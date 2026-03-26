@@ -4,7 +4,7 @@
 Full-featured Android video editor built as a PowerDirector alternative. Kotlin + Jetpack Compose + Media3 Transformer.
 
 ## Version
-v2.9.0
+v3.1.0
 
 ## Tech Stack
 - **Language**: Kotlin 2.1.0
@@ -29,13 +29,22 @@ v2.9.0
   - `ui/projects/ProjectListScreen.kt` - Project gallery with search, sort, create/delete/duplicate/open
   - `ui/projects/ProjectListViewModel.kt` - Project list state management (search, sort, duplicate)
   - `ui/editor/EditorScreen.kt` - Main editor composable (EditorTopBar + preview + timeline + BottomToolArea) with onAction dispatch
-  - `ui/editor/EditorViewModel.kt` - Editor state management (tracks, clips, effects, undo/redo, voiceover, loop)
+  - `ui/editor/EditorViewModel.kt` - Editor state management (tracks, clips, effects, undo/redo, voiceover, loop). Delegates heavy logic to:
+    - `ui/editor/StateFlowExt.kt` - Shared MutableStateFlow.update() CAS-loop extension (used by all delegates)
+    - `ui/editor/ClipEditingDelegate.kt` - Clip add/delete/duplicate/merge/split/trim/speed/reverse/reorder/move-to-track
+    - `ui/editor/EffectsDelegate.kt` - Effect add/update/toggle/remove/copy/paste, transitions
+    - `ui/editor/OverlayDelegate.kt` - Text overlays, image/sticker overlays, timeline markers
+    - `ui/editor/ExportDelegate.kt` - Export, batch export, render preview, share, save-to-gallery
+    - `ui/editor/AudioMixerDelegate.kt` - Audio mixer, track volume/pan/solo, audio effects, beat detection, normalization
+    - `ui/editor/ColorGradingDelegate.kt` - Color grading, LUT import, clip color grade
+    - `ui/editor/AiToolsDelegate.kt` - AI tool dispatch, model downloads, ML engine wrappers
   - `ui/editor/Timeline.kt` - Custom multi-track timeline with thumbnail strips + waveforms + trim handles + keyframe dots + effect badges + trim mode indicator
   - `ui/editor/PreviewPanel.kt` - ExoPlayer-based video preview with playback controls + loop toggle
   - `ui/editor/ToolPanel.kt` - PowerDirector-style BottomToolArea (two-mode tab bar + sub-menu grids) + effects/speed/transform/crop/transition panels
   - `ui/editor/TextEditorSheet.kt` - Text overlay editor with font selector, animations
   - `ui/editor/AudioPanel.kt` - Audio controls, waveform visualization with fade envelope overlay, voiceover recorder
   - `ui/editor/AiToolsPanel.kt` - AI tools UI (captions, bg removal, scene detect, smart crop, etc.)
+  - `ui/editor/StickerPickerPanel.kt` - Sticker/emoji picker with 5 category tabs + custom import
   - `ui/mediapicker/MediaPicker.kt` - Media picker with Photo Picker (API 33+) + OpenDocument fallback + camera capture
   - `res/xml/file_paths.xml` - FileProvider paths config for camera capture + export sharing
   - `ui/export/ExportSheet.kt` - Export settings (resolution, codec, quality, progress, error with retry, share, save to gallery)
@@ -68,6 +77,7 @@ v2.9.0
   - `model/Project.kt` - All data models (Project, Track, Clip, Effect, Transition, Keyframe, ColorGrade, Mask, SpeedCurve, AudioEffect, Caption, BlendMode, BatchExport, ProjectSnapshot, etc.)
 
 ## Architecture Decisions
+- **ViewModel delegate pattern** — EditorViewModel (~3300 lines, down from 4170) decomposed into 7 plain-class delegates (ClipEditing, Effects, Overlay, Export, AudioMixer, ColorGrading, AiTools). Each receives `MutableStateFlow<EditorState>` + lambda refs to ViewModel internals (saveUndoState, showToast, etc.). Not Hilt ViewModels — just extracted behavior with shared state. ViewModel methods thin-delegate to these classes.
 - **Immutable collections** in all models (List/Map, not MutableList/MutableMap) for safe undo/redo copy-on-write
 - **Transformer.start() on Main thread** - Media3 Transformer requires a Looper, export runs withContext(Dispatchers.Main)
 - **Multi-clip playback** via ExoPlayer setMediaItems() with ClippingConfiguration per clip

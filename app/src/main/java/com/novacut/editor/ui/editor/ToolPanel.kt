@@ -25,6 +25,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.novacut.editor.R
 import com.novacut.editor.model.*
 import com.novacut.editor.ui.theme.Mocha
 
@@ -62,6 +64,7 @@ private val textSubMenu = listOf(
     SubMenuItem("text_templates", Icons.Default.Dashboard, "Templates"),
     SubMenuItem("captions", Icons.Default.ClosedCaption, "Captions"),
     SubMenuItem("caption_styles", Icons.Default.Subtitles, "Caption\nStyles"),
+    SubMenuItem("stickers", Icons.Default.EmojiEmotions, "Stickers"),
     SubMenuItem("tts", Icons.Default.RecordVoiceOver, "Text to Speech")
 )
 
@@ -141,8 +144,7 @@ private val projectToolsSubMenu = listOf(
     SubMenuItem("batch_export", Icons.Default.DynamicFeed, "Batch\nExport"),
     SubMenuItem("proxy_toggle", Icons.Default.Speed, "Proxy\nEdit"),
     SubMenuItem("beat_sync", Icons.Default.MusicNote, "Beat\nSync"),
-    SubMenuItem("auto_edit", Icons.Default.AutoFixHigh, "Auto\nEdit"),
-    SubMenuItem("smart_reframe", Icons.Default.Crop, "Smart\nReframe")
+    SubMenuItem("auto_edit", Icons.Default.AutoFixHigh, "Auto\nEdit")
 )
 
 // --- Bottom tool area (tab bar + contextual sub-menu grids) ---
@@ -434,9 +436,9 @@ fun EffectsPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Effects", color = Mocha.Text, fontSize = 16.sp)
+            Text(stringResource(R.string.tool_effects), color = Mocha.Text, fontSize = 16.sp)
             IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
-                Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Close, stringResource(R.string.tool_close), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
             }
         }
 
@@ -512,7 +514,7 @@ fun EffectsPanel(
                     if (isApplied) {
                         Icon(
                             Icons.Default.Check,
-                            contentDescription = "Applied",
+                            contentDescription = stringResource(R.string.tool_applied),
                             tint = Mocha.Green,
                             modifier = Modifier.size(14.dp)
                         )
@@ -553,16 +555,16 @@ fun EffectAdjustmentPanel(
                 IconButton(onClick = onToggleEnabled, modifier = Modifier.size(28.dp)) {
                     Icon(
                         if (effect.enabled) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                        contentDescription = if (effect.enabled) "Disable" else "Enable",
+                        contentDescription = if (effect.enabled) stringResource(R.string.tool_disable) else stringResource(R.string.tool_enable),
                         tint = if (effect.enabled) Mocha.Green else Mocha.Surface2,
                         modifier = Modifier.size(18.dp)
                     )
                 }
                 IconButton(onClick = onRemove, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Default.Delete, "Remove", tint = Mocha.Red, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Delete, stringResource(R.string.tool_remove), tint = Mocha.Red, modifier = Modifier.size(18.dp))
                 }
                 IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Close, stringResource(R.string.tool_close), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
                 }
             }
         }
@@ -801,9 +803,9 @@ fun SpeedPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Speed", color = Mocha.Text, fontSize = 16.sp)
+            Text(stringResource(R.string.tool_speed), color = Mocha.Text, fontSize = 16.sp)
             IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
-                Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Close, stringResource(R.string.tool_close), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
             }
         }
 
@@ -832,14 +834,14 @@ fun SpeedPanel(
         Spacer(modifier = Modifier.height(8.dp))
 
         // Custom speed slider with drag start for undo debounce
-        EffectSlider("Custom Speed", currentSpeed, 0.1f, 16f, onSpeedDragStarted) { onSpeedChanged(it) }
+        EffectSlider(stringResource(R.string.tool_custom_speed), currentSpeed, 0.1f, 16f, onSpeedDragStarted) { onSpeedChanged(it) }
 
         // Reverse toggle
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Reverse", color = Mocha.Text, fontSize = 14.sp)
+            Text(stringResource(R.string.tool_reverse), color = Mocha.Text, fontSize = 14.sp)
             Spacer(modifier = Modifier.weight(1f))
             Switch(
                 checked = isReversed,
@@ -874,35 +876,35 @@ fun TransformPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Transform", color = Mocha.Text, fontSize = 16.sp)
+            Text(stringResource(R.string.tool_transform), color = Mocha.Text, fontSize = 16.sp)
             Row {
                 TextButton(onClick = onReset) {
-                    Text("Reset", color = Mocha.Peach, fontSize = 12.sp)
+                    Text(stringResource(R.string.tool_reset), color = Mocha.Peach, fontSize = 12.sp)
                 }
                 IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Close, stringResource(R.string.tool_close), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        EffectSlider("Position X", clip.positionX, -1f, 1f, onTransformDragStarted) {
+        EffectSlider(stringResource(R.string.tool_position_x), clip.positionX, -1f, 1f, onTransformDragStarted) {
             onTransformChanged(it, null, null, null, null)
         }
-        EffectSlider("Position Y", clip.positionY, -1f, 1f, onTransformDragStarted) {
+        EffectSlider(stringResource(R.string.tool_position_y), clip.positionY, -1f, 1f, onTransformDragStarted) {
             onTransformChanged(null, it, null, null, null)
         }
-        EffectSlider("Scale X", clip.scaleX, 0.1f, 5f, onTransformDragStarted) {
+        EffectSlider(stringResource(R.string.tool_scale_x), clip.scaleX, 0.1f, 5f, onTransformDragStarted) {
             onTransformChanged(null, null, it, null, null)
         }
-        EffectSlider("Scale Y", clip.scaleY, 0.1f, 5f, onTransformDragStarted) {
+        EffectSlider(stringResource(R.string.tool_scale_y), clip.scaleY, 0.1f, 5f, onTransformDragStarted) {
             onTransformChanged(null, null, null, it, null)
         }
-        EffectSlider("Rotation", clip.rotation, -360f, 360f, onTransformDragStarted) {
+        EffectSlider(stringResource(R.string.tool_rotation), clip.rotation, -360f, 360f, onTransformDragStarted) {
             onTransformChanged(null, null, null, null, it)
         }
-        EffectSlider("Opacity", clip.opacity, 0f, 1f, onTransformDragStarted) {
+        EffectSlider(stringResource(R.string.tool_opacity), clip.opacity, 0f, 1f, onTransformDragStarted) {
             onOpacityChanged(it)
         }
     }
@@ -941,9 +943,9 @@ fun CropPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Crop / Aspect Ratio", color = Mocha.Text, fontSize = 16.sp)
+            Text(stringResource(R.string.tool_crop_aspect_ratio), color = Mocha.Text, fontSize = 16.sp)
             IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
-                Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Close, stringResource(R.string.tool_close), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
             }
         }
 
@@ -1028,15 +1030,15 @@ fun TransitionPicker(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Transitions", color = Mocha.Text, fontSize = 16.sp)
+            Text(stringResource(R.string.tool_transitions), color = Mocha.Text, fontSize = 16.sp)
             Row {
                 if (currentTransition != null) {
                     TextButton(onClick = onRemoveTransition) {
-                        Text("Remove", color = Mocha.Red, fontSize = 12.sp)
+                        Text(stringResource(R.string.tool_remove), color = Mocha.Red, fontSize = 12.sp)
                     }
                 }
                 IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Close, stringResource(R.string.tool_close), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
                 }
             }
         }
@@ -1048,6 +1050,27 @@ fun TransitionPicker(
         ) {
             items(TransitionType.entries.toList()) { type ->
                 val isActive = currentTransition?.type == type
+                val icon = when (type) {
+                    TransitionType.DISSOLVE -> Icons.Default.Gradient
+                    TransitionType.WIPE_LEFT, TransitionType.WIPE_RIGHT,
+                    TransitionType.WIPE_UP, TransitionType.WIPE_DOWN -> Icons.Default.SwipeLeft
+                    TransitionType.ZOOM_IN, TransitionType.ZOOM_OUT -> Icons.Default.ZoomIn
+                    TransitionType.SPIN -> Icons.Default.RotateRight
+                    TransitionType.FLIP -> Icons.Default.Flip
+                    TransitionType.CUBE -> Icons.Default.ViewInAr
+                    TransitionType.RIPPLE -> Icons.Default.Water
+                    TransitionType.PIXELATE -> Icons.Default.GridOn
+                    TransitionType.MORPH -> Icons.Default.Transform
+                    TransitionType.GLITCH -> Icons.Default.BrokenImage
+                    TransitionType.SWIRL -> Icons.Default.Cyclone
+                    TransitionType.HEART -> Icons.Default.Favorite
+                    TransitionType.DREAMY -> Icons.Default.AutoAwesome
+                    TransitionType.BURN -> Icons.Default.LocalFireDepartment
+                    TransitionType.LENS_FLARE -> Icons.Default.LensBlur
+                    TransitionType.PAGE_CURL -> Icons.Default.AutoStories
+                    TransitionType.KALEIDOSCOPE -> Icons.Default.FilterVintage
+                    else -> Icons.Default.SwapHoriz
+                }
                 Column(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
@@ -1055,12 +1078,17 @@ fun TransitionPicker(
                         .background(
                             if (isActive) Mocha.Mauve.copy(alpha = 0.2f) else Mocha.Surface0
                         )
+                        .border(
+                            width = if (isActive) 1.dp else 0.dp,
+                            color = if (isActive) Mocha.Mauve else Color.Transparent,
+                            shape = RoundedCornerShape(8.dp)
+                        )
                         .padding(12.dp)
                         .width(70.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Icon(
-                        Icons.Default.SwapHoriz,
+                        icon,
                         contentDescription = type.displayName,
                         tint = if (isActive) Mocha.Mauve else Mocha.Subtext0,
                         modifier = Modifier.size(24.dp)
@@ -1084,7 +1112,7 @@ fun TransitionPicker(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Duration", color = Mocha.Subtext1, fontSize = 12.sp)
+                Text(stringResource(R.string.tool_duration), color = Mocha.Subtext1, fontSize = 12.sp)
                 Text("${currentTransition.durationMs}ms", color = Mocha.Subtext0, fontSize = 12.sp)
             }
             var isDragging by remember { mutableStateOf(false) }
@@ -1122,7 +1150,7 @@ private fun TextOverlayList(
             .background(Mocha.Mantle)
             .padding(horizontal = 12.dp, vertical = 4.dp)
     ) {
-        Text("Text Overlays", color = Mocha.Subtext1, fontSize = 11.sp)
+        Text(stringResource(R.string.tool_text_overlays), color = Mocha.Subtext1, fontSize = 11.sp)
         Spacer(modifier = Modifier.height(4.dp))
         Column(
             modifier = Modifier
@@ -1143,7 +1171,7 @@ private fun TextOverlayList(
                 ) {
                     Icon(
                         Icons.Default.Title,
-                        contentDescription = null,
+                        contentDescription = stringResource(R.string.tool_text_overlay_cd),
                         tint = Color(overlay.color),
                         modifier = Modifier.size(16.dp)
                     )
@@ -1168,13 +1196,13 @@ private fun TextOverlayList(
                         onClick = { onEdit(overlay.id) },
                         modifier = Modifier.size(28.dp)
                     ) {
-                        Icon(Icons.Default.Edit, "Edit", tint = Mocha.Mauve, modifier = Modifier.size(14.dp))
+                        Icon(Icons.Default.Edit, stringResource(R.string.tool_edit), tint = Mocha.Mauve, modifier = Modifier.size(14.dp))
                     }
                     IconButton(
                         onClick = { onDelete(overlay.id) },
                         modifier = Modifier.size(28.dp)
                     ) {
-                        Icon(Icons.Default.Delete, "Delete", tint = Mocha.Red, modifier = Modifier.size(14.dp))
+                        Icon(Icons.Default.Delete, stringResource(R.string.tool_delete), tint = Mocha.Red, modifier = Modifier.size(14.dp))
                     }
                 }
             }

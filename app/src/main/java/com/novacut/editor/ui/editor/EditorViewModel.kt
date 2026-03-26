@@ -10,7 +10,6 @@ import androidx.media3.common.Player
 import com.novacut.editor.ai.AiFeatures
 import com.novacut.editor.engine.AudioEngine
 import com.novacut.editor.engine.AutoSaveState
-import com.novacut.editor.engine.ExportService
 import com.novacut.editor.engine.ExportState
 import com.novacut.editor.engine.ProjectAutoSave
 import com.novacut.editor.engine.ProxyEngine
@@ -34,6 +33,7 @@ import com.novacut.editor.engine.LottieTemplateEngine
 import com.novacut.editor.engine.TapSegmentEngine
 import com.novacut.editor.engine.TimelineExchangeEngine
 import com.novacut.editor.engine.ProxyWorkflowEngine
+import com.novacut.editor.engine.MultiCamEngine
 import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.engine.VoiceoverRecorderEngine
 import com.novacut.editor.engine.TemplateManager
@@ -48,11 +48,10 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import android.content.ContentValues
-import android.os.Build
-import android.os.Environment
-import android.provider.MediaStore
-import androidx.core.content.FileProvider
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import com.novacut.editor.engine.ProxyGenerationWorker
 import java.io.File
 import java.util.UUID
 import javax.inject.Inject
@@ -80,6 +79,8 @@ data class EditorState(
     val exportProgress: Float = 0f,
     val exportState: ExportState = ExportState.IDLE,
     val textOverlays: List<TextOverlay> = emptyList(),
+    val imageOverlays: List<ImageOverlay> = emptyList(),
+    val timelineMarkers: List<TimelineMarker> = emptyList(),
     val waveforms: Map<String, FloatArray> = emptyMap(),
     val showAudioPanel: Boolean = false,
     val showAiToolsPanel: Boolean = false,
@@ -181,6 +182,8 @@ data class EditorState(
     val showNoiseReduction: Boolean = false,
     val isAnalyzingNoise: Boolean = false,
     val noiseAnalysisResult: String? = null,
+    // Sticker picker
+    val showStickerPicker: Boolean = false,
     // Saved export config (for restoring after quick preview)
     val savedExportConfig: ExportConfig? = null
 )
@@ -241,7 +244,7 @@ class EditorViewModel @Inject constructor(
     private val tapSegmentEngine: TapSegmentEngine,
     private val timelineExchangeEngine: TimelineExchangeEngine,
     private val proxyWorkflowEngine: ProxyWorkflowEngine,
-    private val sherpaAsrEngine: com.novacut.editor.engine.whisper.SherpaAsrEngine,
+    private val multiCamEngine: MultiCamEngine,
     @ApplicationContext private val appContext: Context,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -251,15 +254,83 @@ class EditorViewModel @Inject constructor(
     private val _state = MutableStateFlow(EditorState())
     val state: StateFlow<EditorState> = _state.asStateFlow()
 
+    // Fast-path playhead flow — avoids full EditorState copy during playback
+    private val _playheadMs = MutableStateFlow(0L)
+    val playheadMs: StateFlow<Long> = _playheadMs.asStateFlow()
+
     val engine get() = videoEngine
 
-    // Whisper model state (exposed directly from engine for UI binding)
-    val whisperModelState = aiFeatures.whisperEngine.modelState
-    val whisperDownloadProgress = aiFeatures.whisperEngine.downloadProgress
+    // --- Delegates (extracted to reduce ViewModel size) ---
 
-    // Segmentation model state
-    val segmentationModelState = aiFeatures.segmentationEngine.modelState
-    val segmentationDownloadProgress = aiFeatures.segmentationEngine.downloadProgress
+    val colorGradingDelegate = ColorGradingDelegate(
+        stateFlow = _state, videoEngine = videoEngine, appContext = appContext,
+        scope = viewModelScope, saveUndoState = ::saveUndoState, showToast = ::showToast,
+        pauseIfPlaying = ::pauseIfPlaying, dismissedPanelState = ::dismissedPanelState,
+        getSelectedClip = ::getSelectedClip, updatePreview = ::updatePreview
+    )
+
+    val audioMixerDelegate = AudioMixerDelegate(
+        stateFlow = _state, beatDetectionEngine = beatDetectionEngine,
+        loudnessEngine = loudnessEngine, scope = viewModelScope,
+        saveUndoState = ::saveUndoState, showToast = ::showToast,
+        pauseIfPlaying = ::pauseIfPlaying, dismissedPanelState = ::dismissedPanelState
+    )
+
+    val exportDelegate = ExportDelegate(
+        stateFlow = _state, videoEngine = videoEngine, appContext = appContext,
+        scope = viewModelScope, showToast = ::showToast,
+        pauseIfPlaying = ::pauseIfPlaying, dismissedPanelState = ::dismissedPanelState,
+        showExportSheet = ::showExportSheet
+    )
+
+    val aiToolsDelegate = AiToolsDelegate(
+        stateFlow = _state, aiFeatures = aiFeatures, templateManager = templateManager,
+        frameInterpolationEngine = frameInterpolationEngine, inpaintingEngine = inpaintingEngine,
+        upscaleEngine = upscaleEngine, videoMattingEngine = videoMattingEngine,
+        stabilizationEngine = stabilizationEngine, styleTransferEngine = styleTransferEngine,
+        appContext = appContext, scope = viewModelScope,
+        saveUndoState = ::saveUndoState, showToast = ::showToast,
+        getSelectedClip = ::getSelectedClip, setClipTransform = { id, px, py, sx, sy, rot ->
+            setClipTransform(id, positionX = px, positionY = py, scaleX = sx, scaleY = sy, rotation = rot)
+        },
+        rebuildPlayerTimeline = ::rebuildPlayerTimeline, saveProject = ::saveProject,
+        videoEngine = videoEngine
+    )
+
+    val clipEditingDelegate = ClipEditingDelegate(
+        stateFlow = _state, videoEngine = videoEngine, audioEngine = audioEngine,
+        scope = viewModelScope, saveUndoState = ::saveUndoState, showToast = ::showToast,
+        rebuildPlayerTimeline = ::rebuildPlayerTimeline, saveProject = ::saveProject,
+        updatePreview = ::updatePreview, recalculateDuration = ::recalculateDuration,
+        onClipAdded = { clipId, uri ->
+            viewModelScope.launch(Dispatchers.IO) {
+                val (w, h) = videoEngine.getVideoResolution(uri)
+                if (w > 0 && h > 0) {
+                    proxyWorkflowEngine.registerMedia(clipId, uri, w, h)
+                    if (h > 1080) enqueueProxyGeneration()
+                }
+            }
+        }
+    )
+
+    val effectsDelegate = EffectsDelegate(
+        stateFlow = _state, saveUndoState = ::saveUndoState, showToast = ::showToast,
+        updatePreview = ::updatePreview, saveProject = ::saveProject,
+        getSelectedClip = ::getSelectedClip
+    )
+
+    val overlayDelegate = OverlayDelegate(
+        stateFlow = _state, saveUndoState = ::saveUndoState, showToast = ::showToast
+    )
+
+    // Whisper model state (exposed via delegate for UI binding)
+    val whisperModelState get() = aiToolsDelegate.whisperModelState
+    val whisperDownloadProgress get() = aiToolsDelegate.whisperDownloadProgress
+    val segmentationModelState get() = aiToolsDelegate.segmentationModelState
+    val segmentationDownloadProgress get() = aiToolsDelegate.segmentationDownloadProgress
+
+    // LUT picker state (exposed via delegate)
+    val showLutPicker get() = colorGradingDelegate.showLutPicker
 
     // Stored outside EditorState to avoid recomposition on every resize
     @Volatile
@@ -337,7 +408,9 @@ class EditorViewModel @Inject constructor(
 
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_ENDED) {
-                    _state.update { it.copy(isPlaying = false, playheadMs = it.totalDurationMs) }
+                    val totalMs = _state.value.totalDurationMs
+                    _playheadMs.value = totalMs
+                    _state.update { it.copy(isPlaying = false, playheadMs = totalMs) }
                 }
             }
         })
@@ -345,26 +418,33 @@ class EditorViewModel @Inject constructor(
         // Periodic playhead sync (~30fps) with auto-scroll + per-clip speed tracking
         viewModelScope.launch {
             var lastClipIndex = -1
+            var frameCount = 0
             while (isActive) {
                 delay(33)
                 val player = videoEngine.getPlayer() ?: continue
                 if (player.isPlaying) {
                     val currentMs = videoEngine.getAbsolutePositionMs()
-                    _state.update { s ->
-                        var newScroll = s.scrollOffsetMs
-                        // Auto-scroll when playhead approaches right edge (>80% of visible area)
-                        val widthPx = timelineWidthPx
-                        val pixelsPerMs = s.zoomLevel * 0.15f
-                        if (widthPx > 0 && pixelsPerMs >= 0.001f) {
-                            val visibleMs = (widthPx / pixelsPerMs).toLong()
-                            val playheadRelative = currentMs - newScroll
-                            if (playheadRelative > visibleMs * 0.8f) {
-                                newScroll = (currentMs - visibleMs / 4).coerceAtLeast(0L)
-                            } else if (playheadRelative < 0) {
-                                newScroll = (currentMs - visibleMs / 4).coerceAtLeast(0L)
+                    // Fast-path: update dedicated playhead flow every frame
+                    _playheadMs.value = currentMs
+                    frameCount++
+                    // Only sync full state every 5th frame to reduce copies
+                    if (frameCount % 5 == 0) {
+                        _state.update { s ->
+                            var newScroll = s.scrollOffsetMs
+                            // Auto-scroll when playhead approaches right edge (>80% of visible area)
+                            val widthPx = timelineWidthPx
+                            val pixelsPerMs = s.zoomLevel * 0.15f
+                            if (widthPx > 0 && pixelsPerMs >= 0.001f) {
+                                val visibleMs = (widthPx / pixelsPerMs).toLong()
+                                val playheadRelative = currentMs - newScroll
+                                if (playheadRelative > visibleMs * 0.8f) {
+                                    newScroll = (currentMs - visibleMs / 4).coerceAtLeast(0L)
+                                } else if (playheadRelative < 0) {
+                                    newScroll = (currentMs - visibleMs / 4).coerceAtLeast(0L)
+                                }
                             }
+                            s.copy(playheadMs = currentMs, scrollOffsetMs = newScroll)
                         }
-                        s.copy(playheadMs = currentMs, scrollOffsetMs = newScroll)
                     }
                     // Track clip transitions during playback — update speed/effects for current clip
                     val currentIndex = videoEngine.getCurrentClipIndex()
@@ -455,515 +535,69 @@ class EditorViewModel @Inject constructor(
         videoEngine.setPreviewSpeed(speed)
     }
 
-    fun addClipToTrack(uri: Uri, trackType: TrackType = TrackType.VIDEO) {
-        viewModelScope.launch {
-            val duration = try {
-                withContext(Dispatchers.IO) {
-                    videoEngine.getVideoDuration(uri)
-                }
-            } catch (e: Exception) {
-                showToast("Could not read media: ${e.message ?: "Unknown error"}")
-                return@launch
-            }
-            if (duration <= 0) {
-                showToast("Could not read media file")
-                return@launch
-            }
-
-            saveUndoState("Add clip")
-
-            // Create clip ID outside state update so we can reference it for waveform
-            val clipId = java.util.UUID.randomUUID().toString()
-
-            _state.update { state ->
-                val trackIndex = state.tracks.indexOfFirst { it.type == trackType }
-                if (trackIndex < 0) return@update state
-
-                val track = state.tracks[trackIndex]
-                val timelineStart = track.clips.maxOfOrNull { it.timelineEndMs } ?: 0L
-
-                val clip = Clip(
-                    id = clipId,
-                    sourceUri = uri,
-                    sourceDurationMs = duration,
-                    timelineStartMs = timelineStart,
-                    trimStartMs = 0L,
-                    trimEndMs = duration
-                )
-
-                val tracks = state.tracks.mapIndexed { i, t ->
-                    if (i == trackIndex) t.copy(clips = t.clips + clip) else t
-                }
-
-                val totalDuration = tracks.maxOfOrNull { t ->
-                    t.clips.maxOfOrNull { it.timelineEndMs } ?: 0L
-                } ?: 0L
-
-                state.copy(
-                    tracks = tracks,
-                    totalDurationMs = totalDuration,
-                    selectedClipId = clip.id,
-                    selectedTrackId = track.id,
-                    showMediaPicker = false
-                )
-            }
-
-            // Rebuild player timeline with all clips
-            videoEngine.prepareTimeline(_state.value.tracks)
-            saveProject()
-
-            // Extract waveform for audio visualization using the known clip ID
-            viewModelScope.launch {
-                val waveform = audioEngine.extractWaveform(uri)
-                _state.update { it.copy(waveforms = it.waveforms + (clipId to waveform)) }
-            }
-        }
-    }
-
-    fun selectClip(clipId: String?, trackId: String? = null) {
-        _state.update { s ->
-            var newSelectedIds = s.selectedClipIds
-            if (clipId != null) {
-                val allClips = s.tracks.flatMap { it.clips }
-                val selectedClip = allClips.find { it.id == clipId }
-                if (selectedClip?.groupId != null) {
-                    val groupedIds = allClips
-                        .filter { it.groupId == selectedClip.groupId }
-                        .map { it.id }
-                        .toSet()
-                    newSelectedIds = newSelectedIds + groupedIds
-                }
-            }
-            s.copy(selectedClipId = clipId, selectedTrackId = trackId, selectedClipIds = newSelectedIds)
-        }
-        updatePreview()
-    }
-
-    fun deleteSelectedClip() {
-        val clipId = _state.value.selectedClipId ?: return
-        // Validate clip exists before saving undo state
-        val exists = _state.value.tracks.any { it.clips.any { c -> c.id == clipId } }
-        if (!exists) return
-        saveUndoState("Delete clip")
-
-        _state.update { state ->
-            val tracks = state.tracks.map { track ->
-                val clipIndex = track.clips.indexOfFirst { it.id == clipId }
-                if (clipIndex < 0) return@map track
-
-                val deletedClip = track.clips[clipIndex]
-                val gapMs = deletedClip.durationMs
-
-                // Ripple delete: shift subsequent clips back to close the gap
-                val updatedClips = track.clips
-                    .filterNot { it.id == clipId }
-                    .map { clip ->
-                        if (clip.timelineStartMs > deletedClip.timelineStartMs) {
-                            clip.copy(timelineStartMs = clip.timelineStartMs - gapMs)
-                        } else clip
-                    }
-                track.copy(clips = updatedClips)
-            }
-            val totalDuration = tracks.maxOfOrNull { t ->
-                t.clips.maxOfOrNull { it.timelineEndMs } ?: 0L
-            } ?: 0L
-
-            state.copy(
-                tracks = tracks,
-                totalDurationMs = totalDuration,
-                selectedClipId = null,
-                selectedTrackId = null,
-                waveforms = state.waveforms - clipId
+    /**
+     * Enqueue background proxy generation via WorkManager.
+     * Called after importing high-res clips when proxy editing is enabled.
+     */
+    fun enqueueProxyGeneration() {
+        val request = OneTimeWorkRequestBuilder<ProxyGenerationWorker>()
+            .addTag(ProxyGenerationWorker.TAG)
+            .build()
+        WorkManager.getInstance(appContext)
+            .enqueueUniqueWork(
+                ProxyGenerationWorker.WORK_NAME,
+                ExistingWorkPolicy.KEEP,
+                request
             )
-        }
-        rebuildPlayerTimeline()
-        saveProject()
     }
 
-    fun duplicateSelectedClip() {
-        val clipId = _state.value.selectedClipId ?: return
-        // Validate clip exists before saving undo state
-        val exists = _state.value.tracks.any { it.clips.any { c -> c.id == clipId } }
-        if (!exists) return
-        saveUndoState("Duplicate clip")
+    // --- Clip Editing (delegated) ---
+    fun addClipToTrack(uri: Uri, trackType: TrackType = TrackType.VIDEO) = clipEditingDelegate.addClipToTrack(uri, trackType)
+    fun selectClip(clipId: String?, trackId: String? = null) = clipEditingDelegate.selectClip(clipId, trackId)
+    fun deleteSelectedClip() = clipEditingDelegate.deleteSelectedClip()
+    fun duplicateSelectedClip() = clipEditingDelegate.duplicateSelectedClip()
+    fun mergeWithNextClip() = clipEditingDelegate.mergeWithNextClip()
+    fun splitClipAtPlayhead() = clipEditingDelegate.splitClipAtPlayhead()
+    fun beginTrim() = clipEditingDelegate.beginTrim()
+    fun trimClip(clipId: String, newTrimStartMs: Long? = null, newTrimEndMs: Long? = null) = clipEditingDelegate.trimClip(clipId, newTrimStartMs, newTrimEndMs)
+    fun beginSpeedChange() = clipEditingDelegate.beginSpeedChange()
+    fun setClipSpeed(clipId: String, speed: Float) = clipEditingDelegate.setClipSpeed(clipId, speed)
+    fun setClipReversed(clipId: String, reversed: Boolean) = clipEditingDelegate.setClipReversed(clipId, reversed)
+    fun reorderClip(clipId: String, targetIndex: Int) = clipEditingDelegate.reorderClip(clipId, targetIndex)
+    fun moveClipToTrack(clipId: String, targetTrackId: String) = clipEditingDelegate.moveClipToTrack(clipId, targetTrackId)
 
-        _state.update { s ->
-            val trackAndClip = s.tracks.flatMapIndexed { idx, track ->
-                track.clips.filter { it.id == clipId }.map { idx to it }
-            }.firstOrNull() ?: return@update s
+    // --- Effects & Transitions (delegated) ---
+    fun addEffect(clipId: String, effect: Effect) = effectsDelegate.addEffect(clipId, effect)
+    fun beginEffectAdjust() = effectsDelegate.beginEffectAdjust()
+    fun updateEffect(clipId: String, effectId: String, params: Map<String, Float>) = effectsDelegate.updateEffect(clipId, effectId, params)
+    fun toggleEffectEnabled(clipId: String, effectId: String) = effectsDelegate.toggleEffectEnabled(clipId, effectId)
+    fun removeEffect(clipId: String, effectId: String) = effectsDelegate.removeEffect(clipId, effectId)
+    fun copyEffects() = effectsDelegate.copyEffects()
+    fun pasteEffects() = effectsDelegate.pasteEffects()
+    fun setTransition(clipId: String, transition: Transition?) = effectsDelegate.setTransition(clipId, transition)
+    fun beginTransitionDurationChange() = effectsDelegate.beginTransitionDurationChange()
+    fun setTransitionDuration(clipId: String, durationMs: Long) = effectsDelegate.setTransitionDuration(clipId, durationMs)
 
-            val (trackIdx, clip) = trackAndClip
-            val newClip = clip.copy(
-                id = UUID.randomUUID().toString(),
-                timelineStartMs = clip.timelineEndMs,
-                effects = clip.effects.map { it.copy(id = UUID.randomUUID().toString()) },
-                transition = null
-            )
+    // --- Overlays & Markers (delegated) ---
+    fun addTextOverlay(text: TextOverlay) = overlayDelegate.addTextOverlay(text)
+    fun updateTextOverlay(textOverlay: TextOverlay) = overlayDelegate.updateTextOverlay(textOverlay)
+    fun removeTextOverlay(id: String) = overlayDelegate.removeTextOverlay(id)
+    fun addImageOverlay(uri: Uri, type: ImageOverlayType = ImageOverlayType.STICKER) = overlayDelegate.addImageOverlay(uri, type)
+    fun updateImageOverlay(id: String, positionX: Float? = null, positionY: Float? = null, scale: Float? = null, rotation: Float? = null, opacity: Float? = null) = overlayDelegate.updateImageOverlay(id, positionX, positionY, scale, rotation, opacity)
+    fun removeImageOverlay(id: String) = overlayDelegate.removeImageOverlay(id)
+    fun addTimelineMarker(label: String = "", color: MarkerColor = MarkerColor.BLUE) = overlayDelegate.addTimelineMarker(label, color)
+    fun deleteTimelineMarker(id: String) = overlayDelegate.deleteTimelineMarker(id)
 
-            val track = s.tracks[trackIdx]
-            val clipIndex = track.clips.indexOfFirst { it.id == clipId }
-            val updatedClips = track.clips.toMutableList().apply { add(clipIndex + 1, newClip) }
-
-            // Shift subsequent clips forward
-            val shifted = updatedClips.mapIndexed { i, c ->
-                if (i > clipIndex + 1) c.copy(timelineStartMs = c.timelineStartMs + newClip.durationMs) else c
-            }
-
-            val tracks = s.tracks.mapIndexed { i, t -> if (i == trackIdx) t.copy(clips = shifted) else t }
-            recalculateDuration(s.copy(tracks = tracks, selectedClipId = newClip.id))
-        }
-        rebuildPlayerTimeline()
-        saveProject()
-        showToast("Clip duplicated")
+    fun jumpToNextMarker() {
+        val current = _playheadMs.value
+        val next = _state.value.timelineMarkers.firstOrNull { it.timeMs > current + 50 }
+        if (next != null) seekTo(next.timeMs) else showToast("No next marker")
     }
 
-    fun mergeWithNextClip() {
-        val clipId = _state.value.selectedClipId ?: return
-
-        // Validate merge is possible before saving undo state
-        val state = _state.value
-        val trackAndClipInfo = state.tracks.flatMapIndexed { idx, track ->
-            track.clips.filter { it.id == clipId }.map { idx to it }
-        }.firstOrNull()
-        if (trackAndClipInfo == null) return
-        val (vTrackIdx, vClip) = trackAndClipInfo
-        val vTrack = state.tracks[vTrackIdx]
-        val vClipIndex = vTrack.clips.indexOfFirst { it.id == clipId }
-        if (vClipIndex >= vTrack.clips.size - 1) {
-            showToast("No next clip to merge")
-            return
-        }
-        val vNextClip = vTrack.clips[vClipIndex + 1]
-        if (vClip.sourceUri != vNextClip.sourceUri) {
-            showToast("Can only merge clips from the same source")
-            return
-        }
-        if (vClip.trimEndMs != vNextClip.trimStartMs) {
-            showToast("Clips must have adjacent trim ranges to merge")
-            return
-        }
-
-        saveUndoState("Merge clips")
-
-        _state.update { s ->
-            val trackAndClip = s.tracks.flatMapIndexed { idx, track ->
-                track.clips.filter { it.id == clipId }.map { idx to it }
-            }.firstOrNull() ?: return@update s
-
-            val (trackIdx, clip) = trackAndClip
-            val track = s.tracks[trackIdx]
-            val clipIndex = track.clips.indexOfFirst { it.id == clipId }
-
-            if (clipIndex >= track.clips.size - 1) return@update s
-            val nextClip = track.clips[clipIndex + 1]
-            if (clip.sourceUri != nextClip.sourceUri) return@update s
-
-            val merged = clip.copy(
-                trimEndMs = nextClip.trimEndMs,
-                effects = clip.effects + nextClip.effects.map { it.copy(id = UUID.randomUUID().toString()) }
-            )
-
-            val updatedClips = track.clips.toMutableList().apply {
-                removeAt(clipIndex + 1)
-                set(clipIndex, merged)
-            }
-
-            // Shift subsequent clips back
-            val nextDuration = nextClip.durationMs
-            val shifted = updatedClips.mapIndexed { i, c ->
-                if (i > clipIndex) c.copy(timelineStartMs = c.timelineStartMs - nextDuration) else c
-            }
-
-            val tracks = s.tracks.mapIndexed { i, t -> if (i == trackIdx) t.copy(clips = shifted) else t }
-            recalculateDuration(s.copy(tracks = tracks))
-        }
-        rebuildPlayerTimeline()
-        saveProject()
-        showToast("Clips merged")
-    }
-
-    fun splitClipAtPlayhead() {
-        val state = _state.value
-        val clipId = state.selectedClipId ?: return
-        val playhead = state.playheadMs
-
-        // Validate split is possible before saving undo state
-        val splitClip = state.tracks.flatMap { it.clips }.firstOrNull { it.id == clipId }
-        if (splitClip == null || playhead <= splitClip.timelineStartMs || playhead >= splitClip.timelineEndMs) return
-        // Ensure both halves meet minimum duration (100ms)
-        val relPos = playhead - splitClip.timelineStartMs
-        val srcSplit = splitClip.trimStartMs + (relPos * splitClip.speed).toLong()
-        if (srcSplit - splitClip.trimStartMs < 100L || splitClip.trimEndMs - srcSplit < 100L) {
-            showToast("Clip too short to split here")
-            return
-        }
-
-        saveUndoState("Split clip")
-
-        _state.update { s ->
-            val tracks = s.tracks.map { track ->
-                val clipIndex = track.clips.indexOfFirst { it.id == clipId }
-                if (clipIndex < 0) return@map track
-
-                val clip = track.clips[clipIndex]
-                if (playhead <= clip.timelineStartMs || playhead >= clip.timelineEndMs) return@map track
-
-                val relativePosition = playhead - clip.timelineStartMs
-                val splitPointInSource = clip.trimStartMs + (relativePosition * clip.speed).toLong()
-
-                val firstHalf = clip.copy(
-                    trimEndMs = splitPointInSource
-                )
-                val secondHalf = clip.copy(
-                    id = java.util.UUID.randomUUID().toString(),
-                    timelineStartMs = playhead,
-                    trimStartMs = splitPointInSource
-                )
-
-                val updatedClips = buildList {
-                    addAll(track.clips.subList(0, clipIndex))
-                    add(firstHalf)
-                    add(secondHalf)
-                    addAll(track.clips.subList(clipIndex + 1, track.clips.size))
-                }
-                track.copy(clips = updatedClips)
-            }
-            recalculateDuration(s.copy(tracks = tracks))
-        }
-        rebuildPlayerTimeline()
-        saveProject()
-        showToast("Clip split")
-    }
-
-    fun beginTrim() {
-        saveUndoState("Trim clip")
-        videoEngine.setScrubbingMode(true)
-    }
-
-    fun trimClip(clipId: String, newTrimStartMs: Long? = null, newTrimEndMs: Long? = null) {
-        _state.update { state ->
-            val tracks = state.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) {
-                        val start = (newTrimStartMs ?: clip.trimStartMs).coerceIn(0L, clip.sourceDurationMs - 100L)
-                        val end = (newTrimEndMs ?: clip.trimEndMs).coerceIn(start + 100L, clip.sourceDurationMs)
-                        clip.copy(trimStartMs = start, trimEndMs = end)
-                    } else clip
-                })
-            }
-            val totalDuration = tracks.maxOfOrNull { t ->
-                t.clips.maxOfOrNull { it.timelineEndMs } ?: 0L
-            } ?: 0L
-            state.copy(tracks = tracks, totalDurationMs = totalDuration)
-        }
-        rebuildPlayerTimeline()
-    }
-
-    fun beginSpeedChange() {
-        saveUndoState("Change speed")
-    }
-
-    fun setClipSpeed(clipId: String, speed: Float) {
-        _state.update { state ->
-            val tracks = state.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) clip.copy(speed = speed.coerceIn(0.1f, 16f))
-                    else clip
-                })
-            }
-            recalculateDuration(state.copy(tracks = tracks))
-        }
-        // Apply speed to preview immediately (don't rebuild full timeline for smooth slider)
-        videoEngine.setPreviewSpeed(speed.coerceIn(0.1f, 16f))
-    }
-
-    fun setClipReversed(clipId: String, reversed: Boolean) {
-        saveUndoState("Reverse clip")
-        _state.update { state ->
-            val tracks = state.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) clip.copy(isReversed = reversed)
-                    else clip
-                })
-            }
-            state.copy(tracks = tracks)
-        }
-        rebuildPlayerTimeline()
-    }
-
-    fun addEffect(clipId: String, effect: Effect) {
-        // Guard against duplicate effect types
-        val clip = _state.value.tracks.flatMap { it.clips }.firstOrNull { it.id == clipId }
-        if (clip?.effects?.any { it.type == effect.type } == true) {
-            showToast("${effect.type.displayName} already applied")
-            return
-        }
-        saveUndoState("Add effect")
-        _state.update { state ->
-            val tracks = state.tracks.map { track ->
-                track.copy(clips = track.clips.map { c ->
-                    if (c.id == clipId) c.copy(effects = c.effects + effect)
-                    else c
-                })
-            }
-            state.copy(tracks = tracks)
-        }
-        updatePreview()
-        saveProject()
-    }
-
-    fun beginEffectAdjust() {
-        saveUndoState("Adjust effect")
-    }
-
-    fun updateEffect(clipId: String, effectId: String, params: Map<String, Float>) {
-        _state.update { state ->
-            val tracks = state.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) {
-                        clip.copy(effects = clip.effects.map { e ->
-                            if (e.id == effectId) e.copy(params = e.params + params)
-                            else e
-                        })
-                    } else clip
-                })
-            }
-            state.copy(tracks = tracks)
-        }
-        updatePreview()
-    }
-
-    fun toggleEffectEnabled(clipId: String, effectId: String) {
-        saveUndoState("Toggle effect")
-        _state.update { state ->
-            val tracks = state.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) {
-                        clip.copy(effects = clip.effects.map { e ->
-                            if (e.id == effectId) e.copy(enabled = !e.enabled)
-                            else e
-                        })
-                    } else clip
-                })
-            }
-            state.copy(tracks = tracks)
-        }
-        updatePreview()
-        saveProject()
-    }
-
-    fun removeEffect(clipId: String, effectId: String) {
-        saveUndoState("Remove effect")
-        _state.update { state ->
-            val tracks = state.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) clip.copy(effects = clip.effects.filterNot { it.id == effectId })
-                    else clip
-                })
-            }
-            state.copy(tracks = tracks)
-        }
-        updatePreview()
-        saveProject()
-    }
-
-    fun copyEffects() {
-        val clip = getSelectedClip() ?: return
-        if (clip.effects.isEmpty()) {
-            showToast("No effects to copy")
-            return
-        }
-        _state.update { it.copy(copiedEffects = clip.effects) }
-        showToast("Copied ${clip.effects.size} effects")
-    }
-
-    fun pasteEffects() {
-        val clipId = _state.value.selectedClipId ?: return
-        val toPaste = _state.value.copiedEffects
-        if (toPaste.isEmpty()) {
-            showToast("No effects copied")
-            return
-        }
-        val targetClip = _state.value.tracks.flatMap { it.clips }.firstOrNull { it.id == clipId } ?: return
-        val existingTypes = targetClip.effects.map { it.type }.toSet()
-        val filtered = toPaste.filter { it.type !in existingTypes }
-        if (filtered.isEmpty()) {
-            showToast("Effects already present on clip")
-            return
-        }
-        saveUndoState("Paste effects")
-        _state.update { state ->
-            val tracks = state.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) {
-                        clip.copy(effects = clip.effects + filtered.map { it.copy(id = UUID.randomUUID().toString()) })
-                    } else clip
-                })
-            }
-            state.copy(tracks = tracks)
-        }
-        showToast("Pasted ${filtered.size} effects")
-        updatePreview()
-        saveProject()
-    }
-
-    fun setTransition(clipId: String, transition: Transition?) {
-        saveUndoState("Set transition")
-        _state.update { state ->
-            val tracks = state.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) clip.copy(transition = transition)
-                    else clip
-                })
-            }
-            state.copy(tracks = tracks)
-        }
-        updatePreview()
-        saveProject()
-    }
-
-    fun beginTransitionDurationChange() {
-        saveUndoState("Change transition duration")
-    }
-
-    fun setTransitionDuration(clipId: String, durationMs: Long) {
-        _state.update { state ->
-            val tracks = state.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId && clip.transition != null) {
-                        val clampedMs = durationMs.coerceIn(100L, clip.durationMs / 2)
-                        clip.copy(transition = clip.transition.copy(durationMs = clampedMs))
-                    } else clip
-                })
-            }
-            state.copy(tracks = tracks)
-        }
-        saveProject()
-    }
-
-    fun addTextOverlay(text: TextOverlay) {
-        if (text.startTimeMs >= text.endTimeMs) { showToast("Invalid text overlay duration"); return }
-        saveUndoState("Add text")
-        _state.update { it.copy(textOverlays = it.textOverlays + text) }
-    }
-
-    fun updateTextOverlay(textOverlay: TextOverlay) {
-        if (textOverlay.startTimeMs >= textOverlay.endTimeMs) { showToast("Invalid text overlay duration"); return }
-        saveUndoState("Edit text")
-        _state.update { state ->
-            state.copy(
-                textOverlays = state.textOverlays.map {
-                    if (it.id == textOverlay.id) textOverlay else it
-                }
-            )
-        }
-    }
-
-    fun removeTextOverlay(id: String) {
-        saveUndoState("Remove text")
-        _state.update { state ->
-            state.copy(textOverlays = state.textOverlays.filterNot { it.id == id })
-        }
+    fun jumpToPrevMarker() {
+        val current = _playheadMs.value
+        val prev = _state.value.timelineMarkers.lastOrNull { it.timeMs < current - 50 }
+        if (prev != null) seekTo(prev.timeMs) else showToast("No previous marker")
     }
 
     fun addTrack(type: TrackType) {
@@ -1021,6 +655,7 @@ class EditorViewModel @Inject constructor(
 
     fun seekTo(positionMs: Long) {
         videoEngine.seekTo(positionMs)
+        _playheadMs.value = positionMs
         _state.update { it.copy(playheadMs = positionMs) }
         if (_state.value.showScopes) updateScopeFrame()
     }
@@ -1030,6 +665,7 @@ class EditorViewModel @Inject constructor(
     fun endScrub() { videoEngine.setScrubbingMode(false) }
 
     fun updatePlayheadPosition(positionMs: Long) {
+        _playheadMs.value = positionMs
         _state.update { it.copy(playheadMs = positionMs) }
     }
 
@@ -1100,6 +736,7 @@ class EditorViewModel @Inject constructor(
         showEffectLibrary = false,
         showNoiseReduction = false,
         noiseAnalysisResult = null,
+        showStickerPicker = false,
         selectedEffectId = null,
         editingTextOverlayId = null,
         selectedMaskId = null
@@ -1150,160 +787,27 @@ class EditorViewModel @Inject constructor(
         _state.update { it.copy(showVoiceoverRecorder = false) }
     }
 
-    // --- Color Grading ---
-    fun showColorGrading() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showColorGrading = true) } }
-    fun hideColorGrading() { _state.update { it.copy(showColorGrading = false) } }
+    // --- Color Grading (delegated) ---
+    fun showColorGrading() = colorGradingDelegate.showColorGrading()
+    fun hideColorGrading() = colorGradingDelegate.hideColorGrading()
+    fun beginColorGradeAdjust() = colorGradingDelegate.beginColorGradeAdjust()
+    fun updateClipColorGrade(colorGrade: ColorGrade) = colorGradingDelegate.updateClipColorGrade(colorGrade)
+    val showLutPicker: StateFlow<Boolean> = colorGradingDelegate.showLutPicker
+    fun importLut() = colorGradingDelegate.importLut()
+    fun onLutPickerDismissed() = colorGradingDelegate.onLutPickerDismissed()
+    fun onLutFileSelected(uri: Uri) = colorGradingDelegate.onLutFileSelected(uri)
+    fun setClipLut(lutPath: String) = colorGradingDelegate.setClipLut(lutPath)
 
-    fun beginColorGradeAdjust() {
-        saveUndoState("Color grade")
-    }
-
-    fun updateClipColorGrade(colorGrade: ColorGrade) {
-        val clipId = _state.value.selectedClipId ?: return
-        _state.update { s ->
-            s.copy(tracks = s.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) clip.copy(colorGrade = colorGrade) else clip
-                })
-            })
-        }
-        updatePreview()
-    }
-
-    private val _showLutPicker = MutableStateFlow(false)
-    val showLutPicker: StateFlow<Boolean> = _showLutPicker.asStateFlow()
-
-    fun importLut() {
-        _showLutPicker.value = true
-    }
-
-    fun onLutPickerDismissed() {
-        _showLutPicker.value = false
-    }
-
-    fun onLutFileSelected(uri: Uri) {
-        _showLutPicker.value = false
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                // Copy LUT file to app's internal storage
-                val lutDir = File(appContext.filesDir, "luts").also { it.mkdirs() }
-                val fileName = uri.lastPathSegment?.substringAfterLast('/') ?: "imported.cube"
-                val destFile = File(lutDir, fileName)
-                appContext.contentResolver.openInputStream(uri)?.use { input ->
-                    destFile.outputStream().use { output ->
-                        input.copyTo(output)
-                    }
-                }
-                withContext(Dispatchers.Main) {
-                    setClipLut(destFile.absolutePath)
-                    showToast("LUT applied: $fileName")
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    showToast("Failed to import LUT: ${e.message}")
-                }
-            }
-        }
-    }
-
-    fun setClipLut(lutPath: String) {
-        val clipId = _state.value.selectedClipId ?: return
-        val currentGrade = getSelectedClip()?.colorGrade ?: ColorGrade()
-        updateClipColorGrade(currentGrade.copy(lutPath = lutPath))
-    }
-
-    // --- Audio Mixer ---
-    fun showAudioMixer() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showAudioMixer = true) } }
-    fun hideAudioMixer() { _state.update { it.copy(showAudioMixer = false) } }
-
-    fun setTrackVolume(trackId: String, volume: Float) {
-        _state.update { s ->
-            s.copy(tracks = s.tracks.map { track ->
-                if (track.id == trackId) track.copy(volume = volume.coerceIn(0f, 2f)) else track
-            })
-        }
-    }
-
-    fun setTrackPan(trackId: String, pan: Float) {
-        _state.update { s ->
-            s.copy(tracks = s.tracks.map { track ->
-                if (track.id == trackId) track.copy(pan = pan.coerceIn(-1f, 1f)) else track
-            })
-        }
-    }
-
-    fun toggleTrackSolo(trackId: String) {
-        _state.update { s ->
-            s.copy(tracks = s.tracks.map { track ->
-                if (track.id == trackId) track.copy(isSolo = !track.isSolo) else track
-            })
-        }
-    }
-
-    fun addTrackAudioEffect(trackId: String, type: AudioEffectType) {
-        saveUndoState("Add audio effect")
-        _state.update { s ->
-            s.copy(tracks = s.tracks.map { track ->
-                if (track.id == trackId) {
-                    val effect = AudioEffect(
-                        type = type,
-                        params = AudioEffectType.defaultParams(type)
-                    )
-                    track.copy(audioEffects = track.audioEffects + effect)
-                } else track
-            })
-        }
-    }
-
-    fun removeTrackAudioEffect(trackId: String, effectId: String) {
-        saveUndoState("Remove audio effect")
-        _state.update { s ->
-            s.copy(tracks = s.tracks.map { track ->
-                if (track.id == trackId) {
-                    track.copy(audioEffects = track.audioEffects.filter { it.id != effectId })
-                } else track
-            })
-        }
-    }
-
-    fun updateTrackAudioEffectParam(trackId: String, effectId: String, param: String, value: Float) {
-        _state.update { s ->
-            s.copy(tracks = s.tracks.map { track ->
-                if (track.id == trackId) {
-                    track.copy(audioEffects = track.audioEffects.map { effect ->
-                        if (effect.id == effectId) {
-                            effect.copy(params = effect.params + (param to value))
-                        } else effect
-                    })
-                } else track
-            })
-        }
-    }
-
-    fun detectBeats() {
-        val s = _state.value
-        val audioClips = s.tracks
-            .filter { it.type == TrackType.AUDIO || it.type == TrackType.VIDEO }
-            .flatMap { it.clips }
-        if (audioClips.isEmpty()) {
-            showToast("No audio clips to analyze")
-            return
-        }
-        viewModelScope.launch {
-            _state.update { it.copy(isAnalyzingBeats = true) }
-            showToast("Detecting beats...")
-            try {
-                val analysis = beatDetectionEngine.detectBeats(audioClips.first().sourceUri)
-                val beatTimestamps = analysis.beats.map { it.timestampMs }
-                _state.update { it.copy(beatMarkers = beatTimestamps, isAnalyzingBeats = false) }
-                val bpmText = if (analysis.bpm > 0f) " (%.0f BPM)".format(analysis.bpm) else ""
-                showToast("Found ${analysis.beats.size} beats$bpmText")
-            } catch (e: Exception) {
-                _state.update { it.copy(isAnalyzingBeats = false) }
-                showToast("Beat detection failed: ${e.message ?: "Unknown error"}")
-            }
-        }
-    }
+    // --- Audio Mixer (delegated) ---
+    fun showAudioMixer() = audioMixerDelegate.showAudioMixer()
+    fun hideAudioMixer() = audioMixerDelegate.hideAudioMixer()
+    fun setTrackVolume(trackId: String, volume: Float) = audioMixerDelegate.setTrackVolume(trackId, volume)
+    fun setTrackPan(trackId: String, pan: Float) = audioMixerDelegate.setTrackPan(trackId, pan)
+    fun toggleTrackSolo(trackId: String) = audioMixerDelegate.toggleTrackSolo(trackId)
+    fun addTrackAudioEffect(trackId: String, type: AudioEffectType) = audioMixerDelegate.addTrackAudioEffect(trackId, type)
+    fun removeTrackAudioEffect(trackId: String, effectId: String) = audioMixerDelegate.removeTrackAudioEffect(trackId, effectId)
+    fun updateTrackAudioEffectParam(trackId: String, effectId: String, param: String, value: Float) = audioMixerDelegate.updateTrackAudioEffectParam(trackId, effectId, param, value)
+    fun detectBeats() = audioMixerDelegate.detectBeats()
 
     // --- Keyframe Editor ---
     fun showKeyframeEditor() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showKeyframeEditor = true) } }
@@ -1503,53 +1007,12 @@ class EditorViewModel @Inject constructor(
         }
     }
 
-    // --- Batch Export ---
-    fun showBatchExport() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showBatchExport = true) } }
-    fun hideBatchExport() { _state.update { it.copy(showBatchExport = false) } }
-
-    fun addBatchExportItem(config: ExportConfig, name: String) {
-        val item = BatchExportItem(config = config, outputName = name)
-        _state.update { it.copy(batchExportQueue = it.batchExportQueue + item) }
-    }
-
-    fun removeBatchExportItem(id: String) {
-        _state.update { it.copy(batchExportQueue = it.batchExportQueue.filter { it.id != id }) }
-    }
-
-    fun startBatchExport() {
-        val queue = _state.value.batchExportQueue
-        if (queue.isEmpty()) {
-            showToast("Add export items first")
-            return
-        }
-        hideBatchExport()
-        // Export sequentially with per-item status updates
-        viewModelScope.launch {
-            val outputDir = appContext.getExternalFilesDir(Environment.DIRECTORY_MOVIES)
-                ?: appContext.filesDir
-            for ((index, item) in queue.withIndex()) {
-                // Update item status to IN_PROGRESS
-                _state.update { s ->
-                    s.copy(batchExportQueue = s.batchExportQueue.map {
-                        if (it.id == item.id) it.copy(status = BatchExportStatus.IN_PROGRESS) else it
-                    })
-                }
-                showToast("Exporting ${index + 1}/${queue.size}: ${item.outputName}")
-                _state.update { it.copy(exportConfig = item.config) }
-                startExport(outputDir)
-                // Wait for export to complete
-                val result = videoEngine.exportState.first { it != ExportState.EXPORTING }
-                val newStatus = if (result == ExportState.COMPLETE) BatchExportStatus.COMPLETED else BatchExportStatus.FAILED
-                _state.update { s ->
-                    s.copy(batchExportQueue = s.batchExportQueue.map {
-                        if (it.id == item.id) it.copy(status = newStatus) else it
-                    })
-                }
-            }
-            val completed = queue.size
-            showToast("Batch export complete ($completed items)")
-        }
-    }
+    // --- Batch Export (delegated) ---
+    fun showBatchExport() = exportDelegate.showBatchExport()
+    fun hideBatchExport() = exportDelegate.hideBatchExport()
+    fun addBatchExportItem(config: ExportConfig, name: String) = exportDelegate.addBatchExportItem(config, name)
+    fun removeBatchExportItem(id: String) = exportDelegate.removeBatchExportItem(id)
+    fun startBatchExport() = exportDelegate.startBatchExport()
 
     // --- Effect Keyframes ---
     fun addEffectKeyframe(effectId: String, paramName: String, timeOffsetMs: Long, value: Float) {
@@ -1688,32 +1151,10 @@ class EditorViewModel @Inject constructor(
         }
     }
 
-    // --- Render Preview + Smart Render ---
-    fun showRenderPreview() {
-        pauseIfPlaying()
-        val s = _state.value
-        val segments = SmartRenderEngine.analyzeTimeline(s.tracks, s.exportConfig, s.textOverlays)
-        val summary = SmartRenderEngine.getSummary(segments)
-        _state.update { dismissedPanelState(it).copy(
-            showRenderPreview = true,
-            renderSegments = segments,
-            renderSummary = summary
-        ) }
-    }
-    fun hideRenderPreview() { _state.update { it.copy(showRenderPreview = false) } }
-
-    fun renderQuickPreview() {
-        // Export at 480p for quick review without altering the user's export config
-        val savedConfig = _state.value.exportConfig
-        val previewConfig = savedConfig.copy(
-            resolution = com.novacut.editor.model.Resolution.SD_480P,
-            quality = com.novacut.editor.model.ExportQuality.LOW
-        )
-        _state.update { it.copy(exportConfig = previewConfig, savedExportConfig = savedConfig) }
-        hideRenderPreview()
-        showExportSheet()
-        showToast("Rendering preview at 480p...")
-    }
+    // --- Render Preview + Smart Render (delegated) ---
+    fun showRenderPreview() = exportDelegate.showRenderPreview()
+    fun hideRenderPreview() = exportDelegate.hideRenderPreview()
+    fun renderQuickPreview() = exportDelegate.renderQuickPreview()
 
     // --- Cloud Backup ---
     fun showCloudBackup() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showCloudBackup = true) } }
@@ -2076,6 +1517,10 @@ class EditorViewModel @Inject constructor(
     fun showNoiseReduction() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showNoiseReduction = true) } }
     fun hideNoiseReduction() { _state.update { it.copy(showNoiseReduction = false, noiseAnalysisResult = null) } }
 
+    // --- Sticker Picker ---
+    fun showStickerPicker() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showStickerPicker = true) } }
+    fun hideStickerPicker() { _state.update { it.copy(showStickerPicker = false) } }
+
     fun analyzeAndReduceNoise() {
         val clip = getSelectedClip() ?: return
         _state.update { it.copy(isAnalyzingNoise = true, noiseAnalysisResult = null) }
@@ -2188,6 +1633,49 @@ class EditorViewModel @Inject constructor(
         }
     }
 
+    // --- Multi-Cam Sync ---
+    fun syncMultiCamClips() {
+        val videoClips = _state.value.tracks
+            .filter { it.type == TrackType.VIDEO }
+            .flatMap { it.clips }
+        if (videoClips.size < 2) {
+            showToast("Need at least 2 video clips for multi-cam sync")
+            return
+        }
+        viewModelScope.launch {
+            showToast("Syncing clips by audio...")
+            try {
+                val uris = videoClips.map { it.sourceUri }
+                val referenceUri = uris.first()
+                val otherUris = uris.drop(1)
+                val results = withContext(Dispatchers.IO) {
+                    multiCamEngine.syncMultipleClips(referenceUri, otherUris)
+                }
+                if (results.isNotEmpty()) {
+                    saveUndoState("Multi-cam sync")
+                    // Build offset list: first clip stays at 0, rest get offsets from sync results
+                    val offsets = listOf(0L) + results.map { it.offsetMs }
+                    _state.update { s ->
+                        s.copy(tracks = s.tracks.map { track ->
+                            if (track.type == TrackType.VIDEO) {
+                                track.copy(clips = track.clips.mapIndexed { idx, clip ->
+                                    val offset = offsets.getOrNull(idx) ?: 0L
+                                    clip.copy(timelineStartMs = (clip.timelineStartMs + offset).coerceAtLeast(0L))
+                                })
+                            } else track
+                        })
+                    }
+                    rebuildTimeline()
+                    showToast("Synced ${offsets.size} clips by audio")
+                } else {
+                    showToast("Could not find audio sync points")
+                }
+            } catch (e: Exception) {
+                showToast("Multi-cam sync failed: ${e.message}")
+            }
+        }
+    }
+
     // --- Slip/Slide Edit ---
     fun slipClip(clipId: String, slipAmountMs: Long) {
         saveUndoState("Slip edit")
@@ -2249,9 +1737,7 @@ class EditorViewModel @Inject constructor(
     }
 
     // --- Export ---
-    fun cancelExport() {
-        videoEngine.cancelExport()
-    }
+    fun cancelExport() = exportDelegate.cancelExport()
 
     // --- Media Manager ---
     fun showMediaManager() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showMediaManager = true) } }
@@ -2284,41 +1770,10 @@ class EditorViewModel @Inject constructor(
         saveProject()
     }
 
-    // --- Audio Normalization ---
-    fun showAudioNorm() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showAudioNorm = true) } }
-    fun hideAudioNorm() { _state.update { it.copy(showAudioNorm = false) } }
-
-    fun normalizeAudio(targetLufs: Float) {
-        val clipId = _state.value.selectedClipId ?: return
-        val clip = _state.value.tracks.flatMap { it.clips }.find { it.id == clipId } ?: return
-        saveUndoState("Normalize audio")
-
-        viewModelScope.launch {
-            showToast("Measuring loudness...")
-            try {
-                val measurement = loudnessEngine.measureLoudness(clip.sourceUri)
-
-                // Find the matching preset or use YOUTUBE as default
-                val preset = LoudnessEngine.LoudnessPreset.entries
-                    .firstOrNull { it.targetLufs == targetLufs }
-                    ?: LoudnessEngine.LoudnessPreset.YOUTUBE
-
-                val gain = loudnessEngine.calculateNormalizationGain(measurement, preset)
-
-                _state.update { s ->
-                    s.copy(tracks = s.tracks.map { track ->
-                        track.copy(clips = track.clips.map { c ->
-                            if (c.id == clipId) c.copy(volume = (c.volume * gain).coerceIn(0.1f, 3f)) else c
-                        })
-                    })
-                }
-                hideAudioNorm()
-                showToast("Normalized: %.1f → %.0f LUFS".format(measurement.integratedLufs, targetLufs))
-            } catch (e: Exception) {
-                showToast("Normalization failed: ${e.message ?: "Unknown error"}")
-            }
-        }
-    }
+    // --- Audio Normalization (delegated) ---
+    fun showAudioNorm() = audioMixerDelegate.showAudioNorm()
+    fun hideAudioNorm() = audioMixerDelegate.hideAudioNorm()
+    fun normalizeAudio(targetLufs: Float) = audioMixerDelegate.normalizeAudio(targetLufs)
 
     // --- Color Match ---
     fun colorMatchToReference(referenceClipId: String) {
@@ -2875,123 +2330,9 @@ class EditorViewModel @Inject constructor(
         _state.update { it.copy(exportConfig = config) }
     }
 
-    fun startExport(outputDir: File) {
-        val currentState = _state.value
-        if (currentState.tracks.flatMap { it.clips }.isEmpty()) {
-            showToast("No clips to export")
-            return
-        }
-
-        val config = currentState.exportConfig.copy(aspectRatio = currentState.project.aspectRatio)
-        val tracks = currentState.tracks
-        val textOverlays = currentState.textOverlays
-
-        _state.update { it.copy(exportStartTime = System.currentTimeMillis(), exportProgress = 0f, exportState = ExportState.EXPORTING, exportErrorMessage = null) }
-
-        viewModelScope.launch {
-            val outputFile = File(outputDir, "NovaCut_${System.currentTimeMillis()}.mp4")
-
-            // Ensure output directory exists (off main thread)
-            withContext(Dispatchers.IO) { outputDir.mkdirs() }
-
-            // Start foreground service for export notification
-            val serviceIntent = Intent(appContext, ExportService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                appContext.startForegroundService(serviceIntent)
-            } else {
-                appContext.startService(serviceIntent)
-            }
-
-            try {
-                videoEngine.export(
-                    tracks = tracks,
-                    config = config,
-                    outputFile = outputFile,
-                    textOverlays = textOverlays,
-                    onProgress = { progress ->
-                        _state.update { it.copy(exportProgress = progress) }
-                    },
-                    onComplete = {
-                        _state.update { it.copy(lastExportedFilePath = outputFile.absolutePath) }
-                        showToast("Export complete: ${outputFile.name}")
-                    },
-                    onError = { e ->
-                        _state.update { it.copy(exportErrorMessage = e.message ?: "Unknown error") }
-                    }
-                )
-            } catch (e: Exception) {
-                _state.update { it.copy(exportErrorMessage = e.message ?: "Unknown error") }
-            }
-        }
-    }
-
-    fun getShareIntent(): Intent? {
-        val filePath = _state.value.lastExportedFilePath ?: run {
-            showToast("No exported video to share")
-            return null
-        }
-        val file = File(filePath)
-        if (!file.exists()) {
-            showToast("Export file no longer available")
-            return null
-        }
-        val uri = FileProvider.getUriForFile(appContext, "${appContext.packageName}.fileprovider", file)
-        return Intent(Intent.ACTION_SEND).apply {
-            type = "video/*"
-            putExtra(Intent.EXTRA_STREAM, uri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-    }
-
-    fun saveToGallery() {
-        val filePath = _state.value.lastExportedFilePath ?: run {
-            showToast("No exported video")
-            return
-        }
-        val file = File(filePath)
-        if (!file.exists()) {
-            showToast("Export file not found")
-            return
-        }
-
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                try {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        val values = ContentValues().apply {
-                            put(MediaStore.Video.Media.DISPLAY_NAME, file.name)
-                            put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
-                            put(MediaStore.Video.Media.RELATIVE_PATH, "${Environment.DIRECTORY_MOVIES}/NovaCut")
-                            put(MediaStore.Video.Media.IS_PENDING, 1)
-                        }
-                        val resolver = appContext.contentResolver
-                        val contentUri = resolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values)
-                        if (contentUri != null) {
-                            resolver.openOutputStream(contentUri)?.use { out ->
-                                file.inputStream().use { input -> input.copyTo(out) }
-                            }
-                            values.clear()
-                            values.put(MediaStore.Video.Media.IS_PENDING, 0)
-                            resolver.update(contentUri, values, null, null)
-                        } else {
-                            withContext(Dispatchers.Main) { showToast("Failed to save to gallery") }
-                            return@withContext
-                        }
-                    } else {
-                        @Suppress("DEPRECATION")
-                        val moviesDir = File(
-                            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES),
-                            "NovaCut"
-                        ).apply { mkdirs() }
-                        file.copyTo(File(moviesDir, file.name), overwrite = true)
-                    }
-                    withContext(Dispatchers.Main) { showToast("Saved to gallery") }
-                } catch (e: Exception) {
-                    withContext(Dispatchers.Main) { showToast("Save failed: ${e.message}") }
-                }
-            }
-        }
-    }
+    fun startExport(outputDir: File) = exportDelegate.startExport(outputDir)
+    fun getShareIntent(): Intent? = exportDelegate.getShareIntent()
+    fun saveToGallery() = exportDelegate.saveToGallery()
 
     // Undo/Redo
     fun undo() {
@@ -3059,6 +2400,16 @@ class EditorViewModel @Inject constructor(
             delay(3000)
             _state.update { it.copy(toastMessage = null) }
         }
+    }
+
+    // --- Favorite/Recent Effects ---
+
+    fun toggleEffectFavorite(effectType: EffectType) {
+        viewModelScope.launch { settingsRepo.toggleFavoriteEffect(effectType.name) }
+    }
+
+    fun trackEffectUsage(effectType: EffectType) {
+        viewModelScope.launch { settingsRepo.addRecentEffect(effectType.name) }
     }
 
     fun getSelectedClip(): Clip? {
@@ -3523,7 +2874,6 @@ class EditorViewModel @Inject constructor(
                     }
                     "face_track" -> {
                         showToast("Face tracking: detecting faces...")
-                        delay(1000)
                         // Use motion tracking with face region detection
                         val region = com.novacut.editor.ai.TrackingRegion(
                             centerX = 0.5f, centerY = 0.35f, width = 0.3f, height = 0.3f
@@ -3980,6 +3330,7 @@ class EditorViewModel @Inject constructor(
         ttsEngine.stopPreview()
         videoEngine.removePlayerListener()
         videoEngine.resetExportState()
+        audioEngine.clearWaveformCache()
         // DON'T call videoEngine.release() or ttsEngine.release() — they're @Singletons
     }
 }

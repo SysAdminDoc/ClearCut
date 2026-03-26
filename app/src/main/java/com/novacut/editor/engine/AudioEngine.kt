@@ -3,6 +3,7 @@ package com.novacut.editor.engine
 import android.content.Context
 import android.media.*
 import android.net.Uri
+import android.util.LruCache
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -26,13 +27,30 @@ class AudioEngine @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     /**
+     * LRU cache for extracted waveforms keyed by "uri|sampleCount".
+     * Avoids redundant PCM decoding when timeline recomposes.
+     * Max 64 entries (~50KB total for 200-sample waveforms).
+     */
+    private val waveformCache = LruCache<String, FloatArray>(64)
+
+    /**
+     * Clear the waveform cache (e.g., when project changes).
+     */
+    fun clearWaveformCache() {
+        waveformCache.evictAll()
+    }
+
+    /**
      * Extract audio waveform amplitude data from a media file.
      * Returns normalized amplitudes (0..1) at evenly spaced intervals.
+     * Results are cached to avoid redundant decoding on timeline recomposition.
      */
     suspend fun extractWaveform(
         uri: Uri,
         sampleCount: Int = 200
     ): FloatArray = withContext(Dispatchers.IO) {
+        val cacheKey = "${uri}|${sampleCount}"
+        waveformCache.get(cacheKey)?.let { return@withContext it }
         val extractor = MediaExtractor()
         try {
             extractor.setDataSource(context, uri, null)
@@ -132,6 +150,7 @@ class AudioEngine @Inject constructor(
                 }
                 result[i] = peak / maxAmplitude
             }
+            waveformCache.put(cacheKey, result)
             result
         } catch (e: Exception) {
             Log.e(TAG, "Waveform extraction failed for $uri", e)

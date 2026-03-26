@@ -102,13 +102,36 @@ proxyWorkflowEngine, sherpaAsrEngine
 - ProGuard rules verified comprehensive (Hilt, Room, Media3, ONNX, MediaPipe, Coil)
 
 ## Build Info
-- `versionCode = 62`, `versionName = "2.9.0"`
+- `versionCode = 63`, `versionName = "3.0.0"`
 - `compileSdk = 35`, `targetSdk = 35`, `minSdk = 26`
 - R8 minify + shrink enabled for release
 - Signing via `keystore.properties` or env vars (`NOVACUT_KS_PASS`, `NOVACUT_KEY_ALIAS`, `NOVACUT_KEY_PASS`)
 
+## v3.0.0 Final Engines
+- `engine/SoundpipeDspEngine.kt` — Reverb (Schroeder), Moog filter, distortion
+- `engine/RiveTemplateEngine.kt` — 5 interactive templates
+- `engine/CloudInpaintingEngine.kt` — ProPainter cloud API
+
+## v3.0.0 Performance & Polish
+- Playhead in separate StateFlow (60→6 copies/sec during playback)
+- 7 new easings (bounce, elastic, back, circular, expo, sine, cubic)
+- 4 new speed presets (time freeze, film reel, heartbeat, crescendo)
+- MultiCamEngine wired with audio-sync
+- Adjustment layers cascade effects in export pipeline
+- LruCache thumbnails (memory-bounded, 1/8 heap)
+- AiFeatures: Log.w on 15 silent catch blocks
+- Accessibility: contentDescription on all interactive UI elements
+
+## v3.0.0 Final Features
+- ImageOverlay + ImageOverlayType for sticker/GIF overlays
+- TimelineMarker with 6 colors + jump navigation
+- Favorites/recent effects in SettingsRepository (DataStore)
+- Proxy playback: prepareTimeline uses clip.proxyUri
+- Batch export per-item progress tracking
+- EditCommand bridge documented for future migration
+
 ## Completed Work
-See ROADMAP.md for full status. Tiers 1-4 + UI audit + release prep complete.
+All roadmap + performance + accessibility + final features complete.
 
 ---
 

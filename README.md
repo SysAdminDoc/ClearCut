@@ -1,4 +1,4 @@
-# NovaCut v3.0.0
+# NovaCut v3.1.0
 
 A professional Android video editor built with Kotlin and Jetpack Compose. Open alternative to CapCut, PowerDirector, and DaVinci Resolve — with on-device AI, GPU-accelerated effects, and desktop NLE interoperability.
 
@@ -11,14 +11,22 @@ A professional Android video editor built with Kotlin and Jetpack Compose. Open 
 - **Magnetic snapping** — clips snap to edges, playhead, and markers (8dp threshold with diamond indicators)
 - **Clip grouping** — select multiple clips, group/ungroup, move as a unit
 - Speed control (0.1x-16x) with bezier speed ramping curves and presets
-- Keyframe animation for position, scale, rotation, opacity, volume with bezier/hold interpolation
-- Undo/redo (50 levels) with full state restoration
+- Keyframe animation for position, scale, rotation, opacity, volume with **12 easing types** (linear, ease in/out, spring, bounce, elastic, back, circular, expo, sine, cubic)
+- **14 speed presets** including time freeze, film reel, heartbeat, crescendo
+- Undo/redo (50 levels) with full state restoration + command-based undo foundation
 - Long-press multi-select for batch operations
 - Pinch-to-zoom + zoom in/out/fit buttons
 - Timeline scrubbing with frame-accurate seeking
+- **Colored timeline markers** — 6 colors (red/orange/yellow/green/blue/purple) with labels, notes, and jump navigation
+- **Sticker/GIF/image overlays** — position, scale, rotate, opacity with timeline placement
+- **Favorites & recent effects** — mark effects as favorites, track recently used for quick access
+- **Multi-cam sync** — audio-based clip synchronization across tracks
+- **Clip reorder & move** — reorder clips within a track or move between tracks
+- **Haptic feedback** — tactile response on trim handle grab and magnetic snap
+- **Waveform caching** — LRU cache avoids redundant audio decoding on timeline recomposition
 
 ### Effects & Transitions
-- **37 GPU-accelerated GLSL transitions** — dissolve, wipe, zoom, spin, flip, cube, ripple, pixelate, morph, glitch, swirl, heart, dreamy, plus 12 new: door open, burn, radial wipe, mosaic reveal, bounce, lens flare, page curl, cross warp, angular, kaleidoscope, squares wire, color phase
+- **37 GPU-accelerated GLSL transitions** with unique Material icons per type — dissolve, wipe, zoom, spin, flip, cube, ripple, pixelate, morph, glitch, swirl, heart, dreamy, plus 12 new: door open, burn, radial wipe, mosaic reveal, bounce, lens flare, page curl, cross warp, angular, kaleidoscope, squares wire, color phase
 - **40+ video effects** — brightness, contrast, saturation, hue, sharpen, vignette, mosaic, fisheye, wave, chromatic aberration, radial blur, motion blur, tilt shift
 - **Film grain** — perceptual-aware (more in shadows, less in highlights), animated blue noise pattern
 - **VHS/Retro** — scanlines, chroma bleeding, tracking distortion, posterized color depth

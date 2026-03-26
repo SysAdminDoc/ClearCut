@@ -1,6 +1,7 @@
 package com.novacut.editor.engine
 
 import android.content.Context
+import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -58,9 +59,21 @@ class FFmpegEngine @Inject constructor(
         command: String,
         onProgress: (Float) -> Unit = {}
     ): Int = withContext(Dispatchers.IO) {
-        // TODO: When FFmpegX-Android is integrated:
-        // FFmpegX.executeAsync(command) { progress -> onProgress(progress) }
-        -1  // Not yet integrated
+        if (!isAvailable()) {
+            Log.w(TAG, "FFmpegX-Android not available — add dependency to build.gradle.kts")
+            return@withContext -1
+        }
+        try {
+            // Reflective call to avoid hard compile-time dependency
+            val ffmpegClass = Class.forName("io.github.nicholasryan.ffmpegx.FFmpegX")
+            val executeMethod = ffmpegClass.getMethod("execute", String::class.java)
+            val result = executeMethod.invoke(null, command) as Int
+            onProgress(1f)
+            result
+        } catch (e: Exception) {
+            Log.e(TAG, "FFmpeg execution failed: ${e.message}", e)
+            -1
+        }
     }
 
     /**
@@ -122,5 +135,63 @@ class FFmpegEngine @Inject constructor(
         } catch (_: ClassNotFoundException) {
             false
         }
+    }
+
+    /**
+     * Concatenate multiple video files losslessly using the concat demuxer.
+     */
+    suspend fun concat(
+        inputFiles: List<File>,
+        outputFile: File,
+        onProgress: (Float) -> Unit = {}
+    ): Boolean = withContext(Dispatchers.IO) {
+        if (inputFiles.size < 2) return@withContext false
+        val listFile = File(context.cacheDir, "concat_list_${System.currentTimeMillis()}.txt")
+        try {
+            listFile.writeText(inputFiles.joinToString("\n") { "file '${it.absolutePath}'" })
+            val cmd = "-f concat -safe 0 -i \"${listFile.absolutePath}\" -c copy \"${outputFile.absolutePath}\""
+            execute(cmd, onProgress) == 0
+        } finally {
+            listFile.delete()
+        }
+    }
+
+    /**
+     * Change video speed with audio pitch correction.
+     */
+    suspend fun changeSpeed(
+        inputFile: File,
+        outputFile: File,
+        speedFactor: Float,
+        onProgress: (Float) -> Unit = {}
+    ): Boolean = withContext(Dispatchers.IO) {
+        val atempoChain = buildAtempoChain(speedFactor)
+        val cmd = "-i \"${inputFile.absolutePath}\" " +
+            "-filter_complex \"[0:v]setpts=${1f / speedFactor}*PTS[v];[0:a]${atempoChain}[a]\" " +
+            "-map \"[v]\" -map \"[a]\" \"${outputFile.absolutePath}\""
+        execute(cmd, onProgress) == 0
+    }
+
+    /**
+     * Build atempo filter chain — FFmpeg atempo only supports 0.5-100.0 per instance,
+     * so chain multiple for extreme values.
+     */
+    private fun buildAtempoChain(speed: Float): String {
+        val parts = mutableListOf<String>()
+        var remaining = speed.toDouble().coerceIn(0.25, 16.0)
+        while (remaining > 2.0) {
+            parts.add("atempo=2.0")
+            remaining /= 2.0
+        }
+        while (remaining < 0.5) {
+            parts.add("atempo=0.5")
+            remaining /= 0.5
+        }
+        parts.add("atempo=${"%.4f".format(remaining)}")
+        return parts.joinToString(",")
+    }
+
+    companion object {
+        private const val TAG = "FFmpegEngine"
     }
 }

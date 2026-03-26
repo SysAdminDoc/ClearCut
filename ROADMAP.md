@@ -45,10 +45,69 @@
 > Architectural changes, cloud features, advanced workflows.
 
 - [x] 4.1 — **MobileSAM** — TapSegmentEngine with point/box prompts, mask propagation via optical flow
-- [ ] 4.2 — **ProPainter cloud** — Temporally coherent video object removal (cloud-only, deferred)
+- [x] 4.2 — **ProPainter cloud** — CloudInpaintingEngine with job submission/tracking/download API abstraction
 - [x] 4.3 — **OpenTimelineIO** — TimelineExchangeEngine with OTIO JSON export/import + FCPXML export
 - [x] 4.4 — **AV1/VP9 export** — VP9 added to VideoCodec enum, getAvailableCodecs() queries hardware support
-- [ ] 4.5 — **Rive interactive templates** — State machine-driven motion graphics (deferred)
-- [ ] 4.6 — **Soundpipe DSP via NDK** — Broadcast-quality reverb, Moog filter (deferred)
+- [x] 4.5 — **Rive interactive templates** — RiveTemplateEngine with 5 templates, state machine inputs, renderFrame()
+- [x] 4.6 — **Soundpipe DSP** — SoundpipeDspEngine with Schroeder reverb, Moog ladder filter, 4 distortion types (working Kotlin fallback)
 - [x] 4.7 — **Command-based undo/redo** — EditCommand sealed class with AddClip/RemoveClip/Trim/Move/Speed/Effect/Compound
 - [x] 4.8 — **Proxy workflow** — ProxyWorkflowEngine with 3-tier media, auto-switch, generateAllProxies, storage management
+
+## v3.0.0 Release Fixes
+- [x] ExportService: tap-to-open PendingIntent on completion notification
+- [x] ExportService: actual error messages propagated (was hardcoded "Export failed")
+- [x] ExportService: progress notification cancelled before posting completion
+- [x] VideoEngine: exportErrorMessage StateFlow added for error propagation
+- [x] OTIO import: clips with empty URI now skipped (was crash on playback)
+- [x] ProxyWorkflow: empty proxy set returns progress 1.0 (was silent no-op)
+- [x] Settings: default codec selector (H.264/HEVC/AV1/VP9)
+- [x] Settings: proxy generation toggle
+- [x] Settings: AI model management section (Whisper/Segmentation/Piper)
+- [x] ToolPanel: removed duplicate smart_reframe action ID
+
+## v3.0.0 Performance & Polish
+- [x] **Playhead StateFlow split** — playheadMs in separate MutableStateFlow, syncs to EditorState every 5th frame (60→6 copies/sec)
+- [x] **7 new easing types** — BOUNCE, ELASTIC, BACK, CIRCULAR, EXPO, SINE, CUBIC with standard formulas
+- [x] **4 new speed presets** — TIME_FREEZE, FILM_REEL, HEARTBEAT, CRESCENDO
+- [x] **MultiCamEngine wired** — syncMultiCamClips() using first clip as reference, applies SyncResult offsets
+- [x] **Adjustment layer cascade** — Export pipeline applies ADJUSTMENT track effects to overlapping video clips
+- [x] **LruCache thumbnails** — Memory-bounded (1/8 heap, byteCount sizing), replaced LinkedHashMap+cacheLock
+- [x] **AiFeatures error logging** — Log.w added to 15 silent catch blocks (left cleanup catches untouched)
+- [x] **Accessibility** — contentDescription on all interactive UI elements (ToolPanel, EditorScreen, Timeline, AudioMixer)
+- [x] **Sticker/GIF overlays** — ImageOverlay data class, ImageOverlayType enum, add/update/remove methods
+- [x] **Timeline markers** — TimelineMarker with 6 colors, add/delete/jump-to-next/jump-to-prev
+- [x] **Favorites/recent effects** — DataStore persistence, toggle favorite, track usage in SettingsRepository
+- [x] **Proxy playback wiring** — prepareTimeline() now uses clip.proxyUri when available
+- [x] **Batch export per-item progress** — videoEngine.exportProgress collected and mapped to BatchExportItem.progress
+- [x] **EditCommand bridge** — Documentation for gradual migration from snapshot to command-based undo
+
+## v3.1.0 — Code Quality & New Features
+
+### Code Quality
+- [x] **Extract StateFlowExt** — Deduplicated MutableStateFlow.update() CAS-loop from 7 delegate classes into shared `StateFlowExt.kt`
+- [x] **Fix shadowed `it` lambdas** — Fixed `removeBatchExportItem` and `deleteTimelineMarker` where nested lambdas shadowed outer `it`
+- [x] **ExportService lifecycle** — ExportService now properly stopped on export completion, error, and exception
+- [x] **Remove artificial delay** — Removed unexplained `delay(1000)` from face tracking in both AiToolsDelegate and EditorViewModel
+- [x] **Unused import cleanup** — Removed dead `delay` import from AiToolsDelegate
+
+### Engine Improvements
+- [x] **CloudInpaintingEngine** — Config persistence via SharedPreferences, input validation (duration/mask), proper logging, dynamic `isAvailable()` based on config
+- [x] **FFmpegEngine** — Reflective runtime invocation (avoids hard dependency), concat demuxer, speed change with atempo chain (0.25x-16x), proper logging
+- [x] **NoiseReductionEngine** — Runtime DeepFilterNet detection via reflection, proper OFF mode short-circuit, cascading ML→spectral gate fallback
+- [x] **PiperTtsEngine** — Android system TTS fallback via `synthesizeToFile()` with `UtteranceProgressListener`, voice deletion, Sherpa-ONNX runtime detection
+
+### New Features
+- [x] **Waveform cache** — LRU cache (64 entries) in AudioEngine prevents redundant PCM decoding on timeline recomposition, with `clearWaveformCache()` on ViewModel clear
+- [x] **Haptic feedback** — Timeline trim handles fire `LongPress` haptic on drag start; clip slide fires `TextHandleMove` haptic on magnetic snap
+- [x] **Transition icons** — Unique Material icons per transition type (gradient, swipe, zoom, rotate, flip, cube, water, fire, lens, page curl, etc.) replacing generic SwapHoriz
+- [x] **Transition selection border** — Active transition gets Mauve accent border for clearer visual feedback
+- [x] **Clip reorder** — `reorderClip()` repositions clip within track with automatic timeline recalculation
+- [x] **Move clip to track** — `moveClipToTrack()` transfers clip between tracks, appending at end of target track
+
+### Remaining TODO Stubs (Dependency-Gated)
+- [ ] **Sherpa-ONNX Piper synthesis** — Full Piper TTS via Sherpa-ONNX (blocked on `com.k2fsa.sherpa:onnx-android` dependency)
+- [ ] **DeepFilterNet ML processing** — Full ML noise reduction (blocked on `android-deepfilternet` dependency)
+- [ ] **RIFE frame interpolation** — NCNN+Vulkan inference (blocked on NCNN Android dependency)
+- [ ] **LaMa inpainting** — ONNX Runtime inference (blocked on model hosting + ONNX dependency)
+- [ ] **Cloud inpainting API** — ProPainter cloud endpoint integration (blocked on server deployment)
+- [ ] **FFmpegX integration** — Full FFmpeg command execution (blocked on `ffmpegx-android` dependency)

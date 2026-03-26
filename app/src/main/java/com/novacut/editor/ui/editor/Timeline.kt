@@ -24,6 +24,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.*
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -65,10 +67,14 @@ fun Timeline(
     onClipLongPress: (String) -> Unit = {},
     onSlideClip: (clipId: String, deltaMs: Long) -> Unit = { _, _ -> },
     onSlipClip: (clipId: String, deltaMs: Long) -> Unit = { _, _ -> },
+    markers: List<TimelineMarker> = emptyList(),
+    onAddMarker: () -> Unit = {},
+    onMarkerTapped: (TimelineMarker) -> Unit = {},
     engine: VideoEngine,
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
+    val haptic = LocalHapticFeedback.current
     val trackHeight = 60.dp
     val rulerHeight = 28.dp
     val pixelsPerMs = zoomLevel * 0.15f // base scale
@@ -125,7 +131,7 @@ fun Timeline(
             }
         }
 
-        // Zoom controls
+        // Zoom controls + Add Marker
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -133,6 +139,14 @@ fun Timeline(
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Add Marker button
+            IconButton(
+                onClick = onAddMarker,
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(Icons.Default.Flag, "Add Marker", tint = Mocha.Blue, modifier = Modifier.size(16.dp))
+            }
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
                 "${(zoomLevel * 100).toInt()}%",
                 color = Mocha.Subtext0,
@@ -206,19 +220,19 @@ fun Timeline(
                             ) {
                                 Icon(
                                     if (track.isMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
-                                    contentDescription = if (track.isMuted) "Unmute" else "Mute",
+                                    contentDescription = if (track.isMuted) "Unmute track" else "Mute track",
                                     tint = if (track.isMuted) Mocha.Red.copy(alpha = 0.7f) else Mocha.Surface2,
                                     modifier = Modifier.size(11.dp).clickable { onToggleTrackMute(track.id) }
                                 )
                                 Icon(
                                     if (track.isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                    contentDescription = if (track.isVisible) "Hide" else "Show",
+                                    contentDescription = if (track.isVisible) "Hide track" else "Show track",
                                     tint = if (!track.isVisible) Mocha.Red.copy(alpha = 0.7f) else Mocha.Surface2,
                                     modifier = Modifier.size(11.dp).clickable { onToggleTrackVisible(track.id) }
                                 )
                                 Icon(
                                     if (track.isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
-                                    contentDescription = if (track.isLocked) "Unlock" else "Lock",
+                                    contentDescription = if (track.isLocked) "Unlock track" else "Lock track",
                                     tint = if (track.isLocked) Mocha.Peach.copy(alpha = 0.7f) else Mocha.Surface2,
                                     modifier = Modifier.size(11.dp).clickable { onToggleTrackLock(track.id) }
                                 )
@@ -248,45 +262,123 @@ fun Timeline(
                         }
                     }
             ) {
+                // Tapped marker tooltip state
+                var tappedMarkerId by remember { mutableStateOf<String?>(null) }
+
                 Column {
                     // Time ruler — tap and drag to position playhead
                     var rulerDragX by remember { mutableFloatStateOf(0f) }
-                    Canvas(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(rulerHeight)
-                            .background(Mocha.Crust)
-                            .pointerInput(scrollOffsetMs, zoomLevel, totalDurationMs) {
-                                detectDragGestures(
-                                    onDragStart = { offset ->
-                                        rulerDragX = offset.x
-                                        onScrubStart()
-                                        // Move playhead to tap position immediately
+                    Box {
+                        Canvas(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(rulerHeight)
+                                .background(Mocha.Crust)
+                                .pointerInput(scrollOffsetMs, zoomLevel, totalDurationMs, markers) {
+                                    detectTapGestures { offset ->
+                                        // Check if tap is on a marker flag
                                         val currentPixelsPerMs = zoomLevel * 0.15f
-                                        if (currentPixelsPerMs > 0.001f) {
-                                            val tappedMs = scrollOffsetMs + (offset.x / currentPixelsPerMs).toLong()
-                                            onPlayheadMoved(tappedMs.coerceIn(0L, totalDurationMs))
+                                        val flagWidthPx = 8.dp.toPx()
+                                        val tappedMarker = markers.firstOrNull { marker ->
+                                            val markerX = (marker.timeMs - scrollOffsetMs) * currentPixelsPerMs
+                                            offset.x in (markerX - flagWidthPx / 2)..(markerX + flagWidthPx / 2)
                                         }
-                                    },
-                                    onDragEnd = { onScrubEnd() },
-                                    onDragCancel = { onScrubEnd() },
-                                    onDrag = { _, dragAmount ->
-                                        rulerDragX += dragAmount.x
-                                        val currentPixelsPerMs = zoomLevel * 0.15f
-                                        if (currentPixelsPerMs < 0.001f) return@detectDragGestures
-                                        val posMs = scrollOffsetMs + (rulerDragX / currentPixelsPerMs).toLong()
-                                        onPlayheadMoved(posMs.coerceIn(0L, totalDurationMs))
+                                        if (tappedMarker != null) {
+                                            tappedMarkerId = if (tappedMarkerId == tappedMarker.id) null else tappedMarker.id
+                                            onMarkerTapped(tappedMarker)
+                                        } else {
+                                            tappedMarkerId = null
+                                            // Move playhead to tap position
+                                            if (currentPixelsPerMs > 0.001f) {
+                                                val tappedMs = scrollOffsetMs + (offset.x / currentPixelsPerMs).toLong()
+                                                onPlayheadMoved(tappedMs.coerceIn(0L, totalDurationMs))
+                                            }
+                                        }
                                     }
+                                }
+                                .pointerInput(scrollOffsetMs, zoomLevel, totalDurationMs) {
+                                    detectDragGestures(
+                                        onDragStart = { offset ->
+                                            rulerDragX = offset.x
+                                            onScrubStart()
+                                            // Move playhead to tap position immediately
+                                            val currentPixelsPerMs = zoomLevel * 0.15f
+                                            if (currentPixelsPerMs > 0.001f) {
+                                                val tappedMs = scrollOffsetMs + (offset.x / currentPixelsPerMs).toLong()
+                                                onPlayheadMoved(tappedMs.coerceIn(0L, totalDurationMs))
+                                            }
+                                        },
+                                        onDragEnd = { onScrubEnd() },
+                                        onDragCancel = { onScrubEnd() },
+                                        onDrag = { _, dragAmount ->
+                                            rulerDragX += dragAmount.x
+                                            val currentPixelsPerMs = zoomLevel * 0.15f
+                                            if (currentPixelsPerMs < 0.001f) return@detectDragGestures
+                                            val posMs = scrollOffsetMs + (rulerDragX / currentPixelsPerMs).toLong()
+                                            onPlayheadMoved(posMs.coerceIn(0L, totalDurationMs))
+                                        }
+                                    )
+                                }
+                        ) {
+                            drawTimeRuler(
+                                scrollOffsetMs = scrollOffsetMs,
+                                pixelsPerMs = pixelsPerMs,
+                                width = size.width,
+                                height = size.height,
+                                textMeasurer = textMeasurer
+                            )
+
+                            // Draw timeline marker flags
+                            val flagWidthPx = 8.dp.toPx()
+                            val flagHeightPx = 12.dp.toPx()
+                            markers.forEach { marker ->
+                                val markerX = (marker.timeMs - scrollOffsetMs) * pixelsPerMs
+                                if (markerX in -flagWidthPx..size.width + flagWidthPx) {
+                                    val markerColor = Color(marker.color.argb)
+                                    // Draw flag pole
+                                    drawLine(
+                                        color = markerColor,
+                                        start = Offset(markerX, 0f),
+                                        end = Offset(markerX, size.height),
+                                        strokeWidth = 1.5f
+                                    )
+                                    // Draw triangular flag
+                                    val flagPath = Path().apply {
+                                        moveTo(markerX, 0f)
+                                        lineTo(markerX + flagWidthPx, flagHeightPx * 0.4f)
+                                        lineTo(markerX, flagHeightPx)
+                                        close()
+                                    }
+                                    drawPath(flagPath, markerColor)
+                                }
+                            }
+                        }
+
+                        // Marker label tooltip
+                        val tappedMarker = markers.find { it.id == tappedMarkerId }
+                        if (tappedMarker != null && tappedMarker.label.isNotEmpty()) {
+                            val markerX = (tappedMarker.timeMs - scrollOffsetMs) * pixelsPerMs
+                            Box(
+                                modifier = Modifier
+                                    .offset(
+                                        x = with(density) { markerX.toDp() - 40.dp },
+                                        y = rulerHeight
+                                    )
+                                    .background(
+                                        Color(tappedMarker.color.argb).copy(alpha = 0.9f),
+                                        RoundedCornerShape(4.dp)
+                                    )
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = tappedMarker.label,
+                                    color = Mocha.Crust,
+                                    fontSize = 9.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
-                    ) {
-                        drawTimeRuler(
-                            scrollOffsetMs = scrollOffsetMs,
-                            pixelsPerMs = pixelsPerMs,
-                            width = size.width,
-                            height = size.height,
-                            textMeasurer = textMeasurer
-                        )
+                        }
                     }
 
                     // Tracks
@@ -387,11 +479,16 @@ fun Timeline(
 
                                                             val deltaMs = (dragAmount.x / currentPixelsPerMs).toLong()
                                                             if (isTrimMode) {
-                                                                // Slip edit: shift source window within clip (trim mode + body drag)
                                                                 onSlipClip(clip.id, deltaMs)
                                                             } else {
-                                                                // Slide edit: move clip position on timeline
                                                                 onSlideClip(clip.id, deltaMs)
+                                                                // Haptic tick on magnetic snap
+                                                                val snapThreshMs = (12.dp.toPx() / currentPixelsPerMs).toLong()
+                                                                val snapTargetsLocal = tracks.flatMap { t -> t.clips.filter { it.id != clip.id }.flatMap { listOf(it.timelineStartMs, it.timelineEndMs) } }
+                                                                    .plus(playheadMs).plus(0L)
+                                                                if (findSnapTarget(clip.timelineStartMs + deltaMs, snapTargetsLocal, snapThreshMs) != null) {
+                                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                                }
                                                             }
                                                         }
                                                     )
@@ -480,7 +577,10 @@ fun Timeline(
                                                     .pointerInput(clip.id, clip.trimStartMs, clip.trimEndMs, zoomLevel) {
                                                         val currentPixelsPerMs = zoomLevel * 0.15f
                                                         detectHorizontalDragGestures(
-                                                            onDragStart = { onTrimDragStarted() },
+                                                            onDragStart = {
+                                                                onTrimDragStarted()
+                                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                            },
                                                             onDragEnd = {},
                                                             onDragCancel = {},
                                                             onHorizontalDrag = { _, dragAmount ->
@@ -510,7 +610,10 @@ fun Timeline(
                                                     .pointerInput(clip.id, clip.trimStartMs, clip.trimEndMs, zoomLevel) {
                                                         val currentPixelsPerMs = zoomLevel * 0.15f
                                                         detectHorizontalDragGestures(
-                                                            onDragStart = { onTrimDragStarted() },
+                                                            onDragStart = {
+                                                                onTrimDragStarted()
+                                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                            },
                                                             onDragEnd = {},
                                                             onDragCancel = {},
                                                             onHorizontalDrag = { _, dragAmount ->
