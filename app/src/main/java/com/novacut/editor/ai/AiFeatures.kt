@@ -317,15 +317,15 @@ class AiFeatures @Inject constructor(
                 val scaled = Bitmap.createScaledBitmap(frame, 128, 72, true)
                 if (scaled !== frame) frame.recycle()
 
-                for (y in 0 until scaled.height) {
-                    for (x in 0 until scaled.width) {
-                        val pixel = scaled.getPixel(x, y)
-                        histR[Color.red(pixel)]++
-                        histG[Color.green(pixel)]++
-                        histB[Color.blue(pixel)]++
-                        totalPixels++
-                    }
+                val pixelCount = scaled.width * scaled.height
+                val pixels = IntArray(pixelCount)
+                scaled.getPixels(pixels, 0, scaled.width, 0, 0, scaled.width, scaled.height)
+                for (pixel in pixels) {
+                    histR[Color.red(pixel)]++
+                    histG[Color.green(pixel)]++
+                    histB[Color.blue(pixel)]++
                 }
+                totalPixels += pixelCount
                 scaled.recycle()
             }
 
@@ -729,10 +729,13 @@ class AiFeatures @Inject constructor(
             val borderH = max(1, (h * 0.15f).toInt())
             var sumR = 0L; var sumG = 0L; var sumB = 0L; var count = 0L
 
+            val pixels = IntArray(w * h)
+            scaled.getPixels(pixels, 0, w, 0, 0, w, h)
+            scaled.recycle()
             for (y in 0 until h) {
                 for (x in 0 until w) {
                     if (x < borderW || x >= w - borderW || y < borderH || y >= h - borderH) {
-                        val p = scaled.getPixel(x, y)
+                        val p = pixels[y * w + x]
                         sumR += Color.red(p)
                         sumG += Color.green(p)
                         sumB += Color.blue(p)
@@ -740,7 +743,6 @@ class AiFeatures @Inject constructor(
                     }
                 }
             }
-            scaled.recycle()
 
             if (count == 0L) return@withContext BackgroundAnalysis()
 
@@ -1085,20 +1087,19 @@ class AiFeatures @Inject constructor(
 
                 var lumSum = 0f; var satSum = 0f; var tempSum = 0f
                 val n = scaled.width * scaled.height
-                for (y in 0 until scaled.height) {
-                    for (x in 0 until scaled.width) {
-                        val p = scaled.getPixel(x, y)
-                        val r = Color.red(p) / 255f
-                        val g = Color.green(p) / 255f
-                        val b = Color.blue(p) / 255f
-                        lumSum += r * 0.299f + g * 0.587f + b * 0.114f
-                        val cMax = max(r, max(g, b))
-                        val cMin = min(r, min(g, b))
-                        satSum += if (cMax > 0f) (cMax - cMin) / cMax else 0f
-                        tempSum += (r - b) // positive = warm, negative = cool
-                    }
-                }
+                val pixels = IntArray(n)
+                scaled.getPixels(pixels, 0, scaled.width, 0, 0, scaled.width, scaled.height)
                 scaled.recycle()
+                for (p in pixels) {
+                    val r = Color.red(p) / 255f
+                    val g = Color.green(p) / 255f
+                    val b = Color.blue(p) / 255f
+                    lumSum += r * 0.299f + g * 0.587f + b * 0.114f
+                    val cMax = max(r, max(g, b))
+                    val cMin = min(r, min(g, b))
+                    satSum += if (cMax > 0f) (cMax - cMin) / cMax else 0f
+                    tempSum += (r - b)
+                }
                 avgLum += lumSum / n
                 avgSat += satSum / n
                 avgTemp += tempSum / n
@@ -1241,26 +1242,35 @@ class AiFeatures @Inject constructor(
         val height = minOf(frame1.height, frame2.height, 36)
 
         val scaled1 = Bitmap.createScaledBitmap(frame1, width, height, true)
-        val scaled2 = Bitmap.createScaledBitmap(frame2, width, height, true)
+        val scaled2 = try {
+            Bitmap.createScaledBitmap(frame2, width, height, true)
+        } catch (e: Exception) {
+            if (scaled1 !== frame1) scaled1.recycle()
+            throw e
+        }
 
-        var totalDiff = 0L
-        val totalPixels = width * height
+        try {
+            val totalPixels = width * height
+            val pixels1 = IntArray(totalPixels)
+            val pixels2 = IntArray(totalPixels)
+            scaled1.getPixels(pixels1, 0, width, 0, 0, width, height)
+            scaled2.getPixels(pixels2, 0, width, 0, 0, width, height)
 
-        for (y in 0 until height) {
-            for (x in 0 until width) {
-                val p1 = scaled1.getPixel(x, y)
-                val p2 = scaled2.getPixel(x, y)
+            var totalDiff = 0L
+            for (i in 0 until totalPixels) {
+                val p1 = pixels1[i]
+                val p2 = pixels2[i]
                 val dr = abs((p1 shr 16 and 0xFF) - (p2 shr 16 and 0xFF))
                 val dg = abs((p1 shr 8 and 0xFF) - (p2 shr 8 and 0xFF))
                 val db = abs((p1 and 0xFF) - (p2 and 0xFF))
                 totalDiff += (dr + dg + db) / 3
             }
+
+            return (totalDiff.toFloat() / totalPixels / 255f).coerceIn(0f, 1f)
+        } finally {
+            if (scaled1 !== frame1) scaled1.recycle()
+            if (scaled2 !== frame2) scaled2.recycle()
         }
-
-        if (scaled1 !== frame1) scaled1.recycle()
-        if (scaled2 !== frame2) scaled2.recycle()
-
-        return (totalDiff.toFloat() / totalPixels / 255f).coerceIn(0f, 1f)
     }
 
     // ---- Filler Word / Silence Removal ----

@@ -11,8 +11,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.novacut.editor.R
 import com.novacut.editor.model.SaveIndicatorState
 import com.novacut.editor.ui.theme.Mocha
 import kotlinx.coroutines.delay
@@ -56,7 +58,7 @@ fun AutoSaveIndicator(
                         color = Mocha.Subtext0
                     )
                     Text(
-                        text = "Saving...",
+                        text = stringResource(R.string.autosave_saving),
                         fontSize = 10.sp,
                         color = Mocha.Subtext0
                     )
@@ -65,12 +67,12 @@ fun AutoSaveIndicator(
                 SaveIndicatorState.SAVED -> {
                     Icon(
                         imageVector = Icons.Default.Check,
-                        contentDescription = "Saved",
+                        contentDescription = stringResource(R.string.autosave_saved),
                         tint = Mocha.Green,
                         modifier = Modifier.size(14.dp)
                     )
                     Text(
-                        text = "Saved",
+                        text = stringResource(R.string.autosave_saved),
                         fontSize = 10.sp,
                         color = Mocha.Green
                     )
@@ -79,12 +81,12 @@ fun AutoSaveIndicator(
                 SaveIndicatorState.ERROR -> {
                     Icon(
                         imageVector = Icons.Default.Warning,
-                        contentDescription = "Save failed",
+                        contentDescription = stringResource(R.string.autosave_failed),
                         tint = Mocha.Red,
                         modifier = Modifier.size(14.dp)
                     )
                     Text(
-                        text = "Save failed",
+                        text = stringResource(R.string.autosave_failed),
                         fontSize = 10.sp,
                         color = Mocha.Red
                     )

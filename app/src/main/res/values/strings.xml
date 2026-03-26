@@ -351,4 +351,138 @@
     <string name="tool_text_overlay_cd">Text overlay</string>
     <string name="tool_edit">Edit</string>
     <string name="tool_delete">Delete</string>
+
+    <!-- UndoHistoryPanel -->
+    <string name="undo_history_title">History</string>
+    <string name="undo_history_close">Close history</string>
+    <string name="undo_history_empty">No history yet</string>
+
+    <!-- EditorScreen (delete confirmation) -->
+    <string name="editor_delete_clip_message">Delete this clip? This action can be undone.</string>
+
+    <!-- AudioPanel (voiceover) -->
+    <string name="audio_select_clip">Select a clip to edit audio</string>
+    <string name="audio_tap_to_stop">Tap to stop</string>
+    <string name="audio_tap_to_record">Tap to record</string>
+
+    <!-- TtsPanel -->
+    <string name="tts_title">Text to Speech</string>
+    <string name="tts_add_to_timeline">Add to Timeline</string>
+    <string name="tts_enter_text">Enter text to speak\u2026</string>
+    <string name="tts_voice">Voice</string>
+    <string name="tts_speed">Speed</string>
+    <string name="tts_pitch">Pitch</string>
+    <string name="tts_generate">Generate Speech</string>
+    <string name="tts_generating">Generating\u2026</string>
+    <string name="tts_generate_icon_cd">Generate</string>
+    <string name="tts_clear_cd">Clear text</string>
+    <string name="tts_close_cd">Close TTS panel</string>
+    <string name="tts_speed_format">%.1fx</string>
+    <string name="tts_pitch_format">%.1f</string>
+
+    <!-- CaptionEditorPanel -->
+    <string name="caption_title">Captions</string>
+    <string name="caption_no_captions">No captions yet</string>
+    <string name="caption_add">Add Caption</string>
+    <string name="caption_close_cd">Close captions</string>
+    <string name="caption_add_cd">Add caption</string>
+    <string name="caption_style_gallery">Style Gallery</string>
+    <string name="caption_start_time">Start (s)</string>
+    <string name="caption_end_time">End (s)</string>
+    <string name="caption_font_size">Font Size</string>
+    <string name="caption_text_hint">Caption text</string>
+    <string name="caption_delete_cd">Delete caption</string>
+
+    <!-- CloudBackupPanel -->
+    <string name="cloud_backup_title">Cloud Backup</string>
+    <string name="cloud_backup_sign_in">Sign in with Google to back up your projects</string>
+    <string name="cloud_backup_sign_in_google">Sign In</string>
+    <string name="cloud_backup_last_backup">Last backup: %1$s</string>
+    <string name="cloud_backup_never">Never</string>
+    <string name="cloud_backup_auto">Auto-Backup</string>
+    <string name="cloud_backup_auto_desc">Back up after each save</string>
+    <string name="cloud_backup_now">Backup Now</string>
+    <string name="cloud_backup_restore">Restore from Cloud</string>
+    <string name="cloud_backup_no_backups">No cloud backups found</string>
+
+    <!-- SnapshotHistoryPanel -->
+    <string name="snapshot_title">Version History</string>
+    <string name="snapshot_close_cd">Close snapshots</string>
+    <string name="snapshot_take">Take Snapshot</string>
+    <string name="snapshot_take_cd">Take snapshot</string>
+    <string name="snapshot_empty">No snapshots yet</string>
+    <string name="snapshot_name_hint">Snapshot name\u2026</string>
+    <string name="snapshot_tracks_clips">%1$d tracks, %2$d clips</string>
+    <string name="snapshot_restore">Restore</string>
+    <string name="snapshot_restore_cd">Restore snapshot</string>
+    <string name="snapshot_delete_cd">Delete snapshot</string>
+
+    <!-- PipPresetsPanel -->
+    <string name="pip_title">Picture-in-Picture</string>
+    <string name="pip_layout">Layout</string>
+    <string name="pip_close_cd">Close PiP panel</string>
+
+    <!-- ChapterMarkerPanel -->
+    <string name="chapter_title">Chapters</string>
+    <string name="chapter_empty">No chapters. Tap + to add at playhead.</string>
+    <string name="chapter_add_cd">Add chapter at playhead</string>
+    <string name="chapter_close_cd">Close chapters</string>
+    <string name="chapter_label_hint">Chapter label</string>
+
+    <!-- EffectLibraryPanel -->
+    <string name="effect_library_title">Effect Library</string>
+    <string name="effect_library_close_cd">Close effect library</string>
+    <string name="effect_library_favorites">Favorites</string>
+    <string name="effect_library_recent">Recently Used</string>
+    <string name="effect_library_all">All Effects</string>
+    <string name="effect_library_no_favorites">No favorites yet. Tap the star on any effect.</string>
+
+    <!-- FillerRemovalPanel -->
+    <string name="filler_removal_title">Remove Fillers &amp; Silence</string>
+    <string name="filler_removal_close_cd">Close filler removal</string>
+    <string name="filler_removal_description">Automatically detect and remove filler words (um, uh, like, you know) and silent gaps from your clip.</string>
+    <string name="filler_removal_analyzing">Analyzing audio\u2026</string>
+    <string name="filler_removal_analyze_button">Detect Fillers &amp; Silence</string>
+    <string name="filler_removal_found_count">Found %1$d segments to remove</string>
+    <string name="filler_removal_filler_words">Filler Words</string>
+    <string name="filler_removal_silences">Silences</string>
+    <string name="filler_removal_apply">Remove Selected (%1$d)</string>
+
+    <!-- AutoEditPanel -->
+    <string name="auto_edit_title">AI Auto Edit</string>
+    <string name="auto_edit_close_cd">Close auto edit</string>
+    <string name="auto_edit_description">AI analyzes your clips for quality, motion, and faces, then creates a highlight reel with the best moments.</string>
+    <string name="auto_edit_start">Generate Highlight Reel</string>
+
+    <!-- BeatSyncPanel -->
+    <string name="beat_sync_title">Beat Sync</string>
+    <string name="beat_sync_close_cd">Close beat sync</string>
+    <string name="beat_sync_detect">Detect Beats</string>
+    <string name="beat_sync_detecting">Analyzing\u2026</string>
+    <string name="beat_sync_apply">Apply Beat Sync</string>
+
+    <!-- BlendModeSelector -->
+    <string name="blend_mode_title">Blend Mode</string>
+    <string name="blend_mode_close_cd">Close blend mode</string>
+
+    <!-- RenderPreviewSheet -->
+    <string name="render_preview_title">Render Analysis</string>
+    <string name="render_preview_rendering">Rendering preview\u2026</string>
+    <string name="render_preview_close_cd">Close render preview</string>
+    <string name="render_preview_play_cd">Play rendered preview</string>
+
+    <!-- MediaManagerPanel -->
+    <string name="media_manager_title">Media Manager</string>
+    <string name="media_manager_close_cd">Close media manager</string>
+    <string name="media_manager_empty">No media assets in project</string>
+    <string name="media_manager_relink_cd">Relink media</string>
+
+    <!-- SmartReframePanel -->
+    <string name="smart_reframe_title">Smart Reframe</string>
+    <string name="smart_reframe_close_cd">Close smart reframe</string>
+
+    <!-- AutoSaveIndicator -->
+    <string name="autosave_saving">Saving\u2026</string>
+    <string name="autosave_saved">Saved</string>
+    <string name="autosave_failed">Save failed</string>
 </resources>

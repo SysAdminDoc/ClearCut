@@ -15,6 +15,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.novacut.editor.R
 import com.novacut.editor.model.ChapterMarker
 import com.novacut.editor.ui.theme.Mocha
 
@@ -43,7 +45,7 @@ fun ChapterMarkerPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Chapters", color = TextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.chapter_title), color = TextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             Row {
                 // Add chapter at playhead
                 IconButton(
@@ -53,10 +55,10 @@ fun ChapterMarkerPanel(
                     },
                     modifier = Modifier.size(32.dp)
                 ) {
-                    Icon(Icons.Default.Add, "Add at Playhead", tint = Green, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Add, stringResource(R.string.chapter_add_cd), tint = Green, modifier = Modifier.size(18.dp))
                 }
                 IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Close, "Close", tint = Subtext, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Close, stringResource(R.string.chapter_close_cd), tint = Subtext, modifier = Modifier.size(18.dp))
                 }
             }
         }
@@ -80,7 +82,7 @@ fun ChapterMarkerPanel(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Default.Bookmarks, null, tint = Subtext.copy(alpha = 0.3f), modifier = Modifier.size(32.dp))
                     Spacer(Modifier.height(4.dp))
-                    Text("No chapters. Tap + to add at playhead.", color = Subtext, fontSize = 12.sp)
+                    Text(stringResource(R.string.chapter_empty), color = Subtext, fontSize = 12.sp)
                 }
             }
         } else {

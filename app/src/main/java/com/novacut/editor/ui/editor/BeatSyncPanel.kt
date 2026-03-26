@@ -17,6 +17,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.novacut.editor.R
 import com.novacut.editor.ui.theme.Mocha
 
 @Composable
@@ -59,7 +61,7 @@ fun BeatSyncPanel(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Beat Sync",
+                text = stringResource(R.string.beat_sync_title),
                 color = Mocha.Text,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -71,7 +73,7 @@ fun BeatSyncPanel(
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = "Close beat sync",
+                    contentDescription = stringResource(R.string.beat_sync_close_cd),
                     tint = Mocha.Subtext0,
                     modifier = Modifier.size(18.dp)
                 )
@@ -100,7 +102,7 @@ fun BeatSyncPanel(
                     color = Mocha.Peach
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Analyzing...", fontSize = 13.sp)
+                Text(stringResource(R.string.beat_sync_detecting), fontSize = 13.sp)
             } else {
                 Icon(
                     imageVector = Icons.Default.GraphicEq,
@@ -108,7 +110,7 @@ fun BeatSyncPanel(
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Detect Beats", fontSize = 13.sp)
+                Text(stringResource(R.string.beat_sync_detect), fontSize = 13.sp)
             }
         }
 
@@ -185,7 +187,7 @@ fun BeatSyncPanel(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "Apply Beat Sync",
+                    text = stringResource(R.string.beat_sync_apply),
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp
                 )

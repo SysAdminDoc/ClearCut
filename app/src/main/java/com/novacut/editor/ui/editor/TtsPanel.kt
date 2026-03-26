@@ -12,9 +12,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.novacut.editor.R
 import com.novacut.editor.engine.TtsEngine
 import com.novacut.editor.ui.theme.Mocha
 
@@ -44,9 +46,9 @@ fun TtsPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Text to Speech", color = Mocha.Text, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text(stringResource(R.string.tts_title), color = Mocha.Text, fontWeight = FontWeight.Bold, fontSize = 16.sp)
             IconButton(onClick = { onStopPreview(); onClose() }) {
-                Icon(Icons.Default.Close, contentDescription = "Close", tint = Mocha.Subtext0)
+                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.tts_close_cd), tint = Mocha.Subtext0)
             }
         }
 
@@ -66,7 +68,7 @@ fun TtsPanel(
         OutlinedTextField(
             value = text,
             onValueChange = { text = it },
-            placeholder = { Text("Enter text to speak...", color = Mocha.Overlay0) },
+            placeholder = { Text(stringResource(R.string.tts_enter_text), color = Mocha.Overlay0) },
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 80.dp, max = 120.dp),
@@ -124,7 +126,7 @@ fun TtsPanel(
                 }
             }
         } else {
-            Text("Voice Style", color = Mocha.Subtext0, fontSize = 12.sp)
+            Text(stringResource(R.string.tts_voice), color = Mocha.Subtext0, fontSize = 12.sp)
             Spacer(modifier = Modifier.height(4.dp))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(TtsEngine.VoiceStyle.entries.toList()) { style ->
@@ -188,11 +190,11 @@ fun TtsPanel(
                         strokeWidth = 2.dp
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Generating...", fontSize = 13.sp)
+                    Text(stringResource(R.string.tts_generating), fontSize = 13.sp)
                 } else {
-                    Icon(Icons.Default.RecordVoiceOver, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.RecordVoiceOver, contentDescription = stringResource(R.string.tts_generate_icon_cd), modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Add to Timeline", fontSize = 13.sp)
+                    Text(stringResource(R.string.tts_generate), fontSize = 13.sp)
                 }
             }
         }

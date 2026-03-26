@@ -197,7 +197,8 @@ class SegmentationEngine @Inject constructor(
             val result = segment(scaled)
             scaled.recycle()
             result
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            android.util.Log.w("SegmentationEngine", "Frame segmentation failed for $videoUri", e)
             null
         } finally {
             retriever.release()

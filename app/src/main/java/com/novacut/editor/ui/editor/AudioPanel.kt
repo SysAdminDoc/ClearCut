@@ -57,7 +57,7 @@ fun AudioPanel(
 
         if (clip == null) {
             Text(
-                "Select a clip to edit audio",
+                stringResource(R.string.audio_select_clip),
                 color = Mocha.Subtext0,
                 fontSize = 13.sp,
                 modifier = Modifier.padding(vertical = 24.dp).fillMaxWidth(),
@@ -284,7 +284,7 @@ fun VoiceoverRecorder(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            if (isRecording) "Tap to stop" else "Tap to record",
+            if (isRecording) stringResource(R.string.audio_tap_to_stop) else stringResource(R.string.audio_tap_to_record),
             color = Mocha.Subtext0,
             fontSize = 13.sp
         )

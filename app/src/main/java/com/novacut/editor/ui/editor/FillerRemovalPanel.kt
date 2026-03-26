@@ -12,6 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.novacut.editor.R
 import com.novacut.editor.ui.theme.Mocha
 
 @Composable
@@ -34,16 +36,16 @@ fun FillerRemovalPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Remove Fillers & Silence", color = Mocha.Text, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text(stringResource(R.string.filler_removal_title), color = Mocha.Text, fontWeight = FontWeight.Bold, fontSize = 16.sp)
             IconButton(onClick = onClose) {
-                Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0)
+                Icon(Icons.Default.Close, stringResource(R.string.filler_removal_close_cd), tint = Mocha.Subtext0)
             }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            "Automatically detect and remove filler words (um, uh, like, you know) and silent gaps from your clip.",
+            stringResource(R.string.filler_removal_description),
             color = Mocha.Subtext0,
             fontSize = 12.sp
         )
@@ -60,11 +62,11 @@ fun FillerRemovalPanel(
             if (isAnalyzing) {
                 CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Mocha.Base, strokeWidth = 2.dp)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Analyzing audio...")
+                Text(stringResource(R.string.filler_removal_analyzing))
             } else {
                 Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Detect Fillers & Silence")
+                Text(stringResource(R.string.filler_removal_analyze_button))
             }
         }
 

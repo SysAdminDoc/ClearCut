@@ -401,7 +401,9 @@ class WhisperEngine @Inject constructor(
                 map[tokenId] = key
             }
             vocab = map
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            Log.w("WhisperEngine", "Failed to load vocab from $vocabFile", e)
+        }
     }
 
     /**
@@ -494,7 +496,8 @@ class WhisperEngine @Inject constructor(
                 offset += chunk.size
             }
             return allSamples to sampleRate
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w("WhisperEngine", "PCM decode failed for $uri", e)
             return null
         } finally {
             extractor.release()

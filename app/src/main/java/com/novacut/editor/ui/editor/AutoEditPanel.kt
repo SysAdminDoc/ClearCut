@@ -14,6 +14,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.novacut.editor.R
 import com.novacut.editor.ui.theme.Mocha
 
 @Composable
@@ -36,16 +38,16 @@ fun AutoEditPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("AI Auto Edit", color = Mocha.Text, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text(stringResource(R.string.auto_edit_title), color = Mocha.Text, fontWeight = FontWeight.Bold, fontSize = 16.sp)
             IconButton(onClick = onClose) {
-                Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0)
+                Icon(Icons.Default.Close, stringResource(R.string.auto_edit_close_cd), tint = Mocha.Subtext0)
             }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            "AI analyzes your clips for quality, motion, and faces, then creates a highlight reel with the best moments.",
+            stringResource(R.string.auto_edit_description),
             color = Mocha.Subtext0,
             fontSize = 12.sp
         )
@@ -77,7 +79,7 @@ fun AutoEditPanel(
             } else {
                 Icon(Icons.Default.AutoFixHigh, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Generate Highlight Reel")
+                Text(stringResource(R.string.auto_edit_start))
             }
         }
 
