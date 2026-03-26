@@ -17,6 +17,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.novacut.editor.R
 import com.novacut.editor.model.BlendMode
 import com.novacut.editor.ui.theme.Mocha
 
@@ -38,9 +40,9 @@ fun BlendModeSelector(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Blend Mode", color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.blend_mode_title), color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Close, stringResource(R.string.blend_mode_close_cd), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
             }
         }
 

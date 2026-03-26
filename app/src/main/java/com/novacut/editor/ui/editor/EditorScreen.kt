@@ -1311,12 +1311,12 @@ private fun EditorTopBar(
         AlertDialog(
             onDismissRequest = { showDeleteConfirmation = false },
             title = { Text(stringResource(R.string.editor_delete), color = Mocha.Text) },
-            text = { Text("Delete this clip? This action can be undone.", color = Mocha.Subtext1) },
+            text = { Text(stringResource(R.string.editor_delete_clip_message), color = Mocha.Subtext1) },
             confirmButton = {
                 TextButton(onClick = {
                     showDeleteConfirmation = false
                     onDelete()
-                }) { Text("Delete", color = Mocha.Red) }
+                }) { Text(stringResource(R.string.editor_delete), color = Mocha.Red) }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirmation = false }) {

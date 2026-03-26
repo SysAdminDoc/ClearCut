@@ -15,6 +15,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.novacut.editor.R
 import com.novacut.editor.ui.theme.Mocha
 
 @Composable
@@ -40,9 +42,9 @@ fun EffectLibraryPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Effect Library", color = Mocha.Text, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text(stringResource(R.string.effect_library_title), color = Mocha.Text, fontWeight = FontWeight.Bold, fontSize = 16.sp)
             IconButton(onClick = onClose) {
-                Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0)
+                Icon(Icons.Default.Close, stringResource(R.string.effect_library_close_cd), tint = Mocha.Subtext0)
             }
         }
 

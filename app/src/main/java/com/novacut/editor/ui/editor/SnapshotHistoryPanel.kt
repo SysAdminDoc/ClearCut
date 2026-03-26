@@ -12,9 +12,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.novacut.editor.R
 import com.novacut.editor.model.ProjectSnapshot
 import com.novacut.editor.ui.theme.Mocha
 import java.text.SimpleDateFormat
@@ -42,7 +44,7 @@ fun SnapshotHistoryPanel(
                     value = snapshotName,
                     onValueChange = { snapshotName = it },
                     singleLine = true,
-                    placeholder = { Text("Snapshot name...", color = Mocha.Subtext0.copy(alpha = 0.5f)) },
+                    placeholder = { Text(stringResource(R.string.snapshot_name_hint), color = Mocha.Subtext0.copy(alpha = 0.5f)) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Mocha.Mauve,
                         unfocusedBorderColor = Mocha.Subtext0.copy(alpha = 0.3f),
@@ -82,13 +84,13 @@ fun SnapshotHistoryPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Version History", color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.snapshot_title), color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             Row {
                 IconButton(onClick = { showNameDialog = true }, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Add, "New Snapshot", tint = Mocha.Green, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Add, stringResource(R.string.snapshot_take_cd), tint = Mocha.Green, modifier = Modifier.size(18.dp))
                 }
                 IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Close, stringResource(R.string.snapshot_close_cd), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
                 }
             }
         }
@@ -105,7 +107,7 @@ fun SnapshotHistoryPanel(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Default.History, null, tint = Mocha.Subtext0.copy(alpha = 0.3f), modifier = Modifier.size(32.dp))
                     Spacer(Modifier.height(4.dp))
-                    Text("No snapshots yet", color = Mocha.Subtext0, fontSize = 12.sp)
+                    Text(stringResource(R.string.snapshot_empty), color = Mocha.Subtext0, fontSize = 12.sp)
                     Spacer(Modifier.height(4.dp))
                     Text("Save your project state to roll back later", color = Mocha.Subtext0.copy(alpha = 0.5f), fontSize = 10.sp)
                 }
@@ -154,14 +156,14 @@ fun SnapshotHistoryPanel(
                                 onClick = { onRestoreSnapshot(snapshot.id) },
                                 modifier = Modifier.size(28.dp)
                             ) {
-                                Icon(Icons.Default.Restore, "Restore", tint = Mocha.Green, modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.Restore, stringResource(R.string.snapshot_restore_cd), tint = Mocha.Green, modifier = Modifier.size(16.dp))
                             }
                             // Delete
                             IconButton(
                                 onClick = { onDeleteSnapshot(snapshot.id) },
                                 modifier = Modifier.size(28.dp)
                             ) {
-                                Icon(Icons.Default.Delete, "Delete", tint = Mocha.Red.copy(alpha = 0.6f), modifier = Modifier.size(14.dp))
+                                Icon(Icons.Default.Delete, stringResource(R.string.snapshot_delete_cd), tint = Mocha.Red.copy(alpha = 0.6f), modifier = Modifier.size(14.dp))
                             }
                         }
                     }

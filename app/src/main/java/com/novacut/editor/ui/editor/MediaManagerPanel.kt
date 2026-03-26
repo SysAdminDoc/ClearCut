@@ -21,6 +21,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.novacut.editor.R
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.Track
 import com.novacut.editor.ui.theme.Mocha
@@ -64,9 +66,9 @@ fun MediaManagerPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Media Manager", color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.media_manager_title), color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Close, stringResource(R.string.media_manager_close_cd), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
             }
         }
 
@@ -95,7 +97,7 @@ fun MediaManagerPanel(
                     .padding(24.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text("No media assets in project", color = Mocha.Subtext0, fontSize = 13.sp)
+                Text(stringResource(R.string.media_manager_empty), color = Mocha.Subtext0, fontSize = 13.sp)
             }
         } else {
             LazyColumn(

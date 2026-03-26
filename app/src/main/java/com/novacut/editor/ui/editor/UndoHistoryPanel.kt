@@ -15,9 +15,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.novacut.editor.R
 import com.novacut.editor.model.UndoHistoryEntry
 import com.novacut.editor.ui.theme.Mocha
 import kotlinx.coroutines.delay
@@ -61,7 +63,7 @@ fun UndoHistoryPanel(
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
             Text(
-                text = "History",
+                text = stringResource(R.string.undo_history_title),
                 color = Mocha.Text,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -73,7 +75,7 @@ fun UndoHistoryPanel(
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = "Close history",
+                    contentDescription = stringResource(R.string.undo_history_close),
                     tint = Mocha.Subtext0,
                     modifier = Modifier.size(16.dp)
                 )
@@ -88,7 +90,7 @@ fun UndoHistoryPanel(
                     .padding(24.dp)
             ) {
                 Text(
-                    text = "No history yet",
+                    text = stringResource(R.string.undo_history_empty),
                     color = Mocha.Overlay0,
                     fontSize = 12.sp
                 )

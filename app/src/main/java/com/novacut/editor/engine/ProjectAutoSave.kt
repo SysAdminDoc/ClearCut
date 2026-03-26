@@ -519,7 +519,7 @@ data class AutoSaveState(
                 isCompound = json.optBoolean("isCompound", false),
                 compoundClips = json.optJSONArray("compoundClips")?.let { arr ->
                     (0 until arr.length()).mapNotNull { i ->
-                        try { deserializeClip(arr.getJSONObject(i)) } catch (_: Exception) { null }
+                        try { deserializeClip(arr.getJSONObject(i)) } catch (e: Exception) { Log.w(TAG, "Failed to deserialize compound clip $i", e); null }
                     }
                 } ?: emptyList(),
                 linkedClipId = json.optString("linkedClipId", "").takeIf { it.isNotEmpty() },

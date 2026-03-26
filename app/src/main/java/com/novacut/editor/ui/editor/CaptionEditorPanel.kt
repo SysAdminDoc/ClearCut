@@ -19,6 +19,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.novacut.editor.R
 import com.novacut.editor.model.*
 import com.novacut.editor.ui.theme.Mocha
 
@@ -49,7 +51,7 @@ fun CaptionEditorPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Captions", color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.caption_title), color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             Row {
                 // Auto-generate button
                 IconButton(onClick = onGenerateAutoCaption, modifier = Modifier.size(32.dp)) {
@@ -65,10 +67,10 @@ fun CaptionEditorPanel(
                     onAddCaption(newCaption)
                     editingCaption = newCaption
                 }, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Add, "Add Caption", tint = Mocha.Green, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Add, stringResource(R.string.caption_add_cd), tint = Mocha.Green, modifier = Modifier.size(18.dp))
                 }
                 IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Close, stringResource(R.string.caption_close_cd), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
                 }
             }
         }
@@ -110,7 +112,7 @@ fun CaptionEditorPanel(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Default.ClosedCaption, null, tint = Mocha.Subtext0.copy(alpha = 0.3f), modifier = Modifier.size(32.dp))
                     Spacer(Modifier.height(4.dp))
-                    Text("No captions yet", color = Mocha.Subtext0, fontSize = 12.sp)
+                    Text(stringResource(R.string.caption_no_captions), color = Mocha.Subtext0, fontSize = 12.sp)
                     Spacer(Modifier.height(8.dp))
                     OutlinedButton(
                         onClick = onGenerateAutoCaption,
@@ -219,7 +221,7 @@ private fun CaptionRow(
                 Icon(Icons.Default.Edit, "Edit", tint = Mocha.Subtext0, modifier = Modifier.size(14.dp))
             }
             IconButton(onClick = onDelete, modifier = Modifier.size(24.dp)) {
-                Icon(Icons.Default.Delete, "Delete", tint = Mocha.Red.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
+                Icon(Icons.Default.Delete, stringResource(R.string.caption_delete_cd), tint = Mocha.Red.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
             }
         }
     }
@@ -245,7 +247,7 @@ private fun CaptionEditForm(
             value = text,
             onValueChange = { text = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("Caption Text", fontSize = 12.sp) },
+            label = { Text(stringResource(R.string.caption_text_hint), fontSize = 12.sp) },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Mocha.Mauve,
                 unfocusedBorderColor = Mocha.Surface1,
@@ -265,7 +267,7 @@ private fun CaptionEditForm(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("Start (s)", color = Mocha.Subtext0, fontSize = 10.sp)
+                Text(stringResource(R.string.caption_start_time), color = Mocha.Subtext0, fontSize = 10.sp)
                 Slider(
                     value = startTime,
                     onValueChange = { startTime = it.coerceAtMost(endTime) },
@@ -276,7 +278,7 @@ private fun CaptionEditForm(
                 Text("%.1fs".format(startTime), color = Mocha.Subtext0, fontSize = 9.sp)
             }
             Column(modifier = Modifier.weight(1f)) {
-                Text("End (s)", color = Mocha.Subtext0, fontSize = 10.sp)
+                Text(stringResource(R.string.caption_end_time), color = Mocha.Subtext0, fontSize = 10.sp)
                 Slider(
                     value = endTime,
                     onValueChange = { endTime = it.coerceAtLeast(startTime) },
@@ -308,7 +310,7 @@ private fun CaptionEditForm(
         // Size + Position
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("Font Size", color = Mocha.Subtext0, fontSize = 10.sp)
+                Text(stringResource(R.string.caption_font_size), color = Mocha.Subtext0, fontSize = 10.sp)
                 Slider(
                     value = fontSize, onValueChange = { fontSize = it },
                     valueRange = 16f..72f, modifier = Modifier.height(24.dp),

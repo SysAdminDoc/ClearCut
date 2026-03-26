@@ -14,6 +14,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.novacut.editor.R
 import com.novacut.editor.ui.theme.Mocha
 
 @Composable
@@ -45,7 +47,7 @@ fun CloudBackupPanel(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(Icons.Default.Cloud, null, tint = Mocha.Blue, modifier = Modifier.size(20.dp))
-                Text("Cloud Backup", color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.cloud_backup_title), color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
             IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
                 Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
@@ -67,7 +69,7 @@ fun CloudBackupPanel(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Default.CloudOff, null, tint = Mocha.Subtext0.copy(alpha = 0.4f), modifier = Modifier.size(36.dp))
                     Spacer(Modifier.height(8.dp))
-                    Text("Sign in with Google to back up your projects", color = Mocha.Subtext0, fontSize = 12.sp)
+                    Text(stringResource(R.string.cloud_backup_sign_in), color = Mocha.Subtext0, fontSize = 12.sp)
                     Spacer(Modifier.height(12.dp))
                     Button(
                         onClick = onSignIn,
@@ -76,7 +78,7 @@ fun CloudBackupPanel(
                     ) {
                         Icon(Icons.AutoMirrored.Filled.Login, null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Sign In")
+                        Text(stringResource(R.string.cloud_backup_sign_in_google))
                     }
                 }
             }
@@ -130,8 +132,8 @@ fun CloudBackupPanel(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("Auto-Backup", color = Mocha.Text, fontSize = 13.sp)
-                    Text("Back up after each save", color = Mocha.Subtext0, fontSize = 10.sp)
+                    Text(stringResource(R.string.cloud_backup_auto), color = Mocha.Text, fontSize = 13.sp)
+                    Text(stringResource(R.string.cloud_backup_auto_desc), color = Mocha.Subtext0, fontSize = 10.sp)
                 }
                 Switch(
                     checked = autoBackupEnabled,
@@ -155,7 +157,7 @@ fun CloudBackupPanel(
                 ) {
                     Icon(Icons.Default.CloudUpload, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("Backup Now", fontSize = 12.sp)
+                    Text(stringResource(R.string.cloud_backup_now), fontSize = 12.sp)
                 }
                 OutlinedButton(
                     onClick = onRestore,
@@ -165,7 +167,7 @@ fun CloudBackupPanel(
                 ) {
                     Icon(Icons.Default.CloudDownload, null, tint = Mocha.Blue, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("Restore", color = Mocha.Blue, fontSize = 12.sp)
+                    Text(stringResource(R.string.cloud_backup_restore), color = Mocha.Blue, fontSize = 12.sp)
                 }
             }
         }
