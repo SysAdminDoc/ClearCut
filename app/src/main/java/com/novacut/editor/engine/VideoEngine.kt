@@ -46,14 +46,19 @@ class VideoEngine @Inject constructor(
 ) {
     private var player: ExoPlayer? = null
     private var playerListener: Player.Listener? = null
-    // Thread-safe cache without accessOrder to avoid ConcurrentModificationException
+    // Memory-bounded bitmap cache — uses 1/8 of available heap
     // Don't recycle evicted bitmaps — they may still be referenced by Compose Image nodes
-    private val thumbnailCache = object : LinkedHashMap<String, Bitmap>(100, 0.75f, false) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Bitmap>): Boolean {
-            return size > 200
+    private val thumbnailCache = object : android.util.LruCache<String, Bitmap>(
+        (Runtime.getRuntime().maxMemory() / 8).toInt()
+    ) {
+        override fun sizeOf(key: String, bitmap: Bitmap): Int {
+            return bitmap.byteCount
+        }
+        override fun entryRemoved(evicted: Boolean, key: String, oldValue: Bitmap, newValue: Bitmap?) {
+            // Don't recycle — may still be referenced by Compose
+            // Bitmap will be GC'd when no longer referenced
         }
     }
-    private val cacheLock = Any()
 
     // Clip durations for multi-clip seek/playhead calculations
     private var clipDurationsMs: List<Long> = emptyList()
@@ -66,6 +71,9 @@ class VideoEngine @Inject constructor(
 
     private val _exportState = MutableStateFlow(ExportState.IDLE)
     val exportState: StateFlow<ExportState> = _exportState
+
+    private val _exportErrorMessage = MutableStateFlow<String?>(null)
+    val exportErrorMessage: StateFlow<String?> = _exportErrorMessage
 
     /**
      * Get or create ExoPlayer. Must be called from main thread.
@@ -114,8 +122,9 @@ class VideoEngine @Inject constructor(
         }
         clipDurationsMs = videoClips.map { it.durationMs }
         val mediaItems = videoClips.map { clip ->
+            val mediaUri = clip.proxyUri ?: clip.sourceUri
             MediaItem.Builder()
-                .setUri(clip.sourceUri)
+                .setUri(mediaUri)
                 .setClippingConfiguration(
                     MediaItem.ClippingConfiguration.Builder()
                         .setStartPositionMs(clip.trimStartMs)
@@ -197,9 +206,7 @@ class VideoEngine @Inject constructor(
 
     fun extractThumbnail(uri: Uri, timeUs: Long, width: Int = 160, height: Int = 90): Bitmap? {
         val key = "${uri}_${timeUs}_${width}x${height}"
-        synchronized(cacheLock) {
-            thumbnailCache[key]?.let { return it }
-        }
+        thumbnailCache.get(key)?.let { return it }
 
         val retriever = MediaMetadataRetriever()
         return try {
@@ -208,10 +215,7 @@ class VideoEngine @Inject constructor(
             frame?.let {
                 val scaled = Bitmap.createScaledBitmap(it, width, height, true)
                 if (scaled !== it) it.recycle()
-                synchronized(cacheLock) {
-                    // removeEldestEntry handles eviction automatically
-                    thumbnailCache[key] = scaled
-                }
+                thumbnailCache.put(key, scaled)
                 scaled
             }
         } catch (e: Exception) {
@@ -242,6 +246,7 @@ class VideoEngine @Inject constructor(
         config: ExportConfig,
         outputFile: File,
         textOverlays: List<com.novacut.editor.model.TextOverlay> = emptyList(),
+        lottieOverlays: List<LottieOverlaySpec> = emptyList(),
         onProgress: (Float) -> Unit = {},
         onComplete: () -> Unit = {},
         onError: (Exception) -> Unit = {}
@@ -281,46 +286,8 @@ class VideoEngine @Inject constructor(
                         buildVideoEffect(effect)?.let { add(it) }
                     }
 
-                    // Color grading (lift/gamma/gain + HSL qualification)
-                    clip.colorGrade?.let { grade ->
-                        if (grade.enabled) {
-                            // Lift/Gamma/Gain shader
-                            val hasLGG = grade.liftR != 0f || grade.liftG != 0f || grade.liftB != 0f ||
-                                grade.gammaR != 1f || grade.gammaG != 1f || grade.gammaB != 1f ||
-                                grade.gainR != 1f || grade.gainG != 1f || grade.gainB != 1f ||
-                                grade.offsetR != 0f || grade.offsetG != 0f || grade.offsetB != 0f
-                            if (hasLGG) {
-                                add(EffectShaders.colorGrade(
-                                    grade.liftR, grade.liftG, grade.liftB,
-                                    grade.gammaR, grade.gammaG, grade.gammaB,
-                                    grade.gainR, grade.gainG, grade.gainB,
-                                    grade.offsetR, grade.offsetG, grade.offsetB
-                                ))
-                            }
-                            // HSL qualification
-                            grade.hslQualifier?.let { hsl ->
-                                add(EffectShaders.hslQualify(
-                                    hsl.hueCenter, hsl.hueWidth,
-                                    hsl.satMin, hsl.satMax,
-                                    hsl.lumMin, hsl.lumMax,
-                                    hsl.softness,
-                                    hsl.adjustHue, hsl.adjustSat, hsl.adjustLum
-                                ))
-                            }
-                            // LUT
-                            grade.lutPath?.let { path ->
-                                val lutFile = java.io.File(path)
-                                if (lutFile.exists()) {
-                                    val lut = when {
-                                        path.endsWith(".cube", true) -> LutEngine.parseCube(lutFile)
-                                        path.endsWith(".3dl", true) -> LutEngine.parse3dl(lutFile)
-                                        else -> null
-                                    }
-                                    lut?.let { add(LutEngine.createLutEffect(it, grade.lutIntensity)) }
-                                }
-                            }
-                        }
-                    }
+                    // Color grading (lift/gamma/gain + HSL qualification + LUT)
+                    addColorGradingEffects(clip)
 
                     // Masks (rectangle/ellipse) — use clip midpoint for static mask position
                     // (keyframed masks would need per-frame GlEffect, using midpoint as best static approximation)
@@ -355,147 +322,10 @@ class VideoEngine @Inject constructor(
                         add(EffectShaders.blendMode(clip.blendMode, clip.opacity))
                     }
 
-                    // Transition-in effect (reveals clip at start)
-                    clip.transition?.let { transition ->
-                        val durationUs = transition.durationMs * 1000f
-                        add(when (transition.type) {
-                            TransitionType.DISSOLVE, TransitionType.FADE_BLACK ->
-                                EffectShaders.transitionFadeIn(durationUs)
-                            TransitionType.FADE_WHITE ->
-                                EffectShaders.transitionFadeIn(durationUs, fadeToWhite = true)
-                            TransitionType.WIPE_LEFT ->
-                                EffectShaders.transitionWipe(durationUs, -1f, 0f)
-                            TransitionType.WIPE_RIGHT ->
-                                EffectShaders.transitionWipe(durationUs, 1f, 0f)
-                            TransitionType.WIPE_UP ->
-                                EffectShaders.transitionWipe(durationUs, 0f, 1f)
-                            TransitionType.WIPE_DOWN ->
-                                EffectShaders.transitionWipe(durationUs, 0f, -1f)
-                            TransitionType.SLIDE_LEFT ->
-                                EffectShaders.transitionSlideIn(durationUs, 1f, 0f)
-                            TransitionType.SLIDE_RIGHT ->
-                                EffectShaders.transitionSlideIn(durationUs, -1f, 0f)
-                            TransitionType.ZOOM_IN ->
-                                EffectShaders.transitionZoomIn(durationUs)
-                            TransitionType.ZOOM_OUT ->
-                                EffectShaders.transitionZoomOut(durationUs)
-                            TransitionType.SPIN ->
-                                EffectShaders.transitionSpin(durationUs)
-                            TransitionType.FLIP ->
-                                EffectShaders.transitionFlip(durationUs)
-                            TransitionType.CUBE ->
-                                EffectShaders.transitionCube(durationUs)
-                            TransitionType.RIPPLE ->
-                                EffectShaders.transitionRipple(durationUs)
-                            TransitionType.PIXELATE ->
-                                EffectShaders.transitionPixelate(durationUs)
-                            TransitionType.DIRECTIONAL_WARP ->
-                                EffectShaders.transitionDirectionalWarp(durationUs)
-                            TransitionType.WIND ->
-                                EffectShaders.transitionWind(durationUs)
-                            TransitionType.MORPH ->
-                                EffectShaders.transitionMorph(durationUs)
-                            TransitionType.GLITCH ->
-                                EffectShaders.transitionGlitch(durationUs)
-                            TransitionType.CIRCLE_OPEN ->
-                                EffectShaders.transitionCircleOpen(durationUs)
-                            TransitionType.CROSS_ZOOM ->
-                                EffectShaders.transitionCrossZoom(durationUs)
-                            TransitionType.DREAMY ->
-                                EffectShaders.transitionDreamy(durationUs)
-                            TransitionType.HEART ->
-                                EffectShaders.transitionHeart(durationUs)
-                            TransitionType.SWIRL ->
-                                EffectShaders.transitionSwirl(durationUs)
-                            TransitionType.DOOR_OPEN ->
-                                EffectShaders.transitionDoorOpen(durationUs)
-                            TransitionType.BURN ->
-                                EffectShaders.transitionBurn(durationUs)
-                            TransitionType.RADIAL_WIPE ->
-                                EffectShaders.transitionRadialWipe(durationUs)
-                            TransitionType.MOSAIC_REVEAL ->
-                                EffectShaders.transitionMosaicReveal(durationUs)
-                            TransitionType.BOUNCE ->
-                                EffectShaders.transitionBounce(durationUs)
-                            TransitionType.LENS_FLARE ->
-                                EffectShaders.transitionLensFlare(durationUs)
-                            TransitionType.PAGE_CURL ->
-                                EffectShaders.transitionPageCurl(durationUs)
-                            TransitionType.CROSS_WARP ->
-                                EffectShaders.transitionCrossWarp(durationUs)
-                            TransitionType.ANGULAR ->
-                                EffectShaders.transitionAngular(durationUs)
-                            TransitionType.KALEIDOSCOPE ->
-                                EffectShaders.transitionKaleidoscope(durationUs)
-                            TransitionType.SQUARES_WIRE ->
-                                EffectShaders.transitionSquaresWire(durationUs)
-                            TransitionType.COLOR_PHASE ->
-                                EffectShaders.transitionColorPhase(durationUs)
-                        })
-                    }
-                    // Apply static opacity (if no keyframe opacity overrides)
-                    val hasKeyframeOpacity = clip.keyframes.any { it.property == KeyframeProperty.OPACITY }
-                    if (hasKeyframeOpacity) {
-                        add(RgbMatrix { presentationTimeUs, _ ->
-                            val timeMs = presentationTimeUs / 1000L
-                            val opacity = KeyframeEngine.getValueAt(
-                                clip.keyframes, KeyframeProperty.OPACITY, timeMs
-                            ) ?: 1f
-                            floatArrayOf(
-                                opacity, 0f, 0f, 0f,
-                                0f, opacity, 0f, 0f,
-                                0f, 0f, opacity, 0f,
-                                0f, 0f, 0f, 1f
-                            )
-                        })
-                    } else if (clip.opacity != 1f) {
-                        val o = clip.opacity.coerceIn(0f, 1f)
-                        add(RgbMatrix { _, _ ->
-                            floatArrayOf(
-                                o, 0f, 0f, 0f,
-                                0f, o, 0f, 0f,
-                                0f, 0f, o, 0f,
-                                0f, 0f, 0f, 1f
-                            )
-                        })
-                    }
-                    // Apply clip transform (rotation, scale, position) — keyframe-animated or static
-                    val hasKfScale = clip.keyframes.any {
-                        it.property == KeyframeProperty.SCALE_X || it.property == KeyframeProperty.SCALE_Y
-                    }
-                    val hasKfRotation = clip.keyframes.any { it.property == KeyframeProperty.ROTATION }
-                    val hasKfPosition = clip.keyframes.any {
-                        it.property == KeyframeProperty.POSITION_X || it.property == KeyframeProperty.POSITION_Y
-                    }
-                    val needsStaticTransform = clip.rotation != 0f || clip.scaleX != 1f || clip.scaleY != 1f || clip.positionX != 0f || clip.positionY != 0f
-                    if (hasKfScale || hasKfRotation || hasKfPosition) {
-                        // Per-frame animated transform via MatrixTransformation
-                        val kfs = clip.keyframes
-                        val staticSx = clip.scaleX; val staticSy = clip.scaleY
-                        val staticRot = clip.rotation
-                        val staticPx = clip.positionX; val staticPy = clip.positionY
-                        add(MatrixTransformation { presentationTimeUs ->
-                            val timeMs = presentationTimeUs / 1000L
-                            val sx = KeyframeEngine.getValueAt(kfs, KeyframeProperty.SCALE_X, timeMs) ?: staticSx
-                            val sy = KeyframeEngine.getValueAt(kfs, KeyframeProperty.SCALE_Y, timeMs) ?: staticSy
-                            val rot = KeyframeEngine.getValueAt(kfs, KeyframeProperty.ROTATION, timeMs) ?: staticRot
-                            val px = KeyframeEngine.getValueAt(kfs, KeyframeProperty.POSITION_X, timeMs) ?: staticPx
-                            val py = KeyframeEngine.getValueAt(kfs, KeyframeProperty.POSITION_Y, timeMs) ?: staticPy
-                            android.graphics.Matrix().apply {
-                                postScale(sx, sy)
-                                postRotate(rot)
-                                postTranslate(px, -py)
-                            }
-                        })
-                    } else if (needsStaticTransform) {
-                        // Static transform
-                        val m = android.graphics.Matrix().apply {
-                            postScale(clip.scaleX, clip.scaleY)
-                            postRotate(clip.rotation)
-                            postTranslate(clip.positionX, -clip.positionY)
-                        }
-                        add(MatrixTransformation { m })
-                    }
+                    // Transition-in effect
+                    clip.transition?.let { add(buildTransitionEffect(it)) }
+                    // Opacity + transform (keyframe-animated or static)
+                    addOpacityAndTransformEffects(clip)
                     // Speed handled via EditedMediaItem.Builder.setSpeed() below
                     // Text overlays that overlap this clip's timeline range
                     val clipStart = clip.timelineStartMs
@@ -512,6 +342,35 @@ class VideoEngine @Inject constructor(
                         @Suppress("UNCHECKED_CAST")
                         add(OverlayEffect(com.google.common.collect.ImmutableList.copyOf(overlayList) as List<TextureOverlay>))
                     }
+                    // Lottie animated title overlays
+                    val overlappingLottie = lottieOverlays.filter { lo ->
+                        lo.startTimeMs < clipEnd && lo.endTimeMs > clipStart
+                    }
+                    for (lo in overlappingLottie) {
+                        val relStartUs = ((lo.startTimeMs - clipStart).coerceAtLeast(0L)) * 1000L
+                        val durationUs = (lo.endTimeMs - lo.startTimeMs).coerceAtLeast(1L) * 1000L
+                        add(LottieOverlayEffect(
+                            lottieEngine = lo.engine,
+                            composition = lo.composition,
+                            overlayStartUs = relStartUs,
+                            overlayDurationUs = durationUs,
+                            textReplacements = lo.textReplacements
+                        ))
+                    }
+                    // Apply adjustment layer effects (cascade from tracks above)
+                    val adjustmentTracks = tracks.filter { it.type == TrackType.ADJUSTMENT && it.isVisible }
+                    for (adjTrack in adjustmentTracks) {
+                        for (adjClip in adjTrack.clips) {
+                            // Check temporal overlap
+                            if (adjClip.timelineStartMs < clipEnd && adjClip.timelineEndMs > clipStart) {
+                                // Apply adjustment clip's effects to current video clip
+                                for (effect in adjClip.effects.filter { it.enabled }) {
+                                    buildVideoEffect(effect)?.let { add(it) }
+                                }
+                            }
+                        }
+                    }
+
                     // Frame rate control (drops frames to target fps)
                     add(FrameDropEffect.createDefaultFrameDropEffect(config.frameRate.toFloat()))
                     add(Presentation.createForWidthAndHeight(
@@ -660,6 +519,7 @@ class VideoEngine @Inject constructor(
                         exportException: ExportException
                     ) {
                         Log.e(TAG, "Export failed", exportException)
+                        _exportErrorMessage.value = exportException.message ?: "Export encoding failed"
                         _exportState.value = ExportState.ERROR
                         _exportProgress.value = 0f
                         outputFile.delete()
@@ -685,6 +545,7 @@ class VideoEngine @Inject constructor(
                 if (pollCount >= maxPolls && _exportState.value == ExportState.EXPORTING) {
                     Log.w(TAG, "Export progress polling timeout after 10 minutes")
                     transformer.cancel()
+                    _exportErrorMessage.value = "Export timed out after 10 minutes"
                     _exportState.value = ExportState.ERROR
                     _exportProgress.value = 0f
                     outputFile.delete()
@@ -694,6 +555,7 @@ class VideoEngine @Inject constructor(
             }
         } catch (e: Exception) {
             Log.e(TAG, "Export setup failed", e)
+            _exportErrorMessage.value = e.message ?: "Export setup failed"
             _exportState.value = ExportState.ERROR
             _exportProgress.value = 0f
             activeTransformer = null
@@ -731,150 +593,16 @@ class VideoEngine @Inject constructor(
             for (effect in clip.effects.filter { it.enabled && it.type != EffectType.BG_REMOVAL }) {
                 buildVideoEffect(effect)?.let { add(it) }
             }
-            // Color grading (lift/gamma/gain + HSL)
-            clip.colorGrade?.let { grade ->
-                if (grade.enabled) {
-                    val hasLGG = grade.liftR != 0f || grade.liftG != 0f || grade.liftB != 0f ||
-                        grade.gammaR != 1f || grade.gammaG != 1f || grade.gammaB != 1f ||
-                        grade.gainR != 1f || grade.gainG != 1f || grade.gainB != 1f ||
-                        grade.offsetR != 0f || grade.offsetG != 0f || grade.offsetB != 0f
-                    if (hasLGG) {
-                        add(EffectShaders.colorGrade(
-                            grade.liftR, grade.liftG, grade.liftB,
-                            grade.gammaR, grade.gammaG, grade.gammaB,
-                            grade.gainR, grade.gainG, grade.gainB,
-                            grade.offsetR, grade.offsetG, grade.offsetB
-                        ))
-                    }
-                    grade.hslQualifier?.let { hsl ->
-                        add(EffectShaders.hslQualify(
-                            hsl.hueCenter, hsl.hueWidth,
-                            hsl.satMin, hsl.satMax,
-                            hsl.lumMin, hsl.lumMax,
-                            hsl.softness,
-                            hsl.adjustHue, hsl.adjustSat, hsl.adjustLum
-                        ))
-                    }
-                    grade.lutPath?.let { path ->
-                        val lutFile = java.io.File(path)
-                        if (lutFile.exists()) {
-                            val lut = when {
-                                path.endsWith(".cube", true) -> LutEngine.parseCube(lutFile)
-                                path.endsWith(".3dl", true) -> LutEngine.parse3dl(lutFile)
-                                else -> null
-                            }
-                            lut?.let { add(LutEngine.createLutEffect(it, grade.lutIntensity)) }
-                        }
-                    }
-                }
-            }
+            // Color grading (lift/gamma/gain + HSL + LUT)
+            addColorGradingEffects(clip)
             // Blend mode
             if (clip.blendMode != com.novacut.editor.model.BlendMode.NORMAL) {
                 add(EffectShaders.blendMode(clip.blendMode, clip.opacity))
             }
-            // Transition-in (preview)
-            clip.transition?.let { transition ->
-                val durationUs = transition.durationMs * 1000f
-                add(when (transition.type) {
-                    TransitionType.DISSOLVE, TransitionType.FADE_BLACK -> EffectShaders.transitionFadeIn(durationUs)
-                    TransitionType.FADE_WHITE -> EffectShaders.transitionFadeIn(durationUs, fadeToWhite = true)
-                    TransitionType.WIPE_LEFT -> EffectShaders.transitionWipe(durationUs, -1f, 0f)
-                    TransitionType.WIPE_RIGHT -> EffectShaders.transitionWipe(durationUs, 1f, 0f)
-                    TransitionType.WIPE_UP -> EffectShaders.transitionWipe(durationUs, 0f, 1f)
-                    TransitionType.WIPE_DOWN -> EffectShaders.transitionWipe(durationUs, 0f, -1f)
-                    TransitionType.SLIDE_LEFT -> EffectShaders.transitionSlideIn(durationUs, 1f, 0f)
-                    TransitionType.SLIDE_RIGHT -> EffectShaders.transitionSlideIn(durationUs, -1f, 0f)
-                    TransitionType.ZOOM_IN -> EffectShaders.transitionZoomIn(durationUs)
-                    TransitionType.ZOOM_OUT -> EffectShaders.transitionZoomOut(durationUs)
-                    TransitionType.SPIN -> EffectShaders.transitionSpin(durationUs)
-                    TransitionType.FLIP -> EffectShaders.transitionFlip(durationUs)
-                    TransitionType.CUBE -> EffectShaders.transitionCube(durationUs)
-                    TransitionType.RIPPLE -> EffectShaders.transitionRipple(durationUs)
-                    TransitionType.PIXELATE -> EffectShaders.transitionPixelate(durationUs)
-                    TransitionType.DIRECTIONAL_WARP -> EffectShaders.transitionDirectionalWarp(durationUs)
-                    TransitionType.WIND -> EffectShaders.transitionWind(durationUs)
-                    TransitionType.MORPH -> EffectShaders.transitionMorph(durationUs)
-                    TransitionType.GLITCH -> EffectShaders.transitionGlitch(durationUs)
-                    TransitionType.CIRCLE_OPEN -> EffectShaders.transitionCircleOpen(durationUs)
-                    TransitionType.CROSS_ZOOM -> EffectShaders.transitionCrossZoom(durationUs)
-                    TransitionType.DREAMY -> EffectShaders.transitionDreamy(durationUs)
-                    TransitionType.HEART -> EffectShaders.transitionHeart(durationUs)
-                    TransitionType.SWIRL -> EffectShaders.transitionSwirl(durationUs)
-                    TransitionType.DOOR_OPEN -> EffectShaders.transitionDoorOpen(durationUs)
-                    TransitionType.BURN -> EffectShaders.transitionBurn(durationUs)
-                    TransitionType.RADIAL_WIPE -> EffectShaders.transitionRadialWipe(durationUs)
-                    TransitionType.MOSAIC_REVEAL -> EffectShaders.transitionMosaicReveal(durationUs)
-                    TransitionType.BOUNCE -> EffectShaders.transitionBounce(durationUs)
-                    TransitionType.LENS_FLARE -> EffectShaders.transitionLensFlare(durationUs)
-                    TransitionType.PAGE_CURL -> EffectShaders.transitionPageCurl(durationUs)
-                    TransitionType.CROSS_WARP -> EffectShaders.transitionCrossWarp(durationUs)
-                    TransitionType.ANGULAR -> EffectShaders.transitionAngular(durationUs)
-                    TransitionType.KALEIDOSCOPE -> EffectShaders.transitionKaleidoscope(durationUs)
-                    TransitionType.SQUARES_WIRE -> EffectShaders.transitionSquaresWire(durationUs)
-                    TransitionType.COLOR_PHASE -> EffectShaders.transitionColorPhase(durationUs)
-                })
-            }
-            // Opacity
-            val hasKeyframeOpacity = clip.keyframes.any { it.property == KeyframeProperty.OPACITY }
-            if (hasKeyframeOpacity) {
-                add(RgbMatrix { presentationTimeUs, _ ->
-                    val timeMs = presentationTimeUs / 1000L
-                    val opacity = KeyframeEngine.getValueAt(
-                        clip.keyframes, KeyframeProperty.OPACITY, timeMs
-                    ) ?: 1f
-                    floatArrayOf(
-                        opacity, 0f, 0f, 0f,
-                        0f, opacity, 0f, 0f,
-                        0f, 0f, opacity, 0f,
-                        0f, 0f, 0f, 1f
-                    )
-                })
-            } else if (clip.opacity != 1f) {
-                val o = clip.opacity.coerceIn(0f, 1f)
-                add(RgbMatrix { _, _ ->
-                    floatArrayOf(
-                        o, 0f, 0f, 0f,
-                        0f, o, 0f, 0f,
-                        0f, 0f, o, 0f,
-                        0f, 0f, 0f, 1f
-                    )
-                })
-            }
-            // Transform (rotation, scale, position) — keyframe-animated or static
-            val hasKfScale = clip.keyframes.any {
-                it.property == KeyframeProperty.SCALE_X || it.property == KeyframeProperty.SCALE_Y
-            }
-            val hasKfRotation = clip.keyframes.any { it.property == KeyframeProperty.ROTATION }
-            val hasKfPosition = clip.keyframes.any {
-                it.property == KeyframeProperty.POSITION_X || it.property == KeyframeProperty.POSITION_Y
-            }
-            val needsStaticTransform = clip.rotation != 0f || clip.scaleX != 1f || clip.scaleY != 1f || clip.positionX != 0f || clip.positionY != 0f
-            if (hasKfScale || hasKfRotation || hasKfPosition) {
-                val kfs = clip.keyframes
-                val staticSx = clip.scaleX; val staticSy = clip.scaleY
-                val staticRot = clip.rotation
-                val staticPx = clip.positionX; val staticPy = clip.positionY
-                add(MatrixTransformation { presentationTimeUs ->
-                    val timeMs = presentationTimeUs / 1000L
-                    val sx = KeyframeEngine.getValueAt(kfs, KeyframeProperty.SCALE_X, timeMs) ?: staticSx
-                    val sy = KeyframeEngine.getValueAt(kfs, KeyframeProperty.SCALE_Y, timeMs) ?: staticSy
-                    val rot = KeyframeEngine.getValueAt(kfs, KeyframeProperty.ROTATION, timeMs) ?: staticRot
-                    val px = KeyframeEngine.getValueAt(kfs, KeyframeProperty.POSITION_X, timeMs) ?: staticPx
-                    val py = KeyframeEngine.getValueAt(kfs, KeyframeProperty.POSITION_Y, timeMs) ?: staticPy
-                    android.graphics.Matrix().apply {
-                        postScale(sx, sy)
-                        postRotate(rot)
-                        postTranslate(px, -py)
-                    }
-                })
-            } else if (needsStaticTransform) {
-                val m = android.graphics.Matrix().apply {
-                    postScale(clip.scaleX, clip.scaleY)
-                    postRotate(clip.rotation)
-                    postTranslate(clip.positionX, -clip.positionY)
-                }
-                add(MatrixTransformation { m })
-            }
+            // Transition-in
+            clip.transition?.let { add(buildTransitionEffect(it)) }
+            // Opacity + transform (keyframe-animated or static)
+            addOpacityAndTransformEffects(clip)
         }
         try {
             p.setVideoEffects(effects)
@@ -1248,9 +976,7 @@ class VideoEngine @Inject constructor(
     }
 
     fun clearThumbnailCache() {
-        synchronized(cacheLock) {
-            thumbnailCache.clear()
-        }
+        thumbnailCache.evictAll()
     }
 
     fun resetExportState() {
@@ -1263,6 +989,164 @@ class VideoEngine @Inject constructor(
         player?.release()
         player = null
         clearThumbnailCache()
+    }
+
+    // --- Shared effect builders (used by both export and preview) ---
+
+    /**
+     * Build color grading effects (LGG, HSL qualification, LUT) for a clip.
+     */
+    private fun MutableList<androidx.media3.common.Effect>.addColorGradingEffects(clip: Clip) {
+        clip.colorGrade?.let { grade ->
+            if (!grade.enabled) return@let
+            val hasLGG = grade.liftR != 0f || grade.liftG != 0f || grade.liftB != 0f ||
+                grade.gammaR != 1f || grade.gammaG != 1f || grade.gammaB != 1f ||
+                grade.gainR != 1f || grade.gainG != 1f || grade.gainB != 1f ||
+                grade.offsetR != 0f || grade.offsetG != 0f || grade.offsetB != 0f
+            if (hasLGG) {
+                add(EffectShaders.colorGrade(
+                    grade.liftR, grade.liftG, grade.liftB,
+                    grade.gammaR, grade.gammaG, grade.gammaB,
+                    grade.gainR, grade.gainG, grade.gainB,
+                    grade.offsetR, grade.offsetG, grade.offsetB
+                ))
+            }
+            grade.hslQualifier?.let { hsl ->
+                add(EffectShaders.hslQualify(
+                    hsl.hueCenter, hsl.hueWidth,
+                    hsl.satMin, hsl.satMax,
+                    hsl.lumMin, hsl.lumMax,
+                    hsl.softness,
+                    hsl.adjustHue, hsl.adjustSat, hsl.adjustLum
+                ))
+            }
+            grade.lutPath?.let { path ->
+                val lutFile = java.io.File(path)
+                if (lutFile.exists()) {
+                    val lut = when {
+                        path.endsWith(".cube", true) -> LutEngine.parseCube(lutFile)
+                        path.endsWith(".3dl", true) -> LutEngine.parse3dl(lutFile)
+                        else -> null
+                    }
+                    lut?.let { add(LutEngine.createLutEffect(it, grade.lutIntensity)) }
+                }
+            }
+        }
+    }
+
+    /**
+     * Build transition-in effect for a clip.
+     */
+    private fun buildTransitionEffect(transition: Transition): androidx.media3.common.Effect {
+        val durationUs = transition.durationMs * 1000f
+        return when (transition.type) {
+            TransitionType.DISSOLVE, TransitionType.FADE_BLACK ->
+                EffectShaders.transitionFadeIn(durationUs)
+            TransitionType.FADE_WHITE ->
+                EffectShaders.transitionFadeIn(durationUs, fadeToWhite = true)
+            TransitionType.WIPE_LEFT -> EffectShaders.transitionWipe(durationUs, -1f, 0f)
+            TransitionType.WIPE_RIGHT -> EffectShaders.transitionWipe(durationUs, 1f, 0f)
+            TransitionType.WIPE_UP -> EffectShaders.transitionWipe(durationUs, 0f, 1f)
+            TransitionType.WIPE_DOWN -> EffectShaders.transitionWipe(durationUs, 0f, -1f)
+            TransitionType.SLIDE_LEFT -> EffectShaders.transitionSlideIn(durationUs, 1f, 0f)
+            TransitionType.SLIDE_RIGHT -> EffectShaders.transitionSlideIn(durationUs, -1f, 0f)
+            TransitionType.ZOOM_IN -> EffectShaders.transitionZoomIn(durationUs)
+            TransitionType.ZOOM_OUT -> EffectShaders.transitionZoomOut(durationUs)
+            TransitionType.SPIN -> EffectShaders.transitionSpin(durationUs)
+            TransitionType.FLIP -> EffectShaders.transitionFlip(durationUs)
+            TransitionType.CUBE -> EffectShaders.transitionCube(durationUs)
+            TransitionType.RIPPLE -> EffectShaders.transitionRipple(durationUs)
+            TransitionType.PIXELATE -> EffectShaders.transitionPixelate(durationUs)
+            TransitionType.DIRECTIONAL_WARP -> EffectShaders.transitionDirectionalWarp(durationUs)
+            TransitionType.WIND -> EffectShaders.transitionWind(durationUs)
+            TransitionType.MORPH -> EffectShaders.transitionMorph(durationUs)
+            TransitionType.GLITCH -> EffectShaders.transitionGlitch(durationUs)
+            TransitionType.CIRCLE_OPEN -> EffectShaders.transitionCircleOpen(durationUs)
+            TransitionType.CROSS_ZOOM -> EffectShaders.transitionCrossZoom(durationUs)
+            TransitionType.DREAMY -> EffectShaders.transitionDreamy(durationUs)
+            TransitionType.HEART -> EffectShaders.transitionHeart(durationUs)
+            TransitionType.SWIRL -> EffectShaders.transitionSwirl(durationUs)
+            TransitionType.DOOR_OPEN -> EffectShaders.transitionDoorOpen(durationUs)
+            TransitionType.BURN -> EffectShaders.transitionBurn(durationUs)
+            TransitionType.RADIAL_WIPE -> EffectShaders.transitionRadialWipe(durationUs)
+            TransitionType.MOSAIC_REVEAL -> EffectShaders.transitionMosaicReveal(durationUs)
+            TransitionType.BOUNCE -> EffectShaders.transitionBounce(durationUs)
+            TransitionType.LENS_FLARE -> EffectShaders.transitionLensFlare(durationUs)
+            TransitionType.PAGE_CURL -> EffectShaders.transitionPageCurl(durationUs)
+            TransitionType.CROSS_WARP -> EffectShaders.transitionCrossWarp(durationUs)
+            TransitionType.ANGULAR -> EffectShaders.transitionAngular(durationUs)
+            TransitionType.KALEIDOSCOPE -> EffectShaders.transitionKaleidoscope(durationUs)
+            TransitionType.SQUARES_WIRE -> EffectShaders.transitionSquaresWire(durationUs)
+            TransitionType.COLOR_PHASE -> EffectShaders.transitionColorPhase(durationUs)
+        }
+    }
+
+    /**
+     * Build opacity and transform effects (static or keyframe-animated) for a clip.
+     */
+    private fun MutableList<androidx.media3.common.Effect>.addOpacityAndTransformEffects(clip: Clip) {
+        // Opacity
+        val hasKeyframeOpacity = clip.keyframes.any { it.property == KeyframeProperty.OPACITY }
+        if (hasKeyframeOpacity) {
+            add(RgbMatrix { presentationTimeUs, _ ->
+                val timeMs = presentationTimeUs / 1000L
+                val opacity = KeyframeEngine.getValueAt(
+                    clip.keyframes, KeyframeProperty.OPACITY, timeMs
+                ) ?: 1f
+                floatArrayOf(
+                    opacity, 0f, 0f, 0f,
+                    0f, opacity, 0f, 0f,
+                    0f, 0f, opacity, 0f,
+                    0f, 0f, 0f, 1f
+                )
+            })
+        } else if (clip.opacity != 1f) {
+            val o = clip.opacity.coerceIn(0f, 1f)
+            add(RgbMatrix { _, _ ->
+                floatArrayOf(
+                    o, 0f, 0f, 0f,
+                    0f, o, 0f, 0f,
+                    0f, 0f, o, 0f,
+                    0f, 0f, 0f, 1f
+                )
+            })
+        }
+        // Transform (rotation, scale, position) — keyframe-animated or static
+        val hasKfScale = clip.keyframes.any {
+            it.property == KeyframeProperty.SCALE_X || it.property == KeyframeProperty.SCALE_Y
+        }
+        val hasKfRotation = clip.keyframes.any { it.property == KeyframeProperty.ROTATION }
+        val hasKfPosition = clip.keyframes.any {
+            it.property == KeyframeProperty.POSITION_X || it.property == KeyframeProperty.POSITION_Y
+        }
+        val needsStaticTransform = clip.rotation != 0f || clip.scaleX != 1f || clip.scaleY != 1f ||
+            clip.positionX != 0f || clip.positionY != 0f
+        if (hasKfScale || hasKfRotation || hasKfPosition) {
+            val kfs = clip.keyframes
+            val staticSx = clip.scaleX; val staticSy = clip.scaleY
+            val staticRot = clip.rotation
+            val staticPx = clip.positionX; val staticPy = clip.positionY
+            add(MatrixTransformation { presentationTimeUs ->
+                val timeMs = presentationTimeUs / 1000L
+                val sx = KeyframeEngine.getValueAt(kfs, KeyframeProperty.SCALE_X, timeMs) ?: staticSx
+                val sy = KeyframeEngine.getValueAt(kfs, KeyframeProperty.SCALE_Y, timeMs) ?: staticSy
+                val rot = KeyframeEngine.getValueAt(kfs, KeyframeProperty.ROTATION, timeMs) ?: staticRot
+                val px = KeyframeEngine.getValueAt(kfs, KeyframeProperty.POSITION_X, timeMs) ?: staticPx
+                val py = KeyframeEngine.getValueAt(kfs, KeyframeProperty.POSITION_Y, timeMs) ?: staticPy
+                android.graphics.Matrix().apply {
+                    postScale(sx, sy)
+                    postRotate(rot)
+                    postTranslate(px, -py)
+                }
+            })
+        } else if (needsStaticTransform) {
+            val m = android.graphics.Matrix().apply {
+                postScale(clip.scaleX, clip.scaleY)
+                postRotate(clip.rotation)
+                postTranslate(clip.positionX, -clip.positionY)
+            }
+            add(MatrixTransformation { m })
+        }
     }
 }
 
@@ -1540,3 +1424,15 @@ private class ExportTextOverlay(
         }
     }
 }
+
+/**
+ * Specification for a Lottie animated overlay in the export pipeline.
+ * Created by the ViewModel when preparing export with animated title overlays.
+ */
+data class LottieOverlaySpec(
+    val engine: LottieTemplateEngine,
+    val composition: com.airbnb.lottie.LottieComposition,
+    val startTimeMs: Long,
+    val endTimeMs: Long,
+    val textReplacements: Map<String, String> = emptyMap()
+)

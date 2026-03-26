@@ -81,17 +81,27 @@ class ExportDelegate(
                     },
                     onComplete = {
                         appContext.stopService(serviceIntent)
-                        stateFlow.update { it.copy(lastExportedFilePath = outputFile.absolutePath) }
+                        stateFlow.update { it.copy(
+                            exportState = ExportState.COMPLETE,
+                            exportProgress = 1f,
+                            lastExportedFilePath = outputFile.absolutePath
+                        ) }
                         showToast("Export complete: ${outputFile.name}")
                     },
                     onError = { e ->
                         appContext.stopService(serviceIntent)
-                        stateFlow.update { it.copy(exportErrorMessage = e.message ?: "Unknown error") }
+                        stateFlow.update { it.copy(
+                            exportState = ExportState.ERROR,
+                            exportErrorMessage = e.message ?: "Unknown error"
+                        ) }
                     }
                 )
             } catch (e: Exception) {
                 appContext.stopService(serviceIntent)
-                stateFlow.update { it.copy(exportErrorMessage = e.message ?: "Unknown error") }
+                stateFlow.update { it.copy(
+                    exportState = ExportState.ERROR,
+                    exportErrorMessage = e.message ?: "Unknown error"
+                ) }
             }
         }
     }

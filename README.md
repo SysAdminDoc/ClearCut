@@ -1,6 +1,15 @@
-# NovaCut v3.1.0
+# NovaCut v3.2.0
 
 A professional Android video editor built with Kotlin and Jetpack Compose. Open alternative to CapCut, PowerDirector, and DaVinci Resolve — with on-device AI, GPU-accelerated effects, and desktop NLE interoperability.
+
+## What's New in v3.2.0
+- **Timeline performance** — gesture detectors no longer recreated on every scroll/zoom (rememberUpdatedState pattern)
+- **Export state fix** — export progress now correctly transitions to COMPLETE/ERROR (was stuck at EXPORTING)
+- **Delete confirmation** — clip deletion shows a confirmation dialog
+- **Buffering indicator** — preview shows a loading spinner when player is buffering
+- **VideoEngine dedup** — extracted 3 shared methods eliminating ~200 lines of duplicated export/preview code
+- **AI error handling** — all AI operations wrapped in try/catch with user-facing toast errors
+- **Selection state fix** — multi-select no longer leaks across selection changes
 
 ## Features
 

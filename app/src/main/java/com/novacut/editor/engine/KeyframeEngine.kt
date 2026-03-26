@@ -212,6 +212,28 @@ object KeyframeEngine {
                     else -(2f.pow(-10f * t)) * sin((t * 10f - 0.75f) * c4) + 1f
                 raw.coerceIn(0f, 1f)
             }
+            Easing.BOUNCE -> {
+                val n1 = 7.5625f; val d1 = 2.75f
+                val bt = 1f - t
+                1f - when {
+                    bt < 1f / d1 -> n1 * bt * bt
+                    bt < 2f / d1 -> n1 * (bt - 1.5f / d1).let { it * it } + 0.75f
+                    bt < 2.5f / d1 -> n1 * (bt - 2.25f / d1).let { it * it } + 0.9375f
+                    else -> n1 * (bt - 2.625f / d1).let { it * it } + 0.984375f
+                }
+            }
+            Easing.ELASTIC -> {
+                if (t == 0f || t == 1f) t
+                else -(2f.pow(10f * t - 10f)) * sin((t * 10f - 10.75f) * (2f * PI.toFloat() / 3f))
+            }
+            Easing.BACK -> {
+                val c1 = 1.70158f; val c3 = c1 + 1f
+                c3 * t * t * t - c1 * t * t
+            }
+            Easing.CIRCULAR -> 1f - sqrt(1f - t * t)
+            Easing.EXPO -> if (t == 0f) 0f else 2f.pow(10f * t - 10f)
+            Easing.SINE -> 1f - cos(t * PI.toFloat() / 2f)
+            Easing.CUBIC -> t * t * t
         }
     }
 

@@ -11,26 +11,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.novacut.editor.R
+import com.novacut.editor.ui.theme.Mocha
 
-private val Surface0 = Color(0xFF313244)
-private val TextColor = Color(0xFFCDD6F4)
-private val Subtext = Color(0xFFA6ADC8)
-private val Mauve = Color(0xFFCBA6F7)
-private val Green = Color(0xFFA6E3A1)
-private val Yellow = Color(0xFFF9E2AF)
-private val Crust = Color(0xFF11111B)
-
-enum class NormalizationMode(val label: String, val targetLufs: Float) {
-    YOUTUBE("YouTube / Spotify (-14 LUFS)", -14f),
-    TIKTOK("TikTok (-14 LUFS)", -14f),
-    PODCAST("Podcast / Apple (-16 LUFS)", -16f),
-    BROADCAST("Broadcast EBU R128 (-23 LUFS)", -23f),
-    CINEMA("Cinema (-24 LUFS)", -24f),
-    LOUD("Loud (-9 LUFS)", -9f),
-    CUSTOM("Custom", -14f)
+enum class NormalizationMode(val labelResId: Int, val targetLufs: Float) {
+    YOUTUBE(R.string.audio_norm_youtube, -14f),
+    TIKTOK(R.string.audio_norm_tiktok, -14f),
+    PODCAST(R.string.audio_norm_podcast, -16f),
+    BROADCAST(R.string.audio_norm_broadcast, -23f),
+    CINEMA(R.string.audio_norm_cinema, -24f),
+    LOUD(R.string.audio_norm_loud, -9f),
+    CUSTOM(R.string.audio_norm_custom, -14f)
 }
 
 @Composable
@@ -46,7 +41,7 @@ fun AudioNormPanel(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+            .background(Mocha.Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
             .padding(12.dp)
     ) {
         Row(
@@ -54,16 +49,16 @@ fun AudioNormPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Audio Normalization", color = TextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.audio_norm_title), color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Close, "Close", tint = Subtext, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Close, stringResource(R.string.close), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
             }
         }
 
         Spacer(Modifier.height(4.dp))
         Text(
-            "Adjust audio levels to a target loudness standard",
-            color = Subtext,
+            stringResource(R.string.audio_norm_description),
+            color = Mocha.Subtext0,
             fontSize = 11.sp
         )
 
@@ -76,7 +71,7 @@ fun AudioNormPanel(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
-                    .background(if (selected) Mauve.copy(alpha = 0.15f) else Color.Transparent)
+                    .background(if (selected) Mocha.Mauve.copy(alpha = 0.15f) else Color.Transparent)
                     .clickable { selectedMode = mode }
                     .padding(horizontal = 12.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -89,12 +84,12 @@ fun AudioNormPanel(
                     RadioButton(
                         selected = selected,
                         onClick = { selectedMode = mode },
-                        colors = RadioButtonDefaults.colors(selectedColor = Mauve)
+                        colors = RadioButtonDefaults.colors(selectedColor = Mocha.Mauve)
                     )
                     Column {
                         Text(
-                            mode.label,
-                            color = if (selected) TextColor else Subtext,
+                            stringResource(mode.labelResId),
+                            color = if (selected) Mocha.Text else Mocha.Subtext0,
                             fontSize = 13.sp
                         )
                     }
@@ -102,7 +97,7 @@ fun AudioNormPanel(
                 if (mode != NormalizationMode.CUSTOM) {
                     Text(
                         "${mode.targetLufs} LUFS",
-                        color = if (selected) Mauve else Subtext,
+                        color = if (selected) Mocha.Mauve else Mocha.Subtext0,
                         fontSize = 11.sp
                     )
                 }
@@ -116,21 +111,21 @@ fun AudioNormPanel(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Target", color = Subtext, fontSize = 11.sp, modifier = Modifier.width(50.dp))
+                Text(stringResource(R.string.audio_norm_target), color = Mocha.Subtext0, fontSize = 11.sp, modifier = Modifier.width(50.dp))
                 Slider(
                     value = customLufs,
                     onValueChange = { customLufs = it },
                     valueRange = -30f..-5f,
                     modifier = Modifier.weight(1f),
                     colors = SliderDefaults.colors(
-                        thumbColor = Mauve,
-                        activeTrackColor = Mauve.copy(alpha = 0.6f),
-                        inactiveTrackColor = Surface0
+                        thumbColor = Mocha.Mauve,
+                        activeTrackColor = Mocha.Mauve.copy(alpha = 0.6f),
+                        inactiveTrackColor = Mocha.Surface0
                     )
                 )
                 Text(
                     "%.0f LUFS".format(customLufs),
-                    color = Mauve,
+                    color = Mocha.Mauve,
                     fontSize = 11.sp,
                     modifier = Modifier.width(60.dp)
                 )
@@ -143,12 +138,12 @@ fun AudioNormPanel(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Surface0, RoundedCornerShape(8.dp))
+                .background(Mocha.Surface0, RoundedCornerShape(8.dp))
                 .padding(10.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("Current Volume", color = Subtext, fontSize = 12.sp)
-            Text("%.0f%%".format(currentVolume * 100f), color = TextColor, fontSize = 12.sp)
+            Text(stringResource(R.string.audio_norm_current_volume), color = Mocha.Subtext0, fontSize = 12.sp)
+            Text("%.0f%%".format(currentVolume * 100f), color = Mocha.Text, fontSize = 12.sp)
         }
 
         Spacer(Modifier.height(8.dp))
@@ -160,12 +155,12 @@ fun AudioNormPanel(
                 onNormalize(targetLufs)
             },
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = Mauve),
+            colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve),
             shape = RoundedCornerShape(8.dp)
         ) {
             Icon(Icons.Default.Equalizer, null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text("Normalize Audio")
+            Text(stringResource(R.string.audio_norm_normalize_button))
         }
     }
 }

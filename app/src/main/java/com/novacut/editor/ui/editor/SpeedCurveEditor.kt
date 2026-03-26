@@ -17,9 +17,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.novacut.editor.R
 import com.novacut.editor.model.*
 import com.novacut.editor.ui.theme.Mocha
 import kotlin.math.abs
@@ -51,7 +53,7 @@ fun SpeedCurveEditor(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Speed", color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.speed_title), color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
                 Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
             }
@@ -100,7 +102,7 @@ fun SpeedCurveEditor(
 
         if (curveMode) {
             // Presets
-            Text("Presets", color = Mocha.Subtext0, fontSize = 11.sp)
+            Text(stringResource(R.string.speed_presets), color = Mocha.Subtext0, fontSize = 11.sp)
             Spacer(Modifier.height(4.dp))
             Row(
                 modifier = Modifier
@@ -206,7 +208,7 @@ fun SpeedCurveEditor(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(Icons.Default.SwapHoriz, "Reverse", tint = if (isReversed) Mocha.Peach else Mocha.Subtext0, modifier = Modifier.size(20.dp))
-                Text("Reverse Playback", color = Mocha.Text, fontSize = 13.sp)
+                Text(stringResource(R.string.speed_reverse_playback), color = Mocha.Text, fontSize = 13.sp)
             }
             Switch(
                 checked = isReversed,

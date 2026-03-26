@@ -19,6 +19,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -248,7 +250,8 @@ private fun ChannelStrip(
             valueRange = -1f..1f,
             modifier = Modifier
                 .width(48.dp)
-                .height(16.dp),
+                .height(16.dp)
+                .semantics { contentDescription = "Pan control" },
             colors = SliderDefaults.colors(
                 thumbColor = Mocha.Mauve,
                 activeTrackColor = Mocha.Mauve.copy(alpha = 0.5f),
@@ -264,7 +267,8 @@ private fun ChannelStrip(
                 .size(24.dp)
                 .clip(RoundedCornerShape(4.dp))
                 .background(if (track.isMuted) Mocha.Red.copy(alpha = 0.3f) else Mocha.Surface1)
-                .clickable { onMuteToggled() },
+                .clickable { onMuteToggled() }
+                .semantics { contentDescription = if (track.isMuted) "Unmute track" else "Mute track" },
             contentAlignment = Alignment.Center
         ) {
             Text("M", color = if (track.isMuted) Mocha.Red else Mocha.Subtext0, fontSize = 10.sp, fontWeight = FontWeight.Bold)
@@ -276,7 +280,8 @@ private fun ChannelStrip(
                 .size(24.dp)
                 .clip(RoundedCornerShape(4.dp))
                 .background(if (track.isSolo) Mocha.Yellow.copy(alpha = 0.3f) else Mocha.Surface1)
-                .clickable { onSoloToggled() },
+                .clickable { onSoloToggled() }
+                .semantics { contentDescription = if (track.isSolo) "Unsolo track" else "Solo track" },
             contentAlignment = Alignment.Center
         ) {
             Text("S", color = if (track.isSolo) Mocha.Yellow else Mocha.Subtext0, fontSize = 10.sp, fontWeight = FontWeight.Bold)
@@ -288,7 +293,8 @@ private fun ChannelStrip(
                 .size(24.dp)
                 .clip(RoundedCornerShape(4.dp))
                 .background(if (isEffectsExpanded) Mocha.Mauve.copy(alpha = 0.3f) else Mocha.Surface1)
-                .clickable { onEffectsClicked() },
+                .clickable { onEffectsClicked() }
+                .semantics { contentDescription = "Audio effects" },
             contentAlignment = Alignment.Center
         ) {
             Text(

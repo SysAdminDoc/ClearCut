@@ -23,17 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.Track
-
-private val Surface0 = Color(0xFF313244)
-private val Surface1 = Color(0xFF45475A)
-private val TextColor = Color(0xFFCDD6F4)
-private val Subtext = Color(0xFFA6ADC8)
-private val Mauve = Color(0xFFCBA6F7)
-private val Red = Color(0xFFF38BA8)
-private val Green = Color(0xFFA6E3A1)
-private val Yellow = Color(0xFFF9E2AF)
-private val Peach = Color(0xFFFAB387)
-private val Crust = Color(0xFF11111B)
+import com.novacut.editor.ui.theme.Mocha
 
 data class MediaAsset(
     val uri: Uri,
@@ -65,7 +55,7 @@ fun MediaManagerPanel(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+            .background(Mocha.Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
             .padding(12.dp)
     ) {
         // Header
@@ -74,9 +64,9 @@ fun MediaManagerPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Media Manager", color = TextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text("Media Manager", color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Close, "Close", tint = Subtext, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
             }
         }
 
@@ -86,13 +76,13 @@ fun MediaManagerPanel(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Surface0, RoundedCornerShape(8.dp))
+                .background(Mocha.Surface0, RoundedCornerShape(8.dp))
                 .padding(10.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            StatChip("Assets", "${assets.size}", Mauve)
-            StatChip("Size", formatFileSize(totalSize), Peach)
-            StatChip("Missing", "$missingCount", if (missingCount > 0) Red else Green)
+            StatChip("Assets", "${assets.size}", Mocha.Mauve)
+            StatChip("Size", formatFileSize(totalSize), Mocha.Peach)
+            StatChip("Missing", "$missingCount", if (missingCount > 0) Mocha.Red else Mocha.Green)
         }
 
         Spacer(Modifier.height(8.dp))
@@ -105,7 +95,7 @@ fun MediaManagerPanel(
                     .padding(24.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text("No media assets in project", color = Subtext, fontSize = 13.sp)
+                Text("No media assets in project", color = Mocha.Subtext0, fontSize = 13.sp)
             }
         } else {
             LazyColumn(
@@ -129,11 +119,11 @@ fun MediaManagerPanel(
             OutlinedButton(
                 onClick = onRemoveUnused,
                 modifier = Modifier.fillMaxWidth(),
-                border = BorderStroke(1.dp, Yellow.copy(alpha = 0.5f))
+                border = BorderStroke(1.dp, Mocha.Yellow.copy(alpha = 0.5f))
             ) {
-                Icon(Icons.Default.CleaningServices, null, tint = Yellow, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.CleaningServices, null, tint = Mocha.Yellow, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("Remove Unused Media", color = Yellow, fontSize = 12.sp)
+                Text("Remove Unused Media", color = Mocha.Yellow, fontSize = 12.sp)
             }
         }
     }
@@ -143,7 +133,7 @@ fun MediaManagerPanel(
 private fun StatChip(label: String, value: String, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(value, color = color, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-        Text(label, color = Subtext, fontSize = 10.sp)
+        Text(label, color = Mocha.Subtext0, fontSize = 10.sp)
     }
 }
 
@@ -156,7 +146,7 @@ private fun MediaAssetRow(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(Surface0)
+            .background(Mocha.Surface0)
             .padding(8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -170,23 +160,23 @@ private fun MediaAssetRow(
             Icon(
                 if (asset.isAccessible) Icons.Default.VideoFile else Icons.Default.BrokenImage,
                 null,
-                tint = if (asset.isAccessible) Mauve else Red,
+                tint = if (asset.isAccessible) Mocha.Mauve else Mocha.Red,
                 modifier = Modifier.size(24.dp)
             )
             Column {
                 Text(
                     asset.fileName,
-                    color = if (asset.isAccessible) TextColor else Red,
+                    color = if (asset.isAccessible) Mocha.Text else Mocha.Red,
                     fontSize = 12.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(formatFileSize(asset.fileSize), color = Subtext, fontSize = 10.sp)
-                    Text(formatDuration(asset.durationMs), color = Subtext, fontSize = 10.sp)
+                    Text(formatFileSize(asset.fileSize), color = Mocha.Subtext0, fontSize = 10.sp)
+                    Text(formatDuration(asset.durationMs), color = Mocha.Subtext0, fontSize = 10.sp)
                     Text(
                         "Used ${asset.usedInClipIds.size}x",
-                        color = if (asset.usedInClipIds.isEmpty()) Yellow else Green,
+                        color = if (asset.usedInClipIds.isEmpty()) Mocha.Yellow else Mocha.Green,
                         fontSize = 10.sp
                     )
                 }
@@ -199,13 +189,13 @@ private fun MediaAssetRow(
                 onClick = { onJumpToClip(asset.usedInClipIds.first()) },
                 modifier = Modifier.size(24.dp)
             ) {
-                Icon(Icons.Default.MyLocation, "Go to", tint = Subtext, modifier = Modifier.size(14.dp))
+                Icon(Icons.Default.MyLocation, "Go to", tint = Mocha.Subtext0, modifier = Modifier.size(14.dp))
             }
         }
 
         // Missing indicator
         if (!asset.isAccessible) {
-            Icon(Icons.Default.Warning, "Missing", tint = Red, modifier = Modifier.size(16.dp))
+            Icon(Icons.Default.Warning, "Missing", tint = Mocha.Red, modifier = Modifier.size(16.dp))
         }
     }
 }

@@ -12,22 +12,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.novacut.editor.model.ProjectSnapshot
+import com.novacut.editor.ui.theme.Mocha
 import java.text.SimpleDateFormat
 import java.util.*
-
-private val Surface0 = Color(0xFF313244)
-private val TextColor = Color(0xFFCDD6F4)
-private val Subtext = Color(0xFFA6ADC8)
-private val Mauve = Color(0xFFCBA6F7)
-private val Green = Color(0xFFA6E3A1)
-private val Yellow = Color(0xFFF9E2AF)
-private val Red = Color(0xFFF38BA8)
-private val Crust = Color(0xFF11111B)
 
 @Composable
 fun SnapshotHistoryPanel(
@@ -45,19 +36,19 @@ fun SnapshotHistoryPanel(
     if (showNameDialog) {
         AlertDialog(
             onDismissRequest = { showNameDialog = false },
-            title = { Text("Save Snapshot", color = TextColor) },
+            title = { Text("Save Snapshot", color = Mocha.Text) },
             text = {
                 OutlinedTextField(
                     value = snapshotName,
                     onValueChange = { snapshotName = it },
                     singleLine = true,
-                    placeholder = { Text("Snapshot name...", color = Subtext.copy(alpha = 0.5f)) },
+                    placeholder = { Text("Snapshot name...", color = Mocha.Subtext0.copy(alpha = 0.5f)) },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Mauve,
-                        unfocusedBorderColor = Subtext.copy(alpha = 0.3f),
-                        focusedTextColor = TextColor,
-                        unfocusedTextColor = TextColor,
-                        cursorColor = Mauve
+                        focusedBorderColor = Mocha.Mauve,
+                        unfocusedBorderColor = Mocha.Subtext0.copy(alpha = 0.3f),
+                        focusedMocha.Text = Mocha.Text,
+                        unfocusedMocha.Text = Mocha.Text,
+                        cursorColor = Mocha.Mauve
                     )
                 )
             },
@@ -68,22 +59,22 @@ fun SnapshotHistoryPanel(
                     snapshotName = ""
                     showNameDialog = false
                 }) {
-                    Text("Save", color = Mauve)
+                    Text("Save", color = Mocha.Mauve)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showNameDialog = false }) {
-                    Text("Cancel", color = Subtext)
+                    Text("Cancel", color = Mocha.Subtext0)
                 }
             },
-            containerColor = Color(0xFF1E1E2E)
+            containerColor = Mocha.Base
         )
     }
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+            .background(Mocha.Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
             .padding(12.dp)
     ) {
         Row(
@@ -91,13 +82,13 @@ fun SnapshotHistoryPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Version History", color = TextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text("Version History", color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             Row {
                 IconButton(onClick = { showNameDialog = true }, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Add, "New Snapshot", tint = Green, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Add, "New Snapshot", tint = Mocha.Green, modifier = Modifier.size(18.dp))
                 }
                 IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Close, "Close", tint = Subtext, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
                 }
             }
         }
@@ -112,11 +103,11 @@ fun SnapshotHistoryPanel(
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.History, null, tint = Subtext.copy(alpha = 0.3f), modifier = Modifier.size(32.dp))
+                    Icon(Icons.Default.History, null, tint = Mocha.Subtext0.copy(alpha = 0.3f), modifier = Modifier.size(32.dp))
                     Spacer(Modifier.height(4.dp))
-                    Text("No snapshots yet", color = Subtext, fontSize = 12.sp)
+                    Text("No snapshots yet", color = Mocha.Subtext0, fontSize = 12.sp)
                     Spacer(Modifier.height(4.dp))
-                    Text("Save your project state to roll back later", color = Subtext.copy(alpha = 0.5f), fontSize = 10.sp)
+                    Text("Save your project state to roll back later", color = Mocha.Subtext0.copy(alpha = 0.5f), fontSize = 10.sp)
                 }
             }
         } else {
@@ -131,7 +122,7 @@ fun SnapshotHistoryPanel(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(8.dp))
-                            .background(Surface0)
+                            .background(Mocha.Surface0)
                             .padding(10.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
@@ -141,17 +132,17 @@ fun SnapshotHistoryPanel(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Icon(Icons.Default.SaveAlt, null, tint = Yellow, modifier = Modifier.size(20.dp))
+                            Icon(Icons.Default.SaveAlt, null, tint = Mocha.Yellow, modifier = Modifier.size(20.dp))
                             Column {
                                 Text(
                                     snapshot.label.ifEmpty { "Untitled Snapshot" },
-                                    color = TextColor,
+                                    color = Mocha.Text,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Medium
                                 )
                                 Text(
                                     dateFormat.format(Date(snapshot.timestamp)),
-                                    color = Subtext,
+                                    color = Mocha.Subtext0,
                                     fontSize = 10.sp
                                 )
                             }
@@ -163,14 +154,14 @@ fun SnapshotHistoryPanel(
                                 onClick = { onRestoreSnapshot(snapshot.id) },
                                 modifier = Modifier.size(28.dp)
                             ) {
-                                Icon(Icons.Default.Restore, "Restore", tint = Green, modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.Restore, "Restore", tint = Mocha.Green, modifier = Modifier.size(16.dp))
                             }
                             // Delete
                             IconButton(
                                 onClick = { onDeleteSnapshot(snapshot.id) },
                                 modifier = Modifier.size(28.dp)
                             ) {
-                                Icon(Icons.Default.Delete, "Delete", tint = Red.copy(alpha = 0.6f), modifier = Modifier.size(14.dp))
+                                Icon(Icons.Default.Delete, "Delete", tint = Mocha.Red.copy(alpha = 0.6f), modifier = Modifier.size(14.dp))
                             }
                         }
                     }

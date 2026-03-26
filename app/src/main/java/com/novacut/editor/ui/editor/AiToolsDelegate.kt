@@ -386,50 +386,49 @@ class AiToolsDelegate(
     }
 
     private suspend fun runTrackMotion(clip: Clip) {
-        val region = com.novacut.editor.ai.TrackingRegion()
-        val results = aiFeatures.trackMotion(clip.sourceUri, region, clip.trimStartMs, clip.trimEndMs)
-        if (results.isEmpty()) {
-            showToast("Motion tracking failed")
-            return
+        try {
+            val region = com.novacut.editor.ai.TrackingRegion()
+            val results = aiFeatures.trackMotion(clip.sourceUri, region, clip.trimStartMs, clip.trimEndMs)
+            if (results.isEmpty()) {
+                showToast("Motion tracking failed")
+                return
+            }
+            saveUndoState("AI motion track")
+            val posKeyframes = buildTrackingKeyframes(results, clip, invertSign = false, yBaseline = 0.5f)
+            addPositionKeyframes(clip, posKeyframes)
+            showToast("Tracked ${results.size} motion points across clip")
+        } catch (e: Exception) {
+            showToast("Motion tracking error: ${e.message ?: "Unknown"}")
         }
-        saveUndoState("AI motion track")
-        val posKeyframes = results.mapNotNull { tr ->
-            val timeOffset = ((tr.timestampMs - clip.trimStartMs) / clip.speed).toLong()
-            if (timeOffset < 0 || timeOffset > clip.durationMs) return@mapNotNull null
-            listOf(
-                Keyframe(timeOffsetMs = timeOffset, property = KeyframeProperty.POSITION_X,
-                    value = (tr.region.centerX - 0.5f) * 2f, easing = Easing.EASE_IN_OUT),
-                Keyframe(timeOffsetMs = timeOffset, property = KeyframeProperty.POSITION_Y,
-                    value = (tr.region.centerY - 0.5f) * 2f, easing = Easing.EASE_IN_OUT)
-            )
-        }.flatten()
-        addPositionKeyframes(clip, posKeyframes)
-        showToast("Tracked ${results.size} motion points across clip")
     }
 
     private suspend fun runStyleTransfer(clip: Clip) {
-        showToast("Analyzing frame style...")
-        val style = aiFeatures.analyzeAndApplyStyle(clip.sourceUri)
-        if (style.confidence < 0.1f) {
-            showToast("Could not analyze frame style")
-            return
-        }
-        saveUndoState("AI style transfer")
-        val newEffects = buildList {
-            if (kotlin.math.abs(style.contrast - 1f) > 0.02f)
-                add(Effect(type = EffectType.CONTRAST, params = mapOf("value" to style.contrast)))
-            if (kotlin.math.abs(style.temperature) > 0.01f)
-                add(Effect(type = EffectType.TEMPERATURE, params = mapOf("value" to style.temperature)))
-            if (kotlin.math.abs(style.saturation - 1f) > 0.02f)
-                add(Effect(type = EffectType.SATURATION, params = mapOf("value" to style.saturation)))
-            if (kotlin.math.abs(style.exposure) > 0.01f)
-                add(Effect(type = EffectType.EXPOSURE, params = mapOf("value" to style.exposure)))
-            if (style.vignetteIntensity > 0.01f)
-                add(Effect(type = EffectType.VIGNETTE, params = mapOf("intensity" to style.vignetteIntensity, "radius" to style.vignetteRadius)))
-            if (style.filmGrain > 0.01f)
-                add(Effect(type = EffectType.FILM_GRAIN, params = mapOf("intensity" to style.filmGrain)))
-        }
-        if (newEffects.isNotEmpty()) {
+        try {
+            showToast("Analyzing frame style...")
+            val style = aiFeatures.analyzeAndApplyStyle(clip.sourceUri)
+            if (style.confidence < 0.1f) {
+                showToast("Could not analyze frame style")
+                return
+            }
+            saveUndoState("AI style transfer")
+            val newEffects = buildList {
+                if (kotlin.math.abs(style.contrast - 1f) > 0.02f)
+                    add(Effect(type = EffectType.CONTRAST, params = mapOf("value" to style.contrast)))
+                if (kotlin.math.abs(style.temperature) > 0.01f)
+                    add(Effect(type = EffectType.TEMPERATURE, params = mapOf("value" to style.temperature)))
+                if (kotlin.math.abs(style.saturation - 1f) > 0.02f)
+                    add(Effect(type = EffectType.SATURATION, params = mapOf("value" to style.saturation)))
+                if (kotlin.math.abs(style.exposure) > 0.01f)
+                    add(Effect(type = EffectType.EXPOSURE, params = mapOf("value" to style.exposure)))
+                if (style.vignetteIntensity > 0.01f)
+                    add(Effect(type = EffectType.VIGNETTE, params = mapOf("intensity" to style.vignetteIntensity, "radius" to style.vignetteRadius)))
+                if (style.filmGrain > 0.01f)
+                    add(Effect(type = EffectType.FILM_GRAIN, params = mapOf("intensity" to style.filmGrain)))
+            }
+            if (newEffects.isEmpty()) {
+                showToast("No style adjustments needed for '${style.styleName}'")
+                return
+            }
             stateFlow.update { state ->
                 val tracks = state.tracks.map { track ->
                     val idx = track.clips.indexOfFirst { it.id == clip.id }
@@ -438,39 +437,60 @@ class AiToolsDelegate(
                     val updated = c.copy(effects = c.effects + newEffects)
                     track.copy(clips = track.clips.toMutableList().apply { set(idx, updated) })
                 }
-                recalculateDuration(state.copy(tracks = tracks))
+                state.copy(tracks = tracks)
             }
             rebuildPlayerTimeline()
-            videoEngine.applyPreviewEffects(getSelectedClip())
+            getSelectedClip()?.let { videoEngine.applyPreviewEffects(it) }
             saveProject()
+            showToast("Applied '${style.styleName}' style (${newEffects.size} effects)")
+        } catch (e: Exception) {
+            showToast("Style transfer error: ${e.message ?: "Unknown"}")
         }
-        showToast("Applied '${style.styleName}' style (${newEffects.size} effects)")
     }
 
     private suspend fun runFaceTrack(clip: Clip) {
-        showToast("Face tracking: detecting faces...")
-        val region = com.novacut.editor.ai.TrackingRegion(centerX = 0.5f, centerY = 0.35f, width = 0.3f, height = 0.3f)
-        val results = aiFeatures.trackMotion(clip.sourceUri, region, clip.trimStartMs, clip.trimEndMs)
-        if (results.isNotEmpty()) {
-            saveUndoState("AI face track")
-            val posKeyframes = results.mapNotNull { tr ->
-                val timeOffset = ((tr.timestampMs - clip.trimStartMs) / clip.speed).toLong()
-                if (timeOffset < 0 || timeOffset > clip.durationMs) return@mapNotNull null
-                listOf(
-                    Keyframe(timeOffsetMs = timeOffset, property = KeyframeProperty.POSITION_X,
-                        value = -(tr.region.centerX - 0.5f) * 2f, easing = Easing.EASE_IN_OUT),
-                    Keyframe(timeOffsetMs = timeOffset, property = KeyframeProperty.POSITION_Y,
-                        value = -(tr.region.centerY - 0.35f) * 2f, easing = Easing.EASE_IN_OUT)
-                )
-            }.flatten()
-            addPositionKeyframes(clip, posKeyframes)
-            showToast("Face tracked: ${results.size} points")
-        } else {
-            showToast("No face detected")
+        try {
+            showToast("Face tracking: detecting faces...")
+            val region = com.novacut.editor.ai.TrackingRegion(centerX = 0.5f, centerY = 0.35f, width = 0.3f, height = 0.3f)
+            val results = aiFeatures.trackMotion(clip.sourceUri, region, clip.trimStartMs, clip.trimEndMs)
+            if (results.isNotEmpty()) {
+                saveUndoState("AI face track")
+                val posKeyframes = buildTrackingKeyframes(results, clip, invertSign = true, yBaseline = 0.35f)
+                addPositionKeyframes(clip, posKeyframes)
+                showToast("Face tracked: ${results.size} points")
+            } else {
+                showToast("No face detected")
+            }
+        } catch (e: Exception) {
+            showToast("Face tracking error: ${e.message ?: "Unknown"}")
         }
     }
 
+    /**
+     * Build position keyframes from tracking results.
+     * Shared between runTrackMotion and runFaceTrack to avoid duplication.
+     */
+    private fun buildTrackingKeyframes(
+        results: List<com.novacut.editor.ai.TrackingResult>,
+        clip: Clip,
+        invertSign: Boolean,
+        yBaseline: Float
+    ): List<Keyframe> {
+        val sign = if (invertSign) -1f else 1f
+        return results.mapNotNull { tr ->
+            val timeOffset = ((tr.timestampMs - clip.trimStartMs) / clip.speed).toLong()
+            if (timeOffset < 0 || timeOffset > clip.durationMs) return@mapNotNull null
+            listOf(
+                Keyframe(timeOffsetMs = timeOffset, property = KeyframeProperty.POSITION_X,
+                    value = sign * (tr.region.centerX - 0.5f) * 2f, easing = Easing.EASE_IN_OUT),
+                Keyframe(timeOffsetMs = timeOffset, property = KeyframeProperty.POSITION_Y,
+                    value = sign * (tr.region.centerY - yBaseline) * 2f, easing = Easing.EASE_IN_OUT)
+            )
+        }.flatten()
+    }
+
     private suspend fun runSmartReframe(clip: Clip) {
+        try {
         val suggestion = aiFeatures.suggestCrop(clip.sourceUri, 9f / 16f)
         if (suggestion.confidence > 0.1f) {
             saveUndoState("AI smart reframe")
@@ -485,20 +505,27 @@ class AiToolsDelegate(
         } else {
             showToast("Could not determine reframe region")
         }
+        } catch (e: Exception) {
+            showToast("Smart reframe error: ${e.message ?: "Unknown"}")
+        }
     }
 
     private suspend fun runUpscale(clip: Clip) {
-        showToast("Analyzing source resolution...")
-        val result = aiFeatures.analyzeForUpscale(clip.sourceUri)
-        if (result.targetResolution == null) {
-            showToast("Already at maximum resolution (${result.sourceWidth}x${result.sourceHeight})")
-            return
+        try {
+            showToast("Analyzing source resolution...")
+            val result = aiFeatures.analyzeForUpscale(clip.sourceUri)
+            if (result.targetResolution == null) {
+                showToast("Already at maximum resolution (${result.sourceWidth}x${result.sourceHeight})")
+                return
+            }
+            saveUndoState("AI upscale")
+            stateFlow.update { it.copy(project = it.project.copy(resolution = result.targetResolution)) }
+            val sharpenEffect = Effect(type = EffectType.SHARPEN, params = mapOf("strength" to result.sharpenStrength))
+            updateClipEffect(clip, sharpenEffect, setOf(EffectType.SHARPEN))
+            showToast("Upscaled to ${result.targetResolution.label} + sharpening applied")
+        } catch (e: Exception) {
+            showToast("Upscale error: ${e.message ?: "Unknown"}")
         }
-        saveUndoState("AI upscale")
-        stateFlow.update { it.copy(project = it.project.copy(resolution = result.targetResolution)) }
-        val sharpenEffect = Effect(type = EffectType.SHARPEN, params = mapOf("strength" to result.sharpenStrength))
-        updateClipEffect(clip, sharpenEffect, setOf(EffectType.SHARPEN))
-        showToast("Upscaled to ${result.targetResolution.label} + sharpening applied")
     }
 
     private fun addPositionKeyframes(clip: Clip, newKeyframes: List<Keyframe>) {

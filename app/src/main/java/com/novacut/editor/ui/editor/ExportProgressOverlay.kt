@@ -11,19 +11,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.novacut.editor.engine.ExportState
-
-private val Surface0 = Color(0xFF313244)
-private val TextColor = Color(0xFFCDD6F4)
-private val Subtext = Color(0xFFA6ADC8)
-private val Mauve = Color(0xFFCBA6F7)
-private val Red = Color(0xFFF38BA8)
-private val Green = Color(0xFFA6E3A1)
-private val Yellow = Color(0xFFF9E2AF)
+import com.novacut.editor.ui.theme.Mocha
 
 /**
  * Floating export progress overlay that shows during background export.
@@ -48,7 +40,7 @@ fun ExportProgressOverlay(
         Row(
             modifier = Modifier
                 .clip(RoundedCornerShape(12.dp))
-                .background(Surface0)
+                .background(Mocha.Surface0)
                 .padding(10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -58,13 +50,13 @@ fun ExportProgressOverlay(
                 CircularProgressIndicator(
                     progress = { exportProgress },
                     modifier = Modifier.size(36.dp),
-                    color = Mauve,
+                    color = Mocha.Mauve,
                     strokeWidth = 3.dp,
-                    trackColor = Mauve.copy(alpha = 0.1f)
+                    trackColor = Mocha.Mauve.copy(alpha = 0.1f)
                 )
                 Text(
                     "${(exportProgress * 100).toInt()}%",
-                    color = Mauve,
+                    color = Mocha.Mauve,
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -72,7 +64,7 @@ fun ExportProgressOverlay(
 
             // Info
             Column(modifier = Modifier.weight(1f)) {
-                Text("Exporting...", color = TextColor, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                Text("Exporting...", color = Mocha.Text, fontSize = 12.sp, fontWeight = FontWeight.Medium)
 
                 // Estimated time remaining
                 val currentTime by rememberUpdatedState(System.currentTimeMillis())
@@ -85,7 +77,7 @@ fun ExportProgressOverlay(
                 if (remaining > 0 && exportProgress > 0.05f) {
                     Text(
                         "~${formatEta(remaining)} remaining",
-                        color = Subtext,
+                        color = Mocha.Subtext0,
                         fontSize = 10.sp
                     )
                 }
@@ -96,7 +88,7 @@ fun ExportProgressOverlay(
                 onClick = onCancel,
                 modifier = Modifier.size(28.dp)
             ) {
-                Icon(Icons.Default.Close, "Cancel", tint = Red, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.Close, "Cancel", tint = Mocha.Red, modifier = Modifier.size(16.dp))
             }
         }
     }

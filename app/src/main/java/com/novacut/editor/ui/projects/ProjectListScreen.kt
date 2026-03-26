@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -27,6 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.decode.VideoFrameDecoder
 import coil.request.ImageRequest
+import com.novacut.editor.R
 import com.novacut.editor.model.Project
 import com.novacut.editor.model.SortMode
 import com.novacut.editor.ui.theme.Mocha
@@ -79,20 +81,20 @@ fun ProjectListScreen(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            "NovaCut",
+                            stringResource(R.string.projects_app_title),
                             color = Mocha.Text,
                             fontSize = 22.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.weight(1f))
                         Text(
-                            "${projects.size} project${if (projects.size != 1) "s" else ""}",
+                            stringResource(R.string.projects_count, projects.size, if (projects.size != 1) "s" else ""),
                             color = Mocha.Subtext0,
                             fontSize = 13.sp
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         IconButton(onClick = onSettings, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.Settings, "Settings", tint = Mocha.Subtext0, modifier = Modifier.size(20.dp))
+                            Icon(Icons.Default.Settings, stringResource(R.string.projects_settings), tint = Mocha.Subtext0, modifier = Modifier.size(20.dp))
                         }
                     }
 
@@ -100,11 +102,11 @@ fun ProjectListScreen(
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = viewModel::setSearchQuery,
-                        placeholder = { Text("Search projects...", fontSize = 14.sp) },
+                        placeholder = { Text(stringResource(R.string.projects_search_placeholder), fontSize = 14.sp) },
                         leadingIcon = {
                             Icon(
                                 Icons.Default.Search,
-                                contentDescription = "Search",
+                                contentDescription = stringResource(R.string.projects_search),
                                 tint = Mocha.Subtext0,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -117,7 +119,7 @@ fun ProjectListScreen(
                                 ) {
                                     Icon(
                                         Icons.Default.Clear,
-                                        contentDescription = "Clear",
+                                        contentDescription = stringResource(R.string.projects_clear),
                                         tint = Mocha.Subtext0,
                                         modifier = Modifier.size(16.dp)
                                     )
@@ -185,15 +187,15 @@ fun ProjectListScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            if (searchQuery.isNotEmpty()) "No matching projects"
-                            else "No projects yet",
+                            if (searchQuery.isNotEmpty()) stringResource(R.string.projects_no_matching)
+                            else stringResource(R.string.projects_no_projects_yet),
                             color = Mocha.Subtext0,
                             fontSize = 16.sp
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            if (searchQuery.isNotEmpty()) "Try a different search"
-                            else "Tap + to create your first project",
+                            if (searchQuery.isNotEmpty()) stringResource(R.string.projects_try_different_search)
+                            else stringResource(R.string.projects_tap_to_create),
                             color = Mocha.Overlay0,
                             fontSize = 13.sp
                         )
@@ -229,7 +231,7 @@ fun ProjectListScreen(
                 .align(Alignment.BottomEnd)
                 .padding(24.dp)
         ) {
-            Icon(Icons.Default.Add, contentDescription = "New Project")
+            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.projects_new_project))
         }
 
         // Template picker
@@ -238,8 +240,9 @@ fun ProjectListScreen(
             ProjectTemplateSheet(
                 onTemplateSelected = { template ->
                     showTemplateSheet = false
+                    val templateName = stringResource(template.nameResId)
                     viewModel.createProject(
-                        name = if (template.id == "blank") "Untitled" else template.name
+                        name = if (template.id == "blank") "Untitled" else templateName
                     ) { id -> onProjectSelected(id) }
                 },
                 onUserTemplateSelected = { userTemplate ->
@@ -296,7 +299,7 @@ private fun ProjectCard(
             ) {
                 Icon(
                     Icons.Default.Delete,
-                    contentDescription = "Delete",
+                    contentDescription = stringResource(R.string.projects_delete_cd),
                     tint = Mocha.Red
                 )
             }
@@ -332,7 +335,7 @@ private fun ProjectCard(
                                 .decoderFactory(VideoFrameDecoder.Factory())
                                 .crossfade(true)
                                 .build(),
-                            contentDescription = "Project thumbnail",
+                            contentDescription = stringResource(R.string.projects_thumbnail_cd),
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize()
                         )
@@ -390,7 +393,7 @@ private fun ProjectCard(
                     ) {
                         Icon(
                             Icons.Default.MoreVert,
-                            contentDescription = "More",
+                            contentDescription = stringResource(R.string.projects_more_cd),
                             tint = Mocha.Overlay0,
                             modifier = Modifier.size(20.dp)
                         )
@@ -401,7 +404,7 @@ private fun ProjectCard(
                         containerColor = Mocha.Surface1
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Duplicate", color = Mocha.Text, fontSize = 14.sp) },
+                            text = { Text(stringResource(R.string.projects_duplicate), color = Mocha.Text, fontSize = 14.sp) },
                             leadingIcon = {
                                 Icon(
                                     Icons.Default.ContentCopy,
@@ -416,7 +419,7 @@ private fun ProjectCard(
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Delete", color = Mocha.Red, fontSize = 14.sp) },
+                            text = { Text(stringResource(R.string.projects_delete), color = Mocha.Red, fontSize = 14.sp) },
                             leadingIcon = {
                                 Icon(
                                     Icons.Default.Delete,
@@ -439,19 +442,19 @@ private fun ProjectCard(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("Delete Project", color = Mocha.Text) },
-            text = { Text("Delete \"${project.name}\"? This cannot be undone.", color = Mocha.Subtext0) },
+            title = { Text(stringResource(R.string.projects_delete_title), color = Mocha.Text) },
+            text = { Text(stringResource(R.string.projects_delete_message, project.name), color = Mocha.Subtext0) },
             confirmButton = {
                 TextButton(onClick = {
                     onDelete()
                     showDeleteConfirm = false
                 }) {
-                    Text("Delete", color = Mocha.Red)
+                    Text(stringResource(R.string.projects_delete), color = Mocha.Red)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text("Cancel", color = Mocha.Subtext0)
+                    Text(stringResource(R.string.cancel), color = Mocha.Subtext0)
                 }
             },
             containerColor = Mocha.Surface0,

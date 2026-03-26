@@ -14,17 +14,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.novacut.editor.model.BlendMode
-
-private val Surface0 = Color(0xFF313244)
-private val TextColor = Color(0xFFCDD6F4)
-private val Subtext = Color(0xFFA6ADC8)
-private val Mauve = Color(0xFFCBA6F7)
-private val Crust = Color(0xFF11111B)
+import com.novacut.editor.ui.theme.Mocha
 
 @Composable
 fun BlendModeSelector(
@@ -36,7 +30,7 @@ fun BlendModeSelector(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+            .background(Mocha.Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
             .padding(12.dp)
     ) {
         Row(
@@ -44,9 +38,9 @@ fun BlendModeSelector(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Blend Mode", color = TextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text("Blend Mode", color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Close, "Close", tint = Subtext, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
             }
         }
 
@@ -65,7 +59,7 @@ fun BlendModeSelector(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .background(if (selected) Mauve.copy(alpha = 0.2f) else Surface0)
+                        .background(if (selected) Mocha.Mauve.copy(alpha = 0.2f) else Mocha.Surface0)
                         .clickable { onModeSelected(mode) }
                         .padding(horizontal = 8.dp, vertical = 10.dp),
                     contentAlignment = Alignment.Center
@@ -75,11 +69,11 @@ fun BlendModeSelector(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         if (selected) {
-                            Icon(Icons.Default.Check, null, tint = Mauve, modifier = Modifier.size(14.dp))
+                            Icon(Icons.Default.Check, null, tint = Mocha.Mauve, modifier = Modifier.size(14.dp))
                         }
                         Text(
                             mode.displayName,
-                            color = if (selected) Mauve else TextColor,
+                            color = if (selected) Mocha.Mauve else Mocha.Text,
                             fontSize = 11.sp,
                             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
                         )

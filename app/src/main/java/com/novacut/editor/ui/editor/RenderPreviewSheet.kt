@@ -17,16 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.novacut.editor.engine.SmartRenderEngine
-
-private val Surface0 = Color(0xFF313244)
-private val TextColor = Color(0xFFCDD6F4)
-private val Subtext = Color(0xFFA6ADC8)
-private val Mauve = Color(0xFFCBA6F7)
-private val Red = Color(0xFFF38BA8)
-private val Green = Color(0xFFA6E3A1)
-private val Yellow = Color(0xFFF9E2AF)
-private val Peach = Color(0xFFFAB387)
-private val Crust = Color(0xFF11111B)
+import com.novacut.editor.ui.theme.Mocha
 
 @Composable
 fun RenderPreviewSheet(
@@ -40,7 +31,7 @@ fun RenderPreviewSheet(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+            .background(Mocha.Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
             .padding(12.dp)
     ) {
         Row(
@@ -48,9 +39,9 @@ fun RenderPreviewSheet(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Render Analysis", color = TextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text("Render Analysis", color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Close, "Close", tint = Subtext, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
             }
         }
 
@@ -60,24 +51,24 @@ fun RenderPreviewSheet(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Surface0, RoundedCornerShape(8.dp))
+                .background(Mocha.Surface0, RoundedCornerShape(8.dp))
                 .padding(10.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             SummaryChip(
                 label = "Pass-through",
                 value = "${summary.passThroughSegments}",
-                color = Green
+                color = Mocha.Green
             )
             SummaryChip(
                 label = "Re-encode",
                 value = "${summary.reEncodeSegments}",
-                color = if (summary.reEncodeSegments > 0) Yellow else Green
+                color = if (summary.reEncodeSegments > 0) Mocha.Yellow else Mocha.Green
             )
             SummaryChip(
                 label = "Speedup",
                 value = if (summary.estimatedSpeedup < 100f) "%.1fx".format(summary.estimatedSpeedup) else "Max",
-                color = Mauve
+                color = Mocha.Mauve
             )
         }
 
@@ -92,12 +83,12 @@ fun RenderPreviewSheet(
         ) {
             Text(
                 "Re-encode: ${formatMs(summary.reEncodeDurationMs)}",
-                color = Yellow,
+                color = Mocha.Yellow,
                 fontSize = 10.sp
             )
             Text(
                 "Pass-through: ${formatMs(summary.passThroughDurationMs)}",
-                color = Green,
+                color = Mocha.Green,
                 fontSize = 10.sp
             )
         }
@@ -111,13 +102,13 @@ fun RenderPreviewSheet(
                     .fillMaxWidth()
                     .height(8.dp)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(Green.copy(alpha = 0.3f))
+                    .background(Mocha.Green.copy(alpha = 0.3f))
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxHeight()
                         .fillMaxWidth(reEncodeRatio)
-                        .background(Yellow.copy(alpha = 0.6f))
+                        .background(Mocha.Yellow.copy(alpha = 0.6f))
                 )
             }
         }
@@ -125,7 +116,7 @@ fun RenderPreviewSheet(
         Spacer(Modifier.height(8.dp))
 
         // Segment list
-        Text("Segments", color = Subtext, fontSize = 11.sp)
+        Text("Segments", color = Mocha.Subtext0, fontSize = 11.sp)
         Spacer(Modifier.height(4.dp))
         LazyColumn(
             modifier = Modifier
@@ -138,7 +129,7 @@ fun RenderPreviewSheet(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(6.dp))
-                        .background(Surface0)
+                        .background(Mocha.Surface0)
                         .padding(horizontal = 8.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
@@ -151,19 +142,19 @@ fun RenderPreviewSheet(
                             modifier = Modifier
                                 .size(8.dp)
                                 .background(
-                                    if (segment.needsReEncode) Yellow else Green,
+                                    if (segment.needsReEncode) Mocha.Yellow else Mocha.Green,
                                     RoundedCornerShape(4.dp)
                                 )
                         )
                         Text(
                             "${formatMs(segment.startMs)} - ${formatMs(segment.endMs)}",
-                            color = Subtext,
+                            color = Mocha.Subtext0,
                             fontSize = 10.sp
                         )
                     }
                     Text(
                         segment.reason,
-                        color = if (segment.needsReEncode) Yellow else Green,
+                        color = if (segment.needsReEncode) Mocha.Yellow else Mocha.Green,
                         fontSize = 9.sp
                     )
                 }
@@ -181,19 +172,19 @@ fun RenderPreviewSheet(
             OutlinedButton(
                 onClick = onRenderPreview,
                 modifier = Modifier.weight(1f),
-                border = BorderStroke(1.dp, Peach.copy(alpha = 0.5f)),
+                border = BorderStroke(1.dp, Mocha.Peach.copy(alpha = 0.5f)),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Icon(Icons.Default.Preview, null, tint = Peach, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.Preview, null, tint = Mocha.Peach, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("Preview", color = Peach, fontSize = 12.sp)
+                Text("Preview", color = Mocha.Peach, fontSize = 12.sp)
             }
 
             // Full quality export
             Button(
                 onClick = onRenderFull,
                 modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(containerColor = Mauve),
+                colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve),
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Icon(Icons.Default.RocketLaunch, null, modifier = Modifier.size(16.dp))
@@ -208,7 +199,7 @@ fun RenderPreviewSheet(
 private fun SummaryChip(label: String, value: String, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(value, color = color, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-        Text(label, color = Subtext, fontSize = 9.sp)
+        Text(label, color = Mocha.Subtext0, fontSize = 9.sp)
     }
 }
 

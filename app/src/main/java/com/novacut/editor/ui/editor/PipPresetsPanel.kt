@@ -17,13 +17,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-private val Surface0 = Color(0xFF313244)
-private val TextColor = Color(0xFFCDD6F4)
-private val Subtext = Color(0xFFA6ADC8)
-private val Mauve = Color(0xFFCBA6F7)
-private val Peach = Color(0xFFFAB387)
-private val Crust = Color(0xFF11111B)
+import com.novacut.editor.ui.theme.Mocha
 
 data class PipPreset(
     val name: String,
@@ -57,7 +51,7 @@ fun PipPresetsPanel(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+            .background(Mocha.Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
             .padding(12.dp)
     ) {
         Row(
@@ -65,9 +59,9 @@ fun PipPresetsPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Picture-in-Picture", color = TextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text("Picture-in-Picture", color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Close, "Close", tint = Subtext, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
             }
         }
 
@@ -85,7 +79,7 @@ fun PipPresetsPanel(
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(Surface0)
+                            .background(Mocha.Surface0)
                             .clickable { onPresetSelected(preset) }
                             .padding(6.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
@@ -95,11 +89,11 @@ fun PipPresetsPanel(
                             modifier = Modifier
                                 .size(48.dp)
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(Color(0xFF1E1E2E))
+                                .background(Mocha.Base)
                         ) {
                             // Main frame
                             drawRect(
-                                Subtext.copy(alpha = 0.2f),
+                                Mocha.Subtext0.copy(alpha = 0.2f),
                                 Offset(2f, 2f),
                                 Size(size.width - 4f, size.height - 4f),
                                 style = Stroke(1f)
@@ -110,19 +104,19 @@ fun PipPresetsPanel(
                             val pipX = size.width / 2f + preset.posX * size.width / 2f * 0.8f - pipW / 2f
                             val pipY = size.height / 2f + preset.posY * size.height / 2f * 0.8f - pipH / 2f
                             drawRect(
-                                Mauve.copy(alpha = 0.4f),
+                                Mocha.Mauve.copy(alpha = 0.4f),
                                 Offset(pipX, pipY),
                                 Size(pipW, pipH)
                             )
                             drawRect(
-                                Mauve,
+                                Mocha.Mauve,
                                 Offset(pipX, pipY),
                                 Size(pipW, pipH),
                                 style = Stroke(1f)
                             )
                         }
                         Spacer(Modifier.height(2.dp))
-                        Text(preset.name, color = Subtext, fontSize = 8.sp, maxLines = 1)
+                        Text(preset.name, color = Mocha.Subtext0, fontSize = 8.sp, maxLines = 1)
                     }
                 }
                 // Fill remaining slots
@@ -156,7 +150,7 @@ fun ChromaKeyPanel(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+            .background(Mocha.Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
             .padding(12.dp)
     ) {
         Row(
@@ -164,13 +158,13 @@ fun ChromaKeyPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Chroma Key", color = TextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text("Chroma Key", color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             Row {
                 IconButton(onClick = onShowAlphaMatte, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Visibility, "Alpha Matte", tint = Peach, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Visibility, "Alpha Matte", tint = Mocha.Peach, modifier = Modifier.size(18.dp))
                 }
                 IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Close, "Close", tint = Subtext, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
                 }
             }
         }
@@ -178,7 +172,7 @@ fun ChromaKeyPanel(
         Spacer(Modifier.height(8.dp))
 
         // Key color presets
-        Text("Key Color", color = Subtext, fontSize = 11.sp)
+        Text("Key Color", color = Mocha.Subtext0, fontSize = 11.sp)
         Row(
             modifier = Modifier.padding(vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -191,7 +185,7 @@ fun ChromaKeyPanel(
                     .background(Color(0xFF00FF00))
                     .then(
                         if (keyColorG > 0.8f && keyColorR < 0.3f && keyColorB < 0.3f)
-                            Modifier.border(2.dp, Mauve, RoundedCornerShape(6.dp))
+                            Modifier.border(2.dp, Mocha.Mauve, RoundedCornerShape(6.dp))
                         else Modifier
                     )
                     .clickable { onKeyColorChanged(0f, 1f, 0f) },
@@ -207,7 +201,7 @@ fun ChromaKeyPanel(
                     .background(Color(0xFF0044FF))
                     .then(
                         if (keyColorB > 0.8f && keyColorR < 0.3f && keyColorG < 0.3f)
-                            Modifier.border(2.dp, Mauve, RoundedCornerShape(6.dp))
+                            Modifier.border(2.dp, Mocha.Mauve, RoundedCornerShape(6.dp))
                         else Modifier
                     )
                     .clickable { onKeyColorChanged(0f, 0f, 1f) },
@@ -238,10 +232,10 @@ fun ChromaKeyPanel(
         Spacer(Modifier.height(8.dp))
 
         // Refinement controls
-        Text("Refinement", color = Subtext, fontSize = 11.sp)
-        ChromaSlider("Similarity", similarity, Mauve, onSimilarityChanged)
-        ChromaSlider("Smoothness", smoothness, Mauve, onSmoothnessChanged)
-        ChromaSlider("Spill Suppress", spillSuppression, Mauve, onSpillChanged)
+        Text("Refinement", color = Mocha.Subtext0, fontSize = 11.sp)
+        ChromaSlider("Similarity", similarity, Mocha.Mauve, onSimilarityChanged)
+        ChromaSlider("Smoothness", smoothness, Mocha.Mauve, onSmoothnessChanged)
+        ChromaSlider("Spill Suppress", spillSuppression, Mocha.Mauve, onSpillChanged)
     }
 }
 
@@ -258,7 +252,7 @@ private fun ChromaSlider(
             .padding(vertical = 1.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, color = Subtext, fontSize = 10.sp, modifier = Modifier.width(80.dp))
+        Text(label, color = Mocha.Subtext0, fontSize = 10.sp, modifier = Modifier.width(80.dp))
         Slider(
             value = value,
             onValueChange = onChanged,
@@ -269,9 +263,9 @@ private fun ChromaSlider(
             colors = SliderDefaults.colors(
                 thumbColor = color,
                 activeTrackColor = color.copy(alpha = 0.6f),
-                inactiveTrackColor = Surface0
+                inactiveTrackColor = Mocha.Surface0
             )
         )
-        Text("%.2f".format(value), color = Subtext, fontSize = 9.sp, modifier = Modifier.width(30.dp))
+        Text("%.2f".format(value), color = Mocha.Subtext0, fontSize = 9.sp, modifier = Modifier.width(30.dp))
     }
 }

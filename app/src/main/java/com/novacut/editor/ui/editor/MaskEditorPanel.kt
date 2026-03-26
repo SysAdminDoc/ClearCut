@@ -18,9 +18,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.novacut.editor.R
 import com.novacut.editor.model.*
 import com.novacut.editor.ui.theme.Mocha
 
@@ -50,7 +52,7 @@ fun MaskEditorPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Masks", color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.mask_title), color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             Row {
                 var showAddMenu by remember { mutableStateOf(false) }
                 Box {
@@ -79,7 +81,7 @@ fun MaskEditorPanel(
 
         // Mask list
         if (masks.isEmpty()) {
-            Text("No masks. Tap + to add one.", color = Mocha.Subtext0, fontSize = 12.sp, modifier = Modifier.padding(8.dp))
+            Text(stringResource(R.string.mask_empty), color = Mocha.Subtext0, fontSize = 12.sp, modifier = Modifier.padding(8.dp))
         } else {
             Row(
                 modifier = Modifier
@@ -131,7 +133,7 @@ fun MaskEditorPanel(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Invert Mask", color = Mocha.Text, fontSize = 13.sp)
+                Text(stringResource(R.string.mask_invert), color = Mocha.Text, fontSize = 13.sp)
                 Switch(
                     checked = mask.inverted,
                     onCheckedChange = { onMaskUpdated(mask.copy(inverted = it)) },
@@ -152,7 +154,7 @@ fun MaskEditorPanel(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Track to Motion", color = Mocha.Text, fontSize = 13.sp)
+                Text(stringResource(R.string.mask_track_to_motion), color = Mocha.Text, fontSize = 13.sp)
                 Switch(
                     checked = mask.trackToMotion,
                     onCheckedChange = { onMaskUpdated(mask.copy(trackToMotion = it)) },
@@ -197,7 +199,7 @@ private fun MaskChip(
             fontSize = 11.sp
         )
         if (mask.inverted) {
-            Text("INV", color = Mocha.Yellow, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.mask_inv_label), color = Mocha.Yellow, fontSize = 9.sp, fontWeight = FontWeight.Bold)
         }
         Icon(
             Icons.Default.Close,

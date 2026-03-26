@@ -15,23 +15,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.novacut.editor.model.*
-
-private val Surface0 = Color(0xFF313244)
-private val Surface1 = Color(0xFF45475A)
-private val TextColor = Color(0xFFCDD6F4)
-private val Subtext = Color(0xFFA6ADC8)
-private val Mauve = Color(0xFFCBA6F7)
-private val Red = Color(0xFFF38BA8)
-private val Green = Color(0xFFA6E3A1)
-private val Yellow = Color(0xFFF9E2AF)
-private val Peach = Color(0xFFFAB387)
-private val Crust = Color(0xFF11111B)
+import com.novacut.editor.ui.theme.Mocha
 
 @Composable
 fun CaptionEditorPanel(
@@ -51,7 +40,7 @@ fun CaptionEditorPanel(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+            .background(Mocha.Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
             .padding(12.dp)
     ) {
         // Header
@@ -60,11 +49,11 @@ fun CaptionEditorPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Captions", color = TextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text("Captions", color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             Row {
                 // Auto-generate button
                 IconButton(onClick = onGenerateAutoCaption, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.AutoAwesome, "Auto Caption", tint = Yellow, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.AutoAwesome, "Auto Caption", tint = Mocha.Yellow, modifier = Modifier.size(18.dp))
                 }
                 IconButton(onClick = {
                     val newCaption = Caption(
@@ -76,10 +65,10 @@ fun CaptionEditorPanel(
                     onAddCaption(newCaption)
                     editingCaption = newCaption
                 }, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Add, "Add Caption", tint = Green, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Add, "Add Caption", tint = Mocha.Green, modifier = Modifier.size(18.dp))
                 }
                 IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Close, "Close", tint = Subtext, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
                 }
             }
         }
@@ -87,7 +76,7 @@ fun CaptionEditorPanel(
         Spacer(Modifier.height(8.dp))
 
         // Style selector
-        Text("Style", color = Subtext, fontSize = 11.sp)
+        Text("Style", color = Mocha.Subtext0, fontSize = 11.sp)
         Spacer(Modifier.height(4.dp))
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -100,9 +89,9 @@ fun CaptionEditorPanel(
                     label = { Text(styleType.displayName, fontSize = 10.sp) },
                     modifier = Modifier.height(28.dp),
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = Mauve.copy(alpha = 0.2f),
-                        selectedLabelColor = Mauve,
-                        labelColor = Subtext
+                        selectedContainerColor = Mocha.Mauve.copy(alpha = 0.2f),
+                        selectedLabelColor = Mocha.Mauve,
+                        labelColor = Mocha.Subtext0
                     )
                 )
             }
@@ -119,17 +108,17 @@ fun CaptionEditorPanel(
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.ClosedCaption, null, tint = Subtext.copy(alpha = 0.3f), modifier = Modifier.size(32.dp))
+                    Icon(Icons.Default.ClosedCaption, null, tint = Mocha.Subtext0.copy(alpha = 0.3f), modifier = Modifier.size(32.dp))
                     Spacer(Modifier.height(4.dp))
-                    Text("No captions yet", color = Subtext, fontSize = 12.sp)
+                    Text("No captions yet", color = Mocha.Subtext0, fontSize = 12.sp)
                     Spacer(Modifier.height(8.dp))
                     OutlinedButton(
                         onClick = onGenerateAutoCaption,
-                        border = BorderStroke(1.dp, Yellow.copy(alpha = 0.5f))
+                        border = BorderStroke(1.dp, Mocha.Yellow.copy(alpha = 0.5f))
                     ) {
-                        Icon(Icons.Default.AutoAwesome, null, tint = Yellow, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.AutoAwesome, null, tint = Mocha.Yellow, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Auto-Generate", color = Yellow, fontSize = 12.sp)
+                        Text("Auto-Generate", color = Mocha.Yellow, fontSize = 12.sp)
                     }
                 }
             }
@@ -155,7 +144,7 @@ fun CaptionEditorPanel(
         // Editing panel
         editingCaption?.let { caption ->
             Spacer(Modifier.height(8.dp))
-            HorizontalDivider(color = Surface1, thickness = 1.dp)
+            HorizontalDivider(color = Mocha.Surface1, thickness = 1.dp)
             Spacer(Modifier.height(8.dp))
             CaptionEditForm(
                 caption = caption,
@@ -186,9 +175,9 @@ private fun CaptionRow(
             .clip(RoundedCornerShape(8.dp))
             .background(
                 when {
-                    isEditing -> Mauve.copy(alpha = 0.15f)
-                    isActive -> Green.copy(alpha = 0.1f)
-                    else -> Surface0
+                    isEditing -> Mocha.Mauve.copy(alpha = 0.15f)
+                    isActive -> Mocha.Green.copy(alpha = 0.1f)
+                    else -> Mocha.Surface0
                 }
             )
             .clickable(onClick = onEdit)
@@ -199,7 +188,7 @@ private fun CaptionRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 caption.text,
-                color = TextColor,
+                color = Mocha.Text,
                 fontSize = 13.sp,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
@@ -207,18 +196,18 @@ private fun CaptionRow(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     "%.1fs - %.1fs".format(caption.startTimeMs / 1000f, caption.endTimeMs / 1000f),
-                    color = Subtext,
+                    color = Mocha.Subtext0,
                     fontSize = 10.sp
                 )
                 Text(
                     caption.style.type.displayName,
-                    color = Mauve.copy(alpha = 0.7f),
+                    color = Mocha.Mauve.copy(alpha = 0.7f),
                     fontSize = 10.sp
                 )
                 if (caption.words.isNotEmpty()) {
                     Text(
                         "${caption.words.size} words",
-                        color = Peach.copy(alpha = 0.7f),
+                        color = Mocha.Peach.copy(alpha = 0.7f),
                         fontSize = 10.sp
                     )
                 }
@@ -227,10 +216,10 @@ private fun CaptionRow(
 
         Row {
             IconButton(onClick = onEdit, modifier = Modifier.size(24.dp)) {
-                Icon(Icons.Default.Edit, "Edit", tint = Subtext, modifier = Modifier.size(14.dp))
+                Icon(Icons.Default.Edit, "Edit", tint = Mocha.Subtext0, modifier = Modifier.size(14.dp))
             }
             IconButton(onClick = onDelete, modifier = Modifier.size(24.dp)) {
-                Icon(Icons.Default.Delete, "Delete", tint = Red.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
+                Icon(Icons.Default.Delete, "Delete", tint = Mocha.Red.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
             }
         }
     }
@@ -258,11 +247,11 @@ private fun CaptionEditForm(
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Caption Text", fontSize = 12.sp) },
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Mauve,
-                unfocusedBorderColor = Surface1,
-                focusedTextColor = TextColor,
-                unfocusedTextColor = TextColor,
-                cursorColor = Mauve
+                focusedBorderColor = Mocha.Mauve,
+                unfocusedBorderColor = Mocha.Surface1,
+                focusedTextColor = Mocha.Text,
+                unfocusedTextColor = Mocha.Text,
+                cursorColor = Mocha.Mauve
             ),
             maxLines = 3,
             textStyle = androidx.compose.ui.text.TextStyle(fontSize = 13.sp)
@@ -276,31 +265,31 @@ private fun CaptionEditForm(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("Start (s)", color = Subtext, fontSize = 10.sp)
+                Text("Start (s)", color = Mocha.Subtext0, fontSize = 10.sp)
                 Slider(
                     value = startTime,
                     onValueChange = { startTime = it.coerceAtMost(endTime) },
                     valueRange = 0f..(clipDurationMs / 1000f),
                     modifier = Modifier.height(24.dp),
-                    colors = SliderDefaults.colors(thumbColor = Mauve, activeTrackColor = Mauve.copy(alpha = 0.6f))
+                    colors = SliderDefaults.colors(thumbColor = Mocha.Mauve, activeTrackColor = Mocha.Mauve.copy(alpha = 0.6f))
                 )
-                Text("%.1fs".format(startTime), color = Subtext, fontSize = 9.sp)
+                Text("%.1fs".format(startTime), color = Mocha.Subtext0, fontSize = 9.sp)
             }
             Column(modifier = Modifier.weight(1f)) {
-                Text("End (s)", color = Subtext, fontSize = 10.sp)
+                Text("End (s)", color = Mocha.Subtext0, fontSize = 10.sp)
                 Slider(
                     value = endTime,
                     onValueChange = { endTime = it.coerceAtLeast(startTime) },
                     valueRange = 0f..(clipDurationMs / 1000f),
                     modifier = Modifier.height(24.dp),
-                    colors = SliderDefaults.colors(thumbColor = Mauve, activeTrackColor = Mauve.copy(alpha = 0.6f))
+                    colors = SliderDefaults.colors(thumbColor = Mocha.Mauve, activeTrackColor = Mocha.Mauve.copy(alpha = 0.6f))
                 )
-                Text("%.1fs".format(endTime), color = Subtext, fontSize = 9.sp)
+                Text("%.1fs".format(endTime), color = Mocha.Subtext0, fontSize = 9.sp)
             }
         }
 
         // Style
-        Text("Style", color = Subtext, fontSize = 10.sp)
+        Text("Style", color = Mocha.Subtext0, fontSize = 10.sp)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             items(CaptionStyleType.entries.toList()) { type ->
                 FilterChip(
@@ -309,8 +298,8 @@ private fun CaptionEditForm(
                     label = { Text(type.displayName, fontSize = 9.sp) },
                     modifier = Modifier.height(26.dp),
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = Mauve.copy(alpha = 0.2f),
-                        selectedLabelColor = Mauve
+                        selectedContainerColor = Mocha.Mauve.copy(alpha = 0.2f),
+                        selectedLabelColor = Mocha.Mauve
                     )
                 )
             }
@@ -319,19 +308,19 @@ private fun CaptionEditForm(
         // Size + Position
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("Font Size", color = Subtext, fontSize = 10.sp)
+                Text("Font Size", color = Mocha.Subtext0, fontSize = 10.sp)
                 Slider(
                     value = fontSize, onValueChange = { fontSize = it },
                     valueRange = 16f..72f, modifier = Modifier.height(24.dp),
-                    colors = SliderDefaults.colors(thumbColor = Mauve, activeTrackColor = Mauve.copy(alpha = 0.6f))
+                    colors = SliderDefaults.colors(thumbColor = Mocha.Mauve, activeTrackColor = Mocha.Mauve.copy(alpha = 0.6f))
                 )
             }
             Column(modifier = Modifier.weight(1f)) {
-                Text("Position Y", color = Subtext, fontSize = 10.sp)
+                Text("Position Y", color = Mocha.Subtext0, fontSize = 10.sp)
                 Slider(
                     value = positionY, onValueChange = { positionY = it },
                     valueRange = 0.1f..0.95f, modifier = Modifier.height(24.dp),
-                    colors = SliderDefaults.colors(thumbColor = Mauve, activeTrackColor = Mauve.copy(alpha = 0.6f))
+                    colors = SliderDefaults.colors(thumbColor = Mocha.Mauve, activeTrackColor = Mocha.Mauve.copy(alpha = 0.6f))
                 )
             }
         }
@@ -354,7 +343,7 @@ private fun CaptionEditForm(
                 onDone()
             },
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = Mauve),
+            colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve),
             shape = RoundedCornerShape(8.dp)
         ) {
             Text("Save Caption")

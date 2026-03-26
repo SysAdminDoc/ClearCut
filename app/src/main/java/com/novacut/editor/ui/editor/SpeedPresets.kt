@@ -240,4 +240,56 @@ fun generatePresetCurve(type: SpeedPresetType): SpeedCurve = when (type) {
             SpeedPoint(1f, 0.5f, handleInY = 0.6f)
         )
     )
+    // Time Freeze: speed drops to near-zero at 50%, holds briefly, then resumes
+    SpeedPresetType.TIME_FREEZE -> SpeedCurve(
+        listOf(
+            SpeedPoint(0f, 1.0f, handleOutY = 1.0f),
+            SpeedPoint(0.4f, 1.0f, handleInY = 1.0f, handleOutY = 0.3f),
+            SpeedPoint(0.48f, 0.01f, handleInY = 0.01f, handleOutY = 0.01f),
+            SpeedPoint(0.52f, 0.01f, handleInY = 0.01f, handleOutY = 0.01f),
+            SpeedPoint(0.6f, 1.0f, handleInY = 0.3f, handleOutY = 1.0f),
+            SpeedPoint(1f, 1.0f, handleInY = 1.0f)
+        )
+    )
+    // Film Reel: alternating 2x and 1x speed to simulate 24fps stutter
+    SpeedPresetType.FILM_REEL -> SpeedCurve(
+        listOf(
+            SpeedPoint(0f, 2.0f, handleOutY = 2.0f),
+            SpeedPoint(0.12f, 2.0f, handleInY = 2.0f, handleOutY = 2.0f),
+            SpeedPoint(0.13f, 1.0f, handleInY = 1.0f, handleOutY = 1.0f),
+            SpeedPoint(0.25f, 1.0f, handleInY = 1.0f, handleOutY = 1.0f),
+            SpeedPoint(0.26f, 2.0f, handleInY = 2.0f, handleOutY = 2.0f),
+            SpeedPoint(0.38f, 2.0f, handleInY = 2.0f, handleOutY = 2.0f),
+            SpeedPoint(0.39f, 1.0f, handleInY = 1.0f, handleOutY = 1.0f),
+            SpeedPoint(0.5f, 1.0f, handleInY = 1.0f, handleOutY = 1.0f),
+            SpeedPoint(0.51f, 2.0f, handleInY = 2.0f, handleOutY = 2.0f),
+            SpeedPoint(0.63f, 2.0f, handleInY = 2.0f, handleOutY = 2.0f),
+            SpeedPoint(0.64f, 1.0f, handleInY = 1.0f, handleOutY = 1.0f),
+            SpeedPoint(0.75f, 1.0f, handleInY = 1.0f, handleOutY = 1.0f),
+            SpeedPoint(0.76f, 2.0f, handleInY = 2.0f, handleOutY = 2.0f),
+            SpeedPoint(0.88f, 2.0f, handleInY = 2.0f, handleOutY = 2.0f),
+            SpeedPoint(0.89f, 1.0f, handleInY = 1.0f, handleOutY = 1.0f),
+            SpeedPoint(1f, 1.0f, handleInY = 1.0f)
+        )
+    )
+    // Heartbeat: repeating 1.5x → 0.5x → 1.5x → 0.5x pattern
+    SpeedPresetType.HEARTBEAT -> SpeedCurve(
+        listOf(
+            SpeedPoint(0f, 1.5f, handleOutY = 1.3f),
+            SpeedPoint(0.25f, 0.5f, handleInY = 0.7f, handleOutY = 0.7f),
+            SpeedPoint(0.5f, 1.5f, handleInY = 1.3f, handleOutY = 1.3f),
+            SpeedPoint(0.75f, 0.5f, handleInY = 0.7f, handleOutY = 0.7f),
+            SpeedPoint(1f, 1.5f, handleInY = 1.3f)
+        )
+    )
+    // Crescendo: exponential ramp from 0.5x to 3x
+    SpeedPresetType.CRESCENDO -> SpeedCurve(
+        listOf(
+            SpeedPoint(0f, 0.5f, handleOutY = 0.5f),
+            SpeedPoint(0.25f, 0.6f, handleInY = 0.55f, handleOutY = 0.7f),
+            SpeedPoint(0.5f, 0.9f, handleInY = 0.8f, handleOutY = 1.2f),
+            SpeedPoint(0.75f, 1.8f, handleInY = 1.5f, handleOutY = 2.3f),
+            SpeedPoint(1f, 3.0f, handleInY = 2.6f)
+        )
+    )
 }

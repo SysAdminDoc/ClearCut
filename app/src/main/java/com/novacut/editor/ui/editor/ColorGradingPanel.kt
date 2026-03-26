@@ -19,8 +19,10 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.novacut.editor.R
 import com.novacut.editor.model.*
 import com.novacut.editor.ui.theme.Mocha
 import kotlin.math.*
@@ -55,7 +57,7 @@ fun ColorGradingPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Color Grading", color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.color_grading_title), color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             Row {
                 IconButton(onClick = {
                     onColorGradeChanged(ColorGrade())
@@ -156,7 +158,7 @@ private fun ColorWheelsContent(
         Spacer(Modifier.height(12.dp))
 
         // Offset sliders
-        Text("Offset", color = Mocha.Subtext0, fontSize = 11.sp, modifier = Modifier.padding(start = 4.dp))
+        Text(stringResource(R.string.color_grading_offset), color = Mocha.Subtext0, fontSize = 11.sp, modifier = Modifier.padding(start = 4.dp))
         GradingSlider("R", grade.offsetR, -0.5f, 0.5f, Mocha.Red) { onChange(grade.copy(offsetR = it)) }
         GradingSlider("G", grade.offsetG, -0.5f, 0.5f, Mocha.Green) { onChange(grade.copy(offsetG = it)) }
         GradingSlider("B", grade.offsetB, -0.5f, 0.5f, Mocha.Blue) { onChange(grade.copy(offsetB = it)) }
@@ -473,7 +475,7 @@ private fun HslContent(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("HSL Qualifier", color = Mocha.Text, fontSize = 13.sp)
+            Text(stringResource(R.string.color_grading_hsl_qualifier), color = Mocha.Text, fontSize = 13.sp)
             Switch(
                 checked = grade.hslQualifier != null,
                 onCheckedChange = { enabled ->
@@ -485,7 +487,7 @@ private fun HslContent(
 
         if (grade.hslQualifier != null) {
             Spacer(Modifier.height(8.dp))
-            Text("Selection", color = Mocha.Subtext0, fontSize = 11.sp)
+            Text(stringResource(R.string.color_grading_selection), color = Mocha.Subtext0, fontSize = 11.sp)
             GradingSlider("Hue", hsl.hueCenter, 0f, 360f, Mocha.Yellow) {
                 onChange(grade.copy(hslQualifier = hsl.copy(hueCenter = it)))
             }
@@ -509,7 +511,7 @@ private fun HslContent(
             }
 
             Spacer(Modifier.height(8.dp))
-            Text("Adjustment", color = Mocha.Subtext0, fontSize = 11.sp)
+            Text(stringResource(R.string.color_grading_adjustment), color = Mocha.Subtext0, fontSize = 11.sp)
             GradingSlider("Hue", hsl.adjustHue, -180f, 180f, Mocha.Yellow) {
                 onChange(grade.copy(hslQualifier = hsl.copy(adjustHue = it)))
             }
@@ -537,7 +539,7 @@ private fun LutContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("Active LUT", color = Mocha.Text, fontSize = 13.sp)
+                    Text(stringResource(R.string.color_grading_active_lut), color = Mocha.Text, fontSize = 13.sp)
                     Text(
                         grade.lutPath.substringAfterLast("/"),
                         color = Mocha.Subtext0,
@@ -556,7 +558,7 @@ private fun LutContent(
                 onChange(grade.copy(lutIntensity = it))
             }
         } else {
-            Text("No LUT loaded", color = Mocha.Subtext0, fontSize = 13.sp)
+            Text(stringResource(R.string.color_grading_no_lut_loaded), color = Mocha.Subtext0, fontSize = 13.sp)
         }
 
         Spacer(Modifier.height(12.dp))
@@ -569,7 +571,7 @@ private fun LutContent(
         ) {
             Icon(Icons.Default.FileOpen, "Import", tint = Mocha.Mauve, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text("Import LUT (.cube / .3dl)", color = Mocha.Mauve)
+            Text(stringResource(R.string.color_grading_import_lut), color = Mocha.Mauve)
         }
     }
 }

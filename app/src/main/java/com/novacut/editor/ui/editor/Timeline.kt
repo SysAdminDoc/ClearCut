@@ -35,6 +35,8 @@ import com.novacut.editor.ui.theme.Mocha
 import kotlin.math.abs
 import kotlinx.coroutines.launch
 
+private const val BASE_SCALE = 0.15f // pixels per ms at zoom 1.0
+
 private fun findSnapTarget(positionMs: Long, targets: List<Long>, thresholdMs: Long): Long? {
     return targets.minByOrNull { abs(it - positionMs) }
         ?.takeIf { abs(it - positionMs) <= thresholdMs }
@@ -77,9 +79,20 @@ fun Timeline(
     val haptic = LocalHapticFeedback.current
     val trackHeight = 60.dp
     val rulerHeight = 28.dp
-    val pixelsPerMs = zoomLevel * 0.15f // base scale
+    val pixelsPerMs = zoomLevel * BASE_SCALE
     val coroutineScope = rememberCoroutineScope()
     val textMeasurer = rememberTextMeasurer()
+
+    // Use rememberUpdatedState for values that change frequently so pointerInput
+    // blocks always see the latest value without recreating gesture detectors.
+    val currentZoomLevel by rememberUpdatedState(zoomLevel)
+    val currentScrollOffsetMs by rememberUpdatedState(scrollOffsetMs)
+    val currentTotalDurationMs by rememberUpdatedState(totalDurationMs)
+    val currentPlayheadMs by rememberUpdatedState(playheadMs)
+    val currentMarkers by rememberUpdatedState(markers)
+    val currentTracks by rememberUpdatedState(tracks)
+    val currentSelectedClipId by rememberUpdatedState(selectedClipId)
+    val currentIsTrimMode by rememberUpdatedState(isTrimMode)
 
     // Thumbnail cache — quantize zoom to prevent unbounded cache growth
     val thumbnails = remember { mutableStateMapOf<String, List<Bitmap>>() }
@@ -252,13 +265,13 @@ fun Timeline(
                         timelineWidthPx = it.width.toFloat()
                         onTimelineWidthChanged(timelineWidthPx)
                     }
-                    .pointerInput(zoomLevel, scrollOffsetMs) {
+                    .pointerInput(Unit) {
                         detectTransformGestures { _, pan, zoom, _ ->
-                            val currentPixelsPerMs = zoomLevel * 0.15f
-                            val newZoom = (zoomLevel * zoom).coerceIn(0.1f, 10f)
+                            val ppm = currentZoomLevel * BASE_SCALE
+                            val newZoom = (currentZoomLevel * zoom).coerceIn(0.1f, 10f)
                             onZoomChanged(newZoom)
-                            val panMs = (pan.x / currentPixelsPerMs).toLong()
-                            onScrollChanged((scrollOffsetMs - panMs).coerceAtLeast(0L))
+                            val panMs = (pan.x / ppm).toLong()
+                            onScrollChanged((currentScrollOffsetMs - panMs).coerceAtLeast(0L))
                         }
                     }
             ) {
@@ -274,13 +287,13 @@ fun Timeline(
                                 .fillMaxWidth()
                                 .height(rulerHeight)
                                 .background(Mocha.Crust)
-                                .pointerInput(scrollOffsetMs, zoomLevel, totalDurationMs, markers) {
+                                .pointerInput(Unit) {
                                     detectTapGestures { offset ->
                                         // Check if tap is on a marker flag
-                                        val currentPixelsPerMs = zoomLevel * 0.15f
+                                        val ppm = currentZoomLevel * BASE_SCALE
                                         val flagWidthPx = 8.dp.toPx()
-                                        val tappedMarker = markers.firstOrNull { marker ->
-                                            val markerX = (marker.timeMs - scrollOffsetMs) * currentPixelsPerMs
+                                        val tappedMarker = currentMarkers.firstOrNull { marker ->
+                                            val markerX = (marker.timeMs - currentScrollOffsetMs) * ppm
                                             offset.x in (markerX - flagWidthPx / 2)..(markerX + flagWidthPx / 2)
                                         }
                                         if (tappedMarker != null) {
@@ -289,33 +302,32 @@ fun Timeline(
                                         } else {
                                             tappedMarkerId = null
                                             // Move playhead to tap position
-                                            if (currentPixelsPerMs > 0.001f) {
-                                                val tappedMs = scrollOffsetMs + (offset.x / currentPixelsPerMs).toLong()
-                                                onPlayheadMoved(tappedMs.coerceIn(0L, totalDurationMs))
+                                            if (ppm > 0.001f) {
+                                                val tappedMs = currentScrollOffsetMs + (offset.x / ppm).toLong()
+                                                onPlayheadMoved(tappedMs.coerceIn(0L, currentTotalDurationMs))
                                             }
                                         }
                                     }
                                 }
-                                .pointerInput(scrollOffsetMs, zoomLevel, totalDurationMs) {
+                                .pointerInput(Unit) {
                                     detectDragGestures(
                                         onDragStart = { offset ->
                                             rulerDragX = offset.x
                                             onScrubStart()
-                                            // Move playhead to tap position immediately
-                                            val currentPixelsPerMs = zoomLevel * 0.15f
-                                            if (currentPixelsPerMs > 0.001f) {
-                                                val tappedMs = scrollOffsetMs + (offset.x / currentPixelsPerMs).toLong()
-                                                onPlayheadMoved(tappedMs.coerceIn(0L, totalDurationMs))
+                                            val ppm = currentZoomLevel * BASE_SCALE
+                                            if (ppm > 0.001f) {
+                                                val tappedMs = currentScrollOffsetMs + (offset.x / ppm).toLong()
+                                                onPlayheadMoved(tappedMs.coerceIn(0L, currentTotalDurationMs))
                                             }
                                         },
                                         onDragEnd = { onScrubEnd() },
                                         onDragCancel = { onScrubEnd() },
                                         onDrag = { _, dragAmount ->
                                             rulerDragX += dragAmount.x
-                                            val currentPixelsPerMs = zoomLevel * 0.15f
-                                            if (currentPixelsPerMs < 0.001f) return@detectDragGestures
-                                            val posMs = scrollOffsetMs + (rulerDragX / currentPixelsPerMs).toLong()
-                                            onPlayheadMoved(posMs.coerceIn(0L, totalDurationMs))
+                                            val ppm = currentZoomLevel * BASE_SCALE
+                                            if (ppm < 0.001f) return@detectDragGestures
+                                            val posMs = currentScrollOffsetMs + (rulerDragX / ppm).toLong()
+                                            onPlayheadMoved(posMs.coerceIn(0L, currentTotalDurationMs))
                                         }
                                     )
                                 }
@@ -394,23 +406,25 @@ fun Timeline(
                                     color = Mocha.Surface0.copy(alpha = 0.5f),
                                     shape = RoundedCornerShape(0.dp)
                                 )
-                                .pointerInput(scrollOffsetMs, zoomLevel) {
+                                .pointerInput(track.id) {
                                     detectTapGestures(
                                         onTap = { offset ->
-                                            val currentPixelsPerMs = zoomLevel * 0.15f
-                                            val tappedMs = scrollOffsetMs + (offset.x / currentPixelsPerMs).toLong()
-                                            val clip = track.clips.firstOrNull {
+                                            val ppm = currentZoomLevel * BASE_SCALE
+                                            val tappedMs = currentScrollOffsetMs + (offset.x / ppm).toLong()
+                                            val trackClips = currentTracks.firstOrNull { it.id == track.id }?.clips ?: return@detectTapGestures
+                                            val clip = trackClips.firstOrNull {
                                                 tappedMs in it.timelineStartMs..it.timelineEndMs
                                             }
                                             if (clip != null) {
                                                 onClipSelected(clip.id, track.id)
                                             }
-                                            onPlayheadMoved(tappedMs.coerceIn(0L, totalDurationMs))
+                                            onPlayheadMoved(tappedMs.coerceIn(0L, currentTotalDurationMs))
                                         },
                                         onLongPress = { offset ->
-                                            val currentPixelsPerMs = zoomLevel * 0.15f
-                                            val tappedMs = scrollOffsetMs + (offset.x / currentPixelsPerMs).toLong()
-                                            val clip = track.clips.firstOrNull {
+                                            val ppm = currentZoomLevel * BASE_SCALE
+                                            val tappedMs = currentScrollOffsetMs + (offset.x / ppm).toLong()
+                                            val trackClips = currentTracks.firstOrNull { it.id == track.id }?.clips ?: return@detectTapGestures
+                                            val clip = trackClips.firstOrNull {
                                                 tappedMs in it.timelineStartMs..it.timelineEndMs
                                             }
                                             if (clip != null) {
@@ -458,35 +472,32 @@ fun Timeline(
                                                 ) else Modifier
                                             )
                                             .then(
-                                                if (isSelected) Modifier.pointerInput(clip.id, isTrimMode, zoomLevel) {
-                                                    val currentPixelsPerMs = zoomLevel * 0.15f
+                                                if (isSelected) Modifier.pointerInput(clip.id) {
                                                     val trimHandleWidthPx = 12.dp.toPx()
                                                     detectDragGestures(
-                                                        onDragStart = { offset ->
-                                                            // Only handle drags in the middle of the clip (not on trim handles)
-                                                        },
+                                                        onDragStart = { },
                                                         onDragEnd = {},
                                                         onDragCancel = {},
                                                         onDrag = { change, dragAmount ->
-                                                            if (currentPixelsPerMs < 0.001f) return@detectDragGestures
-                                                            val clipWidthPxLocal = clip.durationMs * currentPixelsPerMs
+                                                            val ppm = currentZoomLevel * BASE_SCALE
+                                                            if (ppm < 0.001f) return@detectDragGestures
+                                                            val currentClip = currentTracks.flatMap { it.clips }.firstOrNull { it.id == clip.id } ?: return@detectDragGestures
+                                                            val clipWidthPxLocal = currentClip.durationMs * ppm
                                                             val dragStartX = change.position.x - dragAmount.x
                                                             val isOnLeftHandle = dragStartX < trimHandleWidthPx
                                                             val isOnRightHandle = dragStartX > (clipWidthPxLocal - trimHandleWidthPx)
 
-                                                            // Skip if dragging on trim handle edges (already handled)
                                                             if (isOnLeftHandle || isOnRightHandle) return@detectDragGestures
 
-                                                            val deltaMs = (dragAmount.x / currentPixelsPerMs).toLong()
-                                                            if (isTrimMode) {
+                                                            val deltaMs = (dragAmount.x / ppm).toLong()
+                                                            if (currentIsTrimMode) {
                                                                 onSlipClip(clip.id, deltaMs)
                                                             } else {
                                                                 onSlideClip(clip.id, deltaMs)
-                                                                // Haptic tick on magnetic snap
-                                                                val snapThreshMs = (12.dp.toPx() / currentPixelsPerMs).toLong()
-                                                                val snapTargetsLocal = tracks.flatMap { t -> t.clips.filter { it.id != clip.id }.flatMap { listOf(it.timelineStartMs, it.timelineEndMs) } }
-                                                                    .plus(playheadMs).plus(0L)
-                                                                if (findSnapTarget(clip.timelineStartMs + deltaMs, snapTargetsLocal, snapThreshMs) != null) {
+                                                                val snapThreshMs = (12.dp.toPx() / ppm).toLong()
+                                                                val snapTargetsLocal = currentTracks.flatMap { t -> t.clips.filter { it.id != clip.id }.flatMap { listOf(it.timelineStartMs, it.timelineEndMs) } }
+                                                                    .plus(currentPlayheadMs).plus(0L)
+                                                                if (findSnapTarget(currentClip.timelineStartMs + deltaMs, snapTargetsLocal, snapThreshMs) != null) {
                                                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                                                 }
                                                             }
@@ -574,8 +585,7 @@ fun Timeline(
                                                             bottomStart = 6.dp
                                                         )
                                                     )
-                                                    .pointerInput(clip.id, clip.trimStartMs, clip.trimEndMs, zoomLevel) {
-                                                        val currentPixelsPerMs = zoomLevel * 0.15f
+                                                    .pointerInput(clip.id) {
                                                         detectHorizontalDragGestures(
                                                             onDragStart = {
                                                                 onTrimDragStarted()
@@ -584,11 +594,13 @@ fun Timeline(
                                                             onDragEnd = {},
                                                             onDragCancel = {},
                                                             onHorizontalDrag = { _, dragAmount ->
-                                                                if (currentPixelsPerMs < 0.001f) return@detectHorizontalDragGestures
-                                                                val deltaMs = (dragAmount / currentPixelsPerMs).toLong()
-                                                                val newStart = (clip.trimStartMs + deltaMs)
+                                                                val ppm = currentZoomLevel * BASE_SCALE
+                                                                if (ppm < 0.001f) return@detectHorizontalDragGestures
+                                                                val currentClip = currentTracks.flatMap { it.clips }.firstOrNull { it.id == clip.id } ?: return@detectHorizontalDragGestures
+                                                                val deltaMs = (dragAmount / ppm).toLong()
+                                                                val newStart = (currentClip.trimStartMs + deltaMs)
                                                                     .coerceAtLeast(0L)
-                                                                    .coerceAtMost(clip.trimEndMs - 100L)
+                                                                    .coerceAtMost(currentClip.trimEndMs - 100L)
                                                                 onTrimChanged(clip.id, newStart, null)
                                                             }
                                                         )
@@ -607,8 +619,7 @@ fun Timeline(
                                                             bottomEnd = 6.dp
                                                         )
                                                     )
-                                                    .pointerInput(clip.id, clip.trimStartMs, clip.trimEndMs, zoomLevel) {
-                                                        val currentPixelsPerMs = zoomLevel * 0.15f
+                                                    .pointerInput(clip.id) {
                                                         detectHorizontalDragGestures(
                                                             onDragStart = {
                                                                 onTrimDragStarted()
@@ -617,10 +628,12 @@ fun Timeline(
                                                             onDragEnd = {},
                                                             onDragCancel = {},
                                                             onHorizontalDrag = { _, dragAmount ->
-                                                                if (currentPixelsPerMs < 0.001f) return@detectHorizontalDragGestures
-                                                                val deltaMs = (dragAmount / currentPixelsPerMs).toLong()
-                                                                val newEnd = (clip.trimEndMs + deltaMs)
-                                                                    .coerceIn(clip.trimStartMs + 100L, clip.sourceDurationMs)
+                                                                val ppm = currentZoomLevel * BASE_SCALE
+                                                                if (ppm < 0.001f) return@detectHorizontalDragGestures
+                                                                val currentClip = currentTracks.flatMap { it.clips }.firstOrNull { it.id == clip.id } ?: return@detectHorizontalDragGestures
+                                                                val deltaMs = (dragAmount / ppm).toLong()
+                                                                val newEnd = (currentClip.trimEndMs + deltaMs)
+                                                                    .coerceIn(currentClip.trimStartMs + 100L, currentClip.sourceDurationMs)
                                                                 onTrimChanged(clip.id, null, newEnd)
                                                             }
                                                         )

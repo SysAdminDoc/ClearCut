@@ -16,8 +16,10 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.novacut.editor.R
 import com.novacut.editor.model.Clip
 import com.novacut.editor.ui.theme.Mocha
 
@@ -45,13 +47,24 @@ fun AudioPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Audio", color = Mocha.Text, fontSize = 16.sp)
+            Text(stringResource(R.string.audio_title), color = Mocha.Text, fontSize = 16.sp)
             IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
-                Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Close, "Close audio panel", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
             }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
+
+        if (clip == null) {
+            Text(
+                "Select a clip to edit audio",
+                color = Mocha.Subtext0,
+                fontSize = 13.sp,
+                modifier = Modifier.padding(vertical = 24.dp).fillMaxWidth(),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+            return@Column
+        }
 
         // Waveform visualization with fade envelope
         if (waveform != null && waveform.isNotEmpty()) {
@@ -81,7 +94,7 @@ fun AudioPanel(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Volume", color = Mocha.Subtext1, fontSize = 12.sp)
+                Text(stringResource(R.string.audio_volume), color = Mocha.Subtext1, fontSize = 12.sp)
                 Text("%.2f".format(clip?.volume ?: 1f), color = Mocha.Subtext0, fontSize = 12.sp)
             }
             Slider(
@@ -127,9 +140,9 @@ fun AudioPanel(
             colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Red),
             border = BorderStroke(1.dp, Mocha.Red.copy(alpha = 0.5f))
         ) {
-            Icon(Icons.Default.Mic, contentDescription = "Record voiceover", modifier = Modifier.size(18.dp))
+            Icon(Icons.Default.Mic, contentDescription = stringResource(R.string.audio_record_voiceover), modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Record Voiceover")
+            Text(stringResource(R.string.audio_record_voiceover))
         }
     }
 }
@@ -224,7 +237,7 @@ fun VoiceoverRecorder(
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Voiceover", color = Mocha.Text, fontSize = 18.sp)
+        Text(stringResource(R.string.audio_voiceover), color = Mocha.Text, fontSize = 18.sp)
         Spacer(modifier = Modifier.height(16.dp))
 
         // Recording time
@@ -279,7 +292,7 @@ fun VoiceoverRecorder(
         Spacer(modifier = Modifier.height(16.dp))
 
         TextButton(onClick = onClose) {
-            Text("Cancel", color = Mocha.Subtext0)
+            Text(stringResource(R.string.audio_cancel), color = Mocha.Subtext0)
         }
     }
 }

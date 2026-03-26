@@ -14,9 +14,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.novacut.editor.R
 import com.novacut.editor.engine.segmentation.SegmentationModelState
 import com.novacut.editor.engine.whisper.WhisperModelState
 import com.novacut.editor.ui.theme.Mocha
@@ -130,19 +132,19 @@ fun AiToolsPanel(
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("AI Tools", color = Mocha.Text, fontSize = 16.sp)
+                Text(stringResource(R.string.ai_tools_title), color = Mocha.Text, fontSize = 16.sp)
             }
             IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
-                Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Close, stringResource(R.string.close), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
             }
         }
 
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             if (whisperModelState == WhisperModelState.READY)
-                "Whisper speech-to-text active"
+                stringResource(R.string.ai_whisper_active)
             else
-                "On-device AI - no internet required",
+                stringResource(R.string.ai_on_device),
             color = Mocha.Subtext0,
             fontSize = 11.sp
         )
@@ -175,10 +177,10 @@ fun AiToolsPanel(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         when (whisperModelState) {
-                            WhisperModelState.READY -> "Whisper (speech-to-text)"
-                            WhisperModelState.DOWNLOADING -> "Downloading model..."
-                            WhisperModelState.ERROR -> "Download failed"
-                            else -> "Whisper model (~75 MB)"
+                            WhisperModelState.READY -> stringResource(R.string.ai_whisper_ready)
+                            WhisperModelState.DOWNLOADING -> stringResource(R.string.ai_downloading_model)
+                            WhisperModelState.ERROR -> stringResource(R.string.ai_download_failed)
+                            else -> stringResource(R.string.ai_whisper_size)
                         },
                         color = Mocha.Text,
                         fontSize = 12.sp
@@ -196,7 +198,7 @@ fun AiToolsPanel(
                     }
                     if (whisperModelState == WhisperModelState.NOT_DOWNLOADED) {
                         Text(
-                            "Enables real transcription for captions",
+                            stringResource(R.string.ai_whisper_description),
                             color = Mocha.Subtext0,
                             fontSize = 10.sp
                         )
@@ -210,7 +212,7 @@ fun AiToolsPanel(
                         ) {
                             Icon(Icons.Default.Download, null, modifier = Modifier.size(16.dp), tint = Mocha.Blue)
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Get", color = Mocha.Blue, fontSize = 12.sp)
+                            Text(stringResource(R.string.get), color = Mocha.Blue, fontSize = 12.sp)
                         }
                     }
                     WhisperModelState.READY -> {
@@ -218,7 +220,7 @@ fun AiToolsPanel(
                             onClick = onDeleteWhisper,
                             contentPadding = PaddingValues(horizontal = 8.dp)
                         ) {
-                            Text("Remove", color = Mocha.Subtext0, fontSize = 11.sp)
+                            Text(stringResource(R.string.remove), color = Mocha.Subtext0, fontSize = 11.sp)
                         }
                     }
                     else -> {}
@@ -254,10 +256,10 @@ fun AiToolsPanel(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         when (segmentationModelState) {
-                            SegmentationModelState.READY -> "BG Removal (AI segmentation)"
-                            SegmentationModelState.DOWNLOADING -> "Downloading model..."
-                            SegmentationModelState.ERROR -> "Download failed"
-                            else -> "Selfie segmenter (~256 KB)"
+                            SegmentationModelState.READY -> stringResource(R.string.ai_segmentation_ready)
+                            SegmentationModelState.DOWNLOADING -> stringResource(R.string.ai_downloading_model)
+                            SegmentationModelState.ERROR -> stringResource(R.string.ai_download_failed)
+                            else -> stringResource(R.string.ai_segmentation_size)
                         },
                         color = Mocha.Text,
                         fontSize = 12.sp
@@ -275,7 +277,7 @@ fun AiToolsPanel(
                     }
                     if (segmentationModelState == SegmentationModelState.NOT_DOWNLOADED) {
                         Text(
-                            "Pixel-accurate background removal",
+                            stringResource(R.string.ai_segmentation_description),
                             color = Mocha.Subtext0,
                             fontSize = 10.sp
                         )
@@ -289,7 +291,7 @@ fun AiToolsPanel(
                         ) {
                             Icon(Icons.Default.Download, null, modifier = Modifier.size(16.dp), tint = Mocha.Green)
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Get", color = Mocha.Green, fontSize = 12.sp)
+                            Text(stringResource(R.string.get), color = Mocha.Green, fontSize = 12.sp)
                         }
                     }
                     SegmentationModelState.READY -> {
@@ -297,7 +299,7 @@ fun AiToolsPanel(
                             onClick = onDeleteSegmentation,
                             contentPadding = PaddingValues(horizontal = 8.dp)
                         ) {
-                            Text("Remove", color = Mocha.Subtext0, fontSize = 11.sp)
+                            Text(stringResource(R.string.remove), color = Mocha.Subtext0, fontSize = 11.sp)
                         }
                     }
                     else -> {}
@@ -326,13 +328,13 @@ fun AiToolsPanel(
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        "Processing: ${aiTools.find { it.id == processingTool }?.name ?: processingTool}...",
+                        stringResource(R.string.ai_processing_format, aiTools.find { it.id == processingTool }?.name ?: processingTool),
                         color = Mocha.Text,
                         fontSize = 13.sp,
                         modifier = Modifier.weight(1f)
                     )
                     TextButton(onClick = onCancelProcessing) {
-                        Text("Cancel", color = Mocha.Red, fontSize = 12.sp)
+                        Text(stringResource(R.string.cancel), color = Mocha.Red, fontSize = 12.sp)
                     }
                 }
             }

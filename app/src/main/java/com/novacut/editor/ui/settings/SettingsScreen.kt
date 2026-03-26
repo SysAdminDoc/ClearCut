@@ -10,12 +10,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.novacut.editor.NovaCutApp
+import com.novacut.editor.R
 import com.novacut.editor.model.*
 import com.novacut.editor.ui.theme.Mocha
 
@@ -42,47 +44,55 @@ fun SettingsScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Mocha.Text)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), tint = Mocha.Text)
             }
             Spacer(Modifier.width(12.dp))
-            Text("Settings", color = Mocha.Text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.settings_title), color = Mocha.Text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
 
         Spacer(Modifier.height(8.dp))
 
         // Export Defaults
-        SettingsSection("Export Defaults") {
+        SettingsSection(stringResource(R.string.settings_export_defaults)) {
             SettingsDropdown(
-                label = "Default Resolution",
+                label = stringResource(R.string.settings_default_resolution),
                 value = settings.defaultResolution.label,
                 options = Resolution.entries.map { it.label },
                 onSelected = { idx -> viewModel.setResolution(Resolution.entries[idx]) }
             )
             SettingsDropdown(
-                label = "Default Frame Rate",
+                label = stringResource(R.string.settings_default_frame_rate),
                 value = "${settings.defaultFrameRate}fps",
                 options = listOf("24fps", "30fps", "60fps"),
                 onSelected = { idx -> viewModel.setFrameRate(listOf(24, 30, 60)[idx]) }
             )
             SettingsDropdown(
-                label = "Default Aspect Ratio",
+                label = stringResource(R.string.settings_default_aspect_ratio),
                 value = settings.defaultAspectRatio.label,
                 options = AspectRatio.entries.map { it.label },
                 onSelected = { idx -> viewModel.setAspectRatio(AspectRatio.entries[idx]) }
             )
+            SettingsDropdown(
+                label = stringResource(R.string.settings_default_codec),
+                value = listOf("H.264", "H.265 (HEVC)", "AV1", "VP9")[
+                    listOf("H264", "HEVC", "AV1", "VP9").indexOf(settings.defaultCodec).coerceAtLeast(0)
+                ],
+                options = listOf("H.264", "H.265 (HEVC)", "AV1", "VP9"),
+                onSelected = { viewModel.setDefaultCodec(listOf("H264", "HEVC", "AV1", "VP9")[it]) }
+            )
         }
 
         // Timeline
-        SettingsSection("Timeline") {
+        SettingsSection(stringResource(R.string.settings_timeline)) {
             SettingsToggle(
-                label = "Auto-save",
-                description = "Periodically save project state",
+                label = stringResource(R.string.settings_auto_save),
+                description = stringResource(R.string.settings_auto_save_description),
                 checked = settings.autoSaveEnabled,
                 onChanged = { viewModel.setAutoSave(it) }
             )
             if (settings.autoSaveEnabled) {
                 SettingsSlider(
-                    label = "Auto-save interval",
+                    label = stringResource(R.string.settings_auto_save_interval),
                     value = settings.autoSaveIntervalSec.toFloat(),
                     range = 15f..300f,
                     valueLabel = "${settings.autoSaveIntervalSec}s",
@@ -90,28 +100,67 @@ fun SettingsScreen(
                 )
             }
             SettingsDropdown(
-                label = "Proxy Resolution",
+                label = stringResource(R.string.settings_proxy_resolution),
                 value = settings.proxyResolution.label,
                 options = ProxyResolution.entries.map { it.label },
                 onSelected = { idx -> viewModel.setProxyResolution(ProxyResolution.entries[idx]) }
             )
+            SettingsSwitch(
+                label = stringResource(R.string.settings_enable_proxy),
+                description = stringResource(R.string.settings_enable_proxy_description),
+                checked = settings.proxyEnabled,
+                onChanged = { viewModel.setProxyEnabled(it) }
+            )
+        }
+
+        // AI Models
+        SettingsSection(stringResource(R.string.settings_ai_models)) {
+            Text(
+                stringResource(R.string.settings_ai_models_description),
+                color = Mocha.Subtext0,
+                fontSize = 11.sp
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Model info rows
+            val models = listOf(
+                stringResource(R.string.settings_whisper_model) to stringResource(R.string.settings_whisper_size),
+                stringResource(R.string.settings_segmentation_model) to stringResource(R.string.settings_segmentation_size),
+                stringResource(R.string.settings_piper_model) to stringResource(R.string.settings_piper_size)
+            )
+            models.forEach { (name, size) ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(name, color = Mocha.Text, fontSize = 13.sp)
+                        Text(stringResource(R.string.settings_download_size_format, size), color = Mocha.Subtext0, fontSize = 10.sp)
+                    }
+                    Text(stringResource(R.string.manage), color = Mocha.Mauve, fontSize = 11.sp,
+                        modifier = Modifier.clickable { /* TODO: navigate to model manager */ })
+                }
+            }
         }
 
         // Tutorial
-        SettingsSection("Tutorial") {
+        SettingsSection(stringResource(R.string.settings_tutorial)) {
             OutlinedButton(
                 onClick = { viewModel.resetTutorial() },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Reset First-Run Tutorial")
+                Text(stringResource(R.string.settings_reset_tutorial))
             }
         }
 
         // About
-        SettingsSection("About") {
-            SettingsInfo("Version", NovaCutApp.VERSION)
-            SettingsInfo("Engine", "Media3 Transformer 1.9.2")
-            SettingsInfo("AI Models", "Whisper ONNX + MediaPipe")
+        SettingsSection(stringResource(R.string.settings_about)) {
+            SettingsInfo(stringResource(R.string.settings_version), NovaCutApp.VERSION)
+            SettingsInfo(stringResource(R.string.settings_engine), stringResource(R.string.settings_engine_value))
+            SettingsInfo(stringResource(R.string.settings_ai_models), stringResource(R.string.settings_ai_models_value))
         }
 
         Spacer(Modifier.height(24.dp))
@@ -172,6 +221,37 @@ private fun SettingsDropdown(
 
 @Composable
 private fun SettingsToggle(
+    label: String,
+    description: String,
+    checked: Boolean,
+    onChanged: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(label, color = Mocha.Text, fontSize = 14.sp)
+            Text(description, color = Mocha.Subtext0, fontSize = 11.sp)
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onChanged,
+            colors = SwitchDefaults.colors(
+                checkedTrackColor = Mocha.Mauve,
+                checkedThumbColor = Mocha.Crust,
+                uncheckedTrackColor = Mocha.Surface1,
+                uncheckedThumbColor = Mocha.Subtext0
+            )
+        )
+    }
+}
+
+@Composable
+private fun SettingsSwitch(
     label: String,
     description: String,
     checked: Boolean,

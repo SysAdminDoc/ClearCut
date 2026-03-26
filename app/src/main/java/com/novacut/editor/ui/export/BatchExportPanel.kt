@@ -14,8 +14,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.novacut.editor.R
 import com.novacut.editor.model.*
 import com.novacut.editor.ui.theme.Mocha
 
@@ -41,13 +43,13 @@ fun BatchExportPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Batch Export", color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.batch_export_title), color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             Row {
                 IconButton(onClick = { showPresetPicker = true }, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Add, "Add", tint = Mocha.Green, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Add, stringResource(R.string.batch_export_add_cd), tint = Mocha.Green, modifier = Modifier.size(18.dp))
                 }
                 IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Close, stringResource(R.string.batch_export_close_cd), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
                 }
             }
         }
@@ -55,7 +57,7 @@ fun BatchExportPanel(
         // Platform preset picker
         if (showPresetPicker) {
             Spacer(Modifier.height(8.dp))
-            Text("Add Platform Preset", color = Mocha.Subtext0, fontSize = 12.sp)
+            Text(stringResource(R.string.batch_export_add_platform_preset), color = Mocha.Subtext0, fontSize = 12.sp)
             Spacer(Modifier.height(4.dp))
             Row(
                 modifier = Modifier
@@ -89,19 +91,19 @@ fun BatchExportPanel(
                 FilterChip(
                     selected = false,
                     onClick = {
-                        onAddItem(ExportConfig(exportAudioOnly = true), "Audio Only")
+                        onAddItem(ExportConfig(exportAudioOnly = true), stringResource(R.string.batch_export_audio_only))
                         showPresetPicker = false
                     },
-                    label = { Text("Audio Only", fontSize = 10.sp) },
+                    label = { Text(stringResource(R.string.batch_export_audio_only), fontSize = 10.sp) },
                     modifier = Modifier.height(28.dp)
                 )
                 FilterChip(
                     selected = false,
                     onClick = {
-                        onAddItem(ExportConfig(exportStemsOnly = true), "Audio Stems")
+                        onAddItem(ExportConfig(exportStemsOnly = true), stringResource(R.string.batch_export_audio_stems))
                         showPresetPicker = false
                     },
-                    label = { Text("Audio Stems", fontSize = 10.sp) },
+                    label = { Text(stringResource(R.string.batch_export_audio_stems), fontSize = 10.sp) },
                     modifier = Modifier.height(28.dp)
                 )
             }
@@ -117,7 +119,7 @@ fun BatchExportPanel(
                     .padding(24.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text("No exports queued. Tap + to add.", color = Mocha.Subtext0, fontSize = 13.sp)
+                Text(stringResource(R.string.batch_export_empty_queue), color = Mocha.Subtext0, fontSize = 13.sp)
             }
         } else {
             LazyColumn(
@@ -144,7 +146,7 @@ fun BatchExportPanel(
             ) {
                 Icon(Icons.Default.RocketLaunch, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Export All (${queue.size})")
+                Text(stringResource(R.string.batch_export_export_all, queue.size))
             }
         }
     }
@@ -155,6 +157,8 @@ private fun BatchExportItemRow(
     item: BatchExportItem,
     onRemove: () -> Unit
 ) {
+    val suffixAudioOnly = stringResource(R.string.batch_export_suffix_audio_only)
+    val suffixStems = stringResource(R.string.batch_export_suffix_stems)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -171,8 +175,8 @@ private fun BatchExportItemRow(
                     append(item.config.resolution.label)
                     append(" | ")
                     append(item.config.codec.label)
-                    if (item.config.exportAudioOnly) append(" | Audio Only")
-                    if (item.config.exportStemsOnly) append(" | Stems")
+                    if (item.config.exportAudioOnly) append(suffixAudioOnly)
+                    if (item.config.exportStemsOnly) append(suffixStems)
                 },
                 color = Mocha.Subtext0,
                 fontSize = 10.sp
@@ -182,7 +186,7 @@ private fun BatchExportItemRow(
         when (item.status) {
             BatchExportStatus.QUEUED -> {
                 IconButton(onClick = onRemove, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Default.Close, "Remove", tint = Mocha.Subtext0, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.Close, stringResource(R.string.batch_export_remove_cd), tint = Mocha.Subtext0, modifier = Modifier.size(16.dp))
                 }
             }
             BatchExportStatus.IN_PROGRESS -> {
@@ -194,13 +198,13 @@ private fun BatchExportItemRow(
                 )
             }
             BatchExportStatus.COMPLETED -> {
-                Icon(Icons.Default.CheckCircle, "Done", tint = Mocha.Green, modifier = Modifier.size(24.dp))
+                Icon(Icons.Default.CheckCircle, stringResource(R.string.batch_export_done_cd), tint = Mocha.Green, modifier = Modifier.size(24.dp))
             }
             BatchExportStatus.FAILED -> {
-                Icon(Icons.Default.Error, "Failed", tint = Mocha.Red, modifier = Modifier.size(24.dp))
+                Icon(Icons.Default.Error, stringResource(R.string.batch_export_failed_cd), tint = Mocha.Red, modifier = Modifier.size(24.dp))
             }
             BatchExportStatus.CANCELLED -> {
-                Icon(Icons.Default.Cancel, "Cancelled", tint = Mocha.Yellow, modifier = Modifier.size(24.dp))
+                Icon(Icons.Default.Cancel, stringResource(R.string.batch_export_cancelled_cd), tint = Mocha.Yellow, modifier = Modifier.size(24.dp))
             }
         }
     }

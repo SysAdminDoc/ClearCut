@@ -25,7 +25,6 @@ import android.content.Intent
 import android.util.Log
 import com.novacut.editor.engine.ExportState
 import com.novacut.editor.model.*
-import com.novacut.editor.model.SaveIndicatorState
 import com.novacut.editor.ui.export.BatchExportPanel
 import com.novacut.editor.ui.export.ExportSheet
 import com.novacut.editor.ui.mediapicker.MediaPickerSheet
@@ -33,6 +32,8 @@ import com.novacut.editor.ui.theme.Mocha
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.res.stringResource
+import com.novacut.editor.R
 import java.io.File
 
 @Composable
@@ -42,6 +43,7 @@ fun EditorScreen(
     viewModel: EditorViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val playheadMs by viewModel.playheadMs.collectAsStateWithLifecycle()
     val whisperState by viewModel.whisperModelState.collectAsStateWithLifecycle()
     val whisperProgress by viewModel.whisperDownloadProgress.collectAsStateWithLifecycle()
     val segmentationState by viewModel.segmentationModelState.collectAsStateWithLifecycle()
@@ -79,7 +81,8 @@ fun EditorScreen(
         state.showTutorial || state.showUndoHistory || state.showCaptionStyleGallery ||
         state.showBeatSync || state.showSmartReframe || state.showSpeedPresets ||
         state.showFillerRemoval || state.showAutoEdit ||
-        state.showTts || state.showEffectLibrary || state.showNoiseReduction
+        state.showTts || state.showEffectLibrary || state.showNoiseReduction ||
+        state.showStickerPicker
 
     BackHandler(enabled = hasOpenPanel || state.currentTool != EditorTool.NONE || state.selectedClipId != null) {
         when {
@@ -129,15 +132,15 @@ fun EditorScreen(
                         ) {
                             Icon(
                                 Icons.Default.VideoLibrary,
-                                contentDescription = null,
+                                contentDescription = stringResource(R.string.editor_no_clips_yet),
                                 tint = Mocha.Mauve,
                                 modifier = Modifier.size(48.dp)
                             )
                             Spacer(Modifier.height(12.dp))
-                            Text("No clips yet", color = Mocha.Text, fontSize = 16.sp)
+                            Text(stringResource(R.string.editor_no_clips_yet), color = Mocha.Text, fontSize = 16.sp)
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                "Tap the + button or use the menu to add media",
+                                stringResource(R.string.editor_add_media_hint),
                                 color = Mocha.Subtext0,
                                 fontSize = 12.sp
                             )
@@ -149,7 +152,7 @@ fun EditorScreen(
             // Preview panel
             if (hasClips || hasOpenPanel) PreviewPanel(
                 engine = viewModel.engine,
-                playheadMs = state.playheadMs,
+                playheadMs = playheadMs,
                 totalDurationMs = state.totalDurationMs,
                 isPlaying = state.isPlaying,
                 isLooping = state.isLooping,
@@ -173,18 +176,18 @@ fun EditorScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        "${state.selectedClipIds.size} selected",
+                        stringResource(R.string.editor_selected_count, state.selectedClipIds.size),
                         color = Mocha.Peach,
                         fontSize = 13.sp,
                         modifier = Modifier.weight(1f)
                     )
                     TextButton(onClick = viewModel::deleteMultiSelectedClips) {
-                        Icon(Icons.Default.Delete, null, tint = Mocha.Red, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Delete, stringResource(R.string.editor_delete_selected), tint = Mocha.Red, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Delete", color = Mocha.Red, fontSize = 12.sp)
+                        Text(stringResource(R.string.editor_delete), color = Mocha.Red, fontSize = 12.sp)
                     }
                     TextButton(onClick = viewModel::clearMultiSelect) {
-                        Text("Cancel", color = Mocha.Subtext0, fontSize = 12.sp)
+                        Text(stringResource(R.string.editor_cancel), color = Mocha.Subtext0, fontSize = 12.sp)
                     }
                 }
             }
@@ -199,10 +202,10 @@ fun EditorScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Timeline", color = Mocha.Subtext0, fontSize = 11.sp)
+                Text(stringResource(R.string.editor_timeline), color = Mocha.Subtext0, fontSize = 11.sp)
                 Icon(
                     if (state.isTimelineCollapsed) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
-                    contentDescription = "Toggle timeline",
+                    contentDescription = stringResource(R.string.editor_toggle_timeline),
                     tint = Mocha.Subtext0,
                     modifier = Modifier.size(16.dp)
                 )
@@ -216,7 +219,7 @@ fun EditorScreen(
             ) {
                 Timeline(
                     tracks = state.tracks,
-                    playheadMs = state.playheadMs,
+                    playheadMs = playheadMs,
                     totalDurationMs = state.totalDurationMs,
                     zoomLevel = state.zoomLevel,
                     scrollOffsetMs = state.scrollOffsetMs,
@@ -235,6 +238,9 @@ fun EditorScreen(
                     onToggleTrackLock = viewModel::toggleTrackLock,
                     beatMarkers = state.beatMarkers,
                     selectedClipIds = state.selectedClipIds,
+                    markers = state.timelineMarkers,
+                    onAddMarker = { viewModel.addTimelineMarker() },
+                    onMarkerTapped = { marker -> viewModel.seekTo(marker.timeMs) },
                     onClipLongPress = viewModel::toggleClipMultiSelect,
                     onSlideClip = viewModel::slideClip,
                     onSlipClip = viewModel::slipClip,
@@ -263,7 +269,7 @@ fun EditorScreen(
                         "speed" -> viewModel.showSpeedCurveEditor()
                         "transform" -> viewModel.showTransformPanel()
                         "effects" -> viewModel.showEffectsPanel()
-                        "effects_disabled" -> viewModel.showToast("Select a clip to use Effects")
+                        "effects_disabled" -> viewModel.showToast(context.getString(R.string.editor_select_clip_effects))
                         "transition" -> viewModel.showTransitionPicker()
                         "aspect" -> viewModel.showCropPanel()
                         "back" -> { viewModel.dismissAllPanels(); viewModel.selectClip(null) }
@@ -277,17 +283,17 @@ fun EditorScreen(
                         "paste_fx" -> viewModel.pasteEffects()
                         // New features
                         "color_grade" -> viewModel.showColorGrading()
-                        "color_grade_disabled" -> viewModel.showToast("Select a clip to color grade")
+                        "color_grade_disabled" -> viewModel.showToast(context.getString(R.string.editor_select_clip_color_grade))
                         "keyframes" -> viewModel.showKeyframeEditor()
-                        "keyframes_disabled" -> viewModel.showToast("Select a clip for keyframes")
+                        "keyframes_disabled" -> viewModel.showToast(context.getString(R.string.editor_select_clip_keyframes))
                         "masks" -> viewModel.showMaskEditor()
-                        "masks_disabled" -> viewModel.showToast("Select a clip for masks")
+                        "masks_disabled" -> viewModel.showToast(context.getString(R.string.editor_select_clip_masks))
                         "blend_mode" -> viewModel.showBlendModeSelector()
-                        "blend_mode_disabled" -> viewModel.showToast("Select a clip for blend mode")
+                        "blend_mode_disabled" -> viewModel.showToast(context.getString(R.string.editor_select_clip_blend_mode))
                         "pip" -> viewModel.showPipPresets()
-                        "pip_disabled" -> viewModel.showToast("Select a clip for PiP")
+                        "pip_disabled" -> viewModel.showToast(context.getString(R.string.editor_select_clip_pip))
                         "chroma_key" -> viewModel.showChromaKey()
-                        "chroma_key_disabled" -> viewModel.showToast("Select a clip for chroma key")
+                        "chroma_key_disabled" -> viewModel.showToast(context.getString(R.string.editor_select_clip_chroma_key))
                         "auto_duck" -> viewModel.autoDuck()
                         "scopes" -> viewModel.toggleScopes()
                         "audio_mixer" -> viewModel.showAudioMixer()
@@ -295,7 +301,7 @@ fun EditorScreen(
                         "adjustment_layer" -> viewModel.addAdjustmentLayer()
                         "snapshot" -> viewModel.createSnapshot()
                         "captions" -> viewModel.showCaptionEditor()
-                        "captions_disabled" -> viewModel.showToast("Select a clip for captions")
+                        "captions_disabled" -> viewModel.showToast(context.getString(R.string.editor_select_clip_captions))
                         "chapters" -> viewModel.showChapterMarkers()
                         "history" -> viewModel.showSnapshotHistory()
                         "export_srt" -> viewModel.exportSubtitles(SubtitleFormat.SRT)
@@ -303,7 +309,7 @@ fun EditorScreen(
                         "text_templates" -> viewModel.showTextTemplates()
                         "media_manager" -> viewModel.showMediaManager()
                         "audio_norm" -> viewModel.showAudioNorm()
-                        "audio_norm_disabled" -> viewModel.showToast("Select a clip to normalize")
+                        "audio_norm_disabled" -> viewModel.showToast(context.getString(R.string.editor_select_clip_normalize))
                         "compound" -> viewModel.createCompoundClip()
                         "render_preview" -> viewModel.showRenderPreview()
                         "cloud_backup" -> viewModel.showCloudBackup()
@@ -321,6 +327,7 @@ fun EditorScreen(
                         "speed_presets" -> viewModel.showSpeedPresets()
                         "filler_removal" -> viewModel.showFillerRemoval()
                         "tts" -> viewModel.showTts()
+                        "stickers" -> viewModel.showStickerPicker()
                         "noise_reduction" -> viewModel.showNoiseReduction()
                         "effect_library" -> viewModel.showEffectLibrary()
                         "undo_history" -> viewModel.showUndoHistory()
@@ -448,7 +455,7 @@ fun EditorScreen(
             }
             TextEditorSheet(
                 existingOverlay = editingOverlay,
-                playheadMs = state.playheadMs,
+                playheadMs = playheadMs,
                 onSave = { overlay ->
                     if (editingOverlay != null) {
                         viewModel.updateTextOverlay(overlay)
@@ -483,7 +490,7 @@ fun EditorScreen(
                 },
                 onShare = {
                     viewModel.getShareIntent()?.let { intent ->
-                        context.startActivity(Intent.createChooser(intent, "Share video"))
+                        context.startActivity(Intent.createChooser(intent, context.getString(R.string.editor_share_video)))
                     }
                 },
                 onSaveToGallery = viewModel::saveToGallery,
@@ -684,7 +691,7 @@ fun EditorScreen(
                 KeyframeCurveEditor(
                     keyframes = clip.keyframes,
                     clipDurationMs = clip.durationMs,
-                    playheadMs = (state.playheadMs - clip.timelineStartMs).coerceAtLeast(0L),
+                    playheadMs = (playheadMs - clip.timelineStartMs).coerceAtLeast(0L),
                     activeProperties = state.activeKeyframeProperties,
                     onKeyframesChanged = viewModel::updateClipKeyframes,
                     onPropertyToggled = viewModel::toggleKeyframeProperty,
@@ -819,7 +826,7 @@ fun EditorScreen(
                         chromaEffect?.let { viewModel.updateEffect(cid, it.id, it.params + ("keyR" to r) + ("keyG" to g) + ("keyB" to b)) }
                     }
                 },
-                onShowAlphaMatte = { viewModel.showToast("Alpha matte preview") },
+                onShowAlphaMatte = { viewModel.showToast(context.getString(R.string.editor_alpha_matte_preview)) },
                 onClose = viewModel::hideChromaKey
             )
         }
@@ -859,7 +866,7 @@ fun EditorScreen(
             val clip = state.tracks.flatMap { it.clips }.find { it.id == state.selectedClipId }
             CaptionEditorPanel(
                 captions = clip?.captions ?: emptyList(),
-                playheadMs = (state.playheadMs - (clip?.timelineStartMs ?: 0L)).coerceAtLeast(0L),
+                playheadMs = (playheadMs - (clip?.timelineStartMs ?: 0L)).coerceAtLeast(0L),
                 clipDurationMs = clip?.durationMs ?: 0L,
                 onAddCaption = viewModel::addCaption,
                 onUpdateCaption = viewModel::updateCaption,
@@ -878,7 +885,7 @@ fun EditorScreen(
         ) {
             ChapterMarkerPanel(
                 chapters = state.chapterMarkers,
-                playheadMs = state.playheadMs,
+                playheadMs = playheadMs,
                 onAddChapter = viewModel::addChapterMarker,
                 onUpdateChapter = viewModel::updateChapterMarker,
                 onDeleteChapter = viewModel::deleteChapterMarker,
@@ -913,7 +920,7 @@ fun EditorScreen(
             MediaManagerPanel(
                 tracks = state.tracks,
                 onJumpToClip = viewModel::jumpToClip,
-                onRelinkMedia = { _, _ -> viewModel.showToast("Media relink not available") },
+                onRelinkMedia = { _, _ -> viewModel.showToast(context.getString(R.string.editor_media_relink_unavailable)) },
                 onRemoveUnused = { viewModel.removeUnusedMedia() },
                 onClose = viewModel::hideMediaManager
             )
@@ -966,9 +973,9 @@ fun EditorScreen(
                 isSignedIn = false,
                 lastBackupTime = null,
                 backupProgress = null,
-                onSignIn = { viewModel.showToast("Google Sign-In required") },
-                onBackupNow = { viewModel.showToast("Sign in first") },
-                onRestore = { viewModel.showToast("Sign in first") },
+                onSignIn = { viewModel.showToast(context.getString(R.string.editor_google_sign_in_required)) },
+                onBackupNow = { viewModel.showToast(context.getString(R.string.editor_sign_in_first)) },
+                onRestore = { viewModel.showToast(context.getString(R.string.editor_sign_in_first)) },
                 onAutoBackupToggled = { },
                 autoBackupEnabled = false,
                 onClose = viewModel::hideCloudBackup
@@ -1139,10 +1146,30 @@ fun EditorScreen(
                 hasClipSelected = state.selectedClipId != null,
                 hasCopiedEffects = state.copiedEffects.isNotEmpty(),
                 onExportEffects = { viewModel.exportClipEffects("exported_effects") },
-                onImportEffects = { viewModel.showToast("Use file picker to import .ncfx") },
+                onImportEffects = { viewModel.showToast(context.getString(R.string.editor_use_file_picker_import)) },
                 onCopyEffects = viewModel::copyEffects,
                 onPasteEffects = viewModel::pasteEffects,
                 onClose = viewModel::hideEffectLibrary
+            )
+        }
+
+        // Sticker Picker
+        AnimatedVisibility(
+            visible = state.showStickerPicker,
+            enter = slideInVertically(initialOffsetY = { it }),
+            exit = slideOutVertically(targetOffsetY = { it }),
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            StickerPickerPanel(
+                onStickerSelected = { uri ->
+                    viewModel.addImageOverlay(uri, com.novacut.editor.model.ImageOverlayType.STICKER)
+                    viewModel.hideStickerPicker()
+                },
+                onImportFromGallery = {
+                    viewModel.hideStickerPicker()
+                    viewModel.showMediaPicker()
+                },
+                onClose = viewModel::hideStickerPicker
             )
         }
 
@@ -1184,7 +1211,7 @@ fun EditorScreen(
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             TextTemplateGallery(
-                playheadMs = state.playheadMs,
+                playheadMs = playheadMs,
                 onTemplateSelected = { template -> viewModel.applyTextTemplate(template) },
                 onClose = viewModel::hideTextTemplates
             )
@@ -1202,7 +1229,7 @@ fun EditorScreen(
         if (allCaptions.isNotEmpty()) {
             CaptionPreviewOverlay(
                 captions = allCaptions,
-                currentTimeMs = state.playheadMs,
+                currentTimeMs = playheadMs,
                 modifier = Modifier.align(Alignment.Center)
             )
         }
@@ -1214,7 +1241,7 @@ fun EditorScreen(
                 MotionPathOverlay(
                     keyframes = clip.keyframes,
                     clipDurationMs = clip.durationMs,
-                    currentTimeMs = (state.playheadMs - clip.timelineStartMs).coerceAtLeast(0L),
+                    currentTimeMs = (playheadMs - clip.timelineStartMs).coerceAtLeast(0L),
                     previewWidth = 400f,
                     previewHeight = 225f,
                     modifier = Modifier.align(Alignment.Center)
@@ -1278,18 +1305,39 @@ private fun EditorTopBar(
     var showRenameDialog by remember { mutableStateOf(false) }
     var showSaveTemplateDialog by remember { mutableStateOf(false) }
     var showAddTrackMenu by remember { mutableStateOf(false) }
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
+
+    if (showDeleteConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmation = false },
+            title = { Text(stringResource(R.string.editor_delete), color = Mocha.Text) },
+            text = { Text("Delete this clip? This action can be undone.", color = Mocha.Subtext1) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteConfirmation = false
+                    onDelete()
+                }) { Text("Delete", color = Mocha.Red) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmation = false }) {
+                    Text(stringResource(R.string.editor_cancel), color = Mocha.Subtext0)
+                }
+            },
+            containerColor = Mocha.Mantle
+        )
+    }
 
     if (showSaveTemplateDialog) {
         var templateName by remember { mutableStateOf("$projectName Template") }
         AlertDialog(
             onDismissRequest = { showSaveTemplateDialog = false },
-            title = { Text("Save as Template", color = Mocha.Text) },
+            title = { Text(stringResource(R.string.editor_save_as_template), color = Mocha.Text) },
             text = {
                 OutlinedTextField(
                     value = templateName,
                     onValueChange = { templateName = it },
                     singleLine = true,
-                    label = { Text("Template Name") },
+                    label = { Text(stringResource(R.string.editor_template_name)) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Mocha.Text,
                         unfocusedTextColor = Mocha.Text,
@@ -1305,11 +1353,11 @@ private fun EditorTopBar(
                 TextButton(onClick = {
                     if (templateName.isNotBlank()) onSaveTemplate(templateName.trim())
                     showSaveTemplateDialog = false
-                }) { Text("Save", color = Mocha.Mauve) }
+                }) { Text(stringResource(R.string.editor_save), color = Mocha.Mauve) }
             },
             dismissButton = {
                 TextButton(onClick = { showSaveTemplateDialog = false }) {
-                    Text("Cancel", color = Mocha.Subtext0)
+                    Text(stringResource(R.string.editor_cancel), color = Mocha.Subtext0)
                 }
             },
             containerColor = Mocha.Mantle
@@ -1320,7 +1368,7 @@ private fun EditorTopBar(
         var nameText by remember { mutableStateOf(projectName) }
         AlertDialog(
             onDismissRequest = { showRenameDialog = false },
-            title = { Text("Rename Project", color = Mocha.Text) },
+            title = { Text(stringResource(R.string.editor_rename_project), color = Mocha.Text) },
             text = {
                 OutlinedTextField(
                     value = nameText,
@@ -1339,11 +1387,11 @@ private fun EditorTopBar(
                 TextButton(onClick = {
                     if (nameText.isNotBlank()) onRename(nameText.trim())
                     showRenameDialog = false
-                }) { Text("Save", color = Mocha.Mauve) }
+                }) { Text(stringResource(R.string.editor_save), color = Mocha.Mauve) }
             },
             dismissButton = {
                 TextButton(onClick = { showRenameDialog = false }) {
-                    Text("Cancel", color = Mocha.Subtext0)
+                    Text(stringResource(R.string.editor_cancel), color = Mocha.Subtext0)
                 }
             },
             containerColor = Mocha.Mantle
@@ -1368,7 +1416,7 @@ private fun EditorTopBar(
             ) {
                 Icon(
                     Icons.Default.Home,
-                    contentDescription = "Home",
+                    contentDescription = stringResource(R.string.editor_home),
                     tint = Mocha.Text,
                     modifier = Modifier.size(20.dp)
                 )
@@ -1380,7 +1428,7 @@ private fun EditorTopBar(
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.Undo,
-                    contentDescription = "Undo",
+                    contentDescription = stringResource(R.string.editor_undo),
                     tint = if (canUndo) Mocha.Text else Mocha.Surface2,
                     modifier = Modifier.size(20.dp)
                 )
@@ -1392,7 +1440,7 @@ private fun EditorTopBar(
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.Redo,
-                    contentDescription = "Redo",
+                    contentDescription = stringResource(R.string.editor_redo),
                     tint = if (canRedo) Mocha.Text else Mocha.Surface2,
                     modifier = Modifier.size(20.dp)
                 )
@@ -1425,12 +1473,12 @@ private fun EditorTopBar(
 
             if (selectedClipId != null) {
                 IconButton(
-                    onClick = onDelete,
+                    onClick = { showDeleteConfirmation = true },
                     modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
                         Icons.Default.Delete,
-                        contentDescription = "Delete",
+                        contentDescription = stringResource(R.string.editor_delete),
                         tint = Mocha.Red,
                         modifier = Modifier.size(20.dp)
                     )
@@ -1444,7 +1492,7 @@ private fun EditorTopBar(
                 ) {
                     Icon(
                         Icons.Default.MoreVert,
-                        contentDescription = "More",
+                        contentDescription = stringResource(R.string.editor_more),
                         tint = Mocha.Text,
                         modifier = Modifier.size(20.dp)
                     )
@@ -1454,43 +1502,43 @@ private fun EditorTopBar(
                     onDismissRequest = { showOverflow = false }
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Add Media") },
+                        text = { Text(stringResource(R.string.editor_add_media)) },
                         onClick = {
                             showOverflow = false
                             onAddMedia()
                         },
                         leadingIcon = {
-                            Icon(Icons.Default.Add, contentDescription = null)
+                            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.editor_add_media_cd))
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Add Track") },
+                        text = { Text(stringResource(R.string.editor_add_track)) },
                         onClick = {
                             showOverflow = false
                             showAddTrackMenu = true
                         },
                         leadingIcon = {
-                            Icon(Icons.Default.VideoLibrary, contentDescription = null)
+                            Icon(Icons.Default.VideoLibrary, contentDescription = stringResource(R.string.editor_add_track_cd))
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Rename Project") },
+                        text = { Text(stringResource(R.string.editor_rename_project)) },
                         onClick = {
                             showOverflow = false
                             showRenameDialog = true
                         },
                         leadingIcon = {
-                            Icon(Icons.Default.Edit, contentDescription = null)
+                            Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.editor_rename_project_cd))
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Save as Template") },
+                        text = { Text(stringResource(R.string.editor_save_as_template)) },
                         onClick = {
                             showOverflow = false
                             showSaveTemplateDialog = true
                         },
                         leadingIcon = {
-                            Icon(Icons.Default.SaveAs, contentDescription = null)
+                            Icon(Icons.Default.SaveAs, contentDescription = stringResource(R.string.editor_save_as_template_cd))
                         }
                     )
                 }
@@ -1499,24 +1547,24 @@ private fun EditorTopBar(
                     onDismissRequest = { showAddTrackMenu = false }
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Video Track") },
+                        text = { Text(stringResource(R.string.editor_video_track)) },
                         onClick = { showAddTrackMenu = false; onAddTrack(TrackType.VIDEO) },
-                        leadingIcon = { Icon(Icons.Default.Videocam, contentDescription = null) }
+                        leadingIcon = { Icon(Icons.Default.Videocam, contentDescription = stringResource(R.string.editor_video_track_cd)) }
                     )
                     DropdownMenuItem(
-                        text = { Text("Audio Track") },
+                        text = { Text(stringResource(R.string.editor_audio_track)) },
                         onClick = { showAddTrackMenu = false; onAddTrack(TrackType.AUDIO) },
-                        leadingIcon = { Icon(Icons.Default.MusicNote, contentDescription = null) }
+                        leadingIcon = { Icon(Icons.Default.MusicNote, contentDescription = stringResource(R.string.editor_audio_track_cd)) }
                     )
                     DropdownMenuItem(
-                        text = { Text("Overlay Track") },
+                        text = { Text(stringResource(R.string.editor_overlay_track)) },
                         onClick = { showAddTrackMenu = false; onAddTrack(TrackType.OVERLAY) },
-                        leadingIcon = { Icon(Icons.Default.Layers, contentDescription = null) }
+                        leadingIcon = { Icon(Icons.Default.Layers, contentDescription = stringResource(R.string.editor_overlay_track_cd)) }
                     )
                     DropdownMenuItem(
-                        text = { Text("Text Track") },
+                        text = { Text(stringResource(R.string.editor_text_track)) },
                         onClick = { showAddTrackMenu = false; onAddTrack(TrackType.TEXT) },
-                        leadingIcon = { Icon(Icons.Default.TextFields, contentDescription = null) }
+                        leadingIcon = { Icon(Icons.Default.TextFields, contentDescription = stringResource(R.string.editor_text_track_cd)) }
                     )
                 }
             }
@@ -1531,7 +1579,7 @@ private fun EditorTopBar(
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
                 modifier = Modifier.height(32.dp)
             ) {
-                Text("Export", fontSize = 13.sp)
+                Text(stringResource(R.string.editor_export), fontSize = 13.sp)
             }
         }
     }

@@ -14,13 +14,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import com.novacut.editor.ui.theme.Mocha
 import kotlin.math.*
-
-private val HandleColor = Color(0xFFCBA6F7) // Mauve
-private val BoundingColor = Color(0xFFCBA6F7)
-private val RotateHandleColor = Color(0xFFF9E2AF) // Yellow
-private val AnchorColor = Color(0xFFF38BA8) // Red
-private val GuideColor = Color(0xFF89B4FA) // Blue
 
 private const val HANDLE_RADIUS = 10f
 private const val ROTATE_HANDLE_DISTANCE = 40f
@@ -191,7 +186,7 @@ fun TransformOverlay(
         rotate(rotation, pivot = Offset(centerX, centerY)) {
             // Bounding box
             drawRect(
-                BoundingColor.copy(alpha = 0.6f),
+                Mocha.Mauve.copy(alpha = 0.6f),
                 topLeft = Offset(centerX - hw, centerY - hh),
                 size = androidx.compose.ui.geometry.Size(baseWidth, baseHeight),
                 style = Stroke(width = 1.5f)
@@ -200,13 +195,13 @@ fun TransformOverlay(
             // Dashed diagonals (when scaling)
             if (activeHandle.isScale()) {
                 drawLine(
-                    BoundingColor.copy(alpha = 0.2f),
+                    Mocha.Mauve.copy(alpha = 0.2f),
                     Offset(centerX - hw, centerY - hh),
                     Offset(centerX + hw, centerY + hh),
                     1f
                 )
                 drawLine(
-                    BoundingColor.copy(alpha = 0.2f),
+                    Mocha.Mauve.copy(alpha = 0.2f),
                     Offset(centerX + hw, centerY - hh),
                     Offset(centerX - hw, centerY + hh),
                     1f
@@ -222,7 +217,7 @@ fun TransformOverlay(
             )
             corners.forEach { corner ->
                 drawCircle(Color.White, HANDLE_RADIUS + 1f, corner)
-                drawCircle(HandleColor, HANDLE_RADIUS, corner)
+                drawCircle(Mocha.Mauve, HANDLE_RADIUS, corner)
             }
 
             // Edge midpoint handles
@@ -234,22 +229,22 @@ fun TransformOverlay(
             )
             midpoints.forEach { mid ->
                 drawCircle(Color.White, HANDLE_RADIUS * 0.6f + 1f, mid)
-                drawCircle(HandleColor.copy(alpha = 0.7f), HANDLE_RADIUS * 0.6f, mid)
+                drawCircle(Mocha.Mauve.copy(alpha = 0.7f), HANDLE_RADIUS * 0.6f, mid)
             }
 
             // Rotation handle (line + circle above top center)
             val rotateStart = Offset(centerX, centerY - hh)
             val rotateEnd = Offset(centerX, centerY - hh - ROTATE_HANDLE_DISTANCE)
-            drawLine(RotateHandleColor.copy(alpha = 0.6f), rotateStart, rotateEnd, 1.5f)
+            drawLine(RotateMocha.Mauve.copy(alpha = 0.6f), rotateStart, rotateEnd, 1.5f)
             drawCircle(Color.White, HANDLE_RADIUS + 1f, rotateEnd)
-            drawCircle(RotateHandleColor, HANDLE_RADIUS, rotateEnd)
+            drawCircle(RotateMocha.Mauve, HANDLE_RADIUS, rotateEnd)
             // Rotation arrow icon
             val arrowPath = Path().apply {
                 moveTo(rotateEnd.x - 5f, rotateEnd.y - 2f)
                 lineTo(rotateEnd.x, rotateEnd.y - 6f)
                 lineTo(rotateEnd.x + 5f, rotateEnd.y - 2f)
             }
-            drawPath(arrowPath, RotateHandleColor, style = Stroke(1.5f))
+            drawPath(arrowPath, RotateMocha.Mauve, style = Stroke(1.5f))
 
             // Anchor point (center crosshair)
             val anchorPos = Offset(

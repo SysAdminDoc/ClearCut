@@ -84,7 +84,7 @@ class TimelineExchangeEngine @Inject constructor() {
             put("OTIO_SCHEMA", "Timeline.1")
             put("name", projectName)
             put("metadata", JSONObject().apply {
-                put("novacut_version", "2.9.0")
+                put("novacut_version", "3.0.0")
                 put("export_format", "otio")
             })
             put("tracks", buildOtioStack(tracks, textOverlays, frameRate))
@@ -366,7 +366,8 @@ class TimelineExchangeEngine @Inject constructor() {
         val targetUrl = mediaRef?.optString("target_url", "") ?: ""
 
         if (targetUrl.isEmpty()) {
-            warnings.add("Clip '${clipJson.optString("name")}' has no media reference")
+            warnings.add("Clip '${clipJson.optString("name")}' has no media reference — skipped")
+            return null // Skip clips with no media reference to prevent playback crashes
         }
 
         // Parse available range for source duration

@@ -9,9 +9,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.novacut.editor.R
 import com.novacut.editor.ui.theme.Mocha
 
 @Composable
@@ -33,16 +35,16 @@ fun NoiseReductionPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("AI Noise Reduction", color = Mocha.Text, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text(stringResource(R.string.noise_reduction_title), color = Mocha.Text, fontWeight = FontWeight.Bold, fontSize = 16.sp)
             IconButton(onClick = onClose) {
-                Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0)
+                Icon(Icons.Default.Close, stringResource(R.string.close), tint = Mocha.Subtext0)
             }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            "Analyzes audio to detect noise type (hiss, hum, broadband) and automatically applies the best DSP filters.",
+            stringResource(R.string.noise_reduction_description),
             color = Mocha.Subtext0,
             fontSize = 12.sp
         )
@@ -58,11 +60,11 @@ fun NoiseReductionPanel(
             if (isAnalyzing) {
                 CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Mocha.Base, strokeWidth = 2.dp)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Analyzing noise profile...")
+                Text(stringResource(R.string.noise_reduction_analyzing))
             } else {
                 Icon(Icons.Default.GraphicEq, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Analyze & Fix Noise")
+                Text(stringResource(R.string.noise_reduction_analyze_button))
             }
         }
 
@@ -77,7 +79,7 @@ fun NoiseReductionPanel(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.CheckCircle, "Done", tint = Mocha.Green, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.CheckCircle, stringResource(R.string.done), tint = Mocha.Green, modifier = Modifier.size(16.dp))
                 Text(analysisResult, color = Mocha.Text, fontSize = 12.sp)
             }
         }

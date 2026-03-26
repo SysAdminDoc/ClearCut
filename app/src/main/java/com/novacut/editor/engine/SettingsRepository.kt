@@ -18,6 +18,8 @@ data class AppSettings(
     val defaultResolution: Resolution = Resolution.FHD_1080P,
     val defaultFrameRate: Int = 30,
     val defaultAspectRatio: AspectRatio = AspectRatio.RATIO_16_9,
+    val defaultCodec: String = "H264",
+    val proxyEnabled: Boolean = true,
     val autoSaveEnabled: Boolean = true,
     val autoSaveIntervalSec: Int = 60,
     val proxyResolution: ProxyResolution = ProxyResolution.QUARTER
@@ -34,7 +36,11 @@ class SettingsRepository @Inject constructor(
         val AUTO_SAVE = booleanPreferencesKey("auto_save_enabled")
         val AUTO_SAVE_INTERVAL = intPreferencesKey("auto_save_interval_sec")
         val PROXY_RES = stringPreferencesKey("proxy_resolution")
+        val DEFAULT_CODEC = stringPreferencesKey("default_codec")
+        val PROXY_ENABLED = booleanPreferencesKey("proxy_enabled")
         val TUTORIAL_SHOWN = booleanPreferencesKey("tutorial_shown")
+        val FAVORITE_EFFECTS = stringSetPreferencesKey("favorite_effects")
+        val RECENT_EFFECTS = stringPreferencesKey("recent_effects")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
@@ -46,6 +52,8 @@ class SettingsRepository @Inject constructor(
             defaultAspectRatio = prefs[Keys.ASPECT_RATIO]?.let {
                 try { AspectRatio.valueOf(it) } catch (_: Exception) { null }
             } ?: AspectRatio.RATIO_16_9,
+            defaultCodec = prefs[Keys.DEFAULT_CODEC] ?: "H264",
+            proxyEnabled = prefs[Keys.PROXY_ENABLED] ?: true,
             autoSaveEnabled = prefs[Keys.AUTO_SAVE] ?: true,
             autoSaveIntervalSec = prefs[Keys.AUTO_SAVE_INTERVAL] ?: 60,
             proxyResolution = prefs[Keys.PROXY_RES]?.let {
@@ -79,11 +87,52 @@ class SettingsRepository @Inject constructor(
         context.dataStore.edit { it[Keys.PROXY_RES] = value.name }
     }
 
+    suspend fun updateDefaultCodec(value: String) {
+        context.dataStore.edit { it[Keys.DEFAULT_CODEC] = value }
+    }
+
+    suspend fun updateProxyEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.PROXY_ENABLED] = enabled }
+    }
+
     suspend fun isTutorialShown(): Boolean {
         return context.dataStore.data.map { it[Keys.TUTORIAL_SHOWN] ?: false }.first()
     }
 
     suspend fun setTutorialShown(shown: Boolean = true) {
         context.dataStore.edit { it[Keys.TUTORIAL_SHOWN] = shown }
+    }
+
+    suspend fun getFavoriteEffects(): Set<String> {
+        return context.dataStore.data.map { it[Keys.FAVORITE_EFFECTS] ?: emptySet() }.first()
+    }
+
+    suspend fun toggleFavoriteEffect(effectType: String) {
+        context.dataStore.edit { prefs ->
+            val current = prefs[Keys.FAVORITE_EFFECTS] ?: emptySet()
+            prefs[Keys.FAVORITE_EFFECTS] = if (effectType in current) {
+                current - effectType
+            } else {
+                current + effectType
+            }
+        }
+    }
+
+    suspend fun addRecentEffect(effectType: String) {
+        context.dataStore.edit { prefs ->
+            val current = (prefs[Keys.RECENT_EFFECTS] ?: "")
+                .split(",")
+                .filter { it.isNotBlank() && it != effectType }
+            val updated = (listOf(effectType) + current).take(20)
+            prefs[Keys.RECENT_EFFECTS] = updated.joinToString(",")
+        }
+    }
+
+    suspend fun getRecentEffects(): List<String> {
+        return context.dataStore.data.map { prefs ->
+            (prefs[Keys.RECENT_EFFECTS] ?: "")
+                .split(",")
+                .filter { it.isNotBlank() }
+        }.first()
     }
 }

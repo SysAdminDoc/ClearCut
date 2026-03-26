@@ -16,10 +16,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.novacut.editor.R
 import com.novacut.editor.model.*
 import com.novacut.editor.ui.theme.Mocha
 
@@ -31,7 +33,8 @@ fun TextEditorSheet(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var text by remember { mutableStateOf(existingOverlay?.text ?: "Your Text") }
+    val defaultText = stringResource(R.string.text_editor_your_text)
+    var text by remember { mutableStateOf(existingOverlay?.text ?: defaultText) }
     var fontSize by remember { mutableFloatStateOf(existingOverlay?.fontSize ?: 48f) }
     var bold by remember { mutableStateOf(existingOverlay?.bold ?: false) }
     var italic by remember { mutableStateOf(existingOverlay?.italic ?: false) }
@@ -80,7 +83,7 @@ fun TextEditorSheet(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Text Overlay", color = Mocha.Text, fontSize = 16.sp)
+            Text(stringResource(R.string.text_editor_title), color = Mocha.Text, fontSize = 16.sp)
             Row {
                 TextButton(
                     onClick = {
@@ -115,7 +118,7 @@ fun TextEditorSheet(
                     },
                     enabled = text.isNotBlank()
                 ) {
-                    Text("Save", color = if (text.isNotBlank()) Mocha.Mauve else Mocha.Surface1)
+                    Text(stringResource(R.string.text_editor_save), color = if (text.isNotBlank()) Mocha.Mauve else Mocha.Surface1)
                 }
                 IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
                     Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
@@ -149,7 +152,7 @@ fun TextEditorSheet(
         EffectSlider("Font Size", fontSize, 12f, 120f) { fontSize = it }
 
         // Font family
-        Text("Font", color = Mocha.Subtext1, fontSize = 12.sp)
+        Text(stringResource(R.string.text_editor_font), color = Mocha.Subtext1, fontSize = 12.sp)
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             modifier = Modifier.padding(vertical = 4.dp)
@@ -219,7 +222,7 @@ fun TextEditorSheet(
         Spacer(modifier = Modifier.height(8.dp))
 
         // Color picker
-        Text("Color", color = Mocha.Subtext1, fontSize = 12.sp)
+        Text(stringResource(R.string.text_editor_color), color = Mocha.Subtext1, fontSize = 12.sp)
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.padding(vertical = 8.dp)
@@ -240,7 +243,7 @@ fun TextEditorSheet(
         }
 
         // Position
-        Text("Position", color = Mocha.Subtext1, fontSize = 12.sp)
+        Text(stringResource(R.string.text_editor_position), color = Mocha.Subtext1, fontSize = 12.sp)
         EffectSlider("Horizontal", positionX, 0f, 1f) { positionX = it }
         EffectSlider("Vertical", positionY, 0f, 1f) { positionY = it }
 
@@ -248,7 +251,7 @@ fun TextEditorSheet(
         EffectSlider("Duration (sec)", duration / 1000f, 0.5f, 10f) { duration = it * 1000f }
 
         // Animation In
-        Text("Enter Animation", color = Mocha.Subtext1, fontSize = 12.sp)
+        Text(stringResource(R.string.text_editor_enter_animation), color = Mocha.Subtext1, fontSize = 12.sp)
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             modifier = Modifier.padding(vertical = 4.dp)
@@ -268,7 +271,7 @@ fun TextEditorSheet(
         }
 
         // Animation Out
-        Text("Exit Animation", color = Mocha.Subtext1, fontSize = 12.sp)
+        Text(stringResource(R.string.text_editor_exit_animation), color = Mocha.Subtext1, fontSize = 12.sp)
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             modifier = Modifier.padding(vertical = 4.dp)
@@ -290,7 +293,7 @@ fun TextEditorSheet(
         Spacer(modifier = Modifier.height(8.dp))
 
         // --- Shadow ---
-        Text("Shadow", color = Mocha.Subtext1, fontSize = 12.sp)
+        Text(stringResource(R.string.text_editor_shadow), color = Mocha.Subtext1, fontSize = 12.sp)
         EffectSlider("Offset X", shadowOffsetX, -10f, 10f) { shadowOffsetX = it }
         EffectSlider("Offset Y", shadowOffsetY, -10f, 10f) { shadowOffsetY = it }
         EffectSlider("Blur", shadowBlur, 0f, 20f) { shadowBlur = it }
@@ -298,9 +301,9 @@ fun TextEditorSheet(
         Spacer(modifier = Modifier.height(8.dp))
 
         // --- Glow ---
-        Text("Glow", color = Mocha.Subtext1, fontSize = 12.sp)
+        Text(stringResource(R.string.text_editor_glow), color = Mocha.Subtext1, fontSize = 12.sp)
         EffectSlider("Radius", glowRadius, 0f, 30f) { glowRadius = it }
-        Text("Glow Color", color = Mocha.Subtext1, fontSize = 12.sp)
+        Text(stringResource(R.string.text_editor_glow_color), color = Mocha.Subtext1, fontSize = 12.sp)
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.padding(vertical = 4.dp)
@@ -321,7 +324,7 @@ fun TextEditorSheet(
                         .clickable { glowColor = color }
                 ) {
                     if (color == 0x00000000L) {
-                        Text("Off", color = Mocha.Subtext0, fontSize = 7.sp, modifier = Modifier.align(Alignment.Center))
+                        Text(stringResource(R.string.text_editor_off), color = Mocha.Subtext0, fontSize = 7.sp, modifier = Modifier.align(Alignment.Center))
                     }
                 }
             }
@@ -330,7 +333,7 @@ fun TextEditorSheet(
         Spacer(modifier = Modifier.height(8.dp))
 
         // --- Typography ---
-        Text("Typography", color = Mocha.Subtext1, fontSize = 12.sp)
+        Text(stringResource(R.string.text_editor_typography), color = Mocha.Subtext1, fontSize = 12.sp)
         EffectSlider("Letter Spacing", letterSpacing, -5f, 20f) { letterSpacing = it }
         EffectSlider("Line Height", lineHeight, 0.8f, 3f) { lineHeight = it }
         EffectSlider("Rotation", textRotation, -180f, 180f) { textRotation = it }

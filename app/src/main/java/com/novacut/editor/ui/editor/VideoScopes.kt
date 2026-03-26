@@ -19,14 +19,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.*
 
+import com.novacut.editor.ui.theme.Mocha
+
+// Scope-specific display colors (not theme colors)
 private val ScopeBg = Color(0xCC111111)
 private val ScopeRed = Color(0xFFFF4444)
 private val ScopeGreen = Color(0xFF44FF44)
 private val ScopeBlue = Color(0xFF4488FF)
 private val ScopeWhite = Color(0xFFCCCCCC)
 private val ScopeGrid = Color(0xFF333333)
-private val ScopeText = Color(0xFFA6ADC8)
-private val Mauve = Color(0xFFCBA6F7)
 
 enum class ScopeType(val label: String) {
     HISTOGRAM("Histogram"),
@@ -73,7 +74,7 @@ fun VideoScopesOverlay(
                 val selected = scope == activeScope
                 Text(
                     scope.label.take(4),
-                    color = if (selected) Mauve else ScopeText.copy(alpha = 0.5f),
+                    color = if (selected) Mocha.Mauve else Mocha.Subtext0.copy(alpha = 0.5f),
                     fontSize = 9.sp,
                     modifier = Modifier
                         .clickable { onScopeChanged(scope) }
@@ -82,7 +83,7 @@ fun VideoScopesOverlay(
             }
             Icon(
                 Icons.Default.Close, "Close",
-                tint = ScopeText.copy(alpha = 0.5f),
+                tint = Mocha.Subtext0.copy(alpha = 0.5f),
                 modifier = Modifier
                     .size(14.dp)
                     .clickable(onClick = onClose)

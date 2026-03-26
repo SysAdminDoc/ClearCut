@@ -70,6 +70,23 @@
 -keep class com.google.mediapipe.** { *; }
 -dontwarn com.google.mediapipe.**
 
+# WorkManager + HiltWorker (workers instantiated by class name via reflection)
+-keep class * extends androidx.work.ListenableWorker { public <init>(...); }
+-keep class androidx.hilt.work.** { *; }
+-dontwarn androidx.work.**
+
+# Lottie (uses reflection for text delegates and layer names)
+-keep class com.airbnb.lottie.** { *; }
+-dontwarn com.airbnb.lottie.**
+
+# DataStore Preferences (serializes keys by property name)
+-keep class androidx.datastore.** { *; }
+-dontwarn androidx.datastore.**
+
+# OpenTimelineIO (JNI bridge looks up Java classes by name)
+-keep class io.opentimelineio.** { *; }
+-dontwarn io.opentimelineio.**
+
 # Suppress common warnings
 -dontwarn org.bouncycastle.**
 -dontwarn org.conscrypt.**

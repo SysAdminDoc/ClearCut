@@ -637,7 +637,8 @@ enum class KeyframeProperty {
 enum class KeyframeInterpolation { LINEAR, BEZIER, HOLD }
 
 enum class Easing {
-    LINEAR, EASE_IN, EASE_OUT, EASE_IN_OUT, SPRING
+    LINEAR, EASE_IN, EASE_OUT, EASE_IN_OUT, SPRING,
+    BOUNCE, ELASTIC, BACK, CIRCULAR, EXPO, SINE, CUBIC
 }
 
 // --- Text Overlays ---
@@ -675,6 +676,23 @@ data class TextOverlay(
     val templateId: String? = null,
     val keyframes: List<Keyframe> = emptyList()
 )
+
+// --- Image/Sticker Overlays ---
+
+data class ImageOverlay(
+    val id: String = UUID.randomUUID().toString(),
+    val sourceUri: Uri,
+    val startTimeMs: Long,
+    val endTimeMs: Long,
+    val positionX: Float = 0f,
+    val positionY: Float = 0f,
+    val scale: Float = 0.3f,
+    val rotation: Float = 0f,
+    val opacity: Float = 1.0f,
+    val type: ImageOverlayType = ImageOverlayType.STICKER
+)
+
+enum class ImageOverlayType { STICKER, GIF, IMAGE }
 
 data class TextPath(
     val type: TextPathType,
@@ -1013,7 +1031,11 @@ enum class SpeedPresetType(val displayName: String, val description: String) {
     PULSE("Pulse", "Rhythmic speed oscillation"),
     FLASH("Flash", "Brief fast forward"),
     DREAMY("Dreamy", "Slow with gentle waves"),
-    REWIND("Rewind", "Fast reverse feel")
+    REWIND("Rewind", "Fast reverse feel"),
+    TIME_FREEZE("Time Freeze", "Freeze at midpoint then resume"),
+    FILM_REEL("Film Reel", "Classic 24fps stutter effect"),
+    HEARTBEAT("Heartbeat", "Repeating fast-slow-fast pattern"),
+    CRESCENDO("Crescendo", "Exponential ramp from slow to fast")
 }
 
 // --- Auto-save indicator ---
@@ -1042,3 +1064,18 @@ data class UndoHistoryEntry(
     val description: String,
     val timestamp: Long = System.currentTimeMillis()
 )
+
+// --- Timeline Markers ---
+
+data class TimelineMarker(
+    val id: String = UUID.randomUUID().toString(),
+    val timeMs: Long,
+    val label: String = "",
+    val color: MarkerColor = MarkerColor.BLUE,
+    val notes: String = ""
+)
+
+enum class MarkerColor(val argb: Long) {
+    RED(0xFFE78284), ORANGE(0xFFEF9F76), YELLOW(0xFFE5C890),
+    GREEN(0xFFA6D189), BLUE(0xFF8CAAEE), PURPLE(0xFFCA9EE6)
+}

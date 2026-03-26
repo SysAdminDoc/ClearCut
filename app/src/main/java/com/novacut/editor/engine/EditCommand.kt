@@ -134,3 +134,9 @@ sealed class EditCommand {
         }
     }
 }
+
+/**
+ * Bridge to existing snapshot-based undo system.
+ * Use this to gradually migrate methods from saveUndoState() to EditCommand.
+ * Full migration: replace _state.update + saveUndoState with command.execute() + push to command stack.
+ */

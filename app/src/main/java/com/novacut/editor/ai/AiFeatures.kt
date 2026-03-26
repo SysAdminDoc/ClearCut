@@ -8,6 +8,7 @@ import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.util.Log
 import com.novacut.editor.engine.AudioEffectsEngine
 import com.novacut.editor.engine.segmentation.SegmentationEngine
 import com.novacut.editor.engine.whisper.WhisperEngine
@@ -32,6 +33,8 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
+
+private const val TAG = "AiFeatures"
 
 /**
  * AI-powered features for NovaCut.
@@ -86,7 +89,8 @@ class AiFeatures @Inject constructor(
                     confidence = 0.95f
                 )
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Whisper caption generation failed", e)
             emptyList()
         }
     }
@@ -242,7 +246,8 @@ class AiFeatures @Inject constructor(
             }
 
             captions
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Energy-based caption generation failed", e)
             emptyList()
         } finally {
             extractor.release()
@@ -358,7 +363,8 @@ class AiFeatures @Inject constructor(
                 temperature = tempCorrection,
                 confidence = min(1f, totalPixels / 40000f)
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Auto color correction failed", e)
             ColorCorrection()
         } finally {
             retriever.release()
@@ -459,7 +465,8 @@ class AiFeatures @Inject constructor(
                 },
                 confidence = min(1f, motionX.size / 50f)
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Video stabilization analysis failed", e)
             StabilizationResult()
         } finally {
             retriever.release()
@@ -680,7 +687,8 @@ class AiFeatures @Inject constructor(
                 noiseGateThreshold = noiseFloorRms * 1.5f,
                 confidence = if (noiseCount > sampleRate / 4) 0.9f else 0.5f
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Audio noise analysis failed", e)
             NoiseProfile()
         } finally {
             extractor.release()
@@ -762,7 +770,8 @@ class AiFeatures @Inject constructor(
                 recommendedSpill = 0.15f,
                 confidence = if (isGreenScreen || isBlueScreen) 0.9f else 0.5f
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Background analysis failed", e)
             BackgroundAnalysis()
         } finally {
             retriever.release()
@@ -883,7 +892,8 @@ class AiFeatures @Inject constructor(
             }
             prevFrame?.recycle()
             results
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Scene detection failed", e)
             emptyList()
         } finally {
             retriever.release()
@@ -1028,7 +1038,8 @@ class AiFeatures @Inject constructor(
                 height = (1f / safeRatio).coerceAtMost(1f),
                 confidence = min(1f, totalWeight / 3f)
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Smart crop analysis failed", e)
             val safeRatio = targetAspectRatio.coerceAtLeast(0.01f)
             CropSuggestion(
                 centerX = 0.5f, centerY = 0.5f,
@@ -1160,7 +1171,8 @@ class AiFeatures @Inject constructor(
                 filmGrain = 0.04f,
                 confidence = 0.85f
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Style transfer analysis failed", e)
             StyleTransferResult()
         } finally {
             retriever.release()
@@ -1210,7 +1222,8 @@ class AiFeatures @Inject constructor(
                 sharpenStrength = sharpenStrength,
                 confidence = if (targetResolution != null) 0.9f else 0f
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Upscale analysis failed", e)
             UpscaleResult()
         } finally {
             retriever.release()
@@ -1317,7 +1330,7 @@ class AiFeatures @Inject constructor(
                         }
                     }
                 }
-            } catch (_: Exception) { /* fall through to silence detection */ }
+            } catch (e: Exception) { Log.w(TAG, "Filler word detection failed, falling through to silence detection", e) }
         }
 
         onProgress(0.6f)
@@ -1469,7 +1482,7 @@ class AiFeatures @Inject constructor(
             } finally {
                 extractor.release()
             }
-        } catch (_: Exception) { /* silence detection failed, return what we have */ }
+        } catch (e: Exception) { Log.w(TAG, "Silence detection failed", e) }
 
         onProgress(1f)
         regions.sortedBy { it.startMs }
@@ -1617,7 +1630,8 @@ class AiFeatures @Inject constructor(
 
             onProgress(1f)
             results
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Beat sync edit generation failed", e)
             emptyList()
         } finally {
             extractor.release()
@@ -1712,7 +1726,8 @@ class AiFeatures @Inject constructor(
 
             onProgress(1f)
             smoothed
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Smart reframe analysis failed", e)
             emptyList()
         } finally {
             retriever.release()
@@ -1865,7 +1880,8 @@ class AiFeatures @Inject constructor(
 
                     scaled.recycle()
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w(TAG, "Auto-edit clip quality scoring failed", e)
                 // Score remains 0 — clip will be ranked low
             }
 
@@ -1956,7 +1972,7 @@ class AiFeatures @Inject constructor(
                 } finally {
                     extractor.release()
                 }
-            } catch (_: Exception) { /* proceed without beats */ }
+            } catch (e: Exception) { Log.w(TAG, "Beat detection for auto-edit failed, proceeding without beats", e) }
         }
 
         onProgress(0.75f)
@@ -2341,7 +2357,8 @@ class AiFeatures @Inject constructor(
                 noiseFloorDb = noiseFloorDb,
                 recommendedEffects = recommendedEffects
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Spectral noise profile analysis failed", e)
             SpectralNoiseProfile()
         } finally {
             extractor.release()

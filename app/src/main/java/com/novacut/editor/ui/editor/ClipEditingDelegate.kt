@@ -102,17 +102,19 @@ class ClipEditingDelegate(
     // --- Select Clip ---
     fun selectClip(clipId: String?, trackId: String? = null) {
         stateFlow.update { s ->
-            var newSelectedIds = s.selectedClipIds
-            if (clipId != null) {
+            val newSelectedIds = if (clipId != null) {
                 val allClips = s.tracks.flatMap { it.clips }
                 val selectedClip = allClips.find { it.id == clipId }
                 if (selectedClip?.groupId != null) {
-                    val groupedIds = allClips
+                    allClips
                         .filter { it.groupId == selectedClip.groupId }
                         .map { it.id }
                         .toSet()
-                    newSelectedIds = newSelectedIds + groupedIds
+                } else {
+                    setOf(clipId)
                 }
+            } else {
+                emptySet()
             }
             s.copy(selectedClipId = clipId, selectedTrackId = trackId, selectedClipIds = newSelectedIds)
         }
@@ -154,6 +156,7 @@ class ClipEditingDelegate(
                 totalDurationMs = totalDuration,
                 selectedClipId = null,
                 selectedTrackId = null,
+                selectedClipIds = emptySet(),
                 waveforms = state.waveforms - clipId
             )
         }

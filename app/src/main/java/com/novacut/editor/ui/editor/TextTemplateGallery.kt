@@ -26,12 +26,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.novacut.editor.model.*
-
-private val Surface0 = Color(0xFF313244)
-private val TextColor = Color(0xFFCDD6F4)
-private val Subtext = Color(0xFFA6ADC8)
-private val Mauve = Color(0xFFCBA6F7)
-private val Crust = Color(0xFF11111B)
+import com.novacut.editor.ui.theme.Mocha
 
 // Pre-built text templates
 val builtInTextTemplates = listOf(
@@ -211,7 +206,7 @@ fun TextTemplateGallery(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+            .background(Mocha.Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
             .padding(12.dp)
     ) {
         Row(
@@ -219,9 +214,9 @@ fun TextTemplateGallery(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Text Templates", color = TextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text("Text Templates", color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Close, "Close", tint = Subtext, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
             }
         }
 
@@ -253,8 +248,8 @@ fun TextTemplateGallery(
                     label = { Text("All", fontSize = 10.sp) },
                     modifier = Modifier.height(28.dp),
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = Mauve.copy(alpha = 0.2f),
-                        selectedLabelColor = Mauve
+                        selectedContainerColor = Mocha.Mauve.copy(alpha = 0.2f),
+                        selectedLabelColor = Mocha.Mauve
                     )
                 )
             }
@@ -265,8 +260,8 @@ fun TextTemplateGallery(
                     label = { Text(cat.displayName, fontSize = 10.sp) },
                     modifier = Modifier.height(28.dp),
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = Mauve.copy(alpha = 0.2f),
-                        selectedLabelColor = Mauve
+                        selectedContainerColor = Mocha.Mauve.copy(alpha = 0.2f),
+                        selectedLabelColor = Mocha.Mauve
                     )
                 )
             }
@@ -317,15 +312,15 @@ fun TextTemplateGallery(
                                     durationMs = 3000L
                                 ))
                             },
-                        colors = CardDefaults.cardColors(containerColor = Surface0)
+                        colors = CardDefaults.cardColors(containerColor = Mocha.Surface0)
                     ) {
                         Column(
                             modifier = Modifier.fillMaxSize().padding(8.dp),
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text(name, color = TextColor, fontSize = 11.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
-                            Text(category, color = Subtext, fontSize = 9.sp)
+                            Text(name, color = Mocha.Text, fontSize = 11.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
+                            Text(category, color = Mocha.Subtext0, fontSize = 9.sp)
                         }
                     }
                 }
@@ -359,7 +354,7 @@ private fun TemplateCard(
     Column(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(Surface0)
+            .background(Mocha.Surface0)
             .clickable(onClick = onClick)
     ) {
         // Preview area
@@ -369,7 +364,7 @@ private fun TemplateCard(
                 .height(80.dp)
                 .background(
                     Brush.verticalGradient(
-                        listOf(Color(0xFF181825), Color(0xFF1E1E2E))
+                        listOf(Color(0xFF181825), Mocha.Base)
                     )
                 ),
             contentAlignment = Alignment.Center
@@ -406,10 +401,10 @@ private fun TemplateCard(
 
         // Info
         Column(modifier = Modifier.padding(6.dp)) {
-            Text(template.name, color = TextColor, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+            Text(template.name, color = Mocha.Text, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1)
             Text(
                 "${template.category.displayName} | ${template.durationMs / 1000}s",
-                color = Subtext,
+                color = Mocha.Subtext0,
                 fontSize = 9.sp
             )
         }

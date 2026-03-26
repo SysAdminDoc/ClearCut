@@ -85,6 +85,11 @@ class ProxyWorkflowEngine @Inject constructor(
     ) = withContext(Dispatchers.IO) {
         _isGenerating.value = true
         val needsProxy = _entries.value.filter { !it.value.proxyGenerated && it.value.originalHeight > 1080 }
+        if (needsProxy.isEmpty()) {
+            onProgress(1f)
+            _isGenerating.value = false
+            return@withContext
+        }
         var completed = 0
 
         for ((clipId, entry) in needsProxy) {

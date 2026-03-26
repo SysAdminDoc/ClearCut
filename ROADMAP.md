@@ -111,3 +111,30 @@
 - [ ] **LaMa inpainting** — ONNX Runtime inference (blocked on model hosting + ONNX dependency)
 - [ ] **Cloud inpainting API** — ProPainter cloud endpoint integration (blocked on server deployment)
 - [ ] **FFmpegX integration** — Full FFmpeg command execution (blocked on `ffmpegx-android` dependency)
+
+## v3.2.0 — Performance & UX Hardening
+
+### Bug Fixes
+- [x] **Export state stuck at EXPORTING** — ExportDelegate now sets `exportState = COMPLETE` on success and `exportState = ERROR` on failure/exception; previously state was never updated after export began
+- [x] **Selection state leak** — `selectClip()` now resets `selectedClipIds` on each call instead of accumulating; `deleteSelectedClip()` clears `selectedClipIds`
+- [x] **ExportService not stopped** — Added `stopService()` in ExportDelegate onComplete, onError, and catch blocks; added `stopForeground(STOP_FOREGROUND_REMOVE)` with API level check in ExportService
+- [x] **Null-safe ExportService** — All `getSystemService()` calls now use `?.` to avoid NPE
+- [x] **Style transfer misleading toast** — Shows "No style adjustments needed" when 0 effects applied (was "Applied 0 style effects")
+- [x] **AiToolsDelegate null preview** — Added `getSelectedClip()?.let` guard before `applyPreviewEffects()`
+- [x] **Unnecessary recalculateDuration** — Removed from style transfer (effects don't change clip duration)
+
+### Performance
+- [x] **Timeline pointerInput optimization** — Replaced 6 `pointerInput(scrollOffsetMs, zoomLevel)` calls with `pointerInput(Unit)` + `rememberUpdatedState`, preventing gesture detector recreation on every scroll/zoom change
+- [x] **Extract BASE_SCALE constant** — Replaced magic number `0.15f` with named `BASE_SCALE` constant in Timeline
+- [x] **VideoEngine deduplication** — Extracted `addColorGradingEffects()`, `buildTransitionEffect()`, `addOpacityAndTransformEffects()` shared methods, eliminating ~200 lines duplicated between `export()` and `applyPreviewEffects()`
+- [x] **AiToolsDelegate deduplication** — Extracted shared `buildTrackingKeyframes()` method from `runTrackMotion()` and `runFaceTrack()`
+
+### UX Improvements
+- [x] **Delete confirmation dialog** — Clip deletion now shows confirmation dialog ("Delete this clip? This action can be undone.")
+- [x] **Buffering indicator** — PreviewPanel shows a CircularProgressIndicator when player is in BUFFERING state
+- [x] **AudioPanel null guard** — Shows "Select a clip to edit audio" message when no clip is selected instead of rendering empty controls
+
+### Error Handling
+- [x] **AI operation try/catch** — Wrapped `runTrackMotion`, `runStyleTransfer`, `runFaceTrack`, `runSmartReframe`, `runUpscale` in try/catch with toast error reporting
+- [x] **Clip validation guards** — `deleteSelectedClip()` and `duplicateSelectedClip()` now validate clip exists before saving undo state
+- [x] **Merge validation** — `mergeWithNextClip()` validates merge preconditions (next clip exists, same source, adjacent trims) before saving undo state

@@ -3,13 +3,18 @@ package com.novacut.editor.engine
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.opengl.GLES30
+import android.opengl.GLUtils
+import android.util.Log
 import com.airbnb.lottie.LottieComposition
 import com.airbnb.lottie.LottieCompositionFactory
 import com.airbnb.lottie.LottieDrawable
 import com.airbnb.lottie.TextDelegate
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.suspendCancellableCoroutine
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.resume
 
 /**
  * Renders Lottie animations as video overlay frames.
@@ -98,24 +103,65 @@ class LottieTemplateEngine @Inject constructor(
     }
 
     /**
-     * Load a Lottie composition from assets.
+     * Load a Lottie composition from assets using coroutine suspension.
      */
     suspend fun loadTemplate(assetPath: String): LottieComposition? {
         return try {
-            val result = LottieCompositionFactory.fromAsset(context, assetPath)
-            val task = result
-            val latch = java.util.concurrent.CountDownLatch(1)
-            var composition: LottieComposition? = null
-            task.addListener { result ->
-                composition = result
-                latch.countDown()
-            }.addFailureListener {
-                latch.countDown()
+            suspendCancellableCoroutine { cont ->
+                val task = LottieCompositionFactory.fromAsset(context, assetPath)
+                task.addListener { composition ->
+                    if (cont.isActive) cont.resume(composition)
+                }.addFailureListener { e ->
+                    Log.w(TAG, "Failed to load Lottie template: $assetPath", e)
+                    if (cont.isActive) cont.resume(null)
+                }
             }
-            latch.await(10, java.util.concurrent.TimeUnit.SECONDS)
-            composition
         } catch (e: Exception) {
+            Log.w(TAG, "Exception loading Lottie template: $assetPath", e)
             null
         }
+    }
+
+    /**
+     * Upload a rendered Lottie frame to an OpenGL texture for use as a GlEffect overlay
+     * in the Media3 Transformer export pipeline.
+     *
+     * Must be called on the GL thread (inside GlEffect.drawFrame).
+     *
+     * @param composition Pre-loaded Lottie composition
+     * @param frameTimeMs Time position within the animation
+     * @param width Output frame width
+     * @param height Output frame height
+     * @param textReplacements Map of text layer names to replacement values
+     * @return OpenGL texture ID, or -1 on failure
+     */
+    fun renderFrameToTexture(
+        composition: LottieComposition,
+        frameTimeMs: Long,
+        width: Int,
+        height: Int,
+        textReplacements: Map<String, String> = emptyMap()
+    ): Int {
+        val bitmap = renderFrame(composition, frameTimeMs, width, height, textReplacements)
+        val texIds = IntArray(1)
+        GLES30.glGenTextures(1, texIds, 0)
+        val texId = texIds[0]
+        if (texId == 0) {
+            bitmap.recycle()
+            return -1
+        }
+        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, texId)
+        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_LINEAR)
+        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_LINEAR)
+        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_S, GLES30.GL_CLAMP_TO_EDGE)
+        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE)
+        GLUtils.texImage2D(GLES30.GL_TEXTURE_2D, 0, bitmap, 0)
+        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, 0)
+        bitmap.recycle()
+        return texId
+    }
+
+    companion object {
+        private const val TAG = "LottieTemplateEngine"
     }
 }

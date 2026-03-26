@@ -3,14 +3,18 @@ package com.novacut.editor.engine
 import android.app.*
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.net.Uri
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.content.FileProvider
+import com.novacut.editor.MainActivity
 import com.novacut.editor.NovaCutApp
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.combine
+import java.io.File
 import javax.inject.Inject
 
 private const val TAG = "ExportService"
@@ -69,7 +73,7 @@ class ExportService : Service() {
                             notifyComplete()
                         }
                         ExportState.ERROR -> {
-                            notifyError("Export failed")
+                            notifyError(videoEngine.exportErrorMessage.value ?: "Export failed")
                         }
                         ExportState.CANCELLED -> {
                             notifyCancel()
@@ -83,39 +87,72 @@ class ExportService : Service() {
     private fun updateProgress(progress: Int) {
         if (progress - lastNotifiedProgress < 2 && progress < 100) return
         lastNotifiedProgress = progress
-        val nm = getSystemService(NotificationManager::class.java)
+        val nm = getSystemService(NotificationManager::class.java) ?: return
         nm.notify(NOTIFICATION_ID, buildNotification(progress))
     }
 
     private fun notifyComplete() {
         val nm = getSystemService(NotificationManager::class.java)
+        nm?.cancel(NOTIFICATION_ID) // Cancel the progress notification first
+
+        // Build tap-to-open intent for the exported file
+        val openIntent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val openPi = PendingIntent.getActivity(
+            this, 0, openIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         val notification = NotificationCompat.Builder(this, NovaCutApp.CHANNEL_EXPORT)
             .setSmallIcon(android.R.drawable.ic_menu_save)
             .setContentTitle("Export Complete")
             .setContentText("Your video has been exported successfully")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
+            .setContentIntent(openPi)
             .build()
-        nm.notify(NOTIFICATION_ID + 1, notification)
+        nm?.notify(NOTIFICATION_ID + 1, notification)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } else {
+            @Suppress("DEPRECATION")
+            stopForeground(true)
+        }
         stopSelf()
     }
 
     private fun notifyError(message: String) {
         val nm = getSystemService(NotificationManager::class.java)
+        nm?.cancel(NOTIFICATION_ID)
+
         val notification = NotificationCompat.Builder(this, NovaCutApp.CHANNEL_EXPORT)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .setContentTitle("Export Failed")
             .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .build()
-        nm.notify(NOTIFICATION_ID + 1, notification)
+        nm?.notify(NOTIFICATION_ID + 1, notification)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } else {
+            @Suppress("DEPRECATION")
+            stopForeground(true)
+        }
         stopSelf()
     }
 
     private fun notifyCancel() {
         val nm = getSystemService(NotificationManager::class.java)
-        nm.cancel(NOTIFICATION_ID)
+        nm?.cancel(NOTIFICATION_ID)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } else {
+            @Suppress("DEPRECATION")
+            stopForeground(true)
+        }
         stopSelf()
     }
 

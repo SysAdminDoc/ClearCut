@@ -20,10 +20,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
+import com.novacut.editor.R
 import com.novacut.editor.ui.theme.Mocha
 import java.io.File
 
@@ -139,7 +141,7 @@ fun MediaPickerSheet(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Add Media", color = Mocha.Text, fontSize = 18.sp)
+            Text(stringResource(R.string.media_picker_title), color = Mocha.Text, fontSize = 18.sp)
             IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
                 Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
             }
@@ -154,7 +156,7 @@ fun MediaPickerSheet(
         ) {
             MediaTypeButton(
                 icon = Icons.Default.Videocam,
-                label = "Video",
+                label = stringResource(R.string.media_picker_video),
                 color = Mocha.Blue,
                 modifier = Modifier.weight(1f)
             ) {
@@ -170,7 +172,7 @@ fun MediaPickerSheet(
 
             MediaTypeButton(
                 icon = Icons.Default.Image,
-                label = "Image",
+                label = stringResource(R.string.media_picker_image),
                 color = Mocha.Green,
                 modifier = Modifier.weight(1f)
             ) {
@@ -186,7 +188,7 @@ fun MediaPickerSheet(
 
             MediaTypeButton(
                 icon = Icons.Default.MusicNote,
-                label = "Audio",
+                label = stringResource(R.string.media_picker_audio),
                 color = Mocha.Peach,
                 modifier = Modifier.weight(1f)
             ) {
@@ -216,7 +218,7 @@ fun MediaPickerSheet(
         ) {
             Icon(Icons.Default.LibraryAdd, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Select Multiple Files")
+            Text(stringResource(R.string.media_picker_select_multiple))
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -240,7 +242,7 @@ fun MediaPickerSheet(
         ) {
             Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Record Video")
+            Text(stringResource(R.string.media_picker_record_video))
         }
     }
 }

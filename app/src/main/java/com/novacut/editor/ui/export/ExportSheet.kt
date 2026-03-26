@@ -9,8 +9,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.novacut.editor.R
 import com.novacut.editor.engine.ExportState
 import com.novacut.editor.model.*
 import androidx.compose.ui.text.font.FontWeight
@@ -46,10 +48,10 @@ fun ExportSheet(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Export", color = Mocha.Text, fontSize = 18.sp)
+            Text(stringResource(R.string.export_title), color = Mocha.Text, fontSize = 18.sp)
             if (exportState != ExportState.EXPORTING) {
                 IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Close, stringResource(R.string.close), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
                 }
             }
         }
@@ -63,7 +65,7 @@ fun ExportSheet(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    "Exporting...",
+                    stringResource(R.string.export_exporting),
                     color = Mocha.Text,
                     fontSize = 16.sp
                 )
@@ -84,7 +86,7 @@ fun ExportSheet(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 TextButton(onClick = onCancel) {
-                    Text("Cancel Export", color = Mocha.Red)
+                    Text(stringResource(R.string.export_cancel), color = Mocha.Red)
                 }
             }
             return
@@ -97,12 +99,12 @@ fun ExportSheet(
             ) {
                 Icon(
                     Icons.Default.CheckCircle,
-                    contentDescription = "Complete",
+                    contentDescription = stringResource(R.string.complete),
                     tint = Mocha.Green,
                     modifier = Modifier.size(48.dp)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Export Complete!", color = Mocha.Green, fontSize = 16.sp)
+                Text(stringResource(R.string.export_complete), color = Mocha.Green, fontSize = 16.sp)
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -111,22 +113,22 @@ fun ExportSheet(
                         onClick = onShare,
                         colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve)
                     ) {
-                        Icon(Icons.Default.Share, contentDescription = "Share", modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Share, contentDescription = stringResource(R.string.share), modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Share", color = Mocha.Crust)
+                        Text(stringResource(R.string.share), color = Mocha.Crust)
                     }
                     Button(
                         onClick = onSaveToGallery,
                         colors = ButtonDefaults.buttonColors(containerColor = Mocha.Green)
                     ) {
-                        Icon(Icons.Default.SaveAlt, contentDescription = "Save to gallery", modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.SaveAlt, contentDescription = stringResource(R.string.export_save_to_gallery_cd), modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Save to Gallery", color = Mocha.Crust)
+                        Text(stringResource(R.string.export_save_to_gallery), color = Mocha.Crust)
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 TextButton(onClick = onClose) {
-                    Text("Done", color = Mocha.Subtext0)
+                    Text(stringResource(R.string.done), color = Mocha.Subtext0)
                 }
             }
             return
@@ -139,15 +141,15 @@ fun ExportSheet(
             ) {
                 Icon(
                     Icons.Default.Cancel,
-                    contentDescription = "Cancelled",
+                    contentDescription = stringResource(R.string.cancelled),
                     tint = Mocha.Peach,
                     modifier = Modifier.size(48.dp)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Export Cancelled", color = Mocha.Peach, fontSize = 16.sp)
+                Text(stringResource(R.string.export_cancelled), color = Mocha.Peach, fontSize = 16.sp)
                 Spacer(modifier = Modifier.height(16.dp))
                 TextButton(onClick = onClose) {
-                    Text("Done", color = Mocha.Subtext0)
+                    Text(stringResource(R.string.done), color = Mocha.Subtext0)
                 }
             }
             return
@@ -160,12 +162,12 @@ fun ExportSheet(
             ) {
                 Icon(
                     Icons.Default.Error,
-                    contentDescription = "Error",
+                    contentDescription = stringResource(R.string.error),
                     tint = Mocha.Red,
                     modifier = Modifier.size(48.dp)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Export Failed", color = Mocha.Red, fontSize = 16.sp)
+                Text(stringResource(R.string.export_failed), color = Mocha.Red, fontSize = 16.sp)
                 if (!errorMessage.isNullOrBlank()) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -181,15 +183,15 @@ fun ExportSheet(
                         onClick = onStartExport,
                         colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve)
                     ) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Retry", modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.retry), modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Retry", color = Mocha.Crust)
+                        Text(stringResource(R.string.retry), color = Mocha.Crust)
                     }
                     Button(
                         onClick = onClose,
                         colors = ButtonDefaults.buttonColors(containerColor = Mocha.Surface1)
                     ) {
-                        Text("Close", color = Mocha.Text)
+                        Text(stringResource(R.string.close), color = Mocha.Text)
                     }
                 }
             }
@@ -197,7 +199,7 @@ fun ExportSheet(
         }
 
         // Platform Presets
-        Text("Quick Presets", color = Mocha.Subtext1, fontSize = 12.sp)
+        Text(stringResource(R.string.export_quick_presets), color = Mocha.Subtext1, fontSize = 12.sp)
         Spacer(modifier = Modifier.height(4.dp))
         Row(
             modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -235,7 +237,7 @@ fun ExportSheet(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Audio Only", color = Mocha.Text, fontSize = 13.sp)
+            Text(stringResource(R.string.export_audio_only), color = Mocha.Text, fontSize = 13.sp)
             Switch(
                 checked = config.exportAudioOnly,
                 onCheckedChange = { onConfigChanged(config.copy(exportAudioOnly = it)) },
@@ -251,7 +253,7 @@ fun ExportSheet(
         Spacer(modifier = Modifier.height(12.dp))
 
         // Resolution
-        Text("Resolution", color = Mocha.Subtext1, fontSize = 12.sp)
+        Text(stringResource(R.string.export_resolution), color = Mocha.Subtext1, fontSize = 12.sp)
         Spacer(modifier = Modifier.height(4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Resolution.entries.forEach { res ->
@@ -271,7 +273,7 @@ fun ExportSheet(
         Spacer(modifier = Modifier.height(12.dp))
 
         // Frame rate
-        Text("Frame Rate", color = Mocha.Subtext1, fontSize = 12.sp)
+        Text(stringResource(R.string.export_frame_rate), color = Mocha.Subtext1, fontSize = 12.sp)
         Spacer(modifier = Modifier.height(4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(24, 30, 60).forEach { fps ->
@@ -291,7 +293,7 @@ fun ExportSheet(
         Spacer(modifier = Modifier.height(12.dp))
 
         // Codec
-        Text("Codec", color = Mocha.Subtext1, fontSize = 12.sp)
+        Text(stringResource(R.string.export_codec), color = Mocha.Subtext1, fontSize = 12.sp)
         Spacer(modifier = Modifier.height(4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             VideoCodec.entries.forEach { codec ->
@@ -311,7 +313,7 @@ fun ExportSheet(
         Spacer(modifier = Modifier.height(12.dp))
 
         // Quality
-        Text("Quality", color = Mocha.Subtext1, fontSize = 12.sp)
+        Text(stringResource(R.string.export_quality), color = Mocha.Subtext1, fontSize = 12.sp)
         Spacer(modifier = Modifier.height(4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ExportQuality.entries.forEach { quality ->
@@ -337,15 +339,15 @@ fun ExportSheet(
             colors = CardDefaults.cardColors(containerColor = Mocha.Surface0)
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("Output Details", color = Mocha.Subtext1, fontSize = 12.sp)
+                Text(stringResource(R.string.export_output_details), color = Mocha.Subtext1, fontSize = 12.sp)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text("${w}x${h} @ ${config.frameRate}fps", color = Mocha.Text, fontSize = 13.sp)
                 Text("${config.codec.label} / ${config.quality.label}", color = Mocha.Text, fontSize = 13.sp)
                 val bitrateDesc = when {
-                    config.videoBitrate >= 40_000_000 -> "Studio quality"
-                    config.videoBitrate >= 15_000_000 -> "Great for YouTube/social"
-                    config.videoBitrate >= 6_000_000 -> "Good for sharing"
-                    else -> "Compact file size"
+                    config.videoBitrate >= 40_000_000 -> stringResource(R.string.export_studio_quality)
+                    config.videoBitrate >= 15_000_000 -> stringResource(R.string.export_great_for_youtube)
+                    config.videoBitrate >= 6_000_000 -> stringResource(R.string.export_good_for_sharing)
+                    else -> stringResource(R.string.export_compact_file_size)
                 }
                 Text(
                     "${config.videoBitrate / 1_000_000}Mbps — $bitrateDesc",
@@ -369,14 +371,14 @@ fun ExportSheet(
             ),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Icon(Icons.Default.FileUpload, contentDescription = "Export video", modifier = Modifier.size(20.dp))
+            Icon(Icons.Default.FileUpload, contentDescription = stringResource(R.string.export_video_cd), modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Export Video", fontSize = 15.sp)
+            Text(stringResource(R.string.export_video_button), fontSize = 15.sp)
         }
 
         // Timeline Exchange section
         Spacer(modifier = Modifier.height(12.dp))
-        Text("Timeline Exchange", color = Mocha.Subtext0, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+        Text(stringResource(R.string.export_timeline_exchange), color = Mocha.Subtext0, fontSize = 11.sp, fontWeight = FontWeight.Medium)
         Spacer(modifier = Modifier.height(4.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(

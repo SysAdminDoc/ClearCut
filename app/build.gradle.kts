@@ -120,8 +120,10 @@ dependencies {
     // DataStore
     implementation(libs.androidx.datastore.preferences)
 
-    // WorkManager
+    // WorkManager + Hilt integration
     implementation(libs.androidx.work.runtime.ktx)
+    implementation("androidx.hilt:hilt-work:1.2.0")
+    ksp("androidx.hilt:hilt-compiler:1.2.0")
 
     // Image loading
     implementation(libs.coil.compose)
@@ -137,7 +139,7 @@ dependencies {
     // implementation("com.k2fsa.sherpa:onnx-android:1.10.+")  // Sherpa-ONNX ASR (51x faster Whisper)
     // implementation("io.github.kaleyravideo:android-deepfilternet:0.5.+")  // ML noise reduction
     // implementation("com.github.nicholasryan:aubio-android:0.4.+")  // aubio beat detection (NDK)
-    // implementation("com.airbnb.android:lottie-compose:6.+")  // Lottie animated titles
+    implementation("com.airbnb.android:lottie-compose:6.+")  // Lottie animated titles
 
     // Tier 3 dependencies (uncomment when ready to integrate):
     // implementation("org.opencv:opencv-android:4.9.+")  // OpenCV for stabilization
@@ -146,7 +148,10 @@ dependencies {
 
     // Tier 4 dependencies (uncomment when ready to integrate):
     // implementation("com.github.nicholasryan:mobilesam-android:0.1.+")  // MobileSAM tap-to-segment
-    // implementation("io.opentimelineio:opentimelineio-java:0.15.+")  // OTIO timeline exchange
+    implementation("io.opentimelineio:opentimelineio-java:0.15.+")  // OTIO timeline exchange
     // implementation("com.google.protobuf:protobuf-javalite:4.+")  // Protobuf project format
-    // implementation("androidx.work:work-runtime-ktx:2.9.+")  // WorkManager for proxy generation
+    // implementation("androidx.work:work-runtime-ktx:2.9.+")  // WorkManager for proxy generation (active via libs catalog)
+
+    // Tier 5 dependencies (uncomment when ready to integrate):
+    // implementation("app.rive:rive-android:9.+")  // Rive interactive templates
 }
