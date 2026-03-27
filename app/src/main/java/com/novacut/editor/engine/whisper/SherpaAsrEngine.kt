@@ -2,9 +2,9 @@ package com.novacut.editor.engine.whisper
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
@@ -12,9 +12,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * ASR engine abstraction that supports multiple backends.
- * Primary: Sherpa-ONNX (51x faster than whisper.cpp on Android)
- * Fallback: Built-in WhisperEngine (ONNX Runtime)
+ * Stub engine -- requires com.k2fsa.sherpa:onnx-android for Sherpa-ONNX backend.
+ * See ROADMAP.md
+ *
+ * Delegates to built-in [WhisperEngine] (ONNX Runtime) when Sherpa-ONNX is unavailable.
  *
  * Sherpa-ONNX dependency (add to app/build.gradle.kts when ready):
  *   implementation("com.k2fsa.sherpa:onnx-android:1.10.+")
@@ -25,7 +26,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class SherpaAsrEngine @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val whisperEngine: WhisperEngine
 ) {
     enum class AsrBackend { SHERPA_ONNX, BUILTIN_WHISPER }
     enum class ModelVariant(val displayName: String, val languages: String, val sizeMb: Int) {
@@ -67,58 +69,45 @@ class SherpaAsrEngine @Inject constructor(
     }
 
     /**
-     * Check if Sherpa-ONNX is available (dependency present + model downloaded).
-     * Falls back to built-in WhisperEngine if not.
+     * Returns the active ASR backend. Currently always BUILTIN_WHISPER
+     * since Sherpa-ONNX dependency is not present.
      */
     fun getActiveBackend(): AsrBackend = activeBackend
 
     /**
      * Transcribe audio from a video/audio URI.
-     * Returns segments with word-level timestamps when available.
-     *
-     * When Sherpa-ONNX is integrated, this will:
-     * 1. Extract audio to PCM (16kHz mono)
-     * 2. Create OfflineRecognizer with whisper model config
-     * 3. Process in 30-second chunks
-     * 4. Return segments with word timestamps
-     *
-     * Expected performance with Sherpa-ONNX:
-     * - Whisper Tiny: RTF 0.07 (1 min audio → ~4 sec processing)
-     * - Moonshine Tiny: RTF 0.05 (1 min audio → ~3 sec processing)
+     * Delegates to the built-in [WhisperEngine] and converts results.
      */
     suspend fun transcribe(
         uri: Uri,
         language: String = "en",
         onProgress: (Float) -> Unit = {}
     ): TranscriptionResult = withContext(Dispatchers.IO) {
-        // TODO: When sherpa-onnx dependency is added, implement:
-        // val config = OfflineRecognizerConfig(
-        //     whisper = OfflineWhisperModelConfig(
-        //         encoder = modelDir + "/encoder.onnx",
-        //         decoder = modelDir + "/decoder.onnx",
-        //         language = language,
-        //         tailPaddings = 800
-        //     ),
-        //     modelConfig = OfflineModelConfig(numThreads = 4, provider = "cpu")
-        // )
-        // val recognizer = OfflineRecognizer(config)
-        // ... process chunks, collect segments with timestamps ...
-
-        // For now, delegate to existing WhisperEngine
-        TranscriptionResult(segments = emptyList(), language = language)
+        Log.d(TAG, "transcribe: delegating to built-in WhisperEngine (Sherpa-ONNX not available)")
+        val segments = whisperEngine.transcribe(uri, onProgress)
+        TranscriptionResult(
+            segments = segments.map { seg ->
+                TranscriptionSegment(
+                    text = seg.text,
+                    startTimeMs = seg.startMs,
+                    endTimeMs = seg.endMs
+                )
+            },
+            language = language,
+            durationMs = segments.lastOrNull()?.endMs ?: 0L
+        )
     }
 
     /**
      * Get list of supported languages for the active model.
      */
     fun getSupportedLanguages(): List<String> {
-        return when (activeBackend) {
-            AsrBackend.SHERPA_ONNX -> WHISPER_LANGUAGES
-            AsrBackend.BUILTIN_WHISPER -> WHISPER_LANGUAGES
-        }
+        return WHISPER_LANGUAGES
     }
 
     companion object {
+        private const val TAG = "SherpaASR"
+
         val WHISPER_LANGUAGES = listOf(
             "en", "zh", "de", "es", "ru", "ko", "fr", "ja", "pt", "tr",
             "pl", "ca", "nl", "ar", "sv", "it", "id", "hi", "fi", "vi",

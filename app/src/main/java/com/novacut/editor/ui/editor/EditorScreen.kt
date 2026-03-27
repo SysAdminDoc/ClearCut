@@ -68,21 +68,8 @@ fun EditorScreen(
         }
     }
 
-    val hasOpenPanel = state.showMediaPicker || state.showExportSheet || state.showEffectsPanel ||
-        state.showTextEditor || state.showTransitionPicker || state.showAudioPanel ||
-        state.showAiToolsPanel || state.showTransformPanel || state.showCropPanel ||
-        state.showVoiceoverRecorder || state.selectedEffectId != null || state.editingTextOverlayId != null ||
-        state.showColorGrading || state.showAudioMixer || state.showKeyframeEditor ||
-        state.showSpeedCurveEditor || state.showMaskEditor || state.showBlendModeSelector ||
-        state.showBatchExport || state.showPipPresets || state.showChromaKey ||
-        state.showCaptionEditor || state.showChapterMarkers || state.showSnapshotHistory ||
-        state.showTextTemplates || state.showMediaManager || state.showAudioNorm ||
-        state.showRenderPreview || state.showCloudBackup || state.showScopes ||
-        state.showTutorial || state.showUndoHistory || state.showCaptionStyleGallery ||
-        state.showBeatSync || state.showSmartReframe || state.showSpeedPresets ||
-        state.showFillerRemoval || state.showAutoEdit ||
-        state.showTts || state.showEffectLibrary || state.showNoiseReduction ||
-        state.showStickerPicker
+    val hasOpenPanel = state.panels.hasOpenPanel ||
+        state.selectedEffectId != null || state.editingTextOverlayId != null
 
     BackHandler(enabled = hasOpenPanel || state.currentTool != EditorTool.NONE || state.selectedClipId != null) {
         when {
@@ -358,10 +345,8 @@ fun EditorScreen(
         }
 
         // Bottom sheets / overlays
-        AnimatedVisibility(
-            visible = state.showMediaPicker,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.MEDIA_PICKER),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             MediaPickerSheet(
@@ -376,10 +361,8 @@ fun EditorScreen(
             )
         }
 
-        AnimatedVisibility(
-            visible = state.showEffectsPanel,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.EFFECTS),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             val selectedClip = viewModel.getSelectedClip()
@@ -397,10 +380,8 @@ fun EditorScreen(
         }
 
         // Speed panel
-        AnimatedVisibility(
+        BottomSheetSlot(
             visible = state.currentTool == EditorTool.SPEED && state.selectedClipId != null,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             val clip = viewModel.getSelectedClip()
@@ -417,10 +398,8 @@ fun EditorScreen(
         }
 
         // Transition picker
-        AnimatedVisibility(
-            visible = state.showTransitionPicker,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.TRANSITION_PICKER),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             val clip = viewModel.getSelectedClip()
@@ -444,10 +423,8 @@ fun EditorScreen(
         }
 
         // Text editor
-        AnimatedVisibility(
-            visible = state.showTextEditor,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.TEXT_EDITOR),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             val editingOverlay = state.editingTextOverlayId?.let { id ->
@@ -469,10 +446,8 @@ fun EditorScreen(
         }
 
         // Export sheet
-        AnimatedVisibility(
-            visible = state.showExportSheet,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.EXPORT_SHEET),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             ExportSheet(
@@ -502,10 +477,8 @@ fun EditorScreen(
         }
 
         // Audio panel
-        AnimatedVisibility(
-            visible = state.showAudioPanel,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.AUDIO),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             val clip = viewModel.getSelectedClip()
@@ -532,10 +505,8 @@ fun EditorScreen(
         }
 
         // Voiceover recorder
-        AnimatedVisibility(
-            visible = state.showVoiceoverRecorder,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.VOICEOVER_RECORDER),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             VoiceoverRecorder(
@@ -548,10 +519,8 @@ fun EditorScreen(
         }
 
         // Transform panel
-        AnimatedVisibility(
-            visible = state.showTransformPanel,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.TRANSFORM),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             val clip = viewModel.getSelectedClip()
@@ -570,10 +539,8 @@ fun EditorScreen(
         }
 
         // Crop panel
-        AnimatedVisibility(
-            visible = state.showCropPanel,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.CROP),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             CropPanel(
@@ -586,10 +553,8 @@ fun EditorScreen(
         }
 
         // AI tools panel
-        AnimatedVisibility(
-            visible = state.showAiToolsPanel,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.AI_TOOLS),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             AiToolsPanel(
@@ -611,10 +576,8 @@ fun EditorScreen(
         }
 
         // Effect adjustment panel
-        AnimatedVisibility(
+        BottomSheetSlot(
             visible = state.selectedEffectId != null,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             val clip = viewModel.getSelectedClip()
@@ -642,10 +605,8 @@ fun EditorScreen(
         }
 
         // Color Grading panel
-        AnimatedVisibility(
-            visible = state.showColorGrading,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.COLOR_GRADING),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             val clip = state.tracks.flatMap { it.clips }.find { it.id == state.selectedClipId }
@@ -659,10 +620,8 @@ fun EditorScreen(
         }
 
         // Audio Mixer panel
-        AnimatedVisibility(
-            visible = state.showAudioMixer,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.AUDIO_MIXER),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             AudioMixerPanel(
@@ -680,10 +639,8 @@ fun EditorScreen(
         }
 
         // Keyframe Curve Editor
-        AnimatedVisibility(
-            visible = state.showKeyframeEditor,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.KEYFRAME_EDITOR),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             val clip = state.tracks.flatMap { it.clips }.find { it.id == state.selectedClipId }
@@ -703,10 +660,8 @@ fun EditorScreen(
         }
 
         // Speed Curve Editor
-        AnimatedVisibility(
-            visible = state.showSpeedCurveEditor,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.SPEED_CURVE),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             val clip = state.tracks.flatMap { it.clips }.find { it.id == state.selectedClipId }
@@ -725,10 +680,8 @@ fun EditorScreen(
         }
 
         // Mask Editor panel
-        AnimatedVisibility(
-            visible = state.showMaskEditor,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.MASK_EDITOR),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             val clip = state.tracks.flatMap { it.clips }.find { it.id == state.selectedClipId }
@@ -744,10 +697,8 @@ fun EditorScreen(
         }
 
         // Blend Mode selector
-        AnimatedVisibility(
-            visible = state.showBlendModeSelector,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.BLEND_MODE),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             BlendModeSelector(
@@ -759,7 +710,7 @@ fun EditorScreen(
         }
 
         // Mask preview overlay on the video preview (when mask editor is open)
-        if (state.showMaskEditor) {
+        if (state.panels.isOpen(PanelId.MASK_EDITOR)) {
             val clip = state.tracks.flatMap { it.clips }.find { it.id == state.selectedClipId }
             if (clip != null) {
                 MaskPreviewOverlay(
@@ -775,10 +726,8 @@ fun EditorScreen(
         }
 
         // PiP Presets
-        AnimatedVisibility(
-            visible = state.showPipPresets,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.PIP_PRESETS),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             PipPresetsPanel(
@@ -791,10 +740,8 @@ fun EditorScreen(
         }
 
         // Chroma Key Refinement
-        AnimatedVisibility(
-            visible = state.showChromaKey,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.CHROMA_KEY),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             val clip = state.tracks.flatMap { it.clips }.find { it.id == state.selectedClipId }
@@ -832,7 +779,7 @@ fun EditorScreen(
         }
 
         // Transform overlay on preview (when clip selected and transform visible)
-        if (state.selectedClipId != null && state.showTransformPanel) {
+        if (state.selectedClipId != null && state.panels.isOpen(PanelId.TRANSFORM)) {
             val clip = state.tracks.flatMap { it.clips }.find { it.id == state.selectedClipId }
             if (clip != null) {
                 TransformOverlay(
@@ -857,10 +804,8 @@ fun EditorScreen(
         }
 
         // Caption Editor
-        AnimatedVisibility(
-            visible = state.showCaptionEditor,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.CAPTION_EDITOR),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             val clip = state.tracks.flatMap { it.clips }.find { it.id == state.selectedClipId }
@@ -877,10 +822,8 @@ fun EditorScreen(
         }
 
         // Chapter Markers
-        AnimatedVisibility(
-            visible = state.showChapterMarkers,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.CHAPTER_MARKERS),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             ChapterMarkerPanel(
@@ -895,10 +838,8 @@ fun EditorScreen(
         }
 
         // Snapshot History
-        AnimatedVisibility(
-            visible = state.showSnapshotHistory,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.SNAPSHOT_HISTORY),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             SnapshotHistoryPanel(
@@ -911,10 +852,8 @@ fun EditorScreen(
         }
 
         // Media Manager
-        AnimatedVisibility(
-            visible = state.showMediaManager,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.MEDIA_MANAGER),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             MediaManagerPanel(
@@ -927,10 +866,8 @@ fun EditorScreen(
         }
 
         // Audio Normalization
-        AnimatedVisibility(
-            visible = state.showAudioNorm,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.AUDIO_NORM),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             val clip = state.tracks.flatMap { it.clips }.find { it.id == state.selectedClipId }
@@ -942,10 +879,8 @@ fun EditorScreen(
         }
 
         // Render Preview / Smart Render
-        AnimatedVisibility(
-            visible = state.showRenderPreview,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.RENDER_PREVIEW),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             state.renderSummary?.let { summary ->
@@ -962,31 +897,9 @@ fun EditorScreen(
             }
         }
 
-        // Cloud Backup
-        AnimatedVisibility(
-            visible = state.showCloudBackup,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
-            modifier = Modifier.align(Alignment.BottomCenter)
-        ) {
-            CloudBackupPanel(
-                isSignedIn = false,
-                lastBackupTime = null,
-                backupProgress = null,
-                onSignIn = { viewModel.showToast(context.getString(R.string.editor_google_sign_in_required)) },
-                onBackupNow = { viewModel.showToast(context.getString(R.string.editor_sign_in_first)) },
-                onRestore = { viewModel.showToast(context.getString(R.string.editor_sign_in_first)) },
-                onAutoBackupToggled = { },
-                autoBackupEnabled = false,
-                onClose = viewModel::hideCloudBackup
-            )
-        }
-
         // Batch Export
-        AnimatedVisibility(
-            visible = state.showBatchExport,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.BATCH_EXPORT),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             BatchExportPanel(
@@ -999,10 +912,8 @@ fun EditorScreen(
         }
 
         // Beat Sync
-        AnimatedVisibility(
-            visible = state.showBeatSync,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.BEAT_SYNC),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             BeatSyncPanel(
@@ -1016,10 +927,8 @@ fun EditorScreen(
         }
 
         // Caption Style Gallery
-        AnimatedVisibility(
-            visible = state.showCaptionStyleGallery,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.CAPTION_STYLE_GALLERY),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             CaptionStyleGallery(
@@ -1029,10 +938,8 @@ fun EditorScreen(
         }
 
         // Speed Presets
-        AnimatedVisibility(
-            visible = state.showSpeedPresets,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.SPEED_PRESETS),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             SpeedPresetsPanel(
@@ -1042,10 +949,8 @@ fun EditorScreen(
         }
 
         // Smart Reframe
-        AnimatedVisibility(
-            visible = state.showSmartReframe,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.SMART_REFRAME),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             SmartReframePanel(
@@ -1057,10 +962,8 @@ fun EditorScreen(
         }
 
         // Undo History
-        AnimatedVisibility(
-            visible = state.showUndoHistory,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.UNDO_HISTORY),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             UndoHistoryPanel(
@@ -1072,10 +975,8 @@ fun EditorScreen(
         }
 
         // TTS Panel
-        AnimatedVisibility(
-            visible = state.showTts,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.TTS),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             TtsPanel(
@@ -1089,10 +990,8 @@ fun EditorScreen(
         }
 
         // Filler Removal
-        AnimatedVisibility(
-            visible = state.showFillerRemoval,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.FILLER_REMOVAL),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             FillerRemovalPanel(
@@ -1105,10 +1004,8 @@ fun EditorScreen(
         }
 
         // Auto Edit
-        AnimatedVisibility(
-            visible = state.showAutoEdit,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.AUTO_EDIT),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             AutoEditPanel(
@@ -1121,10 +1018,8 @@ fun EditorScreen(
         }
 
         // Noise Reduction
-        AnimatedVisibility(
-            visible = state.showNoiseReduction,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.NOISE_REDUCTION),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             NoiseReductionPanel(
@@ -1136,10 +1031,8 @@ fun EditorScreen(
         }
 
         // Effect Library
-        AnimatedVisibility(
-            visible = state.showEffectLibrary,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.EFFECT_LIBRARY),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             EffectLibraryPanel(
@@ -1154,10 +1047,8 @@ fun EditorScreen(
         }
 
         // Sticker Picker
-        AnimatedVisibility(
-            visible = state.showStickerPicker,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.STICKER_PICKER),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             StickerPickerPanel(
@@ -1175,7 +1066,7 @@ fun EditorScreen(
 
         // First Run Tutorial
         AnimatedVisibility(
-            visible = state.showTutorial,
+            visible = state.panels.isOpen(PanelId.TUTORIAL),
             enter = fadeIn(),
             exit = fadeOut()
         ) {
@@ -1204,10 +1095,8 @@ fun EditorScreen(
         )
 
         // Text Template Gallery
-        AnimatedVisibility(
-            visible = state.showTextTemplates,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.TEXT_TEMPLATES),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             TextTemplateGallery(
@@ -1235,7 +1124,7 @@ fun EditorScreen(
         }
 
         // Motion path overlay on preview (when keyframe editor is open and position keyframes exist)
-        if (state.showKeyframeEditor && state.selectedClipId != null) {
+        if (state.panels.isOpen(PanelId.KEYFRAME_EDITOR) && state.selectedClipId != null) {
             val clip = state.tracks.flatMap { it.clips }.find { it.id == state.selectedClipId }
             if (clip != null && clip.keyframes.any { it.property == KeyframeProperty.POSITION_X || it.property == KeyframeProperty.POSITION_Y }) {
                 MotionPathOverlay(
@@ -1251,7 +1140,7 @@ fun EditorScreen(
 
         // Video scopes overlay
         AnimatedVisibility(
-            visible = state.showScopes,
+            visible = state.panels.isOpen(PanelId.SCOPES),
             enter = fadeIn() + slideInHorizontally(initialOffsetX = { it }),
             exit = fadeOut() + slideOutHorizontally(targetOffsetX = { it }),
             modifier = Modifier.align(Alignment.TopEnd)

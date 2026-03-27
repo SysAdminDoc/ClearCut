@@ -79,7 +79,7 @@ class SoundpipeDspEngine @Inject constructor(
         channels: Int,
         config: ReverbConfig = ReverbConfig()
     ): FloatArray = withContext(Dispatchers.Default) {
-        // Schroeder reverb implementation (pure Kotlin fallback)
+        // Freeverb-style reverb implementation (pure Kotlin fallback)
         val output = samples.copyOf()
         val delayLengths = intArrayOf(1557, 1617, 1491, 1422, 1277, 1356, 1188, 1116)
         val allPassDelays = intArrayOf(225, 556, 441, 341)
@@ -142,7 +142,7 @@ class SoundpipeDspEngine @Inject constructor(
         config: FilterConfig = FilterConfig()
     ): FloatArray = withContext(Dispatchers.Default) {
         val output = FloatArray(samples.size)
-        val fc = (config.cutoffHz / sampleRate).coerceIn(0.001f, 0.499f)
+        val fc = (2.0f * Math.PI.toFloat() * config.cutoffHz / sampleRate).coerceIn(0.001f, 0.499f)
         val res = config.resonance * 4f // Scale resonance to feedback range
 
         // 4-pole Moog ladder filter approximation

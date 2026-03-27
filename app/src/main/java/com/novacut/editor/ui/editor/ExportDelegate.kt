@@ -177,11 +177,11 @@ class ExportDelegate(
     // --- Batch Export ---
     fun showBatchExport() {
         pauseIfPlaying()
-        stateFlow.update { dismissedPanelState(it).copy(showBatchExport = true) }
+        stateFlow.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.BATCH_EXPORT)) }
     }
 
     fun hideBatchExport() {
-        stateFlow.update { it.copy(showBatchExport = false) }
+        stateFlow.update { it.copy(panels = it.panels.close(PanelId.BATCH_EXPORT)) }
     }
 
     fun addBatchExportItem(config: ExportConfig, name: String) {
@@ -244,14 +244,14 @@ class ExportDelegate(
         val segments = SmartRenderEngine.analyzeTimeline(s.tracks, s.exportConfig, s.textOverlays)
         val summary = SmartRenderEngine.getSummary(segments)
         stateFlow.update { dismissedPanelState(it).copy(
-            showRenderPreview = true,
+            panels = it.panels.closeAll().open(PanelId.RENDER_PREVIEW),
             renderSegments = segments,
             renderSummary = summary
         ) }
     }
 
     fun hideRenderPreview() {
-        stateFlow.update { it.copy(showRenderPreview = false) }
+        stateFlow.update { it.copy(panels = it.panels.close(PanelId.RENDER_PREVIEW)) }
     }
 
     fun renderQuickPreview() {

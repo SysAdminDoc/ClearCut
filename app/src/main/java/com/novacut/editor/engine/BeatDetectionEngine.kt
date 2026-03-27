@@ -8,7 +8,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.sqrt
 
 /**
@@ -115,6 +115,7 @@ class BeatDetectionEngine @Inject constructor(
 
     /**
      * Compute spectral flux: sum of positive magnitude differences between consecutive frames.
+     * Uses radix-2 Cooley-Tukey FFT instead of brute-force DFT for O(N log N) per frame.
      */
     private fun computeSpectralFlux(
         samples: FloatArray,
@@ -124,27 +125,28 @@ class BeatDetectionEngine @Inject constructor(
         val numFrames = (samples.size - windowSize) / hopSize
         if (numFrames <= 1) return floatArrayOf()
 
+        val numBins = windowSize / 2 + 1
         val flux = FloatArray(numFrames)
-        var prevMagnitudes = FloatArray(windowSize / 2 + 1)
+        var prevMagnitudes = FloatArray(numBins)
 
         for (frame in 0 until numFrames) {
             val offset = frame * hopSize
 
-            // Apply Hann window and compute magnitude spectrum (simplified DFT for key bins)
-            val magnitudes = FloatArray(windowSize / 2 + 1)
-            val numBins = minOf(64, windowSize / 2 + 1) // Analyze first 64 bins for speed
+            // Apply Hann window and copy into real array; imag starts at zero
+            val real = FloatArray(windowSize)
+            val imag = FloatArray(windowSize)
+            for (n in 0 until windowSize) {
+                val hannWindow = 0.5f * (1f - cos(2f * Math.PI.toFloat() * n / windowSize))
+                real[n] = if (offset + n < samples.size) samples[offset + n] * hannWindow else 0f
+            }
 
+            // In-place FFT
+            fft(real, imag)
+
+            // Compute magnitudes for bins 0..N/2
+            val magnitudes = FloatArray(numBins)
             for (k in 0 until numBins) {
-                var real = 0f
-                var imag = 0f
-                for (n in 0 until windowSize) {
-                    val hannWindow = 0.5f * (1f - kotlin.math.cos(2f * Math.PI.toFloat() * n / windowSize))
-                    val sample = if (offset + n < samples.size) samples[offset + n] * hannWindow else 0f
-                    val angle = 2f * Math.PI.toFloat() * k * n / windowSize
-                    real += sample * kotlin.math.cos(angle)
-                    imag += sample * kotlin.math.sin(angle)
-                }
-                magnitudes[k] = sqrt(real * real + imag * imag)
+                magnitudes[k] = sqrt(real[k] * real[k] + imag[k] * imag[k])
             }
 
             // Spectral flux = sum of positive differences
@@ -165,6 +167,48 @@ class BeatDetectionEngine @Inject constructor(
         }
 
         return flux
+    }
+
+    /**
+     * Radix-2 Cooley-Tukey in-place FFT.
+     * Input arrays must have power-of-2 length.
+     */
+    private fun fft(real: FloatArray, imag: FloatArray) {
+        val n = real.size
+        // Bit-reversal permutation
+        var j = 0
+        for (i in 1 until n) {
+            var bit = n shr 1
+            while (j and bit != 0) {
+                j = j xor bit
+                bit = bit shr 1
+            }
+            j = j xor bit
+            if (i < j) {
+                real[i] = real[j].also { real[j] = real[i] }
+                imag[i] = imag[j].also { imag[j] = imag[i] }
+            }
+        }
+        // Cooley-Tukey butterfly
+        var len = 2
+        while (len <= n) {
+            val halfLen = len / 2
+            val angle = -2.0 * Math.PI / len
+            for (i in 0 until n step len) {
+                for (k in 0 until halfLen) {
+                    val theta = angle * k
+                    val cos = Math.cos(theta).toFloat()
+                    val sin = Math.sin(theta).toFloat()
+                    val tReal = real[i + k + halfLen] * cos - imag[i + k + halfLen] * sin
+                    val tImag = real[i + k + halfLen] * sin + imag[i + k + halfLen] * cos
+                    real[i + k + halfLen] = real[i + k] - tReal
+                    imag[i + k + halfLen] = imag[i + k] - tImag
+                    real[i + k] += tReal
+                    imag[i + k] += tImag
+                }
+            }
+            len = len shl 1
+        }
     }
 
     /**

@@ -8,7 +8,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-// Sherpa-ONNX loaded via reflection when available (optional dependency)
 import java.io.File
 import java.util.Locale
 import javax.inject.Inject
@@ -16,10 +15,10 @@ import javax.inject.Singleton
 import kotlin.coroutines.resume
 
 /**
- * High-quality offline TTS using Piper (VITS architecture) via Sherpa-ONNX.
- * Near-human quality, 50+ languages, 20-30ms generation speed.
+ * TTS engine with Piper (VITS architecture) via Sherpa-ONNX as future primary backend,
+ * and Android system TTS as the current working fallback.
  *
- * Dependencies (add to build.gradle.kts):
+ * Sherpa-ONNX dependency (add to build.gradle.kts when ready):
  *   implementation("com.k2fsa.sherpa:onnx-android:1.10.+")
  *
  * Voice models (~15-65MB each, downloaded from HuggingFace on first use):
@@ -63,20 +62,8 @@ class PiperTtsEngine @Inject constructor(
 
     /**
      * Synthesize text to audio file.
-     *
-     * When Sherpa-ONNX is integrated:
-     *   val config = OfflineTtsConfig(
-     *     model = OfflineTtsModelConfig(
-     *       vits = OfflineTtsVitsModelConfig(
-     *         model = "$voiceDir/model.onnx",
-     *         tokens = "$voiceDir/tokens.txt",
-     *         dataDir = "$voiceDir/espeak-ng-data"
-     *       )
-     *     )
-     *   )
-     *   val tts = OfflineTts(config)
-     *   val audio = tts.generate(text, sid = 0, speed = speed)
-     *   // Write audio.samples to WAV file
+     * Currently uses Android system TTS. When Sherpa-ONNX is integrated,
+     * Piper voices will be the primary backend.
      *
      * @param text Text to synthesize
      * @param voiceId Voice profile ID
@@ -95,45 +82,8 @@ class PiperTtsEngine @Inject constructor(
         try {
             onProgress(0.1f)
 
-            // Try Sherpa-ONNX Piper if available and voice is downloaded
-            if (isSherpaAvailable() && isVoiceReady(voiceId)) {
-                try {
-                    val voiceDir = File(voicesDir, voiceId)
-                    Log.i(TAG, "Synthesizing with Piper voice: $voiceId")
-                    // Sherpa-ONNX loaded via reflection (optional dependency)
-                    val vitsConfigCls = Class.forName("com.k2fsa.sherpa.onnx.OfflineTtsVitsModelConfig")
-                    val vitsConfig = vitsConfigCls.getDeclaredConstructor(
-                        String::class.java, String::class.java, String::class.java
-                    ).newInstance(
-                        File(voiceDir, "model.onnx").absolutePath,
-                        File(voiceDir, "tokens.txt").absolutePath,
-                        File(voiceDir, "espeak-ng-data").absolutePath
-                    )
-                    val modelConfigCls = Class.forName("com.k2fsa.sherpa.onnx.OfflineTtsModelConfig")
-                    val modelConfig = modelConfigCls.getDeclaredConstructor(
-                        vitsConfigCls, Int::class.java
-                    ).newInstance(vitsConfig, 2)
-                    val configCls = Class.forName("com.k2fsa.sherpa.onnx.OfflineTtsConfig")
-                    val config = configCls.getDeclaredConstructor(modelConfigCls).newInstance(modelConfig)
-                    val ttsCls = Class.forName("com.k2fsa.sherpa.onnx.OfflineTts")
-                    val tts = ttsCls.getDeclaredConstructor(configCls).newInstance(config)
-                    onProgress(0.3f)
-                    val audio = ttsCls.getMethod("generate", String::class.java, Int::class.java, Float::class.java)
-                        .invoke(tts, text, 0, speed)!!
-                    onProgress(0.8f)
-                    val samples = audio.javaClass.getField("samples").get(audio) as FloatArray
-                    val sampleRate = audio.javaClass.getField("sampleRate").get(audio) as Int
-                    writeWavFile(outputFile, samples, sampleRate)
-                    onProgress(1f)
-                    ttsCls.getMethod("release").invoke(tts)
-                    return@withContext outputFile
-                } catch (e: Exception) {
-                    Log.w(TAG, "Piper TTS failed, falling back to system TTS: ${e.message}")
-                }
-            }
-
-            // Fallback: Android system TTS (always available)
-            Log.d(TAG, "Using Android system TTS fallback")
+            // Use Android system TTS (always available)
+            Log.d(TAG, "Using Android system TTS (Sherpa-ONNX Piper not yet integrated)")
             val voice = getAvailableVoices().find { it.id == voiceId }
             val locale = voice?.let { Locale(it.language) } ?: Locale.US
             val result = synthesizeWithSystemTts(text, outputFile, locale, speed)
@@ -202,14 +152,11 @@ class PiperTtsEngine @Inject constructor(
 
     /**
      * Check if Sherpa-ONNX TTS runtime is available.
+     * Currently always false -- dependency not yet added.
      */
     fun isSherpaAvailable(): Boolean {
-        return try {
-            Class.forName("com.k2fsa.sherpa.onnx.OfflineTts")
-            true
-        } catch (_: ClassNotFoundException) {
-            false
-        }
+        // Sherpa-ONNX (com.k2fsa.sherpa:onnx-android) not yet added to dependencies
+        return false
     }
 
     /**
@@ -221,41 +168,6 @@ class PiperTtsEngine @Inject constructor(
             voiceDir.deleteRecursively()
         } else false
     }
-
-    private fun writeWavFile(file: File, samples: FloatArray, sampleRate: Int) {
-        val pcm = ShortArray(samples.size) { i ->
-            (samples[i].coerceIn(-1f, 1f) * 32767f).toInt().toShort()
-        }
-        val dataSize = pcm.size * 2
-        val totalSize = 36 + dataSize
-        file.outputStream().buffered().use { out ->
-            // RIFF header
-            out.write("RIFF".toByteArray())
-            out.write(intToLittleEndian(totalSize))
-            out.write("WAVE".toByteArray())
-            // fmt chunk
-            out.write("fmt ".toByteArray())
-            out.write(intToLittleEndian(16)) // chunk size
-            out.write(shortToLittleEndian(1)) // PCM format
-            out.write(shortToLittleEndian(1)) // mono
-            out.write(intToLittleEndian(sampleRate))
-            out.write(intToLittleEndian(sampleRate * 2)) // byte rate
-            out.write(shortToLittleEndian(2)) // block align
-            out.write(shortToLittleEndian(16)) // bits per sample
-            // data chunk
-            out.write("data".toByteArray())
-            out.write(intToLittleEndian(dataSize))
-            val buffer = java.nio.ByteBuffer.allocate(dataSize).order(java.nio.ByteOrder.LITTLE_ENDIAN)
-            for (s in pcm) buffer.putShort(s)
-            out.write(buffer.array())
-        }
-    }
-
-    private fun intToLittleEndian(value: Int): ByteArray =
-        byteArrayOf(value.toByte(), (value shr 8).toByte(), (value shr 16).toByte(), (value shr 24).toByte())
-
-    private fun shortToLittleEndian(value: Int): ByteArray =
-        byteArrayOf(value.toByte(), (value shr 8).toByte())
 
     companion object {
         private const val TAG = "PiperTTS"

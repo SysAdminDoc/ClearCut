@@ -4,7 +4,7 @@
 Full-featured Android video editor built as a PowerDirector alternative. Kotlin + Jetpack Compose + Media3 Transformer.
 
 ## Version
-v3.4.0
+v3.5.0
 
 ## Tech Stack
 - **Language**: Kotlin 2.1.0
@@ -585,18 +585,18 @@ v3.4.0
 ## v3.0.0 — Full Engine Expansion
 
 ### New Engines (29 injectable singletons total)
-- **SherpaAsrEngine** — Sherpa-ONNX ASR with model variants, word timestamps, language support (51x faster than whisper.cpp)
-- **NoiseReductionEngine** — AndroidDeepFilterNet with 5 modes (off/light/moderate/aggressive/spectral gate), noise profiling
-- **PiperTtsEngine** — Piper VITS voices via Sherpa-ONNX, 10 voice profiles across 8 languages, voice download management
+- **SherpaAsrEngine** — WhisperEngine wrapper (Sherpa-ONNX dependency planned, currently delegates to built-in Whisper)
+- **NoiseReductionEngine** — Spectral gate heuristic (DeepFilterNet ML planned), 5 mode enums defined
+- **PiperTtsEngine** — Android System TTS fallback (Sherpa-ONNX Piper planned), 10 voice profiles defined
 - **LottieTemplateEngine** — 10 built-in animated title templates, frame-by-frame rendering via TextDelegate, 4 categories
 - **BeatDetectionEngine** — Pure-Kotlin spectral flux onset detection + adaptive thresholding + BPM histogram
 - **LoudnessEngine** — EBU R128 measurement (K-weighting, gated blocks, LRA) + 6 platform presets + true-peak limiting
 - **ChromaKeyEngine** — Professional YCbCr distance keying + smoothstep feathering + green/blue spill suppression
-- **FrameInterpolationEngine** — RIFE v4.6 via NCNN+Vulkan (2x/4x/8x configs, model download, frame duplication fallback)
-- **InpaintingEngine** — LaMa-Dilated per-frame + batch processing (ONNX/Qualcomm AI Hub)
-- **UpscaleEngine** — Real-ESRGAN x4plus + general-x4v3 variants, tile-based processing
-- **VideoMattingEngine** — RobustVideoMatting with temporal coherence (hidden states), 4 background modes
-- **StabilizationEngine** — OpenCV L-K/ORB algorithms, Kalman smoothing, configurable crop
+- **FrameInterpolationEngine** — Stub (requires NCNN+Vulkan), config/data classes defined for RIFE v4.6
+- **InpaintingEngine** — LaMa-Dilated (ONNX Runtime + NNAPI), neighbor-fill fallback
+- **UpscaleEngine** — Stub (requires model integration), config defined for Real-ESRGAN x4plus
+- **VideoMattingEngine** — Stub (requires model integration), config defined for RobustVideoMatting
+- **StabilizationEngine** — Stub (requires OpenCV), config defined for L-K/ORB algorithms
 - **StyleTransferEngine** — 9 presets (AnimeGANv2 + Fast NST + OpenCV pencil sketch)
 - **SmartReframeEngine** — EMA-smoothed crop trajectory, face/pose detection, 3 strategies (stationary/pan/track)
 - **FFmpegEngine** — FFmpegX fallback encoder with execute(), subtitle burning, loudness normalization, audio extraction
@@ -638,19 +638,52 @@ v3.4.0
 - **Exception logging** — Log.w added to WhisperEngine, SegmentationEngine, ProjectAutoSave silent catches
 - **String extraction** — 90+ hardcoded UI strings extracted to strings.xml across 15+ panels
 
-## v3.4.0 — Dependency Activation & Engine Wiring
-- **PiperTtsEngine → Sherpa-ONNX** — Direct `OfflineTts` API replacing reflection stubs, WAV file generation with RIFF header
-- **NoiseReductionEngine → DeepFilterNet** — Direct `DeepFilterNet(context, attenuationDb)` API, `processFile()` with spectral gate fallback
-- **FFmpegEngine → FFmpegX** — Direct `FFmpegX.execute()`, two-pass EBU R128 loudness normalization with JSON parsing
-- **FrameInterpolationEngine → NCNN RIFE** — HTTP model download with progress, RIFE v4.6 inference, weighted bitmap blend fallback
-- **InpaintingEngine → ONNX Runtime** — LaMa model download, NNAPI acceleration, NCHW tensor conversion, neighbor-fill fallback
-- **CloudInpaintingEngine → OkHttp** — Multipart upload with Bearer auth, job submission/tracking/download endpoints
-- All tier 2-4 dependencies activated in version catalog (no more reflection stubs)
-- ProGuard keep rules for Sherpa-ONNX, DeepFilterNet, NCNN, FFmpegX, OkHttp JNI/native bridges
+## v3.4.0 — Dependency Activation (Reverted)
+- Dependencies briefly added for engine wiring, then reverted in v3.5.0 due to unavailable artifacts
+- Engine stubs remain for future integration when real dependencies become available
+
+## v3.5.0 — Comprehensive Cleanup & Architecture
+
+### Stub Engine Cleanup (~3,000 lines reduced)
+- 11 stub engines cleaned: removed fabricated Maven coordinates (`io.github.nicholasryan:*`), fake HuggingFace URLs, `Class.forName` reflection probes, fake download/inference logic
+- Each stub now has clear `Log.d` + `return null/false` with KDoc pointing to ROADMAP.md
+- Engines cleaned: FrameInterpolation, Upscale, Stabilization, StyleTransfer, VideoMatting, TapSegment, CloudInpainting, FFmpeg, Rive, SherpaAsr, SmartReframe
+
+### Bug Fixes
+- **NoiseReductionEngine**: spectral gate fallback was creating empty output files — now copies input as pass-through
+- **PiperTtsEngine**: removed dead Sherpa-ONNX reflection code path (system TTS fallback intact)
+- **SoundpipeDspEngine**: fixed Moog filter coefficient (was missing `2π` scaling), renamed "Schroeder reverb" to "Freeverb-style"
+- **BeatDetectionEngine**: replaced O(n*k) brute-force DFT with radix-2 Cooley-Tukey FFT (~12x faster, all 513 bins vs 64)
+
+### EditorState Decomposition
+- Replaced 40 `showXxx: Boolean` panel flags with `PanelVisibility` class using `Set<PanelId>`
+- `PanelId` enum (40 entries) with `isOpen()`, `open()`, `close()`, `closeAll()`
+- `hasOpenPanel` reduced from 15-line OR expression to `state.panels.hasOpenPanel`
+- EditorState reduced from ~96 to ~57 fields
+- Updated across 6 files: EditorViewModel, EditorScreen, 4 delegate files
+
+### EditorScreen Panel Abstraction
+- Created `BottomSheetSlot` composable replacing 40 identical AnimatedVisibility blocks
+- Standardized enter/exit animations (slideInVertically + fadeIn / slideOutVertically + fadeOut)
+- Removed dead CloudBackupPanel from EditorScreen (hardcoded `isSignedIn = false`, all callbacks toast stubs)
+- EditorScreen reduced by ~89 lines
+
+### FCPXML Export Deduplication
+- Removed `EdlExporter.exportFcpxml()` (~110 lines of dead code, zero callers)
+- Removed `ExportFormat.FCPXML` and `ExportFormat.OTIO` enum values (never referenced)
+- All FCPXML export now goes through `TimelineExchangeEngine.exportToFcpxml()`
+
+### Build Cleanup
+- Removed 5 dead ProGuard keep-rule blocks for absent libraries
+- Synced version to 3.5.0 across all files
+- Documentation rewritten to honestly distinguish working vs stub features
 
 ## Next Steps
+- Integrate real dependencies when available (Sherpa-ONNX, DeepFilterNet, NCNN, OpenCV, FFmpeg)
+- Add `@Stable`/`@Immutable` annotations to data classes for Compose compiler optimization
+- Add `derivedStateOf` for computed values in EditorScreen
+- Decompose EditorViewModel (3,300 lines) — convert delegates to proper Hilt-injectable classes
+- Decompose Project.kt (1,081 lines, 70 symbols) into focused model files
+- Decompose VideoEngine.export() (500-line method)
 - True dual-texture blend mode compositing via Media3 Compositor API
-- Community template gallery / sharing
 - ProjectArchive.importArchive() full implementation
-- Speed curve timeline duration calculation fix
-- SmartRenderEngine bypass implementation

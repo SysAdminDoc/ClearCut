@@ -56,6 +56,28 @@ import java.io.File
 import java.util.UUID
 import javax.inject.Inject
 
+enum class PanelId {
+    MEDIA_PICKER, EXPORT_SHEET, EFFECTS, TEXT_EDITOR, TRANSITION_PICKER,
+    AUDIO, AI_TOOLS, TRANSFORM, CROP, VOICEOVER_RECORDER,
+    COLOR_GRADING, AUDIO_MIXER, KEYFRAME_EDITOR, SPEED_CURVE,
+    MASK_EDITOR, BLEND_MODE, BATCH_EXPORT, PIP_PRESETS, CHROMA_KEY,
+    SCOPES, CAPTION_EDITOR, CHAPTER_MARKERS, SNAPSHOT_HISTORY,
+    TEXT_TEMPLATES, MEDIA_MANAGER, AUDIO_NORM, RENDER_PREVIEW,
+    CLOUD_BACKUP, TUTORIAL, UNDO_HISTORY, CAPTION_STYLE_GALLERY,
+    BEAT_SYNC, SMART_REFRAME, SPEED_PRESETS, FILLER_REMOVAL,
+    AUTO_EDIT, TTS, EFFECT_LIBRARY, NOISE_REDUCTION, STICKER_PICKER
+}
+
+data class PanelVisibility(
+    val openPanels: Set<PanelId> = emptySet()
+) {
+    val hasOpenPanel: Boolean get() = openPanels.isNotEmpty()
+    fun isOpen(panel: PanelId): Boolean = panel in openPanels
+    fun open(panel: PanelId): PanelVisibility = copy(openPanels = setOf(panel))
+    fun close(panel: PanelId): PanelVisibility = copy(openPanels = openPanels - panel)
+    fun closeAll(): PanelVisibility = copy(openPanels = emptySet())
+}
+
 data class EditorState(
     val project: Project = Project(),
     val tracks: List<Track> = listOf(
@@ -70,11 +92,7 @@ data class EditorState(
     val scrollOffsetMs: Long = 0L,
     val totalDurationMs: Long = 0L,
     val currentTool: EditorTool = EditorTool.NONE,
-    val showMediaPicker: Boolean = false,
-    val showExportSheet: Boolean = false,
-    val showEffectsPanel: Boolean = false,
-    val showTextEditor: Boolean = false,
-    val showTransitionPicker: Boolean = false,
+    val panels: PanelVisibility = PanelVisibility(),
     val exportConfig: ExportConfig = ExportConfig(),
     val exportProgress: Float = 0f,
     val exportState: ExportState = ExportState.IDLE,
@@ -82,10 +100,6 @@ data class EditorState(
     val imageOverlays: List<ImageOverlay> = emptyList(),
     val timelineMarkers: List<TimelineMarker> = emptyList(),
     val waveforms: Map<String, FloatArray> = emptyMap(),
-    val showAudioPanel: Boolean = false,
-    val showAiToolsPanel: Boolean = false,
-    val showTransformPanel: Boolean = false,
-    val showCropPanel: Boolean = false,
     val selectedEffectId: String? = null,
     val undoStack: List<UndoAction> = emptyList(),
     val redoStack: List<UndoAction> = emptyList(),
@@ -94,31 +108,11 @@ data class EditorState(
     val lastExportedFilePath: String? = null,
     val copiedEffects: List<Effect> = emptyList(),
     val exportErrorMessage: String? = null,
-    val showVoiceoverRecorder: Boolean = false,
     val isRecordingVoiceover: Boolean = false,
     val voiceoverDurationMs: Long = 0L,
     val isLooping: Boolean = false,
     val editingTextOverlayId: String? = null,
-    // New panels
-    val showColorGrading: Boolean = false,
-    val showAudioMixer: Boolean = false,
-    val showKeyframeEditor: Boolean = false,
-    val showSpeedCurveEditor: Boolean = false,
-    val showMaskEditor: Boolean = false,
-    val showBlendModeSelector: Boolean = false,
-    val showBatchExport: Boolean = false,
-    val showPipPresets: Boolean = false,
-    val showChromaKey: Boolean = false,
-    val showScopes: Boolean = false,
     val activeScopeType: com.novacut.editor.ui.editor.ScopeType = com.novacut.editor.ui.editor.ScopeType.HISTOGRAM,
-    val showCaptionEditor: Boolean = false,
-    val showChapterMarkers: Boolean = false,
-    val showSnapshotHistory: Boolean = false,
-    val showTextTemplates: Boolean = false,
-    val showMediaManager: Boolean = false,
-    val showAudioNorm: Boolean = false,
-    val showRenderPreview: Boolean = false,
-    val showCloudBackup: Boolean = false,
     val exportStartTime: Long = 0L,
     val renderSegments: List<com.novacut.editor.engine.SmartRenderEngine.RenderSegment> = emptyList(),
     val renderSummary: com.novacut.editor.engine.SmartRenderEngine.SmartRenderSummary? = null,
@@ -144,46 +138,29 @@ data class EditorState(
     val projectSnapshots: List<ProjectSnapshot> = emptyList(),
     // Proxy
     val proxySettings: ProxySettings = ProxySettings(),
-    // First-run tutorial
-    val showTutorial: Boolean = false,
     // Auto-save indicator
     val saveIndicator: com.novacut.editor.model.SaveIndicatorState = com.novacut.editor.model.SaveIndicatorState.HIDDEN,
     // Undo history
-    val showUndoHistory: Boolean = false,
     val undoHistoryEntries: List<com.novacut.editor.model.UndoHistoryEntry> = emptyList(),
-    // Caption style gallery
-    val showCaptionStyleGallery: Boolean = false,
     // Beat sync
-    val showBeatSync: Boolean = false,
     val isAnalyzingBeats: Boolean = false,
     // Smart reframe
-    val showSmartReframe: Boolean = false,
     val isReframing: Boolean = false,
-    // Speed presets
-    val showSpeedPresets: Boolean = false,
     // Filler removal
-    val showFillerRemoval: Boolean = false,
     val isAnalyzingFillers: Boolean = false,
     val fillerRegions: List<com.novacut.editor.ai.RemovalRegion> = emptyList(),
     // Auto-edit
-    val showAutoEdit: Boolean = false,
     val isAutoEditing: Boolean = false,
     // Editor mode
     val editorMode: EditorMode = EditorMode.PRO,
     // Timeline collapsed
     val isTimelineCollapsed: Boolean = false,
     // TTS
-    val showTts: Boolean = false,
     val isSynthesizingTts: Boolean = false,
     val isTtsAvailable: Boolean = false,
-    // Effect sharing
-    val showEffectLibrary: Boolean = false,
     // Noise reduction
-    val showNoiseReduction: Boolean = false,
     val isAnalyzingNoise: Boolean = false,
     val noiseAnalysisResult: String? = null,
-    // Sticker picker
-    val showStickerPicker: Boolean = false,
     // Saved export config (for restoring after quick preview)
     val savedExportConfig: ExportConfig? = null
 )
@@ -657,7 +634,7 @@ class EditorViewModel @Inject constructor(
         videoEngine.seekTo(positionMs)
         _playheadMs.value = positionMs
         _state.update { it.copy(playheadMs = positionMs) }
-        if (_state.value.showScopes) updateScopeFrame()
+        if (_state.value.panels.isOpen(PanelId.SCOPES)) updateScopeFrame()
     }
 
     /** Enable scrubbing mode during timeline drag for smoother seeking. */
@@ -696,47 +673,8 @@ class EditorViewModel @Inject constructor(
     }
 
     private fun dismissedPanelState(state: EditorState) = state.copy(
-        showMediaPicker = false,
-        showExportSheet = false,
-        showEffectsPanel = false,
-        showTextEditor = false,
-        showTransitionPicker = false,
-        showAudioPanel = false,
-        showAiToolsPanel = false,
-        showTransformPanel = false,
-        showCropPanel = false,
-        showVoiceoverRecorder = false,
-        showColorGrading = false,
-        showAudioMixer = false,
-        showKeyframeEditor = false,
-        showSpeedCurveEditor = false,
-        showMaskEditor = false,
-        showBlendModeSelector = false,
-        showBatchExport = false,
-        showPipPresets = false,
-        showChromaKey = false,
-        showCaptionEditor = false,
-        showChapterMarkers = false,
-        showSnapshotHistory = false,
-        showTextTemplates = false,
-        showMediaManager = false,
-        showAudioNorm = false,
-        showRenderPreview = false,
-        showCloudBackup = false,
-        showScopes = false,
-        showTutorial = false,
-        showUndoHistory = false,
-        showCaptionStyleGallery = false,
-        showBeatSync = false,
-        showSmartReframe = false,
-        showSpeedPresets = false,
-        showFillerRemoval = false,
-        showAutoEdit = false,
-        showTts = false,
-        showEffectLibrary = false,
-        showNoiseReduction = false,
+        panels = state.panels.closeAll(),
         noiseAnalysisResult = null,
-        showStickerPicker = false,
         selectedEffectId = null,
         editingTextOverlayId = null,
         selectedMaskId = null
@@ -746,45 +684,45 @@ class EditorViewModel @Inject constructor(
 
     // Sheet toggles — each atomically dismisses other panels and shows the target
     // All show methods pause playback so users can adjust settings without video moving
-    fun showMediaPicker() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showMediaPicker = true) } }
-    fun hideMediaPicker() { _state.update { it.copy(showMediaPicker = false) } }
+    fun showMediaPicker() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.MEDIA_PICKER)) } }
+    fun hideMediaPicker() { _state.update { it.copy(panels = it.panels.close(PanelId.MEDIA_PICKER)) } }
     fun showExportSheet() {
         pauseIfPlaying()
         videoEngine.resetExportState()
-        _state.update { dismissedPanelState(it).copy(showExportSheet = true, exportState = ExportState.IDLE, exportProgress = 0f, exportErrorMessage = null) }
+        _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.EXPORT_SHEET), exportState = ExportState.IDLE, exportProgress = 0f, exportErrorMessage = null) }
     }
     fun hideExportSheet() {
         _state.update { s ->
             val restored = s.savedExportConfig
             s.copy(
-                showExportSheet = false,
+                panels = s.panels.close(PanelId.EXPORT_SHEET),
                 exportConfig = restored ?: s.exportConfig,
                 savedExportConfig = null
             )
         }
     }
-    fun showEffectsPanel() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showEffectsPanel = true) } }
-    fun hideEffectsPanel() { _state.update { it.copy(showEffectsPanel = false) } }
-    fun showTextEditor() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showTextEditor = true, editingTextOverlayId = null) } }
-    fun editTextOverlay(id: String) { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showTextEditor = true, editingTextOverlayId = id) } }
-    fun hideTextEditor() { _state.update { it.copy(showTextEditor = false, editingTextOverlayId = null) } }
-    fun showTransitionPicker() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showTransitionPicker = true) } }
-    fun hideTransitionPicker() { _state.update { it.copy(showTransitionPicker = false) } }
-    fun showAudioPanel() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showAudioPanel = true) } }
-    fun hideAudioPanel() { _state.update { it.copy(showAudioPanel = false) } }
-    fun showAiToolsPanel() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showAiToolsPanel = true) } }
-    fun hideAiToolsPanel() { _state.update { it.copy(showAiToolsPanel = false) } }
-    fun showTransformPanel() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showTransformPanel = true) } }
-    fun hideTransformPanel() { _state.update { it.copy(showTransformPanel = false) } }
-    fun showCropPanel() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showCropPanel = true) } }
-    fun hideCropPanel() { _state.update { it.copy(showCropPanel = false) } }
+    fun showEffectsPanel() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.EFFECTS)) } }
+    fun hideEffectsPanel() { _state.update { it.copy(panels = it.panels.close(PanelId.EFFECTS)) } }
+    fun showTextEditor() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.TEXT_EDITOR), editingTextOverlayId = null) } }
+    fun editTextOverlay(id: String) { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.TEXT_EDITOR), editingTextOverlayId = id) } }
+    fun hideTextEditor() { _state.update { it.copy(panels = it.panels.close(PanelId.TEXT_EDITOR), editingTextOverlayId = null) } }
+    fun showTransitionPicker() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.TRANSITION_PICKER)) } }
+    fun hideTransitionPicker() { _state.update { it.copy(panels = it.panels.close(PanelId.TRANSITION_PICKER)) } }
+    fun showAudioPanel() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.AUDIO)) } }
+    fun hideAudioPanel() { _state.update { it.copy(panels = it.panels.close(PanelId.AUDIO)) } }
+    fun showAiToolsPanel() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.AI_TOOLS)) } }
+    fun hideAiToolsPanel() { _state.update { it.copy(panels = it.panels.close(PanelId.AI_TOOLS)) } }
+    fun showTransformPanel() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.TRANSFORM)) } }
+    fun hideTransformPanel() { _state.update { it.copy(panels = it.panels.close(PanelId.TRANSFORM)) } }
+    fun showCropPanel() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.CROP)) } }
+    fun hideCropPanel() { _state.update { it.copy(panels = it.panels.close(PanelId.CROP)) } }
     fun selectEffect(effectId: String?) { _state.update { it.copy(selectedEffectId = effectId) } }
     fun clearSelectedEffect() { _state.update { it.copy(selectedEffectId = null) } }
-    fun showVoiceoverPanel() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showVoiceoverRecorder = true) } }
+    fun showVoiceoverPanel() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.VOICEOVER_RECORDER)) } }
     fun hideVoiceoverPanel() {
         if (_state.value.isRecordingVoiceover) stopVoiceover()
         voiceoverDurationJob?.cancel()
-        _state.update { it.copy(showVoiceoverRecorder = false) }
+        _state.update { it.copy(panels = it.panels.close(PanelId.VOICEOVER_RECORDER)) }
     }
 
     // --- Color Grading (delegated) ---
@@ -810,8 +748,8 @@ class EditorViewModel @Inject constructor(
     fun detectBeats() = audioMixerDelegate.detectBeats()
 
     // --- Keyframe Editor ---
-    fun showKeyframeEditor() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showKeyframeEditor = true) } }
-    fun hideKeyframeEditor() { _state.update { it.copy(showKeyframeEditor = false) } }
+    fun showKeyframeEditor() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.KEYFRAME_EDITOR)) } }
+    fun hideKeyframeEditor() { _state.update { it.copy(panels = it.panels.close(PanelId.KEYFRAME_EDITOR)) } }
 
     fun toggleKeyframeProperty(property: KeyframeProperty) {
         _state.update { s ->
@@ -864,8 +802,8 @@ class EditorViewModel @Inject constructor(
     }
 
     // --- Speed Curve ---
-    fun showSpeedCurveEditor() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showSpeedCurveEditor = true) } }
-    fun hideSpeedCurveEditor() { _state.update { it.copy(showSpeedCurveEditor = false) } }
+    fun showSpeedCurveEditor() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.SPEED_CURVE)) } }
+    fun hideSpeedCurveEditor() { _state.update { it.copy(panels = it.panels.close(PanelId.SPEED_CURVE)) } }
 
     fun setClipSpeedCurve(speedCurve: SpeedCurve?) {
         val clipId = _state.value.selectedClipId ?: return
@@ -881,8 +819,8 @@ class EditorViewModel @Inject constructor(
     }
 
     // --- Mask Editor ---
-    fun showMaskEditor() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showMaskEditor = true) } }
-    fun hideMaskEditor() { _state.update { it.copy(showMaskEditor = false, selectedMaskId = null) } }
+    fun showMaskEditor() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.MASK_EDITOR)) } }
+    fun hideMaskEditor() { _state.update { it.copy(panels = it.panels.close(PanelId.MASK_EDITOR), selectedMaskId = null) } }
 
     fun selectMask(maskId: String?) {
         _state.update { it.copy(selectedMaskId = maskId) }
@@ -974,8 +912,8 @@ class EditorViewModel @Inject constructor(
     }
 
     // --- Blend Mode ---
-    fun showBlendModeSelector() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showBlendModeSelector = true) } }
-    fun hideBlendModeSelector() { _state.update { it.copy(showBlendModeSelector = false) } }
+    fun showBlendModeSelector() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.BLEND_MODE)) } }
+    fun hideBlendModeSelector() { _state.update { it.copy(panels = it.panels.close(PanelId.BLEND_MODE)) } }
 
     fun setClipBlendMode(blendMode: BlendMode) {
         val clipId = _state.value.selectedClipId ?: return
@@ -1157,13 +1095,13 @@ class EditorViewModel @Inject constructor(
     fun renderQuickPreview() = exportDelegate.renderQuickPreview()
 
     // --- Cloud Backup ---
-    fun showCloudBackup() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showCloudBackup = true) } }
-    fun hideCloudBackup() { _state.update { it.copy(showCloudBackup = false) } }
+    fun showCloudBackup() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.CLOUD_BACKUP)) } }
+    fun hideCloudBackup() { _state.update { it.copy(panels = it.panels.close(PanelId.CLOUD_BACKUP)) } }
 
     // --- Tutorial ---
-    fun showTutorial() { _state.update { it.copy(showTutorial = true) } }
+    fun showTutorial() { _state.update { it.copy(panels = it.panels.open(PanelId.TUTORIAL)) } }
     fun hideTutorial() {
-        _state.update { it.copy(showTutorial = false) }
+        _state.update { it.copy(panels = it.panels.close(PanelId.TUTORIAL)) }
         viewModelScope.launch { settingsRepo.setTutorialShown() }
     }
 
@@ -1186,9 +1124,9 @@ class EditorViewModel @Inject constructor(
         val entries = _state.value.undoStack.mapIndexed { i, a ->
             com.novacut.editor.model.UndoHistoryEntry(i, a.description)
         }.reversed()
-        _state.update { dismissedPanelState(it).copy(showUndoHistory = true, undoHistoryEntries = entries) }
+        _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.UNDO_HISTORY), undoHistoryEntries = entries) }
     }
-    fun hideUndoHistory() { _state.update { it.copy(showUndoHistory = false) } }
+    fun hideUndoHistory() { _state.update { it.copy(panels = it.panels.close(PanelId.UNDO_HISTORY)) } }
     fun jumpToUndoState(index: Int) {
         val stack = _state.value.undoStack
         if (index < 0 || index >= stack.size) return
@@ -1204,8 +1142,8 @@ class EditorViewModel @Inject constructor(
     }
 
     // --- Caption Style Gallery ---
-    fun showCaptionStyleGallery() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showCaptionStyleGallery = true) } }
-    fun hideCaptionStyleGallery() { _state.update { it.copy(showCaptionStyleGallery = false) } }
+    fun showCaptionStyleGallery() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.CAPTION_STYLE_GALLERY)) } }
+    fun hideCaptionStyleGallery() { _state.update { it.copy(panels = it.panels.close(PanelId.CAPTION_STYLE_GALLERY)) } }
     fun applyCaptionStyle(template: com.novacut.editor.model.CaptionStyleTemplate) {
         hideCaptionStyleGallery()
         saveUndoState("Apply caption style")
@@ -1229,8 +1167,8 @@ class EditorViewModel @Inject constructor(
     }
 
     // --- Beat Sync ---
-    fun showBeatSync() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showBeatSync = true) } }
-    fun hideBeatSync() { _state.update { it.copy(showBeatSync = false) } }
+    fun showBeatSync() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.BEAT_SYNC)) } }
+    fun hideBeatSync() { _state.update { it.copy(panels = it.panels.close(PanelId.BEAT_SYNC)) } }
     fun analyzeBeats() {
         val audioClip = _state.value.tracks
             .filter { it.type == TrackType.AUDIO }
@@ -1282,8 +1220,8 @@ class EditorViewModel @Inject constructor(
     }
 
     // --- Smart Reframe ---
-    fun showSmartReframe() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showSmartReframe = true) } }
-    fun hideSmartReframe() { _state.update { it.copy(showSmartReframe = false) } }
+    fun showSmartReframe() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.SMART_REFRAME)) } }
+    fun hideSmartReframe() { _state.update { it.copy(panels = it.panels.close(PanelId.SMART_REFRAME)) } }
     fun applySmartReframe(targetAspect: AspectRatio) {
         _state.update { it.copy(isReframing = true) }
         viewModelScope.launch {
@@ -1315,8 +1253,8 @@ class EditorViewModel @Inject constructor(
     }
 
     // --- Speed Presets ---
-    fun showSpeedPresets() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showSpeedPresets = true) } }
-    fun hideSpeedPresets() { _state.update { it.copy(showSpeedPresets = false) } }
+    fun showSpeedPresets() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.SPEED_PRESETS)) } }
+    fun hideSpeedPresets() { _state.update { it.copy(panels = it.panels.close(PanelId.SPEED_PRESETS)) } }
     fun applySpeedPreset(curve: SpeedCurve) {
         val clipId = _state.value.selectedClipId ?: return
         saveUndoState("Speed preset")
@@ -1333,8 +1271,8 @@ class EditorViewModel @Inject constructor(
     }
 
     // --- Filler/Silence Removal ---
-    fun showFillerRemoval() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showFillerRemoval = true) } }
-    fun hideFillerRemoval() { _state.update { it.copy(showFillerRemoval = false) } }
+    fun showFillerRemoval() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.FILLER_REMOVAL)) } }
+    fun hideFillerRemoval() { _state.update { it.copy(panels = it.panels.close(PanelId.FILLER_REMOVAL)) } }
 
     fun analyzeFillers() {
         val clip = getSelectedClip() ?: return
@@ -1384,8 +1322,8 @@ class EditorViewModel @Inject constructor(
     }
 
     // --- Auto-Edit ---
-    fun showAutoEdit() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showAutoEdit = true) } }
-    fun hideAutoEdit() { _state.update { it.copy(showAutoEdit = false) } }
+    fun showAutoEdit() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.AUTO_EDIT)) } }
+    fun hideAutoEdit() { _state.update { it.copy(panels = it.panels.close(PanelId.AUTO_EDIT)) } }
 
     fun runAutoEdit() {
         val clips = _state.value.tracks
@@ -1441,9 +1379,9 @@ class EditorViewModel @Inject constructor(
     fun showTts() {
         pauseIfPlaying()
         if (!ttsEngine.isAvailable()) ttsEngine.initialize { _state.update { it.copy(isTtsAvailable = true) } }
-        _state.update { dismissedPanelState(it).copy(showTts = true, isTtsAvailable = ttsEngine.isAvailable()) }
+        _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.TTS), isTtsAvailable = ttsEngine.isAvailable()) }
     }
-    fun hideTts() { ttsEngine.stopPreview(); _state.update { it.copy(showTts = false) } }
+    fun hideTts() { ttsEngine.stopPreview(); _state.update { it.copy(panels = it.panels.close(PanelId.TTS)) } }
 
     fun synthesizeTts(text: String, style: com.novacut.editor.engine.TtsEngine.VoiceStyle) {
         _state.update { it.copy(isSynthesizingTts = true) }
@@ -1472,8 +1410,8 @@ class EditorViewModel @Inject constructor(
     fun stopTtsPreview() { ttsEngine.stopPreview() }
 
     // --- Effect Library ---
-    fun showEffectLibrary() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showEffectLibrary = true) } }
-    fun hideEffectLibrary() { _state.update { it.copy(showEffectLibrary = false) } }
+    fun showEffectLibrary() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.EFFECT_LIBRARY)) } }
+    fun hideEffectLibrary() { _state.update { it.copy(panels = it.panels.close(PanelId.EFFECT_LIBRARY)) } }
 
     fun exportClipEffects(name: String) {
         val clip = getSelectedClip() ?: return
@@ -1514,12 +1452,12 @@ class EditorViewModel @Inject constructor(
     }
 
     // --- Noise Reduction ---
-    fun showNoiseReduction() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showNoiseReduction = true) } }
-    fun hideNoiseReduction() { _state.update { it.copy(showNoiseReduction = false, noiseAnalysisResult = null) } }
+    fun showNoiseReduction() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.NOISE_REDUCTION)) } }
+    fun hideNoiseReduction() { _state.update { it.copy(panels = it.panels.close(PanelId.NOISE_REDUCTION), noiseAnalysisResult = null) } }
 
     // --- Sticker Picker ---
-    fun showStickerPicker() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showStickerPicker = true) } }
-    fun hideStickerPicker() { _state.update { it.copy(showStickerPicker = false) } }
+    fun showStickerPicker() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.STICKER_PICKER)) } }
+    fun hideStickerPicker() { _state.update { it.copy(panels = it.panels.close(PanelId.STICKER_PICKER)) } }
 
     fun analyzeAndReduceNoise() {
         val clip = getSelectedClip() ?: return
@@ -1740,8 +1678,8 @@ class EditorViewModel @Inject constructor(
     fun cancelExport() = exportDelegate.cancelExport()
 
     // --- Media Manager ---
-    fun showMediaManager() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showMediaManager = true) } }
-    fun hideMediaManager() { _state.update { it.copy(showMediaManager = false) } }
+    fun showMediaManager() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.MEDIA_MANAGER)) } }
+    fun hideMediaManager() { _state.update { it.copy(panels = it.panels.close(PanelId.MEDIA_MANAGER)) } }
 
     fun jumpToClip(clipId: String) {
         val clip = _state.value.tracks.flatMap { it.clips }.find { it.id == clipId } ?: return
@@ -1851,8 +1789,8 @@ class EditorViewModel @Inject constructor(
     }
 
     // --- Text Templates ---
-    fun showTextTemplates() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showTextTemplates = true) } }
-    fun hideTextTemplates() { _state.update { it.copy(showTextTemplates = false) } }
+    fun showTextTemplates() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.TEXT_TEMPLATES)) } }
+    fun hideTextTemplates() { _state.update { it.copy(panels = it.panels.close(PanelId.TEXT_TEMPLATES)) } }
 
     fun applyTextTemplate(template: com.novacut.editor.model.TextTemplate) {
         saveUndoState("Apply text template")
@@ -1936,8 +1874,8 @@ class EditorViewModel @Inject constructor(
     }
 
     // --- Captions ---
-    fun showCaptionEditor() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showCaptionEditor = true) } }
-    fun hideCaptionEditor() { _state.update { it.copy(showCaptionEditor = false) } }
+    fun showCaptionEditor() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.CAPTION_EDITOR)) } }
+    fun hideCaptionEditor() { _state.update { it.copy(panels = it.panels.close(PanelId.CAPTION_EDITOR)) } }
 
     fun generateAutoCaption() {
         val clipId = _state.value.selectedClipId ?: return
@@ -1948,8 +1886,8 @@ class EditorViewModel @Inject constructor(
     }
 
     // --- Chapter Markers ---
-    fun showChapterMarkers() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showChapterMarkers = true) } }
-    fun hideChapterMarkers() { _state.update { it.copy(showChapterMarkers = false) } }
+    fun showChapterMarkers() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.CHAPTER_MARKERS)) } }
+    fun hideChapterMarkers() { _state.update { it.copy(panels = it.panels.close(PanelId.CHAPTER_MARKERS)) } }
 
     fun addChapterMarker(marker: ChapterMarker) {
         val totalDuration = _state.value.totalDurationMs
@@ -1988,8 +1926,8 @@ class EditorViewModel @Inject constructor(
     }
 
     // --- Snapshot History ---
-    fun showSnapshotHistory() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showSnapshotHistory = true) } }
-    fun hideSnapshotHistory() { _state.update { it.copy(showSnapshotHistory = false) } }
+    fun showSnapshotHistory() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.SNAPSHOT_HISTORY)) } }
+    fun hideSnapshotHistory() { _state.update { it.copy(panels = it.panels.close(PanelId.SNAPSHOT_HISTORY)) } }
 
     fun deleteSnapshot(snapshotId: String) {
         _state.update { it.copy(projectSnapshots = it.projectSnapshots.filter { s -> s.id != snapshotId }) }
@@ -2093,19 +2031,19 @@ class EditorViewModel @Inject constructor(
         }
     }
 
-    fun showPipPresets() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showPipPresets = true) } }
-    fun hidePipPresets() { _state.update { it.copy(showPipPresets = false) } }
+    fun showPipPresets() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.PIP_PRESETS)) } }
+    fun hidePipPresets() { _state.update { it.copy(panels = it.panels.close(PanelId.PIP_PRESETS)) } }
 
-    fun showChromaKey() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(showChromaKey = true) } }
-    fun hideChromaKey() { _state.update { it.copy(showChromaKey = false) } }
+    fun showChromaKey() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.CHROMA_KEY)) } }
+    fun hideChromaKey() { _state.update { it.copy(panels = it.panels.close(PanelId.CHROMA_KEY)) } }
 
     // --- Video Scopes ---
     private val _scopeFrame = MutableStateFlow<android.graphics.Bitmap?>(null)
     val scopeFrame: StateFlow<android.graphics.Bitmap?> = _scopeFrame.asStateFlow()
 
     fun toggleScopes() {
-        val willShow = !_state.value.showScopes
-        _state.update { it.copy(showScopes = willShow) }
+        val willShow = !_state.value.panels.isOpen(PanelId.SCOPES)
+        _state.update { it.copy(panels = if (willShow) it.panels.open(PanelId.SCOPES) else it.panels.close(PanelId.SCOPES)) }
         if (willShow) updateScopeFrame()
     }
 

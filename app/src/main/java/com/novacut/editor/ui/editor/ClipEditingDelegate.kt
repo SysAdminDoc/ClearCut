@@ -80,7 +80,7 @@ class ClipEditingDelegate(
                     totalDurationMs = totalDuration,
                     selectedClipId = clip.id,
                     selectedTrackId = track.id,
-                    showMediaPicker = false
+                    panels = state.panels.close(PanelId.MEDIA_PICKER)
                 )
             }
 

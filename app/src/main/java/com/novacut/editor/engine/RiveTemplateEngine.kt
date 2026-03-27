@@ -2,13 +2,13 @@ package com.novacut.editor.engine
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.Canvas
+import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Rive interactive template engine for next-gen motion graphics.
+ * Stub engine -- requires app.rive:rive-android dependency. See ROADMAP.md
  *
  * Rive: github.com/rive-app/rive-android
  * - State machine-driven animations with user-adjustable parameters
@@ -95,16 +95,7 @@ class RiveTemplateEngine @Inject constructor(
 
     /**
      * Render a single frame of a Rive animation.
-     * When rive-android dependency is added:
-     *   val file = RiveFile(context.assets.open(assetPath).readBytes())
-     *   val artboard = file.firstArtboard
-     *   val smi = artboard.stateMachineInstance(0)
-     *   // Set inputs
-     *   smi.advance(frameTimeMs / 1000f)
-     *   artboard.advance(frameTimeMs / 1000f)
-     *   // Render to canvas
-     *   val renderer = RiveArtboardRenderer(artboard)
-     *   renderer.draw(canvas)
+     * Returns null until rive-android dependency is added.
      */
     fun renderFrame(
         templateId: String,
@@ -112,10 +103,12 @@ class RiveTemplateEngine @Inject constructor(
         width: Int,
         height: Int,
         inputs: Map<String, Any> = emptyMap()
-    ): Bitmap {
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        // TODO: When Rive dependency is added, render the animation
-        // For now, return transparent bitmap
-        return bitmap
+    ): Bitmap? {
+        Log.d(TAG, "renderFrame: stub -- requires app.rive:rive-android dependency")
+        return null
+    }
+
+    companion object {
+        private const val TAG = "RiveTemplate"
     }
 }

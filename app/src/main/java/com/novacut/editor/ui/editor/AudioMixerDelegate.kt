@@ -27,11 +27,11 @@ class AudioMixerDelegate(
     // --- Audio Mixer ---
     fun showAudioMixer() {
         pauseIfPlaying()
-        stateFlow.update { dismissedPanelState(it).copy(showAudioMixer = true) }
+        stateFlow.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.AUDIO_MIXER)) }
     }
 
     fun hideAudioMixer() {
-        stateFlow.update { it.copy(showAudioMixer = false) }
+        stateFlow.update { it.copy(panels = it.panels.close(PanelId.AUDIO_MIXER)) }
     }
 
     fun setTrackVolume(trackId: String, volume: Float) {
@@ -126,11 +126,11 @@ class AudioMixerDelegate(
     // --- Audio Normalization ---
     fun showAudioNorm() {
         pauseIfPlaying()
-        stateFlow.update { dismissedPanelState(it).copy(showAudioNorm = true) }
+        stateFlow.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.AUDIO_NORM)) }
     }
 
     fun hideAudioNorm() {
-        stateFlow.update { it.copy(showAudioNorm = false) }
+        stateFlow.update { it.copy(panels = it.panels.close(PanelId.AUDIO_NORM)) }
     }
 
     fun normalizeAudio(targetLufs: Float) {

@@ -1,19 +1,20 @@
 package com.novacut.editor.engine
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.RectF
 import android.net.Uri
+import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Smart reframing engine for auto-cropping video to different aspect ratios.
- * Uses face/subject detection to keep important content in frame.
+ * Stub engine -- requires com.google.mediapipe:tasks-vision for face/subject detection.
+ * See ROADMAP.md
+ *
+ * Uses face/subject detection to keep important content in frame when
+ * auto-cropping video to different aspect ratios.
  *
  * Backend: MediaPipe Face Detection (BlazeFace ~400KB, <1ms/frame)
  *          + BlazePose (~3-8MB) for full body tracking
@@ -59,45 +60,15 @@ class SmartReframeEngine @Inject constructor(
 
     /**
      * Analyze video and compute per-frame crop windows.
-     *
-     * When MediaPipe is integrated:
-     *   val faceDetector = FaceDetector.createFromOptions(context, options)
-     *   for each frame:
-     *     val result = faceDetector.detect(mpImage)
-     *     val faces = result.detections()
-     *     // Compute saliency center from face bounding boxes
-     *     // Apply EMA smoothing to crop window position
+     * Returns null until MediaPipe dependency is added.
      */
     suspend fun analyzeForReframe(
         uri: Uri,
         config: ReframeConfig = ReframeConfig(),
         onProgress: (Float) -> Unit = {}
-    ): ReframeResult = withContext(Dispatchers.Default) {
-        onProgress(0.1f)
-
-        // TODO: When MediaPipe is integrated, detect faces per frame
-        // For now, use center-crop as fallback
-        val numFrames = 300  // Assume 10 seconds at 30fps
-        val cropWindows = mutableListOf<CropWindow>()
-
-        // Compute crop dimensions based on target aspect ratio
-        val cropW = if (config.targetAspectRatio < 1f) config.targetAspectRatio else 1f
-        val cropH = if (config.targetAspectRatio < 1f) 1f else 1f / config.targetAspectRatio
-
-        // Center crop (fallback when no face detection)
-        for (i in 0 until numFrames) {
-            ensureActive()
-            cropWindows.add(CropWindow(
-                centerX = 0.5f,
-                centerY = 0.5f,
-                width = cropW,
-                height = cropH
-            ))
-            if (i % 30 == 0) onProgress(0.1f + 0.8f * i / numFrames)
-        }
-
-        onProgress(1f)
-        ReframeResult(cropWindows, 30f, ReframeStrategy.STATIONARY)
+    ): ReframeResult? = withContext(Dispatchers.Default) {
+        Log.d(TAG, "analyzeForReframe: stub -- requires com.google.mediapipe:tasks-vision dependency")
+        null
     }
 
     /**
@@ -118,5 +89,9 @@ class SmartReframeEngine @Inject constructor(
             smoothed.add(Pair(newX, newY))
         }
         return smoothed
+    }
+
+    companion object {
+        private const val TAG = "SmartReframe"
     }
 }

@@ -17,38 +17,38 @@
 ## Tier 2: Medium Effort, High Impact
 > New dependencies (Maven/NDK), model downloads, engine-level changes.
 
-- [x] 2.1 — **Sherpa-ONNX ASR** — SherpaAsrEngine abstraction layer with model variants, word timestamps, language support. Gradle dep commented (activate when ready)
-- [x] 2.2 — **AndroidDeepFilterNet** — NoiseReductionEngine with 5 modes (off/light/moderate/aggressive/spectral gate), noise profiling, ViewModel wired, UI result display. Gradle dep commented
-- [x] 2.3 — **Piper TTS via Sherpa-ONNX** — PiperTtsEngine with 10 voices across 8 languages, synthesize() with progress, voice download management
+- [ ] 2.1 — **Sherpa-ONNX ASR** — SherpaAsrEngine abstraction layer with model variants, word timestamps, language support. Gradle dep commented (stub — dependency not integrated)
+- [ ] 2.2 — **AndroidDeepFilterNet** — NoiseReductionEngine with 5 modes (off/light/moderate/aggressive/spectral gate), noise profiling, ViewModel wired, UI result display. Gradle dep commented (stub — dependency not integrated)
+- [ ] 2.3 — **Piper TTS via Sherpa-ONNX** — PiperTtsEngine with 10 voices across 8 languages, synthesize() with progress, voice download management (stub — dependency not integrated; system TTS fallback works)
 - [x] 2.4 — **Lottie animated titles** — LottieTemplateEngine with 10 built-in templates, frame-by-frame rendering via TextDelegate, 4 categories
 - [x] 2.5 — **Beat detection engine** — Pure-Kotlin spectral flux onset detection + adaptive thresholding + BPM histogram. aubio NDK dep ready to drop in
 - [x] 2.6 — **Loudness engine** — EBU R128 measurement (K-weighting, gated blocks, LRA) + 6 platform presets + true-peak limiting
 - [x] 2.7 — **YCbCr chroma key** — Professional CbCr distance keying + smoothstep feathering + green/blue spill suppression
-- [x] 2.8 — **Oboe resampler** — Abstraction ready, Gradle dep commented for activation
+- [ ] 2.8 — **Oboe resampler** — Abstraction ready, Gradle dep commented for activation (stub — dependency not integrated)
 - [x] 2.9 — **First-run tutorial auto-show** — SettingsRepository flag, 500ms delay trigger in init, persists on dismiss
 
 ## Tier 3: High Effort, Differentiating
 > ML model integration, NDK builds, compute shaders, significant new features.
 
-- [x] 3.1 — **RIFE frame interpolation** — FrameInterpolationEngine with 2x/4x/8x configs, model download mgmt, frame duplication fallback
+- [ ] 3.1 — **RIFE frame interpolation** — FrameInterpolationEngine with 2x/4x/8x configs, model download mgmt, frame duplication fallback (stub — dependency not integrated)
 - [x] 3.2 — **LaMa inpainting** — InpaintingEngine with per-frame + video batch processing, ONNX/Qualcomm AI Hub stubs
-- [x] 3.3 — **Real-ESRGAN upscaling** — UpscaleEngine with x4plus + general-x4v3 variants, tile-based processing
-- [x] 3.4 — **RobustVideoMatting** — VideoMattingEngine with temporal coherence (hidden states), 4 background modes
-- [x] 3.5 — **OpenCV stabilization** — StabilizationEngine with L-K/ORB algorithms, Kalman smoothing, configurable crop
-- [x] 3.6 — **Style transfer** — StyleTransferEngine with 9 presets (AnimeGANv2 + Fast NST + OpenCV pencil sketch)
+- [ ] 3.3 — **Real-ESRGAN upscaling** — UpscaleEngine with x4plus + general-x4v3 variants, tile-based processing (stub — dependency not integrated)
+- [ ] 3.4 — **RobustVideoMatting** — VideoMattingEngine with temporal coherence (hidden states), 4 background modes (stub — dependency not integrated)
+- [ ] 3.5 — **OpenCV stabilization** — StabilizationEngine with L-K/ORB algorithms, Kalman smoothing, configurable crop (stub — dependency not integrated)
+- [ ] 3.6 — **Style transfer** — StyleTransferEngine with 9 presets (AnimeGANv2 + Fast NST + OpenCV pencil sketch) (stub — dependency not integrated)
 - [x] 3.7 — **Smart reframing** — SmartReframeEngine with EMA-smoothed crop trajectory, face/pose detection stubs, 3 strategies (stationary/pan/track)
 - [x] 3.8 — **GPU waveform/vectorscope** — Compute shader documentation added (waveform + vectorscope GLSL for ES 3.1+)
-- [x] 3.9 — **FFmpegX-Android fallback encoder** — FFmpegEngine with execute(), subtitle burning, loudness normalization, audio extraction
+- [ ] 3.9 — **FFmpegX-Android fallback encoder** — FFmpegEngine with execute(), subtitle burning, loudness normalization, audio extraction (stub — dependency not integrated)
 - [x] 3.10 — **libass burned-in subtitles** — SubtitleRenderEngine with Canvas rendering + ASS/SSA file generation
 
 ## Tier 4: Future / Premium
 > Architectural changes, cloud features, advanced workflows.
 
-- [x] 4.1 — **MobileSAM** — TapSegmentEngine with point/box prompts, mask propagation via optical flow
-- [x] 4.2 — **ProPainter cloud** — CloudInpaintingEngine with job submission/tracking/download API abstraction
+- [ ] 4.1 — **MobileSAM** — TapSegmentEngine with point/box prompts, mask propagation via optical flow (stub — dependency not integrated)
+- [ ] 4.2 — **ProPainter cloud** — CloudInpaintingEngine with job submission/tracking/download API abstraction (stub — dependency not integrated)
 - [x] 4.3 — **OpenTimelineIO** — TimelineExchangeEngine with OTIO JSON export/import + FCPXML export
 - [x] 4.4 — **AV1/VP9 export** — VP9 added to VideoCodec enum, getAvailableCodecs() queries hardware support
-- [x] 4.5 — **Rive interactive templates** — RiveTemplateEngine with 5 templates, state machine inputs, renderFrame()
+- [ ] 4.5 — **Rive interactive templates** — RiveTemplateEngine with 5 templates, state machine inputs, renderFrame() (stub — dependency not integrated)
 - [x] 4.6 — **Soundpipe DSP** — SoundpipeDspEngine with Schroeder reverb, Moog ladder filter, 4 distortion types (working Kotlin fallback)
 - [x] 4.7 — **Command-based undo/redo** — EditCommand sealed class with AddClip/RemoveClip/Trim/Move/Speed/Effect/Compound
 - [x] 4.8 — **Proxy workflow** — ProxyWorkflowEngine with 3-tier media, auto-switch, generateAllProxies, storage management
@@ -104,15 +104,17 @@
 - [x] **Clip reorder** — `reorderClip()` repositions clip within track with automatic timeline recalculation
 - [x] **Move clip to track** — `moveClipToTrack()` transfers clip between tracks, appending at end of target track
 
-### Dependency-Gated Items (Completed in v3.4.0)
-- [x] **Sherpa-ONNX Piper synthesis** — Direct OfflineTts API with WAV file generation
-- [x] **DeepFilterNet ML processing** — Direct DeepFilterNet API with attenuation levels and spectral gate fallback
-- [x] **RIFE frame interpolation** — NCNN+Vulkan RIFE v4.6 inference with weighted bitmap blend fallback
-- [x] **LaMa inpainting** — ONNX Runtime with NNAPI acceleration, NCHW tensor conversion, neighbor-fill fallback
-- [x] **Cloud inpainting API** — OkHttp multipart upload with job submission/tracking/download
-- [x] **FFmpegX integration** — Direct FFmpegX.execute() with two-pass EBU R128 loudness normalization
+### Dependency-Gated Items (Planned)
+- [ ] **Sherpa-ONNX Piper synthesis** — Direct OfflineTts API with WAV file generation
+- [ ] **DeepFilterNet ML processing** — Direct DeepFilterNet API with attenuation levels and spectral gate fallback
+- [ ] **RIFE frame interpolation** — NCNN+Vulkan RIFE v4.6 inference with weighted bitmap blend fallback
+- [ ] **LaMa inpainting** — ONNX Runtime with NNAPI acceleration, NCHW tensor conversion, neighbor-fill fallback
+- [ ] **Cloud inpainting API** — OkHttp multipart upload with job submission/tracking/download
+- [ ] **FFmpegX integration** — Direct FFmpegX.execute() with two-pass EBU R128 loudness normalization
 
-## v3.4.0 — Dependency Activation & Engine Wiring
+## v3.4.0 — Dependency Activation (Reverted)
+
+> Dependencies were briefly added but removed in v3.5.0 due to unavailable artifacts. Engine stubs remain for future integration.
 
 ### Engine Implementations
 - [x] **PiperTtsEngine → Sherpa-ONNX** — Direct `OfflineTts` API replacing reflection stubs, WAV file generation with RIFF header

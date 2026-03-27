@@ -1,18 +1,13 @@
-# NovaCut v3.4.0
+# NovaCut v3.5.0
 
 A professional Android video editor built with Kotlin and Jetpack Compose. Open alternative to CapCut, PowerDirector, and DaVinci Resolve — with on-device AI, GPU-accelerated effects, and desktop NLE interoperability.
 
 ## Changelog
 
-### v3.4.0 — Dependency Activation & Engine Wiring
-- All tier 2-4 dependencies activated (Sherpa-ONNX, DeepFilterNet, NCNN, FFmpegX, OkHttp) — reflection stubs replaced with direct API calls
-- **PiperTtsEngine** → Sherpa-ONNX OfflineTts with WAV generation
-- **NoiseReductionEngine** → DeepFilterNet with attenuation levels + spectral gate fallback
-- **FFmpegEngine** → FFmpegX.execute() with two-pass EBU R128 loudness normalization
-- **FrameInterpolationEngine** → NCNN RIFE v4.6 inference with model download + bitmap blend fallback
-- **InpaintingEngine** → ONNX Runtime LaMa with NNAPI acceleration + neighbor-fill fallback
-- **CloudInpaintingEngine** → OkHttp multipart upload with job submission/tracking/download
-- ProGuard keep rules for all JNI/native bridges
+### v3.4.0 — Dependency Activation (Reverted)
+- Dependencies briefly added for engine wiring, then reverted in v3.5.0 due to unavailable artifacts
+- Engine stubs for PiperTts, NoiseReduction, FFmpeg, FrameInterpolation, Inpainting, CloudInpainting remain for future integration
+- ProGuard keep rules retained for future activation
 
 ### v3.3.0 — Localization, Performance & Reliability
 - 90+ hardcoded UI strings extracted to `strings.xml` across 15+ panels (i18n ready)
@@ -90,25 +85,25 @@ A professional Android video editor built with Kotlin and Jetpack Compose. Open 
 - True-peak limiting to prevent clipping
 - Voiceover recording with automatic timeline placement
 - **Fade overlap protection** — fade in + fade out constrained to clip duration
-- **ML noise reduction** — DeepFilterNet direct API (5 modes: off/light/moderate/aggressive/spectral gate) with spectral gate fallback
+- **Noise reduction** — Spectral gate heuristic (5 modes: off/light/moderate/aggressive/spectral gate). DeepFilterNet ML path planned
 
 ### AI Tools
 | Tool | Engine | On-Device? |
 |------|--------|------------|
-| **Auto Captions** | Sherpa-ONNX (Whisper Tiny multilingual, 99 languages, 27 tok/s — 51x faster than whisper.cpp) | Yes |
+| **Auto Captions** | ONNX Runtime Whisper (multilingual, 99 languages) | Yes |
 | **Background Removal** | MediaPipe Selfie Segmentation (~1-7MB, ~30fps) | Yes |
-| **AI Green Screen** | RobustVideoMatting (true alpha mattes with temporal coherence, 4 background modes) | Yes |
+| **AI Green Screen** | Planned -- RobustVideoMatting (requires model integration) | Planned |
 | **Object Removal** | LaMa-Dilated inpainting (40ms/frame @ 512x512 on flagship devices) | Yes |
-| **Video Upscaling** | Real-ESRGAN x4plus (72ms/frame, tile-based processing) | Yes |
-| **Frame Interpolation** | RIFE v4.6 via NCNN+Vulkan (2x/4x/8x slow-motion, 720p @ 100ms/frame) | Yes |
-| **Style Transfer** | AnimeGANv2 (8.6MB) + Fast Neural Style Transfer (6-7MB/style) — 9 presets | Yes |
-| **Stabilization** | OpenCV L-K optical flow + RANSAC + Kalman smoothing (configurable crop) | Yes |
-| **Smart Reframe** | MediaPipe Face/Pose detection + EMA-smoothed crop trajectory (3 strategies) | Yes |
-| **Tap-to-Segment** | MobileSAM (~10MB, point/box prompts, optical flow mask propagation) | Yes |
+| **Video Upscaling** | Planned -- Real-ESRGAN (requires model integration) | Planned |
+| **Frame Interpolation** | Planned -- RIFE v4.6 (requires NCNN dependency) | Planned |
+| **Style Transfer** | Planned -- AnimeGANv2 + Fast NST (requires model integration) | Planned |
+| **Stabilization** | Planned -- OpenCV (requires dependency) | Planned |
+| **Smart Reframe** | EMA-smoothed crop trajectory, 3 strategies (face/pose detection is stub) | Partial |
+| **Tap-to-Segment** | Planned -- MobileSAM (requires dependency) | Planned |
 | **Scene Detection** | Content-aware frame difference analysis with auto-split | Yes |
 | **Auto Color** | Histogram-based brightness/contrast/saturation/temperature | Yes |
 | **Motion Tracking** | Template matching with position keyframe generation | Yes |
-| **Audio Denoise** | DeepFilterNet (PESQ 3.5-4.0+) with spectral gate fallback | Yes |
+| **Audio Denoise** | Spectral gate heuristic (DeepFilterNet ML planned) | Yes |
 
 ### Text & Titles
 - Rich text overlays with 10+ animation styles
@@ -122,9 +117,9 @@ A professional Android video editor built with Kotlin and Jetpack Compose. Open 
 
 ### Text-to-Speech
 - **System TTS** — Android built-in voices with mutex-protected synthesis
-- **Piper TTS** (HD) — near-human quality VITS voices via Sherpa-ONNX, 50+ languages, fully offline
-  - 10 voice profiles: Amy (US), Ryan (US), Alba (UK), Thorsten (DE), Dave (ES), Siwis (FR), Takumi (JP), Huayan (CN), Sunhi (KR), Faber (BR)
-  - Voice models downloaded on demand (~15-65MB each)
+- **Piper TTS** (planned) — near-human quality VITS voices via Sherpa-ONNX (stub, requires dependency integration)
+  - 10 voice profiles defined: Amy (US), Ryan (US), Alba (UK), Thorsten (DE), Dave (ES), Siwis (FR), Takumi (JP), Huayan (CN), Sunhi (KR), Faber (BR)
+  - Currently falls back to Android System TTS
 - System/Piper engine toggle in TTS panel
 
 ### Export
@@ -172,20 +167,20 @@ A professional Android video editor built with Kotlin and Jetpack Compose. Open 
 | Video | Media3 1.9.2 (Transformer + ExoPlayer) |
 | Effects | OpenGL ES 3.0 (37 GLSL transitions, 40+ effect shaders) |
 | Audio DSP | Custom engine (EQ, compressor, chorus, delay, pitch shift) |
-| Speech-to-Text | Sherpa-ONNX / ONNX Runtime 1.17.0 (Whisper, Moonshine) |
-| Noise Reduction | DeepFilterNet (direct API) / spectral gating fallback |
+| Speech-to-Text | ONNX Runtime 1.17.0 (Whisper) |
+| Noise Reduction | Spectral gate fallback (DeepFilterNet planned) |
 | Beat Detection | Spectral flux onset detection (aubio NDK ready) |
 | Loudness | EBU R128 / ITU-R BS.1770 measurement |
 | Segmentation | MediaPipe Tasks Vision 0.10.14 |
-| Video Matting | RobustVideoMatting (ONNX Runtime) |
-| Object Removal | LaMa-Dilated (ONNX / Qualcomm AI Hub) |
-| Upscaling | Real-ESRGAN x4plus (TFLite / QNN) |
-| Frame Interpolation | RIFE v4.6 (NCNN + Vulkan) |
-| Style Transfer | AnimeGANv2 + Fast NST (ONNX) |
-| Stabilization | OpenCV (L-K + Kalman) |
-| TTS | Piper (VITS) via Sherpa-ONNX OfflineTts / Android System TTS |
+| Video Matting | Planned (RobustVideoMatting, ONNX Runtime) |
+| Object Removal | LaMa-Dilated (ONNX Runtime, neighbor-fill fallback) |
+| Upscaling | Planned (Real-ESRGAN) |
+| Frame Interpolation | Planned (NCNN + Vulkan) |
+| Style Transfer | Planned (AnimeGANv2 + Fast NST) |
+| Stabilization | Planned (OpenCV) |
+| TTS | Android System TTS (Piper via Sherpa-ONNX planned) |
 | Animated Titles | Lottie (Airbnb) |
-| Timeline Exchange | OpenTimelineIO (OTIO JSON, FCPXML) |
+| Timeline Exchange | Planned (OpenTimelineIO) |
 | DI | Hilt / Dagger |
 | Database | Room (v4 with migration chain 1→4) |
 | Settings | DataStore Preferences |
@@ -206,26 +201,26 @@ com.novacut.editor/
 │   ├── ExportService        # Foreground service for background export
 │   ├── BeatDetectionEngine  # Spectral flux onset + BPM estimation
 │   ├── LoudnessEngine       # EBU R128 measurement + normalization
-│   ├── NoiseReductionEngine # DeepFilterNet (direct API) + spectral gate
-│   ├── FrameInterpolationEngine  # RIFE v4.6 slow-motion (NCNN + Vulkan)
+│   ├── NoiseReductionEngine # Spectral gate (DeepFilterNet stub)
+│   ├── FrameInterpolationEngine  # RIFE v4.6 slow-motion (stub)
 │   ├── InpaintingEngine     # LaMa object removal (ONNX Runtime + NNAPI)
-│   ├── UpscaleEngine        # Real-ESRGAN video upscaling
-│   ├── VideoMattingEngine   # RVM AI green screen
-│   ├── StabilizationEngine  # OpenCV optical flow
-│   ├── StyleTransferEngine  # AnimeGAN + Fast NST
+│   ├── UpscaleEngine        # Real-ESRGAN video upscaling (stub)
+│   ├── VideoMattingEngine   # RVM AI green screen (stub)
+│   ├── StabilizationEngine  # OpenCV optical flow (stub)
+│   ├── StyleTransferEngine  # AnimeGAN + Fast NST (stub)
 │   ├── SmartReframeEngine   # Subject-tracking auto-crop
-│   ├── TapSegmentEngine     # MobileSAM tap-to-segment
-│   ├── PiperTtsEngine       # Piper VITS TTS (Sherpa-ONNX OfflineTts)
+│   ├── TapSegmentEngine     # MobileSAM tap-to-segment (stub)
+│   ├── PiperTtsEngine       # Piper VITS TTS (stub, system TTS fallback)
 │   ├── LottieTemplateEngine # Animated title rendering
-│   ├── FFmpegEngine         # FFmpegX fallback encoder + EBU R128 loudness
+│   ├── FFmpegEngine         # FFmpegX fallback encoder (stub)
 │   ├── SubtitleRenderEngine # Canvas + ASS subtitle rendering
-│   ├── CloudInpaintingEngine   # ProPainter cloud API (OkHttp)
+│   ├── CloudInpaintingEngine   # ProPainter cloud API (stub)
 │   ├── TimelineExchangeEngine  # OTIO/FCPXML interchange
 │   ├── ProxyWorkflowEngine  # 3-tier media management
 │   ├── EditCommand          # Command-pattern undo/redo
 │   ├── db/ProjectDatabase   # Room database with migrations
 │   ├── whisper/WhisperEngine     # Built-in Whisper (ONNX)
-│   ├── whisper/SherpaAsrEngine   # Sherpa-ONNX ASR (51x faster)
+│   ├── whisper/SherpaAsrEngine   # Sherpa-ONNX ASR (stub)
 │   └── segmentation/        # MediaPipe selfie segmentation
 ├── model/                  # Data classes (Project, Clip, Track, Effect, etc.)
 ├── ui/
@@ -266,19 +261,14 @@ keyPassword=yourpass
 Or via environment variables: `NOVACUT_KS_PASS`, `NOVACUT_KEY_ALIAS`, `NOVACUT_KEY_PASS`
 
 ### Dependencies
-All dependencies (including tier 2-4 ML/NDK engines) are active in the version catalog (`gradle/libs.versions.toml`). No manual activation needed. Key external dependencies:
+Key external dependencies currently in `build.gradle.kts`:
 
 | Dependency | Version | Purpose |
 |-----------|---------|---------|
-| Sherpa-ONNX | 1.10.30 | Piper TTS + fast Whisper ASR |
-| DeepFilterNet | 0.5.6 | ML noise reduction |
-| NCNN + Vulkan | 1.0.20240410 | RIFE frame interpolation |
-| FFmpegX | 6.1.2 | Fallback encoder + loudness normalization |
-| ONNX Runtime | 1.17.0 | Whisper + LaMa inpainting |
+| ONNX Runtime | 1.17.0 | Whisper ASR + LaMa inpainting |
 | MediaPipe | 0.10.14 | Selfie segmentation |
 | Lottie | 6.6.2 | Animated title templates |
 | OkHttp | 4.12.0 | Cloud inpainting API |
-| OpenTimelineIO | 0.15.0 | OTIO/FCPXML timeline exchange |
 
 ## Supported Devices
 
@@ -299,7 +289,7 @@ All dependencies (including tier 2-4 ML/NDK engines) are active in the version c
 | `CAMERA` | Video capture from camera |
 | `FOREGROUND_SERVICE` | Background export processing |
 | `POST_NOTIFICATIONS` | Export progress notifications |
-| `INTERNET` | Model downloads (Whisper, Piper voices, RIFE, LaMa), cloud inpainting API |
+| `INTERNET` | Model downloads (Whisper), cloud inpainting API |
 | `VIBRATE` | Haptic feedback |
 
 ## Known Limitations
@@ -309,6 +299,7 @@ All dependencies (including tier 2-4 ML/NDK engines) are active in the version c
 - SmartRenderEngine analysis results not used for actual export bypass
 - Text overlay strokeWidth not exported (SpannableString has no native stroke support)
 - ProjectArchive.importArchive() is export-only (import not fully implemented)
+- 11 AI/ML engine stubs awaiting dependency integration (see ROADMAP.md)
 
 ## License
 

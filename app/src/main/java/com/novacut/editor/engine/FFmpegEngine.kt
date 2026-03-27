@@ -5,20 +5,13 @@ import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-// FFmpegX loaded via reflection when available (optional dependency)
-import org.json.JSONObject
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * FFmpeg integration for advanced operations beyond Media3 Transformer's capabilities.
- *
- * Dependency (add to build.gradle.kts):
- *   implementation("io.github.nicholasryan:ffmpegx-android:6.1.+")
- *
- * Replaces the now-archived ffmpeg-kit (retired Jan 2025, archived June 2025).
- * Supports Android 10-15+, arm64-v8a/x86_64, 300+ filters.
+ * Stub engine -- requires FFmpeg Android library (e.g. mobile-ffmpeg or ffmpeg-kit successor).
+ * See ROADMAP.md
  *
  * Use cases beyond Media3 Transformer:
  * - Complex audio filter chains (loudnorm two-pass, audio ducking via sidechaincompress)
@@ -34,46 +27,14 @@ class FFmpegEngine @Inject constructor(
 ) {
     /**
      * Execute an FFmpeg command.
-     * Returns exit code (0 = success).
-     *
-     * When FFmpegX-Android is integrated:
-     *   FFmpegX.execute(command)
-     *
-     * Common commands for NovaCut:
-     *
-     * Two-pass loudness normalization:
-     *   Pass 1: "-i input.mp4 -af loudnorm=I=-14:TP=-1:LRA=11:print_format=json -f null -"
-     *   Pass 2: "-i input.mp4 -af loudnorm=I=-14:TP=-1:LRA=11:measured_I=<val>:measured_TP=<val>... output.mp4"
-     *
-     * Subtitle burning with libass:
-     *   "-i input.mp4 -vf ass=subtitles.ass output.mp4"
-     *
-     * Audio extraction:
-     *   "-i input.mp4 -vn -acodec pcm_s16le -ar 16000 -ac 1 output.wav"
-     *
-     * Speed change with pitch correction:
-     *   "-i input.mp4 -filter_complex [0:v]setpts=0.5*PTS[v];[0:a]atempo=2.0[a] -map [v] -map [a] output.mp4"
-     *
-     * AV1 software encode (SVT-AV1):
-     *   "-i input.mp4 -c:v libsvtav1 -preset 8 -crf 30 -c:a libopus output.webm"
+     * Returns exit code (0 = success, -1 = unavailable).
      */
     suspend fun execute(
         command: String,
         onProgress: (Float) -> Unit = {}
     ): Int = withContext(Dispatchers.IO) {
-        if (!isAvailable()) {
-            Log.w(TAG, "FFmpegX-Android not available — add dependency to build.gradle.kts")
-            return@withContext -1
-        }
-        try {
-            val ffmpegCls = Class.forName("io.github.nicholasryan.ffmpegx.FFmpegX")
-            val result = ffmpegCls.getMethod("execute", String::class.java).invoke(null, command) as Int
-            onProgress(1f)
-            result
-        } catch (e: Exception) {
-            Log.e(TAG, "FFmpeg execution failed: ${e.message}", e)
-            -1
-        }
+        Log.d(TAG, "execute: stub -- requires FFmpeg Android dependency")
+        -1
     }
 
     /**
@@ -85,8 +46,8 @@ class FFmpegEngine @Inject constructor(
         sampleRate: Int = 16000,
         channels: Int = 1
     ): Boolean = withContext(Dispatchers.IO) {
-        val cmd = "-i \"$inputUri\" -vn -acodec pcm_s16le -ar $sampleRate -ac $channels \"${outputFile.absolutePath}\""
-        execute(cmd) == 0
+        Log.d(TAG, "extractAudioToWav: stub -- requires FFmpeg Android dependency")
+        false
     }
 
     /**
@@ -98,9 +59,8 @@ class FFmpegEngine @Inject constructor(
         outputFile: File,
         onProgress: (Float) -> Unit = {}
     ): Boolean = withContext(Dispatchers.IO) {
-        val cmd = "-i \"${inputFile.absolutePath}\" -vf \"ass=${subtitleFile.absolutePath}\" " +
-            "-c:a copy \"${outputFile.absolutePath}\""
-        execute(cmd, onProgress) == 0
+        Log.d(TAG, "burnSubtitles: stub -- requires FFmpeg Android dependency")
+        false
     }
 
     /**
@@ -113,51 +73,16 @@ class FFmpegEngine @Inject constructor(
         truePeakDb: Float = -1f,
         onProgress: (Float) -> Unit = {}
     ): Boolean = withContext(Dispatchers.IO) {
-        // Pass 1: measure loudness
-        val measureCmd = "-i \"${inputFile.absolutePath}\" " +
-            "-af loudnorm=I=$targetLufs:TP=$truePeakDb:LRA=11:print_format=json -f null /dev/null"
-        val ffmpegCls = Class.forName("io.github.nicholasryan.ffmpegx.FFmpegX")
-        val pass1Result = ffmpegCls.getMethod("execute", String::class.java).invoke(null, measureCmd) as Int
-        if (pass1Result != 0) {
-            Log.e(TAG, "Loudness measurement (pass 1) failed with code $pass1Result")
-            return@withContext false
-        }
-
-        // Parse measured values from JSON output
-        val output = ffmpegCls.getMethod("getLastCommandOutput").invoke(null) as String
-        val jsonStart = output.lastIndexOf('{')
-        val jsonEnd = output.lastIndexOf('}')
-        if (jsonStart < 0 || jsonEnd < 0) {
-            Log.e(TAG, "Could not find loudnorm JSON in FFmpeg output")
-            return@withContext false
-        }
-        val json = JSONObject(output.substring(jsonStart, jsonEnd + 1))
-        val measuredI = json.getString("input_i")
-        val measuredLRA = json.getString("input_lra")
-        val measuredTP = json.getString("input_tp")
-        val measuredThresh = json.getString("input_thresh")
-
-        onProgress(0.5f)
-
-        // Pass 2: apply correction with measured values
-        val cmd = "-i \"${inputFile.absolutePath}\" " +
-            "-af loudnorm=I=$targetLufs:TP=$truePeakDb:LRA=11" +
-            ":measured_I=$measuredI:measured_LRA=$measuredLRA" +
-            ":measured_TP=$measuredTP:measured_thresh=$measuredThresh " +
-            "-c:v copy \"${outputFile.absolutePath}\""
-        execute(cmd, onProgress) == 0
+        Log.d(TAG, "normalizeLoudness: stub -- requires FFmpeg Android dependency")
+        false
     }
 
     /**
-     * Check if FFmpegX-Android is available at runtime.
+     * Check if an FFmpeg Android library is available at runtime.
      */
     fun isAvailable(): Boolean {
-        return try {
-            Class.forName("io.github.nicholasryan.ffmpegx.FFmpegX")
-            true
-        } catch (_: ClassNotFoundException) {
-            false
-        }
+        Log.d(TAG, "isAvailable: stub -- no FFmpeg Android dependency present")
+        return false
     }
 
     /**
@@ -168,15 +93,8 @@ class FFmpegEngine @Inject constructor(
         outputFile: File,
         onProgress: (Float) -> Unit = {}
     ): Boolean = withContext(Dispatchers.IO) {
-        if (inputFiles.size < 2) return@withContext false
-        val listFile = File(context.cacheDir, "concat_list_${System.currentTimeMillis()}.txt")
-        try {
-            listFile.writeText(inputFiles.joinToString("\n") { "file '${it.absolutePath}'" })
-            val cmd = "-f concat -safe 0 -i \"${listFile.absolutePath}\" -c copy \"${outputFile.absolutePath}\""
-            execute(cmd, onProgress) == 0
-        } finally {
-            listFile.delete()
-        }
+        Log.d(TAG, "concat: stub -- requires FFmpeg Android dependency")
+        false
     }
 
     /**
@@ -188,15 +106,12 @@ class FFmpegEngine @Inject constructor(
         speedFactor: Float,
         onProgress: (Float) -> Unit = {}
     ): Boolean = withContext(Dispatchers.IO) {
-        val atempoChain = buildAtempoChain(speedFactor)
-        val cmd = "-i \"${inputFile.absolutePath}\" " +
-            "-filter_complex \"[0:v]setpts=${1f / speedFactor}*PTS[v];[0:a]${atempoChain}[a]\" " +
-            "-map \"[v]\" -map \"[a]\" \"${outputFile.absolutePath}\""
-        execute(cmd, onProgress) == 0
+        Log.d(TAG, "changeSpeed: stub -- requires FFmpeg Android dependency")
+        false
     }
 
     /**
-     * Build atempo filter chain — FFmpeg atempo only supports 0.5-100.0 per instance,
+     * Build atempo filter chain -- FFmpeg atempo only supports 0.5-100.0 per instance,
      * so chain multiple for extreme values.
      */
     private fun buildAtempoChain(speed: Float): String {

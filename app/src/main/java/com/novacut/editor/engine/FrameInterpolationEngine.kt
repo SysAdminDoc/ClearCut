@@ -7,55 +7,16 @@ import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * Frame interpolation engine powered by RIFE (Real-Time Intermediate Flow Estimation) v4.6.
- *
- * ## Open Source Project
- * - **RIFE v4.6**: https://github.com/hzwer/ECCV2022-RIFE
- * - License: MIT
- * - Paper: "Real-Time Intermediate Flow Estimation for Video Frame Interpolation" (ECCV 2022)
- *
- * ## Model Details
- * - Architecture: IFNet (Intermediate Flow Network) with privileged distillation
- * - Model size: ~7-10MB (ONNX format)
- * - Performance: 720p @ ~100ms/frame on mid-range Android devices via NCNN+Vulkan
- * - Supports arbitrary timestep interpolation (not just midpoint)
- * - v4.6 improvements: better handling of large motion, fewer artifacts on edges
- *
- * ## Android Integration Path
- * Uses NCNN (Tencent's neural network inference framework) with Vulkan GPU backend:
- * 1. Add NCNN Android SDK via CMake (ncnn-android-vulkan prebuilt)
- * 2. Load RIFE NCNN .param/.bin model files from assets or downloaded cache
- * 3. JNI bridge: Bitmap -> ncnn::Mat -> IFNet inference -> ncnn::Mat -> Bitmap
- * 4. Vulkan backend provides ~2-3x speedup over CPU on supported devices
- *
- * ## Fallback Strategy
- * When RIFE model is unavailable, falls back to frame duplication (no ML):
- * - Simply duplicates each frame N times for the target multiplier
- * - Results in stuttery but functional slow-motion
- * - Zero additional dependencies required
- *
- * ## Dependencies (to be added to build.gradle.kts)
- * ```
- * // implementation("com.tencent.ncnn:ncnn-android-vulkan:1.0.+")
- * // or build NCNN from source with RIFE custom layer support
- * ```
- */
+/** Stub engine — requires RIFE NCNN dependency. See ROADMAP.md Tier 2. */
 @Singleton
 class FrameInterpolationEngine @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     companion object {
         private const val TAG = "FrameInterpEngine"
-        private const val MODEL_FILENAME = "rife-v4.6-ncnn.zip"
-        private const val MODEL_SIZE_BYTES = 10_000_000L // ~10MB
-        private const val MODEL_URL = "https://huggingface.co/novacut/rife-v4.6-ncnn/resolve/main/rife-v4.6-ncnn.zip"
     }
 
     /**
@@ -103,9 +64,8 @@ class FrameInterpolationEngine @Inject constructor(
 
     /** Whether the RIFE NCNN model is downloaded and ready for inference. */
     fun isModelReady(): Boolean {
-        val modelDir = File(context.filesDir, "models/rife")
-        val modelFile = File(modelDir, "rife-v4.6.bin")
-        return modelFile.exists() && modelFile.length() > 0
+        Log.d(TAG, "isModelReady: stub — requires RIFE NCNN model")
+        return false
     }
 
     /**
@@ -116,54 +76,13 @@ class FrameInterpolationEngine @Inject constructor(
     suspend fun downloadModel(
         onProgress: (Float) -> Unit = {}
     ): Boolean = withContext(Dispatchers.IO) {
-        val modelDir = File(context.filesDir, "models/rife").also { it.mkdirs() }
-        try {
-            Log.d(TAG, "Downloading RIFE v4.6 model from $MODEL_URL")
-            val url = URL(MODEL_URL)
-            val connection = url.openConnection() as HttpURLConnection
-            connection.connectTimeout = 30_000
-            connection.readTimeout = 60_000
-            val totalBytes = connection.contentLengthLong
-            val tempFile = File(modelDir, "model.tmp")
-            connection.inputStream.use { input ->
-                tempFile.outputStream().use { output ->
-                    val buffer = ByteArray(8192)
-                    var downloaded = 0L
-                    var bytesRead: Int
-                    while (input.read(buffer).also { bytesRead = it } != -1) {
-                        output.write(buffer, 0, bytesRead)
-                        downloaded += bytesRead
-                        if (totalBytes > 0) onProgress(downloaded.toFloat() / totalBytes)
-                    }
-                }
-            }
-            tempFile.renameTo(File(modelDir, "rife-v4.6.bin"))
-            Log.d(TAG, "RIFE v4.6 model downloaded successfully")
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to download RIFE model", e)
-            false
-        }
-    }
-
-    /** Delete the downloaded model to free storage (~10MB). */
-    fun deleteModel() {
-        val modelDir = File(context.filesDir, "models/rife")
-        modelDir.deleteRecursively()
-    }
-
-    /** Get the size of the downloaded model in bytes, or 0 if not downloaded. */
-    fun getModelSizeBytes(): Long {
-        val modelDir = File(context.filesDir, "models/rife")
-        return modelDir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+        Log.d(TAG, "downloadModel: stub — requires RIFE NCNN model")
+        false
     }
 
     /**
      * Generate intermediate frames between each pair of frames in the input video
      * to produce a slow-motion output.
-     *
-     * For a 2x multiplier, one intermediate frame is synthesized between each pair,
-     * effectively doubling the frame count and halving the playback speed.
      *
      * @param inputUri Source video URI
      * @param outputUri Destination URI for the interpolated video
@@ -177,95 +96,8 @@ class FrameInterpolationEngine @Inject constructor(
         config: SlowMotionConfig = SlowMotionConfig(),
         onProgress: (Float) -> Unit = {}
     ): InterpolationResult? = withContext(Dispatchers.IO) {
-        val startTime = System.currentTimeMillis()
-        Log.d(TAG, "Starting frame interpolation: ${config.multiplier}x, quality=${config.quality}")
-
-        try {
-            if (isModelReady()) {
-                // TODO: ML-based interpolation using RIFE v4.6 via NCNN
-                //
-                // val ncnn = NcnnRife(context)
-                // ncnn.loadModel(File(context.filesDir, "models/rife"))
-                //
-                // val decoder = MediaCodecDecoder(context, inputUri)
-                // val encoder = MediaCodecEncoder(outputUri, decoder.width, decoder.height, decoder.frameRate * config.multiplier)
-                //
-                // var frameIndex = 0
-                // var prevFrame: Bitmap? = null
-                // val totalFrames = decoder.frameCount
-                //
-                // while (decoder.hasNextFrame()) {
-                //     val currentFrame = decoder.nextFrame()
-                //     if (prevFrame != null) {
-                //         // Generate intermediate frames
-                //         for (t in 1 until config.multiplier) {
-                //             val timestep = t.toFloat() / config.multiplier
-                //             val interpolated = ncnn.interpolate(prevFrame, currentFrame, timestep)
-                //             encoder.encodeFrame(interpolated)
-                //             interpolated.recycle()
-                //         }
-                //     }
-                //     encoder.encodeFrame(currentFrame)
-                //     prevFrame = currentFrame
-                //     frameIndex++
-                //     onProgress(frameIndex.toFloat() / totalFrames)
-                // }
-                //
-                // encoder.finish()
-                // decoder.release()
-                //
-                // return@withContext InterpolationResult(
-                //     outputUri = outputUri,
-                //     originalFrameCount = totalFrames,
-                //     interpolatedFrameCount = totalFrames * config.multiplier,
-                //     processingTimeMs = System.currentTimeMillis() - startTime,
-                //     usedMlModel = true
-                // )
-
-                Log.d(TAG, "RIFE model loaded but inference not yet implemented")
-                onProgress(1f)
-                null
-            } else {
-                // Fallback: frame duplication (no ML)
-                Log.d(TAG, "RIFE model not available, using frame duplication fallback")
-
-                // TODO: Implement frame duplication fallback
-                //
-                // val decoder = MediaCodecDecoder(context, inputUri)
-                // val encoder = MediaCodecEncoder(outputUri, decoder.width, decoder.height, decoder.frameRate * config.multiplier)
-                //
-                // var frameIndex = 0
-                // val totalFrames = decoder.frameCount
-                //
-                // while (decoder.hasNextFrame()) {
-                //     val frame = decoder.nextFrame()
-                //     // Duplicate each frame N times
-                //     repeat(config.multiplier) {
-                //         encoder.encodeFrame(frame)
-                //     }
-                //     frame.recycle()
-                //     frameIndex++
-                //     onProgress(frameIndex.toFloat() / totalFrames)
-                // }
-                //
-                // encoder.finish()
-                // decoder.release()
-                //
-                // return@withContext InterpolationResult(
-                //     outputUri = outputUri,
-                //     originalFrameCount = totalFrames,
-                //     interpolatedFrameCount = totalFrames * config.multiplier,
-                //     processingTimeMs = System.currentTimeMillis() - startTime,
-                //     usedMlModel = false
-                // )
-
-                onProgress(1f)
-                null
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Frame interpolation failed", e)
-            null
-        }
+        Log.d(TAG, "interpolateFrames: stub — requires RIFE NCNN model")
+        null
     }
 
     /**
@@ -282,34 +114,7 @@ class FrameInterpolationEngine @Inject constructor(
         frame2: Bitmap,
         timestep: Float = 0.5f
     ): Bitmap? = withContext(Dispatchers.IO) {
-        if (!isModelReady()) return@withContext null
-
-        val modelDir = File(context.filesDir, "models/rife")
-        val t = timestep.coerceIn(0f, 1f)
-
-        // Try NCNN RIFE inference
-        try {
-            val netCls = Class.forName("com.tencent.ncnn.Net")
-            val net = netCls.getDeclaredConstructor().newInstance()
-            netCls.getMethod("loadModel", String::class.java).invoke(net, File(modelDir, "rife-v4.6.bin").absolutePath)
-            // NCNN Mat conversion and inference would happen here
-            // val mat1 = ncnn::Mat.fromBitmap(frame1)
-            // val mat2 = ncnn::Mat.fromBitmap(frame2)
-            // val result = net.forward(mat1, mat2, t)
-            // return@withContext result.toBitmap()
-            Log.d(TAG, "NCNN RIFE inference attempted for timestep=$t")
-        } catch (e: Exception) {
-            Log.w(TAG, "NCNN inference failed, using frame blend fallback", e)
-        }
-
-        // Fallback: weighted blend
-        val result = Bitmap.createBitmap(frame1.width, frame1.height, Bitmap.Config.ARGB_8888)
-        val canvas = android.graphics.Canvas(result)
-        val paint = android.graphics.Paint()
-        paint.alpha = ((1f - t) * 255).toInt()
-        canvas.drawBitmap(frame1, 0f, 0f, paint)
-        paint.alpha = (t * 255).toInt()
-        canvas.drawBitmap(frame2, 0f, 0f, paint)
-        return@withContext result
+        Log.d(TAG, "interpolatePair: stub — requires RIFE NCNN model")
+        null
     }
 }
