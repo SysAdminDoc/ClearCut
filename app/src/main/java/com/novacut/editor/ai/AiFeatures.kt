@@ -260,7 +260,7 @@ class AiFeatures @Inject constructor(
             "\\b[Uu]m\\b",
             "\\b[Uu]mm\\b",
             "\\b[Uu]hh\\b",
-            "\\b[Ll]ike\\b",
+            "(?<=,\\s*|^\\.?\\s*)[Ll]ike,?(?=\\s)",
             "\\b[Yy]ou know\\b",
             "\\b[Ss]o\\b(?=\\s*,)",
             "\\b[Aa]ctually\\b(?=\\s*,)",
