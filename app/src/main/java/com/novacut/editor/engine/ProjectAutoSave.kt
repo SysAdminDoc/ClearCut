@@ -151,7 +151,8 @@ data class AutoSaveState(
     val playheadMs: Long = 0L,
     val chapterMarkers: List<ChapterMarker> = emptyList(),
     val imageOverlays: List<ImageOverlay> = emptyList(),
-    val timelineMarkers: List<TimelineMarker> = emptyList()
+    val timelineMarkers: List<TimelineMarker> = emptyList(),
+    val drawingPaths: List<com.novacut.editor.model.DrawingPath> = emptyList()
 ) {
     fun serialize(): String {
         val json = JSONObject().apply {
@@ -197,6 +198,24 @@ data class AutoSaveState(
                             put("timeMs", m.timeMs)
                             put("label", m.label)
                             put("color", m.color.name)
+                        })
+                    }
+                })
+            }
+            if (drawingPaths.isNotEmpty()) {
+                put("drawingPaths", JSONArray().apply {
+                    drawingPaths.forEach { dp ->
+                        put(JSONObject().apply {
+                            put("color", dp.color)
+                            put("strokeWidth", dp.strokeWidth.toDouble())
+                            put("points", JSONArray().apply {
+                                dp.points.forEach { (x, y) ->
+                                    put(JSONObject().apply {
+                                        put("x", x.toDouble())
+                                        put("y", y.toDouble())
+                                    })
+                                }
+                            })
                         })
                     }
                 })
@@ -267,6 +286,22 @@ data class AutoSaveState(
                     )
                 } catch (e: Exception) { Log.w(TAG, "Failed to deserialize timeline marker $i", e); null }
             }
+            val drawingPathsArr = json.optJSONArray("drawingPaths") ?: JSONArray()
+            val drawingPaths = (0 until drawingPathsArr.length()).mapNotNull { i ->
+                try {
+                    val dp = drawingPathsArr.getJSONObject(i)
+                    val pointsArr = dp.optJSONArray("points") ?: return@mapNotNull null
+                    val points = (0 until pointsArr.length()).map { j ->
+                        val pt = pointsArr.getJSONObject(j)
+                        pt.optDouble("x", 0.0).toFloat() to pt.optDouble("y", 0.0).toFloat()
+                    }
+                    com.novacut.editor.model.DrawingPath(
+                        points = points,
+                        color = dp.optLong("color", 0xFFCBA6F7L),
+                        strokeWidth = dp.optDouble("strokeWidth", 4.0).toFloat()
+                    )
+                } catch (e: Exception) { Log.w(TAG, "Failed to deserialize drawing path $i", e); null }
+            }
             return AutoSaveState(
                 projectId = json.optString("projectId", ""),
                 timestamp = json.optLong("timestamp", System.currentTimeMillis()),
@@ -275,7 +310,8 @@ data class AutoSaveState(
                 textOverlays = deserializeTextOverlays(json.optJSONArray("textOverlays") ?: JSONArray()),
                 chapterMarkers = chapters,
                 imageOverlays = imageOverlays,
-                timelineMarkers = timelineMarkers
+                timelineMarkers = timelineMarkers,
+                drawingPaths = drawingPaths
             )
         }
 

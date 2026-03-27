@@ -206,14 +206,14 @@ fun EditorScreen(
                             showRadialMenu = false
                             when (actionId) {
                                 "add_media" -> viewModel.showMediaPicker()
-                                "add_text" -> viewModel.showPanel(PanelId.TEXT_EDITOR)
+                                "add_text" -> viewModel.showTextEditor()
                                 "add_audio" -> viewModel.showMediaPicker()
-                                "record" -> viewModel.showPanel(PanelId.VOICEOVER_RECORDER)
+                                "record" -> viewModel.showVoiceoverPanel()
                                 "snapshot" -> viewModel.createSnapshot()
                                 "split" -> viewModel.splitClipAtPlayhead()
                                 "duplicate" -> viewModel.duplicateSelectedClip()
                                 "effects" -> viewModel.showEffectsPanel()
-                                "speed" -> viewModel.setTool(EditorTool.SPEED)
+                                "speed" -> viewModel.showSpeedCurveEditor()
                                 "transform" -> viewModel.showTransformPanel()
                                 "delete" -> viewModel.deleteSelectedClip()
                             }

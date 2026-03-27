@@ -353,6 +353,7 @@ class EditorViewModel @Inject constructor(
                         textOverlays = recovery.textOverlays,
                         imageOverlays = recovery.imageOverlays,
                         timelineMarkers = recovery.timelineMarkers,
+                        drawingPaths = recovery.drawingPaths,
                         playheadMs = recovery.playheadMs,
                         chapterMarkers = recovery.chapterMarkers,
                         totalDurationMs = recovery.tracks.maxOfOrNull { t ->
@@ -497,7 +498,8 @@ class EditorViewModel @Inject constructor(
                                 imageOverlays = s.imageOverlays,
                                 timelineMarkers = s.timelineMarkers,
                                 playheadMs = s.playheadMs,
-                                chapterMarkers = s.chapterMarkers
+                                chapterMarkers = s.chapterMarkers,
+                                drawingPaths = s.drawingPaths
                             )
                             viewModelScope.launch {
                                 delay(500)
@@ -703,7 +705,8 @@ class EditorViewModel @Inject constructor(
         noiseAnalysisResult = null,
         selectedEffectId = null,
         editingTextOverlayId = null,
-        selectedMaskId = null
+        selectedMaskId = null,
+        isDrawingMode = false
     )
 
     fun dismissAllPanels() { _state.update { dismissedPanelState(it) } }
@@ -984,7 +987,7 @@ class EditorViewModel @Inject constructor(
     // --- Project Snapshots ---
     fun createSnapshot(label: String = "") {
         val s = _state.value
-        val autoSaveState = AutoSaveState(projectId = s.project.id, tracks = s.tracks, textOverlays = s.textOverlays, imageOverlays = s.imageOverlays, timelineMarkers = s.timelineMarkers, playheadMs = s.playheadMs, chapterMarkers = s.chapterMarkers)
+        val autoSaveState = AutoSaveState(projectId = s.project.id, tracks = s.tracks, textOverlays = s.textOverlays, imageOverlays = s.imageOverlays, timelineMarkers = s.timelineMarkers, playheadMs = s.playheadMs, chapterMarkers = s.chapterMarkers, drawingPaths = s.drawingPaths)
         val json = autoSaveState.serialize()
         val snapshot = ProjectSnapshot(
             projectId = s.project.id,
@@ -1006,6 +1009,7 @@ class EditorViewModel @Inject constructor(
                 textOverlays = recovery.textOverlays,
                 imageOverlays = recovery.imageOverlays,
                 timelineMarkers = recovery.timelineMarkers,
+                drawingPaths = recovery.drawingPaths,
                 playheadMs = recovery.playheadMs,
                 chapterMarkers = recovery.chapterMarkers
             )

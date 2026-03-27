@@ -60,7 +60,8 @@ class ExportDelegate(
         ) }
 
         scope.launch {
-            val outputFile = File(outputDir, "NovaCut_${System.currentTimeMillis()}.mp4")
+            val ext = if (currentState.exportConfig.transparentBackground) "webm" else "mp4"
+            val outputFile = File(outputDir, "NovaCut_${System.currentTimeMillis()}.$ext")
             withContext(Dispatchers.IO) { outputDir.mkdirs() }
 
             val serviceIntent = Intent(appContext, ExportService::class.java)
