@@ -582,9 +582,75 @@ v3.4.0
 - `ToolPanel.kt` — `Icons.Default.VolumeUp` → `Icons.AutoMirrored.Filled.VolumeUp`
 - Only 3 remaining: Media3 `EditedMediaItemSequence.Builder` deprecation (framework-level, no fix available)
 
+## v3.0.0 — Full Engine Expansion
+
+### New Engines (29 injectable singletons total)
+- **SherpaAsrEngine** — Sherpa-ONNX ASR with model variants, word timestamps, language support (51x faster than whisper.cpp)
+- **NoiseReductionEngine** — AndroidDeepFilterNet with 5 modes (off/light/moderate/aggressive/spectral gate), noise profiling
+- **PiperTtsEngine** — Piper VITS voices via Sherpa-ONNX, 10 voice profiles across 8 languages, voice download management
+- **LottieTemplateEngine** — 10 built-in animated title templates, frame-by-frame rendering via TextDelegate, 4 categories
+- **BeatDetectionEngine** — Pure-Kotlin spectral flux onset detection + adaptive thresholding + BPM histogram
+- **LoudnessEngine** — EBU R128 measurement (K-weighting, gated blocks, LRA) + 6 platform presets + true-peak limiting
+- **ChromaKeyEngine** — Professional YCbCr distance keying + smoothstep feathering + green/blue spill suppression
+- **FrameInterpolationEngine** — RIFE v4.6 via NCNN+Vulkan (2x/4x/8x configs, model download, frame duplication fallback)
+- **InpaintingEngine** — LaMa-Dilated per-frame + batch processing (ONNX/Qualcomm AI Hub)
+- **UpscaleEngine** — Real-ESRGAN x4plus + general-x4v3 variants, tile-based processing
+- **VideoMattingEngine** — RobustVideoMatting with temporal coherence (hidden states), 4 background modes
+- **StabilizationEngine** — OpenCV L-K/ORB algorithms, Kalman smoothing, configurable crop
+- **StyleTransferEngine** — 9 presets (AnimeGANv2 + Fast NST + OpenCV pencil sketch)
+- **SmartReframeEngine** — EMA-smoothed crop trajectory, face/pose detection, 3 strategies (stationary/pan/track)
+- **FFmpegEngine** — FFmpegX fallback encoder with execute(), subtitle burning, loudness normalization, audio extraction
+- **SubtitleRenderEngine** — Canvas rendering + ASS/SSA file generation for burned-in subtitles
+- **TapSegmentEngine** — MobileSAM with point/box prompts, mask propagation via optical flow
+- **CloudInpaintingEngine** — ProPainter cloud with job submission/tracking/download API
+- **TimelineExchangeEngine** — OTIO JSON export/import + FCPXML export for desktop NLE round-tripping
+- **RiveTemplateEngine** — 5 interactive templates with state machine inputs
+- **SoundpipeDspEngine** — Schroeder reverb, Moog ladder filter, 4 distortion types (Kotlin fallback)
+- **EditCommand** — Command-based undo/redo foundation (AddClip/RemoveClip/Trim/Move/Speed/Effect/Compound)
+- **ProxyWorkflowEngine** — 3-tier media (thumbnail/proxy/original), auto-switch, storage management
+
+### Other v3.0.0 Changes
+- 12 new GLSL transitions (Door Open, Burn, Radial Wipe, Mosaic Reveal, Bounce, Lens Flare, Page Curl, Cross Warp, Angular, Kaleidoscope, Squares Wire, Color Phase)
+- Social media export presets (YouTube/TikTok/Instagram/Threads factory methods)
+- Magnetic timeline snapping (8dp threshold, diamond indicators)
+- Film grain, VHS/Retro, Glitch, Light leak, Gaussian blur shaders
+- Slip/slide editing, clip grouping
+- ExportService fixes (tap-to-open, error propagation, proper lifecycle)
+
+## v3.1.0 — Code Quality & Engine Improvements
+- **StateFlowExt** — Deduplicated MutableStateFlow.update() CAS-loop from 7 delegates
+- **CloudInpaintingEngine** — Config persistence, input validation, dynamic isAvailable()
+- **FFmpegEngine** — Reflective runtime invocation, concat demuxer, atempo chain (0.25x-16x)
+- **NoiseReductionEngine** — Runtime DeepFilterNet detection, OFF mode short-circuit, cascading fallback
+- **PiperTtsEngine** — Android system TTS fallback, voice deletion, runtime detection
+- Waveform LRU cache (64 entries), haptic feedback, transition icons, clip reorder/move
+
+## v3.2.0 — Performance & UX Hardening
+- **Timeline pointerInput optimization** — `pointerInput(Unit)` + `rememberUpdatedState` replacing 6 recreating gesture detectors
+- **VideoEngine deduplication** — Extracted `addColorGradingEffects()`, `buildTransitionEffect()`, `addOpacityAndTransformEffects()` (~200 lines removed)
+- Export state fix (COMPLETE/ERROR), selection state leak fix, ExportService lifecycle fix
+- Delete confirmation dialog, buffering indicator, AudioPanel null guard
+- AI operation try/catch wrapping, clip/merge validation guards
+
+## v3.3.0 — Localization, Performance & Reliability
+- **Batch pixel access** — `getPixels()` batch reads in AiFeatures (~10x faster on large bitmaps)
+- **Bitmap leak fix** — try-finally bitmap recycling in calculateFrameDifference()
+- **Exception logging** — Log.w added to WhisperEngine, SegmentationEngine, ProjectAutoSave silent catches
+- **String extraction** — 90+ hardcoded UI strings extracted to strings.xml across 15+ panels
+
+## v3.4.0 — Dependency Activation & Engine Wiring
+- **PiperTtsEngine → Sherpa-ONNX** — Direct `OfflineTts` API replacing reflection stubs, WAV file generation with RIFF header
+- **NoiseReductionEngine → DeepFilterNet** — Direct `DeepFilterNet(context, attenuationDb)` API, `processFile()` with spectral gate fallback
+- **FFmpegEngine → FFmpegX** — Direct `FFmpegX.execute()`, two-pass EBU R128 loudness normalization with JSON parsing
+- **FrameInterpolationEngine → NCNN RIFE** — HTTP model download with progress, RIFE v4.6 inference, weighted bitmap blend fallback
+- **InpaintingEngine → ONNX Runtime** — LaMa model download, NNAPI acceleration, NCHW tensor conversion, neighbor-fill fallback
+- **CloudInpaintingEngine → OkHttp** — Multipart upload with Bearer auth, job submission/tracking/download endpoints
+- All tier 2-4 dependencies activated in version catalog (no more reflection stubs)
+- ProGuard keep rules for Sherpa-ONNX, DeepFilterNet, NCNN, FFmpegX, OkHttp JNI/native bridges
+
 ## Next Steps
-- FFmpeg integration for broader codec support
-- Frame interpolation AI tool (requires optical flow model)
-- Object removal AI tool (requires inpainting model)
 - True dual-texture blend mode compositing via Media3 Compositor API
 - Community template gallery / sharing
+- ProjectArchive.importArchive() full implementation
+- Speed curve timeline duration calculation fix
+- SmartRenderEngine bypass implementation

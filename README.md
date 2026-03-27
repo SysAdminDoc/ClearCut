@@ -2,30 +2,40 @@
 
 A professional Android video editor built with Kotlin and Jetpack Compose. Open alternative to CapCut, PowerDirector, and DaVinci Resolve — with on-device AI, GPU-accelerated effects, and desktop NLE interoperability.
 
-## What's New in v3.4.0
-- **Dependencies activated** — All tier 2-4 dependencies (Sherpa-ONNX, DeepFilterNet, NCNN, FFmpegX, OkHttp) moved from stubs to real implementations
-- **PiperTtsEngine** — Direct Sherpa-ONNX OfflineTts API with WAV file generation
-- **NoiseReductionEngine** — Direct DeepFilterNet API with attenuation levels and spectral gate fallback
-- **FFmpegEngine** — Direct FFmpegX.execute() with two-pass EBU R128 loudness normalization
-- **FrameInterpolationEngine** — NCNN RIFE v4.6 inference with model download and bitmap blend fallback
-- **InpaintingEngine** — ONNX Runtime LaMa with NNAPI acceleration and neighbor-fill fallback
-- **CloudInpaintingEngine** — OkHttp multipart upload with job submission/tracking/download
-- **ProGuard rules** — Keep rules for all new JNI/native dependencies
+## Changelog
 
-## What's New in v3.3.0
-- **Localization ready** — 90+ hardcoded UI strings extracted to strings.xml across 15+ panels
-- **Bitmap performance** — getPixel() loops replaced with batch getPixels() in AI analysis (~10x faster)
-- **Bitmap leak fix** — calculateFrameDifference() now properly recycles bitmaps via try-finally
-- **Exception logging** — silent catches in Whisper, Segmentation, ProjectAutoSave now log warnings
+### v3.4.0 — Dependency Activation & Engine Wiring
+- All tier 2-4 dependencies activated (Sherpa-ONNX, DeepFilterNet, NCNN, FFmpegX, OkHttp) — reflection stubs replaced with direct API calls
+- **PiperTtsEngine** → Sherpa-ONNX OfflineTts with WAV generation
+- **NoiseReductionEngine** → DeepFilterNet with attenuation levels + spectral gate fallback
+- **FFmpegEngine** → FFmpegX.execute() with two-pass EBU R128 loudness normalization
+- **FrameInterpolationEngine** → NCNN RIFE v4.6 inference with model download + bitmap blend fallback
+- **InpaintingEngine** → ONNX Runtime LaMa with NNAPI acceleration + neighbor-fill fallback
+- **CloudInpaintingEngine** → OkHttp multipart upload with job submission/tracking/download
+- ProGuard keep rules for all JNI/native bridges
 
-## What's New in v3.2.0
-- **Timeline performance** — gesture detectors no longer recreated on every scroll/zoom (rememberUpdatedState pattern)
-- **Export state fix** — export progress now correctly transitions to COMPLETE/ERROR (was stuck at EXPORTING)
-- **Delete confirmation** — clip deletion shows a confirmation dialog
-- **Buffering indicator** — preview shows a loading spinner when player is buffering
-- **VideoEngine dedup** — extracted 3 shared methods eliminating ~200 lines of duplicated export/preview code
-- **AI error handling** — all AI operations wrapped in try/catch with user-facing toast errors
-- **Selection state fix** — multi-select no longer leaks across selection changes
+### v3.3.0 — Localization, Performance & Reliability
+- 90+ hardcoded UI strings extracted to `strings.xml` across 15+ panels (i18n ready)
+- Batch `getPixels()` replacing per-pixel `getPixel()` in AI analysis (~10x faster)
+- Bitmap leak fix in `calculateFrameDifference()` via try-finally
+- Exception logging in Whisper, Segmentation, ProjectAutoSave silent catches
+
+### v3.2.0 — Performance & UX Hardening
+- Timeline `pointerInput(Unit)` + `rememberUpdatedState` pattern (gesture detectors no longer recreated on scroll/zoom)
+- Export state fix (COMPLETE/ERROR transitions), selection state leak fix
+- Delete confirmation dialog, buffering indicator, AudioPanel null guard
+- VideoEngine deduplication (~200 lines removed), AI error handling (try/catch + toast)
+
+### v3.1.0 — Code Quality & Engine Improvements
+- StateFlowExt shared CAS-loop, shadowed lambda fixes, ExportService lifecycle
+- CloudInpaintingEngine config persistence, FFmpegEngine concat/atempo, NoiseReductionEngine cascading fallback
+- PiperTtsEngine system TTS fallback, waveform LRU cache, haptic feedback, transition icons
+
+### v3.0.0 — Full Engine Expansion
+- 23 new engines (29 total injectable singletons): frame interpolation, inpainting, upscaling, video matting, stabilization, style transfer, smart reframe, TTS, beat detection, loudness, chroma key, and more
+- 12 new GLSL transitions, social media export presets, magnetic snapping, clip grouping, slip/slide editing
+- Film grain, VHS/Retro, Glitch, Light leak, Gaussian blur shaders
+- Command-based undo/redo foundation, proxy workflow, OTIO timeline exchange
 
 ## Features
 
@@ -80,7 +90,7 @@ A professional Android video editor built with Kotlin and Jetpack Compose. Open 
 - True-peak limiting to prevent clipping
 - Voiceover recording with automatic timeline placement
 - **Fade overlap protection** — fade in + fade out constrained to clip duration
-- **ML noise reduction** — AndroidDeepFilterNet integration (5 modes: off/light/moderate/aggressive/spectral gate) with noise profile analysis
+- **ML noise reduction** — DeepFilterNet direct API (5 modes: off/light/moderate/aggressive/spectral gate) with spectral gate fallback
 
 ### AI Tools
 | Tool | Engine | On-Device? |
@@ -163,7 +173,7 @@ A professional Android video editor built with Kotlin and Jetpack Compose. Open 
 | Effects | OpenGL ES 3.0 (37 GLSL transitions, 40+ effect shaders) |
 | Audio DSP | Custom engine (EQ, compressor, chorus, delay, pitch shift) |
 | Speech-to-Text | Sherpa-ONNX / ONNX Runtime 1.17.0 (Whisper, Moonshine) |
-| Noise Reduction | AndroidDeepFilterNet / spectral gating fallback |
+| Noise Reduction | DeepFilterNet (direct API) / spectral gating fallback |
 | Beat Detection | Spectral flux onset detection (aubio NDK ready) |
 | Loudness | EBU R128 / ITU-R BS.1770 measurement |
 | Segmentation | MediaPipe Tasks Vision 0.10.14 |
@@ -173,7 +183,7 @@ A professional Android video editor built with Kotlin and Jetpack Compose. Open 
 | Frame Interpolation | RIFE v4.6 (NCNN + Vulkan) |
 | Style Transfer | AnimeGANv2 + Fast NST (ONNX) |
 | Stabilization | OpenCV (L-K + Kalman) |
-| TTS | Piper (VITS) via Sherpa-ONNX / Android System TTS |
+| TTS | Piper (VITS) via Sherpa-ONNX OfflineTts / Android System TTS |
 | Animated Titles | Lottie (Airbnb) |
 | Timeline Exchange | OpenTimelineIO (OTIO JSON, FCPXML) |
 | DI | Hilt / Dagger |
@@ -196,19 +206,20 @@ com.novacut.editor/
 │   ├── ExportService        # Foreground service for background export
 │   ├── BeatDetectionEngine  # Spectral flux onset + BPM estimation
 │   ├── LoudnessEngine       # EBU R128 measurement + normalization
-│   ├── NoiseReductionEngine # DeepFilterNet + spectral gate
-│   ├── FrameInterpolationEngine  # RIFE slow-motion
-│   ├── InpaintingEngine     # LaMa object removal
+│   ├── NoiseReductionEngine # DeepFilterNet (direct API) + spectral gate
+│   ├── FrameInterpolationEngine  # RIFE v4.6 slow-motion (NCNN + Vulkan)
+│   ├── InpaintingEngine     # LaMa object removal (ONNX Runtime + NNAPI)
 │   ├── UpscaleEngine        # Real-ESRGAN video upscaling
 │   ├── VideoMattingEngine   # RVM AI green screen
 │   ├── StabilizationEngine  # OpenCV optical flow
 │   ├── StyleTransferEngine  # AnimeGAN + Fast NST
 │   ├── SmartReframeEngine   # Subject-tracking auto-crop
 │   ├── TapSegmentEngine     # MobileSAM tap-to-segment
-│   ├── PiperTtsEngine       # Piper VITS text-to-speech
+│   ├── PiperTtsEngine       # Piper VITS TTS (Sherpa-ONNX OfflineTts)
 │   ├── LottieTemplateEngine # Animated title rendering
-│   ├── FFmpegEngine         # FFmpegX fallback encoder
+│   ├── FFmpegEngine         # FFmpegX fallback encoder + EBU R128 loudness
 │   ├── SubtitleRenderEngine # Canvas + ASS subtitle rendering
+│   ├── CloudInpaintingEngine   # ProPainter cloud API (OkHttp)
 │   ├── TimelineExchangeEngine  # OTIO/FCPXML interchange
 │   ├── ProxyWorkflowEngine  # 3-tier media management
 │   ├── EditCommand          # Command-pattern undo/redo
@@ -254,31 +265,20 @@ keyPassword=yourpass
 
 Or via environment variables: `NOVACUT_KS_PASS`, `NOVACUT_KEY_ALIAS`, `NOVACUT_KEY_PASS`
 
-### Activating Optional Dependencies
-Tier 2-4 dependencies are commented out in `app/build.gradle.kts`. Uncomment and pin versions as needed:
+### Dependencies
+All dependencies (including tier 2-4 ML/NDK engines) are active in the version catalog (`gradle/libs.versions.toml`). No manual activation needed. Key external dependencies:
 
-```kotlin
-// Speech-to-text (51x faster Whisper)
-implementation("com.k2fsa.sherpa:onnx-android:1.10.37")
-
-// ML noise reduction
-implementation("io.github.kaleyravideo:android-deepfilternet:0.5.6")
-
-// Animated titles
-implementation("com.airbnb.android:lottie-compose:6.6.2")
-
-// Beat detection (NDK)
-implementation("com.github.nicholasryan:aubio-android:0.4.9")
-
-// Stabilization
-implementation("org.opencv:opencv-android:4.9.0")
-
-// Smart reframing
-implementation("com.google.mediapipe:tasks-vision:0.10.14")
-
-// FFmpeg fallback encoder
-implementation("io.github.nicholasryan:ffmpegx-android:6.1.2")
-```
+| Dependency | Version | Purpose |
+|-----------|---------|---------|
+| Sherpa-ONNX | 1.10.30 | Piper TTS + fast Whisper ASR |
+| DeepFilterNet | 0.5.6 | ML noise reduction |
+| NCNN + Vulkan | 1.0.20240410 | RIFE frame interpolation |
+| FFmpegX | 6.1.2 | Fallback encoder + loudness normalization |
+| ONNX Runtime | 1.17.0 | Whisper + LaMa inpainting |
+| MediaPipe | 0.10.14 | Selfie segmentation |
+| Lottie | 6.6.2 | Animated title templates |
+| OkHttp | 4.12.0 | Cloud inpainting API |
+| OpenTimelineIO | 0.15.0 | OTIO/FCPXML timeline exchange |
 
 ## Supported Devices
 
@@ -299,8 +299,16 @@ implementation("io.github.nicholasryan:ffmpegx-android:6.1.2")
 | `CAMERA` | Video capture from camera |
 | `FOREGROUND_SERVICE` | Background export processing |
 | `POST_NOTIFICATIONS` | Export progress notifications |
-| `INTERNET` | Model downloads (Whisper, Piper voices) |
+| `INTERNET` | Model downloads (Whisper, Piper voices, RIFE, LaMa), cloud inpainting API |
 | `VIBRATE` | Haptic feedback |
+
+## Known Limitations
+- Blend modes use mid-gray as virtual blend layer (not true dual-texture compositing — requires Media3 Compositor API)
+- `clip.isReversed` works in preview but not in export (Media3 Transformer has no reverse playback support)
+- Speed curve clips don't correctly affect timeline duration calculation (`Clip.durationMs` uses constant speed only)
+- SmartRenderEngine analysis results not used for actual export bypass
+- Text overlay strokeWidth not exported (SpannableString has no native stroke support)
+- ProjectArchive.importArchive() is export-only (import not fully implemented)
 
 ## License
 
