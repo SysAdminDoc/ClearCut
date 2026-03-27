@@ -68,29 +68,19 @@ fun EditorScreen(
         }
     }
 
-    val hasOpenPanel by remember { derivedStateOf { state.panels.hasOpenPanel || state.selectedEffectId != null || state.editingTextOverlayId != null } }
-    val isClipMode by remember { derivedStateOf { state.selectedClipId != null } }
+    val hasOpenPanel = state.panels.hasOpenPanel || state.selectedEffectId != null || state.editingTextOverlayId != null
+    val isClipMode = state.selectedClipId != null
 
-    // Memoize selected clip lookup — recomputes only when tracks or selectedClipId change
-    val selectedClip by remember {
-        derivedStateOf {
-            state.selectedClipId?.let { id ->
-                state.tracks.flatMap { it.clips }.find { it.id == id }
-            }
-        }
+    val selectedClip = state.selectedClipId?.let { id ->
+        state.tracks.flatMap { it.clips }.find { it.id == id }
     }
 
-    // Memoize all captions with absolute timeline times
-    val allCaptions by remember {
-        derivedStateOf {
-            state.tracks.flatMap { it.clips }.flatMap { clip ->
-                clip.captions.map { caption ->
-                    caption.copy(
-                        startTimeMs = caption.startTimeMs + clip.timelineStartMs,
-                        endTimeMs = caption.endTimeMs + clip.timelineStartMs
-                    )
-                }
-            }
+    val allCaptions = state.tracks.flatMap { it.clips }.flatMap { clip ->
+        clip.captions.map { caption ->
+            caption.copy(
+                startTimeMs = caption.startTimeMs + clip.timelineStartMs,
+                endTimeMs = caption.endTimeMs + clip.timelineStartMs
+            )
         }
     }
 
@@ -124,7 +114,7 @@ fun EditorScreen(
             )
 
             // Empty project onboarding hint
-            val hasClips by remember { derivedStateOf { state.tracks.any { it.clips.isNotEmpty() } } }
+            val hasClips = state.tracks.any { it.clips.isNotEmpty() }
             if (!hasClips && !hasOpenPanel) {
                 Box(
                     modifier = Modifier

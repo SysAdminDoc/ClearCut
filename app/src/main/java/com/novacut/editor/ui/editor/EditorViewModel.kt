@@ -47,8 +47,6 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.novacut.editor.engine.ProxyGenerationWorker
-import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.Stable
 import java.io.File
 import java.util.UUID
 import javax.inject.Inject
@@ -65,7 +63,6 @@ enum class PanelId {
     AUTO_EDIT, TTS, EFFECT_LIBRARY, NOISE_REDUCTION, STICKER_PICKER
 }
 
-@Immutable
 data class PanelVisibility(
     val openPanels: Set<PanelId> = emptySet()
 ) {
@@ -76,7 +73,6 @@ data class PanelVisibility(
     fun closeAll(): PanelVisibility = copy(openPanels = emptySet())
 }
 
-@Stable
 data class EditorState(
     val project: Project = Project(),
     val tracks: List<Track> = listOf(
