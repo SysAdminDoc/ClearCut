@@ -52,6 +52,8 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.novacut.editor.engine.ProxyGenerationWorker
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import java.io.File
 import java.util.UUID
 import javax.inject.Inject
@@ -68,6 +70,7 @@ enum class PanelId {
     AUTO_EDIT, TTS, EFFECT_LIBRARY, NOISE_REDUCTION, STICKER_PICKER
 }
 
+@Immutable
 data class PanelVisibility(
     val openPanels: Set<PanelId> = emptySet()
 ) {
@@ -78,6 +81,7 @@ data class PanelVisibility(
     fun closeAll(): PanelVisibility = copy(openPanels = emptySet())
 }
 
+@Stable
 data class EditorState(
     val project: Project = Project(),
     val tracks: List<Track> = listOf(
@@ -99,7 +103,7 @@ data class EditorState(
     val textOverlays: List<TextOverlay> = emptyList(),
     val imageOverlays: List<ImageOverlay> = emptyList(),
     val timelineMarkers: List<TimelineMarker> = emptyList(),
-    val waveforms: Map<String, FloatArray> = emptyMap(),
+    val waveforms: Map<String, List<Float>> = emptyMap(),
     val selectedEffectId: String? = null,
     val undoStack: List<UndoAction> = emptyList(),
     val redoStack: List<UndoAction> = emptyList(),
@@ -355,7 +359,7 @@ class EditorViewModel @Inject constructor(
                 for (track in recovery.tracks) {
                     for (clip in track.clips) {
                         viewModelScope.launch {
-                            val waveform = audioEngine.extractWaveform(clip.sourceUri)
+                            val waveform = audioEngine.extractWaveform(clip.sourceUri).toList()
                             _state.update { it.copy(waveforms = it.waveforms + (clip.id to waveform)) }
                         }
                     }

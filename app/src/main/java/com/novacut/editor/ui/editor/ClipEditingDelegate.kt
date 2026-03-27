@@ -93,7 +93,7 @@ class ClipEditingDelegate(
 
             // Extract waveform for audio visualization using the known clip ID
             scope.launch {
-                val waveform = audioEngine.extractWaveform(uri)
+                val waveform = audioEngine.extractWaveform(uri).toList()
                 stateFlow.update { it.copy(waveforms = it.waveforms + (clipId to waveform)) }
             }
         }

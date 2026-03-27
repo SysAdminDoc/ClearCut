@@ -51,7 +51,7 @@ fun Timeline(
     scrollOffsetMs: Long,
     selectedClipId: String?,
     isTrimMode: Boolean = false,
-    waveforms: Map<String, FloatArray> = emptyMap(),
+    waveforms: Map<String, List<Float>> = emptyMap(),
     onClipSelected: (String, String) -> Unit,
     onPlayheadMoved: (Long) -> Unit,
     onZoomChanged: (Float) -> Unit,
@@ -888,7 +888,7 @@ private fun DrawScope.drawTimeRuler(
     }
 }
 
-private fun DrawScope.drawWaveform(samples: FloatArray, color: Color) {
+private fun DrawScope.drawWaveform(samples: List<Float>, color: Color) {
     if (samples.isEmpty()) return
     val steps = (size.width / 3f).toInt().coerceAtLeast(1)
     val samplesPerStep = samples.size.toFloat() / steps

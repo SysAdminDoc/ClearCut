@@ -68,10 +68,10 @@ fun EditorScreen(
         }
     }
 
-    val hasOpenPanel = state.panels.hasOpenPanel ||
-        state.selectedEffectId != null || state.editingTextOverlayId != null
+    val hasOpenPanel by remember { derivedStateOf { state.panels.hasOpenPanel || state.selectedEffectId != null || state.editingTextOverlayId != null } }
+    val isClipMode by remember { derivedStateOf { state.selectedClipId != null } }
 
-    BackHandler(enabled = hasOpenPanel || state.currentTool != EditorTool.NONE || state.selectedClipId != null) {
+    BackHandler(enabled = hasOpenPanel || state.currentTool != EditorTool.NONE || isClipMode) {
         when {
             hasOpenPanel -> viewModel.dismissAllPanels()
             state.currentTool != EditorTool.NONE -> viewModel.setTool(EditorTool.NONE)
@@ -101,7 +101,7 @@ fun EditorScreen(
             )
 
             // Empty project onboarding hint
-            val hasClips = state.tracks.any { it.clips.isNotEmpty() }
+            val hasClips by remember { derivedStateOf { state.tracks.any { it.clips.isNotEmpty() } } }
             if (!hasClips && !hasOpenPanel) {
                 Box(
                     modifier = Modifier
