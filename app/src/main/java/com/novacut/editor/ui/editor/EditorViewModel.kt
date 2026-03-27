@@ -236,7 +236,8 @@ class EditorViewModel @Inject constructor(
         stateFlow = _state, appContext = appContext,
         scope = viewModelScope, saveUndoState = ::saveUndoState, showToast = ::showToast,
         pauseIfPlaying = ::pauseIfPlaying, dismissedPanelState = ::dismissedPanelState,
-        getSelectedClip = ::getSelectedClip, updatePreview = ::updatePreview
+        getSelectedClip = ::getSelectedClip, updatePreview = ::updatePreview,
+        saveProject = ::saveProject
     )
 
     val audioMixerDelegate = AudioMixerDelegate(

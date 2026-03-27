@@ -25,7 +25,8 @@ class ColorGradingDelegate(
     private val pauseIfPlaying: () -> Unit,
     private val dismissedPanelState: (EditorState) -> EditorState,
     private val getSelectedClip: () -> com.novacut.editor.model.Clip?,
-    private val updatePreview: () -> Unit
+    private val updatePreview: () -> Unit,
+    private val saveProject: () -> Unit
 ) {
     private val _showLutPicker = MutableStateFlow(false)
     val showLutPicker: StateFlow<Boolean> = _showLutPicker.asStateFlow()
@@ -37,6 +38,7 @@ class ColorGradingDelegate(
 
     fun hideColorGrading() {
         stateFlow.update { it.copy(panels = it.panels.close(PanelId.COLOR_GRADING)) }
+        saveProject()
     }
 
     fun beginColorGradeAdjust() {
@@ -92,6 +94,7 @@ class ColorGradingDelegate(
         saveUndoState("Apply LUT")
         val currentGrade = clip.colorGrade ?: ColorGrade()
         updateClipColorGrade(currentGrade.copy(lutPath = lutPath))
+        saveProject()
     }
 
 }
