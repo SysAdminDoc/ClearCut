@@ -162,7 +162,7 @@ data class EditorState(
     // Drawing overlay
     val drawingPaths: List<com.novacut.editor.model.DrawingPath> = emptyList(),
     val isDrawingMode: Boolean = false,
-    val drawingColor: Long = 0xFFF38BA8,
+    val drawingColor: Long = 0xFFF38BA8L,
     val drawingStrokeWidth: Float = 4f,
     val aiSuggestion: AiSuggestion? = null
 )
@@ -199,7 +199,8 @@ data class UndoAction(
     val textOverlays: List<TextOverlay>,
     val imageOverlays: List<ImageOverlay> = emptyList(),
     val timelineMarkers: List<TimelineMarker> = emptyList(),
-    val chapterMarkers: List<ChapterMarker> = emptyList()
+    val chapterMarkers: List<ChapterMarker> = emptyList(),
+    val drawingPaths: List<com.novacut.editor.model.DrawingPath> = emptyList()
 )
 
 @HiltViewModel
@@ -1174,6 +1175,7 @@ class EditorViewModel @Inject constructor(
             imageOverlays = target.imageOverlays,
             timelineMarkers = target.timelineMarkers,
             chapterMarkers = target.chapterMarkers,
+            drawingPaths = target.drawingPaths,
             undoStack = stack.take(index),
             redoStack = listOf(UndoAction(
                 "Current",
@@ -1181,7 +1183,8 @@ class EditorViewModel @Inject constructor(
                 it.textOverlays,
                 imageOverlays = it.imageOverlays.toList(),
                 timelineMarkers = it.timelineMarkers.toList(),
-                chapterMarkers = it.chapterMarkers.toList()
+                chapterMarkers = it.chapterMarkers.toList(),
+                drawingPaths = it.drawingPaths.toList()
             )) + stack.drop(index + 1)
         ) }
         rebuildTimeline()
@@ -2392,7 +2395,8 @@ class EditorViewModel @Inject constructor(
             _state.value.textOverlays.toList(),
             imageOverlays = _state.value.imageOverlays.toList(),
             timelineMarkers = _state.value.timelineMarkers.toList(),
-            chapterMarkers = _state.value.chapterMarkers.toList()
+            chapterMarkers = _state.value.chapterMarkers.toList(),
+            drawingPaths = _state.value.drawingPaths.toList()
         )
 
         _state.update {
@@ -2402,6 +2406,7 @@ class EditorViewModel @Inject constructor(
                 imageOverlays = action.imageOverlays,
                 timelineMarkers = action.timelineMarkers,
                 chapterMarkers = action.chapterMarkers,
+                drawingPaths = action.drawingPaths,
                 undoStack = undoStack.dropLast(1),
                 redoStack = it.redoStack + currentAction
             ))
@@ -2426,7 +2431,8 @@ class EditorViewModel @Inject constructor(
             _state.value.textOverlays.toList(),
             imageOverlays = _state.value.imageOverlays.toList(),
             timelineMarkers = _state.value.timelineMarkers.toList(),
-            chapterMarkers = _state.value.chapterMarkers.toList()
+            chapterMarkers = _state.value.chapterMarkers.toList(),
+            drawingPaths = _state.value.drawingPaths.toList()
         )
 
         _state.update {
@@ -2436,6 +2442,7 @@ class EditorViewModel @Inject constructor(
                 imageOverlays = action.imageOverlays,
                 timelineMarkers = action.timelineMarkers,
                 chapterMarkers = action.chapterMarkers,
+                drawingPaths = action.drawingPaths,
                 redoStack = redoStack.dropLast(1),
                 undoStack = it.undoStack + currentAction
             ))
@@ -2518,7 +2525,8 @@ class EditorViewModel @Inject constructor(
                 textOverlays = state.textOverlays.toList(),
                 imageOverlays = state.imageOverlays.toList(),
                 timelineMarkers = state.timelineMarkers.toList(),
-                chapterMarkers = state.chapterMarkers.toList()
+                chapterMarkers = state.chapterMarkers.toList(),
+                drawingPaths = state.drawingPaths.toList()
             )
             state.copy(
                 undoStack = (state.undoStack + action).takeLast(50),

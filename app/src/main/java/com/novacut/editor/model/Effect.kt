@@ -155,7 +155,7 @@ enum class EffectType(val displayName: String, val category: EffectCategory) {
                     mapOf("intensity" to ParamRange("Intensity", 0f, 1f))
                 RADIAL_BLUR, MOTION_BLUR, FISHEYE ->
                     mapOf("intensity" to ParamRange("Intensity", 0f, 1f))
-                SPEED -> mapOf("value" to ParamRange("Speed", 0.1f, 16f))
+                SPEED -> mapOf("value" to ParamRange("Speed", 0.1f, 100f))
                 else -> emptyMap()
             }
             return defaults.keys.associateWith { key ->
