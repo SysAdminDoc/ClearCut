@@ -243,7 +243,8 @@ class EditorViewModel @Inject constructor(
         stateFlow = _state, beatDetectionEngine = beatDetectionEngine,
         loudnessEngine = loudnessEngine, scope = viewModelScope,
         saveUndoState = ::saveUndoState, showToast = ::showToast,
-        pauseIfPlaying = ::pauseIfPlaying, dismissedPanelState = ::dismissedPanelState
+        pauseIfPlaying = ::pauseIfPlaying, dismissedPanelState = ::dismissedPanelState,
+        saveProject = ::saveProject
     )
 
     val exportDelegate = ExportDelegate(
@@ -287,7 +288,8 @@ class EditorViewModel @Inject constructor(
     val effectsDelegate = EffectsDelegate(
         stateFlow = _state, saveUndoState = ::saveUndoState, showToast = ::showToast,
         updatePreview = ::updatePreview, saveProject = ::saveProject,
-        getSelectedClip = ::getSelectedClip
+        getSelectedClip = ::getSelectedClip,
+        recalculateDuration = ::recalculateDuration
     )
 
     val overlayDelegate = OverlayDelegate(
@@ -1032,6 +1034,7 @@ class EditorViewModel @Inject constructor(
     }
 
     // --- Auto-save indicator ---
+    @Volatile
     private var saveIndicatorJob: Job? = null
     fun showSaveIndicator(state: com.novacut.editor.model.SaveIndicatorState) {
         saveIndicatorJob?.cancel()
@@ -1735,19 +1738,23 @@ class EditorViewModel @Inject constructor(
     fun exportProjectArchive() {
         viewModelScope.launch {
             showToast("Exporting project archive...")
-            val s = _state.value
-            val dir = java.io.File(appContext.getExternalFilesDir(null), "archives")
-            dir.mkdirs()
-            val file = java.io.File(dir, "${s.project.name}.novacut")
-            val success = com.novacut.editor.engine.ProjectArchive.exportArchive(
-                context = appContext,
-                projectId = s.project.id,
-                tracks = s.tracks,
-                textOverlays = s.textOverlays,
-                playheadMs = s.playheadMs,
-                outputFile = file
-            )
-            showToast(if (success) "Archive saved: ${file.name}" else "Archive export failed")
+            try {
+                val s = _state.value
+                val dir = java.io.File(appContext.getExternalFilesDir(null), "archives")
+                dir.mkdirs()
+                val file = java.io.File(dir, "${s.project.name}.novacut")
+                val success = com.novacut.editor.engine.ProjectArchive.exportArchive(
+                    context = appContext,
+                    projectId = s.project.id,
+                    tracks = s.tracks,
+                    textOverlays = s.textOverlays,
+                    playheadMs = s.playheadMs,
+                    outputFile = file
+                )
+                showToast(if (success) "Archive saved: ${file.name}" else "Archive export failed")
+            } catch (e: Exception) {
+                showToast("Archive export failed: ${e.message}")
+            }
         }
     }
 
@@ -1991,42 +1998,42 @@ class EditorViewModel @Inject constructor(
         viewModelScope.launch {
             showToast("Analyzing speech regions...")
             try {
-            val voiceClip = voiceTracks.flatMap { it.clips }.firstOrNull() ?: return@launch
-            val waveform = withContext(Dispatchers.IO) {
-                audioEngine.extractWaveform(voiceClip.sourceUri, 44100)
-            }
-            val pcm = waveform.map { (it * 32767).toInt().toShort() }.toShortArray()
-            val speechRegions = withContext(Dispatchers.Default) {
-                com.novacut.editor.engine.AudioEffectsEngine.detectSpeechRegions(pcm, 44100, 1)
-            }
+                val voiceClip = voiceTracks.flatMap { it.clips }.firstOrNull() ?: return@launch
+                val waveform = withContext(Dispatchers.IO) {
+                    audioEngine.extractWaveform(voiceClip.sourceUri, 44100)
+                }
+                val pcm = waveform.map { (it * 32767).toInt().toShort() }.toShortArray()
+                val speechRegions = withContext(Dispatchers.Default) {
+                    com.novacut.editor.engine.AudioEffectsEngine.detectSpeechRegions(pcm, 44100, 1)
+                }
 
-            if (speechRegions.isEmpty()) {
-                showToast("No speech detected")
-                return@launch
-            }
+                if (speechRegions.isEmpty()) {
+                    showToast("No speech detected")
+                    return@launch
+                }
 
-            saveUndoState("Auto duck")
+                saveUndoState("Auto duck")
 
-            // Create volume keyframes on music tracks
-            _state.update { state ->
-                state.copy(tracks = state.tracks.map { track ->
-                    if (track.type == TrackType.AUDIO) {
-                        track.copy(clips = track.clips.map { clip ->
-                            val duckKeyframes = mutableListOf<com.novacut.editor.model.Keyframe>()
-                            for ((start, end) in speechRegions) {
-                                duckKeyframes.addAll(
-                                    com.novacut.editor.engine.KeyframeEngine.createVolumeDuck(
-                                        startMs = start, endMs = end,
-                                        normalVolume = clip.volume, duckVolume = clip.volume * 0.15f
+                // Create volume keyframes on music tracks
+                _state.update { state ->
+                    state.copy(tracks = state.tracks.map { track ->
+                        if (track.type == TrackType.AUDIO) {
+                            track.copy(clips = track.clips.map { clip ->
+                                val duckKeyframes = mutableListOf<com.novacut.editor.model.Keyframe>()
+                                for ((start, end) in speechRegions) {
+                                    duckKeyframes.addAll(
+                                        com.novacut.editor.engine.KeyframeEngine.createVolumeDuck(
+                                            startMs = start, endMs = end,
+                                            normalVolume = clip.volume, duckVolume = clip.volume * 0.15f
+                                        )
                                     )
-                                )
-                            }
-                            clip.copy(keyframes = clip.keyframes + duckKeyframes)
-                        })
-                    } else track
-                })
-            }
-            showToast("Ducking applied: ${speechRegions.size} regions")
+                                }
+                                clip.copy(keyframes = clip.keyframes + duckKeyframes)
+                            })
+                        } else track
+                    })
+                }
+                showToast("Ducking applied: ${speechRegions.size} regions")
             } catch (e: Exception) {
                 showToast("Auto-duck failed: ${e.message ?: "Unknown error"}")
             }
@@ -2034,6 +2041,7 @@ class EditorViewModel @Inject constructor(
     }
 
     // Voiceover recording
+    @Volatile
     private var voiceoverDurationJob: Job? = null
 
     fun startVoiceover() {
@@ -2054,7 +2062,7 @@ class EditorViewModel @Inject constructor(
     fun stopVoiceover() {
         voiceoverDurationJob?.cancel()
         val uri = voiceoverEngine.stopRecording()
-        _state.update { it.copy(isRecordingVoiceover = false, panels = it.panels.close(PanelId.VOICEOVER_RECORDER)) }
+        _state.update { it.copy(isRecordingVoiceover = false) }
         if (uri != null) {
             addClipToTrack(uri, TrackType.AUDIO)
             showToast("Voiceover added to audio track")
@@ -2196,6 +2204,7 @@ class EditorViewModel @Inject constructor(
         rebuildPlayerTimeline()
     }
 
+    @Volatile
     private var toastJob: Job? = null
 
     fun showToast(message: String) {
@@ -2274,45 +2283,11 @@ class EditorViewModel @Inject constructor(
     }
 
     // AI Tools
-    fun downloadWhisperModel() {
-        viewModelScope.launch {
-            showToast("Downloading Whisper speech model...")
-            val success = aiFeatures.whisperEngine.downloadModel()
-            showToast(if (success) "Whisper model ready" else "Model download failed")
-        }
-    }
-
-    fun deleteWhisperModel() {
-        aiFeatures.whisperEngine.deleteModel()
-        showToast("Whisper model deleted")
-    }
-
-    fun saveAsTemplate(name: String) {
-        val s = _state.value
-        viewModelScope.launch {
-            templateManager.saveTemplate(
-                name = name,
-                description = "${s.tracks.size} tracks, ${s.textOverlays.size} text overlays",
-                project = s.project,
-                tracks = s.tracks,
-                textOverlays = s.textOverlays
-            )
-            showToast("Saved template: $name")
-        }
-    }
-
-    fun downloadSegmentationModel() {
-        viewModelScope.launch {
-            showToast("Downloading segmentation model...")
-            val success = aiFeatures.segmentationEngine.downloadModel()
-            showToast(if (success) "Segmentation model ready" else "Model download failed")
-        }
-    }
-
-    fun deleteSegmentationModel() {
-        aiFeatures.segmentationEngine.deleteModel()
-        showToast("Segmentation model deleted")
-    }
+    fun downloadWhisperModel() = aiToolsDelegate.downloadWhisperModel()
+    fun deleteWhisperModel() = aiToolsDelegate.deleteWhisperModel()
+    fun saveAsTemplate(name: String) = aiToolsDelegate.saveAsTemplate(name)
+    fun downloadSegmentationModel() = aiToolsDelegate.downloadSegmentationModel()
+    fun deleteSegmentationModel() = aiToolsDelegate.deleteSegmentationModel()
 
     // --- AI tool clip update helper ---
     private fun updateClipByIdWithDuration(clipId: String, transform: (Clip) -> Clip) {
@@ -2488,59 +2463,7 @@ class EditorViewModel @Inject constructor(
         showToast("Upscaled to ${result.targetResolution.label} + sharpening applied")
     }
 
-    fun runAiTool(toolId: String) {
-        val clip = getSelectedClip()
-        if (clip == null) { showToast("Select a clip first"); return }
-        _state.update { it.copy(aiProcessingTool = toolId) }
-        aiJob?.cancel()
-        aiJob = viewModelScope.launch {
-            try {
-                when (toolId) {
-                    "scene_detect" -> aiSceneDetect(clip)
-                    "auto_captions" -> aiAutoCaptions(clip)
-                    "smart_crop" -> {
-                        val suggestion = aiFeatures.suggestCrop(clip.sourceUri, _state.value.project.aspectRatio.toFloat())
-                        if (suggestion.confidence < 0.1f) { showToast("Could not analyze frame for crop") } else {
-                            saveUndoState("AI smart crop")
-                            setClipTransform(clip.id, positionX = suggestion.centerX - 0.5f, positionY = suggestion.centerY - 0.5f)
-                            showToast("Smart crop applied (${"%.0f".format(suggestion.confidence * 100)}% confidence)")
-                        }
-                    }
-                    "auto_color" -> aiAutoColor(clip)
-                    "stabilize" -> aiStabilizeClip(clip)
-                    "denoise" -> aiDenoise(clip)
-                    "remove_bg" -> aiRemoveOrReplaceBg(clip, isReplace = false)
-                    "bg_replace" -> aiRemoveOrReplaceBg(clip, isReplace = true)
-                    "track_motion" -> aiTrackMotion(clip, com.novacut.editor.ai.TrackingRegion(), "AI motion track")
-                    "face_track" -> aiTrackMotion(clip, com.novacut.editor.ai.TrackingRegion(centerX = 0.5f, centerY = 0.35f, width = 0.3f, height = 0.3f), "AI face track", invertX = true, centerY = 0.35f)
-                    "style_transfer" -> aiStyleTransferClip(clip)
-                    "smart_reframe" -> {
-                        val suggestion = aiFeatures.suggestCrop(clip.sourceUri, 9f / 16f)
-                        if (suggestion.confidence > 0.1f) {
-                            saveUndoState("AI smart reframe")
-                            setClipTransform(clip.id, positionX = (suggestion.centerX - 0.5f) * 2f, positionY = (suggestion.centerY - 0.5f) * 2f, scaleX = 1f / suggestion.width, scaleY = 1f / suggestion.height)
-                            showToast("Smart reframed for vertical (${"%.0f".format(suggestion.confidence * 100)}%)")
-                        } else showToast("Could not determine reframe region")
-                    }
-                    "upscale" -> aiUpscale(clip)
-                    "frame_interp" -> applyFrameInterpolation(clip)
-                    "object_remove" -> applyObjectRemoval(clip)
-                    "video_upscale" -> applyVideoUpscale(clip)
-                    "ai_background" -> applyAiBackground(clip)
-                    "ai_stabilize" -> applyStabilization(clip)
-                    "ai_style_transfer" -> applyStyleTransfer(clip)
-                    else -> showToast("Unknown AI tool: $toolId")
-                }
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                showToast("AI tool cancelled"); throw e
-            } catch (e: Exception) {
-                showToast("AI tool failed: ${e.message}")
-            } finally {
-                _state.update { it.copy(aiProcessingTool = null) }
-                aiJob = null
-            }
-        }
-    }
+    fun runAiTool(toolId: String) = aiToolsDelegate.runAiTool(toolId)
 
     // ---- Tier 3: ML Engine Wrapper Methods ----
 
@@ -2734,9 +2657,7 @@ class EditorViewModel @Inject constructor(
         }
     }
 
-    fun cancelAiTool() {
-        aiJob?.cancel()
-    }
+    fun cancelAiTool() = aiToolsDelegate.cancelAiTool()
 
     fun insertFreezeFrame() {
         val clip = getSelectedClip() ?: return
@@ -2818,6 +2739,9 @@ class EditorViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
+        saveIndicatorJob?.cancel()
+        toastJob?.cancel()
+        aiJob?.cancel()
         autoSave.stop()
         voiceoverDurationJob?.cancel()
         voiceoverEngine.release()

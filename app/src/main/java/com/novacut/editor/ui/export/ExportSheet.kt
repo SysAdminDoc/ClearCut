@@ -25,6 +25,8 @@ fun ExportSheet(
     exportProgress: Float,
     aspectRatio: AspectRatio = AspectRatio.RATIO_16_9,
     errorMessage: String? = null,
+    exportStartTime: Long = 0L,
+    totalDurationMs: Long = 0L,
     onConfigChanged: (ExportConfig) -> Unit,
     onStartExport: () -> Unit,
     onShare: () -> Unit = {},
@@ -59,7 +61,7 @@ fun ExportSheet(
         Spacer(modifier = Modifier.height(16.dp))
 
         if (exportState == ExportState.EXPORTING) {
-            // Export progress
+            // Export progress with elapsed time and ETA
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -79,11 +81,31 @@ fun ExportSheet(
                     trackColor = Mocha.Surface0,
                 )
                 Spacer(modifier = Modifier.height(8.dp))
+
+                val pct = (exportProgress * 100).toInt().coerceIn(0, 100)
+                val elapsedMs = if (exportStartTime > 0L) System.currentTimeMillis() - exportStartTime else 0L
+                val elapsedSec = (elapsedMs / 1000).toInt()
+                val elapsedStr = "%d:%02d".format(elapsedSec / 60, elapsedSec % 60)
+                val etaStr = if (exportProgress > 0.05f && elapsedMs > 2000L) {
+                    val totalEstMs = (elapsedMs / exportProgress).toLong()
+                    val remainMs = (totalEstMs - elapsedMs).coerceAtLeast(0L)
+                    val remainSec = (remainMs / 1000).toInt()
+                    "%d:%02d remaining".format(remainSec / 60, remainSec % 60)
+                } else ""
+
                 Text(
-                    "${(exportProgress * 100).toInt().coerceIn(0, 100)}%",
-                    color = Mocha.Subtext0,
-                    fontSize = 14.sp
+                    "$pct%",
+                    color = Mocha.Text,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
                 )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Elapsed: $elapsedStr", color = Mocha.Subtext0, fontSize = 12.sp)
+                    if (etaStr.isNotEmpty()) {
+                        Text(etaStr, color = Mocha.Blue, fontSize = 12.sp)
+                    }
+                }
                 Spacer(modifier = Modifier.height(12.dp))
                 TextButton(onClick = onCancel) {
                     Text(stringResource(R.string.export_cancel), color = Mocha.Red)
@@ -250,6 +272,27 @@ fun ExportSheet(
             )
         }
 
+        // Chapter Markers toggle
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Include Chapter Markers", color = Mocha.Text, fontSize = 13.sp)
+            Switch(
+                checked = config.includeChapterMarkers,
+                onCheckedChange = { onConfigChanged(config.copy(includeChapterMarkers = it)) },
+                colors = SwitchDefaults.colors(
+                    checkedTrackColor = Mocha.Mauve,
+                    checkedThumbColor = Mocha.Crust,
+                    uncheckedTrackColor = Mocha.Surface1,
+                    uncheckedThumbColor = Mocha.Subtext0
+                )
+            )
+        }
+
         Spacer(modifier = Modifier.height(12.dp))
 
         // Resolution
@@ -292,19 +335,44 @@ fun ExportSheet(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Codec
+        // Codec (filtered by device hardware support)
+        val availableCodecs = remember { ExportConfig.getAvailableCodecs() }
         Text(stringResource(R.string.export_codec), color = Mocha.Subtext1, fontSize = 12.sp)
         Spacer(modifier = Modifier.height(4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             VideoCodec.entries.forEach { codec ->
+                val isAvailable = codec in availableCodecs
                 FilterChip(
-                    onClick = { onConfigChanged(config.copy(codec = codec)) },
+                    onClick = { if (isAvailable) onConfigChanged(config.copy(codec = codec)) },
                     label = { Text(codec.label, fontSize = 12.sp) },
                     selected = config.codec == codec,
+                    enabled = isAvailable,
                     colors = FilterChipDefaults.filterChipColors(
                         containerColor = Mocha.Surface0,
                         selectedContainerColor = Mocha.Mauve.copy(alpha = 0.3f),
-                        selectedLabelColor = Mocha.Mauve
+                        selectedLabelColor = Mocha.Mauve,
+                        disabledContainerColor = Mocha.Surface0.copy(alpha = 0.3f),
+                        disabledLabelColor = Mocha.Subtext0.copy(alpha = 0.4f)
+                    )
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Audio Codec
+        Text("Audio Codec", color = Mocha.Subtext1, fontSize = 12.sp)
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            AudioCodec.entries.forEach { codec ->
+                FilterChip(
+                    onClick = { onConfigChanged(config.copy(audioCodec = codec)) },
+                    label = { Text(codec.label, fontSize = 12.sp) },
+                    selected = config.audioCodec == codec,
+                    colors = FilterChipDefaults.filterChipColors(
+                        containerColor = Mocha.Surface0,
+                        selectedContainerColor = Mocha.Teal.copy(alpha = 0.3f),
+                        selectedLabelColor = Mocha.Teal
                     )
                 )
             }
@@ -354,6 +422,21 @@ fun ExportSheet(
                     color = Mocha.Subtext0,
                     fontSize = 12.sp
                 )
+                // Estimated file size
+                if (totalDurationMs > 0L) {
+                    val totalBitrate = config.videoBitrate + config.audioBitrate
+                    val estBytes = (totalBitrate.toLong() * totalDurationMs) / 8000L
+                    val estStr = when {
+                        estBytes >= 1_073_741_824L -> "%.1f GB".format(estBytes / 1_073_741_824.0)
+                        estBytes >= 1_048_576L -> "%.0f MB".format(estBytes / 1_048_576.0)
+                        else -> "%.0f KB".format(estBytes / 1024.0)
+                    }
+                    Text(
+                        "~$estStr estimated",
+                        color = Mocha.Peach,
+                        fontSize = 12.sp
+                    )
+                }
             }
         }
 

@@ -2,7 +2,6 @@ package com.novacut.editor.ui.editor
 
 import android.content.Context
 import android.net.Uri
-import com.novacut.editor.engine.LutEngine
 import com.novacut.editor.model.ColorGrade
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -89,7 +88,9 @@ class ColorGradingDelegate(
     }
 
     fun setClipLut(lutPath: String) {
-        val currentGrade = getSelectedClip()?.colorGrade ?: ColorGrade()
+        val clip = getSelectedClip() ?: return
+        saveUndoState("Apply LUT")
+        val currentGrade = clip.colorGrade ?: ColorGrade()
         updateClipColorGrade(currentGrade.copy(lutPath = lutPath))
     }
 

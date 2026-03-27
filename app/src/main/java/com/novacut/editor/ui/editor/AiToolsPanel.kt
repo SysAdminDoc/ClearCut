@@ -210,7 +210,7 @@ fun AiToolsPanel(
                             onClick = onDownloadWhisper,
                             contentPadding = PaddingValues(horizontal = 8.dp)
                         ) {
-                            Icon(Icons.Default.Download, null, modifier = Modifier.size(16.dp), tint = Mocha.Blue)
+                            Icon(Icons.Default.Download, "Download model", modifier = Modifier.size(16.dp), tint = Mocha.Blue)
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(stringResource(R.string.get), color = Mocha.Blue, fontSize = 12.sp)
                         }
@@ -289,7 +289,7 @@ fun AiToolsPanel(
                             onClick = onDownloadSegmentation,
                             contentPadding = PaddingValues(horizontal = 8.dp)
                         ) {
-                            Icon(Icons.Default.Download, null, modifier = Modifier.size(16.dp), tint = Mocha.Green)
+                            Icon(Icons.Default.Download, "Download model", modifier = Modifier.size(16.dp), tint = Mocha.Green)
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(stringResource(R.string.get), color = Mocha.Green, fontSize = 12.sp)
                         }

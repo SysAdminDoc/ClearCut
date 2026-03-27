@@ -155,34 +155,34 @@ fun Timeline(
             // Add Marker button
             IconButton(
                 onClick = onAddMarker,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(36.dp)
             ) {
-                Icon(Icons.Default.Flag, "Add Marker", tint = Mocha.Blue, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.Flag, "Add Marker", tint = Mocha.Blue, modifier = Modifier.size(18.dp))
             }
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(4.dp))
             Text(
                 "${(zoomLevel * 100).toInt()}%",
                 color = Mocha.Subtext0,
                 fontSize = 10.sp,
-                modifier = Modifier.padding(end = 6.dp)
+                modifier = Modifier.padding(end = 4.dp)
             )
             IconButton(
                 onClick = { onZoomChanged((zoomLevel * 0.75f).coerceAtLeast(0.1f)) },
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(36.dp)
             ) {
-                Icon(Icons.Default.ZoomOut, "Zoom Out", tint = Mocha.Subtext0, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.ZoomOut, "Zoom Out", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
             }
             IconButton(
                 onClick = { onZoomChanged(1f) },
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(36.dp)
             ) {
-                Icon(Icons.Default.FitScreen, "Fit", tint = Mocha.Subtext0, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.FitScreen, "Fit", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
             }
             IconButton(
                 onClick = { onZoomChanged((zoomLevel * 1.33f).coerceAtMost(10f)) },
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(36.dp)
             ) {
-                Icon(Icons.Default.ZoomIn, "Zoom In", tint = Mocha.Subtext0, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.ZoomIn, "Zoom In", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
             }
         }
 

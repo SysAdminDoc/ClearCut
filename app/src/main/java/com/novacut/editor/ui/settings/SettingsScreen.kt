@@ -24,6 +24,7 @@ import com.novacut.editor.ui.theme.Mocha
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
+    onNavigateToAiModels: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
@@ -141,9 +142,25 @@ fun SettingsScreen(
                         Text(stringResource(R.string.settings_download_size_format, size), color = Mocha.Subtext0, fontSize = 10.sp)
                     }
                     Text(stringResource(R.string.manage), color = Mocha.Mauve, fontSize = 11.sp,
-                        modifier = Modifier.clickable { /* TODO: navigate to model manager */ })
+                        modifier = Modifier.clickable { onNavigateToAiModels() })
                 }
             }
+        }
+
+        // Editor
+        SettingsSection("Editor") {
+            SettingsDropdown(
+                label = "Default Mode",
+                value = settings.editorMode,
+                options = listOf("Easy", "Pro"),
+                onSelected = { viewModel.setEditorMode(listOf("Easy", "Pro")[it]) }
+            )
+            SettingsToggle(
+                label = "Haptic Feedback",
+                description = "Vibrate on timeline snap and clip selection",
+                checked = settings.hapticEnabled,
+                onChanged = { viewModel.setHapticEnabled(it) }
+            )
         }
 
         // Tutorial

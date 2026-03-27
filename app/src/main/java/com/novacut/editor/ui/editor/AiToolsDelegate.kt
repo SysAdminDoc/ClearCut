@@ -97,10 +97,17 @@ class AiToolsDelegate(
         }
 
         stateFlow.update { it.copy(aiProcessingTool = toolId) }
+        val clipId = clip.id
 
         aiJob?.cancel()
         aiJob = scope.launch {
             try {
+                // Re-validate clip still exists (user may have deleted it)
+                val currentClip = stateFlow.value.tracks.flatMap { it.clips }.firstOrNull { it.id == clipId }
+                if (currentClip == null) {
+                    showToast("Clip no longer exists")
+                    return@launch
+                }
                 when (toolId) {
                     "scene_detect" -> runSceneDetect(clip)
                     "auto_captions" -> runAutoCaptions(clip)

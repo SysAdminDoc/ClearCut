@@ -16,7 +16,8 @@ class EffectsDelegate(
     private val showToast: (String) -> Unit,
     private val updatePreview: () -> Unit,
     private val saveProject: () -> Unit,
-    private val getSelectedClip: () -> com.novacut.editor.model.Clip?
+    private val getSelectedClip: () -> com.novacut.editor.model.Clip?,
+    private val recalculateDuration: (EditorState) -> EditorState
 ) {
     // --- Effects ---
     fun addEffect(clipId: String, effect: Effect) {
@@ -145,7 +146,7 @@ class EffectsDelegate(
                     else clip
                 })
             }
-            state.copy(tracks = tracks)
+            recalculateDuration(state.copy(tracks = tracks))
         }
         updatePreview()
         saveProject()
@@ -165,8 +166,9 @@ class EffectsDelegate(
                     } else clip
                 })
             }
-            state.copy(tracks = tracks)
+            recalculateDuration(state.copy(tracks = tracks))
         }
+        updatePreview()
         saveProject()
     }
 

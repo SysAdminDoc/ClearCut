@@ -102,7 +102,7 @@ class VideoEngine @Inject constructor(
     @androidx.annotation.OptIn(UnstableApi::class)
     fun prepareTimeline(tracks: List<Track>) {
         val p = getPlayer()
-        val videoClips = tracks.filter { it.type == TrackType.VIDEO }.flatMap { it.clips }
+        val videoClips = tracks.filter { it.type == TrackType.VIDEO && it.isVisible }.flatMap { it.clips }
         if (videoClips.isEmpty()) {
             p.clearMediaItems()
             clipDurationsMs = emptyList()
@@ -239,25 +239,206 @@ class VideoEngine @Inject constructor(
         onComplete: () -> Unit = {},
         onError: (Exception) -> Unit = {}
     ) {
-        // Reset from any previous export state
+        if (_exportState.value == ExportState.EXPORTING) { Log.w(TAG, "Export already in progress"); return }
         _exportState.value = ExportState.EXPORTING
         _exportProgress.value = 0f
 
         try {
-            // Collect all visible video tracks (VIDEO + OVERLAY types) into one merged clip list
             val visibleVideoTracks = tracks.filter {
                 (it.type == TrackType.VIDEO || it.type == TrackType.OVERLAY) && it.isVisible && it.clips.isNotEmpty()
             }
             if (visibleVideoTracks.isEmpty()) {
                 throw IllegalStateException("No video clips to export")
             }
-            // Use primary video track for main sequence; overlay tracks contribute clips appended in order
             val videoTrack = visibleVideoTracks.first()
-            val videoMuted = videoTrack.isMuted
-
             val (targetW, targetH) = config.resolution.forAspect(config.aspectRatio)
 
             val editedItems = videoTrack.clips.map { clip ->
+                buildEditedMediaItem(clip, videoTrack.isMuted, tracks, config, targetW, targetH, textOverlays, lottieOverlays)
+            }
+            val videoSequence = EditedMediaItemSequence.Builder(editedItems).build()
+
+            val audioSequences = buildAudioSequences(tracks)
+            val allSequences = buildList {
+                add(videoSequence)
+                addAll(audioSequences)
+            }
+
+            val composition = buildComposition(allSequences, audioSequences.isNotEmpty(), videoTrack.isMuted)
+
+            val mimeType = when (config.codec) {
+                VideoCodec.HEVC -> MimeTypes.VIDEO_H265
+                VideoCodec.H264 -> MimeTypes.VIDEO_H264
+                VideoCodec.AV1 -> MimeTypes.VIDEO_AV1
+                VideoCodec.VP9 -> MimeTypes.VIDEO_VP9
+            }
+
+            startTransformerWithPolling(composition, mimeType, config, outputFile, onProgress, onComplete, onError)
+        } catch (e: Exception) {
+            Log.e(TAG, "Export setup failed", e)
+            _exportErrorMessage.value = e.message ?: "Export setup failed"
+            _exportState.value = ExportState.ERROR
+            _exportProgress.value = 0f
+            activeTransformer = null
+            outputFile.delete()
+            onError(e)
+        }
+    }
+
+    @androidx.annotation.OptIn(UnstableApi::class)
+    private fun buildEditedMediaItem(
+        clip: Clip,
+        videoMuted: Boolean,
+        tracks: List<Track>,
+        config: ExportConfig,
+        targetW: Int,
+        targetH: Int,
+        textOverlays: List<com.novacut.editor.model.TextOverlay>,
+        lottieOverlays: List<LottieOverlaySpec>
+    ): EditedMediaItem {
+        val mediaItem = MediaItem.Builder()
+            .setUri(clip.sourceUri)
+            .setClippingConfiguration(
+                MediaItem.ClippingConfiguration.Builder()
+                    .setStartPositionMs(clip.trimStartMs)
+                    .setEndPositionMs(clip.trimEndMs)
+                    .build()
+            )
+            .build()
+
+        val videoEffects = buildList<androidx.media3.common.Effect> {
+            for (effect in clip.effects.filter { it.enabled }) {
+                EffectBuilder.buildVideoEffect(effect, segmentationEngine)?.let { add(it) }
+            }
+            addColorGradingEffects(clip)
+
+            val maskTimeMs = clip.durationMs / 2
+            for (mask in clip.masks) {
+                val points = KeyframeEngine.interpolateMaskPoints(mask, maskTimeMs)
+                when (mask.type) {
+                    com.novacut.editor.model.MaskType.RECTANGLE -> {
+                        if (points.size >= 2) {
+                            val cx = (points[0].x + points[1].x) / 2f
+                            val cy = (points[0].y + points[1].y) / 2f
+                            val w = kotlin.math.abs(points[1].x - points[0].x)
+                            val h = kotlin.math.abs(points[1].y - points[0].y)
+                            add(EffectShaders.rectangleMask(cx, cy, w, h, mask.feather / 100f, if (mask.inverted) 1f else 0f))
+                        }
+                    }
+                    com.novacut.editor.model.MaskType.ELLIPSE -> {
+                        if (points.size >= 2) {
+                            add(EffectShaders.ellipseMask(
+                                points[0].x, points[0].y,
+                                points[1].x, points[1].y,
+                                mask.feather / 100f, if (mask.inverted) 1f else 0f
+                            ))
+                        }
+                    }
+                    else -> {}
+                }
+            }
+
+            if (clip.blendMode != com.novacut.editor.model.BlendMode.NORMAL) {
+                add(EffectShaders.blendMode(clip.blendMode, clip.opacity))
+            }
+
+            clip.transition?.let { add(EffectBuilder.buildTransitionEffect(it)) }
+            addOpacityAndTransformEffects(clip)
+
+            val clipStart = clip.timelineStartMs
+            val clipEnd = clip.timelineEndMs
+            val overlapping = textOverlays.filter { overlay ->
+                overlay.startTimeMs < clipEnd && overlay.endTimeMs > clipStart
+            }
+            if (overlapping.isNotEmpty()) {
+                val overlayList = overlapping.map { overlay ->
+                    val relStart = (overlay.startTimeMs - clipStart).coerceAtLeast(0L)
+                    val relEnd = (overlay.endTimeMs - clipStart).coerceAtMost(clip.durationMs)
+                    ExportTextOverlay(overlay, relStart, relEnd)
+                }
+                @Suppress("UNCHECKED_CAST")
+                add(OverlayEffect(com.google.common.collect.ImmutableList.copyOf(overlayList) as List<TextureOverlay>))
+            }
+
+            val overlappingLottie = lottieOverlays.filter { lo ->
+                lo.startTimeMs < clipEnd && lo.endTimeMs > clipStart
+            }
+            for (lo in overlappingLottie) {
+                val relStartUs = ((lo.startTimeMs - clipStart).coerceAtLeast(0L)) * 1000L
+                val durationUs = (lo.endTimeMs - lo.startTimeMs).coerceAtLeast(1L) * 1000L
+                add(LottieOverlayEffect(
+                    lottieEngine = lo.engine,
+                    composition = lo.composition,
+                    overlayStartUs = relStartUs,
+                    overlayDurationUs = durationUs,
+                    textReplacements = lo.textReplacements
+                ))
+            }
+
+            val adjustmentTracks = tracks.filter { it.type == TrackType.ADJUSTMENT && it.isVisible }
+            for (adjTrack in adjustmentTracks) {
+                for (adjClip in adjTrack.clips) {
+                    if (adjClip.timelineStartMs < clipEnd && adjClip.timelineEndMs > clipStart) {
+                        for (effect in adjClip.effects.filter { it.enabled }) {
+                            EffectBuilder.buildVideoEffect(effect, segmentationEngine)?.let { add(it) }
+                        }
+                    }
+                }
+            }
+
+            add(FrameDropEffect.createDefaultFrameDropEffect(config.frameRate.toFloat()))
+            add(Presentation.createForWidthAndHeight(targetW, targetH, Presentation.LAYOUT_SCALE_TO_FIT))
+        }
+
+        val audioProcessors = buildList<AudioProcessor> {
+            if (videoMuted) {
+                add(VolumeAudioProcessor(
+                    volume = 0f, fadeInMs = 0L, fadeOutMs = 0L,
+                    clipDurationMs = clip.durationMs, keyframes = emptyList()
+                ))
+            } else {
+                val hasKfVolume = clip.keyframes.any { it.property == KeyframeProperty.VOLUME }
+                val needsVolume = clip.volume != 1.0f
+                val needsFade = clip.fadeInMs > 0L || clip.fadeOutMs > 0L
+                if (hasKfVolume || needsVolume || needsFade) {
+                    add(VolumeAudioProcessor(
+                        volume = clip.volume, fadeInMs = clip.fadeInMs, fadeOutMs = clip.fadeOutMs,
+                        clipDurationMs = clip.durationMs,
+                        keyframes = if (hasKfVolume) clip.keyframes else emptyList()
+                    ))
+                }
+            }
+        }
+
+        val itemBuilder = EditedMediaItem.Builder(mediaItem)
+            .setEffects(Effects(audioProcessors, videoEffects))
+
+        if (clip.speedCurve != null && clip.speedCurve.points.size >= 2) {
+            val curve = clip.speedCurve
+            val clipDurMs = clip.trimEndMs - clip.trimStartMs
+            itemBuilder.setSpeed(object : androidx.media3.common.audio.SpeedProvider {
+                override fun getSpeed(presentationTimeUs: Long): Float {
+                    val timeMs = presentationTimeUs / 1000L
+                    return curve.getSpeedAt(timeMs, clipDurMs).coerceIn(0.1f, 16f)
+                }
+                override fun getNextSpeedChangeTimeUs(timeUs: Long): Long = androidx.media3.common.C.TIME_UNSET
+            })
+        } else if (clip.speed != 1.0f) {
+            val constSpeed = clip.speed.coerceIn(0.1f, 16f)
+            itemBuilder.setSpeed(object : androidx.media3.common.audio.SpeedProvider {
+                override fun getSpeed(presentationTimeUs: Long): Float = constSpeed
+                override fun getNextSpeedChangeTimeUs(timeUs: Long): Long = androidx.media3.common.C.TIME_UNSET
+            })
+        }
+
+        return itemBuilder.build()
+    }
+
+    @androidx.annotation.OptIn(UnstableApi::class)
+    private fun buildAudioSequences(tracks: List<Track>): List<EditedMediaItemSequence> {
+        val audioTracks = tracks.filter { it.type == TrackType.AUDIO && it.isVisible && !it.isMuted && it.clips.isNotEmpty() }
+        return audioTracks.map { at ->
+            val audioItems = at.clips.map { clip ->
                 val mediaItem = MediaItem.Builder()
                     .setUri(clip.sourceUri)
                     .setClippingConfiguration(
@@ -267,245 +448,83 @@ class VideoEngine @Inject constructor(
                             .build()
                     )
                     .build()
-
-                val videoEffects = buildList<androidx.media3.common.Effect> {
-                    // User effects
-                    for (effect in clip.effects.filter { it.enabled }) {
-                        EffectBuilder.buildVideoEffect(effect, segmentationEngine)?.let { add(it) }
-                    }
-
-                    // Color grading (lift/gamma/gain + HSL qualification + LUT)
-                    addColorGradingEffects(clip)
-
-                    // Masks (rectangle/ellipse) — use clip midpoint for static mask position
-                    // (keyframed masks would need per-frame GlEffect, using midpoint as best static approximation)
-                    val maskTimeMs = clip.durationMs / 2
-                    for (mask in clip.masks) {
-                        val points = KeyframeEngine.interpolateMaskPoints(mask, maskTimeMs)
-                        when (mask.type) {
-                            com.novacut.editor.model.MaskType.RECTANGLE -> {
-                                if (points.size >= 2) {
-                                    val cx = (points[0].x + points[1].x) / 2f
-                                    val cy = (points[0].y + points[1].y) / 2f
-                                    val w = kotlin.math.abs(points[1].x - points[0].x)
-                                    val h = kotlin.math.abs(points[1].y - points[0].y)
-                                    add(EffectShaders.rectangleMask(cx, cy, w, h, mask.feather / 100f, if (mask.inverted) 1f else 0f))
-                                }
-                            }
-                            com.novacut.editor.model.MaskType.ELLIPSE -> {
-                                if (points.size >= 2) {
-                                    add(EffectShaders.ellipseMask(
-                                        points[0].x, points[0].y,
-                                        points[1].x, points[1].y,
-                                        mask.feather / 100f, if (mask.inverted) 1f else 0f
-                                    ))
-                                }
-                            }
-                            else -> {} // Freehand/gradient masks handled differently
-                        }
-                    }
-
-                    // Blend mode
-                    if (clip.blendMode != com.novacut.editor.model.BlendMode.NORMAL) {
-                        add(EffectShaders.blendMode(clip.blendMode, clip.opacity))
-                    }
-
-                    // Transition-in effect
-                    clip.transition?.let { add(EffectBuilder.buildTransitionEffect(it)) }
-                    // Opacity + transform (keyframe-animated or static)
-                    addOpacityAndTransformEffects(clip)
-                    // Speed handled via EditedMediaItem.Builder.setSpeed() below
-                    // Text overlays that overlap this clip's timeline range
-                    val clipStart = clip.timelineStartMs
-                    val clipEnd = clip.timelineEndMs
-                    val overlapping = textOverlays.filter { overlay ->
-                        overlay.startTimeMs < clipEnd && overlay.endTimeMs > clipStart
-                    }
-                    if (overlapping.isNotEmpty()) {
-                        val overlayList = overlapping.map { overlay ->
-                            val relStart = (overlay.startTimeMs - clipStart).coerceAtLeast(0L)
-                            val relEnd = (overlay.endTimeMs - clipStart).coerceAtMost(clip.durationMs)
-                            ExportTextOverlay(overlay, relStart, relEnd)
-                        }
-                        @Suppress("UNCHECKED_CAST")
-                        add(OverlayEffect(com.google.common.collect.ImmutableList.copyOf(overlayList) as List<TextureOverlay>))
-                    }
-                    // Lottie animated title overlays
-                    val overlappingLottie = lottieOverlays.filter { lo ->
-                        lo.startTimeMs < clipEnd && lo.endTimeMs > clipStart
-                    }
-                    for (lo in overlappingLottie) {
-                        val relStartUs = ((lo.startTimeMs - clipStart).coerceAtLeast(0L)) * 1000L
-                        val durationUs = (lo.endTimeMs - lo.startTimeMs).coerceAtLeast(1L) * 1000L
-                        add(LottieOverlayEffect(
-                            lottieEngine = lo.engine,
-                            composition = lo.composition,
-                            overlayStartUs = relStartUs,
-                            overlayDurationUs = durationUs,
-                            textReplacements = lo.textReplacements
-                        ))
-                    }
-                    // Apply adjustment layer effects (cascade from tracks above)
-                    val adjustmentTracks = tracks.filter { it.type == TrackType.ADJUSTMENT && it.isVisible }
-                    for (adjTrack in adjustmentTracks) {
-                        for (adjClip in adjTrack.clips) {
-                            // Check temporal overlap
-                            if (adjClip.timelineStartMs < clipEnd && adjClip.timelineEndMs > clipStart) {
-                                // Apply adjustment clip's effects to current video clip
-                                for (effect in adjClip.effects.filter { it.enabled }) {
-                                    EffectBuilder.buildVideoEffect(effect, segmentationEngine)?.let { add(it) }
-                                }
-                            }
-                        }
-                    }
-
-                    // Frame rate control (drops frames to target fps)
-                    add(FrameDropEffect.createDefaultFrameDropEffect(config.frameRate.toFloat()))
-                    add(Presentation.createForWidthAndHeight(
-                        targetW, targetH, Presentation.LAYOUT_SCALE_TO_FIT
-                    ))
-                }
-
-                val audioProcessors = buildList<AudioProcessor> {
-                    if (videoMuted) {
-                        // Track is muted — silence all audio from video clips
+                val processors = buildList<AudioProcessor> {
+                    val hasKfVol = clip.keyframes.any { it.property == KeyframeProperty.VOLUME }
+                    val needsVolume = clip.volume != 1.0f
+                    val needsFade = clip.fadeInMs > 0L || clip.fadeOutMs > 0L
+                    if (hasKfVol || needsVolume || needsFade) {
                         add(VolumeAudioProcessor(
-                            volume = 0f,
-                            fadeInMs = 0L,
-                            fadeOutMs = 0L,
+                            volume = clip.volume, fadeInMs = clip.fadeInMs, fadeOutMs = clip.fadeOutMs,
                             clipDurationMs = clip.durationMs,
-                            keyframes = emptyList()
+                            keyframes = if (hasKfVol) clip.keyframes else emptyList()
                         ))
-                    } else {
-                        val hasKfVolume = clip.keyframes.any { it.property == KeyframeProperty.VOLUME }
-                        val needsVolume = clip.volume != 1.0f
-                        val needsFade = clip.fadeInMs > 0L || clip.fadeOutMs > 0L
-                        if (hasKfVolume || needsVolume || needsFade) {
-                            add(VolumeAudioProcessor(
-                                volume = clip.volume,
-                                fadeInMs = clip.fadeInMs,
-                                fadeOutMs = clip.fadeOutMs,
-                                clipDurationMs = clip.durationMs,
-                                keyframes = if (hasKfVolume) clip.keyframes else emptyList()
-                            ))
-                        }
                     }
                 }
-
-                val itemBuilder = EditedMediaItem.Builder(mediaItem)
-                    .setEffects(Effects(audioProcessors, videoEffects))
-
-                // Apply speed: variable speed curve via SpeedProvider, or constant speed
-                if (clip.speedCurve != null && clip.speedCurve.points.size >= 2) {
-                    val curve = clip.speedCurve
-                    val clipDurMs = clip.trimEndMs - clip.trimStartMs // Use source time range for curve normalization
-                    itemBuilder.setSpeed(object : androidx.media3.common.audio.SpeedProvider {
-                        override fun getSpeed(presentationTimeUs: Long): Float {
-                            val timeMs = presentationTimeUs / 1000L
-                            return curve.getSpeedAt(timeMs, clipDurMs).coerceIn(0.1f, 16f)
-                        }
-                        override fun getNextSpeedChangeTimeUs(timeUs: Long): Long {
-                            return androidx.media3.common.C.TIME_UNSET
-                        }
-                    })
-                } else if (clip.speed != 1.0f) {
-                    val constSpeed = clip.speed.coerceIn(0.1f, 16f)
-                    itemBuilder.setSpeed(object : androidx.media3.common.audio.SpeedProvider {
-                        override fun getSpeed(presentationTimeUs: Long): Float = constSpeed
-                        override fun getNextSpeedChangeTimeUs(timeUs: Long): Long = androidx.media3.common.C.TIME_UNSET
-                    })
-                }
-
-                itemBuilder.build()
+                EditedMediaItem.Builder(mediaItem)
+                    .setEffects(Effects(processors, emptyList()))
+                    .setRemoveVideo(true)
+                    .build()
             }
+            EditedMediaItemSequence.Builder(audioItems).build()
+        }
+    }
 
-            val videoSequence = EditedMediaItemSequence.Builder(editedItems).build()
+    @androidx.annotation.OptIn(UnstableApi::class)
+    private fun buildComposition(
+        sequences: List<EditedMediaItemSequence>,
+        hasAudioTracks: Boolean,
+        videoMuted: Boolean
+    ): Composition {
+        return Composition.Builder(sequences)
+            .setTransmuxAudio(!hasAudioTracks && !videoMuted)
+            .build()
+    }
 
-            // Build audio track sequences (background music, voiceovers, etc.) — supports multiple audio tracks
-            val audioTracks = tracks.filter { it.type == TrackType.AUDIO && it.isVisible && !it.isMuted && it.clips.isNotEmpty() }
-            val sequences = buildList {
-                add(videoSequence)
-                for (at in audioTracks) {
-                    val audioItems = at.clips.map { clip ->
-                        val mediaItem = MediaItem.Builder()
-                            .setUri(clip.sourceUri)
-                            .setClippingConfiguration(
-                                MediaItem.ClippingConfiguration.Builder()
-                                    .setStartPositionMs(clip.trimStartMs)
-                                    .setEndPositionMs(clip.trimEndMs)
-                                    .build()
-                            )
-                            .build()
-                        val processors = buildList<AudioProcessor> {
-                            val hasKfVol = clip.keyframes.any { it.property == KeyframeProperty.VOLUME }
-                            val needsVolume = clip.volume != 1.0f
-                            val needsFade = clip.fadeInMs > 0L || clip.fadeOutMs > 0L
-                            if (hasKfVol || needsVolume || needsFade) {
-                                add(VolumeAudioProcessor(
-                                    volume = clip.volume,
-                                    fadeInMs = clip.fadeInMs,
-                                    fadeOutMs = clip.fadeOutMs,
-                                    clipDurationMs = clip.durationMs,
-                                    keyframes = if (hasKfVol) clip.keyframes else emptyList()
-                                ))
-                            }
-                        }
-                        EditedMediaItem.Builder(mediaItem)
-                            .setEffects(Effects(processors, emptyList()))
-                            .setRemoveVideo(true)
-                            .build()
-                    }
-                    add(EditedMediaItemSequence.Builder(audioItems).build())
-                }
-            }
-
-            val hasAudioTracks = audioTracks.isNotEmpty()
-            // When video track is muted AND no audio tracks, transmux to pass through;
-            // when there are audio tracks, don't transmux so the processor pipeline runs
-            val composition = Composition.Builder(sequences)
-                .setTransmuxAudio(!hasAudioTracks && !videoMuted)
+    @androidx.annotation.OptIn(UnstableApi::class)
+    private suspend fun startTransformerWithPolling(
+        composition: Composition,
+        mimeType: String,
+        config: ExportConfig,
+        outputFile: File,
+        onProgress: (Float) -> Unit,
+        onComplete: () -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        withContext(Dispatchers.Main) {
+            val transformer = Transformer.Builder(context)
+                .setVideoMimeType(mimeType)
+                .setAudioMimeType(MimeTypes.AUDIO_AAC)
+                .setEncoderFactory(
+                    DefaultEncoderFactory.Builder(context)
+                        .setRequestedVideoEncoderSettings(
+                            VideoEncoderSettings.Builder()
+                                .setBitrate(config.videoBitrate)
+                                .build()
+                        )
+                        .setRequestedAudioEncoderSettings(
+                            AudioEncoderSettings.Builder()
+                                .setBitrate(config.audioBitrate)
+                                .build()
+                        )
+                        .build()
+                )
                 .build()
 
-            val mimeType = when (config.codec) {
-                VideoCodec.HEVC -> MimeTypes.VIDEO_H265
-                VideoCodec.H264 -> MimeTypes.VIDEO_H264
-                VideoCodec.AV1 -> MimeTypes.VIDEO_AV1
-                VideoCodec.VP9 -> MimeTypes.VIDEO_VP9
-            }
-
-            // Transformer.start() requires a Looper — must run on Main thread
-            withContext(Dispatchers.Main) {
-                val transformer = Transformer.Builder(context)
-                    .setVideoMimeType(mimeType)
-                    .setAudioMimeType(MimeTypes.AUDIO_AAC)
-                    .setEncoderFactory(
-                        DefaultEncoderFactory.Builder(context)
-                            .setRequestedVideoEncoderSettings(
-                                VideoEncoderSettings.Builder()
-                                    .setBitrate(config.videoBitrate)
-                                    .build()
-                            )
-                            .setRequestedAudioEncoderSettings(
-                                AudioEncoderSettings.Builder()
-                                    .setBitrate(config.audioBitrate)
-                                    .build()
-                            )
-                            .build()
-                    )
-                    .build()
-
-                val listener = object : Transformer.Listener {
-                    override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+            val listener = object : Transformer.Listener {
+                override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                    android.os.Handler(android.os.Looper.getMainLooper()).post {
                         _exportState.value = ExportState.COMPLETE
                         _exportProgress.value = 1f
                         onComplete()
                     }
+                }
 
-                    override fun onError(
-                        composition: Composition,
-                        exportResult: ExportResult,
-                        exportException: ExportException
-                    ) {
+                override fun onError(
+                    composition: Composition,
+                    exportResult: ExportResult,
+                    exportException: ExportException
+                ) {
+                    android.os.Handler(android.os.Looper.getMainLooper()).post {
                         Log.e(TAG, "Export failed", exportException)
                         _exportErrorMessage.value = exportException.message ?: "Export encoding failed"
                         _exportState.value = ExportState.ERROR
@@ -514,41 +533,33 @@ class VideoEngine @Inject constructor(
                         onError(exportException)
                     }
                 }
-
-                transformer.addListener(listener)
-                activeTransformer = transformer
-                transformer.start(composition, outputFile.absolutePath)
-
-                val holder = ProgressHolder()
-                var pollCount = 0
-                val maxPolls = 2400 // 10 minutes at 250ms intervals
-                while (_exportState.value == ExportState.EXPORTING && pollCount++ < maxPolls) {
-                    val state = transformer.getProgress(holder)
-                    if (state == Transformer.PROGRESS_STATE_AVAILABLE) {
-                        _exportProgress.value = holder.progress / 100f
-                        onProgress(holder.progress / 100f)
-                    }
-                    delay(250)
-                }
-                if (pollCount >= maxPolls && _exportState.value == ExportState.EXPORTING) {
-                    Log.w(TAG, "Export progress polling timeout after 10 minutes")
-                    transformer.cancel()
-                    _exportErrorMessage.value = "Export timed out after 10 minutes"
-                    _exportState.value = ExportState.ERROR
-                    _exportProgress.value = 0f
-                    outputFile.delete()
-                    onError(Exception("Export timed out"))
-                }
-                activeTransformer = null
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Export setup failed", e)
-            _exportErrorMessage.value = e.message ?: "Export setup failed"
-            _exportState.value = ExportState.ERROR
-            _exportProgress.value = 0f
+
+            transformer.addListener(listener)
+            activeTransformer = transformer
+            transformer.start(composition, outputFile.absolutePath)
+
+            val holder = ProgressHolder()
+            var pollCount = 0
+            val maxPolls = 2400 // 10 minutes at 250ms intervals
+            while (_exportState.value == ExportState.EXPORTING && pollCount++ < maxPolls) {
+                val state = transformer.getProgress(holder)
+                if (state == Transformer.PROGRESS_STATE_AVAILABLE) {
+                    _exportProgress.value = holder.progress / 100f
+                    onProgress(holder.progress / 100f)
+                }
+                delay(250)
+            }
+            if (pollCount >= maxPolls && _exportState.value == ExportState.EXPORTING) {
+                Log.w(TAG, "Export progress polling timeout after 10 minutes")
+                transformer.cancel()
+                _exportErrorMessage.value = "Export timed out after 10 minutes"
+                _exportState.value = ExportState.ERROR
+                _exportProgress.value = 0f
+                outputFile.delete()
+                onError(Exception("Export timed out"))
+            }
             activeTransformer = null
-            outputFile.delete()
-            onError(e)
         }
     }
 
@@ -658,15 +669,3 @@ class VideoEngine @Inject constructor(
 }
 
 enum class ExportState { IDLE, EXPORTING, COMPLETE, ERROR, CANCELLED }
-
-/**
- * Specification for a Lottie animated overlay in the export pipeline.
- * Created by the ViewModel when preparing export with animated title overlays.
- */
-data class LottieOverlaySpec(
-    val engine: LottieTemplateEngine,
-    val composition: com.airbnb.lottie.LottieComposition,
-    val startTimeMs: Long,
-    val endTimeMs: Long,
-    val textReplacements: Map<String, String> = emptyMap()
-)

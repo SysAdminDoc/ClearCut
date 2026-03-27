@@ -468,6 +468,8 @@ fun EditorScreen(
                 exportProgress = state.exportProgress,
                 aspectRatio = state.project.aspectRatio,
                 errorMessage = state.exportErrorMessage,
+                exportStartTime = state.exportStartTime,
+                totalDurationMs = state.totalDurationMs,
                 onConfigChanged = viewModel::updateExportConfig,
                 onStartExport = {
                     // Use app-private external dir — works on all Android versions including 11+

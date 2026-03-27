@@ -102,7 +102,7 @@ proxyWorkflowEngine, sherpaAsrEngine
 - ProGuard rules verified comprehensive (Hilt, Room, Media3, ONNX, MediaPipe, Coil)
 
 ## Build Info
-- `versionCode = 63`, `versionName = "3.0.0"`
+- `versionCode = 67`, `versionName = "3.7.0"`
 - `compileSdk = 35`, `targetSdk = 35`, `minSdk = 26`
 - R8 minify + shrink enabled for release
 - Signing via `keystore.properties` or env vars (`NOVACUT_KS_PASS`, `NOVACUT_KEY_ALIAS`, `NOVACUT_KEY_PASS`)

@@ -24,7 +24,8 @@ class AudioMixerDelegate(
     private val saveUndoState: (String) -> Unit,
     private val showToast: (String) -> Unit,
     private val pauseIfPlaying: () -> Unit,
-    private val dismissedPanelState: (EditorState) -> EditorState
+    private val dismissedPanelState: (EditorState) -> EditorState,
+    private val saveProject: () -> Unit
 ) {
     // --- Audio Mixer ---
     fun showAudioMixer() {
@@ -73,6 +74,7 @@ class AudioMixerDelegate(
                 } else track
             })
         }
+        saveProject()
     }
 
     fun removeTrackAudioEffect(trackId: String, effectId: String) {
@@ -84,6 +86,7 @@ class AudioMixerDelegate(
                 } else track
             })
         }
+        saveProject()
     }
 
     fun updateTrackAudioEffectParam(trackId: String, effectId: String, param: String, value: Float) {
@@ -138,8 +141,6 @@ class AudioMixerDelegate(
     fun normalizeAudio(targetLufs: Float) {
         val clipId = stateFlow.value.selectedClipId ?: return
         val clip = stateFlow.value.tracks.flatMap { it.clips }.find { it.id == clipId } ?: return
-        saveUndoState("Normalize audio")
-
         scope.launch {
             showToast("Measuring loudness...")
             try {
@@ -149,6 +150,7 @@ class AudioMixerDelegate(
                     ?: LoudnessEngine.LoudnessPreset.YOUTUBE
                 val gain = loudnessEngine.calculateNormalizationGain(measurement, preset)
 
+                saveUndoState("Normalize audio")
                 stateFlow.update { s ->
                     s.copy(tracks = s.tracks.map { track ->
                         track.copy(clips = track.clips.map { c ->
@@ -157,6 +159,7 @@ class AudioMixerDelegate(
                     })
                 }
                 hideAudioNorm()
+                saveProject()
                 showToast("Normalized: %.1f \u2192 %.0f LUFS".format(measurement.integratedLufs, targetLufs))
             } catch (e: Exception) {
                 showToast("Normalization failed: ${e.message ?: "Unknown error"}")

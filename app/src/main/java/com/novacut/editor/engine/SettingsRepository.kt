@@ -22,7 +22,9 @@ data class AppSettings(
     val proxyEnabled: Boolean = true,
     val autoSaveEnabled: Boolean = true,
     val autoSaveIntervalSec: Int = 60,
-    val proxyResolution: ProxyResolution = ProxyResolution.QUARTER
+    val proxyResolution: ProxyResolution = ProxyResolution.QUARTER,
+    val editorMode: String = "Pro",
+    val hapticEnabled: Boolean = true
 )
 
 @Singleton
@@ -41,6 +43,8 @@ class SettingsRepository @Inject constructor(
         val TUTORIAL_SHOWN = booleanPreferencesKey("tutorial_shown")
         val FAVORITE_EFFECTS = stringSetPreferencesKey("favorite_effects")
         val RECENT_EFFECTS = stringPreferencesKey("recent_effects")
+        val EDITOR_MODE = stringPreferencesKey("editor_mode")
+        val HAPTIC_ENABLED = booleanPreferencesKey("haptic_enabled")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
@@ -58,7 +62,9 @@ class SettingsRepository @Inject constructor(
             autoSaveIntervalSec = prefs[Keys.AUTO_SAVE_INTERVAL] ?: 60,
             proxyResolution = prefs[Keys.PROXY_RES]?.let {
                 try { ProxyResolution.valueOf(it) } catch (_: Exception) { null }
-            } ?: ProxyResolution.QUARTER
+            } ?: ProxyResolution.QUARTER,
+            editorMode = prefs[Keys.EDITOR_MODE] ?: "Pro",
+            hapticEnabled = prefs[Keys.HAPTIC_ENABLED] ?: true
         )
     }
 
@@ -126,6 +132,14 @@ class SettingsRepository @Inject constructor(
             val updated = (listOf(effectType) + current).take(20)
             prefs[Keys.RECENT_EFFECTS] = updated.joinToString(",")
         }
+    }
+
+    suspend fun updateEditorMode(mode: String) {
+        context.dataStore.edit { it[Keys.EDITOR_MODE] = mode }
+    }
+
+    suspend fun updateHapticEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.HAPTIC_ENABLED] = enabled }
     }
 
     suspend fun getRecentEffects(): List<String> {

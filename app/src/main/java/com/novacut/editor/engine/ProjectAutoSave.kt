@@ -6,6 +6,8 @@ import com.novacut.editor.model.*
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
 import org.json.JSONObject
 import android.util.Log
@@ -21,6 +23,7 @@ class ProjectAutoSave @Inject constructor(
 ) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val autoSaveDir = File(context.filesDir, "autosave").apply { mkdirs() }
+    private val saveMutex = Mutex()
     @Volatile
     private var autoSaveJob: Job? = null
     private var consecutiveFailures = 0
@@ -118,7 +121,7 @@ class ProjectAutoSave @Inject constructor(
         scope.cancel()
     }
 
-    private fun saveState(projectId: String, state: AutoSaveState) {
+    private suspend fun saveState(projectId: String, state: AutoSaveState) = saveMutex.withLock {
         val file = getAutoSaveFile(projectId)
         val tempFile = File(autoSaveDir, "${projectId}.tmp")
         try {
@@ -169,11 +172,21 @@ data class AutoSaveState(
 
         fun deserialize(raw: String): AutoSaveState {
             val json = JSONObject(raw)
+            val tracks = deserializeTracks(json.optJSONArray("tracks") ?: JSONArray())
+            // Clean up orphaned linkedClipId references
+            val allClipIds = tracks.flatMap { it.clips.map { c -> c.id } }.toSet()
+            val cleanedTracks = tracks.map { track ->
+                track.copy(clips = track.clips.map { clip ->
+                    if (clip.linkedClipId != null && clip.linkedClipId !in allClipIds) {
+                        clip.copy(linkedClipId = null)
+                    } else clip
+                })
+            }
             return AutoSaveState(
                 projectId = json.optString("projectId", ""),
                 timestamp = json.optLong("timestamp", System.currentTimeMillis()),
                 playheadMs = json.optLong("playheadMs", 0L),
-                tracks = deserializeTracks(json.optJSONArray("tracks") ?: JSONArray()),
+                tracks = cleanedTracks,
                 textOverlays = deserializeTextOverlays(json.optJSONArray("textOverlays") ?: JSONArray())
             )
         }
@@ -360,6 +373,10 @@ data class AutoSaveState(
                     mask.points.forEach { pt ->
                         put(JSONObject().apply {
                             put("x", pt.x.toDouble()); put("y", pt.y.toDouble())
+                            put("handleInX", pt.handleInX.toDouble())
+                            put("handleInY", pt.handleInY.toDouble())
+                            put("handleOutX", pt.handleOutX.toDouble())
+                            put("handleOutY", pt.handleOutY.toDouble())
                         })
                     }
                 })
@@ -534,7 +551,7 @@ data class AutoSaveState(
                     try { deserializeKeyframe(keyframesArr.getJSONObject(i)) } catch (e: Exception) {
                         Log.w(TAG, "Failed to deserialize keyframe $i", e); null
                     }
-                },
+                }.distinctBy { Pair(it.timeOffsetMs, it.property) },
                 transition = json.optJSONObject("transition")?.let { deserializeTransition(it) },
                 colorGrade = json.optJSONObject("colorGrade")?.let { deserializeColorGrade(it) },
                 speedCurve = json.optJSONObject("speedCurve")?.let { deserializeSpeedCurve(it) },
@@ -565,7 +582,7 @@ data class AutoSaveState(
                 params = params,
                 keyframes = (0 until effectKfArr.length()).mapNotNull { i ->
                     try { deserializeEffectKeyframe(effectKfArr.getJSONObject(i)) } catch (e: Exception) { null }
-                }
+                }.distinctBy { Pair(it.timeOffsetMs, it.paramName) }
             )
         }
 

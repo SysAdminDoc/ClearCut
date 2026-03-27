@@ -7,9 +7,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
  * Extracted from delegates to eliminate duplication across 7 delegate classes.
  */
 internal inline fun <T> MutableStateFlow<T>.update(function: (T) -> T) {
+    var attempts = 0
     while (true) {
         val prevValue = value
         val nextValue = function(prevValue)
         if (compareAndSet(prevValue, nextValue)) return
+        if (++attempts > 100) throw IllegalStateException("StateFlow CAS loop exceeded 100 retries")
     }
 }

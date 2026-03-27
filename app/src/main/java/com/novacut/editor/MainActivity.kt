@@ -81,7 +81,10 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable("settings") {
-                        SettingsScreen(onBack = { navController.popBackStack() })
+                        SettingsScreen(
+                            onBack = { navController.popBackStack() },
+                            onNavigateToAiModels = { navController.popBackStack() }
+                        )
                     }
                     composable("editor/{projectId}") {
                         EditorScreen(
