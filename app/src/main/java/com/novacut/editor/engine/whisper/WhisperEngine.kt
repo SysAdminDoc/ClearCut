@@ -135,7 +135,10 @@ class WhisperEngine @Inject constructor(
                             }
                         }
                     }
-                    tempFile.renameTo(file)
+                    if (!tempFile.renameTo(file)) {
+                        tempFile.copyTo(file, overwrite = true)
+                        tempFile.delete()
+                    }
                 } catch (e: Exception) {
                     tempFile.delete()
                     throw e

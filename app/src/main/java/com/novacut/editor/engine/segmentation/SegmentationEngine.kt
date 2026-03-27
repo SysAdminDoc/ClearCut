@@ -112,7 +112,10 @@ class SegmentationEngine @Inject constructor(
                 }
             }
 
-            tempFile.renameTo(modelFile)
+            if (!tempFile.renameTo(modelFile)) {
+                tempFile.copyTo(modelFile, overwrite = true)
+                tempFile.delete()
+            }
             _downloadProgress.value = 1f
             onProgress(1f)
             _modelState.value = SegmentationModelState.READY

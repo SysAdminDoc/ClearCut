@@ -140,7 +140,10 @@ class InpaintingEngine @Inject constructor(
                 }
             }
 
-            tempFile.renameTo(outputFile)
+            if (!tempFile.renameTo(outputFile)) {
+                tempFile.copyTo(outputFile, overwrite = true)
+                tempFile.delete()
+            }
             Log.d(TAG, "LaMa model downloaded: ${outputFile.length()} bytes")
             onProgress(1f)
             true
