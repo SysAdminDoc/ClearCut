@@ -1,8 +1,44 @@
-# NovaCut v3.5.0
+# NovaCut v3.6.0
 
 A professional Android video editor built with Kotlin and Jetpack Compose. Open alternative to CapCut, PowerDirector, and DaVinci Resolve — with on-device AI, GPU-accelerated effects, and desktop NLE interoperability.
 
 ## Changelog
+
+### v3.6.0 — Architecture Hardening & Concurrency Safety
+
+**Critical Fixes**
+- Fixed concurrent file write corruption in ProjectAutoSave (added Mutex coordination between `saveNow()` and auto-save timer)
+- Fixed Transformer listener callbacks executing on internal thread instead of Main (StateFlow writes now dispatched to Main looper)
+- Added export double-start guard preventing overlapping Transformer sessions
+- Added Mutex to ProxyWorkflowEngine preventing duplicate concurrent proxy generation
+- Removed reference to non-existent `showVoiceoverRecorder` field in EditorState
+
+**Duration & State Fixes**
+- `setClipReversed()` now triggers `recalculateDuration()` (timeline total was stale after reversing)
+- `setTransition()` and `setTransitionDuration()` now trigger `recalculateDuration()` (transitions affect clip timing)
+- Added `@Volatile` to `saveIndicatorJob`, `voiceoverDurationJob`, `toastJob` for cross-thread visibility
+- `onCleared()` now cancels all Job fields (`saveIndicatorJob`, `toastJob`, `aiJob`) preventing coroutine leaks
+
+**Model Validation**
+- Added `init { require() }` blocks: Transition (durationMs > 0), Track (pan in -1..1), ImageOverlay (startTime < endTime, scale > 0, opacity 0..1), Caption (endTime >= startTime), Mask (feather >= 0, opacity 0..1), Clip (trimEndMs <= sourceDurationMs)
+
+**Dead Code Removal**
+- Deleted 5 unused @Singleton engine classes: CloudInpaintingEngine, PiperTtsEngine, RiveTemplateEngine, SoundpipeDspEngine, SubtitleRenderEngine
+- Removed unused LutEngine import from ColorGradingDelegate
+
+**VideoEngine Decomposition**
+- Decomposed 500-line `export()` method into 4 focused helpers: `buildEditedMediaItem()`, `buildAudioSequences()`, `buildComposition()`, `startTransformerWithPolling()`
+- Extracted `LottieOverlaySpec` data class to its own file
+- `export()` is now ~55 lines of orchestration logic
+
+**ViewModel Cleanup**
+- Added try-catch around `exportProjectArchive` file I/O
+- Fixed `autoDuck()` indentation/try-block alignment
+
+### v3.5.0 — Build Cleanup
+- Removed 5 unavailable dependencies (sherpa-onnx, deepfilternet, ncnn, ffmpegx, opentimelineio)
+- Cleaned ProGuard keep rules for removed dependencies
+- Engine stubs retained for future dependency integration
 
 ### v3.4.0 — Dependency Activation (Reverted)
 - Dependencies briefly added for engine wiring, then reverted in v3.5.0 due to unavailable artifacts

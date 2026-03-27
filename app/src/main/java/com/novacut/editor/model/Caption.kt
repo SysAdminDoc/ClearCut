@@ -11,7 +11,11 @@ data class Caption(
     val endTimeMs: Long,
     val words: List<CaptionWord> = emptyList(),
     val style: CaptionStyle = CaptionStyle()
-)
+) {
+    init {
+        require(endTimeMs >= startTimeMs) { "endTimeMs must be >= startTimeMs" }
+    }
+}
 
 @Immutable
 data class CaptionWord(
