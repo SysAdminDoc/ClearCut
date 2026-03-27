@@ -71,17 +71,12 @@ class ClipEditingDelegate(
                     if (i == trackIndex) t.copy(clips = t.clips + clip) else t
                 }
 
-                val totalDuration = tracks.maxOfOrNull { t ->
-                    t.clips.maxOfOrNull { it.timelineEndMs } ?: 0L
-                } ?: 0L
-
-                state.copy(
+                recalculateDuration(state.copy(
                     tracks = tracks,
-                    totalDurationMs = totalDuration,
                     selectedClipId = clip.id,
                     selectedTrackId = track.id,
                     panels = state.panels.close(PanelId.MEDIA_PICKER)
-                )
+                ))
             }
 
             // Rebuild player timeline with all clips
@@ -93,8 +88,12 @@ class ClipEditingDelegate(
 
             // Extract waveform for audio visualization using the known clip ID
             scope.launch {
-                val waveform = audioEngine.extractWaveform(uri).toList()
-                stateFlow.update { it.copy(waveforms = it.waveforms + (clipId to waveform)) }
+                try {
+                    val waveform = audioEngine.extractWaveform(uri).toList()
+                    stateFlow.update { it.copy(waveforms = it.waveforms + (clipId to waveform)) }
+                } catch (e: Exception) {
+                    android.util.Log.w("ClipEditingDelegate", "Waveform extraction failed", e)
+                }
             }
         }
     }
@@ -147,18 +146,13 @@ class ClipEditingDelegate(
                     }
                 track.copy(clips = updatedClips)
             }
-            val totalDuration = tracks.maxOfOrNull { t ->
-                t.clips.maxOfOrNull { it.timelineEndMs } ?: 0L
-            } ?: 0L
-
-            state.copy(
+            recalculateDuration(state.copy(
                 tracks = tracks,
-                totalDurationMs = totalDuration,
                 selectedClipId = null,
                 selectedTrackId = null,
                 selectedClipIds = emptySet(),
                 waveforms = state.waveforms - clipId
-            )
+            ))
         }
         rebuildPlayerTimeline()
         saveProject()
@@ -339,10 +333,7 @@ class ClipEditingDelegate(
                     } else clip
                 })
             }
-            val totalDuration = tracks.maxOfOrNull { t ->
-                t.clips.maxOfOrNull { it.timelineEndMs } ?: 0L
-            } ?: 0L
-            state.copy(tracks = tracks, totalDurationMs = totalDuration)
+            recalculateDuration(state.copy(tracks = tracks))
         }
         rebuildPlayerTimeline()
     }

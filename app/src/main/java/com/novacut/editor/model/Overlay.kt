@@ -37,7 +37,12 @@ data class TextOverlay(
     val textPath: TextPath? = null,
     val templateId: String? = null,
     val keyframes: List<Keyframe> = emptyList()
-)
+) {
+    init {
+        require(fontSize > 0f) { "Font size must be positive" }
+        require(text.isNotEmpty()) { "Text overlay cannot be empty" }
+    }
+}
 
 @Immutable
 data class ImageOverlay(

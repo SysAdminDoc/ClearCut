@@ -48,7 +48,10 @@ v3.5.0
   - `ui/mediapicker/MediaPicker.kt` - Media picker with Photo Picker (API 33+) + OpenDocument fallback + camera capture
   - `res/xml/file_paths.xml` - FileProvider paths config for camera capture + export sharing
   - `ui/export/ExportSheet.kt` - Export settings (resolution, codec, quality, progress, error with retry, share, save to gallery)
-  - `engine/VideoEngine.kt` - Media3 Transformer export + ExoPlayer + thumbnail extraction
+  - `engine/VideoEngine.kt` - Media3 Transformer export + ExoPlayer + thumbnail extraction (~670 lines)
+  - `engine/EffectBuilder.kt` - Pure effect mapping: NovaCut model → Media3 Effect (buildVideoEffect, color grading, transitions, transforms)
+  - `engine/VolumeAudioProcessor.kt` - Audio processor for volume/fade/keyframe envelope during export
+  - `engine/ExportTextOverlay.kt` - Text overlay rendering with animation state machine for export
   - `engine/AudioEngine.kt` - Audio waveform extraction + PCM mixing
   - `engine/KeyframeEngine.kt` - Keyframe interpolation with 5 easing curves
   - `engine/ExportService.kt` - Foreground service for export notifications (MEDIA_PROCESSING type)
@@ -678,12 +681,19 @@ v3.5.0
 - Synced version to 3.5.0 across all files
 - Documentation rewritten to honestly distinguish working vs stub features
 
+### VideoEngine Decomposition
+- Extracted `EffectBuilder.kt` (~470 lines) — pure `object` with `buildVideoEffect()`, `addColorGradingEffects()`, `buildTransitionEffect()`, `addOpacityAndTransformEffects()` as stateless extension functions
+- Extracted `VolumeAudioProcessor.kt` (~75 lines) — audio fade/volume/keyframe processor, was private inner class
+- Extracted `ExportTextOverlay.kt` (~200 lines) — text overlay with animation state machine, was private inner class
+- VideoEngine reduced from 1,439 → 672 lines (53% reduction)
+
+### EditorViewModel Dependency Cleanup
+- Removed 5 unused engine constructor parameters: `ffmpegEngine`, `subtitleRenderEngine`, `piperTtsEngine`, `lottieTemplateEngine`, `tapSegmentEngine`
+- Constructor reduced from 32 → 27 parameters
+
 ## Next Steps
 - Integrate real dependencies when available (Sherpa-ONNX, DeepFilterNet, NCNN, OpenCV, FFmpeg)
-- Add `@Stable`/`@Immutable` annotations to data classes for Compose compiler optimization
-- Add `derivedStateOf` for computed values in EditorScreen
 - Decompose EditorViewModel (3,300 lines) — convert delegates to proper Hilt-injectable classes
-- Decompose Project.kt (1,081 lines, 70 symbols) into focused model files
-- Decompose VideoEngine.export() (500-line method)
+- Bundle AI engines into `AiEnginesBundle` facade to reduce constructor parameters further
 - True dual-texture blend mode compositing via Media3 Compositor API
 - ProjectArchive.importArchive() full implementation

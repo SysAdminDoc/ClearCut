@@ -73,7 +73,11 @@ data class Track(
     val blendMode: BlendMode = BlendMode.NORMAL,
     val audioEffects: List<AudioEffect> = emptyList(),
     val isLinkedAV: Boolean = true
-)
+) {
+    init {
+        require(index >= 0) { "Track index must be non-negative" }
+    }
+}
 
 @Immutable
 data class Clip(
@@ -112,6 +116,14 @@ data class Clip(
     val captions: List<Caption> = emptyList(),
     val groupId: String? = null
 ) {
+    init {
+        require(speed > 0f) { "Clip speed must be positive" }
+        require(trimStartMs >= 0) { "trimStartMs must be non-negative" }
+        require(trimEndMs >= trimStartMs) { "trimEndMs must be >= trimStartMs" }
+        require(volume in 0f..2f) { "Volume must be between 0 and 2" }
+        require(opacity in 0f..1f) { "Opacity must be between 0 and 1" }
+    }
+
     val durationMs: Long get() {
         val trimRange = trimEndMs - trimStartMs
         if (trimRange <= 0) return 0L

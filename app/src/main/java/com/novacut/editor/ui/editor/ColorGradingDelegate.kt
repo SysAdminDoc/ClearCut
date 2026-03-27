@@ -3,7 +3,6 @@ package com.novacut.editor.ui.editor
 import android.content.Context
 import android.net.Uri
 import com.novacut.editor.engine.LutEngine
-import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.model.ColorGrade
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -20,7 +19,6 @@ import java.io.File
  */
 class ColorGradingDelegate(
     private val stateFlow: MutableStateFlow<EditorState>,
-    private val videoEngine: VideoEngine,
     private val appContext: Context,
     private val scope: CoroutineScope,
     private val saveUndoState: (String) -> Unit,
