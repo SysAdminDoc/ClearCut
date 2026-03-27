@@ -1077,6 +1077,35 @@ fun EditorScreen(
             )
         }
 
+        // Cloud Backup
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.CLOUD_BACKUP),
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            CloudBackupPanel(
+                isSignedIn = false,
+                lastBackupTime = null,
+                backupProgress = null,
+                onSignIn = { viewModel.showToast("Cloud backup coming soon") },
+                onBackupNow = { viewModel.showToast("Cloud backup coming soon") },
+                onRestore = { viewModel.showToast("Cloud restore coming soon") },
+                onAutoBackupToggled = { },
+                autoBackupEnabled = false,
+                onClose = viewModel::hideCloudBackup
+            )
+        }
+
+        // Export Progress Overlay (floating card during export)
+        ExportProgressOverlay(
+            exportState = state.exportState,
+            exportProgress = state.exportProgress,
+            exportStartTime = state.exportStartTime,
+            onCancel = viewModel::cancelExport,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 56.dp, end = 8.dp)
+        )
+
         // First Run Tutorial
         AnimatedVisibility(
             visible = state.panels.isOpen(PanelId.TUTORIAL),

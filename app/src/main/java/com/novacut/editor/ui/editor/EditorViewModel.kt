@@ -309,9 +309,6 @@ class EditorViewModel @Inject constructor(
     @Volatile
     private var timelineWidthPx: Float = 0f
 
-    @Volatile
-    private var aiJob: kotlinx.coroutines.Job? = null
-
     fun setTimelineWidth(widthPx: Float) {
         timelineWidthPx = widthPx
     }
@@ -1815,16 +1812,19 @@ class EditorViewModel @Inject constructor(
     fun hideChapterMarkers() = hidePanel(PanelId.CHAPTER_MARKERS)
 
     fun addChapterMarker(marker: ChapterMarker) {
+        saveUndoState("Add chapter")
         val totalDuration = _state.value.totalDurationMs
         val clampedMarker = marker.copy(timeMs = marker.timeMs.coerceIn(0L, totalDuration))
         _state.update { s ->
             val updated = (s.chapterMarkers + clampedMarker).sortedBy { it.timeMs }
             s.copy(chapterMarkers = updated)
         }
+        saveProject()
         showToast("Chapter added at ${formatTime(clampedMarker.timeMs)}")
     }
 
     fun updateChapterMarker(index: Int, marker: ChapterMarker) {
+        saveUndoState("Update chapter")
         val totalDuration = _state.value.totalDurationMs
         val clampedMarker = marker.copy(timeMs = marker.timeMs.coerceIn(0L, totalDuration))
         _state.update { s ->
@@ -1834,14 +1834,17 @@ class EditorViewModel @Inject constructor(
                 s.copy(chapterMarkers = updated.sortedBy { it.timeMs })
             } else s
         }
+        saveProject()
     }
 
     fun deleteChapterMarker(index: Int) {
+        saveUndoState("Delete chapter")
         _state.update { s ->
             if (index in s.chapterMarkers.indices) {
                 s.copy(chapterMarkers = s.chapterMarkers.toMutableList().also { it.removeAt(index) })
             } else s
         }
+        saveProject()
     }
 
     private fun formatTime(ms: Long): String {
@@ -2289,374 +2292,7 @@ class EditorViewModel @Inject constructor(
     fun downloadSegmentationModel() = aiToolsDelegate.downloadSegmentationModel()
     fun deleteSegmentationModel() = aiToolsDelegate.deleteSegmentationModel()
 
-    // --- AI tool clip update helper ---
-    private fun updateClipByIdWithDuration(clipId: String, transform: (Clip) -> Clip) {
-        _state.update { state ->
-            val tracks = state.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) transform(clip) else clip
-                })
-            }
-            recalculateDuration(state.copy(tracks = tracks))
-        }
-        rebuildPlayerTimeline()
-        saveProject()
-    }
-
-    // --- Extracted AI tool methods ---
-
-    private suspend fun aiSceneDetect(clip: Clip) {
-        val scenes = aiFeatures.detectScenes(clip.sourceUri)
-        if (scenes.isEmpty()) { showToast("No scene changes detected"); return }
-        saveUndoState("AI scene detect")
-        _state.update { state ->
-            var tracks = state.tracks
-            for (scene in scenes.sortedByDescending { it.timestampMs }) {
-                val splitMs = clip.timelineStartMs + ((scene.timestampMs - clip.trimStartMs) / clip.speed).toLong()
-                if (splitMs <= clip.timelineStartMs || splitMs >= clip.timelineEndMs) continue
-                tracks = tracks.map { track ->
-                    val idx = track.clips.indexOfFirst { it.id == clip.id }
-                    if (idx < 0) return@map track
-                    val c = track.clips[idx]
-                    if (splitMs <= c.timelineStartMs || splitMs >= c.timelineEndMs) return@map track
-                    val relPos = splitMs - c.timelineStartMs
-                    val srcSplit = c.trimStartMs + (relPos * c.speed).toLong()
-                    track.copy(clips = buildList {
-                        addAll(track.clips.subList(0, idx))
-                        add(c.copy(trimEndMs = srcSplit))
-                        add(c.copy(id = UUID.randomUUID().toString(), timelineStartMs = splitMs, trimStartMs = srcSplit))
-                        addAll(track.clips.subList(idx + 1, track.clips.size))
-                    })
-                }
-            }
-            recalculateDuration(state.copy(tracks = tracks))
-        }
-        rebuildPlayerTimeline(); saveProject()
-        showToast("Split into ${scenes.size + 1} clips at scene boundaries")
-    }
-
-    private suspend fun aiAutoCaptions(clip: Clip) {
-        val useWhisper = aiFeatures.whisperEngine.isReady()
-        if (useWhisper) showToast("Transcribing with Whisper...")
-        val captions = aiFeatures.generateAutoCaptions(clip.sourceUri)
-        if (captions.isEmpty()) { showToast("No speech detected"); return }
-        saveUndoState("AI auto captions")
-        _state.update { it.copy(textOverlays = it.textOverlays + aiFeatures.captionsToOverlays(captions)) }
-        saveProject()
-        showToast("Added ${captions.size} captions (${if (useWhisper) "Whisper" else "energy detection"})")
-    }
-
-    private suspend fun aiAutoColor(clip: Clip) {
-        val correction = aiFeatures.autoColorCorrect(clip.sourceUri)
-        if (correction.confidence < 0.1f) { showToast("Could not analyze color"); return }
-        saveUndoState("AI auto color")
-        val newEffects = buildList {
-            if (kotlin.math.abs(correction.brightness) > 0.02f) add(Effect(type = EffectType.BRIGHTNESS, params = mapOf("value" to correction.brightness)))
-            if (kotlin.math.abs(correction.contrast - 1f) > 0.05f) add(Effect(type = EffectType.CONTRAST, params = mapOf("value" to correction.contrast)))
-            if (kotlin.math.abs(correction.saturation - 1f) > 0.05f) add(Effect(type = EffectType.SATURATION, params = mapOf("value" to correction.saturation)))
-            if (kotlin.math.abs(correction.temperature) > 0.05f) add(Effect(type = EffectType.TEMPERATURE, params = mapOf("value" to correction.temperature)))
-        }
-        if (newEffects.isEmpty()) { showToast("Colors already look good!"); return }
-        val autoTypes = newEffects.map { it.type }.toSet()
-        updateClipByIdWithDuration(clip.id) { c -> c.copy(effects = c.effects.filter { it.type !in autoTypes } + newEffects) }
-        showToast("Applied ${newEffects.size} color corrections")
-    }
-
-    private suspend fun aiStabilizeClip(clip: Clip) {
-        val result = aiFeatures.stabilizeVideo(clip.sourceUri)
-        if (result.confidence < 0.1f || result.shakeMagnitude < 0.001f) { showToast("Video is already stable"); return }
-        saveUndoState("AI stabilize")
-        val zoom = result.recommendedZoom
-        val keyframes = result.motionKeyframes.flatMap { kf ->
-            listOf(
-                Keyframe(kf.timestampMs, KeyframeProperty.POSITION_X, kf.offsetX, easing = Easing.EASE_IN_OUT),
-                Keyframe(kf.timestampMs, KeyframeProperty.POSITION_Y, kf.offsetY, easing = Easing.EASE_IN_OUT)
-            )
-        }
-        updateClipByIdWithDuration(clip.id) { c -> c.copy(scaleX = c.scaleX * zoom, scaleY = c.scaleY * zoom, keyframes = c.keyframes + keyframes) }
-        showToast("Stabilized: ${"%.0f".format(result.shakeMagnitude * 100)}% shake corrected, ${"%.0f".format((zoom - 1f) * 100)}% zoom applied")
-    }
-
-    private suspend fun aiDenoise(clip: Clip) {
-        val profile = aiFeatures.analyzeAudioNoise(clip.sourceUri)
-        if (profile.confidence < 0.1f) { showToast("Could not analyze audio noise"); return }
-        if (profile.signalToNoiseDb > 40f) { showToast("Audio is already clean (SNR: ${"%.0f".format(profile.signalToNoiseDb)}dB)"); return }
-        saveUndoState("AI denoise")
-        val volumeBoost = (1f + profile.recommendedReduction * 0.3f).coerceAtMost(1.5f)
-        updateClipByIdWithDuration(clip.id) { c ->
-            c.copy(volume = (c.volume * volumeBoost).coerceIn(0f, 2f), fadeInMs = if (c.fadeInMs < 50) 50L else c.fadeInMs, fadeOutMs = if (c.fadeOutMs < 50) 50L else c.fadeOutMs)
-        }
-        showToast("Denoised: SNR ${"%.0f".format(profile.signalToNoiseDb)}dB, reduction ${"%.0f".format(profile.recommendedReduction * 100)}%")
-    }
-
-    private suspend fun aiRemoveOrReplaceBg(clip: Clip, isReplace: Boolean) {
-        val undoLabel = if (isReplace) "AI background replace" else "AI remove background"
-        val segEngine = aiFeatures.segmentationEngine
-        if (segEngine.isReady()) {
-            val result = segEngine.segmentVideoFrame(clip.sourceUri)
-            if (result == null || result.confidence < 0.05f) { showToast("Could not detect subject in frame"); return }
-            saveUndoState(undoLabel)
-            val bgEffect = Effect(type = EffectType.BG_REMOVAL, params = mapOf("threshold" to 0.5f))
-            updateClipByIdWithDuration(clip.id) { c -> c.copy(effects = c.effects.filter { it.type != EffectType.BG_REMOVAL && it.type != EffectType.CHROMA_KEY } + bgEffect) }
-            showToast(if (isReplace) "Background removed — add replacement media on track below" else "AI background removal applied (${"%.0f".format(result.confidence * 100)}% coverage)")
-        } else {
-            val analysis = aiFeatures.analyzeBackground(clip.sourceUri)
-            if (analysis.confidence < 0.1f) { showToast("Could not detect background"); return }
-            saveUndoState(undoLabel)
-            val chromaKeyEffect = Effect(type = EffectType.CHROMA_KEY, params = mapOf("similarity" to analysis.recommendedSimilarity, "smoothness" to analysis.recommendedSmoothness, "spill" to analysis.recommendedSpill))
-            updateClipByIdWithDuration(clip.id) { c -> c.copy(effects = c.effects.filter { it.type != EffectType.CHROMA_KEY } + chromaKeyEffect) }
-            val msg = if (isReplace) "Background keyed out — add replacement media on track below" else {
-                val bgType = when { analysis.isGreenScreen -> "green screen"; analysis.isBlueScreen -> "blue screen"; else -> "background" }
-                "Applied $bgType removal (${"%.0f".format(analysis.confidence * 100)}% confidence)"
-            }
-            showToast(msg)
-        }
-    }
-
-    private suspend fun aiTrackMotion(clip: Clip, region: com.novacut.editor.ai.TrackingRegion, undoLabel: String, invertX: Boolean = false, centerY: Float = 0.5f) {
-        if (undoLabel.contains("face", true)) showToast("Face tracking: detecting faces...")
-        val results = aiFeatures.trackMotion(clip.sourceUri, region, clip.trimStartMs, clip.trimEndMs)
-        if (results.isEmpty()) { showToast(if (undoLabel.contains("face", true)) "No face detected" else "Motion tracking failed"); return }
-        saveUndoState(undoLabel)
-        val xSign = if (invertX) -1f else 1f
-        val posKeyframes = results.mapNotNull { tr ->
-            val timeOffset = ((tr.timestampMs - clip.trimStartMs) / clip.speed).toLong()
-            if (timeOffset < 0 || timeOffset > clip.durationMs) return@mapNotNull null
-            listOf(
-                Keyframe(timeOffset, KeyframeProperty.POSITION_X, xSign * (tr.region.centerX - 0.5f) * 2f, easing = Easing.EASE_IN_OUT),
-                Keyframe(timeOffset, KeyframeProperty.POSITION_Y, xSign * (tr.region.centerY - centerY) * 2f, easing = Easing.EASE_IN_OUT)
-            )
-        }.flatten()
-        val trackedProps = setOf(KeyframeProperty.POSITION_X, KeyframeProperty.POSITION_Y)
-        updateClipByIdWithDuration(clip.id) { c -> c.copy(keyframes = c.keyframes.filter { it.property !in trackedProps } + posKeyframes) }
-        showToast("Tracked ${results.size} ${if (undoLabel.contains("face", true)) "face" else "motion"} points across clip")
-    }
-
-    private suspend fun aiStyleTransferClip(clip: Clip) {
-        showToast("Analyzing frame style...")
-        val style = aiFeatures.analyzeAndApplyStyle(clip.sourceUri)
-        if (style.confidence < 0.1f) { showToast("Could not analyze frame style"); return }
-        saveUndoState("AI style transfer")
-        val newEffects = buildList {
-            if (kotlin.math.abs(style.contrast - 1f) > 0.02f) add(Effect(type = EffectType.CONTRAST, params = mapOf("value" to style.contrast)))
-            if (kotlin.math.abs(style.temperature) > 0.01f) add(Effect(type = EffectType.TEMPERATURE, params = mapOf("value" to style.temperature)))
-            if (kotlin.math.abs(style.saturation - 1f) > 0.02f) add(Effect(type = EffectType.SATURATION, params = mapOf("value" to style.saturation)))
-            if (kotlin.math.abs(style.exposure) > 0.01f) add(Effect(type = EffectType.EXPOSURE, params = mapOf("value" to style.exposure)))
-            if (style.vignetteIntensity > 0.01f) add(Effect(type = EffectType.VIGNETTE, params = mapOf("intensity" to style.vignetteIntensity, "radius" to style.vignetteRadius)))
-            if (style.filmGrain > 0.01f) add(Effect(type = EffectType.FILM_GRAIN, params = mapOf("intensity" to style.filmGrain)))
-        }
-        if (newEffects.isNotEmpty()) {
-            updateClipByIdWithDuration(clip.id) { c -> c.copy(effects = c.effects + newEffects) }
-            videoEngine.applyPreviewEffects(getSelectedClip())
-        }
-        showToast("Applied '${style.styleName}' style (${newEffects.size} effects)")
-    }
-
-    private suspend fun aiUpscale(clip: Clip) {
-        showToast("Analyzing source resolution...")
-        val result = aiFeatures.analyzeForUpscale(clip.sourceUri)
-        if (result.targetResolution == null) { showToast("Already at maximum resolution (${result.sourceWidth}x${result.sourceHeight})"); return }
-        saveUndoState("AI upscale")
-        _state.update { it.copy(project = it.project.copy(resolution = result.targetResolution)) }
-        val sharpenEffect = Effect(type = EffectType.SHARPEN, params = mapOf("strength" to result.sharpenStrength))
-        updateClipByIdWithDuration(clip.id) { c -> c.copy(effects = c.effects.filter { it.type != EffectType.SHARPEN } + sharpenEffect) }
-        showToast("Upscaled to ${result.targetResolution.label} + sharpening applied")
-    }
-
     fun runAiTool(toolId: String) = aiToolsDelegate.runAiTool(toolId)
-
-    // ---- Tier 3: ML Engine Wrapper Methods ----
-
-    /**
-     * Apply RIFE v4.6 frame interpolation to the selected clip for slow-motion.
-     * Checks if the model is downloaded; if not, shows a toast prompting download.
-     */
-    private suspend fun applyFrameInterpolation(clip: Clip) {
-        if (!frameInterpolationEngine.isModelReady()) {
-            showToast("Frame interpolation requires RIFE model download (~10MB)")
-            // TODO: Show model download dialog
-            // frameInterpolationEngine.downloadModel { progress -> updateProgress(progress) }
-            return
-        }
-        val config = FrameInterpolationEngine.SlowMotionConfig(
-            multiplier = 2,
-            quality = FrameInterpolationEngine.SlowMotionConfig.Quality.PREVIEW
-        )
-        val outputFile = File(appContext.cacheDir, "interp_${clip.id}.mp4")
-        val outputUri = Uri.fromFile(outputFile)
-        showToast("Generating slow-motion (2x)...")
-        val result = frameInterpolationEngine.interpolateFrames(
-            inputUri = clip.sourceUri,
-            outputUri = outputUri,
-            config = config,
-            onProgress = { /* TODO: update progress UI */ }
-        )
-        if (result != null) {
-            saveUndoState("AI frame interpolation")
-            showToast("Slow-motion applied: ${result.interpolatedFrameCount} frames (${if (result.usedMlModel) "RIFE ML" else "frame duplication"})")
-        } else {
-            showToast("Frame interpolation not yet available — model integration pending")
-        }
-    }
-
-    /**
-     * Apply LaMa-Dilated inpainting for object removal on the selected clip.
-     * Replaces the previous "coming soon" toast.
-     */
-    private suspend fun applyObjectRemoval(clip: Clip) {
-        if (!inpaintingEngine.isModelReady()) {
-            showToast("Object removal requires LaMa model download (~174MB)")
-            // TODO: Show model download dialog
-            // inpaintingEngine.downloadModel { progress -> updateProgress(progress) }
-            return
-        }
-        // TODO: Launch mask painting UI for user to mark region to remove
-        // val mask = showMaskPaintingDialog(clip)
-        // val result = inpaintingEngine.inpaintFrame(frameBitmap, mask)
-        showToast("Object removal: tap and paint over the object to remove (UI pending)")
-    }
-
-    /**
-     * Apply Real-ESRGAN upscaling to the selected clip.
-     * Uses x4plus for export quality, general-x4v3 for preview.
-     */
-    private suspend fun applyVideoUpscale(clip: Clip) {
-        val variant = UpscaleEngine.UpscaleConfig.ModelVariant.GENERAL_X4V3
-        if (!upscaleEngine.isModelReady(variant)) {
-            showToast("Video upscale requires Real-ESRGAN model download (~12MB)")
-            // TODO: Show model download dialog
-            return
-        }
-        val config = UpscaleEngine.UpscaleConfig(
-            scaleFactor = 4,
-            modelVariant = variant,
-            quality = UpscaleEngine.UpscaleConfig.Quality.BALANCED
-        )
-        val outputFile = File(appContext.cacheDir, "upscale_${clip.id}.mp4")
-        showToast("Upscaling video with Real-ESRGAN...")
-        val result = upscaleEngine.upscaleVideo(
-            uri = clip.sourceUri,
-            config = config,
-            outputUri = Uri.fromFile(outputFile),
-            onProgress = { /* TODO: update progress UI */ }
-        )
-        if (result != null) {
-            saveUndoState("AI video upscale")
-            showToast("Upscaled to ${result.outputWidth}x${result.outputHeight}")
-        } else {
-            showToast("Video upscale not yet available — model integration pending")
-        }
-    }
-
-    /**
-     * Apply RobustVideoMatting for AI green-screen / background replacement.
-     * Offers higher quality alpha matting than existing MediaPipe segmentation.
-     */
-    private suspend fun applyAiBackground(clip: Clip) {
-        if (!videoMattingEngine.isModelReady()) {
-            showToast("AI background requires RVM model download (~15MB)")
-            // TODO: Show model download dialog
-            return
-        }
-        val config = VideoMattingEngine.MattingConfig(
-            quality = VideoMattingEngine.MattingConfig.Quality.PREVIEW,
-            backgroundMode = VideoMattingEngine.MattingConfig.BackgroundMode.BLUR
-        )
-        val outputFile = File(appContext.cacheDir, "matting_${clip.id}.mp4")
-        showToast("Processing AI background removal...")
-        val result = videoMattingEngine.processVideo(
-            uri = clip.sourceUri,
-            outputUri = Uri.fromFile(outputFile),
-            config = config,
-            onProgress = { /* TODO: update progress UI */ }
-        )
-        if (result != null) {
-            saveUndoState("AI background replacement")
-            showToast("Background replaced (${result.framesProcessed} frames, ${"%.1f".format(result.averageFps)} fps)")
-        } else {
-            showToast("AI background not yet available — model integration pending")
-        }
-    }
-
-    /**
-     * Apply OpenCV-based video stabilization using optical flow + Kalman smoothing.
-     * Falls back to existing AiFeatures.stabilizeVideo() if OpenCV is unavailable.
-     */
-    private suspend fun applyStabilization(clip: Clip) {
-        if (!stabilizationEngine.isOpenCvAvailable()) {
-            // Fall back to existing basic stabilization in AiFeatures
-            showToast("Advanced stabilization requires OpenCV — using basic stabilization")
-            val result = aiFeatures.stabilizeVideo(clip.sourceUri)
-            if (result.confidence < 0.1f || result.shakeMagnitude < 0.001f) {
-                showToast("Video is already stable")
-            } else {
-                saveUndoState("AI stabilize (basic)")
-                showToast("Basic stabilization applied (${"%.0f".format(result.shakeMagnitude * 100)}% shake)")
-            }
-            return
-        }
-        val config = StabilizationEngine.StabilizationConfig(
-            smoothingStrength = 0.5f,
-            cropPercentage = 0.15f,
-            algorithm = StabilizationEngine.StabilizationConfig.Algorithm.LK_OPTICAL_FLOW
-        )
-        showToast("Analyzing camera motion...")
-        val motionData = stabilizationEngine.analyzeMotion(
-            uri = clip.sourceUri,
-            config = config,
-            onProgress = { /* TODO: update progress UI */ }
-        )
-        if (motionData == null) {
-            showToast("Motion analysis failed — using basic stabilization fallback")
-            return
-        }
-        val outputFile = File(appContext.cacheDir, "stabilized_${clip.id}.mp4")
-        showToast("Applying stabilization (${motionData.frameCount} frames)...")
-        val result = stabilizationEngine.stabilize(
-            uri = clip.sourceUri,
-            motionData = motionData,
-            config = config,
-            outputUri = Uri.fromFile(outputFile),
-            onProgress = { /* TODO: update progress UI */ }
-        )
-        if (result != null) {
-            saveUndoState("AI stabilize (OpenCV)")
-            showToast("Stabilized with ${"%.0f".format(result.cropApplied * 100)}% crop")
-        } else {
-            showToast("Stabilization not yet available — OpenCV integration pending")
-        }
-    }
-
-    /**
-     * Apply neural style transfer (AnimeGANv2 / Fast NST) to the selected clip.
-     * Shows available styles and applies the selected one.
-     */
-    private suspend fun applyStyleTransfer(clip: Clip) {
-        val available = styleTransferEngine.getAvailableStyles()
-        if (available.isEmpty()) {
-            showToast("Style transfer requires model download — no styles available yet")
-            // TODO: Show style download picker dialog
-            return
-        }
-        // TODO: Show style selection dialog and let user pick
-        // For now, try first available style
-        val style = available.first()
-        showToast("Applying '${style.displayName}' style...")
-        val outputFile = File(appContext.cacheDir, "styled_${clip.id}.mp4")
-        val result = styleTransferEngine.applyStyleToVideo(
-            uri = clip.sourceUri,
-            style = style,
-            outputUri = Uri.fromFile(outputFile),
-            onProgress = { /* TODO: update progress UI */ }
-        )
-        if (result != null) {
-            saveUndoState("AI style transfer (${style.displayName})")
-            showToast("Applied '${style.displayName}' to ${result.framesProcessed} frames (${"%.1f".format(result.averageFps)} fps)")
-        } else {
-            showToast("Style transfer not yet available — model integration pending")
-        }
-    }
-
     fun cancelAiTool() = aiToolsDelegate.cancelAiTool()
 
     fun insertFreezeFrame() {
@@ -2741,7 +2377,7 @@ class EditorViewModel @Inject constructor(
         super.onCleared()
         saveIndicatorJob?.cancel()
         toastJob?.cancel()
-        aiJob?.cancel()
+        aiToolsDelegate.cancelAiTool()
         autoSave.stop()
         voiceoverDurationJob?.cancel()
         voiceoverEngine.release()
