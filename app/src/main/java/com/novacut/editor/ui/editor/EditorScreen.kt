@@ -23,6 +23,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.Intent
 import android.util.Log
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.pointerInput
 import com.novacut.editor.engine.ExportState
 import com.novacut.editor.model.*
 import com.novacut.editor.ui.export.BatchExportPanel
@@ -67,6 +70,10 @@ fun EditorScreen(
             lutPickerLauncher.launch(arrayOf("*/*"))
         }
     }
+
+    // Radial menu state
+    var showRadialMenu by remember { mutableStateOf(false) }
+    var radialMenuPosition by remember { mutableStateOf(Offset.Zero) }
 
     val hasOpenPanel = state.panels.hasOpenPanel || state.selectedEffectId != null || state.editingTextOverlayId != null
     val isClipMode = state.selectedClipId != null
@@ -149,22 +156,72 @@ fun EditorScreen(
                 }
             }
 
-            // Preview panel
-            if (hasClips || hasOpenPanel) PreviewPanel(
-                engine = viewModel.engine,
-                playheadMs = playheadMs,
-                totalDurationMs = state.totalDurationMs,
-                isPlaying = state.isPlaying,
-                isLooping = state.isLooping,
-                aspectRatio = state.project.aspectRatio,
-                frameRate = state.project.frameRate,
-                onTogglePlayback = viewModel::togglePlayback,
-                onToggleLoop = viewModel::toggleLoop,
-                onSeek = viewModel::seekTo,
-                showScopesButton = true,
-                onToggleScopes = viewModel::toggleScopes,
-                modifier = Modifier.weight(0.45f)
-            )
+            // Preview panel with long-press radial menu
+            if (hasClips || hasOpenPanel) Box(
+                modifier = Modifier
+                    .weight(0.45f)
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onLongPress = { offset ->
+                                radialMenuPosition = offset
+                                showRadialMenu = true
+                            }
+                        )
+                    }
+            ) {
+                PreviewPanel(
+                    engine = viewModel.engine,
+                    playheadMs = playheadMs,
+                    totalDurationMs = state.totalDurationMs,
+                    isPlaying = state.isPlaying,
+                    isLooping = state.isLooping,
+                    aspectRatio = state.project.aspectRatio,
+                    frameRate = state.project.frameRate,
+                    onTogglePlayback = viewModel::togglePlayback,
+                    onToggleLoop = viewModel::toggleLoop,
+                    onSeek = viewModel::seekTo,
+                    selectedClipId = state.selectedClipId,
+                    onPreviewTransformStarted = { viewModel.beginTransformChange() },
+                    onPreviewTransformChanged = { dx, dy, scaleChange, rotationChange ->
+                        val clip = selectedClip ?: return@PreviewPanel
+                        viewModel.setClipTransform(
+                            clipId = clip.id,
+                            positionX = clip.positionX + dx / 500f,
+                            positionY = clip.positionY + dy / 500f,
+                            scaleX = (clip.scaleX * scaleChange),
+                            scaleY = (clip.scaleY * scaleChange),
+                            rotation = clip.rotation + rotationChange
+                        )
+                    },
+                    showScopesButton = true,
+                    onToggleScopes = viewModel::toggleScopes,
+                    modifier = Modifier.fillMaxSize()
+                )
+
+                if (showRadialMenu) {
+                    RadialActionMenu(
+                        position = radialMenuPosition,
+                        hasClipSelected = isClipMode,
+                        onAction = { actionId ->
+                            showRadialMenu = false
+                            when (actionId) {
+                                "add_media" -> viewModel.showMediaPicker()
+                                "add_text" -> viewModel.showPanel(PanelId.TEXT_EDITOR)
+                                "add_audio" -> viewModel.showMediaPicker()
+                                "record" -> viewModel.showPanel(PanelId.VOICEOVER_RECORDER)
+                                "snapshot" -> viewModel.createSnapshot()
+                                "split" -> viewModel.splitClipAtPlayhead()
+                                "duplicate" -> viewModel.duplicateSelectedClip()
+                                "effects" -> viewModel.showEffectsPanel()
+                                "speed" -> viewModel.setTool(EditorTool.SPEED)
+                                "transform" -> viewModel.showTransformPanel()
+                                "delete" -> viewModel.deleteSelectedClip()
+                            }
+                        },
+                        onDismiss = { showRadialMenu = false }
+                    )
+                }
+            }
 
             // Multi-select action bar
             if (state.selectedClipIds.isNotEmpty()) {
@@ -191,6 +248,21 @@ fun EditorScreen(
                     }
                 }
             }
+
+            // AI Suggestion Banner
+            AiSuggestionBanner(
+                suggestion = state.aiSuggestion,
+                onApply = { actionId ->
+                    viewModel.dismissAiSuggestion()
+                    when (actionId) {
+                        "auto_color" -> viewModel.runAiTool("auto_color")
+                        "denoise" -> viewModel.runAiTool("denoise")
+                        "transition" -> viewModel.showTransitionPicker()
+                        else -> Log.w("EditorScreen", "Unknown AI suggestion action: $actionId")
+                    }
+                },
+                onDismiss = viewModel::dismissAiSuggestion
+            )
 
             // Timeline collapse toggle
             Row(
@@ -335,6 +407,8 @@ fun EditorScreen(
                         "noise_reduction" -> viewModel.showNoiseReduction()
                         "effect_library" -> viewModel.showEffectLibrary()
                         "undo_history" -> viewModel.showUndoHistory()
+                        "draw" -> viewModel.showDrawingMode()
+                        "multi_cam" -> viewModel.showMultiCam()
                         // AI tools
                         "auto_captions" -> viewModel.runAiTool("auto_captions")
                         "scene_detect" -> viewModel.runAiTool("scene_detect")
@@ -938,7 +1012,10 @@ fun EditorScreen(
                 beatMarkers = state.beatMarkers,
                 totalDurationMs = state.totalDurationMs,
                 isAnalyzing = state.isAnalyzingBeats,
+                isPlaying = state.isPlaying,
                 onAnalyze = viewModel::analyzeBeats,
+                onTapBeat = viewModel::tapBeatMarker,
+                onClearBeats = viewModel::clearBeatMarkers,
                 onApplyBeatSync = viewModel::applyBeatSync,
                 onClose = viewModel::hideBeatSync
             )
@@ -1030,7 +1107,7 @@ fun EditorScreen(
                 clipCount = state.tracks.filter { it.type == TrackType.VIDEO }.flatMap { it.clips }.size,
                 hasAudio = state.tracks.any { it.type == TrackType.AUDIO && it.clips.isNotEmpty() },
                 isProcessing = state.isAutoEditing,
-                onGenerate = viewModel::runAutoEdit,
+                onGenerate = { script -> viewModel.runAutoEdit(script) },
                 onClose = viewModel::hideAutoEdit
             )
         }
@@ -1082,20 +1159,71 @@ fun EditorScreen(
             )
         }
 
-        // Cloud Backup
+        // Drawing Overlay
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.DRAWING),
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            DrawingOverlayPanel(
+                drawingColor = state.drawingColor,
+                drawingStrokeWidth = state.drawingStrokeWidth,
+                onColorChanged = viewModel::setDrawingColor,
+                onStrokeWidthChanged = viewModel::setDrawingStrokeWidth,
+                onUndo = viewModel::undoLastPath,
+                onClear = viewModel::clearDrawing,
+                onDone = viewModel::hideDrawingMode
+            )
+        }
+
+        // Drawing Canvas on preview
+        if (state.isDrawingMode || state.drawingPaths.isNotEmpty()) {
+            DrawingCanvas(
+                paths = state.drawingPaths,
+                isDrawingMode = state.isDrawingMode,
+                drawingColor = state.drawingColor,
+                drawingStrokeWidth = state.drawingStrokeWidth,
+                onPathAdded = viewModel::addDrawingPath,
+                modifier = Modifier.align(Alignment.TopCenter)
+            )
+        }
+
+        // Multi-Cam Panel
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.MULTI_CAM),
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            MultiCamPanel(
+                tracks = state.tracks,
+                selectedClipId = state.selectedClipId,
+                onAngleSelected = viewModel::switchMultiCamAngle,
+                onSyncClips = viewModel::syncMultiCamClips,
+                onClose = viewModel::hideMultiCam
+            )
+        }
+
+        // Project Backup
         BottomSheetSlot(
             visible = state.panels.isOpen(PanelId.CLOUD_BACKUP),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
+            val lastBackupTime by viewModel.lastBackupTime.collectAsStateWithLifecycle()
+            val backupSize by viewModel.backupEstimatedSize.collectAsStateWithLifecycle()
+            val isExportingBackup by viewModel.isExportingBackup.collectAsStateWithLifecycle()
+
+            LaunchedEffect(Unit) { viewModel.estimateBackupSize() }
+
+            val backupImportLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.OpenDocument()
+            ) { uri ->
+                if (uri != null) viewModel.importProjectBackup(uri)
+            }
+
             CloudBackupPanel(
-                isSignedIn = false,
-                lastBackupTime = null,
-                backupProgress = null,
-                onSignIn = { viewModel.showToast("Cloud backup coming soon") },
-                onBackupNow = { viewModel.showToast("Cloud backup coming soon") },
-                onRestore = { viewModel.showToast("Cloud restore coming soon") },
-                onAutoBackupToggled = { },
-                autoBackupEnabled = false,
+                lastBackupTime = lastBackupTime,
+                estimatedSizeBytes = backupSize,
+                isExporting = isExportingBackup,
+                onExportBackup = viewModel::exportProjectBackup,
+                onImportBackup = { backupImportLauncher.launch(arrayOf("*/*")) },
                 onClose = viewModel::hideCloudBackup
             )
         }

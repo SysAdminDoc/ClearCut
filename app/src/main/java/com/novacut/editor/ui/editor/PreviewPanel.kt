@@ -10,7 +10,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -38,6 +40,9 @@ fun PreviewPanel(
     onToggleLoop: () -> Unit = {},
     onSeek: (Long) -> Unit,
     onPlayerViewReady: (PlayerView) -> Unit = {},
+    selectedClipId: String? = null,
+    onPreviewTransformStarted: () -> Unit = {},
+    onPreviewTransformChanged: (dx: Float, dy: Float, scaleChange: Float, rotationChange: Float) -> Unit = { _, _, _, _ -> },
     showScopesButton: Boolean = false,
     onToggleScopes: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -50,12 +55,24 @@ fun PreviewPanel(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // Video Preview
+        var transformStarted by remember { mutableStateOf(false) }
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(aspectRatio.toFloat())
                 .clip(RoundedCornerShape(8.dp))
-                .background(Mocha.Mantle),
+                .background(Mocha.Mantle)
+                .then(
+                    if (selectedClipId != null) Modifier.pointerInput(selectedClipId) {
+                        detectTransformGestures { _, pan, zoom, rotation ->
+                            if (!transformStarted) {
+                                transformStarted = true
+                                onPreviewTransformStarted()
+                            }
+                            onPreviewTransformChanged(pan.x, pan.y, zoom, rotation)
+                        }
+                    } else Modifier
+                ),
             contentAlignment = Alignment.Center
         ) {
             // Observe player buffering state

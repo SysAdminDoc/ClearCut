@@ -89,3 +89,10 @@ data class UndoHistoryEntry(
     val description: String,
     val timestamp: Long = System.currentTimeMillis()
 )
+
+@Immutable
+data class DrawingPath(
+    val points: List<Pair<Float, Float>>,
+    val color: Long,
+    val strokeWidth: Float
+)

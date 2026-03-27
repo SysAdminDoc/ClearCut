@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,7 +27,10 @@ fun BeatSyncPanel(
     beatMarkers: List<Long>,
     totalDurationMs: Long,
     isAnalyzing: Boolean,
+    isPlaying: Boolean = false,
     onAnalyze: () -> Unit,
+    onTapBeat: () -> Unit = {},
+    onClearBeats: () -> Unit = {},
     onApplyBeatSync: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier
@@ -82,41 +86,86 @@ fun BeatSyncPanel(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Detect Beats button
-        Button(
-            onClick = onAnalyze,
-            enabled = !isAnalyzing,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Mocha.Surface0,
-                contentColor = Mocha.Text,
-                disabledContainerColor = Mocha.Surface0.copy(alpha = 0.5f),
-                disabledContentColor = Mocha.Subtext0
-            ),
-            shape = RoundedCornerShape(8.dp),
+        // Detect Beats + Tap Beats row
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            if (isAnalyzing) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(16.dp),
-                    strokeWidth = 2.dp,
-                    color = Mocha.Peach
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.beat_sync_detecting), fontSize = 13.sp)
-            } else {
+            Button(
+                onClick = onAnalyze,
+                enabled = !isAnalyzing,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Mocha.Surface0,
+                    contentColor = Mocha.Text,
+                    disabledContainerColor = Mocha.Surface0.copy(alpha = 0.5f),
+                    disabledContentColor = Mocha.Subtext0
+                ),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                if (isAnalyzing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = Mocha.Peach
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.beat_sync_detecting), fontSize = 13.sp)
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.GraphicEq,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.beat_sync_detect), fontSize = 13.sp)
+                }
+            }
+
+            Button(
+                onClick = onTapBeat,
+                enabled = isPlaying,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Mocha.Peach,
+                    contentColor = Mocha.Crust,
+                    disabledContainerColor = Mocha.Peach.copy(alpha = 0.3f),
+                    disabledContentColor = Mocha.Subtext0
+                ),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.weight(1f)
+            ) {
                 Icon(
-                    imageVector = Icons.Default.GraphicEq,
+                    imageVector = Icons.Default.TouchApp,
                     contentDescription = null,
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.beat_sync_detect), fontSize = 13.sp)
+                Text("Tap Beats", fontSize = 13.sp)
+            }
+        }
+
+        // Marker count + clear row
+        if (hasBeats) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "${beatMarkers.size} markers",
+                    color = Mocha.Subtext0,
+                    fontSize = 12.sp,
+                    modifier = Modifier.weight(1f)
+                )
+                TextButton(onClick = onClearBeats) {
+                    Text("Clear", color = Mocha.Red, fontSize = 12.sp)
+                }
             }
         }
 
         // Beat info & visualization
         if (hasBeats) {
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Stats row
             Row(

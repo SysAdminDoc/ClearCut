@@ -293,6 +293,27 @@ fun ExportSheet(
             )
         }
 
+        // Transparent Background toggle
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Transparent Background (WebM VP9)", color = Mocha.Text, fontSize = 13.sp)
+            Switch(
+                checked = config.transparentBackground,
+                onCheckedChange = { onConfigChanged(config.copy(transparentBackground = it)) },
+                colors = SwitchDefaults.colors(
+                    checkedTrackColor = Mocha.Mauve,
+                    checkedThumbColor = Mocha.Crust,
+                    uncheckedTrackColor = Mocha.Surface1,
+                    uncheckedThumbColor = Mocha.Subtext0
+                )
+            )
+        }
+
         Spacer(modifier = Modifier.height(12.dp))
 
         // Resolution

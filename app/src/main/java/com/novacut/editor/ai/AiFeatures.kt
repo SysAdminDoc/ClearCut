@@ -254,6 +254,32 @@ class AiFeatures @Inject constructor(
         }
     }
 
+    fun cleanCaptionText(text: String): String {
+        val fillerPatterns = listOf(
+            "\\b[Uu]h\\b",
+            "\\b[Uu]m\\b",
+            "\\b[Uu]mm\\b",
+            "\\b[Uu]hh\\b",
+            "\\b[Ll]ike\\b",
+            "\\b[Yy]ou know\\b",
+            "\\b[Ss]o\\b(?=\\s*,)",
+            "\\b[Aa]ctually\\b(?=\\s*,)",
+            "\\b[Bb]asically\\b(?=\\s*,)",
+            "\\b[Ll]iterally\\b(?=\\s*,)",
+            "\\b[Rr]ight\\b(?=\\s*,)",
+            "\\b[Ii] mean\\b"
+        )
+        var result = text
+        for (pattern in fillerPatterns) {
+            result = result.replace(Regex(pattern), "")
+        }
+        result = result.replace(Regex(",\\s*,"), ",")
+        result = result.replace(Regex("\\s{2,}"), " ")
+        result = result.replace(Regex("^\\s*,\\s*"), "")
+        result = result.replace(Regex("\\s*,\\s*$"), "")
+        return result.trim()
+    }
+
     /**
      * Convert caption entries to TextOverlay objects for the timeline.
      */
@@ -261,9 +287,11 @@ class AiFeatures @Inject constructor(
         captions: List<CaptionEntry>,
         style: CaptionStyle = CaptionStyle()
     ): List<TextOverlay> {
-        return captions.map { caption ->
+        return captions.mapNotNull { caption ->
+            val cleaned = cleanCaptionText(caption.text)
+            if (cleaned.isBlank()) return@mapNotNull null
             TextOverlay(
-                text = caption.text,
+                text = cleaned,
                 fontSize = style.fontSize,
                 color = style.textColor,
                 backgroundColor = style.backgroundColor,
@@ -1838,10 +1866,26 @@ class AiFeatures @Inject constructor(
      * @param onProgress progress callback (0..1)
      * @return auto-edit result with selected segments and transition points
      */
+    fun parseScriptToSegments(script: String, clipCount: Int, targetDurationMs: Long): List<ScriptSegment> {
+        if (script.isBlank() || clipCount <= 0 || targetDurationMs <= 0) return emptyList()
+        val sentences = script.split(Regex("[.!?]+")).map { it.trim() }.filter { it.isNotEmpty() }
+        if (sentences.isEmpty()) return emptyList()
+        val durationPerSegment = targetDurationMs / sentences.size
+        return sentences.mapIndexed { index, sentence ->
+            val keyword = sentence.split(" ").firstOrNull { it.length > 3 } ?: sentence.take(20)
+            ScriptSegment(
+                keyword = keyword,
+                durationMs = durationPerSegment.coerceIn(1000L, 15000L),
+                clipIndex = index % clipCount
+            )
+        }
+    }
+
     suspend fun generateAutoEdit(
         clips: List<AutoEditClip>,
         musicUri: Uri?,
         targetDurationMs: Long,
+        script: String? = null,
         onProgress: (Float) -> Unit = {}
     ): AutoEditResult = withContext(Dispatchers.IO) {
         if (clips.isEmpty() || targetDurationMs <= 0) {
@@ -1992,6 +2036,35 @@ class AiFeatures @Inject constructor(
         val segments = mutableListOf<AutoEditSegment>()
         val transitionPoints = mutableListOf<Long>()
         var timelinePos = 0L
+
+        // Script-based ordering: use script segments to determine clip order/duration
+        if (!script.isNullOrBlank()) {
+            val scriptSegments = parseScriptToSegments(script, clips.size, targetDurationMs)
+            for (seg in scriptSegments) {
+                ensureActive()
+                if (timelinePos >= targetDurationMs) break
+                val clipIdx = seg.clipIndex ?: continue
+                if (clipIdx >= clips.size) continue
+                val segDur = min(seg.durationMs, clips[clipIdx].durationMs)
+                if (segDur <= 0) continue
+
+                segments.add(AutoEditSegment(
+                    clipIndex = clipIdx,
+                    trimStartMs = 0L,
+                    trimEndMs = segDur,
+                    timelineStartMs = timelinePos
+                ))
+
+                if (timelinePos > 0) transitionPoints.add(timelinePos)
+                timelinePos += segDur
+            }
+
+            onProgress(1f)
+            return@withContext AutoEditResult(
+                segments = segments,
+                transitionPoints = transitionPoints
+            )
+        }
 
         if (beatPositions.size >= 2) {
             // Beat-synced: place clips at beat intervals
@@ -2550,6 +2623,14 @@ data class ReframeKeyframe(
     val panX: Float,
     val panY: Float,
     val zoom: Float
+)
+
+// ---- Script-to-Video ----
+
+data class ScriptSegment(
+    val keyword: String,
+    val durationMs: Long,
+    val clipIndex: Int?
 )
 
 // ---- AI Auto-Edit / Highlight Reel ----

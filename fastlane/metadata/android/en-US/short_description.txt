@@ -1,0 +1,1 @@
+Professional video editor with AI tools, GLSL effects, and multi-track timeline.

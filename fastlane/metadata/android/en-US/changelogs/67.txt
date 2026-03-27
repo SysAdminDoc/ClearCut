@@ -1,0 +1,4 @@
+- Extended speed range from 16x to 100x to match CapCut
+- Added transparent video export (WebM VP9 with alpha channel)
+- Filler word auto-strip from AI-generated captions (um, uh, like, you know)
+- Added F-Droid fastlane metadata for publishing

@@ -133,7 +133,7 @@ v3.7.0
 - Merge clip with next adjacent clip (same-source only)
 - 40+ video effects (color, filters, blur, distortion, keying) with adjustable parameters
 - 25 transition types with GLSL shaders + adjustable duration (100-2000ms)
-- Speed control (0.1x-16x) + reverse
+- Speed control (0.1x-100x) + reverse
 - Loop playback toggle
 - Keyframe opacity applied during export via RgbMatrix
 - Text overlays with 10 animation styles + font family selector (6 fonts)

@@ -18,7 +18,8 @@ data class ExportConfig(
     val exportStemsOnly: Boolean = false,
     val includeChapterMarkers: Boolean = false,
     val chapters: List<ChapterMarker> = emptyList(),
-    val subtitleFormat: SubtitleFormat? = null
+    val subtitleFormat: SubtitleFormat? = null,
+    val transparentBackground: Boolean = false
 ) {
     init {
         require(videoBitrate > 0) { "Bitrate must be positive" }
