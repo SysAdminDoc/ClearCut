@@ -301,7 +301,10 @@ fun EditorScreen(
                         "beat_detect" -> viewModel.detectBeats()
                         "adjustment_layer" -> viewModel.addAdjustmentLayer()
                         "snapshot" -> viewModel.createSnapshot()
-                        "captions" -> viewModel.showCaptionEditor()
+                        "captions" -> {
+                            if (state.selectedClipId != null) viewModel.showCaptionEditor()
+                            else viewModel.showToast(context.getString(R.string.editor_select_clip_captions))
+                        }
                         "captions_disabled" -> viewModel.showToast(context.getString(R.string.editor_select_clip_captions))
                         "chapters" -> viewModel.showChapterMarkers()
                         "history" -> viewModel.showSnapshotHistory()
@@ -1125,17 +1128,6 @@ fun EditorScreen(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(top = 48.dp, end = 8.dp)
-        )
-
-        // Export progress floating overlay
-        ExportProgressOverlay(
-            exportState = state.exportState,
-            exportProgress = state.exportProgress,
-            exportStartTime = state.exportStartTime,
-            onCancel = viewModel::cancelExport,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(8.dp)
         )
 
         // Text Template Gallery
