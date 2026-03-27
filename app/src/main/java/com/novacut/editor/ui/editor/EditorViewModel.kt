@@ -26,11 +26,6 @@ import com.novacut.editor.engine.VideoMattingEngine
 import com.novacut.editor.engine.StabilizationEngine
 import com.novacut.editor.engine.StyleTransferEngine
 import com.novacut.editor.engine.SmartReframeEngine
-import com.novacut.editor.engine.FFmpegEngine
-import com.novacut.editor.engine.SubtitleRenderEngine
-import com.novacut.editor.engine.PiperTtsEngine
-import com.novacut.editor.engine.LottieTemplateEngine
-import com.novacut.editor.engine.TapSegmentEngine
 import com.novacut.editor.engine.TimelineExchangeEngine
 import com.novacut.editor.engine.ProxyWorkflowEngine
 import com.novacut.editor.engine.MultiCamEngine
@@ -192,7 +187,10 @@ enum class EditorTool(val displayName: String) {
 data class UndoAction(
     val description: String,
     val tracks: List<Track>,
-    val textOverlays: List<TextOverlay>
+    val textOverlays: List<TextOverlay>,
+    val imageOverlays: List<ImageOverlay> = emptyList(),
+    val timelineMarkers: List<TimelineMarker> = emptyList(),
+    val chapterMarkers: List<ChapterMarker> = emptyList()
 )
 
 @HiltViewModel
@@ -218,11 +216,6 @@ class EditorViewModel @Inject constructor(
     private val stabilizationEngine: StabilizationEngine,
     private val styleTransferEngine: StyleTransferEngine,
     private val smartReframeEngine: SmartReframeEngine,
-    private val ffmpegEngine: FFmpegEngine,
-    private val subtitleRenderEngine: SubtitleRenderEngine,
-    private val piperTtsEngine: PiperTtsEngine,
-    private val lottieTemplateEngine: LottieTemplateEngine,
-    private val tapSegmentEngine: TapSegmentEngine,
     private val timelineExchangeEngine: TimelineExchangeEngine,
     private val proxyWorkflowEngine: ProxyWorkflowEngine,
     private val multiCamEngine: MultiCamEngine,
@@ -244,7 +237,7 @@ class EditorViewModel @Inject constructor(
     // --- Delegates (extracted to reduce ViewModel size) ---
 
     val colorGradingDelegate = ColorGradingDelegate(
-        stateFlow = _state, videoEngine = videoEngine, appContext = appContext,
+        stateFlow = _state, appContext = appContext,
         scope = viewModelScope, saveUndoState = ::saveUndoState, showToast = ::showToast,
         pauseIfPlaying = ::pauseIfPlaying, dismissedPanelState = ::dismissedPanelState,
         getSelectedClip = ::getSelectedClip, updatePreview = ::updatePreview
@@ -275,7 +268,8 @@ class EditorViewModel @Inject constructor(
             setClipTransform(id, positionX = px, positionY = py, scaleX = sx, scaleY = sy, rotation = rot)
         },
         rebuildPlayerTimeline = ::rebuildPlayerTimeline, saveProject = ::saveProject,
-        videoEngine = videoEngine
+        videoEngine = videoEngine,
+        recalculateDuration = ::recalculateDuration
     )
 
     val clipEditingDelegate = ClipEditingDelegate(
@@ -317,6 +311,7 @@ class EditorViewModel @Inject constructor(
     @Volatile
     private var timelineWidthPx: Float = 0f
 
+    @Volatile
     private var aiJob: kotlinx.coroutines.Job? = null
 
     fun setTimelineWidth(widthPx: Float) {
@@ -506,6 +501,7 @@ class EditorViewModel @Inject constructor(
     private fun rebuildPlayerTimeline() {
         videoEngine.prepareTimeline(_state.value.tracks)
         updatePreview()
+        _state.update { recalculateDuration(it) }
     }
 
     /** Apply the selected clip's effects and speed to ExoPlayer for live preview. */
@@ -686,10 +682,50 @@ class EditorViewModel @Inject constructor(
 
     fun dismissAllPanels() { _state.update { dismissedPanelState(it) } }
 
-    // Sheet toggles — each atomically dismisses other panels and shows the target
-    // All show methods pause playback so users can adjust settings without video moving
-    fun showMediaPicker() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.MEDIA_PICKER)) } }
-    fun hideMediaPicker() { _state.update { it.copy(panels = it.panels.close(PanelId.MEDIA_PICKER)) } }
+    // --- Clip update helpers ---
+    private inline fun updateClipById(clipId: String, crossinline transform: (Clip) -> Clip) {
+        _state.update { s ->
+            s.copy(tracks = s.tracks.map { track ->
+                track.copy(clips = track.clips.map { clip ->
+                    if (clip.id == clipId) transform(clip) else clip
+                })
+            })
+        }
+    }
+
+    private inline fun updateSelectedClip(crossinline transform: (Clip) -> Clip): Boolean {
+        val clipId = _state.value.selectedClipId ?: return false
+        updateClipById(clipId, transform)
+        return true
+    }
+
+    // Generic panel show/hide — standard panels use these directly
+    fun showPanel(panel: PanelId) {
+        pauseIfPlaying()
+        _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(panel)) }
+    }
+    fun hidePanel(panel: PanelId) {
+        _state.update { it.copy(panels = it.panels.close(panel)) }
+    }
+
+    // Standard panel toggles
+    fun showMediaPicker() = showPanel(PanelId.MEDIA_PICKER)
+    fun hideMediaPicker() = hidePanel(PanelId.MEDIA_PICKER)
+    fun showEffectsPanel() = showPanel(PanelId.EFFECTS)
+    fun hideEffectsPanel() = hidePanel(PanelId.EFFECTS)
+    fun showTransitionPicker() = showPanel(PanelId.TRANSITION_PICKER)
+    fun hideTransitionPicker() = hidePanel(PanelId.TRANSITION_PICKER)
+    fun showAudioPanel() = showPanel(PanelId.AUDIO)
+    fun hideAudioPanel() = hidePanel(PanelId.AUDIO)
+    fun showAiToolsPanel() = showPanel(PanelId.AI_TOOLS)
+    fun hideAiToolsPanel() = hidePanel(PanelId.AI_TOOLS)
+    fun showTransformPanel() = showPanel(PanelId.TRANSFORM)
+    fun hideTransformPanel() = hidePanel(PanelId.TRANSFORM)
+    fun showCropPanel() = showPanel(PanelId.CROP)
+    fun hideCropPanel() = hidePanel(PanelId.CROP)
+    fun showVoiceoverPanel() = showPanel(PanelId.VOICEOVER_RECORDER)
+
+    // Non-standard panel methods (side effects beyond show/hide)
     fun showExportSheet() {
         pauseIfPlaying()
         videoEngine.resetExportState()
@@ -705,29 +741,16 @@ class EditorViewModel @Inject constructor(
             )
         }
     }
-    fun showEffectsPanel() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.EFFECTS)) } }
-    fun hideEffectsPanel() { _state.update { it.copy(panels = it.panels.close(PanelId.EFFECTS)) } }
     fun showTextEditor() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.TEXT_EDITOR), editingTextOverlayId = null) } }
     fun editTextOverlay(id: String) { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.TEXT_EDITOR), editingTextOverlayId = id) } }
     fun hideTextEditor() { _state.update { it.copy(panels = it.panels.close(PanelId.TEXT_EDITOR), editingTextOverlayId = null) } }
-    fun showTransitionPicker() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.TRANSITION_PICKER)) } }
-    fun hideTransitionPicker() { _state.update { it.copy(panels = it.panels.close(PanelId.TRANSITION_PICKER)) } }
-    fun showAudioPanel() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.AUDIO)) } }
-    fun hideAudioPanel() { _state.update { it.copy(panels = it.panels.close(PanelId.AUDIO)) } }
-    fun showAiToolsPanel() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.AI_TOOLS)) } }
-    fun hideAiToolsPanel() { _state.update { it.copy(panels = it.panels.close(PanelId.AI_TOOLS)) } }
-    fun showTransformPanel() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.TRANSFORM)) } }
-    fun hideTransformPanel() { _state.update { it.copy(panels = it.panels.close(PanelId.TRANSFORM)) } }
-    fun showCropPanel() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.CROP)) } }
-    fun hideCropPanel() { _state.update { it.copy(panels = it.panels.close(PanelId.CROP)) } }
-    fun selectEffect(effectId: String?) { _state.update { it.copy(selectedEffectId = effectId) } }
-    fun clearSelectedEffect() { _state.update { it.copy(selectedEffectId = null) } }
-    fun showVoiceoverPanel() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.VOICEOVER_RECORDER)) } }
     fun hideVoiceoverPanel() {
         if (_state.value.isRecordingVoiceover) stopVoiceover()
         voiceoverDurationJob?.cancel()
-        _state.update { it.copy(panels = it.panels.close(PanelId.VOICEOVER_RECORDER)) }
+        hidePanel(PanelId.VOICEOVER_RECORDER)
     }
+    fun selectEffect(effectId: String?) { _state.update { it.copy(selectedEffectId = effectId) } }
+    fun clearSelectedEffect() { _state.update { it.copy(selectedEffectId = null) } }
 
     // --- Color Grading (delegated) ---
     fun showColorGrading() = colorGradingDelegate.showColorGrading()
@@ -752,8 +775,8 @@ class EditorViewModel @Inject constructor(
     fun detectBeats() = audioMixerDelegate.detectBeats()
 
     // --- Keyframe Editor ---
-    fun showKeyframeEditor() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.KEYFRAME_EDITOR)) } }
-    fun hideKeyframeEditor() { _state.update { it.copy(panels = it.panels.close(PanelId.KEYFRAME_EDITOR)) } }
+    fun showKeyframeEditor() = showPanel(PanelId.KEYFRAME_EDITOR)
+    fun hideKeyframeEditor() = hidePanel(PanelId.KEYFRAME_EDITOR)
 
     fun toggleKeyframeProperty(property: KeyframeProperty) {
         _state.update { s ->
@@ -764,74 +787,47 @@ class EditorViewModel @Inject constructor(
     }
 
     fun updateClipKeyframes(keyframes: List<Keyframe>) {
-        val clipId = _state.value.selectedClipId ?: return
-        _state.update { s ->
-            s.copy(tracks = s.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) clip.copy(keyframes = keyframes) else clip
-                })
-            })
-        }
+        updateSelectedClip { it.copy(keyframes = keyframes) }
     }
 
     fun addKeyframe(property: KeyframeProperty, timeOffsetMs: Long, value: Float) {
-        val clipId = _state.value.selectedClipId ?: return
+        if (_state.value.selectedClipId == null) return
         saveUndoState("Add keyframe")
-        _state.update { s ->
-            s.copy(tracks = s.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) {
-                        val kf = Keyframe(timeOffsetMs, property, value, interpolation = KeyframeInterpolation.BEZIER)
-                        clip.copy(keyframes = clip.keyframes + kf)
-                    } else clip
-                })
-            })
-        }
+        val kf = Keyframe(timeOffsetMs, property, value, interpolation = KeyframeInterpolation.BEZIER)
+        updateSelectedClip { it.copy(keyframes = it.keyframes + kf) }
     }
 
     fun deleteKeyframe(keyframe: Keyframe) {
-        val clipId = _state.value.selectedClipId ?: return
+        if (_state.value.selectedClipId == null) return
         saveUndoState("Delete keyframe")
-        _state.update { s ->
-            s.copy(tracks = s.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) {
-                        clip.copy(keyframes = clip.keyframes.filter {
-                            !(it.timeOffsetMs == keyframe.timeOffsetMs && it.property == keyframe.property && it.value == keyframe.value)
-                        })
-                    } else clip
-                })
+        updateSelectedClip { clip ->
+            clip.copy(keyframes = clip.keyframes.filter {
+                !(it.timeOffsetMs == keyframe.timeOffsetMs && it.property == keyframe.property && it.value == keyframe.value)
             })
         }
     }
 
     // --- Speed Curve ---
-    fun showSpeedCurveEditor() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.SPEED_CURVE)) } }
-    fun hideSpeedCurveEditor() { _state.update { it.copy(panels = it.panels.close(PanelId.SPEED_CURVE)) } }
+    fun showSpeedCurveEditor() = showPanel(PanelId.SPEED_CURVE)
+    fun hideSpeedCurveEditor() = hidePanel(PanelId.SPEED_CURVE)
 
     fun setClipSpeedCurve(speedCurve: SpeedCurve?) {
-        val clipId = _state.value.selectedClipId ?: return
+        if (_state.value.selectedClipId == null) return
         saveUndoState("Speed curve")
-        _state.update { s ->
-            s.copy(tracks = s.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) clip.copy(speedCurve = speedCurve) else clip
-                })
-            })
-        }
+        updateSelectedClip { it.copy(speedCurve = speedCurve) }
         rebuildPlayerTimeline()
     }
 
     // --- Mask Editor ---
-    fun showMaskEditor() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.MASK_EDITOR)) } }
-    fun hideMaskEditor() { _state.update { it.copy(panels = it.panels.close(PanelId.MASK_EDITOR), selectedMaskId = null) } }
+    fun showMaskEditor() = showPanel(PanelId.MASK_EDITOR)
+    fun hideMaskEditor() { hidePanel(PanelId.MASK_EDITOR); _state.update { it.copy(selectedMaskId = null) } }
 
     fun selectMask(maskId: String?) {
         _state.update { it.copy(selectedMaskId = maskId) }
     }
 
     fun addMask(type: MaskType) {
-        val clipId = _state.value.selectedClipId ?: return
+        if (_state.value.selectedClipId == null) return
         saveUndoState("Add mask")
         val defaultPoints = when (type) {
             MaskType.RECTANGLE -> listOf(MaskPoint(0.25f, 0.25f), MaskPoint(0.75f, 0.75f))
@@ -841,94 +837,51 @@ class EditorViewModel @Inject constructor(
             MaskType.FREEHAND -> emptyList()
         }
         val mask = Mask(type = type, points = defaultPoints)
-        _state.update { s ->
-            s.copy(
-                tracks = s.tracks.map { track ->
-                    track.copy(clips = track.clips.map { clip ->
-                        if (clip.id == clipId) clip.copy(masks = clip.masks + mask) else clip
-                    })
-                },
-                selectedMaskId = mask.id
-            )
-        }
+        updateSelectedClip { it.copy(masks = it.masks + mask) }
+        _state.update { it.copy(selectedMaskId = mask.id) }
     }
 
     fun updateMask(mask: Mask) {
-        val clipId = _state.value.selectedClipId ?: return
-        _state.update { s ->
-            s.copy(tracks = s.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) {
-                        clip.copy(masks = clip.masks.map { if (it.id == mask.id) mask else it })
-                    } else clip
-                })
-            })
+        updateSelectedClip { clip ->
+            clip.copy(masks = clip.masks.map { if (it.id == mask.id) mask else it })
         }
     }
 
     fun deleteMask(maskId: String) {
-        val clipId = _state.value.selectedClipId ?: return
+        if (_state.value.selectedClipId == null) return
         saveUndoState("Delete mask")
-        _state.update { s ->
-            s.copy(
-                tracks = s.tracks.map { track ->
-                    track.copy(clips = track.clips.map { clip ->
-                        if (clip.id == clipId) clip.copy(masks = clip.masks.filter { it.id != maskId }) else clip
-                    })
-                },
-                selectedMaskId = null
-            )
-        }
+        updateSelectedClip { it.copy(masks = it.masks.filter { m -> m.id != maskId }) }
+        _state.update { it.copy(selectedMaskId = null) }
     }
 
     fun updateMaskPoint(maskId: String, pointIndex: Int, x: Float, y: Float) {
-        val clipId = _state.value.selectedClipId ?: return
-        _state.update { s ->
-            s.copy(tracks = s.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) {
-                        clip.copy(masks = clip.masks.map { mask ->
-                            if (mask.id == maskId && pointIndex in mask.points.indices) {
-                                mask.copy(points = mask.points.toMutableList().apply {
-                                    set(pointIndex, get(pointIndex).copy(x = x, y = y))
-                                })
-                            } else mask
-                        })
-                    } else clip
-                })
+        updateSelectedClip { clip ->
+            clip.copy(masks = clip.masks.map { mask ->
+                if (mask.id == maskId && pointIndex in mask.points.indices) {
+                    mask.copy(points = mask.points.toMutableList().apply {
+                        set(pointIndex, get(pointIndex).copy(x = x, y = y))
+                    })
+                } else mask
             })
         }
     }
 
     fun setFreehandMaskPoints(maskId: String, points: List<MaskPoint>) {
-        val clipId = _state.value.selectedClipId ?: return
-        _state.update { s ->
-            s.copy(tracks = s.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) {
-                        clip.copy(masks = clip.masks.map { mask ->
-                            if (mask.id == maskId) mask.copy(points = points) else mask
-                        })
-                    } else clip
-                })
+        updateSelectedClip { clip ->
+            clip.copy(masks = clip.masks.map { mask ->
+                if (mask.id == maskId) mask.copy(points = points) else mask
             })
         }
     }
 
     // --- Blend Mode ---
-    fun showBlendModeSelector() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.BLEND_MODE)) } }
-    fun hideBlendModeSelector() { _state.update { it.copy(panels = it.panels.close(PanelId.BLEND_MODE)) } }
+    fun showBlendModeSelector() = showPanel(PanelId.BLEND_MODE)
+    fun hideBlendModeSelector() = hidePanel(PanelId.BLEND_MODE)
 
     fun setClipBlendMode(blendMode: BlendMode) {
-        val clipId = _state.value.selectedClipId ?: return
+        if (_state.value.selectedClipId == null) return
         saveUndoState("Blend mode")
-        _state.update { s ->
-            s.copy(tracks = s.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) clip.copy(blendMode = blendMode) else clip
-                })
-            })
-        }
+        updateSelectedClip { it.copy(blendMode = blendMode) }
         updatePreview()
     }
 
@@ -958,20 +911,14 @@ class EditorViewModel @Inject constructor(
 
     // --- Effect Keyframes ---
     fun addEffectKeyframe(effectId: String, paramName: String, timeOffsetMs: Long, value: Float) {
-        val clipId = _state.value.selectedClipId ?: return
+        if (_state.value.selectedClipId == null) return
         saveUndoState("Effect keyframe")
-        _state.update { s ->
-            s.copy(tracks = s.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) {
-                        clip.copy(effects = clip.effects.map { effect ->
-                            if (effect.id == effectId) {
-                                val kf = EffectKeyframe(timeOffsetMs, paramName, value)
-                                effect.copy(keyframes = effect.keyframes + kf)
-                            } else effect
-                        })
-                    } else clip
-                })
+        updateSelectedClip { clip ->
+            clip.copy(effects = clip.effects.map { effect ->
+                if (effect.id == effectId) {
+                    val kf = EffectKeyframe(timeOffsetMs, paramName, value)
+                    effect.copy(keyframes = effect.keyframes + kf)
+                } else effect
             })
         }
     }
@@ -990,42 +937,21 @@ class EditorViewModel @Inject constructor(
 
     // --- Captions ---
     fun addCaption(caption: Caption) {
-        val clipId = _state.value.selectedClipId ?: return
+        if (_state.value.selectedClipId == null) return
         saveUndoState("Add caption")
-        _state.update { s ->
-            s.copy(tracks = s.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) clip.copy(captions = clip.captions + caption) else clip
-                })
-            })
-        }
+        updateSelectedClip { it.copy(captions = it.captions + caption) }
     }
 
     fun updateCaption(caption: Caption) {
-        val clipId = _state.value.selectedClipId ?: return
-        _state.update { s ->
-            s.copy(tracks = s.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) {
-                        clip.copy(captions = clip.captions.map { if (it.id == caption.id) caption else it })
-                    } else clip
-                })
-            })
+        updateSelectedClip { clip ->
+            clip.copy(captions = clip.captions.map { if (it.id == caption.id) caption else it })
         }
     }
 
     fun removeCaption(captionId: String) {
-        val clipId = _state.value.selectedClipId ?: return
+        if (_state.value.selectedClipId == null) return
         saveUndoState("Remove caption")
-        _state.update { s ->
-            s.copy(tracks = s.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) {
-                        clip.copy(captions = clip.captions.filter { it.id != captionId })
-                    } else clip
-                })
-            })
-        }
+        updateSelectedClip { it.copy(captions = it.captions.filter { c -> c.id != captionId }) }
     }
 
     // --- Project Snapshots ---
@@ -1099,13 +1025,13 @@ class EditorViewModel @Inject constructor(
     fun renderQuickPreview() = exportDelegate.renderQuickPreview()
 
     // --- Cloud Backup ---
-    fun showCloudBackup() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.CLOUD_BACKUP)) } }
-    fun hideCloudBackup() { _state.update { it.copy(panels = it.panels.close(PanelId.CLOUD_BACKUP)) } }
+    fun showCloudBackup() = showPanel(PanelId.CLOUD_BACKUP)
+    fun hideCloudBackup() = hidePanel(PanelId.CLOUD_BACKUP)
 
     // --- Tutorial ---
-    fun showTutorial() { _state.update { it.copy(panels = it.panels.open(PanelId.TUTORIAL)) } }
+    fun showTutorial() { _state.update { it.copy(panels = it.panels.open(PanelId.TUTORIAL)) } } // no dismiss — overlays other panels
     fun hideTutorial() {
-        _state.update { it.copy(panels = it.panels.close(PanelId.TUTORIAL)) }
+        hidePanel(PanelId.TUTORIAL)
         viewModelScope.launch { settingsRepo.setTutorialShown() }
     }
 
@@ -1130,7 +1056,7 @@ class EditorViewModel @Inject constructor(
         }.reversed()
         _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.UNDO_HISTORY), undoHistoryEntries = entries) }
     }
-    fun hideUndoHistory() { _state.update { it.copy(panels = it.panels.close(PanelId.UNDO_HISTORY)) } }
+    fun hideUndoHistory() = hidePanel(PanelId.UNDO_HISTORY)
     fun jumpToUndoState(index: Int) {
         val stack = _state.value.undoStack
         if (index < 0 || index >= stack.size) return
@@ -1138,16 +1064,26 @@ class EditorViewModel @Inject constructor(
         _state.update { it.copy(
             tracks = target.tracks,
             textOverlays = target.textOverlays,
+            imageOverlays = target.imageOverlays,
+            timelineMarkers = target.timelineMarkers,
+            chapterMarkers = target.chapterMarkers,
             undoStack = stack.take(index),
-            redoStack = listOf(UndoAction("Current", it.tracks, it.textOverlays)) + stack.drop(index + 1)
+            redoStack = listOf(UndoAction(
+                "Current",
+                it.tracks,
+                it.textOverlays,
+                imageOverlays = it.imageOverlays.toList(),
+                timelineMarkers = it.timelineMarkers.toList(),
+                chapterMarkers = it.chapterMarkers.toList()
+            )) + stack.drop(index + 1)
         ) }
         rebuildTimeline()
         showToast("Restored: ${target.description}")
     }
 
     // --- Caption Style Gallery ---
-    fun showCaptionStyleGallery() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.CAPTION_STYLE_GALLERY)) } }
-    fun hideCaptionStyleGallery() { _state.update { it.copy(panels = it.panels.close(PanelId.CAPTION_STYLE_GALLERY)) } }
+    fun showCaptionStyleGallery() = showPanel(PanelId.CAPTION_STYLE_GALLERY)
+    fun hideCaptionStyleGallery() = hidePanel(PanelId.CAPTION_STYLE_GALLERY)
     fun applyCaptionStyle(template: com.novacut.editor.model.CaptionStyleTemplate) {
         hideCaptionStyleGallery()
         saveUndoState("Apply caption style")
@@ -1171,8 +1107,8 @@ class EditorViewModel @Inject constructor(
     }
 
     // --- Beat Sync ---
-    fun showBeatSync() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.BEAT_SYNC)) } }
-    fun hideBeatSync() { _state.update { it.copy(panels = it.panels.close(PanelId.BEAT_SYNC)) } }
+    fun showBeatSync() = showPanel(PanelId.BEAT_SYNC)
+    fun hideBeatSync() = hidePanel(PanelId.BEAT_SYNC)
     fun analyzeBeats() {
         val audioClip = _state.value.tracks
             .filter { it.type == TrackType.AUDIO }
@@ -1224,8 +1160,8 @@ class EditorViewModel @Inject constructor(
     }
 
     // --- Smart Reframe ---
-    fun showSmartReframe() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.SMART_REFRAME)) } }
-    fun hideSmartReframe() { _state.update { it.copy(panels = it.panels.close(PanelId.SMART_REFRAME)) } }
+    fun showSmartReframe() = showPanel(PanelId.SMART_REFRAME)
+    fun hideSmartReframe() = hidePanel(PanelId.SMART_REFRAME)
     fun applySmartReframe(targetAspect: AspectRatio) {
         _state.update { it.copy(isReframing = true) }
         viewModelScope.launch {
@@ -1257,26 +1193,20 @@ class EditorViewModel @Inject constructor(
     }
 
     // --- Speed Presets ---
-    fun showSpeedPresets() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.SPEED_PRESETS)) } }
-    fun hideSpeedPresets() { _state.update { it.copy(panels = it.panels.close(PanelId.SPEED_PRESETS)) } }
+    fun showSpeedPresets() = showPanel(PanelId.SPEED_PRESETS)
+    fun hideSpeedPresets() = hidePanel(PanelId.SPEED_PRESETS)
     fun applySpeedPreset(curve: SpeedCurve) {
-        val clipId = _state.value.selectedClipId ?: return
+        if (_state.value.selectedClipId == null) return
         saveUndoState("Speed preset")
-        _state.update { s ->
-            s.copy(tracks = s.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) clip.copy(speedCurve = curve) else clip
-                })
-            })
-        }
+        updateSelectedClip { it.copy(speedCurve = curve) }
         rebuildTimeline()
         showToast("Speed preset applied")
         hideSpeedPresets()
     }
 
     // --- Filler/Silence Removal ---
-    fun showFillerRemoval() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.FILLER_REMOVAL)) } }
-    fun hideFillerRemoval() { _state.update { it.copy(panels = it.panels.close(PanelId.FILLER_REMOVAL)) } }
+    fun showFillerRemoval() = showPanel(PanelId.FILLER_REMOVAL)
+    fun hideFillerRemoval() = hidePanel(PanelId.FILLER_REMOVAL)
 
     fun analyzeFillers() {
         val clip = getSelectedClip() ?: return
@@ -1326,8 +1256,8 @@ class EditorViewModel @Inject constructor(
     }
 
     // --- Auto-Edit ---
-    fun showAutoEdit() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.AUTO_EDIT)) } }
-    fun hideAutoEdit() { _state.update { it.copy(panels = it.panels.close(PanelId.AUTO_EDIT)) } }
+    fun showAutoEdit() = showPanel(PanelId.AUTO_EDIT)
+    fun hideAutoEdit() = hidePanel(PanelId.AUTO_EDIT)
 
     fun runAutoEdit() {
         val clips = _state.value.tracks
@@ -1385,7 +1315,7 @@ class EditorViewModel @Inject constructor(
         if (!ttsEngine.isAvailable()) ttsEngine.initialize { _state.update { it.copy(isTtsAvailable = true) } }
         _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.TTS), isTtsAvailable = ttsEngine.isAvailable()) }
     }
-    fun hideTts() { ttsEngine.stopPreview(); _state.update { it.copy(panels = it.panels.close(PanelId.TTS)) } }
+    fun hideTts() { ttsEngine.stopPreview(); hidePanel(PanelId.TTS) }
 
     fun synthesizeTts(text: String, style: com.novacut.editor.engine.TtsEngine.VoiceStyle) {
         _state.update { it.copy(isSynthesizingTts = true) }
@@ -1414,8 +1344,8 @@ class EditorViewModel @Inject constructor(
     fun stopTtsPreview() { ttsEngine.stopPreview() }
 
     // --- Effect Library ---
-    fun showEffectLibrary() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.EFFECT_LIBRARY)) } }
-    fun hideEffectLibrary() { _state.update { it.copy(panels = it.panels.close(PanelId.EFFECT_LIBRARY)) } }
+    fun showEffectLibrary() = showPanel(PanelId.EFFECT_LIBRARY)
+    fun hideEffectLibrary() = hidePanel(PanelId.EFFECT_LIBRARY)
 
     fun exportClipEffects(name: String) {
         val clip = getSelectedClip() ?: return
@@ -1433,19 +1363,13 @@ class EditorViewModel @Inject constructor(
         viewModelScope.launch {
             val imported = effectShareEngine.importEffects(uri)
             if (imported != null) {
-                val clipId = _state.value.selectedClipId ?: return@launch
+                if (_state.value.selectedClipId == null) return@launch
                 saveUndoState("Import effects")
-                _state.update { s ->
-                    s.copy(tracks = s.tracks.map { track ->
-                        track.copy(clips = track.clips.map { clip ->
-                            if (clip.id == clipId) {
-                                clip.copy(
-                                    effects = clip.effects + imported.effects,
-                                    colorGrade = imported.colorGrade ?: clip.colorGrade
-                                )
-                            } else clip
-                        })
-                    })
+                updateSelectedClip { clip ->
+                    clip.copy(
+                        effects = clip.effects + imported.effects,
+                        colorGrade = imported.colorGrade ?: clip.colorGrade
+                    )
                 }
                 showToast("Imported: ${imported.name}")
                 updatePreview()
@@ -1456,12 +1380,12 @@ class EditorViewModel @Inject constructor(
     }
 
     // --- Noise Reduction ---
-    fun showNoiseReduction() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.NOISE_REDUCTION)) } }
-    fun hideNoiseReduction() { _state.update { it.copy(panels = it.panels.close(PanelId.NOISE_REDUCTION), noiseAnalysisResult = null) } }
+    fun showNoiseReduction() = showPanel(PanelId.NOISE_REDUCTION)
+    fun hideNoiseReduction() { hidePanel(PanelId.NOISE_REDUCTION); _state.update { it.copy(noiseAnalysisResult = null) } }
 
     // --- Sticker Picker ---
-    fun showStickerPicker() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.STICKER_PICKER)) } }
-    fun hideStickerPicker() { _state.update { it.copy(panels = it.panels.close(PanelId.STICKER_PICKER)) } }
+    fun showStickerPicker() = showPanel(PanelId.STICKER_PICKER)
+    fun hideStickerPicker() = hidePanel(PanelId.STICKER_PICKER)
 
     fun analyzeAndReduceNoise() {
         val clip = getSelectedClip() ?: return
@@ -1682,8 +1606,8 @@ class EditorViewModel @Inject constructor(
     fun cancelExport() = exportDelegate.cancelExport()
 
     // --- Media Manager ---
-    fun showMediaManager() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.MEDIA_MANAGER)) } }
-    fun hideMediaManager() { _state.update { it.copy(panels = it.panels.close(PanelId.MEDIA_MANAGER)) } }
+    fun showMediaManager() = showPanel(PanelId.MEDIA_MANAGER)
+    fun hideMediaManager() = hidePanel(PanelId.MEDIA_MANAGER)
 
     fun jumpToClip(clipId: String) {
         val clip = _state.value.tracks.flatMap { it.clips }.find { it.id == clipId } ?: return
@@ -1793,8 +1717,8 @@ class EditorViewModel @Inject constructor(
     }
 
     // --- Text Templates ---
-    fun showTextTemplates() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.TEXT_TEMPLATES)) } }
-    fun hideTextTemplates() { _state.update { it.copy(panels = it.panels.close(PanelId.TEXT_TEMPLATES)) } }
+    fun showTextTemplates() = showPanel(PanelId.TEXT_TEMPLATES)
+    fun hideTextTemplates() = hidePanel(PanelId.TEXT_TEMPLATES)
 
     fun applyTextTemplate(template: com.novacut.editor.model.TextTemplate) {
         saveUndoState("Apply text template")
@@ -1865,21 +1789,15 @@ class EditorViewModel @Inject constructor(
 
     // --- Linked A/V ---
     fun unlinkAudioVideo() {
-        val clipId = _state.value.selectedClipId ?: return
+        if (_state.value.selectedClipId == null) return
         saveUndoState("Unlink A/V")
-        _state.update { s ->
-            s.copy(tracks = s.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) clip.copy(linkedClipId = null) else clip
-                })
-            })
-        }
+        updateSelectedClip { it.copy(linkedClipId = null) }
         showToast("Audio/video unlinked")
     }
 
     // --- Captions ---
-    fun showCaptionEditor() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.CAPTION_EDITOR)) } }
-    fun hideCaptionEditor() { _state.update { it.copy(panels = it.panels.close(PanelId.CAPTION_EDITOR)) } }
+    fun showCaptionEditor() = showPanel(PanelId.CAPTION_EDITOR)
+    fun hideCaptionEditor() = hidePanel(PanelId.CAPTION_EDITOR)
 
     fun generateAutoCaption() {
         val clipId = _state.value.selectedClipId ?: return
@@ -1890,8 +1808,8 @@ class EditorViewModel @Inject constructor(
     }
 
     // --- Chapter Markers ---
-    fun showChapterMarkers() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.CHAPTER_MARKERS)) } }
-    fun hideChapterMarkers() { _state.update { it.copy(panels = it.panels.close(PanelId.CHAPTER_MARKERS)) } }
+    fun showChapterMarkers() = showPanel(PanelId.CHAPTER_MARKERS)
+    fun hideChapterMarkers() = hidePanel(PanelId.CHAPTER_MARKERS)
 
     fun addChapterMarker(marker: ChapterMarker) {
         val totalDuration = _state.value.totalDurationMs
@@ -1930,8 +1848,8 @@ class EditorViewModel @Inject constructor(
     }
 
     // --- Snapshot History ---
-    fun showSnapshotHistory() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.SNAPSHOT_HISTORY)) } }
-    fun hideSnapshotHistory() { _state.update { it.copy(panels = it.panels.close(PanelId.SNAPSHOT_HISTORY)) } }
+    fun showSnapshotHistory() = showPanel(PanelId.SNAPSHOT_HISTORY)
+    fun hideSnapshotHistory() = hidePanel(PanelId.SNAPSHOT_HISTORY)
 
     fun deleteSnapshot(snapshotId: String) {
         _state.update { it.copy(projectSnapshots = it.projectSnapshots.filter { s -> s.id != snapshotId }) }
@@ -2019,27 +1937,16 @@ class EditorViewModel @Inject constructor(
 
     // --- PiP ---
     fun applyPipPreset(preset: com.novacut.editor.ui.editor.PipPreset) {
-        val clipId = _state.value.selectedClipId ?: return
+        if (_state.value.selectedClipId == null) return
         saveUndoState("PiP preset")
-        _state.update { s ->
-            s.copy(tracks = s.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) clip.copy(
-                        positionX = preset.posX,
-                        positionY = preset.posY,
-                        scaleX = preset.scaleX,
-                        scaleY = preset.scaleY
-                    ) else clip
-                })
-            })
-        }
+        updateSelectedClip { it.copy(positionX = preset.posX, positionY = preset.posY, scaleX = preset.scaleX, scaleY = preset.scaleY) }
     }
 
-    fun showPipPresets() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.PIP_PRESETS)) } }
-    fun hidePipPresets() { _state.update { it.copy(panels = it.panels.close(PanelId.PIP_PRESETS)) } }
+    fun showPipPresets() = showPanel(PanelId.PIP_PRESETS)
+    fun hidePipPresets() = hidePanel(PanelId.PIP_PRESETS)
 
-    fun showChromaKey() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.CHROMA_KEY)) } }
-    fun hideChromaKey() { _state.update { it.copy(panels = it.panels.close(PanelId.CHROMA_KEY)) } }
+    fun showChromaKey() = showPanel(PanelId.CHROMA_KEY)
+    fun hideChromaKey() = hidePanel(PanelId.CHROMA_KEY)
 
     // --- Video Scopes ---
     private val _scopeFrame = MutableStateFlow<android.graphics.Bitmap?>(null)
@@ -2071,14 +1978,7 @@ class EditorViewModel @Inject constructor(
 
     // --- Transform overlay ---
     fun setClipAnchor(x: Float, y: Float) {
-        val clipId = _state.value.selectedClipId ?: return
-        _state.update { s ->
-            s.copy(tracks = s.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) clip.copy(anchorX = x, anchorY = y) else clip
-                })
-            })
-        }
+        updateSelectedClip { it.copy(anchorX = x, anchorY = y) }
     }
 
     // --- Auto-ducking ---
@@ -2158,7 +2058,7 @@ class EditorViewModel @Inject constructor(
     fun stopVoiceover() {
         voiceoverDurationJob?.cancel()
         val uri = voiceoverEngine.stopRecording()
-        _state.update { it.copy(isRecordingVoiceover = false, showVoiceoverRecorder = false) }
+        _state.update { it.copy(isRecordingVoiceover = false, panels = it.panels.close(PanelId.VOICEOVER_RECORDER)) }
         if (uri != null) {
             addClipToTrack(uri, TrackType.AUDIO)
             showToast("Voiceover added to audio track")
@@ -2168,15 +2068,7 @@ class EditorViewModel @Inject constructor(
     }
 
     fun setClipVolume(clipId: String, volume: Float) {
-        _state.update { state ->
-            val tracks = state.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) clip.copy(volume = volume.coerceIn(0f, 2f))
-                    else clip
-                })
-            }
-            state.copy(tracks = tracks)
-        }
+        updateClipById(clipId) { it.copy(volume = volume.coerceIn(0f, 2f)) }
     }
 
     fun beginVolumeChange() {
@@ -2189,49 +2081,26 @@ class EditorViewModel @Inject constructor(
 
     fun setClipTransform(clipId: String, positionX: Float? = null, positionY: Float? = null,
                          scaleX: Float? = null, scaleY: Float? = null, rotation: Float? = null) {
-        _state.update { state ->
-            val tracks = state.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) clip.copy(
-                        positionX = positionX ?: clip.positionX,
-                        positionY = positionY ?: clip.positionY,
-                        scaleX = (scaleX ?: clip.scaleX).coerceIn(0.1f, 5f),
-                        scaleY = (scaleY ?: clip.scaleY).coerceIn(0.1f, 5f),
-                        rotation = rotation ?: clip.rotation
-                    ) else clip
-                })
-            }
-            state.copy(tracks = tracks)
+        updateClipById(clipId) { clip ->
+            clip.copy(
+                positionX = positionX ?: clip.positionX,
+                positionY = positionY ?: clip.positionY,
+                scaleX = (scaleX ?: clip.scaleX).coerceIn(0.1f, 5f),
+                scaleY = (scaleY ?: clip.scaleY).coerceIn(0.1f, 5f),
+                rotation = rotation ?: clip.rotation
+            )
         }
         updatePreview()
     }
 
     fun resetClipTransform(clipId: String) {
         saveUndoState("Reset transform")
-        _state.update { state ->
-            val tracks = state.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) clip.copy(
-                        positionX = 0f, positionY = 0f,
-                        scaleX = 1f, scaleY = 1f, rotation = 0f
-                    ) else clip
-                })
-            }
-            state.copy(tracks = tracks)
-        }
+        updateClipById(clipId) { it.copy(positionX = 0f, positionY = 0f, scaleX = 1f, scaleY = 1f, rotation = 0f) }
         saveProject()
     }
 
     fun setClipOpacity(clipId: String, opacity: Float) {
-        _state.update { state ->
-            val tracks = state.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) clip.copy(opacity = opacity.coerceIn(0f, 1f))
-                    else clip
-                })
-            }
-            state.copy(tracks = tracks)
-        }
+        updateClipById(clipId) { it.copy(opacity = opacity.coerceIn(0f, 1f)) }
         updatePreview()
     }
 
@@ -2240,30 +2109,16 @@ class EditorViewModel @Inject constructor(
     }
 
     fun setClipFadeIn(clipId: String, fadeInMs: Long) {
-        _state.update { state ->
-            val tracks = state.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) {
-                        val maxFade = (clip.durationMs - clip.fadeOutMs).coerceAtLeast(0L)
-                        clip.copy(fadeInMs = fadeInMs.coerceIn(0L, maxFade))
-                    } else clip
-                })
-            }
-            state.copy(tracks = tracks)
+        updateClipById(clipId) { clip ->
+            val maxFade = (clip.durationMs - clip.fadeOutMs).coerceAtLeast(0L)
+            clip.copy(fadeInMs = fadeInMs.coerceIn(0L, maxFade))
         }
     }
 
     fun setClipFadeOut(clipId: String, fadeOutMs: Long) {
-        _state.update { state ->
-            val tracks = state.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) {
-                        val maxFade = (clip.durationMs - clip.fadeInMs).coerceAtLeast(0L)
-                        clip.copy(fadeOutMs = fadeOutMs.coerceIn(0L, maxFade))
-                    } else clip
-                })
-            }
-            state.copy(tracks = tracks)
+        updateClipById(clipId) { clip ->
+            val maxFade = (clip.durationMs - clip.fadeInMs).coerceAtLeast(0L)
+            clip.copy(fadeOutMs = fadeOutMs.coerceIn(0L, maxFade))
         }
     }
 
@@ -2285,13 +2140,19 @@ class EditorViewModel @Inject constructor(
         val currentAction = UndoAction(
             "Redo",
             _state.value.tracks.map { it.copy() },
-            _state.value.textOverlays.toList()
+            _state.value.textOverlays.toList(),
+            imageOverlays = _state.value.imageOverlays.toList(),
+            timelineMarkers = _state.value.timelineMarkers.toList(),
+            chapterMarkers = _state.value.chapterMarkers.toList()
         )
 
         _state.update {
             val restored = recalculateDuration(it.copy(
                 tracks = action.tracks,
                 textOverlays = action.textOverlays,
+                imageOverlays = action.imageOverlays,
+                timelineMarkers = action.timelineMarkers,
+                chapterMarkers = action.chapterMarkers,
                 undoStack = undoStack.dropLast(1),
                 redoStack = it.redoStack + currentAction
             ))
@@ -2313,13 +2174,19 @@ class EditorViewModel @Inject constructor(
         val currentAction = UndoAction(
             "Undo",
             _state.value.tracks.map { it.copy() },
-            _state.value.textOverlays.toList()
+            _state.value.textOverlays.toList(),
+            imageOverlays = _state.value.imageOverlays.toList(),
+            timelineMarkers = _state.value.timelineMarkers.toList(),
+            chapterMarkers = _state.value.chapterMarkers.toList()
         )
 
         _state.update {
             val restored = recalculateDuration(it.copy(
                 tracks = action.tracks,
                 textOverlays = action.textOverlays,
+                imageOverlays = action.imageOverlays,
+                timelineMarkers = action.timelineMarkers,
+                chapterMarkers = action.chapterMarkers,
                 redoStack = redoStack.dropLast(1),
                 undoStack = it.undoStack + currentAction
             ))
@@ -2398,7 +2265,10 @@ class EditorViewModel @Inject constructor(
             val action = UndoAction(
                 description = description,
                 tracks = state.tracks.map { it.copy() },
-                textOverlays = state.textOverlays.toList()
+                textOverlays = state.textOverlays.toList(),
+                imageOverlays = state.imageOverlays.toList(),
+                timelineMarkers = state.timelineMarkers.toList(),
+                chapterMarkers = state.chapterMarkers.toList()
             )
             state.copy(
                 undoStack = (state.undoStack + action).takeLast(50),
@@ -2448,539 +2318,225 @@ class EditorViewModel @Inject constructor(
         showToast("Segmentation model deleted")
     }
 
+    // --- AI tool clip update helper ---
+    private fun updateClipByIdWithDuration(clipId: String, transform: (Clip) -> Clip) {
+        _state.update { state ->
+            val tracks = state.tracks.map { track ->
+                track.copy(clips = track.clips.map { clip ->
+                    if (clip.id == clipId) transform(clip) else clip
+                })
+            }
+            recalculateDuration(state.copy(tracks = tracks))
+        }
+        rebuildPlayerTimeline()
+        saveProject()
+    }
+
+    // --- Extracted AI tool methods ---
+
+    private suspend fun aiSceneDetect(clip: Clip) {
+        val scenes = aiFeatures.detectScenes(clip.sourceUri)
+        if (scenes.isEmpty()) { showToast("No scene changes detected"); return }
+        saveUndoState("AI scene detect")
+        _state.update { state ->
+            var tracks = state.tracks
+            for (scene in scenes.sortedByDescending { it.timestampMs }) {
+                val splitMs = clip.timelineStartMs + ((scene.timestampMs - clip.trimStartMs) / clip.speed).toLong()
+                if (splitMs <= clip.timelineStartMs || splitMs >= clip.timelineEndMs) continue
+                tracks = tracks.map { track ->
+                    val idx = track.clips.indexOfFirst { it.id == clip.id }
+                    if (idx < 0) return@map track
+                    val c = track.clips[idx]
+                    if (splitMs <= c.timelineStartMs || splitMs >= c.timelineEndMs) return@map track
+                    val relPos = splitMs - c.timelineStartMs
+                    val srcSplit = c.trimStartMs + (relPos * c.speed).toLong()
+                    track.copy(clips = buildList {
+                        addAll(track.clips.subList(0, idx))
+                        add(c.copy(trimEndMs = srcSplit))
+                        add(c.copy(id = UUID.randomUUID().toString(), timelineStartMs = splitMs, trimStartMs = srcSplit))
+                        addAll(track.clips.subList(idx + 1, track.clips.size))
+                    })
+                }
+            }
+            recalculateDuration(state.copy(tracks = tracks))
+        }
+        rebuildPlayerTimeline(); saveProject()
+        showToast("Split into ${scenes.size + 1} clips at scene boundaries")
+    }
+
+    private suspend fun aiAutoCaptions(clip: Clip) {
+        val useWhisper = aiFeatures.whisperEngine.isReady()
+        if (useWhisper) showToast("Transcribing with Whisper...")
+        val captions = aiFeatures.generateAutoCaptions(clip.sourceUri)
+        if (captions.isEmpty()) { showToast("No speech detected"); return }
+        saveUndoState("AI auto captions")
+        _state.update { it.copy(textOverlays = it.textOverlays + aiFeatures.captionsToOverlays(captions)) }
+        saveProject()
+        showToast("Added ${captions.size} captions (${if (useWhisper) "Whisper" else "energy detection"})")
+    }
+
+    private suspend fun aiAutoColor(clip: Clip) {
+        val correction = aiFeatures.autoColorCorrect(clip.sourceUri)
+        if (correction.confidence < 0.1f) { showToast("Could not analyze color"); return }
+        saveUndoState("AI auto color")
+        val newEffects = buildList {
+            if (kotlin.math.abs(correction.brightness) > 0.02f) add(Effect(type = EffectType.BRIGHTNESS, params = mapOf("value" to correction.brightness)))
+            if (kotlin.math.abs(correction.contrast - 1f) > 0.05f) add(Effect(type = EffectType.CONTRAST, params = mapOf("value" to correction.contrast)))
+            if (kotlin.math.abs(correction.saturation - 1f) > 0.05f) add(Effect(type = EffectType.SATURATION, params = mapOf("value" to correction.saturation)))
+            if (kotlin.math.abs(correction.temperature) > 0.05f) add(Effect(type = EffectType.TEMPERATURE, params = mapOf("value" to correction.temperature)))
+        }
+        if (newEffects.isEmpty()) { showToast("Colors already look good!"); return }
+        val autoTypes = newEffects.map { it.type }.toSet()
+        updateClipByIdWithDuration(clip.id) { c -> c.copy(effects = c.effects.filter { it.type !in autoTypes } + newEffects) }
+        showToast("Applied ${newEffects.size} color corrections")
+    }
+
+    private suspend fun aiStabilizeClip(clip: Clip) {
+        val result = aiFeatures.stabilizeVideo(clip.sourceUri)
+        if (result.confidence < 0.1f || result.shakeMagnitude < 0.001f) { showToast("Video is already stable"); return }
+        saveUndoState("AI stabilize")
+        val zoom = result.recommendedZoom
+        val keyframes = result.motionKeyframes.flatMap { kf ->
+            listOf(
+                Keyframe(kf.timestampMs, KeyframeProperty.POSITION_X, kf.offsetX, easing = Easing.EASE_IN_OUT),
+                Keyframe(kf.timestampMs, KeyframeProperty.POSITION_Y, kf.offsetY, easing = Easing.EASE_IN_OUT)
+            )
+        }
+        updateClipByIdWithDuration(clip.id) { c -> c.copy(scaleX = c.scaleX * zoom, scaleY = c.scaleY * zoom, keyframes = c.keyframes + keyframes) }
+        showToast("Stabilized: ${"%.0f".format(result.shakeMagnitude * 100)}% shake corrected, ${"%.0f".format((zoom - 1f) * 100)}% zoom applied")
+    }
+
+    private suspend fun aiDenoise(clip: Clip) {
+        val profile = aiFeatures.analyzeAudioNoise(clip.sourceUri)
+        if (profile.confidence < 0.1f) { showToast("Could not analyze audio noise"); return }
+        if (profile.signalToNoiseDb > 40f) { showToast("Audio is already clean (SNR: ${"%.0f".format(profile.signalToNoiseDb)}dB)"); return }
+        saveUndoState("AI denoise")
+        val volumeBoost = (1f + profile.recommendedReduction * 0.3f).coerceAtMost(1.5f)
+        updateClipByIdWithDuration(clip.id) { c ->
+            c.copy(volume = (c.volume * volumeBoost).coerceIn(0f, 2f), fadeInMs = if (c.fadeInMs < 50) 50L else c.fadeInMs, fadeOutMs = if (c.fadeOutMs < 50) 50L else c.fadeOutMs)
+        }
+        showToast("Denoised: SNR ${"%.0f".format(profile.signalToNoiseDb)}dB, reduction ${"%.0f".format(profile.recommendedReduction * 100)}%")
+    }
+
+    private suspend fun aiRemoveOrReplaceBg(clip: Clip, isReplace: Boolean) {
+        val undoLabel = if (isReplace) "AI background replace" else "AI remove background"
+        val segEngine = aiFeatures.segmentationEngine
+        if (segEngine.isReady()) {
+            val result = segEngine.segmentVideoFrame(clip.sourceUri)
+            if (result == null || result.confidence < 0.05f) { showToast("Could not detect subject in frame"); return }
+            saveUndoState(undoLabel)
+            val bgEffect = Effect(type = EffectType.BG_REMOVAL, params = mapOf("threshold" to 0.5f))
+            updateClipByIdWithDuration(clip.id) { c -> c.copy(effects = c.effects.filter { it.type != EffectType.BG_REMOVAL && it.type != EffectType.CHROMA_KEY } + bgEffect) }
+            showToast(if (isReplace) "Background removed — add replacement media on track below" else "AI background removal applied (${"%.0f".format(result.confidence * 100)}% coverage)")
+        } else {
+            val analysis = aiFeatures.analyzeBackground(clip.sourceUri)
+            if (analysis.confidence < 0.1f) { showToast("Could not detect background"); return }
+            saveUndoState(undoLabel)
+            val chromaKeyEffect = Effect(type = EffectType.CHROMA_KEY, params = mapOf("similarity" to analysis.recommendedSimilarity, "smoothness" to analysis.recommendedSmoothness, "spill" to analysis.recommendedSpill))
+            updateClipByIdWithDuration(clip.id) { c -> c.copy(effects = c.effects.filter { it.type != EffectType.CHROMA_KEY } + chromaKeyEffect) }
+            val msg = if (isReplace) "Background keyed out — add replacement media on track below" else {
+                val bgType = when { analysis.isGreenScreen -> "green screen"; analysis.isBlueScreen -> "blue screen"; else -> "background" }
+                "Applied $bgType removal (${"%.0f".format(analysis.confidence * 100)}% confidence)"
+            }
+            showToast(msg)
+        }
+    }
+
+    private suspend fun aiTrackMotion(clip: Clip, region: com.novacut.editor.ai.TrackingRegion, undoLabel: String, invertX: Boolean = false, centerY: Float = 0.5f) {
+        if (undoLabel.contains("face", true)) showToast("Face tracking: detecting faces...")
+        val results = aiFeatures.trackMotion(clip.sourceUri, region, clip.trimStartMs, clip.trimEndMs)
+        if (results.isEmpty()) { showToast(if (undoLabel.contains("face", true)) "No face detected" else "Motion tracking failed"); return }
+        saveUndoState(undoLabel)
+        val xSign = if (invertX) -1f else 1f
+        val posKeyframes = results.mapNotNull { tr ->
+            val timeOffset = ((tr.timestampMs - clip.trimStartMs) / clip.speed).toLong()
+            if (timeOffset < 0 || timeOffset > clip.durationMs) return@mapNotNull null
+            listOf(
+                Keyframe(timeOffset, KeyframeProperty.POSITION_X, xSign * (tr.region.centerX - 0.5f) * 2f, easing = Easing.EASE_IN_OUT),
+                Keyframe(timeOffset, KeyframeProperty.POSITION_Y, xSign * (tr.region.centerY - centerY) * 2f, easing = Easing.EASE_IN_OUT)
+            )
+        }.flatten()
+        val trackedProps = setOf(KeyframeProperty.POSITION_X, KeyframeProperty.POSITION_Y)
+        updateClipByIdWithDuration(clip.id) { c -> c.copy(keyframes = c.keyframes.filter { it.property !in trackedProps } + posKeyframes) }
+        showToast("Tracked ${results.size} ${if (undoLabel.contains("face", true)) "face" else "motion"} points across clip")
+    }
+
+    private suspend fun aiStyleTransferClip(clip: Clip) {
+        showToast("Analyzing frame style...")
+        val style = aiFeatures.analyzeAndApplyStyle(clip.sourceUri)
+        if (style.confidence < 0.1f) { showToast("Could not analyze frame style"); return }
+        saveUndoState("AI style transfer")
+        val newEffects = buildList {
+            if (kotlin.math.abs(style.contrast - 1f) > 0.02f) add(Effect(type = EffectType.CONTRAST, params = mapOf("value" to style.contrast)))
+            if (kotlin.math.abs(style.temperature) > 0.01f) add(Effect(type = EffectType.TEMPERATURE, params = mapOf("value" to style.temperature)))
+            if (kotlin.math.abs(style.saturation - 1f) > 0.02f) add(Effect(type = EffectType.SATURATION, params = mapOf("value" to style.saturation)))
+            if (kotlin.math.abs(style.exposure) > 0.01f) add(Effect(type = EffectType.EXPOSURE, params = mapOf("value" to style.exposure)))
+            if (style.vignetteIntensity > 0.01f) add(Effect(type = EffectType.VIGNETTE, params = mapOf("intensity" to style.vignetteIntensity, "radius" to style.vignetteRadius)))
+            if (style.filmGrain > 0.01f) add(Effect(type = EffectType.FILM_GRAIN, params = mapOf("intensity" to style.filmGrain)))
+        }
+        if (newEffects.isNotEmpty()) {
+            updateClipByIdWithDuration(clip.id) { c -> c.copy(effects = c.effects + newEffects) }
+            videoEngine.applyPreviewEffects(getSelectedClip())
+        }
+        showToast("Applied '${style.styleName}' style (${newEffects.size} effects)")
+    }
+
+    private suspend fun aiUpscale(clip: Clip) {
+        showToast("Analyzing source resolution...")
+        val result = aiFeatures.analyzeForUpscale(clip.sourceUri)
+        if (result.targetResolution == null) { showToast("Already at maximum resolution (${result.sourceWidth}x${result.sourceHeight})"); return }
+        saveUndoState("AI upscale")
+        _state.update { it.copy(project = it.project.copy(resolution = result.targetResolution)) }
+        val sharpenEffect = Effect(type = EffectType.SHARPEN, params = mapOf("strength" to result.sharpenStrength))
+        updateClipByIdWithDuration(clip.id) { c -> c.copy(effects = c.effects.filter { it.type != EffectType.SHARPEN } + sharpenEffect) }
+        showToast("Upscaled to ${result.targetResolution.label} + sharpening applied")
+    }
+
     fun runAiTool(toolId: String) {
         val clip = getSelectedClip()
-        if (clip == null) {
-            showToast("Select a clip first")
-            return
-        }
-
+        if (clip == null) { showToast("Select a clip first"); return }
         _state.update { it.copy(aiProcessingTool = toolId) }
-
         aiJob?.cancel()
         aiJob = viewModelScope.launch {
             try {
                 when (toolId) {
-                    "scene_detect" -> {
-                        val scenes = aiFeatures.detectScenes(clip.sourceUri)
-                        if (scenes.isEmpty()) {
-                            showToast("No scene changes detected")
-                        } else {
-                            saveUndoState("AI scene detect")
-                            _state.update { state ->
-                                var tracks = state.tracks
-                                for (scene in scenes.sortedByDescending { it.timestampMs }) {
-                                    val splitMs = clip.timelineStartMs +
-                                        ((scene.timestampMs - clip.trimStartMs) / clip.speed).toLong()
-                                    if (splitMs <= clip.timelineStartMs || splitMs >= clip.timelineEndMs) continue
-
-                                    tracks = tracks.map { track ->
-                                        val idx = track.clips.indexOfFirst { it.id == clip.id }
-                                        if (idx < 0) return@map track
-                                        val c = track.clips[idx]
-                                        if (splitMs <= c.timelineStartMs || splitMs >= c.timelineEndMs) return@map track
-
-                                        val relPos = splitMs - c.timelineStartMs
-                                        val srcSplit = c.trimStartMs + (relPos * c.speed).toLong()
-                                        val first = c.copy(trimEndMs = srcSplit)
-                                        val second = c.copy(
-                                            id = java.util.UUID.randomUUID().toString(),
-                                            timelineStartMs = splitMs,
-                                            trimStartMs = srcSplit
-                                        )
-                                        val newClips = buildList {
-                                            addAll(track.clips.subList(0, idx))
-                                            add(first)
-                                            add(second)
-                                            addAll(track.clips.subList(idx + 1, track.clips.size))
-                                        }
-                                        track.copy(clips = newClips)
-                                    }
-                                }
-                                recalculateDuration(state.copy(tracks = tracks))
-                            }
-                            rebuildPlayerTimeline()
-                            saveProject()
-                            showToast("Split into ${scenes.size + 1} clips at scene boundaries")
-                        }
-                    }
-                    "auto_captions" -> {
-                        val useWhisper = aiFeatures.whisperEngine.isReady()
-                        if (useWhisper) showToast("Transcribing with Whisper...")
-                        val captions = aiFeatures.generateAutoCaptions(clip.sourceUri)
-                        if (captions.isEmpty()) {
-                            showToast("No speech detected")
-                        } else {
-                            saveUndoState("AI auto captions")
-                            val overlays = aiFeatures.captionsToOverlays(captions)
-                            _state.update { it.copy(textOverlays = it.textOverlays + overlays) }
-                            saveProject()
-                            val source = if (useWhisper) "Whisper" else "energy detection"
-                            showToast("Added ${captions.size} captions ($source)")
-                        }
-                    }
+                    "scene_detect" -> aiSceneDetect(clip)
+                    "auto_captions" -> aiAutoCaptions(clip)
                     "smart_crop" -> {
-                        val suggestion = aiFeatures.suggestCrop(
-                            clip.sourceUri,
-                            _state.value.project.aspectRatio.toFloat()
-                        )
-                        if (suggestion.confidence < 0.1f) {
-                            showToast("Could not analyze frame for crop")
-                        } else {
+                        val suggestion = aiFeatures.suggestCrop(clip.sourceUri, _state.value.project.aspectRatio.toFloat())
+                        if (suggestion.confidence < 0.1f) { showToast("Could not analyze frame for crop") } else {
                             saveUndoState("AI smart crop")
-                            setClipTransform(
-                                clip.id,
-                                positionX = suggestion.centerX - 0.5f,
-                                positionY = suggestion.centerY - 0.5f
-                            )
+                            setClipTransform(clip.id, positionX = suggestion.centerX - 0.5f, positionY = suggestion.centerY - 0.5f)
                             showToast("Smart crop applied (${"%.0f".format(suggestion.confidence * 100)}% confidence)")
                         }
                     }
-                    "auto_color" -> {
-                        val correction = aiFeatures.autoColorCorrect(clip.sourceUri)
-                        if (correction.confidence < 0.1f) {
-                            showToast("Could not analyze color")
-                        } else {
-                            saveUndoState("AI auto color")
-                            val newEffects = buildList {
-                                if (kotlin.math.abs(correction.brightness) > 0.02f) {
-                                    add(Effect(type = EffectType.BRIGHTNESS, params = mapOf("value" to correction.brightness)))
-                                }
-                                if (kotlin.math.abs(correction.contrast - 1f) > 0.05f) {
-                                    add(Effect(type = EffectType.CONTRAST, params = mapOf("value" to correction.contrast)))
-                                }
-                                if (kotlin.math.abs(correction.saturation - 1f) > 0.05f) {
-                                    add(Effect(type = EffectType.SATURATION, params = mapOf("value" to correction.saturation)))
-                                }
-                                if (kotlin.math.abs(correction.temperature) > 0.05f) {
-                                    add(Effect(type = EffectType.TEMPERATURE, params = mapOf("value" to correction.temperature)))
-                                }
-                            }
-                            if (newEffects.isEmpty()) {
-                                showToast("Colors already look good!")
-                            } else {
-                                _state.update { state ->
-                                    val tracks = state.tracks.map { track ->
-                                        val idx = track.clips.indexOfFirst { it.id == clip.id }
-                                        if (idx < 0) return@map track
-                                        val c = track.clips[idx]
-                                        // Remove existing auto-color effects (same types) then add new
-                                        val autoTypes = newEffects.map { it.type }.toSet()
-                                        val filteredEffects = c.effects.filter { it.type !in autoTypes }
-                                        val updatedClip = c.copy(effects = filteredEffects + newEffects)
-                                        track.copy(clips = track.clips.toMutableList().apply { set(idx, updatedClip) })
-                                    }
-                                    recalculateDuration(state.copy(tracks = tracks))
-                                }
-                                rebuildPlayerTimeline()
-                                saveProject()
-                                showToast("Applied ${newEffects.size} color corrections")
-                            }
-                        }
-                    }
-                    "stabilize" -> {
-                        val result = aiFeatures.stabilizeVideo(clip.sourceUri)
-                        if (result.confidence < 0.1f || result.shakeMagnitude < 0.001f) {
-                            showToast("Video is already stable")
-                        } else {
-                            saveUndoState("AI stabilize")
-                            _state.update { state ->
-                                val tracks = state.tracks.map { track ->
-                                    val idx = track.clips.indexOfFirst { it.id == clip.id }
-                                    if (idx < 0) return@map track
-                                    val c = track.clips[idx]
-                                    // Apply stabilization: zoom in slightly + generate smooth keyframes
-                                    val zoom = result.recommendedZoom
-                                    val keyframes = result.motionKeyframes.flatMap { kf ->
-                                        listOf(
-                                            Keyframe(
-                                                timeOffsetMs = kf.timestampMs,
-                                                property = KeyframeProperty.POSITION_X,
-                                                value = kf.offsetX,
-                                                easing = Easing.EASE_IN_OUT
-                                            ),
-                                            Keyframe(
-                                                timeOffsetMs = kf.timestampMs,
-                                                property = KeyframeProperty.POSITION_Y,
-                                                value = kf.offsetY,
-                                                easing = Easing.EASE_IN_OUT
-                                            )
-                                        )
-                                    }
-                                    val stabilized = c.copy(
-                                        scaleX = c.scaleX * zoom,
-                                        scaleY = c.scaleY * zoom,
-                                        keyframes = c.keyframes + keyframes
-                                    )
-                                    track.copy(clips = track.clips.toMutableList().apply { set(idx, stabilized) })
-                                }
-                                recalculateDuration(state.copy(tracks = tracks))
-                            }
-                            rebuildPlayerTimeline()
-                            saveProject()
-                            showToast("Stabilized: ${
-                                "%.0f".format(result.shakeMagnitude * 100)
-                            }% shake corrected, ${
-                                "%.0f".format((result.recommendedZoom - 1f) * 100)
-                            }% zoom applied")
-                        }
-                    }
-                    "denoise" -> {
-                        val profile = aiFeatures.analyzeAudioNoise(clip.sourceUri)
-                        if (profile.confidence < 0.1f) {
-                            showToast("Could not analyze audio noise")
-                        } else if (profile.signalToNoiseDb > 40f) {
-                            showToast("Audio is already clean (SNR: ${"%.0f".format(profile.signalToNoiseDb)}dB)")
-                        } else {
-                            saveUndoState("AI denoise")
-                            // Apply noise reduction by adjusting volume and fade
-                            // Boost signal relative to noise floor, apply noise gate via volume
-                            val volumeBoost = (1f + profile.recommendedReduction * 0.3f).coerceAtMost(1.5f)
-                            _state.update { state ->
-                                val tracks = state.tracks.map { track ->
-                                    val idx = track.clips.indexOfFirst { it.id == clip.id }
-                                    if (idx < 0) return@map track
-                                    val c = track.clips[idx]
-                                    val denoised = c.copy(
-                                        volume = (c.volume * volumeBoost).coerceIn(0f, 2f),
-                                        fadeInMs = if (c.fadeInMs < 50) 50L else c.fadeInMs,
-                                        fadeOutMs = if (c.fadeOutMs < 50) 50L else c.fadeOutMs
-                                    )
-                                    track.copy(clips = track.clips.toMutableList().apply { set(idx, denoised) })
-                                }
-                                recalculateDuration(state.copy(tracks = tracks))
-                            }
-                            rebuildPlayerTimeline()
-                            saveProject()
-                            showToast("Denoised: SNR ${"%.0f".format(profile.signalToNoiseDb)}dB, " +
-                                "reduction ${"%.0f".format(profile.recommendedReduction * 100)}%")
-                        }
-                    }
-                    "remove_bg" -> {
-                        val segEngine = aiFeatures.segmentationEngine
-                        if (segEngine.isReady()) {
-                            // Use MediaPipe selfie segmentation (pixel-accurate)
-                            val result = segEngine.segmentVideoFrame(clip.sourceUri)
-                            if (result == null || result.confidence < 0.05f) {
-                                showToast("Could not detect subject in frame")
-                            } else {
-                                saveUndoState("AI remove background")
-                                val bgEffect = Effect(
-                                    type = EffectType.BG_REMOVAL,
-                                    params = mapOf("threshold" to 0.5f)
-                                )
-                                _state.update { state ->
-                                    val tracks = state.tracks.map { track ->
-                                        val idx = track.clips.indexOfFirst { it.id == clip.id }
-                                        if (idx < 0) return@map track
-                                        val c = track.clips[idx]
-                                        val filtered = c.effects.filter {
-                                            it.type != EffectType.BG_REMOVAL && it.type != EffectType.CHROMA_KEY
-                                        }
-                                        val updated = c.copy(effects = filtered + bgEffect)
-                                        track.copy(clips = track.clips.toMutableList().apply { set(idx, updated) })
-                                    }
-                                    recalculateDuration(state.copy(tracks = tracks))
-                                }
-                                rebuildPlayerTimeline()
-                                saveProject()
-                                showToast("AI background removal applied (${"%.0f".format(result.confidence * 100)}% coverage)")
-                            }
-                        } else {
-                            // Fallback: chroma key analysis
-                            val analysis = aiFeatures.analyzeBackground(clip.sourceUri)
-                            if (analysis.confidence < 0.1f) {
-                                showToast("Could not detect background")
-                            } else {
-                                saveUndoState("AI remove background")
-                                val chromaKeyEffect = Effect(
-                                    type = EffectType.CHROMA_KEY,
-                                    params = mapOf(
-                                        "similarity" to analysis.recommendedSimilarity,
-                                        "smoothness" to analysis.recommendedSmoothness,
-                                        "spill" to analysis.recommendedSpill
-                                    )
-                                )
-                                _state.update { state ->
-                                    val tracks = state.tracks.map { track ->
-                                        val idx = track.clips.indexOfFirst { it.id == clip.id }
-                                        if (idx < 0) return@map track
-                                        val c = track.clips[idx]
-                                        val filtered = c.effects.filter { it.type != EffectType.CHROMA_KEY }
-                                        val updated = c.copy(effects = filtered + chromaKeyEffect)
-                                        track.copy(clips = track.clips.toMutableList().apply { set(idx, updated) })
-                                    }
-                                    recalculateDuration(state.copy(tracks = tracks))
-                                }
-                                rebuildPlayerTimeline()
-                                saveProject()
-                                val bgType = when {
-                                    analysis.isGreenScreen -> "green screen"
-                                    analysis.isBlueScreen -> "blue screen"
-                                    else -> "background"
-                                }
-                                showToast("Applied $bgType removal (${
-                                    "%.0f".format(analysis.confidence * 100)
-                                }% confidence)")
-                            }
-                        }
-                    }
-                    "track_motion" -> {
-                        // Track from center of frame across the clip duration
-                        val region = com.novacut.editor.ai.TrackingRegion()
-                        val results = aiFeatures.trackMotion(
-                            clip.sourceUri, region, clip.trimStartMs, clip.trimEndMs
-                        )
-                        if (results.isEmpty()) {
-                            showToast("Motion tracking failed")
-                        } else {
-                            saveUndoState("AI motion track")
-                            // Convert tracking results to position keyframes
-                            val posKeyframes = results.mapNotNull { tr ->
-                                val timeOffset = ((tr.timestampMs - clip.trimStartMs) / clip.speed).toLong()
-                                if (timeOffset < 0 || timeOffset > clip.durationMs) return@mapNotNull null
-                                listOf(
-                                    Keyframe(
-                                        timeOffsetMs = timeOffset,
-                                        property = KeyframeProperty.POSITION_X,
-                                        value = (tr.region.centerX - 0.5f) * 2f, // Normalize to -1..1
-                                        easing = Easing.EASE_IN_OUT
-                                    ),
-                                    Keyframe(
-                                        timeOffsetMs = timeOffset,
-                                        property = KeyframeProperty.POSITION_Y,
-                                        value = (tr.region.centerY - 0.5f) * 2f,
-                                        easing = Easing.EASE_IN_OUT
-                                    )
-                                )
-                            }.flatten()
-
-                            _state.update { state ->
-                                val tracks = state.tracks.map { track ->
-                                    val idx = track.clips.indexOfFirst { it.id == clip.id }
-                                    if (idx < 0) return@map track
-                                    val c = track.clips[idx]
-                                    // Merge tracking keyframes with existing
-                                    val trackedProps = setOf(KeyframeProperty.POSITION_X, KeyframeProperty.POSITION_Y)
-                                    val existing = c.keyframes.filter { it.property !in trackedProps }
-                                    val updated = c.copy(keyframes = existing + posKeyframes)
-                                    track.copy(clips = track.clips.toMutableList().apply { set(idx, updated) })
-                                }
-                                recalculateDuration(state.copy(tracks = tracks))
-                            }
-                            rebuildPlayerTimeline()
-                            saveProject()
-                            showToast("Tracked ${results.size} motion points across clip")
-                        }
-                    }
-                    "style_transfer" -> {
-                        showToast("Analyzing frame style...")
-                        val style = aiFeatures.analyzeAndApplyStyle(clip.sourceUri)
-                        if (style.confidence < 0.1f) {
-                            showToast("Could not analyze frame style")
-                        } else {
-                            saveUndoState("AI style transfer")
-                            val newEffects = buildList {
-                                if (kotlin.math.abs(style.contrast - 1f) > 0.02f)
-                                    add(Effect(type = EffectType.CONTRAST, params = mapOf("value" to style.contrast)))
-                                if (kotlin.math.abs(style.temperature) > 0.01f)
-                                    add(Effect(type = EffectType.TEMPERATURE, params = mapOf("value" to style.temperature)))
-                                if (kotlin.math.abs(style.saturation - 1f) > 0.02f)
-                                    add(Effect(type = EffectType.SATURATION, params = mapOf("value" to style.saturation)))
-                                if (kotlin.math.abs(style.exposure) > 0.01f)
-                                    add(Effect(type = EffectType.EXPOSURE, params = mapOf("value" to style.exposure)))
-                                if (style.vignetteIntensity > 0.01f)
-                                    add(Effect(type = EffectType.VIGNETTE, params = mapOf(
-                                        "intensity" to style.vignetteIntensity, "radius" to style.vignetteRadius
-                                    )))
-                                if (style.filmGrain > 0.01f)
-                                    add(Effect(type = EffectType.FILM_GRAIN, params = mapOf("intensity" to style.filmGrain)))
-                            }
-                            if (newEffects.isNotEmpty()) {
-                                _state.update { state ->
-                                    val tracks = state.tracks.map { track ->
-                                        val idx = track.clips.indexOfFirst { it.id == clip.id }
-                                        if (idx < 0) return@map track
-                                        val c = track.clips[idx]
-                                        val updated = c.copy(effects = c.effects + newEffects)
-                                        track.copy(clips = track.clips.toMutableList().apply { set(idx, updated) })
-                                    }
-                                    recalculateDuration(state.copy(tracks = tracks))
-                                }
-                                rebuildPlayerTimeline()
-                                videoEngine.applyPreviewEffects(getSelectedClip())
-                                saveProject()
-                            }
-                            showToast("Applied '${style.styleName}' style (${newEffects.size} effects)")
-                        }
-                    }
-                    "face_track" -> {
-                        showToast("Face tracking: detecting faces...")
-                        // Use motion tracking with face region detection
-                        val region = com.novacut.editor.ai.TrackingRegion(
-                            centerX = 0.5f, centerY = 0.35f, width = 0.3f, height = 0.3f
-                        )
-                        val results = aiFeatures.trackMotion(clip.sourceUri, region, clip.trimStartMs, clip.trimEndMs)
-                        if (results.isNotEmpty()) {
-                            saveUndoState("AI face track")
-                            val posKeyframes = results.mapNotNull { tr ->
-                                val timeOffset = ((tr.timestampMs - clip.trimStartMs) / clip.speed).toLong()
-                                if (timeOffset < 0 || timeOffset > clip.durationMs) return@mapNotNull null
-                                listOf(
-                                    Keyframe(timeOffsetMs = timeOffset, property = KeyframeProperty.POSITION_X,
-                                        value = -(tr.region.centerX - 0.5f) * 2f, easing = Easing.EASE_IN_OUT),
-                                    Keyframe(timeOffsetMs = timeOffset, property = KeyframeProperty.POSITION_Y,
-                                        value = -(tr.region.centerY - 0.35f) * 2f, easing = Easing.EASE_IN_OUT)
-                                )
-                            }.flatten()
-                            _state.update { state ->
-                                val tracks = state.tracks.map { track ->
-                                    val idx = track.clips.indexOfFirst { it.id == clip.id }
-                                    if (idx < 0) return@map track
-                                    val c = track.clips[idx]
-                                    val updated = c.copy(keyframes = c.keyframes + posKeyframes)
-                                    track.copy(clips = track.clips.toMutableList().apply { set(idx, updated) })
-                                }
-                                recalculateDuration(state.copy(tracks = tracks))
-                            }
-                            rebuildPlayerTimeline()
-                            showToast("Face tracked: ${results.size} points")
-                        } else {
-                            showToast("No face detected")
-                        }
-                    }
+                    "auto_color" -> aiAutoColor(clip)
+                    "stabilize" -> aiStabilizeClip(clip)
+                    "denoise" -> aiDenoise(clip)
+                    "remove_bg" -> aiRemoveOrReplaceBg(clip, isReplace = false)
+                    "bg_replace" -> aiRemoveOrReplaceBg(clip, isReplace = true)
+                    "track_motion" -> aiTrackMotion(clip, com.novacut.editor.ai.TrackingRegion(), "AI motion track")
+                    "face_track" -> aiTrackMotion(clip, com.novacut.editor.ai.TrackingRegion(centerX = 0.5f, centerY = 0.35f, width = 0.3f, height = 0.3f), "AI face track", invertX = true, centerY = 0.35f)
+                    "style_transfer" -> aiStyleTransferClip(clip)
                     "smart_reframe" -> {
                         val suggestion = aiFeatures.suggestCrop(clip.sourceUri, 9f / 16f)
                         if (suggestion.confidence > 0.1f) {
                             saveUndoState("AI smart reframe")
-                            setClipTransform(clip.id,
-                                positionX = (suggestion.centerX - 0.5f) * 2f,
-                                positionY = (suggestion.centerY - 0.5f) * 2f,
-                                scaleX = 1f / suggestion.width,
-                                scaleY = 1f / suggestion.height
-                            )
+                            setClipTransform(clip.id, positionX = (suggestion.centerX - 0.5f) * 2f, positionY = (suggestion.centerY - 0.5f) * 2f, scaleX = 1f / suggestion.width, scaleY = 1f / suggestion.height)
                             showToast("Smart reframed for vertical (${"%.0f".format(suggestion.confidence * 100)}%)")
-                        } else {
-                            showToast("Could not determine reframe region")
-                        }
+                        } else showToast("Could not determine reframe region")
                     }
-                    "upscale" -> {
-                        showToast("Analyzing source resolution...")
-                        val result = aiFeatures.analyzeForUpscale(clip.sourceUri)
-                        if (result.targetResolution == null) {
-                            showToast("Already at maximum resolution (${result.sourceWidth}x${result.sourceHeight})")
-                        } else {
-                            saveUndoState("AI upscale")
-                            // Update project resolution
-                            _state.update { it.copy(
-                                project = it.project.copy(resolution = result.targetResolution)
-                            ) }
-                            // Add sharpening to compensate for upscale
-                            val sharpenEffect = Effect(
-                                type = EffectType.SHARPEN,
-                                params = mapOf("strength" to result.sharpenStrength)
-                            )
-                            _state.update { state ->
-                                val tracks = state.tracks.map { track ->
-                                    val idx = track.clips.indexOfFirst { it.id == clip.id }
-                                    if (idx < 0) return@map track
-                                    val c = track.clips[idx]
-                                    val filtered = c.effects.filter { it.type != EffectType.SHARPEN }
-                                    val updated = c.copy(effects = filtered + sharpenEffect)
-                                    track.copy(clips = track.clips.toMutableList().apply { set(idx, updated) })
-                                }
-                                recalculateDuration(state.copy(tracks = tracks))
-                            }
-                            rebuildPlayerTimeline()
-                            saveProject()
-                            showToast("Upscaled to ${result.targetResolution.label} + sharpening applied")
-                        }
-                    }
-                    "frame_interp" -> {
-                        applyFrameInterpolation(clip)
-                    }
-                    "object_remove" -> {
-                        applyObjectRemoval(clip)
-                    }
-                    "video_upscale" -> {
-                        applyVideoUpscale(clip)
-                    }
-                    "ai_background" -> {
-                        applyAiBackground(clip)
-                    }
-                    "ai_stabilize" -> {
-                        applyStabilization(clip)
-                    }
-                    "ai_style_transfer" -> {
-                        applyStyleTransfer(clip)
-                    }
-                    "bg_replace" -> {
-                        val segEngine = aiFeatures.segmentationEngine
-                        if (segEngine.isReady()) {
-                            // Use MediaPipe segmentation for accurate subject isolation
-                            val result = segEngine.segmentVideoFrame(clip.sourceUri)
-                            if (result != null && result.confidence >= 0.05f) {
-                                saveUndoState("AI background replace")
-                                val bgEffect = Effect(
-                                    type = EffectType.BG_REMOVAL,
-                                    params = mapOf("threshold" to 0.5f)
-                                )
-                                _state.update { state ->
-                                    val tracks = state.tracks.map { track ->
-                                        val idx = track.clips.indexOfFirst { it.id == clip.id }
-                                        if (idx < 0) return@map track
-                                        val c = track.clips[idx]
-                                        val filtered = c.effects.filter {
-                                            it.type != EffectType.BG_REMOVAL && it.type != EffectType.CHROMA_KEY
-                                        }
-                                        val updated = c.copy(effects = filtered + bgEffect)
-                                        track.copy(clips = track.clips.toMutableList().apply { set(idx, updated) })
-                                    }
-                                    recalculateDuration(state.copy(tracks = tracks))
-                                }
-                                rebuildPlayerTimeline()
-                                showToast("Background removed — add replacement media on track below")
-                            } else {
-                                showToast("Could not detect subject in frame")
-                            }
-                        } else {
-                            // Fallback: chroma key
-                            val analysis = aiFeatures.analyzeBackground(clip.sourceUri)
-                            if (analysis.confidence > 0.1f) {
-                                saveUndoState("AI background replace")
-                                val chromaKeyEffect = Effect(
-                                    type = EffectType.CHROMA_KEY,
-                                    params = mapOf(
-                                        "similarity" to analysis.recommendedSimilarity,
-                                        "smoothness" to analysis.recommendedSmoothness,
-                                        "spill" to analysis.recommendedSpill
-                                    )
-                                )
-                                _state.update { state ->
-                                    val tracks = state.tracks.map { track ->
-                                        val idx = track.clips.indexOfFirst { it.id == clip.id }
-                                        if (idx < 0) return@map track
-                                        val c = track.clips[idx]
-                                        val filtered = c.effects.filter { it.type != EffectType.CHROMA_KEY }
-                                        val updated = c.copy(effects = filtered + chromaKeyEffect)
-                                        track.copy(clips = track.clips.toMutableList().apply { set(idx, updated) })
-                                    }
-                                    recalculateDuration(state.copy(tracks = tracks))
-                                }
-                                rebuildPlayerTimeline()
-                                showToast("Background keyed out — add replacement media on track below")
-                            } else {
-                                showToast("Could not detect background")
-                            }
-                        }
-                    }
-                    else -> {
-                        showToast("Unknown AI tool: $toolId")
-                    }
+                    "upscale" -> aiUpscale(clip)
+                    "frame_interp" -> applyFrameInterpolation(clip)
+                    "object_remove" -> applyObjectRemoval(clip)
+                    "video_upscale" -> applyVideoUpscale(clip)
+                    "ai_background" -> applyAiBackground(clip)
+                    "ai_stabilize" -> applyStabilization(clip)
+                    "ai_style_transfer" -> applyStyleTransfer(clip)
+                    else -> showToast("Unknown AI tool: $toolId")
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
-                showToast("AI tool cancelled")
-                throw e
+                showToast("AI tool cancelled"); throw e
             } catch (e: Exception) {
                 showToast("AI tool failed: ${e.message}")
             } finally {

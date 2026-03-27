@@ -71,6 +71,29 @@ fun EditorScreen(
     val hasOpenPanel by remember { derivedStateOf { state.panels.hasOpenPanel || state.selectedEffectId != null || state.editingTextOverlayId != null } }
     val isClipMode by remember { derivedStateOf { state.selectedClipId != null } }
 
+    // Memoize selected clip lookup — recomputes only when tracks or selectedClipId change
+    val selectedClip by remember {
+        derivedStateOf {
+            state.selectedClipId?.let { id ->
+                state.tracks.flatMap { it.clips }.find { it.id == id }
+            }
+        }
+    }
+
+    // Memoize all captions with absolute timeline times
+    val allCaptions by remember {
+        derivedStateOf {
+            state.tracks.flatMap { it.clips }.flatMap { clip ->
+                clip.captions.map { caption ->
+                    caption.copy(
+                        startTimeMs = caption.startTimeMs + clip.timelineStartMs,
+                        endTimeMs = caption.endTimeMs + clip.timelineStartMs
+                    )
+                }
+            }
+        }
+    }
+
     BackHandler(enabled = hasOpenPanel || state.currentTool != EditorTool.NONE || isClipMode) {
         when {
             hasOpenPanel -> viewModel.dismissAllPanels()
@@ -365,7 +388,6 @@ fun EditorScreen(
             visible = state.panels.isOpen(PanelId.EFFECTS),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            val selectedClip = viewModel.getSelectedClip()
             EffectsPanel(
                 selectedClip = selectedClip,
                 onAddEffect = { effectType ->
@@ -384,7 +406,7 @@ fun EditorScreen(
             visible = state.currentTool == EditorTool.SPEED && state.selectedClipId != null,
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            val clip = viewModel.getSelectedClip()
+            val clip = selectedClip
             if (clip != null) {
                 SpeedPanel(
                     currentSpeed = clip.speed,
@@ -402,7 +424,7 @@ fun EditorScreen(
             visible = state.panels.isOpen(PanelId.TRANSITION_PICKER),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            val clip = viewModel.getSelectedClip()
+            val clip = selectedClip
             TransitionPicker(
                 onTransitionSelected = { type ->
                     val clipId = state.selectedClipId ?: return@TransitionPicker
@@ -481,7 +503,7 @@ fun EditorScreen(
             visible = state.panels.isOpen(PanelId.AUDIO),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            val clip = viewModel.getSelectedClip()
+            val clip = selectedClip
             AudioPanel(
                 clip = clip,
                 waveform = clip?.let { state.waveforms[it.id] },
@@ -523,7 +545,7 @@ fun EditorScreen(
             visible = state.panels.isOpen(PanelId.TRANSFORM),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            val clip = viewModel.getSelectedClip()
+            val clip = selectedClip
             if (clip != null) {
                 TransformPanel(
                     clip = clip,
@@ -580,7 +602,7 @@ fun EditorScreen(
             visible = state.selectedEffectId != null,
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            val clip = viewModel.getSelectedClip()
+            val clip = selectedClip
             val effect = clip?.effects?.firstOrNull { it.id == state.selectedEffectId }
             if (effect != null) {
                 EffectAdjustmentPanel(
@@ -609,7 +631,7 @@ fun EditorScreen(
             visible = state.panels.isOpen(PanelId.COLOR_GRADING),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            val clip = state.tracks.flatMap { it.clips }.find { it.id == state.selectedClipId }
+            val clip = selectedClip
             ColorGradingPanel(
                 colorGrade = clip?.colorGrade ?: ColorGrade(),
                 onColorGradeChanged = viewModel::updateClipColorGrade,
@@ -643,7 +665,7 @@ fun EditorScreen(
             visible = state.panels.isOpen(PanelId.KEYFRAME_EDITOR),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            val clip = state.tracks.flatMap { it.clips }.find { it.id == state.selectedClipId }
+            val clip = selectedClip
             if (clip != null) {
                 KeyframeCurveEditor(
                     keyframes = clip.keyframes,
@@ -664,7 +686,7 @@ fun EditorScreen(
             visible = state.panels.isOpen(PanelId.SPEED_CURVE),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            val clip = state.tracks.flatMap { it.clips }.find { it.id == state.selectedClipId }
+            val clip = selectedClip
             if (clip != null) {
                 SpeedCurveEditor(
                     speedCurve = clip.speedCurve,
@@ -684,7 +706,7 @@ fun EditorScreen(
             visible = state.panels.isOpen(PanelId.MASK_EDITOR),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            val clip = state.tracks.flatMap { it.clips }.find { it.id == state.selectedClipId }
+            val clip = selectedClip
             MaskEditorPanel(
                 masks = clip?.masks ?: emptyList(),
                 selectedMaskId = state.selectedMaskId,
@@ -702,8 +724,7 @@ fun EditorScreen(
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             BlendModeSelector(
-                currentMode = state.tracks.flatMap { it.clips }
-                    .find { it.id == state.selectedClipId }?.blendMode ?: BlendMode.NORMAL,
+                currentMode = selectedClip?.blendMode ?: BlendMode.NORMAL,
                 onModeSelected = viewModel::setClipBlendMode,
                 onClose = viewModel::hideBlendModeSelector
             )
@@ -711,7 +732,7 @@ fun EditorScreen(
 
         // Mask preview overlay on the video preview (when mask editor is open)
         if (state.panels.isOpen(PanelId.MASK_EDITOR)) {
-            val clip = state.tracks.flatMap { it.clips }.find { it.id == state.selectedClipId }
+            val clip = selectedClip
             if (clip != null) {
                 MaskPreviewOverlay(
                     masks = clip.masks,
@@ -744,7 +765,7 @@ fun EditorScreen(
             visible = state.panels.isOpen(PanelId.CHROMA_KEY),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            val clip = state.tracks.flatMap { it.clips }.find { it.id == state.selectedClipId }
+            val clip = selectedClip
             val chromaEffect = clip?.effects?.find { it.type == EffectType.CHROMA_KEY }
             ChromaKeyPanel(
                 similarity = chromaEffect?.params?.get("similarity") ?: 0.4f,
@@ -780,7 +801,7 @@ fun EditorScreen(
 
         // Transform overlay on preview (when clip selected and transform visible)
         if (state.selectedClipId != null && state.panels.isOpen(PanelId.TRANSFORM)) {
-            val clip = state.tracks.flatMap { it.clips }.find { it.id == state.selectedClipId }
+            val clip = selectedClip
             if (clip != null) {
                 TransformOverlay(
                     positionX = clip.positionX,
@@ -808,7 +829,7 @@ fun EditorScreen(
             visible = state.panels.isOpen(PanelId.CAPTION_EDITOR),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            val clip = state.tracks.flatMap { it.clips }.find { it.id == state.selectedClipId }
+            val clip = selectedClip
             CaptionEditorPanel(
                 captions = clip?.captions ?: emptyList(),
                 playheadMs = (playheadMs - (clip?.timelineStartMs ?: 0L)).coerceAtLeast(0L),
@@ -870,7 +891,7 @@ fun EditorScreen(
             visible = state.panels.isOpen(PanelId.AUDIO_NORM),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            val clip = state.tracks.flatMap { it.clips }.find { it.id == state.selectedClipId }
+            val clip = selectedClip
             AudioNormPanel(
                 currentVolume = clip?.volume ?: 1f,
                 onNormalize = viewModel::normalizeAudio,
@@ -1009,8 +1030,8 @@ fun EditorScreen(
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             AutoEditPanel(
-                clipCount = state.tracks.filter { it.type == com.novacut.editor.model.TrackType.VIDEO }.flatMap { it.clips }.size,
-                hasAudio = state.tracks.any { it.type == com.novacut.editor.model.TrackType.AUDIO && it.clips.isNotEmpty() },
+                clipCount = state.tracks.filter { it.type == TrackType.VIDEO }.flatMap { it.clips }.size,
+                hasAudio = state.tracks.any { it.type == TrackType.AUDIO && it.clips.isNotEmpty() },
                 isProcessing = state.isAutoEditing,
                 onGenerate = viewModel::runAutoEdit,
                 onClose = viewModel::hideAutoEdit
@@ -1107,14 +1128,6 @@ fun EditorScreen(
         }
 
         // Caption preview on video (always show when captions exist)
-        val allCaptions = state.tracks.flatMap { it.clips }.flatMap { clip ->
-            clip.captions.map { caption ->
-                caption.copy(
-                    startTimeMs = caption.startTimeMs + clip.timelineStartMs,
-                    endTimeMs = caption.endTimeMs + clip.timelineStartMs
-                )
-            }
-        }
         if (allCaptions.isNotEmpty()) {
             CaptionPreviewOverlay(
                 captions = allCaptions,
@@ -1125,7 +1138,7 @@ fun EditorScreen(
 
         // Motion path overlay on preview (when keyframe editor is open and position keyframes exist)
         if (state.panels.isOpen(PanelId.KEYFRAME_EDITOR) && state.selectedClipId != null) {
-            val clip = state.tracks.flatMap { it.clips }.find { it.id == state.selectedClipId }
+            val clip = selectedClip
             if (clip != null && clip.keyframes.any { it.property == KeyframeProperty.POSITION_X || it.property == KeyframeProperty.POSITION_Y }) {
                 MotionPathOverlay(
                     keyframes = clip.keyframes,

@@ -38,7 +38,8 @@ class AiToolsDelegate(
     private val setClipTransform: (String, Float?, Float?, Float?, Float?, Float?) -> Unit,
     private val rebuildPlayerTimeline: () -> Unit,
     private val saveProject: () -> Unit,
-    private val videoEngine: VideoEngine
+    private val videoEngine: VideoEngine,
+    private val recalculateDuration: (EditorState) -> EditorState
 ) {
     private var aiJob: Job? = null
 
@@ -141,7 +142,7 @@ class AiToolsDelegate(
     // --- Individual AI tool implementations ---
 
     private suspend fun runSceneDetect(clip: Clip) {
-        val scenes = aiFeatures.detectScenes(clip.sourceUri)
+        val scenes = withContext(Dispatchers.Default) { aiFeatures.detectScenes(clip.sourceUri) }
         if (scenes.isEmpty()) {
             showToast("No scene changes detected")
             return
@@ -185,13 +186,13 @@ class AiToolsDelegate(
     private suspend fun runAutoCaptions(clip: Clip) {
         val useWhisper = aiFeatures.whisperEngine.isReady()
         if (useWhisper) showToast("Transcribing with Whisper...")
-        val captions = aiFeatures.generateAutoCaptions(clip.sourceUri)
+        val captions = withContext(Dispatchers.Default) { aiFeatures.generateAutoCaptions(clip.sourceUri) }
         if (captions.isEmpty()) {
             showToast("No speech detected")
             return
         }
         saveUndoState("AI auto captions")
-        val overlays = aiFeatures.captionsToOverlays(captions)
+        val overlays = withContext(Dispatchers.Default) { aiFeatures.captionsToOverlays(captions) }
         stateFlow.update { it.copy(textOverlays = it.textOverlays + overlays) }
         saveProject()
         val source = if (useWhisper) "Whisper" else "energy detection"
@@ -199,9 +200,9 @@ class AiToolsDelegate(
     }
 
     private suspend fun runSmartCrop(clip: Clip) {
-        val suggestion = aiFeatures.suggestCrop(
+        val suggestion = withContext(Dispatchers.Default) { aiFeatures.suggestCrop(
             clip.sourceUri, stateFlow.value.project.aspectRatio.toFloat()
-        )
+        ) }
         if (suggestion.confidence < 0.1f) {
             showToast("Could not analyze frame for crop")
             return
@@ -212,7 +213,7 @@ class AiToolsDelegate(
     }
 
     private suspend fun runAutoColor(clip: Clip) {
-        val correction = aiFeatures.autoColorCorrect(clip.sourceUri)
+        val correction = withContext(Dispatchers.Default) { aiFeatures.autoColorCorrect(clip.sourceUri) }
         if (correction.confidence < 0.1f) {
             showToast("Could not analyze color")
             return
@@ -250,7 +251,7 @@ class AiToolsDelegate(
     }
 
     private suspend fun runStabilize(clip: Clip) {
-        val result = aiFeatures.stabilizeVideo(clip.sourceUri)
+        val result = withContext(Dispatchers.Default) { aiFeatures.stabilizeVideo(clip.sourceUri) }
         if (result.confidence < 0.1f || result.shakeMagnitude < 0.001f) {
             showToast("Video is already stable")
             return
@@ -281,7 +282,7 @@ class AiToolsDelegate(
     }
 
     private suspend fun runDenoise(clip: Clip) {
-        val profile = aiFeatures.analyzeAudioNoise(clip.sourceUri)
+        val profile = withContext(Dispatchers.Default) { aiFeatures.analyzeAudioNoise(clip.sourceUri) }
         if (profile.confidence < 0.1f) {
             showToast("Could not analyze audio noise")
             return
@@ -314,7 +315,7 @@ class AiToolsDelegate(
     private suspend fun runRemoveBg(clip: Clip) {
         val segEngine = aiFeatures.segmentationEngine
         if (segEngine.isReady()) {
-            val result = segEngine.segmentVideoFrame(clip.sourceUri)
+            val result = withContext(Dispatchers.Default) { segEngine.segmentVideoFrame(clip.sourceUri) }
             if (result == null || result.confidence < 0.05f) {
                 showToast("Could not detect subject in frame")
                 return
@@ -331,7 +332,7 @@ class AiToolsDelegate(
     private suspend fun runBgReplace(clip: Clip) {
         val segEngine = aiFeatures.segmentationEngine
         if (segEngine.isReady()) {
-            val result = segEngine.segmentVideoFrame(clip.sourceUri)
+            val result = withContext(Dispatchers.Default) { segEngine.segmentVideoFrame(clip.sourceUri) }
             if (result != null && result.confidence >= 0.05f) {
                 saveUndoState("AI background replace")
                 val bgEffect = Effect(type = EffectType.BG_REMOVAL, params = mapOf("threshold" to 0.5f))
@@ -346,7 +347,7 @@ class AiToolsDelegate(
     }
 
     private suspend fun applyChromaKeyFallback(clip: Clip, action: String) {
-        val analysis = aiFeatures.analyzeBackground(clip.sourceUri)
+        val analysis = withContext(Dispatchers.Default) { aiFeatures.analyzeBackground(clip.sourceUri) }
         if (analysis.confidence < 0.1f) {
             showToast("Could not detect background")
             return
@@ -388,7 +389,7 @@ class AiToolsDelegate(
     private suspend fun runTrackMotion(clip: Clip) {
         try {
             val region = com.novacut.editor.ai.TrackingRegion()
-            val results = aiFeatures.trackMotion(clip.sourceUri, region, clip.trimStartMs, clip.trimEndMs)
+            val results = withContext(Dispatchers.Default) { aiFeatures.trackMotion(clip.sourceUri, region, clip.trimStartMs, clip.trimEndMs) }
             if (results.isEmpty()) {
                 showToast("Motion tracking failed")
                 return
@@ -405,7 +406,7 @@ class AiToolsDelegate(
     private suspend fun runStyleTransfer(clip: Clip) {
         try {
             showToast("Analyzing frame style...")
-            val style = aiFeatures.analyzeAndApplyStyle(clip.sourceUri)
+            val style = withContext(Dispatchers.Default) { aiFeatures.analyzeAndApplyStyle(clip.sourceUri) }
             if (style.confidence < 0.1f) {
                 showToast("Could not analyze frame style")
                 return
@@ -452,7 +453,7 @@ class AiToolsDelegate(
         try {
             showToast("Face tracking: detecting faces...")
             val region = com.novacut.editor.ai.TrackingRegion(centerX = 0.5f, centerY = 0.35f, width = 0.3f, height = 0.3f)
-            val results = aiFeatures.trackMotion(clip.sourceUri, region, clip.trimStartMs, clip.trimEndMs)
+            val results = withContext(Dispatchers.Default) { aiFeatures.trackMotion(clip.sourceUri, region, clip.trimStartMs, clip.trimEndMs) }
             if (results.isNotEmpty()) {
                 saveUndoState("AI face track")
                 val posKeyframes = buildTrackingKeyframes(results, clip, invertSign = true, yBaseline = 0.35f)
@@ -491,7 +492,7 @@ class AiToolsDelegate(
 
     private suspend fun runSmartReframe(clip: Clip) {
         try {
-        val suggestion = aiFeatures.suggestCrop(clip.sourceUri, 9f / 16f)
+        val suggestion = withContext(Dispatchers.Default) { aiFeatures.suggestCrop(clip.sourceUri, 9f / 16f) }
         if (suggestion.confidence > 0.1f) {
             saveUndoState("AI smart reframe")
             setClipTransform(clip.id,
@@ -513,7 +514,7 @@ class AiToolsDelegate(
     private suspend fun runUpscale(clip: Clip) {
         try {
             showToast("Analyzing source resolution...")
-            val result = aiFeatures.analyzeForUpscale(clip.sourceUri)
+            val result = withContext(Dispatchers.Default) { aiFeatures.analyzeForUpscale(clip.sourceUri) }
             if (result.targetResolution == null) {
                 showToast("Already at maximum resolution (${result.sourceWidth}x${result.sourceHeight})")
                 return
@@ -624,7 +625,7 @@ class AiToolsDelegate(
     private suspend fun applyStabilization(clip: Clip) {
         if (!stabilizationEngine.isOpenCvAvailable()) {
             showToast("Advanced stabilization requires OpenCV \u2014 using basic stabilization")
-            val result = aiFeatures.stabilizeVideo(clip.sourceUri)
+            val result = withContext(Dispatchers.Default) { aiFeatures.stabilizeVideo(clip.sourceUri) }
             if (result.confidence < 0.1f || result.shakeMagnitude < 0.001f) {
                 showToast("Video is already stable")
             } else {
@@ -675,13 +676,6 @@ class AiToolsDelegate(
         } else {
             showToast("Style transfer not yet available \u2014 model integration pending")
         }
-    }
-
-    private fun recalculateDuration(state: EditorState): EditorState {
-        val totalDuration = state.tracks.maxOfOrNull { t ->
-            t.clips.maxOfOrNull { it.timelineEndMs } ?: 0L
-        } ?: 0L
-        return state.copy(totalDurationMs = totalDuration)
     }
 
 }

@@ -113,7 +113,7 @@ class ProxyEngine @Inject constructor(
         proxyMap.clear()
     }
 
-    fun getCacheSize(): Long {
-        return proxyDir.listFiles()?.sumOf { it.length() } ?: 0L
+    suspend fun getCacheSize(): Long = withContext(Dispatchers.IO) {
+        proxyDir.listFiles()?.sumOf { it.length() } ?: 0L
     }
 }

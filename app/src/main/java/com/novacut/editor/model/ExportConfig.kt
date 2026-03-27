@@ -20,6 +20,11 @@ data class ExportConfig(
     val chapters: List<ChapterMarker> = emptyList(),
     val subtitleFormat: SubtitleFormat? = null
 ) {
+    init {
+        require(videoBitrate > 0) { "Bitrate must be positive" }
+        require(audioBitrate > 0) { "Audio bitrate must be positive" }
+    }
+
     companion object {
         fun youtube1080() = ExportConfig(
             resolution = Resolution.FHD_1080P, frameRate = 30, quality = ExportQuality.HIGH,

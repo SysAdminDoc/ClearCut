@@ -7,6 +7,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
@@ -54,11 +55,11 @@ class ProxyWorkflowEngine @Inject constructor(
      * Register a new media source. Starts thumbnail extraction immediately.
      */
     suspend fun registerMedia(clipId: String, uri: Uri, width: Int, height: Int) {
-        _entries.value = _entries.value + (clipId to MediaEntry(
+        _entries.update { current -> current + (clipId to MediaEntry(
             originalUri = uri,
             originalWidth = width,
             originalHeight = height
-        ))
+        )) }
     }
 
     /**
@@ -94,7 +95,7 @@ class ProxyWorkflowEngine @Inject constructor(
 
         for ((clipId, entry) in needsProxy) {
             try {
-                _entries.value = _entries.value + (clipId to entry.copy(proxyGenerating = true))
+                _entries.update { current -> current + (clipId to entry.copy(proxyGenerating = true)) }
 
                 // Use QUARTER resolution (540p from 4K) for proxy editing
                 val proxyUri = proxyEngine.generateProxy(
@@ -102,13 +103,13 @@ class ProxyWorkflowEngine @Inject constructor(
                     ProxyResolution.QUARTER
                 ) { /* per-clip progress */ }
 
-                _entries.value = _entries.value + (clipId to entry.copy(
+                _entries.update { current -> current + (clipId to entry.copy(
                     proxyUri = proxyUri,
                     proxyGenerated = proxyUri != null,
                     proxyGenerating = false
-                ))
+                )) }
             } catch (e: Exception) {
-                _entries.value = _entries.value + (clipId to entry.copy(proxyGenerating = false))
+                _entries.update { current -> current + (clipId to entry.copy(proxyGenerating = false)) }
             }
             completed++
             onProgress(completed.toFloat() / needsProxy.size)
@@ -120,19 +121,20 @@ class ProxyWorkflowEngine @Inject constructor(
      * Delete all proxy files to reclaim storage.
      */
     suspend fun deleteAllProxies() = withContext(Dispatchers.IO) {
-        _entries.value = _entries.value.mapValues { (_, entry) ->
-            entry.proxyUri?.let { uri ->
-                try { File(uri.path ?: "").delete() } catch (_: Exception) {}
+        val current = _entries.value
+        for ((_, entry) in current) {
+            entry.proxyUri?.path?.let { path ->
+                try { File(path).delete() } catch (_: Exception) {}
             }
-            entry.copy(proxyUri = null, proxyGenerated = false)
         }
+        _entries.update { it.mapValues { (_, e) -> e.copy(proxyUri = null, proxyGenerated = false) } }
     }
 
     /**
      * Get total proxy storage usage in bytes.
      */
-    fun getProxyStorageBytes(): Long {
-        return _entries.value.values.sumOf { entry ->
+    suspend fun getProxyStorageBytes(): Long = withContext(Dispatchers.IO) {
+        _entries.value.values.sumOf { entry ->
             entry.proxyUri?.path?.let { File(it).length() } ?: 0L
         }
     }

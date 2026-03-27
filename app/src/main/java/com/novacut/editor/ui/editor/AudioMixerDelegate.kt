@@ -6,8 +6,10 @@ import com.novacut.editor.model.AudioEffect
 import com.novacut.editor.model.AudioEffectType
 import com.novacut.editor.model.TrackType
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Delegate handling audio mixer, track volume/pan/solo, audio effects,
@@ -111,7 +113,7 @@ class AudioMixerDelegate(
             stateFlow.update { it.copy(isAnalyzingBeats = true) }
             showToast("Detecting beats...")
             try {
-                val analysis = beatDetectionEngine.detectBeats(audioClips.first().sourceUri)
+                val analysis = withContext(Dispatchers.IO) { beatDetectionEngine.detectBeats(audioClips.first().sourceUri) }
                 val beatTimestamps = analysis.beats.map { it.timestampMs }
                 stateFlow.update { it.copy(beatMarkers = beatTimestamps, isAnalyzingBeats = false) }
                 val bpmText = if (analysis.bpm > 0f) " (%.0f BPM)".format(analysis.bpm) else ""
@@ -141,7 +143,7 @@ class AudioMixerDelegate(
         scope.launch {
             showToast("Measuring loudness...")
             try {
-                val measurement = loudnessEngine.measureLoudness(clip.sourceUri)
+                val measurement = withContext(Dispatchers.IO) { loudnessEngine.measureLoudness(clip.sourceUri) }
                 val preset = LoudnessEngine.LoudnessPreset.entries
                     .firstOrNull { it.targetLufs == targetLufs }
                     ?: LoudnessEngine.LoudnessPreset.YOUTUBE

@@ -21,6 +21,7 @@ class ProjectAutoSave @Inject constructor(
 ) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val autoSaveDir = File(context.filesDir, "autosave").apply { mkdirs() }
+    @Volatile
     private var autoSaveJob: Job? = null
     private var consecutiveFailures = 0
 
@@ -62,7 +63,7 @@ class ProjectAutoSave @Inject constructor(
         return getAutoSaveFile(projectId).exists()
     }
 
-    fun loadRecoveryData(projectId: String): AutoSaveState? {
+    suspend fun loadRecoveryData(projectId: String): AutoSaveState? = withContext(Dispatchers.IO) {
         // Clean up stale temp file if present
         val tempFile = File(autoSaveDir, "${projectId}.tmp")
         if (tempFile.exists()) {
@@ -70,8 +71,8 @@ class ProjectAutoSave @Inject constructor(
             tempFile.delete()
         }
         val file = getAutoSaveFile(projectId)
-        if (!file.exists()) return null
-        return try {
+        if (!file.exists()) return@withContext null
+        try {
             AutoSaveState.deserialize(file.readText())
         } catch (e: Exception) {
             Log.e(TAG, "Failed to load recovery data for $projectId", e)

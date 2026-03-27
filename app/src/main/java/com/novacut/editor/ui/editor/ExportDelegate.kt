@@ -222,6 +222,7 @@ class ExportDelegate(
                     }
                 }
                 val result = try {
+                    videoEngine.exportState.first { it == ExportState.EXPORTING }
                     videoEngine.exportState.first { it != ExportState.EXPORTING }
                 } finally {
                     progressJob.cancel()
