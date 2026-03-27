@@ -32,7 +32,7 @@ fun TtsPanel(
 ) {
     var text by remember { mutableStateOf("") }
     var selectedStyle by remember { mutableStateOf(TtsEngine.VoiceStyle.NARRATOR) }
-    var usePiper by remember { mutableStateOf(false) }
+    // Piper HD voices will be available after Sherpa-ONNX integration
 
     Column(
         modifier = modifier
@@ -84,73 +84,38 @@ fun TtsPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // TTS Engine selector
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            FilterChip(
-                selected = !usePiper,
-                onClick = { usePiper = false },
-                label = { Text("System TTS", fontSize = 11.sp) },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = Mocha.Mauve.copy(alpha = 0.2f),
-                    selectedLabelColor = Mocha.Mauve
-                )
-            )
-            FilterChip(
-                selected = usePiper,
-                onClick = { usePiper = true },
-                label = { Text("Piper (HD)", fontSize = 11.sp) },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = Mocha.Green.copy(alpha = 0.2f),
-                    selectedLabelColor = Mocha.Green
-                )
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            "Piper HD voices (coming soon \u2014 requires Sherpa-ONNX integration)",
+            color = Mocha.Subtext0,
+            fontSize = 10.sp,
+            modifier = Modifier.padding(vertical = 8.dp)
+        )
 
         // Voice style selector
-        if (usePiper) {
-            Text("Piper voices (download required):", color = Mocha.Subtext0, fontSize = 10.sp)
-            val piperVoices = listOf("Amy (US)" to "en", "Ryan (US)" to "en", "Alba (UK)" to "en",
-                "Thorsten (DE)" to "de", "Dave (ES)" to "es", "Siwis (FR)" to "fr")
-            piperVoices.forEach { (name, lang) ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().clickable { /* select voice */ }.padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
+        Text(stringResource(R.string.tts_voice), color = Mocha.Subtext0, fontSize = 12.sp)
+        Spacer(modifier = Modifier.height(4.dp))
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(TtsEngine.VoiceStyle.entries.toList()) { style ->
+                val isSelected = style == selectedStyle
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (isSelected) Mocha.Mauve else Mocha.Surface0)
+                        .clickable { selectedStyle = style }
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
                 ) {
-                    Text(name, color = Mocha.Text, fontSize = 12.sp, modifier = Modifier.weight(1f))
-                    Text(lang.uppercase(), color = Mocha.Subtext0, fontSize = 10.sp)
-                }
-            }
-        } else {
-            Text(stringResource(R.string.tts_voice), color = Mocha.Subtext0, fontSize = 12.sp)
-            Spacer(modifier = Modifier.height(4.dp))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(TtsEngine.VoiceStyle.entries.toList()) { style ->
-                    val isSelected = style == selectedStyle
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (isSelected) Mocha.Mauve else Mocha.Surface0)
-                            .clickable { selectedStyle = style }
-                            .padding(horizontal = 12.dp, vertical = 8.dp)
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                style.displayName,
-                                color = if (isSelected) Mocha.Base else Mocha.Text,
-                                fontSize = 12.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                            )
-                            Text(
-                                "%.1fx".format(style.rate),
-                                color = if (isSelected) Mocha.Mantle else Mocha.Subtext0,
-                                fontSize = 10.sp
-                            )
-                        }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            style.displayName,
+                            color = if (isSelected) Mocha.Base else Mocha.Text,
+                            fontSize = 12.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                        )
+                        Text(
+                            "%.1fx".format(style.rate),
+                            color = if (isSelected) Mocha.Mantle else Mocha.Subtext0,
+                            fontSize = 10.sp
+                        )
                     }
                 }
             }

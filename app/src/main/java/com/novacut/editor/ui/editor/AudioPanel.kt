@@ -26,7 +26,7 @@ import com.novacut.editor.ui.theme.Mocha
 @Composable
 fun AudioPanel(
     clip: Clip?,
-    waveform: FloatArray?,
+    waveform: List<Float>?,
     onVolumeChanged: (Float) -> Unit,
     onVolumeDragStarted: () -> Unit = {},
     onFadeInChanged: (Long) -> Unit,
@@ -202,7 +202,7 @@ private fun DrawScope.drawFadeEnvelope(fadeInMs: Long, fadeOutMs: Long, duration
     )
 }
 
-private fun DrawScope.drawWaveform(waveform: FloatArray, color: Color) {
+private fun DrawScope.drawWaveform(waveform: List<Float>, color: Color) {
     val centerY = size.height / 2f
     val barWidth = size.width / waveform.size
     val maxBarHeight = size.height * 0.8f
