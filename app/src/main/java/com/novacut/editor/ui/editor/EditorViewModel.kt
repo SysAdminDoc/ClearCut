@@ -338,6 +338,8 @@ class EditorViewModel @Inject constructor(
                     it.copy(
                         tracks = recovery.tracks.ifEmpty { it.tracks },
                         textOverlays = recovery.textOverlays,
+                        imageOverlays = recovery.imageOverlays,
+                        timelineMarkers = recovery.timelineMarkers,
                         playheadMs = recovery.playheadMs,
                         chapterMarkers = recovery.chapterMarkers,
                         totalDurationMs = recovery.tracks.maxOfOrNull { t ->
@@ -479,6 +481,8 @@ class EditorViewModel @Inject constructor(
                                 projectId = s.project.id,
                                 tracks = s.tracks,
                                 textOverlays = s.textOverlays,
+                                imageOverlays = s.imageOverlays,
+                                timelineMarkers = s.timelineMarkers,
                                 playheadMs = s.playheadMs,
                                 chapterMarkers = s.chapterMarkers
                             )
@@ -593,6 +597,8 @@ class EditorViewModel @Inject constructor(
             }
             state.copy(tracks = tracks)
         }
+        rebuildPlayerTimeline()
+        saveProject()
     }
 
     fun toggleTrackVisibility(trackId: String) {
@@ -602,6 +608,8 @@ class EditorViewModel @Inject constructor(
             }
             state.copy(tracks = tracks)
         }
+        rebuildPlayerTimeline()
+        saveProject()
     }
 
     fun toggleTrackLock(trackId: String) {
@@ -611,6 +619,7 @@ class EditorViewModel @Inject constructor(
             }
             state.copy(tracks = tracks)
         }
+        saveProject()
     }
 
     // Playback
@@ -901,6 +910,7 @@ class EditorViewModel @Inject constructor(
                 if (track.id == trackId) track.copy(opacity = opacity.coerceIn(0f, 1f)) else track
             })
         }
+        saveProject()
     }
 
     // --- Batch Export (delegated) ---
@@ -958,7 +968,7 @@ class EditorViewModel @Inject constructor(
     // --- Project Snapshots ---
     fun createSnapshot(label: String = "") {
         val s = _state.value
-        val autoSaveState = AutoSaveState(projectId = s.project.id, tracks = s.tracks, textOverlays = s.textOverlays, playheadMs = s.playheadMs, chapterMarkers = s.chapterMarkers)
+        val autoSaveState = AutoSaveState(projectId = s.project.id, tracks = s.tracks, textOverlays = s.textOverlays, imageOverlays = s.imageOverlays, timelineMarkers = s.timelineMarkers, playheadMs = s.playheadMs, chapterMarkers = s.chapterMarkers)
         val json = autoSaveState.serialize()
         val snapshot = ProjectSnapshot(
             projectId = s.project.id,
@@ -978,6 +988,8 @@ class EditorViewModel @Inject constructor(
             it.copy(
                 tracks = recovery.tracks,
                 textOverlays = recovery.textOverlays,
+                imageOverlays = recovery.imageOverlays,
+                timelineMarkers = recovery.timelineMarkers,
                 playheadMs = recovery.playheadMs,
                 chapterMarkers = recovery.chapterMarkers
             )
@@ -1694,6 +1706,7 @@ class EditorViewModel @Inject constructor(
             val compoundClip = firstClip.copy(
                 id = java.util.UUID.randomUUID().toString(),
                 timelineStartMs = compoundStart,
+                sourceDurationMs = compoundDurationMs,
                 trimStartMs = 0L,
                 trimEndMs = compoundDurationMs,
                 speed = 1f,
@@ -2013,7 +2026,7 @@ class EditorViewModel @Inject constructor(
                 val waveform = withContext(Dispatchers.IO) {
                     audioEngine.extractWaveform(voiceClip.sourceUri, 44100)
                 }
-                val pcm = waveform.map { (it * 32767).toInt().toShort() }.toShortArray()
+                val pcm = ShortArray(waveform.size) { (waveform[it] * 32767).toInt().toShort() }
                 val speechRegions = withContext(Dispatchers.Default) {
                     com.novacut.editor.engine.AudioEffectsEngine.detectSpeechRegions(pcm, 44100, 1)
                 }
@@ -2117,6 +2130,7 @@ class EditorViewModel @Inject constructor(
     fun setClipOpacity(clipId: String, opacity: Float) {
         updateClipById(clipId) { it.copy(opacity = opacity.coerceIn(0f, 1f)) }
         updatePreview()
+        saveProject()
     }
 
     fun beginFadeAdjust() {

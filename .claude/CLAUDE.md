@@ -565,3 +565,24 @@ All roadmap + performance + accessibility + final features complete.
 18. **OpenTimelineIO** — desktop NLE round-tripping
 19. **Protobuf project format** — binary serialization for performance
 20. **CRDT collaborative editing** — multi-user real-time editing (v2+)
+
+## v3.7.0 Post-Audit Fixes
+
+### Critical Bug Fixes
+- **createCompoundClip() crash** — was setting `trimEndMs = compoundDurationMs` without updating `sourceDurationMs`, violating `require(trimEndMs <= sourceDurationMs)`. Now sets `sourceDurationMs = compoundDurationMs`.
+- **imageOverlays/timelineMarkers data loss** — neither was serialized in `ProjectAutoSave`. Added full serialize/deserialize for both. Recovery, snapshots, and auto-save state now include them.
+- **setTransitionDuration crash on short clips** — `coerceIn(100L, clip.durationMs / 2)` threw `IllegalArgumentException` when clip < 200ms. Now uses `coerceAtLeast(100L)` on the upper bound.
+
+### Persistence Fixes
+- **toggleTrackMute/Visibility** — now call `rebuildPlayerTimeline()` + `saveProject()` (mute/visibility changes were lost on restart and not reflected in preview)
+- **toggleTrackLock** — now calls `saveProject()`
+- **setTrackOpacity** — now calls `saveProject()`
+- **setClipOpacity** — now calls `saveProject()`
+
+### Performance Fix
+- **autoDuck() boxing** — replaced `waveform.map { }.toShortArray()` (boxes millions of Shorts) with `ShortArray(size) { }` constructor
+
+### Known Remaining Issues
+- Export only uses first visible video track (overlay tracks with clips dropped). Multi-track compositing requires Media3 Compositor API.
+- `splitClipAt()` helper ignores speed curves when computing source position
+- SmartRenderEngine analysis results not used for actual export

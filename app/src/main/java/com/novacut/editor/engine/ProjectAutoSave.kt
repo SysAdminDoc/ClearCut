@@ -149,7 +149,9 @@ data class AutoSaveState(
     val tracks: List<Track> = emptyList(),
     val textOverlays: List<TextOverlay> = emptyList(),
     val playheadMs: Long = 0L,
-    val chapterMarkers: List<ChapterMarker> = emptyList()
+    val chapterMarkers: List<ChapterMarker> = emptyList(),
+    val imageOverlays: List<ImageOverlay> = emptyList(),
+    val timelineMarkers: List<TimelineMarker> = emptyList()
 ) {
     fun serialize(): String {
         val json = JSONObject().apply {
@@ -165,6 +167,36 @@ data class AutoSaveState(
                         put(JSONObject().apply {
                             put("timeMs", ch.timeMs)
                             put("title", ch.title)
+                        })
+                    }
+                })
+            }
+            if (imageOverlays.isNotEmpty()) {
+                put("imageOverlays", JSONArray().apply {
+                    imageOverlays.forEach { io ->
+                        put(JSONObject().apply {
+                            put("id", io.id)
+                            put("sourceUri", io.sourceUri.toString())
+                            put("startTimeMs", io.startTimeMs)
+                            put("endTimeMs", io.endTimeMs)
+                            put("positionX", io.positionX.toDouble())
+                            put("positionY", io.positionY.toDouble())
+                            put("scale", io.scale.toDouble())
+                            put("rotation", io.rotation.toDouble())
+                            put("opacity", io.opacity.toDouble())
+                            put("type", io.type.name)
+                        })
+                    }
+                })
+            }
+            if (timelineMarkers.isNotEmpty()) {
+                put("timelineMarkers", JSONArray().apply {
+                    timelineMarkers.forEach { m ->
+                        put(JSONObject().apply {
+                            put("id", m.id)
+                            put("timeMs", m.timeMs)
+                            put("label", m.label)
+                            put("color", m.color.name)
                         })
                     }
                 })
@@ -203,13 +235,47 @@ data class AutoSaveState(
                     )
                 } catch (_: Exception) { null }
             }
+            val imageOverlaysArr = json.optJSONArray("imageOverlays") ?: JSONArray()
+            val imageOverlays = (0 until imageOverlaysArr.length()).mapNotNull { i ->
+                try {
+                    val io = imageOverlaysArr.getJSONObject(i)
+                    val srcUri = io.optString("sourceUri", "")
+                    if (srcUri.isEmpty()) return@mapNotNull null
+                    ImageOverlay(
+                        id = io.optString("id", java.util.UUID.randomUUID().toString()),
+                        sourceUri = android.net.Uri.parse(srcUri),
+                        startTimeMs = io.optLong("startTimeMs", 0L),
+                        endTimeMs = io.optLong("endTimeMs", 5000L),
+                        positionX = io.optDouble("positionX", 0.0).toFloat(),
+                        positionY = io.optDouble("positionY", 0.0).toFloat(),
+                        scale = io.optDouble("scale", 0.3).toFloat().coerceAtLeast(0.01f),
+                        rotation = io.optDouble("rotation", 0.0).toFloat(),
+                        opacity = io.optDouble("opacity", 1.0).toFloat().coerceIn(0f, 1f),
+                        type = safeValueOf(io.optString("type", "STICKER"), ImageOverlayType.STICKER)
+                    )
+                } catch (e: Exception) { Log.w(TAG, "Failed to deserialize image overlay $i", e); null }
+            }
+            val timelineMarkersArr = json.optJSONArray("timelineMarkers") ?: JSONArray()
+            val timelineMarkers = (0 until timelineMarkersArr.length()).mapNotNull { i ->
+                try {
+                    val m = timelineMarkersArr.getJSONObject(i)
+                    TimelineMarker(
+                        id = m.optString("id", java.util.UUID.randomUUID().toString()),
+                        timeMs = m.optLong("timeMs", 0L),
+                        label = m.optString("label", ""),
+                        color = safeValueOf(m.optString("color", "BLUE"), MarkerColor.BLUE)
+                    )
+                } catch (e: Exception) { Log.w(TAG, "Failed to deserialize timeline marker $i", e); null }
+            }
             return AutoSaveState(
                 projectId = json.optString("projectId", ""),
                 timestamp = json.optLong("timestamp", System.currentTimeMillis()),
                 playheadMs = json.optLong("playheadMs", 0L),
                 tracks = cleanedTracks,
                 textOverlays = deserializeTextOverlays(json.optJSONArray("textOverlays") ?: JSONArray()),
-                chapterMarkers = chapters
+                chapterMarkers = chapters,
+                imageOverlays = imageOverlays,
+                timelineMarkers = timelineMarkers
             )
         }
 

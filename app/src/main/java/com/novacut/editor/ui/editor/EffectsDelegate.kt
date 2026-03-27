@@ -161,7 +161,8 @@ class EffectsDelegate(
             val tracks = state.tracks.map { track ->
                 track.copy(clips = track.clips.map { clip ->
                     if (clip.id == clipId && clip.transition != null) {
-                        val clampedMs = durationMs.coerceIn(100L, clip.durationMs / 2)
+                        val maxDuration = (clip.durationMs / 2).coerceAtLeast(100L)
+                        val clampedMs = durationMs.coerceIn(100L, maxDuration)
                         clip.copy(transition = clip.transition.copy(durationMs = clampedMs))
                     } else clip
                 })
