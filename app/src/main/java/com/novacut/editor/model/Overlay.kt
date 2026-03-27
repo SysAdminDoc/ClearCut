@@ -56,7 +56,13 @@ data class ImageOverlay(
     val rotation: Float = 0f,
     val opacity: Float = 1.0f,
     val type: ImageOverlayType = ImageOverlayType.STICKER
-)
+) {
+    init {
+        require(startTimeMs < endTimeMs) { "startTimeMs must be < endTimeMs" }
+        require(scale > 0f) { "scale must be positive" }
+        require(opacity in 0f..1f) { "opacity must be between 0 and 1" }
+    }
+}
 
 enum class ImageOverlayType { STICKER, GIF, IMAGE }
 

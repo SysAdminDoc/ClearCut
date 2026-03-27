@@ -6,6 +6,8 @@ import com.novacut.editor.model.ProxyResolution
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
@@ -44,6 +46,8 @@ class ProxyWorkflowEngine @Inject constructor(
         val proxyGenerated: Boolean = false,
         val proxyGenerating: Boolean = false
     )
+
+    private val generationMutex = Mutex()
 
     private val _entries = MutableStateFlow<Map<String, MediaEntry>>(emptyMap())
     val entries: StateFlow<Map<String, MediaEntry>> = _entries
@@ -84,37 +88,39 @@ class ProxyWorkflowEngine @Inject constructor(
     suspend fun generateAllProxies(
         onProgress: (Float) -> Unit = {}
     ) = withContext(Dispatchers.IO) {
-        _isGenerating.value = true
-        val needsProxy = _entries.value.filter { !it.value.proxyGenerated && it.value.originalHeight > 1080 }
-        if (needsProxy.isEmpty()) {
-            onProgress(1f)
-            _isGenerating.value = false
-            return@withContext
-        }
-        var completed = 0
-
-        for ((clipId, entry) in needsProxy) {
-            try {
-                _entries.update { current -> current + (clipId to entry.copy(proxyGenerating = true)) }
-
-                // Use QUARTER resolution (540p from 4K) for proxy editing
-                val proxyUri = proxyEngine.generateProxy(
-                    entry.originalUri,
-                    ProxyResolution.QUARTER
-                ) { /* per-clip progress */ }
-
-                _entries.update { current -> current + (clipId to entry.copy(
-                    proxyUri = proxyUri,
-                    proxyGenerated = proxyUri != null,
-                    proxyGenerating = false
-                )) }
-            } catch (e: Exception) {
-                _entries.update { current -> current + (clipId to entry.copy(proxyGenerating = false)) }
+        generationMutex.withLock {
+            _isGenerating.value = true
+            val needsProxy = _entries.value.filter { !it.value.proxyGenerated && it.value.originalHeight > 1080 }
+            if (needsProxy.isEmpty()) {
+                onProgress(1f)
+                _isGenerating.value = false
+                return@withLock
             }
-            completed++
-            onProgress(completed.toFloat() / needsProxy.size)
+            var completed = 0
+
+            for ((clipId, entry) in needsProxy) {
+                try {
+                    _entries.update { current -> current + (clipId to entry.copy(proxyGenerating = true)) }
+
+                    // Use QUARTER resolution (540p from 4K) for proxy editing
+                    val proxyUri = proxyEngine.generateProxy(
+                        entry.originalUri,
+                        ProxyResolution.QUARTER
+                    ) { /* per-clip progress */ }
+
+                    _entries.update { current -> current + (clipId to entry.copy(
+                        proxyUri = proxyUri,
+                        proxyGenerated = proxyUri != null,
+                        proxyGenerating = false
+                    )) }
+                } catch (e: Exception) {
+                    _entries.update { current -> current + (clipId to entry.copy(proxyGenerating = false)) }
+                }
+                completed++
+                onProgress(completed.toFloat() / needsProxy.size)
+            }
+            _isGenerating.value = false
         }
-        _isGenerating.value = false
     }
 
     /**

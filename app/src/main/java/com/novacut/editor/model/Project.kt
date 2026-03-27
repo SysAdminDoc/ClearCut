@@ -76,6 +76,7 @@ data class Track(
 ) {
     init {
         require(index >= 0) { "Track index must be non-negative" }
+        require(pan in -1f..1f) { "Pan must be between -1 and 1" }
     }
 }
 
@@ -122,6 +123,7 @@ data class Clip(
         require(trimEndMs >= trimStartMs) { "trimEndMs must be >= trimStartMs" }
         require(volume in 0f..2f) { "Volume must be between 0 and 2" }
         require(opacity in 0f..1f) { "Opacity must be between 0 and 1" }
+        require(trimEndMs <= sourceDurationMs) { "trimEndMs cannot exceed sourceDurationMs" }
     }
 
     val durationMs: Long get() {

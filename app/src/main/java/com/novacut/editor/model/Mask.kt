@@ -12,7 +12,12 @@ data class Mask(
     val expansion: Float = 0f,
     val keyframes: List<MaskKeyframe> = emptyList(),
     val trackToMotion: Boolean = false
-)
+) {
+    init {
+        require(feather >= 0f) { "Feather must be non-negative" }
+        require(opacity in 0f..1f) { "Mask opacity must be between 0 and 1" }
+    }
+}
 
 enum class MaskType(val displayName: String) {
     RECTANGLE("Rectangle"),

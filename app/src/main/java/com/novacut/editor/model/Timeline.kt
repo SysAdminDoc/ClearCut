@@ -7,7 +7,11 @@ import java.util.UUID
 data class Transition(
     val type: TransitionType,
     val durationMs: Long = 500L
-)
+) {
+    init {
+        require(durationMs > 0) { "Transition duration must be positive" }
+    }
+}
 
 enum class TransitionType(val displayName: String) {
     DISSOLVE("Dissolve"),
