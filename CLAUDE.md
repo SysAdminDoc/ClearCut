@@ -4,7 +4,7 @@
 Full-featured Android video editor built as a PowerDirector alternative. Kotlin + Jetpack Compose + Media3 Transformer.
 
 ## Version
-v3.5.0
+v3.6.0
 
 ## Tech Stack
 - **Language**: Kotlin 2.1.0
@@ -690,6 +690,26 @@ v3.5.0
 ### EditorViewModel Dependency Cleanup
 - Removed 5 unused engine constructor parameters: `ffmpegEngine`, `subtitleRenderEngine`, `piperTtsEngine`, `lottieTemplateEngine`, `tapSegmentEngine`
 - Constructor reduced from 32 → 27 parameters
+
+## v3.6.0 — Model Split, Compose Stability & Build Fixes
+
+### Project.kt Split (1,081 → 230 lines)
+- Split monolithic Project.kt into 9 focused model files:
+  - `model/Effect.kt`, `model/ExportConfig.kt`, `model/Timeline.kt`, `model/Overlay.kt`
+  - `model/Caption.kt`, `model/ColorGrading.kt`, `model/Mask.kt`, `model/EditorModels.kt`
+- Project.kt now contains only Project, Track, Clip core models
+
+### Compose Stability
+- `@Immutable` on 16 model data classes (Project, Track, Clip, Effect, Transition, Keyframe, TextOverlay, etc.)
+- `@Stable` on EditorState, `@Immutable` on PanelVisibility
+- `derivedStateOf` for hasOpenPanel, hasClips, isClipMode in EditorScreen (reduces recompositions)
+- Waveforms `Map<String, FloatArray>` → `Map<String, List<Float>>` for Compose structural equality
+
+### Build Fixes
+- ProxyWorkflowEngine: added missing `kotlinx.coroutines.flow.update` import, fixed type inference in `deleteAllProxies()`
+- EditorViewModel: fixed `showVoiceoverRecorder` → `PanelId.VOICEOVER_RECORDER` (panel system migration incomplete)
+- Removed dead TtsPanel Piper voice selector (empty click handlers)
+- Moved hardcoded hilt-work deps to version catalog, pinned all dependency versions
 
 ## Next Steps
 - Integrate real dependencies when available (Sherpa-ONNX, DeepFilterNet, NCNN, OpenCV, FFmpeg)
