@@ -267,12 +267,16 @@ fun Timeline(
                         onTimelineWidthChanged(timelineWidthPx)
                     }
                     .pointerInput(Unit) {
-                        detectTransformGestures { _, pan, zoom, _ ->
-                            val ppm = currentZoomLevel * BASE_SCALE
+                        detectTransformGestures { centroid, pan, zoom, _ ->
+                            val oldPpm = currentZoomLevel * BASE_SCALE
                             val newZoom = (currentZoomLevel * zoom).coerceIn(0.1f, 10f)
+                            val newPpm = newZoom * BASE_SCALE
+                            // Adjust scroll to keep the pinch center point stable
+                            val centerMs = currentScrollOffsetMs + (centroid.x / oldPpm).toLong()
+                            val newScroll = centerMs - (centroid.x / newPpm).toLong()
                             onZoomChanged(newZoom)
-                            val panMs = (pan.x / ppm).toLong()
-                            onScrollChanged((currentScrollOffsetMs - panMs).coerceAtLeast(0L))
+                            val panMs = (pan.x / newPpm).toLong()
+                            onScrollChanged((newScroll - panMs).coerceAtLeast(0L))
                         }
                     }
             ) {
