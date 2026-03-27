@@ -406,7 +406,7 @@ class EditorViewModel @Inject constructor(
             }
         })
 
-        // Periodic playhead sync (~30fps) with auto-scroll + per-clip speed tracking
+        // Periodic playhead sync (~30fps) with smooth auto-scroll + per-clip speed tracking
         viewModelScope.launch {
             var lastClipIndex = -1
             var frameCount = 0
@@ -418,23 +418,26 @@ class EditorViewModel @Inject constructor(
                     // Fast-path: update dedicated playhead flow every frame
                     _playheadMs.value = currentMs
                     frameCount++
-                    // Only sync full state every 5th frame to reduce copies
-                    if (frameCount % 5 == 0) {
-                        _state.update { s ->
-                            var newScroll = s.scrollOffsetMs
-                            // Auto-scroll when playhead approaches right edge (>80% of visible area)
-                            val widthPx = timelineWidthPx
-                            val pixelsPerMs = s.zoomLevel * 0.15f
-                            if (widthPx > 0 && pixelsPerMs >= 0.001f) {
-                                val visibleMs = (widthPx / pixelsPerMs).toLong()
-                                val playheadRelative = currentMs - newScroll
-                                if (playheadRelative > visibleMs * 0.8f) {
-                                    newScroll = (currentMs - visibleMs / 4).coerceAtLeast(0L)
-                                } else if (playheadRelative < 0) {
-                                    newScroll = (currentMs - visibleMs / 4).coerceAtLeast(0L)
-                                }
-                            }
-                            s.copy(playheadMs = currentMs, scrollOffsetMs = newScroll)
+
+                    // Compute auto-scroll every frame for smooth following
+                    val widthPx = timelineWidthPx
+                    val s = _state.value
+                    val pixelsPerMs = s.zoomLevel * 0.15f
+                    var newScroll = s.scrollOffsetMs
+                    if (widthPx > 0 && pixelsPerMs >= 0.001f) {
+                        val visibleMs = (widthPx / pixelsPerMs).toLong()
+                        val playheadRelative = currentMs - newScroll
+                        if (playheadRelative > visibleMs * 0.8f || playheadRelative < 0) {
+                            // Smooth scroll: lerp toward target instead of jumping
+                            val targetScroll = (currentMs - visibleMs / 4).coerceAtLeast(0L)
+                            newScroll = newScroll + ((targetScroll - newScroll) * 0.15f).toLong()
+                        }
+                    }
+
+                    // Sync full state every 5th frame (playhead + scroll)
+                    if (frameCount % 5 == 0 || newScroll != s.scrollOffsetMs) {
+                        _state.update { st ->
+                            st.copy(playheadMs = currentMs, scrollOffsetMs = newScroll)
                         }
                     }
                     // Track clip transitions during playback — update speed/effects for current clip
