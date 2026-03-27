@@ -337,6 +337,7 @@ class EditorViewModel @Inject constructor(
                         tracks = recovery.tracks.ifEmpty { it.tracks },
                         textOverlays = recovery.textOverlays,
                         playheadMs = recovery.playheadMs,
+                        chapterMarkers = recovery.chapterMarkers,
                         totalDurationMs = recovery.tracks.maxOfOrNull { t ->
                             t.clips.maxOfOrNull { c -> c.timelineEndMs } ?: 0L
                         } ?: 0L
@@ -476,7 +477,8 @@ class EditorViewModel @Inject constructor(
                                 projectId = s.project.id,
                                 tracks = s.tracks,
                                 textOverlays = s.textOverlays,
-                                playheadMs = s.playheadMs
+                                playheadMs = s.playheadMs,
+                                chapterMarkers = s.chapterMarkers
                             )
                             viewModelScope.launch {
                                 delay(500)
@@ -952,7 +954,7 @@ class EditorViewModel @Inject constructor(
     // --- Project Snapshots ---
     fun createSnapshot(label: String = "") {
         val s = _state.value
-        val autoSaveState = AutoSaveState(projectId = s.project.id, tracks = s.tracks, textOverlays = s.textOverlays, playheadMs = s.playheadMs)
+        val autoSaveState = AutoSaveState(projectId = s.project.id, tracks = s.tracks, textOverlays = s.textOverlays, playheadMs = s.playheadMs, chapterMarkers = s.chapterMarkers)
         val json = autoSaveState.serialize()
         val snapshot = ProjectSnapshot(
             projectId = s.project.id,
@@ -972,10 +974,12 @@ class EditorViewModel @Inject constructor(
             it.copy(
                 tracks = recovery.tracks,
                 textOverlays = recovery.textOverlays,
-                playheadMs = recovery.playheadMs
+                playheadMs = recovery.playheadMs,
+                chapterMarkers = recovery.chapterMarkers
             )
         }
         rebuildPlayerTimeline()
+        saveProject()
         showToast("Restored: ${snapshot.label}")
     }
 

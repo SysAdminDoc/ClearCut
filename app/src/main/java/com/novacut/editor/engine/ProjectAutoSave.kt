@@ -148,7 +148,8 @@ data class AutoSaveState(
     val timestamp: Long = System.currentTimeMillis(),
     val tracks: List<Track> = emptyList(),
     val textOverlays: List<TextOverlay> = emptyList(),
-    val playheadMs: Long = 0L
+    val playheadMs: Long = 0L,
+    val chapterMarkers: List<ChapterMarker> = emptyList()
 ) {
     fun serialize(): String {
         val json = JSONObject().apply {
@@ -158,6 +159,16 @@ data class AutoSaveState(
             put("playheadMs", playheadMs)
             put("tracks", serializeTracks(tracks))
             put("textOverlays", serializeTextOverlays(textOverlays))
+            if (chapterMarkers.isNotEmpty()) {
+                put("chapterMarkers", JSONArray().apply {
+                    chapterMarkers.forEach { ch ->
+                        put(JSONObject().apply {
+                            put("timeMs", ch.timeMs)
+                            put("title", ch.title)
+                        })
+                    }
+                })
+            }
         }
         return json.toString(2)
     }
@@ -182,12 +193,23 @@ data class AutoSaveState(
                     } else clip
                 })
             }
+            val chaptersArr = json.optJSONArray("chapterMarkers") ?: JSONArray()
+            val chapters = (0 until chaptersArr.length()).mapNotNull { i ->
+                try {
+                    val ch = chaptersArr.getJSONObject(i)
+                    ChapterMarker(
+                        timeMs = ch.optLong("timeMs", 0L),
+                        title = ch.optString("title", "")
+                    )
+                } catch (_: Exception) { null }
+            }
             return AutoSaveState(
                 projectId = json.optString("projectId", ""),
                 timestamp = json.optLong("timestamp", System.currentTimeMillis()),
                 playheadMs = json.optLong("playheadMs", 0L),
                 tracks = cleanedTracks,
-                textOverlays = deserializeTextOverlays(json.optJSONArray("textOverlays") ?: JSONArray())
+                textOverlays = deserializeTextOverlays(json.optJSONArray("textOverlays") ?: JSONArray()),
+                chapterMarkers = chapters
             )
         }
 
