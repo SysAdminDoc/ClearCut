@@ -266,7 +266,9 @@ class VideoEngine @Inject constructor(
 
             val composition = buildComposition(allSequences, audioSequences.isNotEmpty(), videoTrack.isMuted)
 
-            val mimeType = when (config.codec) {
+            val mimeType = if (config.transparentBackground) {
+                MimeTypes.VIDEO_VP9
+            } else when (config.codec) {
                 VideoCodec.HEVC -> MimeTypes.VIDEO_H265
                 VideoCodec.H264 -> MimeTypes.VIDEO_H264
                 VideoCodec.AV1 -> MimeTypes.VIDEO_AV1
@@ -419,12 +421,12 @@ class VideoEngine @Inject constructor(
             itemBuilder.setSpeed(object : androidx.media3.common.audio.SpeedProvider {
                 override fun getSpeed(presentationTimeUs: Long): Float {
                     val timeMs = presentationTimeUs / 1000L
-                    return curve.getSpeedAt(timeMs, clipDurMs).coerceIn(0.1f, 16f)
+                    return curve.getSpeedAt(timeMs, clipDurMs).coerceIn(0.1f, 100f)
                 }
                 override fun getNextSpeedChangeTimeUs(timeUs: Long): Long = androidx.media3.common.C.TIME_UNSET
             })
         } else if (clip.speed != 1.0f) {
-            val constSpeed = clip.speed.coerceIn(0.1f, 16f)
+            val constSpeed = clip.speed.coerceIn(0.1f, 100f)
             itemBuilder.setSpeed(object : androidx.media3.common.audio.SpeedProvider {
                 override fun getSpeed(presentationTimeUs: Long): Float = constSpeed
                 override fun getNextSpeedChangeTimeUs(timeUs: Long): Long = androidx.media3.common.C.TIME_UNSET
@@ -615,7 +617,7 @@ class VideoEngine @Inject constructor(
      */
     fun setPreviewSpeed(speed: Float) {
         try {
-            player?.playbackParameters = androidx.media3.common.PlaybackParameters(speed.coerceIn(0.1f, 16f))
+            player?.playbackParameters = androidx.media3.common.PlaybackParameters(speed.coerceIn(0.1f, 100f))
         } catch (e: Exception) {
             Log.w(TAG, "Failed to set preview speed", e)
         }

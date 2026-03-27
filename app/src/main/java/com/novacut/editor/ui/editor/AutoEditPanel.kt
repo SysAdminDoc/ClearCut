@@ -23,10 +23,11 @@ fun AutoEditPanel(
     clipCount: Int,
     hasAudio: Boolean,
     isProcessing: Boolean,
-    onGenerate: () -> Unit,
+    onGenerate: (String?) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var scriptText by remember { mutableStateOf("") }
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -64,10 +65,31 @@ fun AutoEditPanel(
             InfoCard("Target", "~60s", Icons.Default.Timer, Mocha.Peach, Modifier.weight(1f))
         }
 
+        Spacer(modifier = Modifier.height(12.dp))
+
+        OutlinedTextField(
+            value = scriptText,
+            onValueChange = { scriptText = it },
+            label = { Text("Script / Description (optional)", color = Mocha.Subtext0, fontSize = 12.sp) },
+            placeholder = { Text("Describe your video story...", color = Mocha.Surface2, fontSize = 12.sp) },
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 2,
+            maxLines = 4,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Mocha.Text,
+                unfocusedTextColor = Mocha.Text,
+                cursorColor = Mocha.Mauve,
+                focusedBorderColor = Mocha.Mauve,
+                unfocusedBorderColor = Mocha.Surface1,
+                focusedLabelColor = Mocha.Mauve,
+                unfocusedLabelColor = Mocha.Subtext0
+            )
+        )
+
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(
-            onClick = onGenerate,
+            onClick = { onGenerate(scriptText.takeIf { it.isNotBlank() }) },
             enabled = clipCount > 0 && !isProcessing,
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve, contentColor = Mocha.Base)

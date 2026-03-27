@@ -353,14 +353,14 @@ class ClipEditingDelegate(
         stateFlow.update { state ->
             val tracks = state.tracks.map { track ->
                 track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) clip.copy(speed = speed.coerceIn(0.1f, 16f))
+                    if (clip.id == clipId) clip.copy(speed = speed.coerceIn(0.1f, 100f))
                     else clip
                 })
             }
             recalculateDuration(state.copy(tracks = tracks))
         }
         // Apply speed to preview immediately (don't rebuild full timeline for smooth slider)
-        videoEngine.setPreviewSpeed(speed.coerceIn(0.1f, 16f))
+        videoEngine.setPreviewSpeed(speed.coerceIn(0.1f, 100f))
     }
 
     fun endSpeedChange() {

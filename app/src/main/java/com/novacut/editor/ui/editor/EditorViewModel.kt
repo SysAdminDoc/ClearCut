@@ -60,7 +60,8 @@ enum class PanelId {
     TEXT_TEMPLATES, MEDIA_MANAGER, AUDIO_NORM, RENDER_PREVIEW,
     CLOUD_BACKUP, TUTORIAL, UNDO_HISTORY, CAPTION_STYLE_GALLERY,
     BEAT_SYNC, SMART_REFRAME, SPEED_PRESETS, FILLER_REMOVAL,
-    AUTO_EDIT, TTS, EFFECT_LIBRARY, NOISE_REDUCTION, STICKER_PICKER
+    AUTO_EDIT, TTS, EFFECT_LIBRARY, NOISE_REDUCTION, STICKER_PICKER,
+    DRAWING, MULTI_CAM
 }
 
 data class PanelVisibility(
@@ -157,7 +158,19 @@ data class EditorState(
     val isAnalyzingNoise: Boolean = false,
     val noiseAnalysisResult: String? = null,
     // Saved export config (for restoring after quick preview)
-    val savedExportConfig: ExportConfig? = null
+    val savedExportConfig: ExportConfig? = null,
+    // Drawing overlay
+    val drawingPaths: List<com.novacut.editor.model.DrawingPath> = emptyList(),
+    val isDrawingMode: Boolean = false,
+    val drawingColor: Long = 0xFFF38BA8,
+    val drawingStrokeWidth: Float = 4f,
+    val aiSuggestion: AiSuggestion? = null
+)
+
+data class AiSuggestion(
+    val id: String,
+    val message: String,
+    val actionId: String
 )
 
 enum class EditorMode(val label: String) {
@@ -533,7 +546,10 @@ class EditorViewModel @Inject constructor(
 
     // --- Clip Editing (delegated) ---
     fun addClipToTrack(uri: Uri, trackType: TrackType = TrackType.VIDEO) = clipEditingDelegate.addClipToTrack(uri, trackType)
-    fun selectClip(clipId: String?, trackId: String? = null) = clipEditingDelegate.selectClip(clipId, trackId)
+    fun selectClip(clipId: String?, trackId: String? = null) {
+        clipEditingDelegate.selectClip(clipId, trackId)
+        generateAiSuggestion(clipId)
+    }
     fun deleteSelectedClip() = clipEditingDelegate.deleteSelectedClip()
     fun duplicateSelectedClip() = clipEditingDelegate.duplicateSelectedClip()
     fun mergeWithNextClip() = clipEditingDelegate.mergeWithNextClip()
@@ -1039,9 +1055,80 @@ class EditorViewModel @Inject constructor(
     fun hideRenderPreview() = exportDelegate.hideRenderPreview()
     fun renderQuickPreview() = exportDelegate.renderQuickPreview()
 
-    // --- Cloud Backup ---
+    // --- Project Backup ---
     fun showCloudBackup() = showPanel(PanelId.CLOUD_BACKUP)
     fun hideCloudBackup() = hidePanel(PanelId.CLOUD_BACKUP)
+
+    private val _backupEstimatedSize = MutableStateFlow(0L)
+    val backupEstimatedSize: StateFlow<Long> = _backupEstimatedSize.asStateFlow()
+    private val _lastBackupTime = MutableStateFlow<Long?>(null)
+    val lastBackupTime: StateFlow<Long?> = _lastBackupTime.asStateFlow()
+    private val _isExportingBackup = MutableStateFlow(false)
+    val isExportingBackup: StateFlow<Boolean> = _isExportingBackup.asStateFlow()
+
+    fun estimateBackupSize() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val size = com.novacut.editor.engine.ProjectArchive.estimateArchiveSize(appContext, _state.value.tracks)
+            _backupEstimatedSize.value = size
+        }
+    }
+
+    fun exportProjectBackup() {
+        _isExportingBackup.value = true
+        viewModelScope.launch {
+            try {
+                val s = _state.value
+                val dir = File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "NovaCut")
+                dir.mkdirs()
+                val fileName = "${s.project.name.replace(Regex("[^a-zA-Z0-9._\\- ]"), "_")}.novacut"
+                val file = File(dir, fileName)
+                val success = com.novacut.editor.engine.ProjectArchive.exportArchive(
+                    context = appContext,
+                    projectId = s.project.id,
+                    tracks = s.tracks,
+                    textOverlays = s.textOverlays,
+                    playheadMs = s.playheadMs,
+                    outputFile = file
+                )
+                _isExportingBackup.value = false
+                if (success) {
+                    _lastBackupTime.value = System.currentTimeMillis()
+                    showToast("Backup saved: ${file.name}")
+                } else {
+                    showToast("Backup export failed")
+                }
+            } catch (e: Exception) {
+                _isExportingBackup.value = false
+                showToast("Backup failed: ${e.message}")
+            }
+        }
+    }
+
+    fun importProjectBackup(uri: Uri) {
+        viewModelScope.launch {
+            try {
+                showToast("Importing backup...")
+                val targetDir = File(appContext.filesDir, "imported_${System.currentTimeMillis()}")
+                targetDir.mkdirs()
+                val state = com.novacut.editor.engine.ProjectArchive.importArchive(appContext, uri, targetDir)
+                if (state != null) {
+                    saveUndoState("Import backup")
+                    _state.update { s ->
+                        s.copy(
+                            tracks = state.tracks,
+                            textOverlays = state.textOverlays
+                        )
+                    }
+                    rebuildTimeline()
+                    showToast("Backup imported successfully")
+                } else {
+                    showToast("Failed to import backup")
+                }
+            } catch (e: Exception) {
+                showToast("Import failed: ${e.message}")
+            }
+        }
+    }
 
     // --- Tutorial ---
     fun showTutorial() { _state.update { it.copy(panels = it.panels.open(PanelId.TUTORIAL)) } } // no dismiss — overlays other panels
@@ -1174,6 +1261,58 @@ class EditorViewModel @Inject constructor(
         showToast("Split $splitCount clips at beat markers")
         hideBeatSync()
     }
+    fun tapBeatMarker() {
+        val currentMs = _state.value.playheadMs
+        _state.update { s ->
+            val existing = s.beatMarkers
+            val tooClose = existing.any { kotlin.math.abs(it - currentMs) < 50L }
+            if (tooClose) s else s.copy(beatMarkers = (existing + currentMs).sorted())
+        }
+    }
+    fun clearBeatMarkers() {
+        _state.update { it.copy(beatMarkers = emptyList()) }
+    }
+
+    // --- AI Suggestions ---
+    fun dismissAiSuggestion() {
+        _state.update { it.copy(aiSuggestion = null) }
+    }
+    private fun generateAiSuggestion(clipId: String?) {
+        if (clipId == null) {
+            _state.update { it.copy(aiSuggestion = null) }
+            return
+        }
+        val s = _state.value
+        val clip = s.tracks.flatMap { it.clips }.firstOrNull { it.id == clipId } ?: return
+        val suggestion: AiSuggestion? = when {
+            clip.effects.isEmpty() && clip.durationMs > 5000L ->
+                AiSuggestion(
+                    id = "auto_color_${clip.id}",
+                    message = "This clip could use color correction",
+                    actionId = "auto_color"
+                )
+            s.tracks.filter { it.type == TrackType.VIDEO }.flatMap { it.clips }.size > 3 &&
+                s.tracks.flatMap { it.clips }.none { it.transition != null } ->
+                AiSuggestion(
+                    id = "add_transitions_${clip.id}",
+                    message = "Add transitions between your clips",
+                    actionId = "transition"
+                )
+            else -> {
+                val waveform = s.waveforms[clip.id]
+                if (waveform != null && waveform.size > 10) {
+                    val avg = waveform.map { kotlin.math.abs(it) }.average().toFloat()
+                    val variance = waveform.map { val d = kotlin.math.abs(it) - avg; d * d }.average().toFloat()
+                    if (variance < 0.005f) AiSuggestion(
+                        id = "denoise_${clip.id}",
+                        message = "Low audio variance detected - try Denoise",
+                        actionId = "denoise"
+                    ) else null
+                } else null
+            }
+        }
+        _state.update { it.copy(aiSuggestion = suggestion) }
+    }
 
     // --- Smart Reframe ---
     fun showSmartReframe() = showPanel(PanelId.SMART_REFRAME)
@@ -1275,7 +1414,7 @@ class EditorViewModel @Inject constructor(
     fun showAutoEdit() = showPanel(PanelId.AUTO_EDIT)
     fun hideAutoEdit() = hidePanel(PanelId.AUTO_EDIT)
 
-    fun runAutoEdit() {
+    fun runAutoEdit(script: String? = null) {
         val clips = _state.value.tracks
             .filter { it.type == TrackType.VIDEO }
             .flatMap { it.clips }
@@ -1291,7 +1430,7 @@ class EditorViewModel @Inject constructor(
                     .firstOrNull()?.sourceUri
                 val targetMs = 60_000L // 1 minute highlight reel
 
-                val result = aiFeatures.generateAutoEdit(autoClips, musicUri, targetMs)
+                val result = aiFeatures.generateAutoEdit(autoClips, musicUri, targetMs, script)
 
                 if (result.segments.isNotEmpty()) {
                     saveUndoState("Auto edit")
@@ -1402,6 +1541,68 @@ class EditorViewModel @Inject constructor(
     // --- Sticker Picker ---
     fun showStickerPicker() = showPanel(PanelId.STICKER_PICKER)
     fun hideStickerPicker() = hidePanel(PanelId.STICKER_PICKER)
+
+    // --- Drawing Overlay ---
+    fun showDrawingMode() {
+        pauseIfPlaying()
+        _state.update { dismissedPanelState(it).copy(
+            panels = it.panels.closeAll().open(PanelId.DRAWING),
+            isDrawingMode = true
+        ) }
+    }
+    fun hideDrawingMode() {
+        _state.update { it.copy(panels = it.panels.close(PanelId.DRAWING), isDrawingMode = false) }
+    }
+    fun addDrawingPath(path: com.novacut.editor.model.DrawingPath) {
+        _state.update { it.copy(drawingPaths = it.drawingPaths + path) }
+        saveProject()
+    }
+    fun clearDrawing() {
+        saveUndoState("Clear drawing")
+        _state.update { it.copy(drawingPaths = emptyList()) }
+        saveProject()
+    }
+    fun undoLastPath() {
+        if (_state.value.drawingPaths.isEmpty()) return
+        saveUndoState("Undo drawing path")
+        _state.update { it.copy(drawingPaths = it.drawingPaths.dropLast(1)) }
+        saveProject()
+    }
+    fun setDrawingColor(color: Long) {
+        _state.update { it.copy(drawingColor = color) }
+    }
+    fun setDrawingStrokeWidth(width: Float) {
+        _state.update { it.copy(drawingStrokeWidth = width) }
+    }
+
+    // --- Multi-Cam ---
+    fun showMultiCam() = showPanel(PanelId.MULTI_CAM)
+    fun hideMultiCam() = hidePanel(PanelId.MULTI_CAM)
+    fun switchMultiCamAngle(clipId: String) {
+        val s = _state.value
+        val videoTracks = s.tracks.filter { it.type == TrackType.VIDEO }
+        if (videoTracks.isEmpty()) return
+        val primaryTrack = videoTracks.first()
+        val sourceTrack = videoTracks.find { track -> track.clips.any { it.id == clipId } } ?: return
+        if (sourceTrack.id == primaryTrack.id) {
+            _state.update { it.copy(selectedClipId = clipId) }
+            return
+        }
+        val clip = sourceTrack.clips.find { it.id == clipId } ?: return
+        saveUndoState("Switch multi-cam angle")
+        _state.update { st ->
+            val updatedTracks = st.tracks.map { track ->
+                when (track.id) {
+                    primaryTrack.id -> track.copy(clips = listOf(clip) + track.clips)
+                    sourceTrack.id -> track.copy(clips = track.clips.filter { it.id != clipId })
+                    else -> track
+                }
+            }
+            st.copy(tracks = updatedTracks, selectedClipId = clipId)
+        }
+        rebuildPlayerTimeline()
+        saveProject()
+    }
 
     fun analyzeAndReduceNoise() {
         val clip = getSelectedClip() ?: return
@@ -2326,6 +2527,51 @@ class EditorViewModel @Inject constructor(
     fun downloadWhisperModel() = aiToolsDelegate.downloadWhisperModel()
     fun deleteWhisperModel() = aiToolsDelegate.deleteWhisperModel()
     fun saveAsTemplate(name: String) = aiToolsDelegate.saveAsTemplate(name)
+
+    fun exportTemplate(name: String) {
+        viewModelScope.launch {
+            try {
+                val dir = File(appContext.getExternalFilesDir(null), "templates")
+                dir.mkdirs()
+                val sanitized = name.replace(Regex("[^a-zA-Z0-9._\\- ]"), "_")
+                val outputFile = File(dir, "$sanitized.novacut-template")
+                val success = templateManager.exportTemplateToFile(name, outputFile)
+                if (success) {
+                    showToast("Template exported: ${outputFile.name}")
+                    val uri = androidx.core.content.FileProvider.getUriForFile(
+                        appContext, "${appContext.packageName}.fileprovider", outputFile
+                    )
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "application/json"
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    appContext.startActivity(Intent.createChooser(shareIntent, "Share Template").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                } else {
+                    showToast("Template export failed")
+                }
+            } catch (e: Exception) {
+                showToast("Template export failed: ${e.message}")
+            }
+        }
+    }
+
+    fun importTemplate(uri: Uri) {
+        viewModelScope.launch {
+            try {
+                val template = templateManager.importTemplateFromUri(uri)
+                if (template != null) {
+                    showToast("Imported template: ${template.name}")
+                } else {
+                    showToast("Failed to import template")
+                }
+            } catch (e: Exception) {
+                showToast("Import failed: ${e.message}")
+            }
+        }
+    }
+
     fun downloadSegmentationModel() = aiToolsDelegate.downloadSegmentationModel()
     fun deleteSegmentationModel() = aiToolsDelegate.deleteSegmentationModel()
 

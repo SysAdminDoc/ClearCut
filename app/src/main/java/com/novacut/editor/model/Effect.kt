@@ -108,6 +108,62 @@ enum class EffectType(val displayName: String, val category: EffectCategory) {
             LIGHT_LEAK -> mapOf("intensity" to 0.5f)
             GRAYSCALE, SEPIA, INVERT, MIRROR, REVERSE -> emptyMap()
         }
+
+        data class ParamRange(val label: String, val min: Float, val max: Float, val step: Float = 0f)
+
+        val parameterRanges: Map<String, ParamRange> = mapOf(
+            "value" to ParamRange("Value", -5f, 5f),
+            "intensity" to ParamRange("Intensity", 0f, 2f),
+            "radius" to ParamRange("Radius", 0f, 25f),
+            "strength" to ParamRange("Strength", 0f, 2f),
+            "size" to ParamRange("Size", 2f, 50f),
+            "similarity" to ParamRange("Similarity", 0f, 1f),
+            "smoothness" to ParamRange("Smoothness", 0f, 0.5f),
+            "spill" to ParamRange("Spill", 0f, 1f),
+            "threshold" to ParamRange("Threshold", 0.1f, 0.9f),
+            "blur" to ParamRange("Blur", 0f, 0.05f),
+            "focusY" to ParamRange("Focus Y", 0f, 1f),
+            "width" to ParamRange("Width", 0.01f, 0.5f),
+            "amplitude" to ParamRange("Amplitude", 0f, 0.1f),
+            "frequency" to ParamRange("Frequency", 1f, 30f),
+            "levels" to ParamRange("Levels", 2f, 16f)
+        )
+
+        fun paramRangesForType(type: EffectType): Map<String, ParamRange> {
+            val defaults = defaultParams(type)
+            if (defaults.isEmpty()) return emptyMap()
+            val overrides: Map<String, ParamRange> = when (type) {
+                BRIGHTNESS -> mapOf("value" to ParamRange("Brightness", -1f, 1f))
+                CONTRAST -> mapOf("value" to ParamRange("Contrast", 0f, 3f))
+                SATURATION -> mapOf("value" to ParamRange("Saturation", 0f, 3f))
+                TEMPERATURE -> mapOf("value" to ParamRange("Temperature", -5f, 5f))
+                TINT -> mapOf("value" to ParamRange("Tint", -1f, 1f))
+                EXPOSURE -> mapOf("value" to ParamRange("Exposure", -2f, 2f))
+                GAMMA -> mapOf("value" to ParamRange("Gamma", 0.2f, 3f))
+                HIGHLIGHTS -> mapOf("value" to ParamRange("Highlights", -1f, 1f))
+                SHADOWS -> mapOf("value" to ParamRange("Shadows", -1f, 1f))
+                VIBRANCE -> mapOf("value" to ParamRange("Vibrance", -1f, 1f))
+                VIGNETTE -> mapOf(
+                    "intensity" to ParamRange("Intensity", 0f, 1f),
+                    "radius" to ParamRange("Radius", 0.1f, 1f)
+                )
+                GAUSSIAN_BLUR -> mapOf("radius" to ParamRange("Radius", 0f, 25f))
+                FILM_GRAIN -> mapOf("intensity" to ParamRange("Intensity", 0f, 0.5f))
+                GLITCH -> mapOf("intensity" to ParamRange("Intensity", 0f, 1f))
+                CHROMATIC_ABERRATION -> mapOf("intensity" to ParamRange("Intensity", 0f, 2f))
+                CYBERPUNK, NOIR, VINTAGE, COOL_TONE, WARM_TONE, VHS_RETRO, LIGHT_LEAK ->
+                    mapOf("intensity" to ParamRange("Intensity", 0f, 1f))
+                RADIAL_BLUR, MOTION_BLUR, FISHEYE ->
+                    mapOf("intensity" to ParamRange("Intensity", 0f, 1f))
+                SPEED -> mapOf("value" to ParamRange("Speed", 0.1f, 16f))
+                else -> emptyMap()
+            }
+            return defaults.keys.associateWith { key ->
+                overrides[key] ?: parameterRanges[key] ?: ParamRange(
+                    key.replaceFirstChar { c -> c.uppercase() }, 0f, 1f
+                )
+            }
+        }
     }
 }
 

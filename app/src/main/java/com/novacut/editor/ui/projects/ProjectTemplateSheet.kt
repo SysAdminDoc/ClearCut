@@ -110,6 +110,8 @@ fun ProjectTemplateSheet(
     onDismiss: () -> Unit,
     onUserTemplateSelected: (UserTemplate) -> Unit = {},
     onDeleteUserTemplate: (String) -> Unit = {},
+    onShareTemplate: (String) -> Unit = {},
+    onImportTemplate: () -> Unit = {},
     userTemplates: List<UserTemplate> = emptyList(),
     modifier: Modifier = Modifier
 ) {
@@ -132,6 +134,19 @@ fun ProjectTemplateSheet(
 
         Spacer(Modifier.height(4.dp))
         Text(stringResource(R.string.template_choose), color = Mocha.Subtext0, fontSize = 13.sp)
+
+        Spacer(Modifier.height(8.dp))
+
+        OutlinedButton(
+            onClick = onImportTemplate,
+            modifier = Modifier.fillMaxWidth(),
+            border = BorderStroke(1.dp, Mocha.Blue.copy(alpha = 0.5f)),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Icon(Icons.Default.FileOpen, contentDescription = null, tint = Mocha.Blue, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("Import Template", color = Mocha.Blue, fontSize = 13.sp)
+        }
 
         Spacer(Modifier.height(12.dp))
 
@@ -168,7 +183,8 @@ fun ProjectTemplateSheet(
                     UserTemplateCard(
                         template = ut,
                         onClick = { onUserTemplateSelected(ut) },
-                        onDelete = { onDeleteUserTemplate(ut.id) }
+                        onDelete = { onDeleteUserTemplate(ut.id) },
+                        onShare = { onShareTemplate(ut.name) }
                     )
                 }
             }
@@ -180,7 +196,8 @@ fun ProjectTemplateSheet(
 private fun UserTemplateCard(
     template: UserTemplate,
     onClick: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onShare: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -221,6 +238,15 @@ private fun UserTemplateCard(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
+                Icon(
+                    Icons.Default.Share,
+                    "Share",
+                    tint = Mocha.Blue.copy(alpha = 0.7f),
+                    modifier = Modifier
+                        .size(14.dp)
+                        .clickable(onClick = onShare)
+                )
+                Spacer(Modifier.width(4.dp))
                 Icon(
                     Icons.Default.Close,
                     stringResource(R.string.template_delete),

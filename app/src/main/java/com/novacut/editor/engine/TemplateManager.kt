@@ -1,6 +1,7 @@
 package com.novacut.editor.engine
 
 import android.content.Context
+import android.net.Uri
 import android.util.Log
 import com.novacut.editor.model.*
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -101,6 +102,81 @@ class TemplateManager @Inject constructor(
             state.tracks to state.textOverlays
         } catch (e: Exception) {
             Log.e("TemplateManager", "Failed to deserialize template '${template.name}'", e)
+            null
+        }
+    }
+
+    suspend fun exportTemplateToFile(templateName: String, outputFile: File): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val template = listTemplates().find { it.name == templateName } ?: return@withContext false
+            val json = JSONObject().apply {
+                put("novacut_template_version", 1)
+                put("id", template.id)
+                put("name", template.name)
+                put("description", template.description)
+                put("aspectRatio", template.aspectRatio.name)
+                put("frameRate", template.frameRate)
+                put("resolution", template.resolution.name)
+                put("trackTypes", JSONArray(template.trackTypes.map { it.name }))
+                put("textOverlayCount", template.textOverlayCount)
+                put("effectSummary", template.effectSummary)
+                put("createdAt", template.createdAt)
+                put("stateJson", template.stateJson)
+            }
+            outputFile.parentFile?.mkdirs()
+            outputFile.writeText(json.toString(2))
+            true
+        } catch (e: Exception) {
+            Log.e("TemplateManager", "Failed to export template '$templateName'", e)
+            false
+        }
+    }
+
+    suspend fun importTemplateFromUri(uri: Uri): UserTemplate? = withContext(Dispatchers.IO) {
+        try {
+            val text = context.contentResolver.openInputStream(uri)?.use { it.bufferedReader().readText() }
+                ?: return@withContext null
+            val json = JSONObject(text)
+            val template = UserTemplate(
+                id = UUID.randomUUID().toString(),
+                name = json.optString("name", "Imported Template"),
+                description = json.optString("description", ""),
+                aspectRatio = try {
+                    AspectRatio.valueOf(json.optString("aspectRatio", "RATIO_16_9"))
+                } catch (_: Exception) { AspectRatio.RATIO_16_9 },
+                frameRate = json.optInt("frameRate", 30),
+                resolution = try {
+                    Resolution.valueOf(json.optString("resolution", "FHD_1080P"))
+                } catch (_: Exception) { Resolution.FHD_1080P },
+                trackTypes = json.optJSONArray("trackTypes")?.let { arr ->
+                    (0 until arr.length()).mapNotNull { i ->
+                        try { TrackType.valueOf(arr.getString(i)) } catch (_: Exception) { null }
+                    }
+                } ?: listOf(TrackType.VIDEO, TrackType.AUDIO),
+                textOverlayCount = json.optInt("textOverlayCount", 0),
+                effectSummary = json.optString("effectSummary", ""),
+                createdAt = System.currentTimeMillis(),
+                stateJson = json.optString("stateJson", "{}")
+            )
+            // Save locally
+            templateDir.mkdirs()
+            val saveJson = JSONObject().apply {
+                put("id", template.id)
+                put("name", template.name)
+                put("description", template.description)
+                put("aspectRatio", template.aspectRatio.name)
+                put("frameRate", template.frameRate)
+                put("resolution", template.resolution.name)
+                put("trackTypes", JSONArray(template.trackTypes.map { it.name }))
+                put("textOverlayCount", template.textOverlayCount)
+                put("effectSummary", template.effectSummary)
+                put("createdAt", template.createdAt)
+                put("stateJson", template.stateJson)
+            }
+            File(templateDir, "${template.id}.json").writeText(saveJson.toString(2))
+            template
+        } catch (e: Exception) {
+            Log.e("TemplateManager", "Failed to import template from URI", e)
             null
         }
     }

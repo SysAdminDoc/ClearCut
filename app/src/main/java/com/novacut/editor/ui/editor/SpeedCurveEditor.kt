@@ -152,7 +152,7 @@ fun SpeedCurveEditor(
                     .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                listOf(0.25f, 0.5f, 0.75f, 1f, 1.5f, 2f, 4f, 8f, 16f).forEach { speed ->
+                listOf(0.25f, 0.5f, 0.75f, 1f, 1.5f, 2f, 4f, 8f, 16f, 50f, 100f).forEach { speed ->
                     val selected = abs(constantSpeed - speed) < 0.01f
                     FilterChip(
                         selected = selected,
@@ -172,13 +172,13 @@ fun SpeedCurveEditor(
 
             // Fine control slider (logarithmic mapping for perceptually uniform speed control)
             val logMin = kotlin.math.ln(0.1f)
-            val logMax = kotlin.math.ln(16f)
-            val sliderPosition = (kotlin.math.ln(constantSpeed.coerceIn(0.1f, 16f)) - logMin) / (logMax - logMin)
+            val logMax = kotlin.math.ln(100f)
+            val sliderPosition = (kotlin.math.ln(constantSpeed.coerceIn(0.1f, 100f)) - logMin) / (logMax - logMin)
             Slider(
                 value = sliderPosition,
                 onValueChange = { pos ->
                     val logSpeed = logMin + pos * (logMax - logMin)
-                    val newSpeed = kotlin.math.exp(logSpeed).coerceIn(0.1f, 16f)
+                    val newSpeed = kotlin.math.exp(logSpeed).coerceIn(0.1f, 100f)
                     onConstantSpeedChanged(newSpeed)
                 },
                 modifier = Modifier.fillMaxWidth(),

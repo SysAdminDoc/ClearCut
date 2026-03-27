@@ -81,7 +81,8 @@ private val clipEditSubMenu = listOf(
     SubMenuItem("compound", Icons.Default.ViewModule, "Compound\nClip"),
     SubMenuItem("speed_presets", Icons.Default.Speed, "Speed\nPresets"),
     SubMenuItem("group", Icons.Default.GroupWork, "Group"),
-    SubMenuItem("ungroup", Icons.Default.Workspaces, "Ungroup")
+    SubMenuItem("ungroup", Icons.Default.Workspaces, "Ungroup"),
+    SubMenuItem("draw", Icons.Default.Draw, "Draw")
 )
 
 // Clip mode — Motion tab sub-menu (replaces simple Transform panel)
@@ -144,7 +145,8 @@ private val projectToolsSubMenu = listOf(
     SubMenuItem("batch_export", Icons.Default.DynamicFeed, "Batch\nExport"),
     SubMenuItem("proxy_toggle", Icons.Default.Speed, "Proxy\nEdit"),
     SubMenuItem("beat_sync", Icons.Default.MusicNote, "Beat\nSync"),
-    SubMenuItem("auto_edit", Icons.Default.AutoFixHigh, "Auto\nEdit")
+    SubMenuItem("auto_edit", Icons.Default.AutoFixHigh, "Auto\nEdit"),
+    SubMenuItem("multi_cam", Icons.Default.Videocam, "Multi\nCam")
 )
 
 // --- Bottom tool area (tab bar + contextual sub-menu grids) ---
@@ -571,172 +573,14 @@ fun EffectAdjustmentPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Parameter sliders based on effect type
+        // Auto-generated parameter sliders from EffectType metadata
+        val ranges = EffectType.paramRangesForType(effect.type)
         val defaults = EffectType.defaultParams(effect.type)
-        fun param(key: String) = effect.params[key] ?: defaults[key] ?: 0f
-
         val ds = onEffectDragStarted
-        when (effect.type) {
-            EffectType.BRIGHTNESS -> {
-                EffectSlider("Brightness", param("value"), -1f, 1f, ds) {
-                    onUpdateParams(mapOf("value" to it))
-                }
-            }
-            EffectType.CONTRAST -> {
-                EffectSlider("Contrast", param("value"), 0f, 3f, ds) {
-                    onUpdateParams(mapOf("value" to it))
-                }
-            }
-            EffectType.SATURATION -> {
-                EffectSlider("Saturation", param("value"), 0f, 3f, ds) {
-                    onUpdateParams(mapOf("value" to it))
-                }
-            }
-            EffectType.TEMPERATURE -> {
-                EffectSlider("Temperature", param("value"), -5f, 5f, ds) {
-                    onUpdateParams(mapOf("value" to it))
-                }
-            }
-            EffectType.EXPOSURE -> {
-                EffectSlider("Exposure", param("value"), -2f, 2f, ds) {
-                    onUpdateParams(mapOf("value" to it))
-                }
-            }
-            EffectType.VIGNETTE -> {
-                EffectSlider("Intensity", param("intensity"), 0f, 1f, ds) {
-                    onUpdateParams(mapOf("intensity" to it))
-                }
-                EffectSlider("Radius", param("radius"), 0.1f, 1f, ds) {
-                    onUpdateParams(mapOf("radius" to it))
-                }
-            }
-            EffectType.GAUSSIAN_BLUR -> {
-                EffectSlider("Radius", param("radius"), 0f, 25f, ds) {
-                    onUpdateParams(mapOf("radius" to it))
-                }
-            }
-            EffectType.CHROMA_KEY -> {
-                EffectSlider("Similarity", param("similarity"), 0f, 1f, ds) {
-                    onUpdateParams(mapOf("similarity" to it))
-                }
-                EffectSlider("Smoothness", param("smoothness"), 0f, 0.5f, ds) {
-                    onUpdateParams(mapOf("smoothness" to it))
-                }
-                EffectSlider("Spill", param("spill"), 0f, 1f, ds) {
-                    onUpdateParams(mapOf("spill" to it))
-                }
-            }
-            EffectType.BG_REMOVAL -> {
-                EffectSlider("Threshold", param("threshold"), 0.1f, 0.9f, ds) {
-                    onUpdateParams(mapOf("threshold" to it))
-                }
-            }
-            EffectType.FILM_GRAIN -> {
-                EffectSlider("Intensity", param("intensity"), 0f, 0.5f, ds) {
-                    onUpdateParams(mapOf("intensity" to it))
-                }
-            }
-            EffectType.SHARPEN -> {
-                EffectSlider("Strength", param("strength"), 0f, 2f, ds) {
-                    onUpdateParams(mapOf("strength" to it))
-                }
-            }
-            EffectType.GLITCH -> {
-                EffectSlider("Intensity", param("intensity"), 0f, 1f, ds) {
-                    onUpdateParams(mapOf("intensity" to it))
-                }
-            }
-            EffectType.PIXELATE -> {
-                EffectSlider("Size", param("size"), 2f, 50f, ds) {
-                    onUpdateParams(mapOf("size" to it))
-                }
-            }
-            EffectType.CHROMATIC_ABERRATION -> {
-                EffectSlider("Intensity", param("intensity"), 0f, 2f, ds) {
-                    onUpdateParams(mapOf("intensity" to it))
-                }
-            }
-            EffectType.CYBERPUNK, EffectType.NOIR, EffectType.VINTAGE, EffectType.COOL_TONE, EffectType.WARM_TONE -> {
-                EffectSlider("Intensity", param("intensity"), 0f, 1f, ds) {
-                    onUpdateParams(mapOf("intensity" to it))
-                }
-            }
-            EffectType.TILT_SHIFT -> {
-                EffectSlider("Blur", param("blur"), 0f, 0.05f, ds) {
-                    onUpdateParams(mapOf("blur" to it))
-                }
-                EffectSlider("Focus Y", param("focusY"), 0f, 1f, ds) {
-                    onUpdateParams(mapOf("focusY" to it))
-                }
-                EffectSlider("Width", param("width"), 0.01f, 0.5f, ds) {
-                    onUpdateParams(mapOf("width" to it))
-                }
-            }
-            EffectType.TINT -> {
-                EffectSlider("Tint", param("value"), -1f, 1f, ds) {
-                    onUpdateParams(mapOf("value" to it))
-                }
-            }
-            EffectType.GAMMA -> {
-                EffectSlider("Gamma", param("value"), 0.2f, 3f, ds) {
-                    onUpdateParams(mapOf("value" to it))
-                }
-            }
-            EffectType.HIGHLIGHTS -> {
-                EffectSlider("Highlights", param("value"), -1f, 1f, ds) {
-                    onUpdateParams(mapOf("value" to it))
-                }
-            }
-            EffectType.SHADOWS -> {
-                EffectSlider("Shadows", param("value"), -1f, 1f, ds) {
-                    onUpdateParams(mapOf("value" to it))
-                }
-            }
-            EffectType.VIBRANCE -> {
-                EffectSlider("Vibrance", param("value"), -1f, 1f, ds) {
-                    onUpdateParams(mapOf("value" to it))
-                }
-            }
-            EffectType.MOSAIC -> {
-                EffectSlider("Size", param("size"), 2f, 50f, ds) {
-                    onUpdateParams(mapOf("size" to it))
-                }
-            }
-            EffectType.RADIAL_BLUR -> {
-                EffectSlider("Intensity", param("intensity"), 0f, 1f, ds) {
-                    onUpdateParams(mapOf("intensity" to it))
-                }
-            }
-            EffectType.MOTION_BLUR -> {
-                EffectSlider("Intensity", param("intensity"), 0f, 1f, ds) {
-                    onUpdateParams(mapOf("intensity" to it))
-                }
-            }
-            EffectType.FISHEYE -> {
-                EffectSlider("Intensity", param("intensity"), 0f, 1f, ds) {
-                    onUpdateParams(mapOf("intensity" to it))
-                }
-            }
-            EffectType.WAVE -> {
-                EffectSlider("Amplitude", param("amplitude"), 0f, 0.1f, ds) {
-                    onUpdateParams(mapOf("amplitude" to it))
-                }
-                EffectSlider("Frequency", param("frequency"), 1f, 30f, ds) {
-                    onUpdateParams(mapOf("frequency" to it))
-                }
-            }
-            EffectType.POSTERIZE -> {
-                EffectSlider("Levels", param("levels"), 2f, 16f, ds) {
-                    onUpdateParams(mapOf("levels" to it))
-                }
-            }
-            EffectType.SPEED -> {
-                EffectSlider("Speed", param("value"), 0.1f, 16f, ds) {
-                    onUpdateParams(mapOf("value" to it))
-                }
-            }
-            else -> {
-                // Effects without adjustable parameters (GRAYSCALE, SEPIA, INVERT, MIRROR, REVERSE)
+        for ((key, range) in ranges) {
+            val currentValue = effect.params[key] ?: defaults[key] ?: 0f
+            EffectSlider(range.label, currentValue, range.min, range.max, ds) {
+                onUpdateParams(effect.params + (key to it))
             }
         }
     }
@@ -836,7 +680,7 @@ fun SpeedPanel(
         Spacer(modifier = Modifier.height(8.dp))
 
         // Custom speed slider with drag start for undo debounce
-        EffectSlider(stringResource(R.string.tool_custom_speed), currentSpeed, 0.1f, 16f, onSpeedDragStarted, onSpeedDragEnded) { onSpeedChanged(it) }
+        EffectSlider(stringResource(R.string.tool_custom_speed), currentSpeed, 0.1f, 100f, onSpeedDragStarted, onSpeedDragEnded) { onSpeedChanged(it) }
 
         // Reverse toggle
         Row(
