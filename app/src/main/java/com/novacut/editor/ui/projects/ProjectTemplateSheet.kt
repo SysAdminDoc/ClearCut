@@ -145,7 +145,7 @@ fun ProjectTemplateSheet(
         ) {
             Icon(Icons.Default.FileOpen, contentDescription = null, tint = Mocha.Blue, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
-            Text("Import Template", color = Mocha.Blue, fontSize = 13.sp)
+            Text(stringResource(R.string.template_import), color = Mocha.Blue, fontSize = 13.sp)
         }
 
         Spacer(Modifier.height(12.dp))

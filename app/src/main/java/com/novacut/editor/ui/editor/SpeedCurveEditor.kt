@@ -142,7 +142,7 @@ fun SpeedCurveEditor(
             )
         } else {
             // Constant speed controls
-            Text("Speed: ${String.format("%.2f", constantSpeed)}x", color = Mocha.Text, fontSize = 14.sp)
+            Text(stringResource(R.string.speed_label, constantSpeed), color = Mocha.Text, fontSize = 14.sp)
             Spacer(Modifier.height(4.dp))
 
             // Quick presets

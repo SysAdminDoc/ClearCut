@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.13.0</string>
+    <string name="app_version">v3.14.0</string>
 
     <!-- Common -->
     <string name="close">Close</string>
@@ -796,4 +796,34 @@
     <string name="beat_sync_markers_count">%1$d markers</string>
     <string name="beat_sync_label_beats">Beats</string>
     <string name="beat_sync_label_bpm">BPM</string>
+
+    <!-- FirstRunTutorial — v3.14.0 -->
+    <string name="tutorial_skip">Skip</string>
+    <string name="tutorial_next">Next</string>
+    <string name="tutorial_get_started">Get Started</string>
+    <string name="tutorial_step_counter">%1$d of %2$d</string>
+    <string name="tutorial_title_add_media">Add Your Media</string>
+    <string name="tutorial_desc_add_media">Tap the + button to import videos, photos, or audio from your device. You can also capture new footage with your camera.</string>
+    <string name="tutorial_title_timeline">Your Timeline</string>
+    <string name="tutorial_desc_timeline">Drag, trim, and arrange your clips on the multi-track timeline. Pinch to zoom and swipe to scroll through your project.</string>
+    <string name="tutorial_title_edit">Edit &amp; Enhance</string>
+    <string name="tutorial_desc_edit">Apply effects, transitions, text overlays, and AI-powered tools from the toolbar. Tap a clip to see editing options.</string>
+    <string name="tutorial_title_export">Export &amp; Share</string>
+    <string name="tutorial_desc_export">When you\'re ready, tap the export button to render your video. Choose from platform presets for YouTube, TikTok, Instagram, and more.</string>
+
+    <!-- ExportSheet — v3.14.0 -->
+    <string name="export_elapsed">Elapsed: %1$s</string>
+    <string name="export_transparent_bg">Transparent Background (WebM VP9)</string>
+    <string name="export_audio_codec">Audio Codec</string>
+    <string name="export_otio">OTIO</string>
+    <string name="export_fcpxml">FCPXML</string>
+
+    <!-- SpeedCurveEditor — v3.14.0 -->
+    <string name="speed_label">Speed: %1$.2fx</string>
+
+    <!-- ProjectTemplateSheet — v3.14.0 -->
+    <string name="template_import">Import Template</string>
+
+    <!-- SnapshotHistoryPanel — v3.14.0 -->
+    <string name="snapshot_default_prefix">Snapshot</string>
 </resources>

@@ -1,8 +1,16 @@
-# NovaCut v3.13.0
+# NovaCut v3.14.0
 
 A professional Android video editor built with Kotlin and Jetpack Compose. Open alternative to CapCut, PowerDirector, and DaVinci Resolve — with on-device AI, GPU-accelerated effects, and desktop NLE interoperability.
 
 ## Changelog
+
+### v3.14.0 — Audit Fixes, Deep Localization & GIF Correctness
+- **GIF color quantization fix** — Fixed operator precedence bug in color quantization formula that caused incorrect palette mapping (wrong colors in exported GIFs)
+- **FirstRunTutorial localization** — Extracted 4 titles, 4 descriptions, "Skip"/"Next"/"Get Started" to strings.xml with @StringRes data class
+- **ExportSheet localization** — Extracted 8 hardcoded strings (Elapsed, Transparent Background, Audio Codec, OTIO, FCPXML, subtitle/stems/chapter labels)
+- **SpeedCurveEditor localization** — Speed label format string extracted
+- **ProjectTemplateSheet** — "Import Template" extracted to string resource
+- **SnapshotHistoryPanel** — Default snapshot name prefix extracted
 
 ### v3.13.0 — GIF Hardening, Settings Localization & Editor Polish
 - **GIF encoder hardening** — Fixed bitmap memory leak on export error (moved recycle to finally block), added division-by-zero guard for frame rate

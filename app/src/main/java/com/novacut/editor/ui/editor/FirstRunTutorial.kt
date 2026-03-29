@@ -22,35 +22,35 @@ import androidx.compose.ui.unit.sp
 import com.novacut.editor.R
 import com.novacut.editor.ui.theme.Mocha
 
-private data class TutorialStep(
-    val title: String,
-    val description: String,
+private data class TutorialStepDef(
+    val titleRes: Int,
+    val descriptionRes: Int,
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
     val arrowIcon: androidx.compose.ui.graphics.vector.ImageVector
 )
 
-private val tutorialSteps = listOf(
-    TutorialStep(
-        title = "Add Your Media",
-        description = "Tap the + button to import videos, photos, or audio from your device. You can also capture new footage with your camera.",
+private val tutorialStepDefs = listOf(
+    TutorialStepDef(
+        titleRes = R.string.tutorial_title_add_media,
+        descriptionRes = R.string.tutorial_desc_add_media,
         icon = Icons.Default.Add,
         arrowIcon = Icons.Default.KeyboardArrowUp
     ),
-    TutorialStep(
-        title = "Your Timeline",
-        description = "Drag, trim, and arrange your clips on the multi-track timeline. Pinch to zoom and swipe to scroll through your project.",
+    TutorialStepDef(
+        titleRes = R.string.tutorial_title_timeline,
+        descriptionRes = R.string.tutorial_desc_timeline,
         icon = Icons.Default.ViewTimeline,
         arrowIcon = Icons.Default.KeyboardArrowDown
     ),
-    TutorialStep(
-        title = "Edit & Enhance",
-        description = "Apply effects, transitions, text overlays, and AI-powered tools from the toolbar. Tap a clip to see editing options.",
+    TutorialStepDef(
+        titleRes = R.string.tutorial_title_edit,
+        descriptionRes = R.string.tutorial_desc_edit,
         icon = Icons.Default.AutoFixHigh,
         arrowIcon = Icons.Default.KeyboardArrowDown
     ),
-    TutorialStep(
-        title = "Export & Share",
-        description = "When you're ready, tap the export button to render your video. Choose from platform presets for YouTube, TikTok, Instagram, and more.",
+    TutorialStepDef(
+        titleRes = R.string.tutorial_title_export,
+        descriptionRes = R.string.tutorial_desc_export,
         icon = Icons.Default.Upload,
         arrowIcon = Icons.Default.KeyboardArrowUp
     )
@@ -70,7 +70,7 @@ fun FirstRunTutorial(
     ) {
         // Skip button
         Text(
-            text = "Skip",
+            text = stringResource(R.string.tutorial_skip),
             color = Mocha.Subtext0,
             fontSize = 14.sp,
             modifier = Modifier
@@ -89,7 +89,7 @@ fun FirstRunTutorial(
             modifier = Modifier.align(Alignment.Center),
             label = "tutorial_step"
         ) { step ->
-            val tutorialStep = tutorialSteps[step]
+            val tutorialStep = tutorialStepDefs[step]
 
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -120,7 +120,7 @@ fun FirstRunTutorial(
                 ) {
                     Icon(
                         imageVector = tutorialStep.icon,
-                        contentDescription = tutorialStep.title,
+                        contentDescription = stringResource(tutorialStep.titleRes),
                         tint = Mocha.Mauve,
                         modifier = Modifier.size(28.dp)
                     )
@@ -130,7 +130,7 @@ fun FirstRunTutorial(
 
                 // Title
                 Text(
-                    text = tutorialStep.title,
+                    text = stringResource(tutorialStep.titleRes),
                     color = Mocha.Text,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
@@ -141,7 +141,7 @@ fun FirstRunTutorial(
 
                 // Description
                 Text(
-                    text = tutorialStep.description,
+                    text = stringResource(tutorialStep.descriptionRes),
                     color = Mocha.Subtext1,
                     fontSize = 13.sp,
                     textAlign = TextAlign.Center,
@@ -155,7 +155,7 @@ fun FirstRunTutorial(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    repeat(tutorialSteps.size) { index ->
+                    repeat(tutorialStepDefs.size) { index ->
                         Box(
                             modifier = Modifier
                                 .size(if (index == step) 10.dp else 8.dp)
@@ -170,7 +170,7 @@ fun FirstRunTutorial(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 // Next / Get Started button
-                val isLastStep = step == tutorialSteps.size - 1
+                val isLastStep = step == tutorialStepDefs.size - 1
                 Button(
                     onClick = {
                         if (isLastStep) {
@@ -187,7 +187,7 @@ fun FirstRunTutorial(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = if (isLastStep) "Get Started" else "Next",
+                        text = stringResource(if (isLastStep) R.string.tutorial_get_started else R.string.tutorial_next),
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp
                     )

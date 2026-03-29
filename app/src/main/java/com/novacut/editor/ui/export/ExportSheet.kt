@@ -103,7 +103,7 @@ fun ExportSheet(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Elapsed: $elapsedStr", color = Mocha.Subtext0, fontSize = 12.sp)
+                    Text(stringResource(R.string.export_elapsed, elapsedStr), color = Mocha.Subtext0, fontSize = 12.sp)
                     if (etaStr.isNotEmpty()) {
                         Text(etaStr, color = Mocha.Blue, fontSize = 12.sp)
                     }
@@ -280,7 +280,7 @@ fun ExportSheet(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Export Subtitles", color = Mocha.Text, fontSize = 13.sp)
+            Text(stringResource(R.string.export_subtitles), color = Mocha.Text, fontSize = 13.sp)
             Switch(
                 checked = config.subtitleFormat != null,
                 onCheckedChange = {
@@ -315,7 +315,7 @@ fun ExportSheet(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Export Audio Stems", color = Mocha.Text, fontSize = 13.sp)
+            Text(stringResource(R.string.export_stems), color = Mocha.Text, fontSize = 13.sp)
             Switch(
                 checked = config.exportStemsOnly,
                 onCheckedChange = { onConfigChanged(config.copy(exportStemsOnly = it, exportAudioOnly = false)) },
@@ -331,7 +331,7 @@ fun ExportSheet(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Include Chapter Markers", color = Mocha.Text, fontSize = 13.sp)
+            Text(stringResource(R.string.export_chapter_markers), color = Mocha.Text, fontSize = 13.sp)
             Switch(
                 checked = config.includeChapterMarkers,
                 onCheckedChange = { onConfigChanged(config.copy(includeChapterMarkers = it)) },
@@ -352,7 +352,7 @@ fun ExportSheet(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Transparent Background (WebM VP9)", color = Mocha.Text, fontSize = 13.sp)
+            Text(stringResource(R.string.export_transparent_bg), color = Mocha.Text, fontSize = 13.sp)
             Switch(
                 checked = config.transparentBackground,
                 onCheckedChange = { onConfigChanged(config.copy(transparentBackground = it)) },
@@ -433,7 +433,7 @@ fun ExportSheet(
         Spacer(modifier = Modifier.height(12.dp))
 
         // Audio Codec
-        Text("Audio Codec", color = Mocha.Subtext1, fontSize = 12.sp)
+        Text(stringResource(R.string.export_audio_codec), color = Mocha.Subtext1, fontSize = 12.sp)
         Spacer(modifier = Modifier.height(4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             AudioCodec.entries.forEach { codec ->
@@ -653,7 +653,7 @@ fun ExportSheet(
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Blue),
                 border = BorderStroke(1.dp, Mocha.Blue.copy(alpha = 0.4f))
             ) {
-                Text("OTIO", fontSize = 11.sp)
+                Text(stringResource(R.string.export_otio), fontSize = 11.sp)
             }
             OutlinedButton(
                 onClick = onExportFcpxml,
@@ -661,7 +661,7 @@ fun ExportSheet(
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Blue),
                 border = BorderStroke(1.dp, Mocha.Blue.copy(alpha = 0.4f))
             ) {
-                Text("FCPXML", fontSize = 11.sp)
+                Text(stringResource(R.string.export_fcpxml), fontSize = 11.sp)
             }
         }
     }

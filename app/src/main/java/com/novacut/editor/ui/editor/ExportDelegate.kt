@@ -380,7 +380,7 @@ class ExportDelegate(
             val palette = mutableListOf<Int>()
             for (pixel in pixels) {
                 val rgb = pixel and 0x00FFFFFF
-                val quantized = ((rgb shr 16 and 0xF0) shl 8) or (rgb shr 8 and 0xF0) or (rgb and 0xF0 shr 4)
+                val quantized = ((rgb shr 16 and 0xF0) shl 8) or ((rgb shr 8) and 0xF0) or ((rgb and 0xF0) shr 4)
                 if (quantized !in colorMap && palette.size < 256) {
                     colorMap[quantized] = palette.size
                     palette.add(rgb)
@@ -418,7 +418,7 @@ class ExportDelegate(
             val indexedPixels = ByteArray(pixels.size)
             for (i in pixels.indices) {
                 val rgb = pixels[i] and 0x00FFFFFF
-                val quantized = ((rgb shr 16 and 0xF0) shl 8) or (rgb shr 8 and 0xF0) or (rgb and 0xF0 shr 4)
+                val quantized = ((rgb shr 16 and 0xF0) shl 8) or ((rgb shr 8) and 0xF0) or ((rgb and 0xF0) shr 4)
                 indexedPixels[i] = (colorMap[quantized] ?: 0).toByte()
             }
 

@@ -283,3 +283,20 @@
 
 ### Undo Stack Bounds
 - [x] **Redo-path bounded** — `undoStack` on redo now bounded to 50 entries via `.takeLast(50)`, matching the save path
+
+## v3.14.0 — Audit Fixes, Deep Localization & GIF Correctness
+
+### Bug Fixes
+- [x] **GIF color quantization** — Fixed operator precedence in `((rgb and 0xF0) shr 4)` — shift had higher precedence than AND, causing wrong palette mapping and incorrect colors in exported GIFs
+
+### FirstRunTutorial Localization
+- [x] **@StringRes migration** — `TutorialStep` replaced with `TutorialStepDef` using `titleRes`/`descriptionRes` resource IDs
+- [x] **14 string resources** — 4 titles, 4 descriptions, Skip, Next, Get Started, step counter format
+
+### ExportSheet Localization
+- [x] **8 string extractions** — "Elapsed:", "Transparent Background (WebM VP9)", "Audio Codec", "OTIO", "FCPXML" + reused existing subtitle/stems/chapter strings
+
+### Remaining Panel String Extractions
+- [x] **SpeedCurveEditor** — `"Speed: %.2fx"` format string extracted
+- [x] **ProjectTemplateSheet** — `"Import Template"` extracted
+- [x] **SnapshotHistoryPanel** — Default snapshot name prefix extracted

@@ -102,7 +102,7 @@ proxyWorkflowEngine, sherpaAsrEngine
 - ProGuard rules verified comprehensive (Hilt, Room, Media3, ONNX, MediaPipe, Coil)
 
 ## Build Info
-- `versionCode = 73`, `versionName = "3.13.0"`
+- `versionCode = 74`, `versionName = "3.14.0"`
 - `compileSdk = 35`, `targetSdk = 35`, `minSdk = 26`
 - R8 minify + shrink enabled for release
 - Signing via `keystore.properties` or env vars (`NOVACUT_KS_PASS`, `NOVACUT_KEY_ALIAS`, `NOVACUT_KEY_PASS`)
@@ -135,6 +135,19 @@ Research across CapCut, VN, KineMaster, PowerDirector, DaVinci Resolve iPad, and
 
 ### New PanelIds
 - `DRAWING`, `MULTI_CAM`
+
+## v3.14.0 — GIF Quantization Fix & Deep Localization
+
+### GIF Color Quantization Fix
+- Operator precedence bug: `rgb and 0xF0 shr 4` → `(rgb and 0xF0) shr 4` (2 occurrences in ExportDelegate)
+- Kotlin `shr` binds tighter than `and`, causing incorrect 4-bit color quantization
+
+### Deep Localization (5 screens, ~30 strings)
+- FirstRunTutorial: migrated from `TutorialStep(String, String)` to `TutorialStepDef(@StringRes Int, @StringRes Int)` — 10 tutorial strings + Skip/Next/Get Started
+- ExportSheet: 8 hardcoded labels extracted (elapsed, transparent bg, audio codec, OTIO, FCPXML)
+- SpeedCurveEditor: speed label format string
+- ProjectTemplateSheet: "Import Template" label
+- SnapshotHistoryPanel: default snapshot name prefix
 
 ## v3.13.0 — GIF Hardening, Settings Localization & Editor Polish
 
