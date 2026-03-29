@@ -146,7 +146,8 @@ private val projectToolsSubMenu = listOf(
     SubMenuItem("proxy_toggle", Icons.Default.Speed, "Proxy\nEdit"),
     SubMenuItem("beat_sync", Icons.Default.MusicNote, "Beat\nSync"),
     SubMenuItem("auto_edit", Icons.Default.AutoFixHigh, "Auto\nEdit"),
-    SubMenuItem("multi_cam", Icons.Default.Videocam, "Multi\nCam")
+    SubMenuItem("multi_cam", Icons.Default.Videocam, "Multi\nCam"),
+    SubMenuItem("marker_list", Icons.Default.BookmarkBorder, "Marker\nList")
 )
 
 // --- Bottom tool area (tab bar + contextual sub-menu grids) ---

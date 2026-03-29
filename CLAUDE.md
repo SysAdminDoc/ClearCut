@@ -4,7 +4,7 @@
 Full-featured Android video editor built as a PowerDirector alternative. Kotlin + Jetpack Compose + Media3 Transformer.
 
 ## Version
-v3.8.0
+v3.9.0
 
 ## Tech Stack
 - **Language**: Kotlin 2.1.0

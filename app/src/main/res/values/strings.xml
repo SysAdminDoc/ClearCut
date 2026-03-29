@@ -34,6 +34,9 @@
     <string name="export_output_details">Output Details</string>
     <string name="export_video_button">Export Video</string>
     <string name="export_video_cd">Export video</string>
+    <string name="export_subtitles">Export Subtitles</string>
+    <string name="export_stems">Export Audio Stems</string>
+    <string name="export_chapter_markers">Include Chapter Markers</string>
     <string name="export_timeline_exchange">Timeline Exchange</string>
     <string name="export_save_to_gallery_cd">Save to gallery</string>
     <string name="export_studio_quality">Studio quality</string>
@@ -43,6 +46,13 @@
     <string name="export_bitrate_format">%1$dMbps \u2014 %2$s</string>
     <string name="export_resolution_format">%1$dx%2$d @ %3$dfps</string>
     <string name="export_codec_quality_format">%1$s / %2$s</string>
+    <string name="export_gif">Export as GIF</string>
+    <string name="export_gif_frame_rate">GIF Frame Rate</string>
+    <string name="export_gif_max_width">GIF Max Width</string>
+    <string name="export_capture_frame">Capture Frame</string>
+    <string name="export_capture_format">Format</string>
+    <string name="export_gif_button">Export GIF</string>
+    <string name="export_capture_button">Capture Frame</string>
 
     <!-- AiToolsPanel -->
     <string name="ai_tools_title">AI Tools</string>
@@ -356,6 +366,15 @@
     <string name="undo_history_title">History</string>
     <string name="undo_history_close">Close history</string>
     <string name="undo_history_empty">No history yet</string>
+
+    <!-- MarkerListPanel -->
+    <string name="marker_list_title">Markers</string>
+    <string name="marker_list_search">Search markers…</string>
+
+    <!-- Track header enhancements -->
+    <string name="track_collapse">Collapse track</string>
+    <string name="track_expand">Expand track</string>
+    <string name="track_waveform_toggle">Toggle waveform</string>
 
     <!-- EditorScreen (delete confirmation) -->
     <string name="editor_delete_clip_message">Delete this clip? This action can be undone.</string>

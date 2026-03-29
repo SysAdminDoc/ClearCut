@@ -337,6 +337,9 @@ data class AutoSaveState(
                 put("opacity", track.opacity.toDouble())
                 put("blendMode", track.blendMode.name)
                 put("isLinkedAV", track.isLinkedAV)
+                put("showWaveform", track.showWaveform)
+                put("trackHeight", track.trackHeight)
+                put("isCollapsed", track.isCollapsed)
                 put("clips", JSONArray().apply {
                     track.clips.forEach { put(serializeClip(it)) }
                 })
@@ -618,6 +621,9 @@ data class AutoSaveState(
                 opacity = json.optDouble("opacity", 1.0).toFloat(),
                 blendMode = safeValueOf(json.optString("blendMode", "NORMAL"), BlendMode.NORMAL),
                 isLinkedAV = json.optBoolean("isLinkedAV", true),
+                showWaveform = json.optBoolean("showWaveform", true),
+                trackHeight = json.optInt("trackHeight", 64),
+                isCollapsed = json.optBoolean("isCollapsed", false),
                 clips = (0 until clipsArr.length()).mapNotNull { i ->
                     try { deserializeClip(clipsArr.getJSONObject(i)) } catch (e: Exception) {
                         Log.w(TAG, "Failed to deserialize clip $i", e); null

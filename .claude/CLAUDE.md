@@ -102,7 +102,7 @@ proxyWorkflowEngine, sherpaAsrEngine
 - ProGuard rules verified comprehensive (Hilt, Room, Media3, ONNX, MediaPipe, Coil)
 
 ## Build Info
-- `versionCode = 68`, `versionName = "3.8.0"`
+- `versionCode = 69`, `versionName = "3.9.0"`
 - `compileSdk = 35`, `targetSdk = 35`, `minSdk = 26`
 - R8 minify + shrink enabled for release
 - Signing via `keystore.properties` or env vars (`NOVACUT_KS_PASS`, `NOVACUT_KEY_ALIAS`, `NOVACUT_KEY_PASS`)
@@ -135,6 +135,35 @@ Research across CapCut, VN, KineMaster, PowerDirector, DaVinci Resolve iPad, and
 
 ### New PanelIds
 - `DRAWING`, `MULTI_CAM`
+
+## v3.9.0 — Export Expansion, Settings & UX Polish
+
+### Export Enhancements
+- GIF export mode with configurable frame rate (10/15/20fps) and max width (320/480/640px)
+- Frame capture (PNG/JPEG) from current playhead position
+- Subtitle export (SRT/VTT/ASS) from caption data
+- Audio stems export toggle
+- Chapter markers export toggle
+- `FrameCaptureFormat` enum added to ExportConfig
+
+### Settings Expansion (7 new AppSettings fields)
+- Timeline: Show Waveforms, Snap to Beat, Snap to Markers, Default Track Height (48/64/80/96)
+- Editor: Confirm Before Delete, Thumbnail Cache Size (64/128/256 MB), Default Export Quality
+- All persisted via DataStore with live sync to EditorViewModel
+
+### Marker List Panel
+- `MarkerListPanel.kt` — searchable, filterable marker list with color filter chips
+- Inline label editing, jump-to-time on click, delete per marker
+- Wired via `PanelId.MARKER_LIST` + ToolPanel "Marker List" action
+
+### Track Header Enhancements
+- Track model fields: `showWaveform`, `trackHeight`, `isCollapsed`
+- ViewModel methods: `toggleTrackWaveform`, `setTrackHeight`, `toggleTrackCollapsed`, `collapseAllTracks`, `expandAllTracks`
+- Serialized/deserialized in ProjectAutoSave
+
+### Snap-to-Beat/Marker Scrubbing
+- Timeline snap targets extended with beat markers (when snapToBeat enabled) and timeline markers (when snapToMarker enabled)
+- Settings-driven via SettingsRepository → EditorViewModel StateFlow sync
 
 ### Model Changes
 - `ExportConfig.transparentBackground: Boolean` — VP9 alpha export toggle

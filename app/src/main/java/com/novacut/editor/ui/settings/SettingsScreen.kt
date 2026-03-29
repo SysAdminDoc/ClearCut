@@ -112,6 +112,45 @@ fun SettingsScreen(
                 checked = settings.proxyEnabled,
                 onChanged = { viewModel.setProxyEnabled(it) }
             )
+            SettingsSwitch(
+                label = "Show Waveforms",
+                description = "Display audio waveforms on timeline clips",
+                checked = settings.showWaveforms,
+                onChanged = { viewModel.setShowWaveforms(it) }
+            )
+            SettingsSwitch(
+                label = "Snap to Beat",
+                description = "Snap clip edges to detected beat markers",
+                checked = settings.snapToBeat,
+                onChanged = { viewModel.setSnapToBeat(it) }
+            )
+            SettingsSwitch(
+                label = "Snap to Markers",
+                description = "Snap clip edges to timeline markers",
+                checked = settings.snapToMarker,
+                onChanged = { viewModel.setSnapToMarker(it) }
+            )
+            // Default Track Height chips
+            Text("Default Track Height", color = Mocha.Text, fontSize = 14.sp,
+                modifier = Modifier.padding(top = 8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf(48, 64, 80, 96).forEach { height ->
+                    FilterChip(
+                        selected = settings.defaultTrackHeight == height,
+                        onClick = { viewModel.setDefaultTrackHeight(height) },
+                        label = { Text("${height}dp", fontSize = 12.sp) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Mocha.Mauve,
+                            selectedLabelColor = Mocha.Crust,
+                            containerColor = Mocha.Surface0,
+                            labelColor = Mocha.Text
+                        )
+                    )
+                }
+            }
         }
 
         // AI Models
@@ -161,6 +200,54 @@ fun SettingsScreen(
                 checked = settings.hapticEnabled,
                 onChanged = { viewModel.setHapticEnabled(it) }
             )
+            SettingsSwitch(
+                label = "Confirm Before Delete",
+                description = "Show confirmation dialog before deleting clips",
+                checked = settings.confirmBeforeDelete,
+                onChanged = { viewModel.setConfirmBeforeDelete(it) }
+            )
+            // Thumbnail Cache chips
+            Text("Thumbnail Cache", color = Mocha.Text, fontSize = 14.sp,
+                modifier = Modifier.padding(top = 8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf(64 to "64 MB", 128 to "128 MB", 256 to "256 MB").forEach { (size, label) ->
+                    FilterChip(
+                        selected = settings.thumbnailCacheSizeMb == size,
+                        onClick = { viewModel.setThumbnailCacheSize(size) },
+                        label = { Text(label, fontSize = 12.sp) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Mocha.Mauve,
+                            selectedLabelColor = Mocha.Crust,
+                            containerColor = Mocha.Surface0,
+                            labelColor = Mocha.Text
+                        )
+                    )
+                }
+            }
+            // Default Export Quality chips
+            Text("Default Export Quality", color = Mocha.Text, fontSize = 14.sp,
+                modifier = Modifier.padding(top = 8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf("LOW" to "Small File", "MEDIUM" to "Balanced", "HIGH" to "Best Quality").forEach { (key, label) ->
+                    FilterChip(
+                        selected = settings.defaultExportQuality == key,
+                        onClick = { viewModel.setDefaultExportQuality(key) },
+                        label = { Text(label, fontSize = 12.sp) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Mocha.Mauve,
+                            selectedLabelColor = Mocha.Crust,
+                            containerColor = Mocha.Surface0,
+                            labelColor = Mocha.Text
+                        )
+                    )
+                }
+            }
         }
 
         // Tutorial

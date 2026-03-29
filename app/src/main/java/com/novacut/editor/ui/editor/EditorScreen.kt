@@ -311,6 +311,8 @@ fun EditorScreen(
                     onToggleTrackLock = viewModel::toggleTrackLock,
                     beatMarkers = state.beatMarkers,
                     selectedClipIds = state.selectedClipIds,
+                    snapToBeat = viewModel.snapToBeat,
+                    snapToMarker = viewModel.snapToMarker,
                     markers = state.timelineMarkers,
                     onAddMarker = { viewModel.addTimelineMarker() },
                     onMarkerTapped = { marker -> viewModel.seekTo(marker.timeMs) },
@@ -409,6 +411,7 @@ fun EditorScreen(
                         "undo_history" -> viewModel.showUndoHistory()
                         "draw" -> viewModel.showDrawingMode()
                         "multi_cam" -> viewModel.showMultiCam()
+                        "marker_list" -> viewModel.showMarkerList()
                         // AI tools
                         "auto_captions" -> viewModel.runAiTool("auto_captions")
                         "scene_detect" -> viewModel.runAiTool("scene_detect")
@@ -565,6 +568,8 @@ fun EditorScreen(
                 onCancel = { viewModel.engine.cancelExport() },
                 onExportOtio = viewModel::exportToOtio,
                 onExportFcpxml = viewModel::exportToFcpxml,
+                onCaptureFrame = viewModel::captureFrame,
+                onExportSubtitles = { format -> viewModel.exportSubtitles(format) },
                 onClose = viewModel::hideExportSheet
             )
         }
@@ -1066,6 +1071,20 @@ fun EditorScreen(
                 entries = state.undoHistoryEntries,
                 onJumpTo = viewModel::jumpToUndoState,
                 onClose = viewModel::hideUndoHistory
+            )
+        }
+
+        // Marker List
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.MARKER_LIST),
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            MarkerListPanel(
+                markers = state.timelineMarkers,
+                onJumpTo = { viewModel.seekTo(it) },
+                onDelete = viewModel::deleteTimelineMarker,
+                onUpdateLabel = viewModel::updateMarkerLabel,
+                onClose = viewModel::hideMarkerList
             )
         }
 

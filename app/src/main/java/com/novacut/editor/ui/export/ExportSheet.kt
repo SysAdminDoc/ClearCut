@@ -34,6 +34,8 @@ fun ExportSheet(
     onCancel: () -> Unit = {},
     onExportOtio: () -> Unit = {},
     onExportFcpxml: () -> Unit = {},
+    onExportSubtitles: (SubtitleFormat) -> Unit = {},
+    onCaptureFrame: () -> Unit = {},
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -262,13 +264,62 @@ fun ExportSheet(
             Text(stringResource(R.string.export_audio_only), color = Mocha.Text, fontSize = 13.sp)
             Switch(
                 checked = config.exportAudioOnly,
-                onCheckedChange = { onConfigChanged(config.copy(exportAudioOnly = it)) },
+                onCheckedChange = { onConfigChanged(config.copy(exportAudioOnly = it, exportAsGif = false, captureFrameOnly = false)) },
                 colors = SwitchDefaults.colors(
                     checkedTrackColor = Mocha.Mauve,
                     checkedThumbColor = Mocha.Crust,
                     uncheckedTrackColor = Mocha.Surface1,
                     uncheckedThumbColor = Mocha.Subtext0
                 )
+            )
+        }
+
+        // Subtitle Export
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Export Subtitles", color = Mocha.Text, fontSize = 13.sp)
+            Switch(
+                checked = config.subtitleFormat != null,
+                onCheckedChange = {
+                    onConfigChanged(config.copy(subtitleFormat = if (it) SubtitleFormat.SRT else null))
+                },
+                colors = SwitchDefaults.colors(checkedTrackColor = Mocha.Mauve, checkedThumbColor = Mocha.Crust, uncheckedTrackColor = Mocha.Surface1, uncheckedThumbColor = Mocha.Subtext0)
+            )
+        }
+
+        // Show format picker when enabled
+        if (config.subtitleFormat != null) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SubtitleFormat.entries.forEach { fmt ->
+                    FilterChip(
+                        onClick = { onConfigChanged(config.copy(subtitleFormat = fmt)) },
+                        label = { Text(fmt.displayName, fontSize = 12.sp) },
+                        selected = config.subtitleFormat == fmt,
+                        colors = FilterChipDefaults.filterChipColors(
+                            containerColor = Mocha.Surface0,
+                            selectedContainerColor = Mocha.Mauve.copy(alpha = 0.3f),
+                            selectedLabelColor = Mocha.Mauve
+                        )
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        // Stems Export (per-track audio)
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Export Audio Stems", color = Mocha.Text, fontSize = 13.sp)
+            Switch(
+                checked = config.exportStemsOnly,
+                onCheckedChange = { onConfigChanged(config.copy(exportStemsOnly = it, exportAudioOnly = false)) },
+                colors = SwitchDefaults.colors(checkedTrackColor = Mocha.Mauve, checkedThumbColor = Mocha.Crust, uncheckedTrackColor = Mocha.Surface1, uncheckedThumbColor = Mocha.Subtext0)
             )
         }
 
@@ -461,11 +512,115 @@ fun ExportSheet(
             }
         }
 
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // GIF Export toggle
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(stringResource(R.string.export_gif), color = Mocha.Text, fontSize = 13.sp)
+            Switch(
+                checked = config.exportAsGif,
+                onCheckedChange = { onConfigChanged(config.copy(exportAsGif = it, captureFrameOnly = false, exportAudioOnly = false)) },
+                colors = SwitchDefaults.colors(
+                    checkedTrackColor = Mocha.Mauve,
+                    checkedThumbColor = Mocha.Crust,
+                    uncheckedTrackColor = Mocha.Surface1,
+                    uncheckedThumbColor = Mocha.Subtext0
+                )
+            )
+        }
+        if (config.exportAsGif) {
+            Text(stringResource(R.string.export_gif_frame_rate), color = Mocha.Subtext1, fontSize = 12.sp)
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(10, 15, 20).forEach { fps ->
+                    FilterChip(
+                        onClick = { onConfigChanged(config.copy(gifFrameRate = fps)) },
+                        label = { Text("${fps}fps", fontSize = 12.sp) },
+                        selected = config.gifFrameRate == fps,
+                        colors = FilterChipDefaults.filterChipColors(
+                            containerColor = Mocha.Surface0,
+                            selectedContainerColor = Mocha.Mauve.copy(alpha = 0.3f),
+                            selectedLabelColor = Mocha.Mauve
+                        )
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(stringResource(R.string.export_gif_max_width), color = Mocha.Subtext1, fontSize = 12.sp)
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(320, 480, 640).forEach { w ->
+                    FilterChip(
+                        onClick = { onConfigChanged(config.copy(gifMaxWidth = w)) },
+                        label = { Text("${w}px", fontSize = 12.sp) },
+                        selected = config.gifMaxWidth == w,
+                        colors = FilterChipDefaults.filterChipColors(
+                            containerColor = Mocha.Surface0,
+                            selectedContainerColor = Mocha.Mauve.copy(alpha = 0.3f),
+                            selectedLabelColor = Mocha.Mauve
+                        )
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Frame Capture (single frame)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(stringResource(R.string.export_capture_frame), color = Mocha.Text, fontSize = 13.sp)
+            Switch(
+                checked = config.captureFrameOnly,
+                onCheckedChange = { onConfigChanged(config.copy(captureFrameOnly = it, exportAsGif = false, exportAudioOnly = false)) },
+                colors = SwitchDefaults.colors(
+                    checkedTrackColor = Mocha.Mauve,
+                    checkedThumbColor = Mocha.Crust,
+                    uncheckedTrackColor = Mocha.Surface1,
+                    uncheckedThumbColor = Mocha.Subtext0
+                )
+            )
+        }
+        if (config.captureFrameOnly) {
+            Text(stringResource(R.string.export_capture_format), color = Mocha.Subtext1, fontSize = 12.sp)
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FrameCaptureFormat.entries.forEach { fmt ->
+                    FilterChip(
+                        onClick = { onConfigChanged(config.copy(captureFormat = fmt)) },
+                        label = { Text(fmt.displayName, fontSize = 12.sp) },
+                        selected = config.captureFormat == fmt,
+                        colors = FilterChipDefaults.filterChipColors(
+                            containerColor = Mocha.Surface0,
+                            selectedContainerColor = Mocha.Mauve.copy(alpha = 0.3f),
+                            selectedLabelColor = Mocha.Mauve
+                        )
+                    )
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
 
         // Export button
         Button(
-            onClick = onStartExport,
+            onClick = {
+                if (config.captureFrameOnly) onCaptureFrame() else {
+                    onStartExport()
+                    config.subtitleFormat?.let { onExportSubtitles(it) }
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
@@ -477,7 +632,14 @@ fun ExportSheet(
         ) {
             Icon(Icons.Default.FileUpload, contentDescription = stringResource(R.string.export_video_cd), modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.export_video_button), fontSize = 15.sp)
+            Text(
+                when {
+                    config.exportAsGif -> stringResource(R.string.export_gif_button)
+                    config.captureFrameOnly -> stringResource(R.string.export_capture_button)
+                    else -> stringResource(R.string.export_video_button)
+                },
+                fontSize = 15.sp
+            )
         }
 
         // Timeline Exchange section

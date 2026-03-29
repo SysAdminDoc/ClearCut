@@ -31,4 +31,11 @@ class SettingsViewModel @Inject constructor(
     fun resetTutorial() = viewModelScope.launch { repo.setTutorialShown(false) }
     fun setEditorMode(mode: String) = viewModelScope.launch { repo.updateEditorMode(mode) }
     fun setHapticEnabled(enabled: Boolean) = viewModelScope.launch { repo.updateHapticEnabled(enabled) }
+    fun setShowWaveforms(v: Boolean) = viewModelScope.launch { repo.updateShowWaveforms(v) }
+    fun setDefaultTrackHeight(v: Int) = viewModelScope.launch { repo.updateDefaultTrackHeight(v) }
+    fun setSnapToBeat(v: Boolean) = viewModelScope.launch { repo.updateSnapToBeat(v) }
+    fun setSnapToMarker(v: Boolean) = viewModelScope.launch { repo.updateSnapToMarker(v) }
+    fun setThumbnailCacheSize(v: Int) = viewModelScope.launch { repo.updateThumbnailCacheSize(v) }
+    fun setConfirmBeforeDelete(v: Boolean) = viewModelScope.launch { repo.updateConfirmBeforeDelete(v) }
+    fun setDefaultExportQuality(v: String) = viewModelScope.launch { repo.updateDefaultExportQuality(v) }
 }

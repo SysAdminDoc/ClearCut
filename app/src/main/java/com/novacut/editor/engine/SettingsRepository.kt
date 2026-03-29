@@ -24,7 +24,14 @@ data class AppSettings(
     val autoSaveIntervalSec: Int = 60,
     val proxyResolution: ProxyResolution = ProxyResolution.QUARTER,
     val editorMode: String = "Pro",
-    val hapticEnabled: Boolean = true
+    val hapticEnabled: Boolean = true,
+    val showWaveforms: Boolean = true,
+    val defaultTrackHeight: Int = 64,
+    val snapToBeat: Boolean = false,
+    val snapToMarker: Boolean = true,
+    val thumbnailCacheSizeMb: Int = 128,
+    val confirmBeforeDelete: Boolean = true,
+    val defaultExportQuality: String = "HIGH"
 )
 
 @Singleton
@@ -45,6 +52,13 @@ class SettingsRepository @Inject constructor(
         val RECENT_EFFECTS = stringPreferencesKey("recent_effects")
         val EDITOR_MODE = stringPreferencesKey("editor_mode")
         val HAPTIC_ENABLED = booleanPreferencesKey("haptic_enabled")
+        val SHOW_WAVEFORMS = booleanPreferencesKey("show_waveforms")
+        val DEFAULT_TRACK_HEIGHT = intPreferencesKey("default_track_height")
+        val SNAP_TO_BEAT = booleanPreferencesKey("snap_to_beat")
+        val SNAP_TO_MARKER = booleanPreferencesKey("snap_to_marker")
+        val THUMBNAIL_CACHE_SIZE_MB = intPreferencesKey("thumbnail_cache_size_mb")
+        val CONFIRM_BEFORE_DELETE = booleanPreferencesKey("confirm_before_delete")
+        val DEFAULT_EXPORT_QUALITY = stringPreferencesKey("default_export_quality")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
@@ -64,7 +78,14 @@ class SettingsRepository @Inject constructor(
                 try { ProxyResolution.valueOf(it) } catch (_: Exception) { null }
             } ?: ProxyResolution.QUARTER,
             editorMode = prefs[Keys.EDITOR_MODE] ?: "Pro",
-            hapticEnabled = prefs[Keys.HAPTIC_ENABLED] ?: true
+            hapticEnabled = prefs[Keys.HAPTIC_ENABLED] ?: true,
+            showWaveforms = prefs[Keys.SHOW_WAVEFORMS] ?: true,
+            defaultTrackHeight = prefs[Keys.DEFAULT_TRACK_HEIGHT] ?: 64,
+            snapToBeat = prefs[Keys.SNAP_TO_BEAT] ?: false,
+            snapToMarker = prefs[Keys.SNAP_TO_MARKER] ?: true,
+            thumbnailCacheSizeMb = prefs[Keys.THUMBNAIL_CACHE_SIZE_MB] ?: 128,
+            confirmBeforeDelete = prefs[Keys.CONFIRM_BEFORE_DELETE] ?: true,
+            defaultExportQuality = prefs[Keys.DEFAULT_EXPORT_QUALITY] ?: "HIGH"
         )
     }
 
@@ -148,5 +169,33 @@ class SettingsRepository @Inject constructor(
                 .split(",")
                 .filter { it.isNotBlank() }
         }.first()
+    }
+
+    suspend fun updateShowWaveforms(value: Boolean) {
+        context.dataStore.edit { it[Keys.SHOW_WAVEFORMS] = value }
+    }
+
+    suspend fun updateDefaultTrackHeight(value: Int) {
+        context.dataStore.edit { it[Keys.DEFAULT_TRACK_HEIGHT] = value.coerceIn(48, 120) }
+    }
+
+    suspend fun updateSnapToBeat(value: Boolean) {
+        context.dataStore.edit { it[Keys.SNAP_TO_BEAT] = value }
+    }
+
+    suspend fun updateSnapToMarker(value: Boolean) {
+        context.dataStore.edit { it[Keys.SNAP_TO_MARKER] = value }
+    }
+
+    suspend fun updateThumbnailCacheSize(value: Int) {
+        context.dataStore.edit { it[Keys.THUMBNAIL_CACHE_SIZE_MB] = value.coerceIn(32, 512) }
+    }
+
+    suspend fun updateConfirmBeforeDelete(value: Boolean) {
+        context.dataStore.edit { it[Keys.CONFIRM_BEFORE_DELETE] = value }
+    }
+
+    suspend fun updateDefaultExportQuality(value: String) {
+        context.dataStore.edit { it[Keys.DEFAULT_EXPORT_QUALITY] = value }
     }
 }

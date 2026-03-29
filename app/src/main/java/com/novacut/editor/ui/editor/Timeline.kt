@@ -70,6 +70,8 @@ fun Timeline(
     onClipLongPress: (String) -> Unit = {},
     onSlideClip: (clipId: String, deltaMs: Long) -> Unit = { _, _ -> },
     onSlipClip: (clipId: String, deltaMs: Long) -> Unit = { _, _ -> },
+    snapToBeat: Boolean = false,
+    snapToMarker: Boolean = true,
     markers: List<TimelineMarker> = emptyList(),
     onAddMarker: () -> Unit = {},
     onMarkerTapped: (TimelineMarker) -> Unit = {},
@@ -502,6 +504,8 @@ fun Timeline(
                                                                 val snapThreshMs = (12.dp.toPx() / ppm).toLong()
                                                                 val snapTargetsLocal = currentTracks.flatMap { t -> t.clips.filter { it.id != clip.id }.flatMap { listOf(it.timelineStartMs, it.timelineEndMs) } }
                                                                     .plus(currentPlayheadMs).plus(0L)
+                                                                    .let { if (snapToBeat) it + beatMarkers else it }
+                                                                    .let { if (snapToMarker) it + markers.map { m -> m.timeMs } else it }
                                                                 if (findSnapTarget(currentClip.timelineStartMs + deltaMs, snapTargetsLocal, snapThreshMs) != null) {
                                                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                                                 }
@@ -754,6 +758,8 @@ fun Timeline(
                                     .distinct()
                                     .plus(playheadMs)
                                     .plus(0L)
+                                    .let { if (snapToBeat) it + beatMarkers else it }
+                                    .let { if (snapToMarker) it + markers.map { m -> m.timeMs } else it }
                                 val snapThresholdPx = with(density) { 8.dp.toPx() }
                                 val snapThresholdMs = (snapThresholdPx / pixelsPerMs).toLong()
 

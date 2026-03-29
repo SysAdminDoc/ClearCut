@@ -167,3 +167,32 @@
 ### Localization
 - [x] **String extraction** — Extracted 90+ hardcoded UI strings to `strings.xml` across 15 panels: UndoHistoryPanel, AudioPanel, EditorScreen (delete dialog), TtsPanel, SnapshotHistoryPanel, CaptionEditorPanel, CloudBackupPanel, ChapterMarkerPanel, EffectLibraryPanel, FillerRemovalPanel, AutoEditPanel, BeatSyncPanel, BlendModeSelector, RenderPreviewSheet, MediaManagerPanel, PipPresetsPanel, AutoSaveIndicator
 - [x] **Accessibility** — All extracted strings include content descriptions for screen readers
+
+## v3.9.0 — Export Expansion, Settings & UX Polish
+
+### Export Enhancements
+- [x] **GIF export** — Toggle in ExportSheet with configurable frame rate (10/15/20fps) and max width (320/480/640px)
+- [x] **Frame capture** — PNG/JPEG single-frame export from playhead position via `captureFrame()` in ViewModel
+- [x] **Subtitle export** — SRT/VTT/ASS format picker in ExportSheet, exports caption data via `exportSubtitles()`
+- [x] **Stems export toggle** — `exportStemsOnly` wired in ExportSheet UI
+- [x] **Chapter markers toggle** — `includeChapterMarkers` wired in ExportSheet UI
+- [x] **FrameCaptureFormat enum** — PNG/JPEG with `.extension` property added to ExportConfig
+
+### Settings Expansion
+- [x] **7 new AppSettings fields** — `showWaveforms`, `defaultTrackHeight`, `snapToBeat`, `snapToMarker`, `thumbnailCacheSizeMb`, `confirmBeforeDelete`, `defaultExportQuality`
+- [x] **Timeline settings section** — Show Waveforms, Snap to Beat, Snap to Markers, Default Track Height chips (48/64/80/96)
+- [x] **Editor settings section** — Confirm Before Delete, Thumbnail Cache chips (64/128/256 MB), Default Export Quality chips
+- [x] **DataStore persistence** — All 7 fields persisted with live sync to EditorViewModel snap state
+
+### Marker List Panel
+- [x] **MarkerListPanel.kt** — Searchable marker list with color filter chips, inline label editing, jump-to-time, delete
+- [x] **Panel wiring** — `PanelId.MARKER_LIST` + ToolPanel "Marker List" action + EditorScreen BottomSheetSlot
+
+### Track Header Enhancements
+- [x] **Track model fields** — `showWaveform: Boolean`, `trackHeight: Int`, `isCollapsed: Boolean` added to Track data class
+- [x] **ViewModel methods** — `toggleTrackWaveform`, `setTrackHeight`, `toggleTrackCollapsed`, `collapseAllTracks`, `expandAllTracks`
+- [x] **ProjectAutoSave** — New Track fields serialized/deserialized with safe defaults
+
+### Snap-to-Beat/Marker Scrubbing
+- [x] **Timeline snap extension** — Beat markers and timeline marker positions added as snap targets (settings-driven)
+- [x] **Settings sync** — `snapToBeat`/`snapToMarker` flow from SettingsRepository → EditorViewModel → Timeline params

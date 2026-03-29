@@ -19,7 +19,12 @@ data class ExportConfig(
     val includeChapterMarkers: Boolean = false,
     val chapters: List<ChapterMarker> = emptyList(),
     val subtitleFormat: SubtitleFormat? = null,
-    val transparentBackground: Boolean = false
+    val transparentBackground: Boolean = false,
+    val exportAsGif: Boolean = false,
+    val gifFrameRate: Int = 15,
+    val gifMaxWidth: Int = 480,
+    val captureFrameOnly: Boolean = false,
+    val captureFormat: FrameCaptureFormat = FrameCaptureFormat.PNG
 ) {
     init {
         require(videoBitrate > 0) { "Bitrate must be positive" }
@@ -179,6 +184,11 @@ enum class SubtitleFormat(val extension: String, val displayName: String) {
     SRT("srt", "SubRip (.srt)"),
     VTT("vtt", "WebVTT (.vtt)"),
     ASS("ass", "Advanced SubStation (.ass)")
+}
+
+enum class FrameCaptureFormat(val extension: String, val displayName: String) {
+    PNG("png", "PNG"),
+    JPEG("jpg", "JPEG (smaller)")
 }
 
 @Immutable

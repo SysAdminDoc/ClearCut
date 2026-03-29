@@ -72,7 +72,10 @@ data class Track(
     val opacity: Float = 1.0f,
     val blendMode: BlendMode = BlendMode.NORMAL,
     val audioEffects: List<AudioEffect> = emptyList(),
-    val isLinkedAV: Boolean = true
+    val isLinkedAV: Boolean = true,
+    val showWaveform: Boolean = true,
+    val trackHeight: Int = 64,
+    val isCollapsed: Boolean = false
 ) {
     init {
         require(index >= 0) { "Track index must be non-negative" }

@@ -3,6 +3,7 @@ package com.novacut.editor.ui.editor
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -61,7 +62,7 @@ enum class PanelId {
     CLOUD_BACKUP, TUTORIAL, UNDO_HISTORY, CAPTION_STYLE_GALLERY,
     BEAT_SYNC, SMART_REFRAME, SPEED_PRESETS, FILLER_REMOVAL,
     AUTO_EDIT, TTS, EFFECT_LIBRARY, NOISE_REDUCTION, STICKER_PICKER,
-    DRAWING, MULTI_CAM
+    DRAWING, MULTI_CAM, MARKER_LIST
 }
 
 data class PanelVisibility(
@@ -321,6 +322,12 @@ class EditorViewModel @Inject constructor(
     // LUT picker state (exposed via delegate)
     val showLutPicker get() = colorGradingDelegate.showLutPicker
 
+    // Snap-to-beat / snap-to-marker (driven by user settings)
+    private val _snapToBeat = MutableStateFlow(false)
+    private val _snapToMarker = MutableStateFlow(true)
+    val snapToBeat: Boolean get() = _snapToBeat.value
+    val snapToMarker: Boolean get() = _snapToMarker.value
+
     // Stored outside EditorState to avoid recomposition on every resize
     @Volatile
     private var timelineWidthPx: Float = 0f
@@ -515,6 +522,10 @@ class EditorViewModel @Inject constructor(
                         autoSave.stop()
                     }
                 }
+
+                // Sync snap settings
+                _snapToBeat.value = settings.snapToBeat
+                _snapToMarker.value = settings.snapToMarker
             }
         }
     }
@@ -1192,6 +1203,52 @@ class EditorViewModel @Inject constructor(
         ) }
         rebuildTimeline()
         showToast("Restored: ${target.description}")
+    }
+
+    // --- Marker List ---
+    fun showMarkerList() = showPanel(PanelId.MARKER_LIST)
+    fun hideMarkerList() = hidePanel(PanelId.MARKER_LIST)
+    fun updateMarkerLabel(markerId: String, label: String) {
+        _state.update { state ->
+            state.copy(timelineMarkers = state.timelineMarkers.map {
+                if (it.id == markerId) it.copy(label = label) else it
+            })
+        }
+        saveProject()
+    }
+
+    // --- Track Header Enhancements ---
+    fun toggleTrackWaveform(trackId: String) {
+        _state.update { state ->
+            state.copy(tracks = state.tracks.map {
+                if (it.id == trackId) it.copy(showWaveform = !it.showWaveform) else it
+            })
+        }
+    }
+    fun setTrackHeight(trackId: String, height: Int) {
+        _state.update { state ->
+            state.copy(tracks = state.tracks.map {
+                if (it.id == trackId) it.copy(trackHeight = height.coerceIn(32, 120)) else it
+            })
+        }
+        saveProject()
+    }
+    fun toggleTrackCollapsed(trackId: String) {
+        _state.update { state ->
+            state.copy(tracks = state.tracks.map {
+                if (it.id == trackId) it.copy(isCollapsed = !it.isCollapsed) else it
+            })
+        }
+    }
+    fun collapseAllTracks() {
+        _state.update { state ->
+            state.copy(tracks = state.tracks.map { it.copy(isCollapsed = true) })
+        }
+    }
+    fun expandAllTracks() {
+        _state.update { state ->
+            state.copy(tracks = state.tracks.map { it.copy(isCollapsed = false) })
+        }
     }
 
     // --- Caption Style Gallery ---
@@ -2489,6 +2546,30 @@ class EditorViewModel @Inject constructor(
     fun getSelectedTrack(): Track? {
         val trackId = _state.value.selectedTrackId ?: return null
         return _state.value.tracks.firstOrNull { it.id == trackId }
+    }
+
+    fun captureFrame() {
+        val clip = getSelectedClip() ?: _state.value.tracks.flatMap { it.clips }.firstOrNull() ?: return
+        viewModelScope.launch {
+            try {
+                val config = _state.value.exportConfig
+                val format = if (config.captureFormat == FrameCaptureFormat.JPEG)
+                    android.graphics.Bitmap.CompressFormat.JPEG else android.graphics.Bitmap.CompressFormat.PNG
+                val quality = if (config.captureFormat == FrameCaptureFormat.JPEG) 90 else 100
+                val bitmap = videoEngine.extractThumbnail(
+                    clip.sourceUri, _playheadMs.value * 1000
+                ) ?: return@launch
+                val ext = config.captureFormat.extension
+                val file = java.io.File(appContext.cacheDir, "frame_${System.currentTimeMillis()}.$ext")
+                file.outputStream().use { bitmap.compress(format, quality, it) }
+                bitmap.recycle()
+                _state.update { it.copy(lastExportedFilePath = file.absolutePath, exportState = ExportState.COMPLETE) }
+                showToast("Frame saved: ${file.name}")
+            } catch (e: Exception) {
+                Log.w("EditorVM", "Frame capture failed", e)
+                showToast("Frame capture failed")
+            }
+        }
     }
 
     // Project persistence
