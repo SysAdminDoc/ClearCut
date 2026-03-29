@@ -2,8 +2,10 @@ package com.novacut.editor.ui.editor
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Redo
@@ -32,6 +34,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.focusable
 import com.novacut.editor.engine.ExportState
 import com.novacut.editor.model.*
+import com.novacut.editor.model.ClipLabel
+import androidx.compose.ui.graphics.Color
 import com.novacut.editor.ui.export.BatchExportPanel
 import com.novacut.editor.ui.export.ExportSheet
 import com.novacut.editor.ui.mediapicker.MediaPickerSheet
@@ -75,6 +79,8 @@ fun EditorScreen(
         }
     }
 
+    var showClipLabelPicker by remember { mutableStateOf(false) }
+
     // Radial menu state
     var showRadialMenu by remember { mutableStateOf(false) }
     var radialMenuPosition by remember { mutableStateOf(Offset.Zero) }
@@ -107,6 +113,10 @@ fun EditorScreen(
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
+    }
+
+    LaunchedEffect(state.selectedClipId) {
+        if (state.selectedClipId == null) showClipLabelPicker = false
     }
 
     Box(modifier = Modifier
@@ -408,6 +418,9 @@ fun EditorScreen(
                     onSlipClip = viewModel::slipClip,
                     onToggleTrackCollapsed = viewModel::toggleTrackCollapsed,
                     onToggleTrackWaveform = viewModel::toggleTrackWaveform,
+                    onCollapseAllTracks = viewModel::collapseAllTracks,
+                    onExpandAllTracks = viewModel::expandAllTracks,
+                    onSetTrackHeight = viewModel::setTrackHeight,
                     onScrubStart = viewModel::beginScrub,
                     onScrubEnd = viewModel::endScrub,
                     engine = viewModel.engine,
@@ -499,6 +512,7 @@ fun EditorScreen(
                         "effect_library" -> viewModel.showEffectLibrary()
                         "undo_history" -> viewModel.showUndoHistory()
                         "draw" -> viewModel.showDrawingMode()
+                        "label" -> showClipLabelPicker = true
                         "multi_cam" -> viewModel.showMultiCam()
                         "marker_list" -> viewModel.showMarkerList()
                         // AI tools
@@ -1416,6 +1430,65 @@ fun EditorScreen(
                 onClose = viewModel::toggleScopes,
                 modifier = Modifier.padding(8.dp)
             )
+        }
+
+        // Clip Label Picker
+        AnimatedVisibility(
+            visible = showClipLabelPicker && state.selectedClipId != null,
+            enter = fadeIn() + slideInVertically { it },
+            exit = fadeOut() + slideOutVertically { it },
+            modifier = Modifier.align(Alignment.BottomCenter).zIndex(20f)
+        ) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Mocha.Surface0),
+                shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Clip Label", color = Mocha.Text, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                        IconButton(onClick = { showClipLabelPicker = false }, modifier = Modifier.size(24.dp)) {
+                            Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(16.dp))
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        ClipLabel.entries.forEach { label ->
+                            val selectedClip = state.tracks.flatMap { it.clips }.find { it.id == state.selectedClipId }
+                            val isSelected = selectedClip?.clipLabel == label
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (label == ClipLabel.NONE) Mocha.Surface2
+                                        else Color(label.argb)
+                                    )
+                                    .then(
+                                        if (isSelected) Modifier.border(2.dp, Mocha.Text, CircleShape) else Modifier
+                                    )
+                                    .clickable {
+                                        state.selectedClipId?.let { viewModel.setClipLabel(it, label) }
+                                    }
+                            ) {
+                                if (label == ClipLabel.NONE) {
+                                    Icon(Icons.Default.Close, null, tint = Mocha.Subtext0, modifier = Modifier.size(16.dp))
+                                }
+                                if (isSelected && label != ClipLabel.NONE) {
+                                    Icon(Icons.Default.Check, null, tint = Mocha.Crust, modifier = Modifier.size(16.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // Toast messages

@@ -227,3 +227,20 @@
 - [x] **Timeline** — M=add marker, S=split, +/-=zoom, Delete=delete clip
 - [x] **Project** — Ctrl+S=save, Ctrl+C/V=copy/paste effects
 - [x] **Focus system** — FocusRequester + focusable() on root Box for key event capture
+
+## v3.11.0 — Clip Labels, Track Controls & Localization
+
+### Clip Label Picker UI
+- [x] **Label SubMenuItem** — "Color Label" action added to clipEditSubMenu in ToolPanel
+- [x] **Label picker Card** — AnimatedVisibility bottom sheet with 7 ClipLabel color circles, selection border, dismiss on deselect
+- [x] **EditorScreen wiring** — `"label"` action handler toggles picker, `setClipLabel()` called on tap
+
+### Track Controls
+- [x] **Collapse/expand all toggle** — UnfoldLess/UnfoldMore IconButton in Timeline zoom controls row
+- [x] **Track height cycling** — Long-press track type icon cycles 48→64→80→96→48dp via `onSetTrackHeight`
+- [x] **EditorScreen wiring** — `onCollapseAllTracks`, `onExpandAllTracks`, `onSetTrackHeight` wired to ViewModel
+
+### ToolPanel Localization
+- [x] **@StringRes migration** — `TabItem.label` and `SubMenuItem.label` changed from `String` to `@StringRes Int`
+- [x] **83 string resources** — All tab labels (12) and sub-menu item labels (71) extracted to strings.xml
+- [x] **Composable resolution** — `stringResource(item.labelRes)` used in BottomTabBar and SubMenuGrid rendering

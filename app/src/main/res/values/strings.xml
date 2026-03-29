@@ -336,6 +336,101 @@
     <string name="editor_text_track_cd">Text track</string>
     <string name="editor_export">Export</string>
 
+    <!-- ToolPanel: Tab labels -->
+    <string name="tool_tab_edit">Edit</string>
+    <string name="tool_tab_audio">Audio</string>
+    <string name="tool_tab_text">Text</string>
+    <string name="tool_tab_effects">Effects</string>
+    <string name="tool_tab_aspect">Aspect</string>
+    <string name="tool_tab_tools">Tools</string>
+    <string name="tool_tab_speed">Speed</string>
+    <string name="tool_tab_motion">Motion</string>
+    <string name="tool_tab_fx">FX</string>
+    <string name="tool_tab_trans">Trans</string>
+    <string name="tool_tab_color">Color</string>
+    <string name="tool_tab_ai">AI</string>
+
+    <!-- ToolPanel: Text sub-menu -->
+    <string name="tool_add_text">Add Text</string>
+    <string name="tool_text_templates">Templates</string>
+    <string name="tool_captions">Captions</string>
+    <string name="tool_caption_styles">Caption\nStyles</string>
+    <string name="tool_stickers">Stickers</string>
+    <string name="tool_text_to_speech">Text to Speech</string>
+
+    <!-- ToolPanel: Clip edit sub-menu -->
+    <string name="tool_split">Split</string>
+    <string name="tool_trim">Trim</string>
+    <string name="tool_merge_next">Merge\nNext</string>
+    <string name="tool_duplicate">Duplicate</string>
+    <string name="tool_freeze_frame">Freeze\nFrame</string>
+    <string name="tool_copy_effects">Copy\nEffects</string>
+    <string name="tool_paste_effects">Paste\nEffects</string>
+    <string name="tool_unlink_av">Unlink\nA/V</string>
+    <string name="tool_compound_clip">Compound\nClip</string>
+    <string name="tool_speed_presets">Speed\nPresets</string>
+    <string name="tool_group">Group</string>
+    <string name="tool_ungroup">Ungroup</string>
+    <string name="tool_draw">Draw</string>
+    <string name="tool_color_label">Color\nLabel</string>
+
+    <!-- ToolPanel: Clip motion sub-menu -->
+    <string name="tool_submenu_transform">Transform</string>
+    <string name="tool_keyframes">Keyframes</string>
+    <string name="tool_masks">Masks</string>
+    <string name="tool_blend_mode">Blend\nMode</string>
+    <string name="tool_pip">PiP</string>
+    <string name="tool_chroma_key">Chroma\nKey</string>
+
+    <!-- ToolPanel: Clip color sub-menu -->
+    <string name="tool_color_grade">Color\nGrade</string>
+    <string name="tool_submenu_effects">Effects</string>
+    <string name="tool_normalize_audio">Normalize\nAudio</string>
+
+    <!-- ToolPanel: Clip AI sub-menu -->
+    <string name="tool_scene_detect">Scene\nDetect</string>
+    <string name="tool_remove_bg">Remove\nBG</string>
+    <string name="tool_replace_bg">Replace\nBG</string>
+    <string name="tool_track_motion">Track\nMotion</string>
+    <string name="tool_face_track">Face\nTrack</string>
+    <string name="tool_smart_crop">Smart\nCrop</string>
+    <string name="tool_smart_reframe">Smart\nReframe</string>
+    <string name="tool_stabilize">Stabilize</string>
+    <string name="tool_denoise">Denoise</string>
+    <string name="tool_auto_captions">Auto\nCaptions</string>
+    <string name="tool_auto_color">Auto\nColor</string>
+    <string name="tool_style_transfer">Style\nTransfer</string>
+    <string name="tool_object_remove">Object\nRemove</string>
+    <string name="tool_upscale_4k">Upscale\n4K</string>
+    <string name="tool_frame_interp">Frame\nInterp</string>
+    <string name="tool_ai_upscale">AI\nUpscale</string>
+    <string name="tool_ai_background">AI\nBackground</string>
+    <string name="tool_ai_stabilize">AI\nStabilize</string>
+    <string name="tool_ai_style">AI\nStyle</string>
+    <string name="tool_remove_fillers">Remove\nFillers</string>
+    <string name="tool_reduce_noise">Reduce\nNoise</string>
+
+    <!-- ToolPanel: Project tools sub-menu -->
+    <string name="tool_audio_mixer">Audio\nMixer</string>
+    <string name="tool_beat_detect">Beat\nDetect</string>
+    <string name="tool_auto_duck">Auto\nDuck</string>
+    <string name="tool_adj_layer">Adj\nLayer</string>
+    <string name="tool_video_scopes">Video\nScopes</string>
+    <string name="tool_chapters">Chapters</string>
+    <string name="tool_snapshot">Snapshot</string>
+    <string name="tool_version_history">Version\nHistory</string>
+    <string name="tool_export_srt">Export\nSRT</string>
+    <string name="tool_media_manager">Media\nManager</string>
+    <string name="tool_render_analysis">Render\nAnalysis</string>
+    <string name="tool_cloud_backup">Cloud\nBackup</string>
+    <string name="tool_project_archive">Project\nArchive</string>
+    <string name="tool_batch_export">Batch\nExport</string>
+    <string name="tool_proxy_edit">Proxy\nEdit</string>
+    <string name="tool_beat_sync">Beat\nSync</string>
+    <string name="tool_auto_edit">Auto\nEdit</string>
+    <string name="tool_multi_cam">Multi\nCam</string>
+    <string name="tool_marker_list">Marker\nList</string>
+
     <!-- ToolPanel -->
     <string name="tool_effects">Effects</string>
     <string name="tool_close">Close</string>
@@ -509,6 +604,9 @@
     <!-- Clip Labels -->
     <string name="clip_label">Label</string>
     <string name="clip_label_none">No Label</string>
+    <string name="collapse_all_tracks">Collapse all tracks</string>
+    <string name="expand_all_tracks">Expand all tracks</string>
+    <string name="clip_label_picker_title">Clip Label</string>
 
     <!-- Keyboard shortcuts -->
     <string name="keyboard_shortcuts">Keyboard Shortcuts</string>

@@ -102,7 +102,7 @@ proxyWorkflowEngine, sherpaAsrEngine
 - ProGuard rules verified comprehensive (Hilt, Room, Media3, ONNX, MediaPipe, Coil)
 
 ## Build Info
-- `versionCode = 70`, `versionName = "3.10.0"`
+- `versionCode = 71`, `versionName = "3.11.0"`
 - `compileSdk = 35`, `targetSdk = 35`, `minSdk = 26`
 - R8 minify + shrink enabled for release
 - Signing via `keystore.properties` or env vars (`NOVACUT_KS_PASS`, `NOVACUT_KEY_ALIAS`, `NOVACUT_KEY_PASS`)
@@ -135,6 +135,23 @@ Research across CapCut, VN, KineMaster, PowerDirector, DaVinci Resolve iPad, and
 
 ### New PanelIds
 - `DRAWING`, `MULTI_CAM`
+
+## v3.11.0 — Clip Labels, Track Controls & Localization
+
+### Clip Label Picker
+- Color label selector UI (7 colors from ClipLabel enum) in BottomToolArea clip edit sub-menu
+- AnimatedVisibility Card with color circles, selection borders, dismiss on clip deselect
+
+### Track Controls
+- Collapse/expand all tracks toggle (UnfoldLess/UnfoldMore) in Timeline zoom controls row
+- Track height cycling via long-press on track type icon (48→64→80→96→48)
+- `onCollapseAllTracks`, `onExpandAllTracks`, `onSetTrackHeight` wired through EditorScreen
+
+### ToolPanel Localization
+- All 83 hardcoded TabItem/SubMenuItem labels extracted to strings.xml
+- `TabItem.label: String` → `TabItem.labelRes: @StringRes Int`
+- `SubMenuItem.label: String` → `SubMenuItem.labelRes: @StringRes Int`
+- Resolved via `stringResource()` in composable rendering (BottomTabBar, SubMenuGrid)
 
 ## v3.9.0 — Export Expansion, Settings & UX Polish
 

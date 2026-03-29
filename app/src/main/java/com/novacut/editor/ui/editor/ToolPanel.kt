@@ -26,128 +26,130 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
+import androidx.annotation.StringRes
 import com.novacut.editor.R
 import com.novacut.editor.model.*
 import com.novacut.editor.ui.theme.Mocha
 
 // --- Tab & sub-menu data ---
 
-data class TabItem(val id: String, val icon: ImageVector, val label: String)
-data class SubMenuItem(val id: String, val icon: ImageVector, val label: String)
+data class TabItem(val id: String, val icon: ImageVector, @StringRes val labelRes: Int)
+data class SubMenuItem(val id: String, val icon: ImageVector, @StringRes val labelRes: Int)
 
 // Project mode tabs (no clip selected)
 val projectTabs = listOf(
-    TabItem("edit", Icons.Default.Edit, "Edit"),
-    TabItem("audio", Icons.Default.MusicNote, "Audio"),
-    TabItem("text", Icons.Default.Title, "Text"),
-    TabItem("effects", Icons.Default.AutoFixHigh, "Effects"),
-    TabItem("aspect", Icons.Default.AspectRatio, "Aspect"),
-    TabItem("project_tools", Icons.Default.Build, "Tools")
+    TabItem("edit", Icons.Default.Edit, R.string.tool_tab_edit),
+    TabItem("audio", Icons.Default.MusicNote, R.string.tool_tab_audio),
+    TabItem("text", Icons.Default.Title, R.string.tool_tab_text),
+    TabItem("effects", Icons.Default.AutoFixHigh, R.string.tool_tab_effects),
+    TabItem("aspect", Icons.Default.AspectRatio, R.string.tool_tab_aspect),
+    TabItem("project_tools", Icons.Default.Build, R.string.tool_tab_tools)
 )
 
 // Clip mode tabs (clip selected)
 val clipTabs = listOf(
-    TabItem("back", Icons.AutoMirrored.Filled.ArrowBack, ""),
-    TabItem("edit", Icons.Default.Edit, "Edit"),
-    TabItem("audio", Icons.Default.MusicNote, "Audio"),
-    TabItem("speed", Icons.Default.Speed, "Speed"),
-    TabItem("transform", Icons.Default.Transform, "Motion"),
-    TabItem("effects", Icons.Default.AutoFixHigh, "FX"),
-    TabItem("transition", Icons.Default.SwapHoriz, "Trans"),
-    TabItem("color", Icons.Default.Palette, "Color"),
-    TabItem("ai", Icons.Default.AutoAwesome, "AI")
+    TabItem("back", Icons.AutoMirrored.Filled.ArrowBack, 0),
+    TabItem("edit", Icons.Default.Edit, R.string.tool_tab_edit),
+    TabItem("audio", Icons.Default.MusicNote, R.string.tool_tab_audio),
+    TabItem("speed", Icons.Default.Speed, R.string.tool_tab_speed),
+    TabItem("transform", Icons.Default.Transform, R.string.tool_tab_motion),
+    TabItem("effects", Icons.Default.AutoFixHigh, R.string.tool_tab_fx),
+    TabItem("transition", Icons.Default.SwapHoriz, R.string.tool_tab_trans),
+    TabItem("color", Icons.Default.Palette, R.string.tool_tab_color),
+    TabItem("ai", Icons.Default.AutoAwesome, R.string.tool_tab_ai)
 )
 
 // Project mode — Text tab sub-menu
 private val textSubMenu = listOf(
-    SubMenuItem("add_text", Icons.Default.Title, "Add Text"),
-    SubMenuItem("text_templates", Icons.Default.Dashboard, "Templates"),
-    SubMenuItem("captions", Icons.Default.ClosedCaption, "Captions"),
-    SubMenuItem("caption_styles", Icons.Default.Subtitles, "Caption\nStyles"),
-    SubMenuItem("stickers", Icons.Default.EmojiEmotions, "Stickers"),
-    SubMenuItem("tts", Icons.Default.RecordVoiceOver, "Text to Speech")
+    SubMenuItem("add_text", Icons.Default.Title, R.string.tool_add_text),
+    SubMenuItem("text_templates", Icons.Default.Dashboard, R.string.tool_text_templates),
+    SubMenuItem("captions", Icons.Default.ClosedCaption, R.string.tool_captions),
+    SubMenuItem("caption_styles", Icons.Default.Subtitles, R.string.tool_caption_styles),
+    SubMenuItem("stickers", Icons.Default.EmojiEmotions, R.string.tool_stickers),
+    SubMenuItem("tts", Icons.Default.RecordVoiceOver, R.string.tool_text_to_speech)
 )
 
 // Clip mode — Edit tab sub-menu
 private val clipEditSubMenu = listOf(
-    SubMenuItem("split", Icons.AutoMirrored.Filled.CallSplit, "Split"),
-    SubMenuItem("trim", Icons.Default.ContentCut, "Trim"),
-    SubMenuItem("merge", Icons.Default.Compress, "Merge\nNext"),
-    SubMenuItem("duplicate", Icons.Default.ContentCopy, "Duplicate"),
-    SubMenuItem("freeze", Icons.Default.AcUnit, "Freeze\nFrame"),
-    SubMenuItem("copy_fx", Icons.Default.FileCopy, "Copy\nEffects"),
-    SubMenuItem("paste_fx", Icons.Default.ContentPaste, "Paste\nEffects"),
-    SubMenuItem("unlink_av", Icons.Default.LinkOff, "Unlink\nA/V"),
-    SubMenuItem("compound", Icons.Default.ViewModule, "Compound\nClip"),
-    SubMenuItem("speed_presets", Icons.Default.Speed, "Speed\nPresets"),
-    SubMenuItem("group", Icons.Default.GroupWork, "Group"),
-    SubMenuItem("ungroup", Icons.Default.Workspaces, "Ungroup"),
-    SubMenuItem("draw", Icons.Default.Draw, "Draw")
+    SubMenuItem("split", Icons.AutoMirrored.Filled.CallSplit, R.string.tool_split),
+    SubMenuItem("trim", Icons.Default.ContentCut, R.string.tool_trim),
+    SubMenuItem("merge", Icons.Default.Compress, R.string.tool_merge_next),
+    SubMenuItem("duplicate", Icons.Default.ContentCopy, R.string.tool_duplicate),
+    SubMenuItem("freeze", Icons.Default.AcUnit, R.string.tool_freeze_frame),
+    SubMenuItem("copy_fx", Icons.Default.FileCopy, R.string.tool_copy_effects),
+    SubMenuItem("paste_fx", Icons.Default.ContentPaste, R.string.tool_paste_effects),
+    SubMenuItem("unlink_av", Icons.Default.LinkOff, R.string.tool_unlink_av),
+    SubMenuItem("compound", Icons.Default.ViewModule, R.string.tool_compound_clip),
+    SubMenuItem("speed_presets", Icons.Default.Speed, R.string.tool_speed_presets),
+    SubMenuItem("group", Icons.Default.GroupWork, R.string.tool_group),
+    SubMenuItem("ungroup", Icons.Default.Workspaces, R.string.tool_ungroup),
+    SubMenuItem("draw", Icons.Default.Draw, R.string.tool_draw),
+    SubMenuItem("label", Icons.Default.Label, R.string.tool_color_label)
 )
 
 // Clip mode — Motion tab sub-menu (replaces simple Transform panel)
 private val clipMotionSubMenu = listOf(
-    SubMenuItem("transform", Icons.Default.Transform, "Transform"),
-    SubMenuItem("keyframes", Icons.Default.Timeline, "Keyframes"),
-    SubMenuItem("masks", Icons.Default.Layers, "Masks"),
-    SubMenuItem("blend_mode", Icons.Default.BlurOn, "Blend\nMode"),
-    SubMenuItem("pip", Icons.Default.PictureInPicture, "PiP"),
-    SubMenuItem("chroma_key", Icons.Default.Deblur, "Chroma\nKey")
+    SubMenuItem("transform", Icons.Default.Transform, R.string.tool_submenu_transform),
+    SubMenuItem("keyframes", Icons.Default.Timeline, R.string.tool_keyframes),
+    SubMenuItem("masks", Icons.Default.Layers, R.string.tool_masks),
+    SubMenuItem("blend_mode", Icons.Default.BlurOn, R.string.tool_blend_mode),
+    SubMenuItem("pip", Icons.Default.PictureInPicture, R.string.tool_pip),
+    SubMenuItem("chroma_key", Icons.Default.Deblur, R.string.tool_chroma_key)
 )
 
 // Clip mode — Color tab sub-menu
 private val clipColorSubMenu = listOf(
-    SubMenuItem("color_grade", Icons.Default.Palette, "Color\nGrade"),
-    SubMenuItem("effects", Icons.Default.AutoFixHigh, "Effects"),
-    SubMenuItem("audio_norm", Icons.AutoMirrored.Filled.VolumeUp, "Normalize\nAudio")
+    SubMenuItem("color_grade", Icons.Default.Palette, R.string.tool_color_grade),
+    SubMenuItem("effects", Icons.Default.AutoFixHigh, R.string.tool_submenu_effects),
+    SubMenuItem("audio_norm", Icons.AutoMirrored.Filled.VolumeUp, R.string.tool_normalize_audio)
 )
 
 // Clip mode — AI Magic tab sub-menu (expanded)
 private val clipAiSubMenu = listOf(
-    SubMenuItem("scene_detect", Icons.Default.ContentCut, "Scene\nDetect"),
-    SubMenuItem("remove_bg", Icons.Default.Wallpaper, "Remove\nBG"),
-    SubMenuItem("bg_replace", Icons.Default.PhotoFilter, "Replace\nBG"),
-    SubMenuItem("track_motion", Icons.Default.GpsFixed, "Track\nMotion"),
-    SubMenuItem("face_track", Icons.Default.Face, "Face\nTrack"),
-    SubMenuItem("smart_crop", Icons.Default.Crop, "Smart\nCrop"),
-    SubMenuItem("smart_reframe", Icons.Default.CropRotate, "Smart\nReframe"),
-    SubMenuItem("stabilize", Icons.Default.Straighten, "Stabilize"),
-    SubMenuItem("denoise", Icons.AutoMirrored.Filled.VolumeOff, "Denoise"),
-    SubMenuItem("auto_captions", Icons.Default.ClosedCaption, "Auto\nCaptions"),
-    SubMenuItem("auto_color", Icons.Default.Palette, "Auto\nColor"),
-    SubMenuItem("style_transfer", Icons.Default.Style, "Style\nTransfer"),
-    SubMenuItem("object_remove", Icons.Default.HideImage, "Object\nRemove"),
-    SubMenuItem("upscale", Icons.Default.ZoomIn, "Upscale\n4K"),
-    SubMenuItem("frame_interp", Icons.Default.SlowMotionVideo, "Frame\nInterp"),
-    SubMenuItem("video_upscale", Icons.Default.ZoomIn, "AI\nUpscale"),
-    SubMenuItem("ai_background", Icons.Default.PhotoFilter, "AI\nBackground"),
-    SubMenuItem("ai_stabilize", Icons.Default.Straighten, "AI\nStabilize"),
-    SubMenuItem("ai_style_transfer", Icons.Default.Style, "AI\nStyle"),
-    SubMenuItem("filler_removal", Icons.Default.ContentCut, "Remove\nFillers"),
-    SubMenuItem("noise_reduction", Icons.Default.GraphicEq, "Reduce\nNoise")
+    SubMenuItem("scene_detect", Icons.Default.ContentCut, R.string.tool_scene_detect),
+    SubMenuItem("remove_bg", Icons.Default.Wallpaper, R.string.tool_remove_bg),
+    SubMenuItem("bg_replace", Icons.Default.PhotoFilter, R.string.tool_replace_bg),
+    SubMenuItem("track_motion", Icons.Default.GpsFixed, R.string.tool_track_motion),
+    SubMenuItem("face_track", Icons.Default.Face, R.string.tool_face_track),
+    SubMenuItem("smart_crop", Icons.Default.Crop, R.string.tool_smart_crop),
+    SubMenuItem("smart_reframe", Icons.Default.CropRotate, R.string.tool_smart_reframe),
+    SubMenuItem("stabilize", Icons.Default.Straighten, R.string.tool_stabilize),
+    SubMenuItem("denoise", Icons.AutoMirrored.Filled.VolumeOff, R.string.tool_denoise),
+    SubMenuItem("auto_captions", Icons.Default.ClosedCaption, R.string.tool_auto_captions),
+    SubMenuItem("auto_color", Icons.Default.Palette, R.string.tool_auto_color),
+    SubMenuItem("style_transfer", Icons.Default.Style, R.string.tool_style_transfer),
+    SubMenuItem("object_remove", Icons.Default.HideImage, R.string.tool_object_remove),
+    SubMenuItem("upscale", Icons.Default.ZoomIn, R.string.tool_upscale_4k),
+    SubMenuItem("frame_interp", Icons.Default.SlowMotionVideo, R.string.tool_frame_interp),
+    SubMenuItem("video_upscale", Icons.Default.ZoomIn, R.string.tool_ai_upscale),
+    SubMenuItem("ai_background", Icons.Default.PhotoFilter, R.string.tool_ai_background),
+    SubMenuItem("ai_stabilize", Icons.Default.Straighten, R.string.tool_ai_stabilize),
+    SubMenuItem("ai_style_transfer", Icons.Default.Style, R.string.tool_ai_style),
+    SubMenuItem("filler_removal", Icons.Default.ContentCut, R.string.tool_remove_fillers),
+    SubMenuItem("noise_reduction", Icons.Default.GraphicEq, R.string.tool_reduce_noise)
 )
 
 // Project mode — Tools tab sub-menu
 private val projectToolsSubMenu = listOf(
-    SubMenuItem("audio_mixer", Icons.Default.Equalizer, "Audio\nMixer"),
-    SubMenuItem("beat_detect", Icons.Default.GraphicEq, "Beat\nDetect"),
-    SubMenuItem("auto_duck", Icons.Default.RecordVoiceOver, "Auto\nDuck"),
-    SubMenuItem("adjustment_layer", Icons.Default.Tune, "Adj\nLayer"),
-    SubMenuItem("scopes", Icons.Default.Insights, "Video\nScopes"),
-    SubMenuItem("chapters", Icons.Default.Bookmarks, "Chapters"),
-    SubMenuItem("snapshot", Icons.Default.Save, "Snapshot"),
-    SubMenuItem("history", Icons.Default.History, "Version\nHistory"),
-    SubMenuItem("export_srt", Icons.Default.Subtitles, "Export\nSRT"),
-    SubMenuItem("media_manager", Icons.Default.FolderOpen, "Media\nManager"),
-    SubMenuItem("render_preview", Icons.Default.Preview, "Render\nAnalysis"),
-    SubMenuItem("cloud_backup", Icons.Default.Cloud, "Cloud\nBackup"),
-    SubMenuItem("archive", Icons.Default.Archive, "Project\nArchive"),
-    SubMenuItem("batch_export", Icons.Default.DynamicFeed, "Batch\nExport"),
-    SubMenuItem("proxy_toggle", Icons.Default.Speed, "Proxy\nEdit"),
-    SubMenuItem("beat_sync", Icons.Default.MusicNote, "Beat\nSync"),
-    SubMenuItem("auto_edit", Icons.Default.AutoFixHigh, "Auto\nEdit"),
-    SubMenuItem("multi_cam", Icons.Default.Videocam, "Multi\nCam"),
-    SubMenuItem("marker_list", Icons.Default.BookmarkBorder, "Marker\nList")
+    SubMenuItem("audio_mixer", Icons.Default.Equalizer, R.string.tool_audio_mixer),
+    SubMenuItem("beat_detect", Icons.Default.GraphicEq, R.string.tool_beat_detect),
+    SubMenuItem("auto_duck", Icons.Default.RecordVoiceOver, R.string.tool_auto_duck),
+    SubMenuItem("adjustment_layer", Icons.Default.Tune, R.string.tool_adj_layer),
+    SubMenuItem("scopes", Icons.Default.Insights, R.string.tool_video_scopes),
+    SubMenuItem("chapters", Icons.Default.Bookmarks, R.string.tool_chapters),
+    SubMenuItem("snapshot", Icons.Default.Save, R.string.tool_snapshot),
+    SubMenuItem("history", Icons.Default.History, R.string.tool_version_history),
+    SubMenuItem("export_srt", Icons.Default.Subtitles, R.string.tool_export_srt),
+    SubMenuItem("media_manager", Icons.Default.FolderOpen, R.string.tool_media_manager),
+    SubMenuItem("render_preview", Icons.Default.Preview, R.string.tool_render_analysis),
+    SubMenuItem("cloud_backup", Icons.Default.Cloud, R.string.tool_cloud_backup),
+    SubMenuItem("archive", Icons.Default.Archive, R.string.tool_project_archive),
+    SubMenuItem("batch_export", Icons.Default.DynamicFeed, R.string.tool_batch_export),
+    SubMenuItem("proxy_toggle", Icons.Default.Speed, R.string.tool_proxy_edit),
+    SubMenuItem("beat_sync", Icons.Default.MusicNote, R.string.tool_beat_sync),
+    SubMenuItem("auto_edit", Icons.Default.AutoFixHigh, R.string.tool_auto_edit),
+    SubMenuItem("multi_cam", Icons.Default.Videocam, R.string.tool_multi_cam),
+    SubMenuItem("marker_list", Icons.Default.BookmarkBorder, R.string.tool_marker_list)
 )
 
 // --- Bottom tool area (tab bar + contextual sub-menu grids) ---
@@ -329,16 +331,17 @@ private fun BottomTabBar(
                         .padding(vertical = 6.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    val tabLabel = if (tab.labelRes != 0) stringResource(tab.labelRes) else ""
                     Icon(
                         tab.icon,
-                        contentDescription = tab.label.ifEmpty { tab.id },
+                        contentDescription = tabLabel.ifEmpty { tab.id },
                         tint = if (isActive && !isBack) Mocha.Mauve else Mocha.Subtext0,
                         modifier = Modifier.size(24.dp)
                     )
-                    if (tab.label.isNotEmpty()) {
+                    if (tabLabel.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = tab.label,
+                            text = tabLabel,
                             fontSize = 10.sp,
                             color = if (isActive) Mocha.Mauve else Mocha.Subtext0,
                             textAlign = TextAlign.Center,
@@ -390,15 +393,16 @@ private fun SubMenuGrid(
                                 .then(if (isDisabled) Modifier.alpha(0.35f) else Modifier),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
+                            val itemLabel = stringResource(item.labelRes)
                             Icon(
                                 item.icon,
-                                contentDescription = item.label,
+                                contentDescription = itemLabel,
                                 tint = Mocha.Text,
                                 modifier = Modifier.size(28.dp)
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = item.label,
+                                text = itemLabel,
                                 fontSize = 10.sp,
                                 color = Mocha.Subtext0,
                                 textAlign = TextAlign.Center,

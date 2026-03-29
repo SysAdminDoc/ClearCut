@@ -2,6 +2,7 @@ package com.novacut.editor.ui.editor
 
 import android.graphics.Bitmap
 import androidx.compose.foundation.*
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -42,6 +43,7 @@ private fun findSnapTarget(positionMs: Long, targets: List<Long>, thresholdMs: L
         ?.takeIf { abs(it - positionMs) <= thresholdMs }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun Timeline(
     tracks: List<Track>,
@@ -72,6 +74,9 @@ fun Timeline(
     onSlipClip: (clipId: String, deltaMs: Long) -> Unit = { _, _ -> },
     onToggleTrackCollapsed: (String) -> Unit = {},
     onToggleTrackWaveform: (String) -> Unit = {},
+    onCollapseAllTracks: () -> Unit = {},
+    onExpandAllTracks: () -> Unit = {},
+    onSetTrackHeight: (String, Int) -> Unit = { _, _ -> },
     snapToBeat: Boolean = false,
     snapToMarker: Boolean = true,
     markers: List<TimelineMarker> = emptyList(),
@@ -156,6 +161,21 @@ fun Timeline(
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Collapse/Expand all tracks
+            IconButton(
+                onClick = {
+                    if (tracks.any { !it.isCollapsed }) onCollapseAllTracks()
+                    else onExpandAllTracks()
+                },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    if (tracks.any { !it.isCollapsed }) Icons.Default.UnfoldLess else Icons.Default.UnfoldMore,
+                    contentDescription = if (tracks.any { !it.isCollapsed }) "Collapse all" else "Expand all",
+                    tint = Mocha.Subtext0,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
             // Add Marker button
             IconButton(
                 onClick = onAddMarker,
@@ -236,7 +256,20 @@ fun Timeline(
                                 },
                                 contentDescription = track.type.name,
                                 tint = if (track.isVisible) trackColor else Mocha.Surface2,
-                                modifier = Modifier.size(14.dp)
+                                modifier = Modifier
+                                    .size(14.dp)
+                                    .combinedClickable(
+                                        onClick = {},
+                                        onLongClick = {
+                                            val nextHeight = when (track.trackHeight) {
+                                                48 -> 64
+                                                64 -> 80
+                                                80 -> 96
+                                                else -> 48
+                                            }
+                                            onSetTrackHeight(track.id, nextHeight)
+                                        }
+                                    )
                             )
                             Row(
                                 modifier = Modifier.padding(top = 2.dp),
