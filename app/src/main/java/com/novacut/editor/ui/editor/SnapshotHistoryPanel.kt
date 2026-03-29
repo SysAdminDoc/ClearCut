@@ -56,7 +56,7 @@ fun SnapshotHistoryPanel(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val prefix = "Snapshot"
+                    val prefix = stringResource(R.string.snapshot_default_prefix)
                     val defaultName = "$prefix ${java.text.SimpleDateFormat("MMM d HH:mm", java.util.Locale.getDefault()).format(java.util.Date())}"
                     onCreateSnapshot(snapshotName.ifBlank { defaultName })
                     snapshotName = ""

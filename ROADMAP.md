@@ -284,6 +284,25 @@
 ### Undo Stack Bounds
 - [x] **Redo-path bounded** — `undoStack` on redo now bounded to 50 entries via `.takeLast(50)`, matching the save path
 
+## v3.15.0 — Comprehensive Localization & Notification i18n
+
+### Panel Localization (~55 strings)
+- [x] **AudioMixerPanel** — Effects track header, contentDescriptions (pan, mute/unmute, solo/unsolo, audio effects, master, add/remove effect)
+- [x] **MediaManagerPanel** — Stat labels (Assets, Size, Missing), "Used Nx", contentDescriptions (Go to, Missing)
+- [x] **ExportProgressOverlay** — ETA remaining format, Cancel contentDescription
+- [x] **ChromaKeyPanel** — 6 slider labels (Red, Green, Blue, Similarity, Smoothness, Spill Suppress)
+- [x] **RenderPreviewSheet** — Duration breakdown labels (Re-encode, Pass-through)
+- [x] **ChapterMarkerPanel** — Default chapter name format string
+- [x] **KeyframeCurveEditor** — 8 preset labels + Presets/Delete/Close contentDescriptions
+- [x] **CaptionEditorPanel** — Auto Caption cd, word count format, Edit cd
+- [x] **SmartReframePanel** — Close contentDescription
+- [x] **StickerPickerPanel** — Import sticker contentDescriptions
+- [x] **CloudBackupPanel** — Close contentDescription
+- [x] **SnapshotHistoryPanel** — Default snapshot prefix now uses stringResource
+
+### ExportService Notification i18n
+- [x] **7 notification strings** — Title, progress text, complete title/text, failed title/default, cancel action
+
 ## v3.14.0 — Audit Fixes, Deep Localization & GIF Correctness
 
 ### Bug Fixes

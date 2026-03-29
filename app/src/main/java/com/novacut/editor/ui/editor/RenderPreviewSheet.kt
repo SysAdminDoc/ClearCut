@@ -84,12 +84,12 @@ fun RenderPreviewSheet(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                "Re-encode: ${formatMs(summary.reEncodeDurationMs)}",
+                stringResource(R.string.render_re_encode_duration, formatMs(summary.reEncodeDurationMs)),
                 color = Mocha.Yellow,
                 fontSize = 10.sp
             )
             Text(
-                "Pass-through: ${formatMs(summary.passThroughDurationMs)}",
+                stringResource(R.string.render_pass_through_duration, formatMs(summary.passThroughDurationMs)),
                 color = Mocha.Green,
                 fontSize = 10.sp
             )

@@ -826,4 +826,81 @@
 
     <!-- SnapshotHistoryPanel — v3.14.0 -->
     <string name="snapshot_default_prefix">Snapshot</string>
+
+    <!-- v3.15.0 — Deep localization pass -->
+
+    <!-- Generic -->
+    <string name="close">Close</string>
+
+    <!-- CaptionEditorPanel -->
+    <string name="cd_caption_auto">Auto Caption</string>
+    <string name="caption_word_count">%1$d words</string>
+    <string name="cd_caption_edit">Edit</string>
+
+    <!-- AudioMixerPanel -->
+    <string name="mixer_effects_track">Effects: %1$s Track %2$d</string>
+    <string name="cd_mixer_add_effect">Add Effect</string>
+    <string name="cd_mixer_pan">Pan control</string>
+    <string name="cd_mixer_mute">Mute track</string>
+    <string name="cd_mixer_unmute">Unmute track</string>
+    <string name="cd_mixer_solo">Solo track</string>
+    <string name="cd_mixer_unsolo">Unsolo track</string>
+    <string name="cd_mixer_audio_effects">Audio effects</string>
+    <string name="cd_mixer_master">Master</string>
+    <string name="cd_mixer_remove_effect">Remove</string>
+
+    <!-- MediaManagerPanel -->
+    <string name="media_stat_assets">Assets</string>
+    <string name="media_stat_size">Size</string>
+    <string name="media_stat_missing">Missing</string>
+    <string name="media_used_count">Used %1$dx</string>
+    <string name="cd_media_goto">Go to clip</string>
+    <string name="cd_media_missing">Missing</string>
+
+    <!-- ExportProgressOverlay -->
+    <string name="export_eta_remaining">~%1$s remaining</string>
+    <string name="cd_export_cancel">Cancel export</string>
+
+    <!-- ChromaKeyPanel -->
+    <string name="chroma_red">Red</string>
+    <string name="chroma_green">Green</string>
+    <string name="chroma_blue">Blue</string>
+    <string name="chroma_similarity">Similarity</string>
+    <string name="chroma_smoothness">Smoothness</string>
+    <string name="chroma_spill_suppress">Spill Suppress</string>
+
+    <!-- RenderPreviewSheet -->
+    <string name="render_re_encode_duration">Re-encode: %1$s</string>
+    <string name="render_pass_through_duration">Pass-through: %1$s</string>
+
+    <!-- ChapterMarkerPanel -->
+    <string name="chapter_default_name">Chapter %1$d</string>
+
+    <!-- KeyframeCurveEditor -->
+    <string name="cd_keyframe_presets">Presets</string>
+    <string name="cd_keyframe_delete">Delete keyframe</string>
+    <string name="keyframe_preset_ken_burns">Ken Burns</string>
+    <string name="keyframe_preset_fade_in">Fade In</string>
+    <string name="keyframe_preset_fade_out">Fade Out</string>
+    <string name="keyframe_preset_pulse">Pulse</string>
+    <string name="keyframe_preset_shake">Shake</string>
+    <string name="keyframe_preset_drift">Drift</string>
+    <string name="keyframe_preset_spin">Spin 360</string>
+    <string name="keyframe_preset_zoom">Zoom In/Out</string>
+
+    <!-- ExportService notifications -->
+    <string name="notif_export_complete_title">Export Complete</string>
+    <string name="notif_export_complete_text">Your video has been exported successfully</string>
+    <string name="notif_export_failed_title">Export Failed</string>
+    <string name="notif_export_title">Exporting Video</string>
+    <string name="notif_export_progress">%1$d%% complete</string>
+    <string name="notif_export_cancel">Cancel</string>
+    <string name="notif_export_failed_default">Export failed</string>
+
+    <!-- SmartReframePanel -->
+    <string name="cd_smart_reframe_close">Close smart reframe</string>
+
+    <!-- StickerPickerPanel -->
+    <string name="cd_sticker_import">Import sticker from gallery</string>
+    <string name="cd_sticker_import_gallery">Import from gallery</string>
 </resources>

@@ -64,7 +64,7 @@ fun AudioMixerPanel(
         ) {
             Text(stringResource(R.string.panel_audio_mixer_title), color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Close, stringResource(R.string.close), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
             }
         }
 
@@ -123,14 +123,14 @@ fun AudioMixerPanel(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "Effects: ${track.type.name} Track ${tracks.indexOf(track) + 1}",
+                            stringResource(R.string.mixer_effects_track, track.type.name, tracks.indexOf(track) + 1),
                             color = Mocha.Text, fontSize = 13.sp
                         )
                         // Add effect dropdown
                         var showAddMenu by remember { mutableStateOf(false) }
                         Box {
                             IconButton(onClick = { showAddMenu = true }, modifier = Modifier.size(28.dp)) {
-                                Icon(Icons.Default.Add, "Add Effect", tint = Mocha.Green, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Default.Add, stringResource(R.string.cd_mixer_add_effect), tint = Mocha.Green, modifier = Modifier.size(18.dp))
                             }
                             DropdownMenu(
                                 expanded = showAddMenu,
@@ -206,6 +206,10 @@ private fun ChannelStrip(
         TrackType.TEXT -> "T${track.index + 1}"
         TrackType.ADJUSTMENT -> "ADJ"
     }
+    val panDesc = stringResource(R.string.cd_mixer_pan)
+    val muteDesc = stringResource(if (track.isMuted) R.string.cd_mixer_unmute else R.string.cd_mixer_mute)
+    val soloDesc = stringResource(if (track.isSolo) R.string.cd_mixer_unsolo else R.string.cd_mixer_solo)
+    val fxDesc = stringResource(R.string.cd_mixer_audio_effects)
 
     Column(
         modifier = Modifier
@@ -253,7 +257,7 @@ private fun ChannelStrip(
             modifier = Modifier
                 .width(48.dp)
                 .height(16.dp)
-                .semantics { contentDescription = "Pan control" },
+                .semantics { contentDescription = panDesc },
             colors = SliderDefaults.colors(
                 thumbColor = Mocha.Mauve,
                 activeTrackColor = Mocha.Mauve.copy(alpha = 0.5f),
@@ -270,7 +274,7 @@ private fun ChannelStrip(
                 .clip(RoundedCornerShape(4.dp))
                 .background(if (track.isMuted) Mocha.Red.copy(alpha = 0.3f) else Mocha.Surface1)
                 .clickable { onMuteToggled() }
-                .semantics { contentDescription = if (track.isMuted) "Unmute track" else "Mute track" },
+                .semantics { contentDescription = muteDesc },
             contentAlignment = Alignment.Center
         ) {
             Text(stringResource(R.string.panel_audio_mixer_mute), color = if (track.isMuted) Mocha.Red else Mocha.Subtext0, fontSize = 10.sp, fontWeight = FontWeight.Bold)
@@ -283,7 +287,7 @@ private fun ChannelStrip(
                 .clip(RoundedCornerShape(4.dp))
                 .background(if (track.isSolo) Mocha.Yellow.copy(alpha = 0.3f) else Mocha.Surface1)
                 .clickable { onSoloToggled() }
-                .semantics { contentDescription = if (track.isSolo) "Unsolo track" else "Solo track" },
+                .semantics { contentDescription = soloDesc },
             contentAlignment = Alignment.Center
         ) {
             Text(stringResource(R.string.panel_audio_mixer_solo), color = if (track.isSolo) Mocha.Yellow else Mocha.Subtext0, fontSize = 10.sp, fontWeight = FontWeight.Bold)
@@ -296,7 +300,7 @@ private fun ChannelStrip(
                 .clip(RoundedCornerShape(4.dp))
                 .background(if (isEffectsExpanded) Mocha.Mauve.copy(alpha = 0.3f) else Mocha.Surface1)
                 .clickable { onEffectsClicked() }
-                .semantics { contentDescription = "Audio effects" },
+                .semantics { contentDescription = fxDesc },
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -383,7 +387,7 @@ private fun MasterBusStrip() {
     ) {
         Text(stringResource(R.string.panel_audio_mixer_master), color = Mocha.Mauve, fontSize = 10.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
-        Icon(Icons.Default.GraphicEq, "Master", tint = Mocha.Mauve, modifier = Modifier.size(24.dp))
+        Icon(Icons.Default.GraphicEq, stringResource(R.string.cd_mixer_master), tint = Mocha.Mauve, modifier = Modifier.size(24.dp))
     }
 }
 
@@ -417,7 +421,7 @@ private fun AudioEffectChip(
         )
         Icon(
             Icons.Default.Close,
-            "Remove",
+            stringResource(R.string.cd_mixer_remove_effect),
             tint = Mocha.Subtext0,
             modifier = Modifier
                 .size(14.dp)

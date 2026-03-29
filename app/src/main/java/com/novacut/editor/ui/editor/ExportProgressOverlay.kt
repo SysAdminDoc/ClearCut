@@ -78,7 +78,7 @@ fun ExportProgressOverlay(
 
                 if (remaining > 0 && exportProgress > 0.05f) {
                     Text(
-                        "~${formatEta(remaining)} remaining",
+                        stringResource(R.string.export_eta_remaining, formatEta(remaining)),
                         color = Mocha.Subtext0,
                         fontSize = 10.sp
                     )
@@ -90,7 +90,7 @@ fun ExportProgressOverlay(
                 onClick = onCancel,
                 modifier = Modifier.size(28.dp)
             ) {
-                Icon(Icons.Default.Close, "Cancel", tint = Mocha.Red, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.Close, stringResource(R.string.cd_export_cancel), tint = Mocha.Red, modifier = Modifier.size(16.dp))
             }
         }
     }

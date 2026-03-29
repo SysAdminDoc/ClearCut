@@ -77,18 +77,18 @@ fun KeyframeCurveEditor(
                 var showPresets by remember { mutableStateOf(false) }
                 Box {
                     IconButton(onClick = { showPresets = true }, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.AutoAwesome, "Presets", tint = Mocha.Yellow, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.AutoAwesome, stringResource(R.string.cd_keyframe_presets), tint = Mocha.Yellow, modifier = Modifier.size(18.dp))
                     }
                     DropdownMenu(expanded = showPresets, onDismissRequest = { showPresets = false }) {
                         listOf(
-                            "Ken Burns" to "kenburns",
-                            "Fade In" to "fadein",
-                            "Fade Out" to "fadeout",
-                            "Pulse" to "pulse",
-                            "Shake" to "shake",
-                            "Drift" to "drift",
-                            "Spin 360" to "spin",
-                            "Zoom In/Out" to "zoominout"
+                            stringResource(R.string.keyframe_preset_ken_burns) to "kenburns",
+                            stringResource(R.string.keyframe_preset_fade_in) to "fadein",
+                            stringResource(R.string.keyframe_preset_fade_out) to "fadeout",
+                            stringResource(R.string.keyframe_preset_pulse) to "pulse",
+                            stringResource(R.string.keyframe_preset_shake) to "shake",
+                            stringResource(R.string.keyframe_preset_drift) to "drift",
+                            stringResource(R.string.keyframe_preset_spin) to "spin",
+                            stringResource(R.string.keyframe_preset_zoom) to "zoominout"
                         ).forEach { (label, id) ->
                             DropdownMenuItem(
                                 text = { Text(label, fontSize = 13.sp) },
@@ -112,7 +112,7 @@ fun KeyframeCurveEditor(
                     }
                 }
                 IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Close, stringResource(R.string.close), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
                 }
             }
         }
@@ -245,7 +245,7 @@ fun KeyframeCurveEditor(
                         },
                         modifier = Modifier.size(24.dp)
                     ) {
-                        Icon(Icons.Default.Delete, "Delete", tint = Mocha.Red, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Delete, stringResource(R.string.cd_keyframe_delete), tint = Mocha.Red, modifier = Modifier.size(16.dp))
                     }
                 }
             }

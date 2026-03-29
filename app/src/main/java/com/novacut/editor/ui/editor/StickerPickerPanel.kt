@@ -174,7 +174,7 @@ fun StickerPickerPanel(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(
                         Icons.Default.AddPhotoAlternate,
-                        contentDescription = "Import sticker from gallery",
+                        contentDescription = stringResource(R.string.cd_sticker_import),
                         tint = Mocha.Blue,
                         modifier = Modifier.size(48.dp)
                     )
@@ -189,7 +189,7 @@ fun StickerPickerPanel(
                     ) {
                         Icon(
                             Icons.Default.Image,
-                            contentDescription = "Import from gallery",
+                            contentDescription = stringResource(R.string.cd_sticker_import_gallery),
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(Modifier.width(6.dp))

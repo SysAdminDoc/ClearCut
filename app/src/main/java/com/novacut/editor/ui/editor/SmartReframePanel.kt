@@ -84,7 +84,7 @@ fun SmartReframePanel(
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = "Close smart reframe",
+                    contentDescription = stringResource(R.string.cd_smart_reframe_close),
                     tint = Mocha.Subtext0,
                     modifier = Modifier.size(18.dp)
                 )

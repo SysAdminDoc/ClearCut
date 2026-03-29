@@ -102,7 +102,7 @@ proxyWorkflowEngine, sherpaAsrEngine
 - ProGuard rules verified comprehensive (Hilt, Room, Media3, ONNX, MediaPipe, Coil)
 
 ## Build Info
-- `versionCode = 74`, `versionName = "3.14.0"`
+- `versionCode = 75`, `versionName = "3.15.0"`
 - `compileSdk = 35`, `targetSdk = 35`, `minSdk = 26`
 - R8 minify + shrink enabled for release
 - Signing via `keystore.properties` or env vars (`NOVACUT_KS_PASS`, `NOVACUT_KEY_ALIAS`, `NOVACUT_KEY_PASS`)
@@ -135,6 +135,22 @@ Research across CapCut, VN, KineMaster, PowerDirector, DaVinci Resolve iPad, and
 
 ### New PanelIds
 - `DRAWING`, `MULTI_CAM`
+
+## v3.15.0 — Comprehensive Localization & Notification i18n
+
+### Panel Localization (~55 strings)
+- AudioMixerPanel: effects track header, 7 semantic contentDescriptions (pan, mute/unmute, solo/unsolo, fx, master, remove)
+- MediaManagerPanel: 3 stat labels, usage count format, 2 contentDescriptions
+- ExportProgressOverlay: ETA remaining format, cancel contentDescription
+- ChromaKeyPanel: 6 slider labels
+- RenderPreviewSheet: 2 duration breakdown labels
+- ChapterMarkerPanel: default chapter name format
+- KeyframeCurveEditor: 8 preset labels + 3 contentDescriptions
+- CaptionEditorPanel: 3 remaining strings (auto caption cd, word count, edit cd)
+- SmartReframePanel, StickerPickerPanel, CloudBackupPanel, SnapshotHistoryPanel: remaining contentDescriptions
+
+### ExportService Notification i18n
+- 7 notification strings extracted: title, progress, complete, failed, cancel action
 
 ## v3.14.0 — GIF Quantization Fix & Deep Localization
 

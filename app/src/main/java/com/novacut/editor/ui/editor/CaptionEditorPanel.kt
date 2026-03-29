@@ -55,7 +55,7 @@ fun CaptionEditorPanel(
             Row {
                 // Auto-generate button
                 IconButton(onClick = onGenerateAutoCaption, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.AutoAwesome, "Auto Caption", tint = Mocha.Yellow, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.AutoAwesome, stringResource(R.string.cd_caption_auto), tint = Mocha.Yellow, modifier = Modifier.size(18.dp))
                 }
                 IconButton(onClick = {
                     val newCaption = Caption(
@@ -208,7 +208,7 @@ private fun CaptionRow(
                 )
                 if (caption.words.isNotEmpty()) {
                     Text(
-                        "${caption.words.size} words",
+                        stringResource(R.string.caption_word_count, caption.words.size),
                         color = Mocha.Peach.copy(alpha = 0.7f),
                         fontSize = 10.sp
                     )
@@ -218,7 +218,7 @@ private fun CaptionRow(
 
         Row {
             IconButton(onClick = onEdit, modifier = Modifier.size(24.dp)) {
-                Icon(Icons.Default.Edit, "Edit", tint = Mocha.Subtext0, modifier = Modifier.size(14.dp))
+                Icon(Icons.Default.Edit, stringResource(R.string.cd_caption_edit), tint = Mocha.Subtext0, modifier = Modifier.size(14.dp))
             }
             IconButton(onClick = onDelete, modifier = Modifier.size(24.dp)) {
                 Icon(Icons.Default.Delete, stringResource(R.string.caption_delete_cd), tint = Mocha.Red.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))

@@ -50,7 +50,7 @@ fun ChapterMarkerPanel(
                 // Add chapter at playhead
                 IconButton(
                     onClick = {
-                        val title = "Chapter ${chapters.size + 1}"
+                        val title = stringResource(R.string.chapter_default_name, chapters.size + 1)
                         onAddChapter(ChapterMarker(playheadMs, title))
                     },
                     modifier = Modifier.size(32.dp)

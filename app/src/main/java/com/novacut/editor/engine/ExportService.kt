@@ -11,6 +11,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.FileProvider
 import com.novacut.editor.MainActivity
 import com.novacut.editor.NovaCutApp
+import com.novacut.editor.R
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.combine
@@ -73,7 +74,7 @@ class ExportService : Service() {
                             notifyComplete()
                         }
                         ExportState.ERROR -> {
-                            notifyError(videoEngine.exportErrorMessage.value ?: "Export failed")
+                            notifyError(videoEngine.exportErrorMessage.value ?: getString(R.string.notif_export_failed_default))
                         }
                         ExportState.CANCELLED -> {
                             notifyCancel()
@@ -106,8 +107,8 @@ class ExportService : Service() {
 
         val notification = NotificationCompat.Builder(this, NovaCutApp.CHANNEL_EXPORT)
             .setSmallIcon(android.R.drawable.ic_menu_save)
-            .setContentTitle("Export Complete")
-            .setContentText("Your video has been exported successfully")
+            .setContentTitle(getString(R.string.notif_export_complete_title))
+            .setContentText(getString(R.string.notif_export_complete_text))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
             .setContentIntent(openPi)
@@ -128,7 +129,7 @@ class ExportService : Service() {
 
         val notification = NotificationCompat.Builder(this, NovaCutApp.CHANNEL_EXPORT)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentTitle("Export Failed")
+            .setContentTitle(getString(R.string.notif_export_failed_title))
             .setContentText(message)
             .setStyle(NotificationCompat.BigTextStyle().bigText(message))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -173,11 +174,11 @@ class ExportService : Service() {
 
         return NotificationCompat.Builder(this, NovaCutApp.CHANNEL_EXPORT)
             .setSmallIcon(android.R.drawable.ic_menu_save)
-            .setContentTitle("Exporting Video")
-            .setContentText("${progress}% complete")
+            .setContentTitle(getString(R.string.notif_export_title))
+            .setContentText(getString(R.string.notif_export_progress, progress))
             .setProgress(100, progress, progress == 0)
             .setOngoing(true)
-            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Cancel", cancelPi)
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, getString(R.string.notif_export_cancel), cancelPi)
             .build()
     }
 }

@@ -82,9 +82,9 @@ fun MediaManagerPanel(
                 .padding(10.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            StatChip("Assets", "${assets.size}", Mocha.Mauve)
-            StatChip("Size", formatFileSize(totalSize), Mocha.Peach)
-            StatChip("Missing", "$missingCount", if (missingCount > 0) Mocha.Red else Mocha.Green)
+            StatChip(stringResource(R.string.media_stat_assets), "${assets.size}", Mocha.Mauve)
+            StatChip(stringResource(R.string.media_stat_size), formatFileSize(totalSize), Mocha.Peach)
+            StatChip(stringResource(R.string.media_stat_missing), "$missingCount", if (missingCount > 0) Mocha.Red else Mocha.Green)
         }
 
         Spacer(Modifier.height(8.dp))
@@ -177,7 +177,7 @@ private fun MediaAssetRow(
                     Text(formatFileSize(asset.fileSize), color = Mocha.Subtext0, fontSize = 10.sp)
                     Text(formatDuration(asset.durationMs), color = Mocha.Subtext0, fontSize = 10.sp)
                     Text(
-                        "Used ${asset.usedInClipIds.size}x",
+                        stringResource(R.string.media_used_count, asset.usedInClipIds.size),
                         color = if (asset.usedInClipIds.isEmpty()) Mocha.Yellow else Mocha.Green,
                         fontSize = 10.sp
                     )
@@ -191,13 +191,13 @@ private fun MediaAssetRow(
                 onClick = { onJumpToClip(asset.usedInClipIds.first()) },
                 modifier = Modifier.size(24.dp)
             ) {
-                Icon(Icons.Default.MyLocation, "Go to", tint = Mocha.Subtext0, modifier = Modifier.size(14.dp))
+                Icon(Icons.Default.MyLocation, stringResource(R.string.cd_media_goto), tint = Mocha.Subtext0, modifier = Modifier.size(14.dp))
             }
         }
 
         // Missing indicator
         if (!asset.isAccessible) {
-            Icon(Icons.Default.Warning, "Missing", tint = Mocha.Red, modifier = Modifier.size(16.dp))
+            Icon(Icons.Default.Warning, stringResource(R.string.cd_media_missing), tint = Mocha.Red, modifier = Modifier.size(16.dp))
         }
     }
 }

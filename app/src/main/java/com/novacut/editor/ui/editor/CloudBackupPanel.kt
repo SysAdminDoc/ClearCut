@@ -46,7 +46,7 @@ fun CloudBackupPanel(
                 Text(stringResource(R.string.panel_cloud_backup_title), color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
             IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Close, stringResource(R.string.close), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
             }
         }
 

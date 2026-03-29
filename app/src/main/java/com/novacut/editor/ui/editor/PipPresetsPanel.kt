@@ -227,17 +227,17 @@ fun ChromaKeyPanel(
         Spacer(Modifier.height(4.dp))
 
         // Key color RGB sliders
-        ChromaSlider("Red", keyColorR, Color(0xFFF38BA8)) { onKeyColorChanged(it, keyColorG, keyColorB) }
-        ChromaSlider("Green", keyColorG, Color(0xFFA6E3A1)) { onKeyColorChanged(keyColorR, it, keyColorB) }
-        ChromaSlider("Blue", keyColorB, Color(0xFF89B4FA)) { onKeyColorChanged(keyColorR, keyColorG, it) }
+        ChromaSlider(stringResource(R.string.chroma_red), keyColorR, Color(0xFFF38BA8)) { onKeyColorChanged(it, keyColorG, keyColorB) }
+        ChromaSlider(stringResource(R.string.chroma_green), keyColorG, Color(0xFFA6E3A1)) { onKeyColorChanged(keyColorR, it, keyColorB) }
+        ChromaSlider(stringResource(R.string.chroma_blue), keyColorB, Color(0xFF89B4FA)) { onKeyColorChanged(keyColorR, keyColorG, it) }
 
         Spacer(Modifier.height(8.dp))
 
         // Refinement controls
         Text(stringResource(R.string.panel_chroma_key_refinement), color = Mocha.Subtext0, fontSize = 11.sp)
-        ChromaSlider("Similarity", similarity, Mocha.Mauve, onSimilarityChanged)
-        ChromaSlider("Smoothness", smoothness, Mocha.Mauve, onSmoothnessChanged)
-        ChromaSlider("Spill Suppress", spillSuppression, Mocha.Mauve, onSpillChanged)
+        ChromaSlider(stringResource(R.string.chroma_similarity), similarity, Mocha.Mauve, onSimilarityChanged)
+        ChromaSlider(stringResource(R.string.chroma_smoothness), smoothness, Mocha.Mauve, onSmoothnessChanged)
+        ChromaSlider(stringResource(R.string.chroma_spill_suppress), spillSuppression, Mocha.Mauve, onSpillChanged)
     }
 }
 

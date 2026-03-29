@@ -1,8 +1,14 @@
-# NovaCut v3.14.0
+# NovaCut v3.15.0
 
 A professional Android video editor built with Kotlin and Jetpack Compose. Open alternative to CapCut, PowerDirector, and DaVinci Resolve — with on-device AI, GPU-accelerated effects, and desktop NLE interoperability.
 
 ## Changelog
+
+### v3.15.0 — Comprehensive Localization & Notification i18n
+- **55+ string extractions** — AudioMixerPanel (10), MediaManagerPanel (6), ExportProgressOverlay (2), ChromaKeyPanel (6), RenderPreviewSheet (2), ChapterMarkerPanel (1), KeyframeCurveEditor (10), ExportService notifications (7), CaptionEditorPanel (3), SmartReframePanel (1), StickerPickerPanel (2), CloudBackupPanel (1), SnapshotHistoryPanel (1)
+- **ExportService notification i18n** — All notification title/text/action strings extracted to string resources
+- **Accessibility contentDescriptions** — Remaining hardcoded contentDescription strings across 7 panels extracted to string resources
+- **Semantic modifier localization** — AudioMixerPanel semantics blocks (pan, mute/unmute, solo/unsolo, fx) now use localized strings
 
 ### v3.14.0 — Audit Fixes, Deep Localization & GIF Correctness
 - **GIF color quantization fix** — Fixed operator precedence bug in color quantization formula that caused incorrect palette mapping (wrong colors in exported GIFs)
