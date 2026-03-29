@@ -152,7 +152,7 @@ fun BeatSyncPanel(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "${beatMarkers.size} markers",
+                    text = stringResource(R.string.beat_sync_markers_count, beatMarkers.size),
                     color = Mocha.Subtext0,
                     fontSize = 12.sp,
                     modifier = Modifier.weight(1f)
@@ -180,7 +180,7 @@ fun BeatSyncPanel(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Beats",
+                        text = stringResource(R.string.beat_sync_label_beats),
                         color = Mocha.Subtext0,
                         fontSize = 11.sp
                     )
@@ -193,7 +193,7 @@ fun BeatSyncPanel(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "BPM",
+                        text = stringResource(R.string.beat_sync_label_bpm),
                         color = Mocha.Subtext0,
                         fontSize = 11.sp
                     )

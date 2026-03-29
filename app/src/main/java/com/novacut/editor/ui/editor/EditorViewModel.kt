@@ -2533,7 +2533,7 @@ class EditorViewModel @Inject constructor(
                 chapterMarkers = action.chapterMarkers,
                 drawingPaths = action.drawingPaths,
                 redoStack = redoStack.dropLast(1),
-                undoStack = it.undoStack + currentAction
+                undoStack = (it.undoStack + currentAction).takeLast(50)
             ))
             val clipExists = it.selectedClipId != null &&
                 restored.tracks.any { t -> t.clips.any { c -> c.id == it.selectedClipId } }

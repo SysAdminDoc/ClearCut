@@ -260,3 +260,26 @@
 - [x] **75 string extractions** — Hardcoded `Text("...")` from 21 panel composables extracted to strings.xml
 - [x] **Organized by panel** — `panel_audio_mixer_*`, `panel_cloud_backup_*`, `panel_pip_*`, etc.
 - [x] **Import fixes** — Added missing `stringResource`/`R` imports to 7 panel files
+
+## v3.13.0 — GIF Hardening, Settings Localization & Editor Polish
+
+### GIF Encoder Hardening
+- [x] **Bitmap leak fix** — Moved `frames.forEach { it.recycle() }` to finally block, preventing memory leak on export error
+- [x] **Division-by-zero guard** — `gifFrameRate.coerceAtLeast(1)` prevents crash on malformed ExportConfig
+
+### Settings Screen Localization
+- [x] **22 string extractions** — All hardcoded SettingsScreen labels/descriptions extracted to strings.xml
+- [x] **Sections localized** — Editor, Show Waveforms, Snap to Beat, Snap to Markers, Default Track Height, Default Mode, Haptic Feedback, Confirm Before Delete, Thumbnail Cache, Default Export Quality
+- [x] **Quality labels** — "Small File"/"Balanced"/"Best Quality" now string resources
+
+### Reset Tutorial Confirmation
+- [x] **AlertDialog guard** — Reset Tutorial button now shows confirmation dialog before clearing tutorial state
+- [x] **3 new strings** — `settings_reset_tutorial_confirm`, `settings_reset_tutorial_confirm_title`, `settings_confirm`
+
+### Panel String Extractions
+- [x] **ChapterMarkerPanel** — Description text + 3 contentDescriptions (Save/Edit/Delete) extracted
+- [x] **AutoEditPanel** — 6 InfoCard labels (Clips/Music/Yes/No/Target/~60s) extracted
+- [x] **BeatSyncPanel** — 3 stat labels (markers count, Beats, BPM) extracted with pluralization support
+
+### Undo Stack Bounds
+- [x] **Redo-path bounded** — `undoStack` on redo now bounded to 50 entries via `.takeLast(50)`, matching the save path

@@ -11,8 +11,8 @@
 - **Package:** `com.novacut.editor`
 
 ## Key File Locations
-- ViewModel: `app/src/main/java/com/novacut/editor/ui/editor/EditorViewModel.kt` (3525 lines)
-- Editor UI: `app/src/main/java/com/novacut/editor/ui/editor/EditorScreen.kt` (1486 lines)
+- ViewModel: `app/src/main/java/com/novacut/editor/ui/editor/EditorViewModel.kt` (~3650 lines)
+- Editor UI: `app/src/main/java/com/novacut/editor/ui/editor/EditorScreen.kt` (~1600 lines)
 - Data model: `app/src/main/java/com/novacut/editor/model/Project.kt`
 - Video engine: `app/src/main/java/com/novacut/editor/engine/VideoEngine.kt`
 - AI features: `app/src/main/java/com/novacut/editor/ai/AiFeatures.kt`
@@ -20,7 +20,7 @@
 - Auto-save: `app/src/main/java/com/novacut/editor/engine/ProjectAutoSave.kt`
 
 ## Conventions
-- Panels toggled via `show*` booleans in `EditorState`
+- Panels toggled via `PanelVisibility` data class + `PanelId` enum in `EditorState`
 - All clip mutations go through `_state.update {}` followed by `rebuildTimeline()`
 - Undo via `saveUndoState("description")` before mutations
 - Color theme: Catppuccin Mocha (`Mocha.*` in `Theme.kt`)
@@ -102,7 +102,7 @@ proxyWorkflowEngine, sherpaAsrEngine
 - ProGuard rules verified comprehensive (Hilt, Room, Media3, ONNX, MediaPipe, Coil)
 
 ## Build Info
-- `versionCode = 72`, `versionName = "3.12.0"`
+- `versionCode = 73`, `versionName = "3.13.0"`
 - `compileSdk = 35`, `targetSdk = 35`, `minSdk = 26`
 - R8 minify + shrink enabled for release
 - Signing via `keystore.properties` or env vars (`NOVACUT_KS_PASS`, `NOVACUT_KEY_ALIAS`, `NOVACUT_KEY_PASS`)
@@ -135,6 +135,27 @@ Research across CapCut, VN, KineMaster, PowerDirector, DaVinci Resolve iPad, and
 
 ### New PanelIds
 - `DRAWING`, `MULTI_CAM`
+
+## v3.13.0 — GIF Hardening, Settings Localization & Editor Polish
+
+### GIF Encoder Hardening
+- Bitmap leak fix: `frames.forEach { it.recycle() }` moved to finally block
+- Division-by-zero guard: `gifFrameRate.coerceAtLeast(1)` before frame interval calculation
+
+### Settings Screen Localization (22 strings)
+- All hardcoded SettingsScreen labels extracted to strings.xml
+- Sections: Editor, Show Waveforms, Snap to Beat, Snap to Markers, Default Track Height, Default Mode, Haptic Feedback, Confirm Before Delete, Thumbnail Cache, Default Export Quality
+
+### Reset Tutorial Confirmation
+- AlertDialog added before resetting tutorial state
+
+### Panel String Extractions
+- ChapterMarkerPanel: description + 3 contentDescriptions (Save/Edit/Delete)
+- AutoEditPanel: 6 InfoCard labels
+- BeatSyncPanel: 3 stat labels with format string
+
+### Undo Stack Bounds
+- Redo-path undoStack bounded to 50 entries via `.takeLast(50)`
 
 ## v3.12.0 — GIF Export, Accessibility & Panel Localization
 

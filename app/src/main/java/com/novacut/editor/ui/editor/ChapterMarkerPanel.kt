@@ -65,7 +65,7 @@ fun ChapterMarkerPanel(
 
         Spacer(Modifier.height(4.dp))
         Text(
-            "Chapters are embedded in MP4 exports for YouTube navigation",
+            stringResource(R.string.chapter_description),
             color = Mocha.Subtext0,
             fontSize = 10.sp
         )
@@ -163,7 +163,7 @@ fun ChapterMarkerPanel(
                                     },
                                     modifier = Modifier.size(24.dp)
                                 ) {
-                                    Icon(Icons.Default.Check, "Save", tint = Mocha.Green, modifier = Modifier.size(14.dp))
+                                    Icon(Icons.Default.Check, stringResource(R.string.cd_chapter_save), tint = Mocha.Green, modifier = Modifier.size(14.dp))
                                 }
                             } else {
                                 IconButton(
@@ -173,7 +173,7 @@ fun ChapterMarkerPanel(
                                     },
                                     modifier = Modifier.size(24.dp)
                                 ) {
-                                    Icon(Icons.Default.Edit, "Edit", tint = Mocha.Subtext0, modifier = Modifier.size(14.dp))
+                                    Icon(Icons.Default.Edit, stringResource(R.string.cd_chapter_edit), tint = Mocha.Subtext0, modifier = Modifier.size(14.dp))
                                 }
                             }
                             IconButton(
@@ -184,7 +184,7 @@ fun ChapterMarkerPanel(
                                 },
                                 modifier = Modifier.size(24.dp)
                             ) {
-                                Icon(Icons.Default.Delete, "Delete", tint = Mocha.Red.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
+                                Icon(Icons.Default.Delete, stringResource(R.string.cd_chapter_delete), tint = Mocha.Red.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
                             }
                         }
                     }

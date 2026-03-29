@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.8.0</string>
+    <string name="app_version">v3.13.0</string>
 
     <!-- Common -->
     <string name="close">Close</string>
@@ -752,4 +752,48 @@
     <string name="cd_smart_reframe">Smart reframe</string>
     <string name="cd_clip_thumbnail">Clip thumbnail</string>
     <string name="cd_tts_preview">Preview speech</string>
+
+    <!-- Settings — v3.13.0 string extraction -->
+    <string name="settings_editor">Editor</string>
+    <string name="settings_show_waveforms">Show Waveforms</string>
+    <string name="settings_show_waveforms_desc">Display audio waveforms on timeline clips</string>
+    <string name="settings_snap_beat">Snap to Beat</string>
+    <string name="settings_snap_beat_desc">Snap clip edges to detected beat markers</string>
+    <string name="settings_snap_markers">Snap to Markers</string>
+    <string name="settings_snap_markers_desc">Snap clip edges to timeline markers</string>
+    <string name="settings_default_track_height">Default Track Height</string>
+    <string name="settings_default_mode">Default Mode</string>
+    <string name="settings_mode_easy">Easy</string>
+    <string name="settings_mode_pro">Pro</string>
+    <string name="settings_haptic_feedback">Haptic Feedback</string>
+    <string name="settings_haptic_desc">Vibrate on timeline snap and clip selection</string>
+    <string name="settings_confirm_delete">Confirm Before Delete</string>
+    <string name="settings_confirm_delete_desc">Show confirmation dialog before deleting clips</string>
+    <string name="settings_thumbnail_cache">Thumbnail Cache</string>
+    <string name="settings_export_quality">Default Export Quality</string>
+    <string name="settings_quality_small">Small File</string>
+    <string name="settings_quality_balanced">Balanced</string>
+    <string name="settings_quality_best">Best Quality</string>
+    <string name="settings_reset_tutorial_confirm">Reset the first-run tutorial? You will see the tutorial again next time you open the editor.</string>
+    <string name="settings_reset_tutorial_confirm_title">Reset Tutorial</string>
+    <string name="settings_confirm">Confirm</string>
+
+    <!-- ChapterMarkerPanel — v3.13.0 -->
+    <string name="chapter_description">Chapters are embedded in MP4 exports for YouTube navigation</string>
+    <string name="cd_chapter_save">Save</string>
+    <string name="cd_chapter_edit">Edit</string>
+    <string name="cd_chapter_delete">Delete</string>
+
+    <!-- AutoEditPanel — v3.13.0 InfoCard labels -->
+    <string name="auto_edit_info_clips">Clips</string>
+    <string name="auto_edit_info_music">Music</string>
+    <string name="auto_edit_info_yes">Yes</string>
+    <string name="auto_edit_info_no">No</string>
+    <string name="auto_edit_info_target">Target</string>
+    <string name="auto_edit_info_target_value">~60s</string>
+
+    <!-- BeatSyncPanel — v3.13.0 stat labels -->
+    <string name="beat_sync_markers_count">%1$d markers</string>
+    <string name="beat_sync_label_beats">Beats</string>
+    <string name="beat_sync_label_bpm">BPM</string>
 </resources>

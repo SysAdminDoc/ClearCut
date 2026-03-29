@@ -73,7 +73,7 @@ class ExportDelegate(
                     withContext(Dispatchers.IO) { outputDir.mkdirs() }
                     val allClips = tracks.flatMap { it.clips }.sortedBy { it.timelineStartMs }
                     val totalDurationMs = allClips.maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L
-                    val frameIntervalMs = (1000 / configWithChapters.gifFrameRate).toLong()
+                    val frameIntervalMs = (1000 / configWithChapters.gifFrameRate.coerceAtLeast(1)).toLong()
                     val frameCount = (totalDurationMs / frameIntervalMs).toInt().coerceIn(1, 300)
                     val maxWidth = configWithChapters.gifMaxWidth
 
@@ -101,10 +101,13 @@ class ExportDelegate(
                         return@launch
                     }
 
-                    withContext(Dispatchers.IO) {
-                        gifFile.outputStream().buffered().use { out ->
-                            encodeGif(frames, frameIntervalMs.toInt(), out)
+                    try {
+                        withContext(Dispatchers.IO) {
+                            gifFile.outputStream().buffered().use { out ->
+                                encodeGif(frames, frameIntervalMs.toInt(), out)
+                            }
                         }
+                    } finally {
                         frames.forEach { it.recycle() }
                     }
 

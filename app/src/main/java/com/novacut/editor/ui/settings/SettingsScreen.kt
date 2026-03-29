@@ -113,25 +113,25 @@ fun SettingsScreen(
                 onChanged = { viewModel.setProxyEnabled(it) }
             )
             SettingsSwitch(
-                label = "Show Waveforms",
-                description = "Display audio waveforms on timeline clips",
+                label = stringResource(R.string.settings_show_waveforms),
+                description = stringResource(R.string.settings_show_waveforms_desc),
                 checked = settings.showWaveforms,
                 onChanged = { viewModel.setShowWaveforms(it) }
             )
             SettingsSwitch(
-                label = "Snap to Beat",
-                description = "Snap clip edges to detected beat markers",
+                label = stringResource(R.string.settings_snap_beat),
+                description = stringResource(R.string.settings_snap_beat_desc),
                 checked = settings.snapToBeat,
                 onChanged = { viewModel.setSnapToBeat(it) }
             )
             SettingsSwitch(
-                label = "Snap to Markers",
-                description = "Snap clip edges to timeline markers",
+                label = stringResource(R.string.settings_snap_markers),
+                description = stringResource(R.string.settings_snap_markers_desc),
                 checked = settings.snapToMarker,
                 onChanged = { viewModel.setSnapToMarker(it) }
             )
             // Default Track Height chips
-            Text("Default Track Height", color = Mocha.Text, fontSize = 14.sp,
+            Text(stringResource(R.string.settings_default_track_height), color = Mocha.Text, fontSize = 14.sp,
                 modifier = Modifier.padding(top = 8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
@@ -187,27 +187,27 @@ fun SettingsScreen(
         }
 
         // Editor
-        SettingsSection("Editor") {
+        SettingsSection(stringResource(R.string.settings_editor)) {
             SettingsDropdown(
-                label = "Default Mode",
+                label = stringResource(R.string.settings_default_mode),
                 value = settings.editorMode,
-                options = listOf("Easy", "Pro"),
+                options = listOf(stringResource(R.string.settings_mode_easy), stringResource(R.string.settings_mode_pro)),
                 onSelected = { viewModel.setEditorMode(listOf("Easy", "Pro")[it]) }
             )
             SettingsToggle(
-                label = "Haptic Feedback",
-                description = "Vibrate on timeline snap and clip selection",
+                label = stringResource(R.string.settings_haptic_feedback),
+                description = stringResource(R.string.settings_haptic_desc),
                 checked = settings.hapticEnabled,
                 onChanged = { viewModel.setHapticEnabled(it) }
             )
             SettingsSwitch(
-                label = "Confirm Before Delete",
-                description = "Show confirmation dialog before deleting clips",
+                label = stringResource(R.string.settings_confirm_delete),
+                description = stringResource(R.string.settings_confirm_delete_desc),
                 checked = settings.confirmBeforeDelete,
                 onChanged = { viewModel.setConfirmBeforeDelete(it) }
             )
             // Thumbnail Cache chips
-            Text("Thumbnail Cache", color = Mocha.Text, fontSize = 14.sp,
+            Text(stringResource(R.string.settings_thumbnail_cache), color = Mocha.Text, fontSize = 14.sp,
                 modifier = Modifier.padding(top = 8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
@@ -228,13 +228,18 @@ fun SettingsScreen(
                 }
             }
             // Default Export Quality chips
-            Text("Default Export Quality", color = Mocha.Text, fontSize = 14.sp,
+            Text(stringResource(R.string.settings_export_quality), color = Mocha.Text, fontSize = 14.sp,
                 modifier = Modifier.padding(top = 8.dp))
+            val qualityLabels = listOf(
+                "LOW" to stringResource(R.string.settings_quality_small),
+                "MEDIUM" to stringResource(R.string.settings_quality_balanced),
+                "HIGH" to stringResource(R.string.settings_quality_best)
+            )
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                listOf("LOW" to "Small File", "MEDIUM" to "Balanced", "HIGH" to "Best Quality").forEach { (key, label) ->
+                qualityLabels.forEach { (key, label) ->
                     FilterChip(
                         selected = settings.defaultExportQuality == key,
                         onClick = { viewModel.setDefaultExportQuality(key) },
@@ -251,13 +256,33 @@ fun SettingsScreen(
         }
 
         // Tutorial
+        var showResetConfirm by remember { mutableStateOf(false) }
         SettingsSection(stringResource(R.string.settings_tutorial)) {
             OutlinedButton(
-                onClick = { viewModel.resetTutorial() },
+                onClick = { showResetConfirm = true },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(stringResource(R.string.settings_reset_tutorial))
             }
+        }
+        if (showResetConfirm) {
+            AlertDialog(
+                onDismissRequest = { showResetConfirm = false },
+                title = { Text(stringResource(R.string.settings_reset_tutorial_confirm_title), color = Mocha.Text) },
+                text = { Text(stringResource(R.string.settings_reset_tutorial_confirm), color = Mocha.Subtext0) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        viewModel.resetTutorial()
+                        showResetConfirm = false
+                    }) { Text(stringResource(R.string.settings_confirm), color = Mocha.Mauve) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showResetConfirm = false }) {
+                        Text(stringResource(R.string.cancel), color = Mocha.Subtext0)
+                    }
+                },
+                containerColor = Mocha.Mantle
+            )
         }
 
         // About

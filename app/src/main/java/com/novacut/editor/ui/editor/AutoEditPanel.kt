@@ -60,9 +60,9 @@ fun AutoEditPanel(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            InfoCard("Clips", "$clipCount", Icons.Default.Videocam, Mocha.Blue, Modifier.weight(1f))
-            InfoCard("Music", if (hasAudio) "Yes" else "No", Icons.Default.MusicNote, if (hasAudio) Mocha.Green else Mocha.Surface1, Modifier.weight(1f))
-            InfoCard("Target", "~60s", Icons.Default.Timer, Mocha.Peach, Modifier.weight(1f))
+            InfoCard(stringResource(R.string.auto_edit_info_clips), "$clipCount", Icons.Default.Videocam, Mocha.Blue, Modifier.weight(1f))
+            InfoCard(stringResource(R.string.auto_edit_info_music), if (hasAudio) stringResource(R.string.auto_edit_info_yes) else stringResource(R.string.auto_edit_info_no), Icons.Default.MusicNote, if (hasAudio) Mocha.Green else Mocha.Surface1, Modifier.weight(1f))
+            InfoCard(stringResource(R.string.auto_edit_info_target), stringResource(R.string.auto_edit_info_target_value), Icons.Default.Timer, Mocha.Peach, Modifier.weight(1f))
         }
 
         Spacer(modifier = Modifier.height(12.dp))

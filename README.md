@@ -1,8 +1,66 @@
-# NovaCut v3.6.0
+# NovaCut v3.13.0
 
 A professional Android video editor built with Kotlin and Jetpack Compose. Open alternative to CapCut, PowerDirector, and DaVinci Resolve — with on-device AI, GPU-accelerated effects, and desktop NLE interoperability.
 
 ## Changelog
+
+### v3.13.0 — GIF Hardening, Settings Localization & Editor Polish
+- **GIF encoder hardening** — Fixed bitmap memory leak on export error (moved recycle to finally block), added division-by-zero guard for frame rate
+- **Settings screen localization** — Extracted 22 hardcoded strings (labels, descriptions, quality labels) to strings.xml
+- **Reset tutorial confirmation** — AlertDialog guard before clearing tutorial state, prevents accidental resets
+- **Panel string extractions** — ChapterMarkerPanel (4 strings), AutoEditPanel (6 InfoCard labels), BeatSyncPanel (3 stat labels with format strings)
+- **Undo stack bounds** — Redo-path undo stack now bounded to 50 entries, matching save path
+
+### v3.12.0 — GIF Export, Accessibility & Panel Localization
+- **GIF89a encoder** — Self-contained GIF export with LZW compression in ExportDelegate, no external dependencies. Configurable frame rate (10/15/20fps) and max width (320/480/640px), capped at 300 frames
+- **25 contentDescription fixes** — Replaced `null` across 13 panel files with proper `stringResource(R.string.cd_*)` for screen readers
+- **75 panel string extractions** — Hardcoded `Text("...")` from 21 panel composables extracted to strings.xml, organized by panel prefix
+
+### v3.11.0 — Clip Labels, Track Controls & Localization
+- **Clip label picker** — Color label selector UI (7 Catppuccin colors) via AnimatedVisibility Card in clip edit sub-menu
+- **Collapse/expand all tracks** — UnfoldLess/UnfoldMore toggle in Timeline zoom controls row
+- **Track height cycling** — Long-press track type icon cycles 48→64→80→96→48dp
+- **ToolPanel @StringRes migration** — All 83 TabItem/SubMenuItem labels extracted to strings.xml, resolved via `stringResource()`
+
+### v3.10.0 — Track Headers, Keyboard Shortcuts & Editor Polish
+- **Track collapse/expand** — Per-track chevron icon; collapsed tracks render as thin 24dp colored bars
+- **Per-track height** — Timeline uses `Track.trackHeight` instead of hardcoded 60dp
+- **Waveform toggle** — Per-track GraphicEq icon gated by `Track.showWaveform`
+- **Keyboard shortcuts** — Space=play/pause, Ctrl+Z=undo, arrows=seek, M=marker, S=split, Delete=delete, Ctrl+S=save, Ctrl+C/V=copy/paste effects
+- **Clip color labels** — ClipLabel enum (7 Catppuccin colors) with 3dp top border on Timeline clips, undo-supported `setClipLabel()`
+- **Settings wired** — `confirmBeforeDelete`, `defaultExportQuality`, `showWaveforms` now gate editor behavior
+- **Chapter markers on export** — Timeline markers auto-populate export chapter list
+
+### v3.9.0 — Export Expansion, Settings & UX Polish
+- **GIF export UI** — Toggle in ExportSheet with frame rate and max width options
+- **Frame capture** — PNG/JPEG single-frame export from playhead position
+- **Subtitle export** — SRT/VTT/ASS format picker in ExportSheet
+- **Stems & chapter markers toggles** — Wired in ExportSheet UI
+- **7 new settings** — showWaveforms, snapToBeat, snapToMarker, defaultTrackHeight, confirmBeforeDelete, thumbnailCacheSizeMb, defaultExportQuality (all DataStore-persisted)
+- **Marker list panel** — Searchable, filterable marker list with color chips, inline editing, jump-to-time
+- **Track header fields** — showWaveform, trackHeight, isCollapsed added to Track model with ViewModel methods
+- **Snap-to-beat/marker** — Beat markers and timeline markers added as snap targets (settings-driven)
+
+### v3.8.0 — Competitor-Inspired Features
+- **AI suggestion banner** — Contextual suggestions above timeline (auto-detects: no effects, low audio, no transitions)
+- **Drawing overlay** — Annotation layer with 6 Catppuccin colors, brush size, eraser, per-path undo (KineMaster-inspired)
+- **Multi-cam panel** — 2x2 grid angle switching with thumbnails and sync button (PowerDirector-inspired)
+- **Radial action menu** — Long-press quick-action menu on preview with spring animation (KineMaster Media Wheel)
+- **Speed range extended** — 16x → 100x (matching CapCut)
+- **Transparent video export** — WebM VP9 alpha channel toggle
+- **Filler word auto-strip** — `cleanCaptionText()` removes filler words from captions
+- **Manual beat tap** — Tap-to-place markers during playback in BeatSyncPanel
+- **Pinch-to-transform** — Pinch/rotate/drag gestures on PreviewPanel
+- **Script-to-video** — Text input for smarter clip selection in AutoEditPanel
+- **Auto-generated effect UI** — `ParamRange` metadata replaces 170-line hand-coded when block
+- **Community templates** — `.novacut-template` export/import via share intent
+- **Project backup panel** — CloudBackupPanel rewritten to functional archive export/import
+- **F-Droid fastlane metadata** — Structure created for F-Droid distribution
+
+### v3.7.0 — Panel System, PanelVisibility & Architecture Refactor
+- **PanelVisibility system** — Replaced legacy `show*` booleans with `PanelId` enum + `PanelVisibility` data class in EditorState
+- **BottomSheetSlot pattern** — Unified panel rendering via slot-based AnimatedVisibility
+- **Delegate pattern consolidation** — ViewModel delegates (ClipEditing, Effects, Export, AudioMixer, ColorGrading, AiTools, Overlay) fully wired
 
 ### v3.6.0 — Architecture Hardening & Concurrency Safety
 
@@ -90,6 +148,12 @@ A professional Android video editor built with Kotlin and Jetpack Compose. Open 
 - **Clip reorder & move** — reorder clips within a track or move between tracks
 - **Haptic feedback** — tactile response on trim handle grab and magnetic snap
 - **Waveform caching** — LRU cache avoids redundant audio decoding on timeline recomposition
+- **Clip color labels** — 7 Catppuccin colors (red, peach, green, blue, mauve, yellow, none) with colored top border on Timeline
+- **Track collapse/expand** — Per-track chevron + collapse/expand all toggle, collapsed tracks show thin 24dp colored bars
+- **Track height cycling** — Long-press track type icon to cycle 48→64→80→96dp
+- **Keyboard shortcuts** — Space, Ctrl+Z/Y, arrow keys, M, S, +/-, Delete, Ctrl+S, Ctrl+C/V for external keyboard editing
+- **Snap-to-beat/marker** — Beat markers and timeline markers as additional snap targets (settings-driven)
+- **Marker list panel** — Searchable, filterable marker list with color chips, inline label editing, jump-to-time
 
 ### Effects & Transitions
 - **37 GPU-accelerated GLSL transitions** with unique Material icons per type — dissolve, wipe, zoom, spin, flip, cube, ripple, pixelate, morph, glitch, swirl, heart, dreamy, plus 12 new: door open, burn, radial wipe, mosaic reveal, bounce, lens flare, page curl, cross warp, angular, kaleidoscope, squares wire, color phase
@@ -159,6 +223,8 @@ A professional Android video editor built with Kotlin and Jetpack Compose. Open 
 - System/Piper engine toggle in TTS panel
 
 ### Export
+- **GIF export** — Self-contained GIF89a encoder with LZW compression, configurable frame rate (10/15/20fps) and max width (320/480/640px)
+- **Frame capture** — PNG/JPEG single-frame export from current playhead position
 - 480p to 4K Ultra HD
 - **4 codecs** — H.264, H.265 (HEVC), AV1, VP9 with hardware capability detection via `MediaCodecList`
 - **One-tap platform presets** — YouTube 1080p, YouTube 4K, TikTok, Instagram Reels, Instagram Square, Threads
@@ -192,6 +258,12 @@ A professional Android video editor built with Kotlin and Jetpack Compose. Open 
 - Auto-save toggle + interval (15-300s)
 - Proxy resolution selector
 - Reset first-run tutorial
+- **Show waveforms** — Global waveform visibility toggle
+- **Snap to beat / snap to markers** — Timeline snap behavior toggles
+- **Default track height** — 48/64/80/96dp chips
+- **Confirm before delete** — Gate clip deletion dialog
+- **Thumbnail cache size** — 64/128/256 MB
+- **Default export quality** — LOW/MEDIUM/HIGH
 - All settings persist via DataStore
 
 ## Tech Stack
