@@ -127,7 +127,7 @@ fun AiToolsPanel(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     Icons.Default.AutoAwesome,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.cd_ai_tools_magic),
                     tint = Mocha.Mauve,
                     modifier = Modifier.size(20.dp)
                 )
@@ -164,7 +164,7 @@ fun AiToolsPanel(
             ) {
                 Icon(
                     Icons.Default.RecordVoiceOver,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.cd_whisper_model_status),
                     tint = when (whisperModelState) {
                         WhisperModelState.READY -> Mocha.Green
                         WhisperModelState.DOWNLOADING -> Mocha.Yellow
@@ -243,7 +243,7 @@ fun AiToolsPanel(
             ) {
                 Icon(
                     Icons.Default.PersonOff,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.cd_segmentation_model_status),
                     tint = when (segmentationModelState) {
                         SegmentationModelState.READY -> Mocha.Green
                         SegmentationModelState.DOWNLOADING -> Mocha.Yellow

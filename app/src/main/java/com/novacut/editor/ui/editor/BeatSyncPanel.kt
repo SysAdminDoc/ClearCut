@@ -59,7 +59,7 @@ fun BeatSyncPanel(
         ) {
             Icon(
                 imageVector = Icons.Default.MusicNote,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.cd_beat_sync),
                 tint = Mocha.Peach,
                 modifier = Modifier.size(20.dp)
             )
@@ -114,7 +114,7 @@ fun BeatSyncPanel(
                 } else {
                     Icon(
                         imageVector = Icons.Default.GraphicEq,
-                        contentDescription = null,
+                        contentDescription = stringResource(R.string.cd_detect_beats),
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -136,11 +136,11 @@ fun BeatSyncPanel(
             ) {
                 Icon(
                     imageVector = Icons.Default.TouchApp,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.cd_tap_beats),
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Tap Beats", fontSize = 13.sp)
+                Text(stringResource(R.string.panel_beat_sync_tap), fontSize = 13.sp)
             }
         }
 
@@ -158,7 +158,7 @@ fun BeatSyncPanel(
                     modifier = Modifier.weight(1f)
                 )
                 TextButton(onClick = onClearBeats) {
-                    Text("Clear", color = Mocha.Red, fontSize = 12.sp)
+                    Text(stringResource(R.string.panel_beat_sync_clear), color = Mocha.Red, fontSize = 12.sp)
                 }
             }
         }

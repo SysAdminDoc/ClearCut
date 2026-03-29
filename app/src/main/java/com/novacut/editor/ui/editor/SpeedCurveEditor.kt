@@ -68,7 +68,7 @@ fun SpeedCurveEditor(
                 .background(Mocha.Surface0, RoundedCornerShape(8.dp))
                 .padding(2.dp)
         ) {
-            listOf("Constant" to false, "Speed Ramp" to true).forEach { (label, isCurve) ->
+            listOf(stringResource(R.string.panel_speed_constant) to false, stringResource(R.string.panel_speed_ramp) to true).forEach { (label, isCurve) ->
                 Box(
                     modifier = Modifier
                         .weight(1f)

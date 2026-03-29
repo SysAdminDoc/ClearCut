@@ -13,6 +13,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.novacut.editor.R
 import com.novacut.editor.ui.theme.Mocha
 
 @Composable
@@ -41,7 +43,7 @@ fun CloudBackupPanel(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(Icons.Default.Backup, null, tint = Mocha.Blue, modifier = Modifier.size(20.dp))
-                Text("Project Backup", color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.panel_cloud_backup_title), color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
             IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
                 Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
@@ -51,7 +53,7 @@ fun CloudBackupPanel(
         Spacer(Modifier.height(8.dp))
 
         Text(
-            "Export your project as a backup archive to Downloads/NovaCut/. Import to restore on any device.",
+            stringResource(R.string.panel_cloud_backup_description),
             color = Mocha.Subtext0,
             fontSize = 12.sp
         )
@@ -67,7 +69,7 @@ fun CloudBackupPanel(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text("Estimated Size", color = Mocha.Subtext0, fontSize = 11.sp)
+                Text(stringResource(R.string.panel_cloud_backup_estimated_size), color = Mocha.Subtext0, fontSize = 11.sp)
                 Text(
                     formatFileSize(estimatedSizeBytes),
                     color = Mocha.Text,
@@ -76,12 +78,12 @@ fun CloudBackupPanel(
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text("Last Backup", color = Mocha.Subtext0, fontSize = 11.sp)
+                Text(stringResource(R.string.panel_cloud_backup_last_backup), color = Mocha.Subtext0, fontSize = 11.sp)
                 Text(
                     if (lastBackupTime != null) {
                         java.text.SimpleDateFormat("MMM d, h:mm a", java.util.Locale.getDefault())
                             .format(java.util.Date(lastBackupTime))
-                    } else "Never",
+                    } else stringResource(R.string.panel_cloud_backup_never),
                     color = if (lastBackupTime != null) Mocha.Green else Mocha.Subtext0,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium
@@ -105,11 +107,11 @@ fun CloudBackupPanel(
                 if (isExporting) {
                     CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Mocha.Base, strokeWidth = 2.dp)
                     Spacer(Modifier.width(4.dp))
-                    Text("Exporting...", fontSize = 12.sp)
+                    Text(stringResource(R.string.panel_cloud_backup_exporting), fontSize = 12.sp)
                 } else {
                     Icon(Icons.Default.Upload, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("Export Backup", fontSize = 12.sp)
+                    Text(stringResource(R.string.panel_cloud_backup_export), fontSize = 12.sp)
                 }
             }
             OutlinedButton(
@@ -121,7 +123,7 @@ fun CloudBackupPanel(
             ) {
                 Icon(Icons.Default.Download, null, tint = Mocha.Blue, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("Import Backup", color = Mocha.Blue, fontSize = 12.sp)
+                Text(stringResource(R.string.panel_cloud_backup_import), color = Mocha.Blue, fontSize = 12.sp)
             }
         }
     }

@@ -17,7 +17,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
+import com.novacut.editor.R
 import com.novacut.editor.model.AspectRatio
 import com.novacut.editor.ui.theme.Mocha
 
@@ -56,7 +58,7 @@ fun SmartReframePanel(
         ) {
             Icon(
                 imageVector = Icons.Default.Crop,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.cd_smart_reframe),
                 tint = Mocha.Mauve,
                 modifier = Modifier.size(20.dp)
             )

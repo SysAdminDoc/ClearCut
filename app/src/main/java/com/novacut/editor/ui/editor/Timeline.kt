@@ -29,7 +29,9 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
+import com.novacut.editor.R
 import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.model.*
 import com.novacut.editor.ui.theme.Mocha
@@ -608,7 +610,7 @@ fun Timeline(
                                                     thumbs.forEach { bitmap ->
                                                         Image(
                                                             bitmap = bitmap.asImageBitmap(),
-                                                            contentDescription = null,
+                                                            contentDescription = stringResource(R.string.cd_clip_thumbnail),
                                                             modifier = Modifier
                                                                 .weight(1f)
                                                                 .fillMaxHeight(),

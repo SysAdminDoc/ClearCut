@@ -244,3 +244,19 @@
 - [x] **@StringRes migration** — `TabItem.label` and `SubMenuItem.label` changed from `String` to `@StringRes Int`
 - [x] **83 string resources** — All tab labels (12) and sub-menu item labels (71) extracted to strings.xml
 - [x] **Composable resolution** — `stringResource(item.labelRes)` used in BottomTabBar and SubMenuGrid rendering
+
+## v3.12.0 — GIF Export, Accessibility & Panel Localization
+
+### GIF Export Backend
+- [x] **GIF89a encoder** — Self-contained GIF encoder with LZW compression in ExportDelegate, no external dependencies
+- [x] **Frame extraction pipeline** — Extracts frames via `extractThumbnail()`, scales to `gifMaxWidth`, caps at 300 frames
+- [x] **ExportDelegate integration** — GIF branch in `startExport()` with progress reporting, short-circuits before MP4 path
+
+### Accessibility
+- [x] **25 contentDescription fixes** — Replaced `null` with `stringResource(R.string.cd_*)` across 13 panel files
+- [x] **23 string resources** — New `cd_` prefixed content descriptions for screen readers
+
+### Panel Localization
+- [x] **75 string extractions** — Hardcoded `Text("...")` from 21 panel composables extracted to strings.xml
+- [x] **Organized by panel** — `panel_audio_mixer_*`, `panel_cloud_backup_*`, `panel_pip_*`, etc.
+- [x] **Import fixes** — Added missing `stringResource`/`R` imports to 7 panel files

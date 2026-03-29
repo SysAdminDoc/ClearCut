@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.ui.res.stringResource
+import com.novacut.editor.R
 import com.novacut.editor.model.*
 import com.novacut.editor.ui.theme.Mocha
 
@@ -60,7 +62,7 @@ fun AudioMixerPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Audio Mixer", color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.panel_audio_mixer_title), color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
                 Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
             }
@@ -151,7 +153,7 @@ fun AudioMixerPanel(
 
                     // Effect chain list
                     if (track.audioEffects.isEmpty()) {
-                        Text("No effects", color = Mocha.Subtext0, fontSize = 12.sp, modifier = Modifier.padding(8.dp))
+                        Text(stringResource(R.string.panel_audio_mixer_no_effects), color = Mocha.Subtext0, fontSize = 12.sp, modifier = Modifier.padding(8.dp))
                     } else {
                         LazyRow(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -271,7 +273,7 @@ private fun ChannelStrip(
                 .semantics { contentDescription = if (track.isMuted) "Unmute track" else "Mute track" },
             contentAlignment = Alignment.Center
         ) {
-            Text("M", color = if (track.isMuted) Mocha.Red else Mocha.Subtext0, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.panel_audio_mixer_mute), color = if (track.isMuted) Mocha.Red else Mocha.Subtext0, fontSize = 10.sp, fontWeight = FontWeight.Bold)
         }
 
         // Solo button
@@ -284,7 +286,7 @@ private fun ChannelStrip(
                 .semantics { contentDescription = if (track.isSolo) "Unsolo track" else "Solo track" },
             contentAlignment = Alignment.Center
         ) {
-            Text("S", color = if (track.isSolo) Mocha.Yellow else Mocha.Subtext0, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.panel_audio_mixer_solo), color = if (track.isSolo) Mocha.Yellow else Mocha.Subtext0, fontSize = 10.sp, fontWeight = FontWeight.Bold)
         }
 
         // FX button
@@ -298,7 +300,7 @@ private fun ChannelStrip(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                "FX",
+                stringResource(R.string.panel_audio_mixer_fx),
                 color = if (track.audioEffects.isNotEmpty()) Mocha.Mauve else Mocha.Subtext0,
                 fontSize = 9.sp,
                 fontWeight = FontWeight.Bold
@@ -379,7 +381,7 @@ private fun MasterBusStrip() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("MST", color = Mocha.Mauve, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.panel_audio_mixer_master), color = Mocha.Mauve, fontSize = 10.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
         Icon(Icons.Default.GraphicEq, "Master", tint = Mocha.Mauve, modifier = Modifier.size(24.dp))
     }

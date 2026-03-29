@@ -14,6 +14,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.novacut.editor.R
 import com.novacut.editor.engine.ExportState
 import com.novacut.editor.ui.theme.Mocha
 
@@ -64,7 +66,7 @@ fun ExportProgressOverlay(
 
             // Info
             Column(modifier = Modifier.weight(1f)) {
-                Text("Exporting...", color = Mocha.Text, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                Text(stringResource(R.string.panel_export_progress_exporting), color = Mocha.Text, fontSize = 12.sp, fontWeight = FontWeight.Medium)
 
                 // Estimated time remaining
                 val currentTime by rememberUpdatedState(System.currentTimeMillis())

@@ -19,6 +19,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.novacut.editor.R
 import com.novacut.editor.model.MarkerColor
 import com.novacut.editor.model.TimelineMarker
 import com.novacut.editor.ui.theme.Mocha
@@ -56,7 +58,7 @@ fun MarkerListPanel(
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
             Text(
-                "Markers (${filtered.size})",
+                stringResource(R.string.panel_marker_header, filtered.size),
                 color = Mocha.Text,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -71,7 +73,7 @@ fun MarkerListPanel(
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
-            placeholder = { Text("Search markers...", fontSize = 12.sp) },
+            placeholder = { Text(stringResource(R.string.panel_marker_search), fontSize = 12.sp) },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 4.dp)
@@ -95,7 +97,7 @@ fun MarkerListPanel(
         ) {
             FilterChip(
                 onClick = { filterColor = null },
-                label = { Text("All", fontSize = 10.sp) },
+                label = { Text(stringResource(R.string.panel_marker_all), fontSize = 10.sp) },
                 selected = filterColor == null,
                 colors = FilterChipDefaults.filterChipColors(
                     containerColor = Mocha.Surface0,
@@ -130,7 +132,7 @@ fun MarkerListPanel(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier.fillMaxWidth().padding(24.dp)
             ) {
-                Text("No markers", color = Mocha.Overlay0, fontSize = 12.sp)
+                Text(stringResource(R.string.panel_marker_no_markers), color = Mocha.Overlay0, fontSize = 12.sp)
             }
         } else {
             LazyColumn(modifier = Modifier.fillMaxWidth()) {

@@ -1449,7 +1449,7 @@ fun EditorScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Clip Label", color = Mocha.Text, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                        Text(stringResource(R.string.panel_editor_clip_label), color = Mocha.Text, fontSize = 14.sp, modifier = Modifier.weight(1f))
                         IconButton(onClick = { showClipLabelPicker = false }, modifier = Modifier.size(24.dp)) {
                             Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(16.dp))
                         }

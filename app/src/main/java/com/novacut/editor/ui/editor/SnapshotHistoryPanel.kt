@@ -38,7 +38,7 @@ fun SnapshotHistoryPanel(
     if (showNameDialog) {
         AlertDialog(
             onDismissRequest = { showNameDialog = false },
-            title = { Text("Save Snapshot", color = Mocha.Text) },
+            title = { Text(stringResource(R.string.panel_snapshot_save_title), color = Mocha.Text) },
             text = {
                 OutlinedTextField(
                     value = snapshotName,
@@ -61,12 +61,12 @@ fun SnapshotHistoryPanel(
                     snapshotName = ""
                     showNameDialog = false
                 }) {
-                    Text("Save", color = Mocha.Mauve)
+                    Text(stringResource(R.string.panel_snapshot_save_button), color = Mocha.Mauve)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showNameDialog = false }) {
-                    Text("Cancel", color = Mocha.Subtext0)
+                    Text(stringResource(R.string.panel_snapshot_cancel), color = Mocha.Subtext0)
                 }
             },
             containerColor = Mocha.Base
@@ -109,7 +109,7 @@ fun SnapshotHistoryPanel(
                     Spacer(Modifier.height(4.dp))
                     Text(stringResource(R.string.snapshot_empty), color = Mocha.Subtext0, fontSize = 12.sp)
                     Spacer(Modifier.height(4.dp))
-                    Text("Save your project state to roll back later", color = Mocha.Subtext0.copy(alpha = 0.5f), fontSize = 10.sp)
+                    Text(stringResource(R.string.panel_snapshot_save_hint), color = Mocha.Subtext0.copy(alpha = 0.5f), fontSize = 10.sp)
                 }
             }
         } else {
@@ -137,7 +137,7 @@ fun SnapshotHistoryPanel(
                             Icon(Icons.Default.SaveAlt, null, tint = Mocha.Yellow, modifier = Modifier.size(20.dp))
                             Column {
                                 Text(
-                                    snapshot.label.ifEmpty { "Untitled Snapshot" },
+                                    snapshot.label.ifEmpty { stringResource(R.string.panel_snapshot_untitled) },
                                     color = Mocha.Text,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Medium

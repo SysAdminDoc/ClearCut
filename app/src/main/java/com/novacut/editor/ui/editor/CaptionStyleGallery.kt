@@ -27,7 +27,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
+import com.novacut.editor.R
 import com.novacut.editor.model.*
 import com.novacut.editor.ui.theme.Mocha
 
@@ -83,7 +85,7 @@ fun CaptionStyleGallery(
                 ) {
                     Icon(
                         Icons.Default.MusicNote,
-                        contentDescription = null,
+                        contentDescription = stringResource(R.string.cd_karaoke_section),
                         tint = Mocha.Mauve,
                         modifier = Modifier.size(16.dp)
                     )
@@ -112,7 +114,7 @@ fun CaptionStyleGallery(
                 ) {
                     Icon(
                         Icons.Default.Subtitles,
-                        contentDescription = null,
+                        contentDescription = stringResource(R.string.cd_caption_styles_section),
                         tint = Mocha.Subtext0,
                         modifier = Modifier.size(16.dp)
                     )

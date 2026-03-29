@@ -64,7 +64,7 @@ fun FillerRemovalPanel(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(stringResource(R.string.filler_removal_analyzing))
             } else {
-                Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.Search, contentDescription = stringResource(R.string.cd_filler_analyze), modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(stringResource(R.string.filler_removal_analyze_button))
             }
@@ -82,10 +82,10 @@ fun FillerRemovalPanel(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("Found $regionCount regions", color = Mocha.Text, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Text("Filler words and silent gaps", color = Mocha.Subtext0, fontSize = 11.sp)
+                    Text(stringResource(R.string.panel_filler_removal_found, regionCount), color = Mocha.Text, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text(stringResource(R.string.panel_filler_removal_found_description), color = Mocha.Subtext0, fontSize = 11.sp)
                 }
-                Icon(Icons.Default.Check, contentDescription = null, tint = Mocha.Green, modifier = Modifier.size(24.dp))
+                Icon(Icons.Default.Check, contentDescription = stringResource(R.string.cd_filler_regions_found), tint = Mocha.Green, modifier = Modifier.size(24.dp))
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -95,9 +95,9 @@ fun FillerRemovalPanel(
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve, contentColor = Mocha.Base)
             ) {
-                Icon(Icons.Default.ContentCut, contentDescription = null, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.ContentCut, contentDescription = stringResource(R.string.cd_filler_remove_all), modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Remove All ($regionCount regions)")
+                Text(stringResource(R.string.panel_filler_removal_remove_all, regionCount))
             }
         }
     }

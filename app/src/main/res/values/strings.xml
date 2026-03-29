@@ -610,4 +610,146 @@
 
     <!-- Keyboard shortcuts -->
     <string name="keyboard_shortcuts">Keyboard Shortcuts</string>
+
+    <!-- AudioMixerPanel -->
+    <string name="panel_audio_mixer_title">Audio Mixer</string>
+    <string name="panel_audio_mixer_no_effects">No effects</string>
+    <string name="panel_audio_mixer_master">MST</string>
+    <string name="panel_audio_mixer_mute">M</string>
+    <string name="panel_audio_mixer_solo">S</string>
+    <string name="panel_audio_mixer_fx">FX</string>
+
+    <!-- CloudBackupPanel -->
+    <string name="panel_cloud_backup_title">Project Backup</string>
+    <string name="panel_cloud_backup_description">Export your project as a backup archive to Downloads/NovaCut/. Import to restore on any device.</string>
+    <string name="panel_cloud_backup_estimated_size">Estimated Size</string>
+    <string name="panel_cloud_backup_last_backup">Last Backup</string>
+    <string name="panel_cloud_backup_never">Never</string>
+    <string name="panel_cloud_backup_exporting">Exporting\u2026</string>
+    <string name="panel_cloud_backup_export">Export Backup</string>
+    <string name="panel_cloud_backup_import">Import Backup</string>
+
+    <!-- PipPresetsPanel (ChromaKey section) -->
+    <string name="panel_chroma_key_title">Chroma Key</string>
+    <string name="panel_chroma_key_alpha_matte">Alpha Matte</string>
+    <string name="panel_chroma_key_color">Key Color</string>
+    <string name="panel_chroma_key_refinement">Refinement</string>
+
+    <!-- AutoEditPanel -->
+    <string name="panel_auto_edit_generating">Generating highlight reel\u2026</string>
+    <string name="panel_auto_edit_script_label">Script / Description (optional)</string>
+    <string name="panel_auto_edit_script_placeholder">Describe your video story\u2026</string>
+    <string name="panel_auto_edit_add_music_hint">Add music to the audio track for beat-synced cuts</string>
+
+    <!-- CaptionEditorPanel -->
+    <string name="panel_caption_style">Style</string>
+    <string name="panel_caption_auto_generate">Auto-Generate</string>
+    <string name="panel_caption_save">Save Caption</string>
+    <string name="panel_caption_style_label">Style</string>
+    <string name="panel_caption_position_y">Position Y</string>
+
+    <!-- DrawingOverlayPanel -->
+    <string name="panel_drawing_title">Draw</string>
+    <string name="panel_drawing_done">Done</string>
+    <string name="panel_drawing_size">Size</string>
+
+    <!-- EffectLibraryPanel -->
+    <string name="panel_effect_library_description">Save, share, and reuse effect chains across clips and projects.</string>
+    <string name="panel_effect_library_copy">Copy</string>
+    <string name="panel_effect_library_paste">Paste</string>
+    <string name="panel_effect_library_export">Export .ncfx</string>
+    <string name="panel_effect_library_import">Import .ncfx</string>
+    <string name="panel_effect_library_select_clip_hint">Select a clip to copy, paste, or export its effects.</string>
+
+    <!-- FillerRemovalPanel -->
+    <string name="panel_filler_removal_found">Found %1$d regions</string>
+    <string name="panel_filler_removal_found_description">Filler words and silent gaps</string>
+    <string name="panel_filler_removal_remove_all">Remove All (%1$d regions)</string>
+
+    <!-- MarkerListPanel -->
+    <string name="panel_marker_header">Markers (%1$d)</string>
+    <string name="panel_marker_search">Search markers\u2026</string>
+    <string name="panel_marker_all">All</string>
+    <string name="panel_marker_no_markers">No markers</string>
+
+    <!-- MultiCamPanel -->
+    <string name="panel_multi_cam_title">Multi-Cam</string>
+    <string name="panel_multi_cam_sync">Sync Clips</string>
+    <string name="panel_multi_cam_no_clips">No video clips available</string>
+
+    <!-- RenderPreviewSheet -->
+    <string name="panel_render_pass_through">Pass-through</string>
+    <string name="panel_render_re_encode">Re-encode</string>
+    <string name="panel_render_speedup">Speedup</string>
+    <string name="panel_render_segments">Segments</string>
+    <string name="panel_render_preview">Preview</string>
+    <string name="panel_render_export">Export</string>
+
+    <!-- SnapshotHistoryPanel -->
+    <string name="panel_snapshot_save_title">Save Snapshot</string>
+    <string name="panel_snapshot_save_button">Save</string>
+    <string name="panel_snapshot_cancel">Cancel</string>
+    <string name="panel_snapshot_save_hint">Save your project state to roll back later</string>
+    <string name="panel_snapshot_untitled">Untitled Snapshot</string>
+
+    <!-- TextEditorSheet -->
+    <string name="panel_text_editor_close">Close</string>
+    <string name="panel_text_editor_text_label">Text</string>
+    <string name="panel_text_editor_font_size">Font Size</string>
+
+    <!-- TextTemplateGallery -->
+    <string name="panel_text_template_title">Text Templates</string>
+    <string name="panel_text_template_static">Static</string>
+    <string name="panel_text_template_animated">Animated</string>
+    <string name="panel_text_template_all">All</string>
+
+    <!-- BeatSyncPanel -->
+    <string name="panel_beat_sync_tap">Tap Beats</string>
+    <string name="panel_beat_sync_clear">Clear</string>
+
+    <!-- ExportProgressOverlay -->
+    <string name="panel_export_progress_exporting">Exporting\u2026</string>
+
+    <!-- KeyframeCurveEditor -->
+    <string name="panel_keyframes_title">Keyframes</string>
+
+    <!-- MediaManagerPanel -->
+    <string name="panel_media_manager_remove_unused">Remove Unused Media</string>
+
+    <!-- SpeedCurveEditor -->
+    <string name="panel_speed_constant">Constant</string>
+    <string name="panel_speed_ramp">Speed Ramp</string>
+
+    <!-- TtsPanel -->
+    <string name="panel_tts_not_available">TTS not available on this device</string>
+    <string name="panel_tts_piper_hint">Piper HD voices (coming soon \u2014 requires Sherpa-ONNX integration)</string>
+    <string name="panel_tts_preview">Preview</string>
+
+    <!-- EditorScreen (Clip Label) -->
+    <string name="panel_editor_clip_label">Clip Label</string>
+
+    <!-- Content descriptions -->
+    <string name="cd_ai_suggestion">AI suggestion</string>
+    <string name="cd_ai_tools_magic">AI tools</string>
+    <string name="cd_whisper_model_status">Whisper model status</string>
+    <string name="cd_segmentation_model_status">Segmentation model status</string>
+    <string name="cd_auto_edit_generate">Generate highlight reel</string>
+    <string name="cd_beat_sync">Beat sync</string>
+    <string name="cd_detect_beats">Detect beats</string>
+    <string name="cd_tap_beats">Tap beats</string>
+    <string name="cd_karaoke_section">Karaoke styles</string>
+    <string name="cd_caption_styles_section">Caption styles</string>
+    <string name="cd_filler_analyze">Detect fillers</string>
+    <string name="cd_filler_regions_found">Regions found</string>
+    <string name="cd_filler_remove_all">Remove all filler regions</string>
+    <string name="cd_tutorial_direction">Direction indicator</string>
+    <string name="cd_tutorial_next">Next step</string>
+    <string name="cd_noise_analyze">Analyze noise</string>
+    <string name="cd_multicam_sync">Sync clips</string>
+    <string name="cd_multicam_angle">Camera angle</string>
+    <string name="cd_multicam_selected">Selected angle</string>
+    <string name="cd_preview_empty">Video library</string>
+    <string name="cd_smart_reframe">Smart reframe</string>
+    <string name="cd_clip_thumbnail">Clip thumbnail</string>
+    <string name="cd_tts_preview">Preview speech</string>
 </resources>

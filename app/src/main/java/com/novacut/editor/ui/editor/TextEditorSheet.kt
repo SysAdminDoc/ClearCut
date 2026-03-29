@@ -121,7 +121,7 @@ fun TextEditorSheet(
                     Text(stringResource(R.string.text_editor_save), color = if (text.isNotBlank()) Mocha.Mauve else Mocha.Surface1)
                 }
                 IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Close, stringResource(R.string.panel_text_editor_close), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
                 }
             }
         }
@@ -133,7 +133,7 @@ fun TextEditorSheet(
             value = text,
             onValueChange = { text = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("Text") },
+            label = { Text(stringResource(R.string.panel_text_editor_text_label)) },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Mocha.Mauve,
                 unfocusedBorderColor = Mocha.Surface1,

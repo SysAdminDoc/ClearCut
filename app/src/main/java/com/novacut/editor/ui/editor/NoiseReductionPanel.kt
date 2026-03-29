@@ -62,7 +62,7 @@ fun NoiseReductionPanel(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(stringResource(R.string.noise_reduction_analyzing))
             } else {
-                Icon(Icons.Default.GraphicEq, contentDescription = null, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.GraphicEq, contentDescription = stringResource(R.string.cd_noise_analyze), modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(stringResource(R.string.noise_reduction_analyze_button))
             }

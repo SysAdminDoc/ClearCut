@@ -25,6 +25,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.novacut.editor.R
 import com.novacut.editor.model.*
 import com.novacut.editor.ui.theme.Mocha
 
@@ -214,9 +216,9 @@ fun TextTemplateGallery(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Text Templates", color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.panel_text_template_title), color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Close, stringResource(R.string.close), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
             }
         }
 
@@ -230,12 +232,12 @@ fun TextTemplateGallery(
             FilterChip(
                 selected = !showAnimated,
                 onClick = { showAnimated = false },
-                label = { Text("Static", fontSize = 11.sp) }
+                label = { Text(stringResource(R.string.panel_text_template_static), fontSize = 11.sp) }
             )
             FilterChip(
                 selected = showAnimated,
                 onClick = { showAnimated = true },
-                label = { Text("Animated", fontSize = 11.sp) }
+                label = { Text(stringResource(R.string.panel_text_template_animated), fontSize = 11.sp) }
             )
         }
 
@@ -245,7 +247,7 @@ fun TextTemplateGallery(
                 FilterChip(
                     selected = selectedCategory == null,
                     onClick = { selectedCategory = null },
-                    label = { Text("All", fontSize = 10.sp) },
+                    label = { Text(stringResource(R.string.panel_text_template_all), fontSize = 10.sp) },
                     modifier = Modifier.height(28.dp),
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = Mocha.Mauve.copy(alpha = 0.2f),

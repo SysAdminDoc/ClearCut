@@ -70,8 +70,8 @@ fun AutoEditPanel(
         OutlinedTextField(
             value = scriptText,
             onValueChange = { scriptText = it },
-            label = { Text("Script / Description (optional)", color = Mocha.Subtext0, fontSize = 12.sp) },
-            placeholder = { Text("Describe your video story...", color = Mocha.Surface2, fontSize = 12.sp) },
+            label = { Text(stringResource(R.string.panel_auto_edit_script_label), color = Mocha.Subtext0, fontSize = 12.sp) },
+            placeholder = { Text(stringResource(R.string.panel_auto_edit_script_placeholder), color = Mocha.Surface2, fontSize = 12.sp) },
             modifier = Modifier.fillMaxWidth(),
             minLines = 2,
             maxLines = 4,
@@ -97,9 +97,9 @@ fun AutoEditPanel(
             if (isProcessing) {
                 CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Mocha.Base, strokeWidth = 2.dp)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Generating highlight reel...")
+                Text(stringResource(R.string.panel_auto_edit_generating))
             } else {
-                Icon(Icons.Default.AutoFixHigh, contentDescription = null, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.AutoFixHigh, contentDescription = stringResource(R.string.cd_auto_edit_generate), modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(stringResource(R.string.auto_edit_start))
             }
@@ -108,7 +108,7 @@ fun AutoEditPanel(
         if (!hasAudio) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                "Add music to the audio track for beat-synced cuts",
+                stringResource(R.string.panel_auto_edit_add_music_hint),
                 color = Mocha.Subtext0,
                 fontSize = 11.sp
             )
@@ -130,7 +130,7 @@ private fun InfoCard(
             .padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
+        Icon(icon, contentDescription = label, tint = color, modifier = Modifier.size(20.dp))
         Spacer(modifier = Modifier.height(4.dp))
         Text(value, color = Mocha.Text, fontWeight = FontWeight.Bold, fontSize = 14.sp)
         Text(label, color = Mocha.Subtext0, fontSize = 10.sp)

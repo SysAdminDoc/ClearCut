@@ -54,7 +54,7 @@ fun TtsPanel(
 
         if (!isAvailable) {
             Text(
-                "TTS not available on this device",
+                stringResource(R.string.panel_tts_not_available),
                 color = Mocha.Red,
                 fontSize = 12.sp,
                 modifier = Modifier.padding(vertical = 8.dp)
@@ -85,7 +85,7 @@ fun TtsPanel(
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            "Piper HD voices (coming soon \u2014 requires Sherpa-ONNX integration)",
+            stringResource(R.string.panel_tts_piper_hint),
             color = Mocha.Subtext0,
             fontSize = 10.sp,
             modifier = Modifier.padding(vertical = 8.dp)
@@ -136,9 +136,9 @@ fun TtsPanel(
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Mauve),
                 border = BorderStroke(1.dp, if (text.isNotBlank()) Mocha.Mauve else Mocha.Surface1)
             ) {
-                Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.cd_tts_preview), modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Preview", fontSize = 13.sp)
+                Text(stringResource(R.string.panel_tts_preview), fontSize = 13.sp)
             }
 
             // Generate button

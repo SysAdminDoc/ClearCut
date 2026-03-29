@@ -125,7 +125,7 @@ fun MediaManagerPanel(
             ) {
                 Icon(Icons.Default.CleaningServices, null, tint = Mocha.Yellow, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("Remove Unused Media", color = Mocha.Yellow, fontSize = 12.sp)
+                Text(stringResource(R.string.panel_media_manager_remove_unused), color = Mocha.Yellow, fontSize = 12.sp)
             }
         }
     }

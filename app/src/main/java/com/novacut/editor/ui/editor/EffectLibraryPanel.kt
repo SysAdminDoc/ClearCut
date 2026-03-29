@@ -51,7 +51,7 @@ fun EffectLibraryPanel(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            "Save, share, and reuse effect chains across clips and projects.",
+            stringResource(R.string.panel_effect_library_description),
             color = Mocha.Subtext0,
             fontSize = 12.sp
         )
@@ -73,7 +73,7 @@ fun EffectLibraryPanel(
             ) {
                 Icon(Icons.Default.ContentCopy, null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("Copy", fontSize = 12.sp)
+                Text(stringResource(R.string.panel_effect_library_copy), fontSize = 12.sp)
             }
 
             // Paste effects to selected clip
@@ -86,7 +86,7 @@ fun EffectLibraryPanel(
             ) {
                 Icon(Icons.Default.ContentPaste, null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("Paste", fontSize = 12.sp)
+                Text(stringResource(R.string.panel_effect_library_paste), fontSize = 12.sp)
             }
         }
 
@@ -108,7 +108,7 @@ fun EffectLibraryPanel(
             ) {
                 Icon(Icons.Default.Upload, null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("Export .ncfx", fontSize = 12.sp)
+                Text(stringResource(R.string.panel_effect_library_export), fontSize = 12.sp)
             }
 
             // Import effects from .ncfx file
@@ -122,14 +122,14 @@ fun EffectLibraryPanel(
             ) {
                 Icon(Icons.Default.Download, null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("Import .ncfx", fontSize = 12.sp)
+                Text(stringResource(R.string.panel_effect_library_import), fontSize = 12.sp)
             }
         }
 
         if (!hasClipSelected) {
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                "Select a clip to copy, paste, or export its effects.",
+                stringResource(R.string.panel_effect_library_select_clip_hint),
                 color = Mocha.Subtext0.copy(alpha = 0.7f),
                 fontSize = 11.sp
             )

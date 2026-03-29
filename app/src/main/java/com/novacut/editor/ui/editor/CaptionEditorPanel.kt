@@ -78,7 +78,7 @@ fun CaptionEditorPanel(
         Spacer(Modifier.height(8.dp))
 
         // Style selector
-        Text("Style", color = Mocha.Subtext0, fontSize = 11.sp)
+        Text(stringResource(R.string.panel_caption_style), color = Mocha.Subtext0, fontSize = 11.sp)
         Spacer(Modifier.height(4.dp))
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -120,7 +120,7 @@ fun CaptionEditorPanel(
                     ) {
                         Icon(Icons.Default.AutoAwesome, null, tint = Mocha.Yellow, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Auto-Generate", color = Mocha.Yellow, fontSize = 12.sp)
+                        Text(stringResource(R.string.panel_caption_auto_generate), color = Mocha.Yellow, fontSize = 12.sp)
                     }
                 }
             }
@@ -291,7 +291,7 @@ private fun CaptionEditForm(
         }
 
         // Style
-        Text("Style", color = Mocha.Subtext0, fontSize = 10.sp)
+        Text(stringResource(R.string.panel_caption_style_label), color = Mocha.Subtext0, fontSize = 10.sp)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             items(CaptionStyleType.entries.toList()) { type ->
                 FilterChip(
@@ -318,7 +318,7 @@ private fun CaptionEditForm(
                 )
             }
             Column(modifier = Modifier.weight(1f)) {
-                Text("Position Y", color = Mocha.Subtext0, fontSize = 10.sp)
+                Text(stringResource(R.string.panel_caption_position_y), color = Mocha.Subtext0, fontSize = 10.sp)
                 Slider(
                     value = positionY, onValueChange = { positionY = it },
                     valueRange = 0.1f..0.95f, modifier = Modifier.height(24.dp),
@@ -348,7 +348,7 @@ private fun CaptionEditForm(
             colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve),
             shape = RoundedCornerShape(8.dp)
         ) {
-            Text("Save Caption")
+            Text(stringResource(R.string.panel_caption_save))
         }
     }
 }

@@ -23,6 +23,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.novacut.editor.R
 import com.novacut.editor.model.DrawingPath
 import com.novacut.editor.ui.theme.Mocha
 
@@ -58,7 +60,7 @@ fun DrawingOverlayPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Draw", color = Mocha.Text, fontSize = 16.sp)
+            Text(stringResource(R.string.panel_drawing_title), color = Mocha.Text, fontSize = 16.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 IconButton(onClick = onUndo, modifier = Modifier.size(36.dp)) {
                     Icon(Icons.Default.Undo, contentDescription = "Undo", tint = Mocha.Subtext0, modifier = Modifier.size(20.dp))
@@ -74,7 +76,7 @@ fun DrawingOverlayPanel(
                     ),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
                 ) {
-                    Text("Done", fontSize = 13.sp)
+                    Text(stringResource(R.string.panel_drawing_done), fontSize = 13.sp)
                 }
             }
         }
@@ -130,7 +132,7 @@ fun DrawingOverlayPanel(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Size", color = Mocha.Subtext0, fontSize = 12.sp, modifier = Modifier.width(36.dp))
+            Text(stringResource(R.string.panel_drawing_size), color = Mocha.Subtext0, fontSize = 12.sp, modifier = Modifier.width(36.dp))
             Slider(
                 value = drawingStrokeWidth,
                 onValueChange = onStrokeWidthChanged,

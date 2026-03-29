@@ -58,17 +58,17 @@ fun RenderPreviewSheet(
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             SummaryChip(
-                label = "Pass-through",
+                label = stringResource(R.string.panel_render_pass_through),
                 value = "${summary.passThroughSegments}",
                 color = Mocha.Green
             )
             SummaryChip(
-                label = "Re-encode",
+                label = stringResource(R.string.panel_render_re_encode),
                 value = "${summary.reEncodeSegments}",
                 color = if (summary.reEncodeSegments > 0) Mocha.Yellow else Mocha.Green
             )
             SummaryChip(
-                label = "Speedup",
+                label = stringResource(R.string.panel_render_speedup),
                 value = if (summary.estimatedSpeedup < 100f) "%.1fx".format(summary.estimatedSpeedup) else "Max",
                 color = Mocha.Mauve
             )
@@ -118,7 +118,7 @@ fun RenderPreviewSheet(
         Spacer(Modifier.height(8.dp))
 
         // Segment list
-        Text("Segments", color = Mocha.Subtext0, fontSize = 11.sp)
+        Text(stringResource(R.string.panel_render_segments), color = Mocha.Subtext0, fontSize = 11.sp)
         Spacer(Modifier.height(4.dp))
         LazyColumn(
             modifier = Modifier
@@ -179,7 +179,7 @@ fun RenderPreviewSheet(
             ) {
                 Icon(Icons.Default.Preview, null, tint = Mocha.Peach, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("Preview", color = Mocha.Peach, fontSize = 12.sp)
+                Text(stringResource(R.string.panel_render_preview), color = Mocha.Peach, fontSize = 12.sp)
             }
 
             // Full quality export
@@ -191,7 +191,7 @@ fun RenderPreviewSheet(
             ) {
                 Icon(Icons.Default.RocketLaunch, null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("Export", fontSize = 12.sp)
+                Text(stringResource(R.string.panel_render_export), fontSize = 12.sp)
             }
         }
     }

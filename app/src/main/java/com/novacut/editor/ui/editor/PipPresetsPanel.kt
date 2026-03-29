@@ -160,13 +160,13 @@ fun ChromaKeyPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Chroma Key", color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.panel_chroma_key_title), color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             Row {
                 IconButton(onClick = onShowAlphaMatte, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Visibility, "Alpha Matte", tint = Mocha.Peach, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Visibility, stringResource(R.string.panel_chroma_key_alpha_matte), tint = Mocha.Peach, modifier = Modifier.size(18.dp))
                 }
                 IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Close, stringResource(R.string.close), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
                 }
             }
         }
@@ -174,7 +174,7 @@ fun ChromaKeyPanel(
         Spacer(Modifier.height(8.dp))
 
         // Key color presets
-        Text("Key Color", color = Mocha.Subtext0, fontSize = 11.sp)
+        Text(stringResource(R.string.panel_chroma_key_color), color = Mocha.Subtext0, fontSize = 11.sp)
         Row(
             modifier = Modifier.padding(vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -234,7 +234,7 @@ fun ChromaKeyPanel(
         Spacer(Modifier.height(8.dp))
 
         // Refinement controls
-        Text("Refinement", color = Mocha.Subtext0, fontSize = 11.sp)
+        Text(stringResource(R.string.panel_chroma_key_refinement), color = Mocha.Subtext0, fontSize = 11.sp)
         ChromaSlider("Similarity", similarity, Mocha.Mauve, onSimilarityChanged)
         ChromaSlider("Smoothness", smoothness, Mocha.Mauve, onSmoothnessChanged)
         ChromaSlider("Spill Suppress", spillSuppression, Mocha.Mauve, onSpillChanged)

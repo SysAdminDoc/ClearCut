@@ -102,7 +102,7 @@ proxyWorkflowEngine, sherpaAsrEngine
 - ProGuard rules verified comprehensive (Hilt, Room, Media3, ONNX, MediaPipe, Coil)
 
 ## Build Info
-- `versionCode = 71`, `versionName = "3.11.0"`
+- `versionCode = 72`, `versionName = "3.12.0"`
 - `compileSdk = 35`, `targetSdk = 35`, `minSdk = 26`
 - R8 minify + shrink enabled for release
 - Signing via `keystore.properties` or env vars (`NOVACUT_KS_PASS`, `NOVACUT_KEY_ALIAS`, `NOVACUT_KEY_PASS`)
@@ -135,6 +135,25 @@ Research across CapCut, VN, KineMaster, PowerDirector, DaVinci Resolve iPad, and
 
 ### New PanelIds
 - `DRAWING`, `MULTI_CAM`
+
+## v3.12.0 — GIF Export, Accessibility & Panel Localization
+
+### GIF Export Backend
+- Full GIF89a encoder with LZW compression in ExportDelegate (no external libraries)
+- Frame extraction pipeline: `extractThumbnail()` per frame, scaling to `gifMaxWidth`
+- Supports configurable frame rate and max 300 frames, progress reporting
+- `encodeGif()` + `lzwEncode()` private methods with Netscape looping extension
+
+### Accessibility (25 contentDescription fixes)
+- Replaced `contentDescription = null` across 13 panel files with `stringResource(R.string.cd_*)`
+- 23 new content description strings added to strings.xml
+- Covers: AiToolsPanel, BeatSyncPanel, FillerRemovalPanel, FirstRunTutorial, MultiCamPanel, etc.
+
+### Panel Localization (75 string extractions)
+- Extracted hardcoded `Text("...")` from 21 panel composable files to strings.xml
+- 75 new `panel_*` prefixed string resources organized by panel name
+- Panels: AudioMixer, CloudBackup, PipPresets, CaptionEditor, DrawingOverlay, EffectLibrary, etc.
+- Added missing `stringResource`/`R` imports to 7 files
 
 ## v3.11.0 — Clip Labels, Track Controls & Localization
 

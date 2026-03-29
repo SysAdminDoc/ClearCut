@@ -137,7 +137,7 @@ fun PreviewPanel(
                 ) {
                     Icon(
                         Icons.Default.VideoLibrary,
-                        contentDescription = null,
+                        contentDescription = stringResource(R.string.cd_preview_empty),
                         tint = Mocha.Overlay0,
                         modifier = Modifier.size(64.dp)
                     )

@@ -17,7 +17,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
+import com.novacut.editor.R
 import com.novacut.editor.ui.theme.Mocha
 
 private data class TutorialStep(
@@ -101,7 +103,7 @@ fun FirstRunTutorial(
                 // Direction arrow
                 Icon(
                     imageVector = tutorialStep.arrowIcon,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.cd_tutorial_direction),
                     tint = Mocha.Mauve,
                     modifier = Modifier.size(32.dp)
                 )
@@ -118,7 +120,7 @@ fun FirstRunTutorial(
                 ) {
                     Icon(
                         imageVector = tutorialStep.icon,
-                        contentDescription = null,
+                        contentDescription = tutorialStep.title,
                         tint = Mocha.Mauve,
                         modifier = Modifier.size(28.dp)
                     )
@@ -193,7 +195,7 @@ fun FirstRunTutorial(
                         Spacer(modifier = Modifier.width(4.dp))
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = null,
+                            contentDescription = stringResource(R.string.cd_tutorial_next),
                             modifier = Modifier.size(16.dp)
                         )
                     }
