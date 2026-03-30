@@ -102,7 +102,7 @@ proxyWorkflowEngine, sherpaAsrEngine
 - ProGuard rules verified comprehensive (Hilt, Room, Media3, ONNX, MediaPipe, Coil)
 
 ## Build Info
-- `versionCode = 76`, `versionName = "3.16.0"`
+- `versionCode = 77`, `versionName = "3.17.0"`
 - `compileSdk = 35`, `targetSdk = 35`, `minSdk = 26`
 - R8 minify + shrink enabled for release
 - Signing via `keystore.properties` or env vars (`NOVACUT_KS_PASS`, `NOVACUT_KEY_ALIAS`, `NOVACUT_KEY_PASS`)
@@ -135,6 +135,16 @@ Research across CapCut, VN, KineMaster, PowerDirector, DaVinci Resolve iPad, and
 
 ### New PanelIds
 - `DRAWING`, `MULTI_CAM`
+
+## v3.17.0 — Security & Resource Leak Audit
+
+### Security Fix
+- **Zip Slip path traversal** — ProjectArchive.importArchive() now validates that extracted file paths don't escape targetDir via `../` traversal (canonicalPath check)
+
+### Resource Leak Fixes
+- **InpaintingEngine ONNX resources** — OrtSession, OnnxTensor, and inference results now closed in nested finally blocks; previously leaked on inference errors
+- **HttpURLConnection leaks** — All 3 model download methods (InpaintingEngine, SegmentationEngine, WhisperEngine) now call `disconnect()` in finally blocks
+- **ProjectArchive ZipInputStream** — Replaced manual `close()` with `.use {}` blocks for both inputStream and zipInput; previously leaked on mid-extraction errors
 
 ## v3.16.0 — Resource Leak Fix & Remaining i18n
 

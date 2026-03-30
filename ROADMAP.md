@@ -284,6 +284,16 @@
 ### Undo Stack Bounds
 - [x] **Redo-path bounded** — `undoStack` on redo now bounded to 50 entries via `.takeLast(50)`, matching the save path
 
+## v3.17.0 — Security & Resource Leak Audit
+
+### Security
+- [x] **Zip Slip path traversal** — ProjectArchive validates canonicalPath stays within targetDir
+
+### Resource Leaks
+- [x] **InpaintingEngine ONNX** — Session, tensors, results wrapped in nested finally blocks
+- [x] **HttpURLConnection** — disconnect() added to InpaintingEngine, SegmentationEngine, WhisperEngine downloaders
+- [x] **ProjectArchive ZipInputStream** — Replaced manual close() with .use {} for exception safety
+
 ## v3.16.0 — Resource Leak Fix & Remaining i18n
 
 ### Bug Fix
