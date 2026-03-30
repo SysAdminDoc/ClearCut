@@ -216,11 +216,12 @@ fun StickerPickerPanel(
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 items(stickers, key = { it.id }) { sticker ->
+                    val selectLabel = stringResource(R.string.cd_select_sticker, sticker.display)
                     Card(
                         modifier = Modifier
                             .aspectRatio(1f)
                             .clickable(
-                                onClickLabel = "Select sticker ${sticker.display}"
+                                onClickLabel = selectLabel
                             ) {
                                 onStickerSelected(sticker.contentUri)
                             },

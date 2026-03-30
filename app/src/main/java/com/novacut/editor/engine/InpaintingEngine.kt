@@ -230,9 +230,6 @@ class InpaintingEngine @Inject constructor(
                         bitmap.width, bitmap.height
                     )
 
-                    if (inputBitmap !== bitmap) inputBitmap.recycle()
-                    if (maskBitmap !== mask) maskBitmap.recycle()
-
                     onProgress(1f)
                     Log.d(TAG, "LaMa inference completed in ${System.currentTimeMillis() - startTime}ms")
                     return@withContext InpaintingResult(
@@ -248,6 +245,8 @@ class InpaintingEngine @Inject constructor(
                 imageTensor.close()
                 maskTensor.close()
                 session.close()
+                if (inputBitmap !== bitmap) inputBitmap.recycle()
+                if (maskBitmap !== mask) maskBitmap.recycle()
             }
         } catch (e: Exception) {
             Log.e(TAG, "ONNX inference failed, falling back to pixel-averaging", e)

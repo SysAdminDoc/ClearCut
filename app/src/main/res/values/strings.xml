@@ -914,4 +914,12 @@
 
     <!-- Timeline -->
     <string name="cd_toggle_waveform">Toggle waveform</string>
+
+    <!-- ColorGradingPanel -->
+    <string name="color_wheel_lift">Lift</string>
+    <string name="color_wheel_gamma">Gamma</string>
+    <string name="color_wheel_gain">Gain</string>
+
+    <!-- StickerPickerPanel -->
+    <string name="cd_select_sticker">Select sticker %1$s</string>
 </resources>

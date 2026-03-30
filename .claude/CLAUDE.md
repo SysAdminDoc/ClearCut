@@ -102,7 +102,7 @@ proxyWorkflowEngine, sherpaAsrEngine
 - ProGuard rules verified comprehensive (Hilt, Room, Media3, ONNX, MediaPipe, Coil)
 
 ## Build Info
-- `versionCode = 77`, `versionName = "3.17.0"`
+- `versionCode = 78`, `versionName = "3.18.0"`
 - `compileSdk = 35`, `targetSdk = 35`, `minSdk = 26`
 - R8 minify + shrink enabled for release
 - Signing via `keystore.properties` or env vars (`NOVACUT_KS_PASS`, `NOVACUT_KEY_ALIAS`, `NOVACUT_KEY_PASS`)
@@ -135,6 +135,17 @@ Research across CapCut, VN, KineMaster, PowerDirector, DaVinci Resolve iPad, and
 
 ### New PanelIds
 - `DRAWING`, `MULTI_CAM`
+
+## v3.18.0 — Code Quality & Remaining i18n
+
+### Bug Fixes
+- InpaintingEngine: scaled input/mask bitmaps now recycled in finally block (leaked on ONNX inference error)
+- User-Agent header: SegmentationEngine and WhisperEngine now use dynamic `NovaCutApp.VERSION` instead of hardcoded "1.8.0"
+- Deprecated icon suppressions: DrawingOverlayPanel (Undo), ToolPanel (Label, RotateRight) properly suppressed
+
+### Final i18n Pass (4 strings)
+- ColorGradingPanel: "Lift", "Gamma", "Gain" color wheel labels extracted
+- StickerPickerPanel: "Select sticker" onClickLabel extracted with format arg
 
 ## v3.17.0 — Security & Resource Leak Audit
 

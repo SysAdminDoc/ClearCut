@@ -84,6 +84,7 @@ private val clipEditSubMenu = listOf(
     SubMenuItem("group", Icons.Default.GroupWork, R.string.tool_group),
     SubMenuItem("ungroup", Icons.Default.Workspaces, R.string.tool_ungroup),
     SubMenuItem("draw", Icons.Default.Draw, R.string.tool_draw),
+    @Suppress("DEPRECATION")
     SubMenuItem("label", Icons.Default.Label, R.string.tool_color_label)
 )
 

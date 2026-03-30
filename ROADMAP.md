@@ -284,6 +284,17 @@
 ### Undo Stack Bounds
 - [x] **Redo-path bounded** — `undoStack` on redo now bounded to 50 entries via `.takeLast(50)`, matching the save path
 
+## v3.18.0 — Code Quality & Remaining i18n
+
+### Bug Fixes
+- [x] **InpaintingEngine bitmap leak** — Scaled input/mask bitmaps recycled in finally block
+- [x] **Stale User-Agent** — SegmentationEngine + WhisperEngine now use NovaCutApp.VERSION dynamically
+- [x] **Deprecated icon warnings** — Proper @Suppress annotations added
+
+### i18n (4 strings)
+- [x] **ColorGradingPanel** — Lift, Gamma, Gain labels extracted
+- [x] **StickerPickerPanel** — "Select sticker" accessibility label extracted
+
 ## v3.17.0 — Security & Resource Leak Audit
 
 ### Security

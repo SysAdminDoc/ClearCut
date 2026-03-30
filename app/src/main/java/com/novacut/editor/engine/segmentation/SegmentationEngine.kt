@@ -86,7 +86,7 @@ class SegmentationEngine @Inject constructor(
             val conn = URL(MODEL_URL).openConnection() as HttpURLConnection
             conn.connectTimeout = 15000
             conn.readTimeout = 30000
-            conn.setRequestProperty("User-Agent", "NovaCut/1.8.0")
+            conn.setRequestProperty("User-Agent", "NovaCut/${com.novacut.editor.NovaCutApp.VERSION.removePrefix("v")}")
             try {
                 conn.connect()
 

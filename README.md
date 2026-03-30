@@ -1,8 +1,14 @@
-# NovaCut v3.17.0
+# NovaCut v3.18.0
 
 A professional Android video editor built with Kotlin and Jetpack Compose. Open alternative to CapCut, PowerDirector, and DaVinci Resolve — with on-device AI, GPU-accelerated effects, and desktop NLE interoperability.
 
 ## Changelog
+
+### v3.18.0 — Code Quality & Remaining i18n
+- **Bitmap leak fix** — InpaintingEngine scaled bitmaps now recycled in finally block
+- **Dynamic User-Agent** — Model downloaders now use `NovaCutApp.VERSION` instead of hardcoded "1.8.0"
+- **i18n** — Color wheel labels (Lift/Gamma/Gain) and sticker selection accessibility label extracted
+- **Deprecation cleanup** — Added `@Suppress` for deprecated icon references
 
 ### v3.17.0 — Security & Resource Leak Audit
 - **Zip Slip security fix** — ProjectArchive now validates extracted file paths against path traversal attacks

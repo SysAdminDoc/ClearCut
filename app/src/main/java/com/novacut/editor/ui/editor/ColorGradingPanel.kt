@@ -133,21 +133,21 @@ private fun ColorWheelsContent(
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             ColorWheel(
-                label = "Lift",
+                label = stringResource(R.string.color_wheel_lift),
                 r = grade.liftR, g = grade.liftG, b = grade.liftB,
                 onChanged = { r, g, b -> onChange(grade.copy(liftR = r, liftG = g, liftB = b)) },
                 onDragStarted = onDragStarted,
                 modifier = Modifier.weight(1f)
             )
             ColorWheel(
-                label = "Gamma",
+                label = stringResource(R.string.color_wheel_gamma),
                 r = grade.gammaR - 1f, g = grade.gammaG - 1f, b = grade.gammaB - 1f,
                 onChanged = { r, g, b -> onChange(grade.copy(gammaR = r + 1f, gammaG = g + 1f, gammaB = b + 1f)) },
                 onDragStarted = onDragStarted,
                 modifier = Modifier.weight(1f)
             )
             ColorWheel(
-                label = "Gain",
+                label = stringResource(R.string.color_wheel_gain),
                 r = grade.gainR - 1f, g = grade.gainG - 1f, b = grade.gainB - 1f,
                 onChanged = { r, g, b -> onChange(grade.copy(gainR = r + 1f, gainG = g + 1f, gainB = b + 1f)) },
                 onDragStarted = onDragStarted,

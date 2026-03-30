@@ -109,7 +109,7 @@ class WhisperEngine @Inject constructor(
                 val conn = URL(url).openConnection() as HttpURLConnection
                 conn.connectTimeout = 30000
                 conn.readTimeout = 60000
-                conn.setRequestProperty("User-Agent", "NovaCut/1.8.0")
+                conn.setRequestProperty("User-Agent", "NovaCut/${com.novacut.editor.NovaCutApp.VERSION.removePrefix("v")}")
                 try {
                     conn.connect()
 
