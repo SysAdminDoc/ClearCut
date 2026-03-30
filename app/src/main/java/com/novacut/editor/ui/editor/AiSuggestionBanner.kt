@@ -76,7 +76,7 @@ fun AiSuggestionBanner(
                 Spacer(modifier = Modifier.width(4.dp))
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = "Dismiss suggestion",
+                    contentDescription = stringResource(R.string.cd_dismiss_suggestion),
                     tint = Mocha.Subtext0,
                     modifier = Modifier
                         .size(14.dp)

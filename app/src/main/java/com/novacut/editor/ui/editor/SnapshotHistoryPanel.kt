@@ -35,6 +35,8 @@ fun SnapshotHistoryPanel(
     var snapshotName by remember { mutableStateOf("") }
     val dateFormat = remember { SimpleDateFormat("MMM d, h:mm a", Locale.getDefault()) }
 
+    val snapshotPrefix = stringResource(R.string.snapshot_default_prefix)
+
     if (showNameDialog) {
         AlertDialog(
             onDismissRequest = { showNameDialog = false },
@@ -56,8 +58,7 @@ fun SnapshotHistoryPanel(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val prefix = stringResource(R.string.snapshot_default_prefix)
-                    val defaultName = "$prefix ${java.text.SimpleDateFormat("MMM d HH:mm", java.util.Locale.getDefault()).format(java.util.Date())}"
+                    val defaultName = "$snapshotPrefix ${java.text.SimpleDateFormat("MMM d HH:mm", java.util.Locale.getDefault()).format(java.util.Date())}"
                     onCreateSnapshot(snapshotName.ifBlank { defaultName })
                     snapshotName = ""
                     showNameDialog = false

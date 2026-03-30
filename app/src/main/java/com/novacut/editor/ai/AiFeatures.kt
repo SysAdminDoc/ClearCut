@@ -1897,53 +1897,56 @@ class AiFeatures @Inject constructor(
         // Phase 1: Analyze each clip for quality metrics
         val scored = mutableListOf<Pair<Int, Float>>() // clipIndex to score
         val retriever = MediaMetadataRetriever()
+        try {
+            for ((idx, clip) in clips.withIndex()) {
+                ensureActive()
+                var qualityScore = 0f
+                var motionScore = 0f
+                var faceScore = 0f
 
-        for ((idx, clip) in clips.withIndex()) {
-            ensureActive()
-            var qualityScore = 0f
-            var motionScore = 0f
-            var faceScore = 0f
+                try {
+                    retriever.setDataSource(context, clip.uri)
+                    val midTime = clip.durationMs / 2
 
-            try {
-                retriever.setDataSource(context, clip.uri)
-                val midTime = clip.durationMs / 2
-
-                val frame = retriever.getFrameAtTime(
-                    midTime * 1000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC
-                )
-                if (frame != null) {
-                    val scaled = Bitmap.createScaledBitmap(frame, 64, 36, true)
-                    if (scaled !== frame) frame.recycle()
-
-                    // Sharpness via Laplacian variance approximation
-                    qualityScore = computeSharpness(scaled)
-
-                    // Face presence via skin-tone pixel ratio
-                    faceScore = detectSkinToneRatio(scaled)
-
-                    // Motion: compare two frames
-                    val frame2 = retriever.getFrameAtTime(
-                        (midTime + 500) * 1000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC
+                    val frame = retriever.getFrameAtTime(
+                        midTime * 1000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC
                     )
-                    if (frame2 != null) {
-                        val scaled2 = Bitmap.createScaledBitmap(frame2, 64, 36, true)
-                        if (scaled2 !== frame2) frame2.recycle()
-                        motionScore = calculateFrameDifference(scaled, scaled2)
-                        scaled2.recycle()
+                    if (frame != null) {
+                        val scaled = Bitmap.createScaledBitmap(frame, 64, 36, true)
+                        if (scaled !== frame) frame.recycle()
+
+                        // Sharpness via Laplacian variance approximation
+                        qualityScore = computeSharpness(scaled)
+
+                        // Face presence via skin-tone pixel ratio
+                        faceScore = detectSkinToneRatio(scaled)
+
+                        // Motion: compare two frames
+                        val frame2 = retriever.getFrameAtTime(
+                            (midTime + 500) * 1000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC
+                        )
+                        if (frame2 != null) {
+                            val scaled2 = Bitmap.createScaledBitmap(frame2, 64, 36, true)
+                            if (scaled2 !== frame2) frame2.recycle()
+                            motionScore = calculateFrameDifference(scaled, scaled2)
+                            scaled2.recycle()
+                        }
+
+                        scaled.recycle()
                     }
-
-                    scaled.recycle()
+                } catch (e: Exception) {
+                    Log.w(TAG, "Auto-edit clip quality scoring failed", e)
+                    // Score remains 0 — clip will be ranked low
                 }
-            } catch (e: Exception) {
-                Log.w(TAG, "Auto-edit clip quality scoring failed", e)
-                // Score remains 0 — clip will be ranked low
+
+                // Combined score: sharpness (40%), motion (30%), face (30%)
+                val combinedScore = qualityScore * 0.4f + motionScore * 0.3f + faceScore * 0.3f
+                scored.add(idx to combinedScore)
+
+                onProgress(0.05f + 0.5f * (idx + 1) / clips.size)
             }
-
-            // Combined score: sharpness (40%), motion (30%), face (30%)
-            val combinedScore = qualityScore * 0.4f + motionScore * 0.3f + faceScore * 0.3f
-            scored.add(idx to combinedScore)
-
-            onProgress(0.05f + 0.5f * (idx + 1) / clips.size)
+        } finally {
+            retriever.release()
         }
 
         // Phase 2: Optionally detect beats for synced cuts

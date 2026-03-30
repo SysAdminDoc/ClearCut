@@ -61,7 +61,7 @@ fun MultiCamPanel(
                     Text(stringResource(R.string.panel_multi_cam_sync), fontSize = 12.sp)
                 }
                 IconButton(onClick = onClose, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Default.Close, contentDescription = "Close", tint = Mocha.Subtext0, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cd_multicam_close), tint = Mocha.Subtext0, modifier = Modifier.size(20.dp))
                 }
             }
         }

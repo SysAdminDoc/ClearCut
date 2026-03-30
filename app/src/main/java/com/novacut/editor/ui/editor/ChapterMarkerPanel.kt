@@ -48,10 +48,10 @@ fun ChapterMarkerPanel(
             Text(stringResource(R.string.chapter_title), color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             Row {
                 // Add chapter at playhead
+                val defaultChapterTitle = stringResource(R.string.chapter_default_name, chapters.size + 1)
                 IconButton(
                     onClick = {
-                        val title = stringResource(R.string.chapter_default_name, chapters.size + 1)
-                        onAddChapter(ChapterMarker(playheadMs, title))
+                        onAddChapter(ChapterMarker(playheadMs, defaultChapterTitle))
                     },
                     modifier = Modifier.size(32.dp)
                 ) {

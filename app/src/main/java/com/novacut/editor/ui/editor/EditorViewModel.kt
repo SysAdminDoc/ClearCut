@@ -596,6 +596,30 @@ class EditorViewModel @Inject constructor(
     fun setClipReversed(clipId: String, reversed: Boolean) = clipEditingDelegate.setClipReversed(clipId, reversed)
     fun reorderClip(clipId: String, targetIndex: Int) = clipEditingDelegate.reorderClip(clipId, targetIndex)
     fun moveClipToTrack(clipId: String, targetTrackId: String) = clipEditingDelegate.moveClipToTrack(clipId, targetTrackId)
+    fun splitAtPlayhead() = splitClipAtPlayhead()
+
+    fun copyClipEffects() {
+        val state = _state.value
+        val selectedId = state.selectedClipId ?: return
+        val clip = state.tracks.flatMap { it.clips }.find { it.id == selectedId } ?: return
+        if (clip.effects.isEmpty()) return
+        _state.update { it.copy(copiedEffects = clip.effects) }
+    }
+
+    fun pasteClipEffects() {
+        val state = _state.value
+        val selectedId = state.selectedClipId ?: return
+        if (state.copiedEffects.isEmpty()) return
+        saveUndoState("Paste effects")
+        _state.update { s ->
+            s.copy(tracks = s.tracks.map { track ->
+                track.copy(clips = track.clips.map { clip ->
+                    if (clip.id == selectedId) clip.copy(effects = state.copiedEffects.map { it.copy(id = java.util.UUID.randomUUID().toString()) })
+                    else clip
+                })
+            })
+        }
+    }
 
     fun setClipLabel(clipId: String, label: ClipLabel) {
         saveUndoState("Change clip label")
@@ -685,6 +709,7 @@ class EditorViewModel @Inject constructor(
     }
 
     // Playback
+    fun togglePlayPause() = togglePlayback()
     fun togglePlayback() {
         if (videoEngine.isPlaying()) {
             videoEngine.pause()

@@ -1,8 +1,12 @@
-# NovaCut v3.15.0
+# NovaCut v3.16.0
 
 A professional Android video editor built with Kotlin and Jetpack Compose. Open alternative to CapCut, PowerDirector, and DaVinci Resolve — with on-device AI, GPU-accelerated effects, and desktop NLE interoperability.
 
 ## Changelog
+
+### v3.16.0 — Resource Leak Fix & Remaining i18n
+- **MediaMetadataRetriever leak fix** — `generateAutoEdit()` in AiFeatures.kt now properly releases retriever in try/finally block after clip quality scoring
+- **Final contentDescription localization** — 6 remaining hardcoded strings extracted: AiSuggestionBanner (1), DrawingOverlayPanel (3), MultiCamPanel (1), Timeline (1)
 
 ### v3.15.0 — Comprehensive Localization & Notification i18n
 - **55+ string extractions** — AudioMixerPanel (10), MediaManagerPanel (6), ExportProgressOverlay (2), ChromaKeyPanel (6), RenderPreviewSheet (2), ChapterMarkerPanel (1), KeyframeCurveEditor (10), ExportService notifications (7), CaptionEditorPanel (3), SmartReframePanel (1), StickerPickerPanel (2), CloudBackupPanel (1), SnapshotHistoryPanel (1)

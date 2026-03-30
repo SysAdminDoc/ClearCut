@@ -284,6 +284,17 @@
 ### Undo Stack Bounds
 - [x] **Redo-path bounded** — `undoStack` on redo now bounded to 50 entries via `.takeLast(50)`, matching the save path
 
+## v3.16.0 — Resource Leak Fix & Remaining i18n
+
+### Bug Fix
+- [x] **AiFeatures MediaMetadataRetriever leak** — `generateAutoEdit()` retriever wrapped in try/finally with `release()`, preventing native resource leak during auto-edit clip scoring
+
+### Final contentDescription Localization (6 strings)
+- [x] **AiSuggestionBanner** — "Dismiss suggestion" contentDescription extracted
+- [x] **DrawingOverlayPanel** — "Undo", "Clear", "Eraser" contentDescriptions extracted
+- [x] **MultiCamPanel** — "Close" contentDescription extracted
+- [x] **Timeline** — "Toggle waveform" contentDescription extracted
+
 ## v3.15.0 — Comprehensive Localization & Notification i18n
 
 ### Panel Localization (~55 strings)

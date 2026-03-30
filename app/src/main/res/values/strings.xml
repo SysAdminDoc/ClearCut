@@ -829,9 +829,6 @@
 
     <!-- v3.15.0 — Deep localization pass -->
 
-    <!-- Generic -->
-    <string name="close">Close</string>
-
     <!-- CaptionEditorPanel -->
     <string name="cd_caption_auto">Auto Caption</string>
     <string name="caption_word_count">%1$d words</string>
@@ -903,4 +900,18 @@
     <!-- StickerPickerPanel -->
     <string name="cd_sticker_import">Import sticker from gallery</string>
     <string name="cd_sticker_import_gallery">Import from gallery</string>
+
+    <!-- AiSuggestionBanner -->
+    <string name="cd_dismiss_suggestion">Dismiss suggestion</string>
+
+    <!-- DrawingOverlayPanel -->
+    <string name="cd_drawing_undo">Undo</string>
+    <string name="cd_drawing_clear">Clear</string>
+    <string name="cd_drawing_eraser">Eraser</string>
+
+    <!-- MultiCamPanel -->
+    <string name="cd_multicam_close">Close</string>
+
+    <!-- Timeline -->
+    <string name="cd_toggle_waveform">Toggle waveform</string>
 </resources>

@@ -102,7 +102,7 @@ proxyWorkflowEngine, sherpaAsrEngine
 - ProGuard rules verified comprehensive (Hilt, Room, Media3, ONNX, MediaPipe, Coil)
 
 ## Build Info
-- `versionCode = 75`, `versionName = "3.15.0"`
+- `versionCode = 76`, `versionName = "3.16.0"`
 - `compileSdk = 35`, `targetSdk = 35`, `minSdk = 26`
 - R8 minify + shrink enabled for release
 - Signing via `keystore.properties` or env vars (`NOVACUT_KS_PASS`, `NOVACUT_KEY_ALIAS`, `NOVACUT_KEY_PASS`)
@@ -135,6 +135,17 @@ Research across CapCut, VN, KineMaster, PowerDirector, DaVinci Resolve iPad, and
 
 ### New PanelIds
 - `DRAWING`, `MULTI_CAM`
+
+## v3.16.0 — Resource Leak Fix & Remaining i18n
+
+### Bug Fix
+- AiFeatures.kt `generateAutoEdit()`: MediaMetadataRetriever was never released after clip quality scoring loop — wrapped in try/finally with `retriever.release()`
+
+### Final contentDescription Localization (6 strings)
+- AiSuggestionBanner: "Dismiss suggestion" cd
+- DrawingOverlayPanel: "Undo", "Clear", "Eraser" cds
+- MultiCamPanel: "Close" cd
+- Timeline: "Toggle waveform" cd
 
 ## v3.15.0 — Comprehensive Localization & Notification i18n
 

@@ -63,10 +63,10 @@ fun DrawingOverlayPanel(
             Text(stringResource(R.string.panel_drawing_title), color = Mocha.Text, fontSize = 16.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 IconButton(onClick = onUndo, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Default.Undo, contentDescription = "Undo", tint = Mocha.Subtext0, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Default.Undo, contentDescription = stringResource(R.string.cd_drawing_undo), tint = Mocha.Subtext0, modifier = Modifier.size(20.dp))
                 }
                 IconButton(onClick = onClear, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Default.DeleteSweep, contentDescription = "Clear", tint = Mocha.Subtext0, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Default.DeleteSweep, contentDescription = stringResource(R.string.cd_drawing_clear), tint = Mocha.Subtext0, modifier = Modifier.size(20.dp))
                 }
                 FilledTonalButton(
                     onClick = onDone,
@@ -119,7 +119,7 @@ fun DrawingOverlayPanel(
             ) {
                 Icon(
                     Icons.Default.SquareFoot,
-                    contentDescription = "Eraser",
+                    contentDescription = stringResource(R.string.cd_drawing_eraser),
                     tint = if (isEraser) Mocha.Text else Mocha.Subtext0,
                     modifier = Modifier.size(20.dp)
                 )

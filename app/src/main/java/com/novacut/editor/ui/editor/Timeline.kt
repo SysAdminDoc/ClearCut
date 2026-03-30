@@ -298,7 +298,7 @@ fun Timeline(
                                 if (track.type == TrackType.AUDIO || track.type == TrackType.VIDEO) {
                                     Icon(
                                         Icons.Default.GraphicEq,
-                                        contentDescription = "Toggle waveform",
+                                        contentDescription = stringResource(R.string.cd_toggle_waveform),
                                         tint = if (track.showWaveform) Mocha.Teal else Mocha.Surface2,
                                         modifier = Modifier.size(11.dp).clickable { onToggleTrackWaveform(track.id) }
                                     )
