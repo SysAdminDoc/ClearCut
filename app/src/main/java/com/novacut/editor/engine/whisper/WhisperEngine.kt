@@ -106,11 +106,11 @@ class WhisperEngine @Inject constructor(
             for ((url, file) in files) {
                 if (file.exists() && file.length() > 1000) continue
                 val tempFile = File(file.parentFile, "${file.name}.tmp")
+                val conn = URL(url).openConnection() as HttpURLConnection
+                conn.connectTimeout = 30000
+                conn.readTimeout = 60000
+                conn.setRequestProperty("User-Agent", "NovaCut/1.8.0")
                 try {
-                    val conn = URL(url).openConnection() as HttpURLConnection
-                    conn.connectTimeout = 30000
-                    conn.readTimeout = 60000
-                    conn.setRequestProperty("User-Agent", "NovaCut/1.8.0")
                     conn.connect()
 
                     if (conn.responseCode != 200) {
@@ -142,6 +142,8 @@ class WhisperEngine @Inject constructor(
                 } catch (e: Exception) {
                     tempFile.delete()
                     throw e
+                } finally {
+                    conn.disconnect()
                 }
             }
 

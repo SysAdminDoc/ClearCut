@@ -14,6 +14,7 @@ import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.FloatBuffer
 import javax.inject.Inject
@@ -118,26 +119,29 @@ class InpaintingEngine @Inject constructor(
         val outputFile = File(modelDir, MODEL_FILENAME)
         try {
             Log.d(TAG, "Downloading LaMa-Dilated model from $MODEL_URL")
-            val connection = URL(MODEL_URL).openConnection().apply {
-                connectTimeout = 30_000
-                readTimeout = 30_000
-            }
-            val contentLength = connection.contentLengthLong.let {
-                if (it > 0) it else MODEL_SIZE_BYTES
-            }
-
+            val connection = URL(MODEL_URL).openConnection() as HttpURLConnection
+            connection.connectTimeout = 30_000
+            connection.readTimeout = 30_000
             val tempFile = File(modelDir, "$MODEL_FILENAME.tmp")
-            BufferedInputStream(connection.getInputStream(), 8192).use { input ->
-                FileOutputStream(tempFile).use { output ->
-                    val buffer = ByteArray(8192)
-                    var totalBytesRead = 0L
-                    var bytesRead: Int
-                    while (input.read(buffer).also { bytesRead = it } != -1) {
-                        output.write(buffer, 0, bytesRead)
-                        totalBytesRead += bytesRead
-                        onProgress((totalBytesRead.toFloat() / contentLength).coerceIn(0f, 1f))
+            try {
+                val contentLength = connection.contentLengthLong.let {
+                    if (it > 0) it else MODEL_SIZE_BYTES
+                }
+
+                BufferedInputStream(connection.inputStream, 8192).use { input ->
+                    FileOutputStream(tempFile).use { output ->
+                        val buffer = ByteArray(8192)
+                        var totalBytesRead = 0L
+                        var bytesRead: Int
+                        while (input.read(buffer).also { bytesRead = it } != -1) {
+                            output.write(buffer, 0, bytesRead)
+                            totalBytesRead += bytesRead
+                            onProgress((totalBytesRead.toFloat() / contentLength).coerceIn(0f, 1f))
+                        }
                     }
                 }
+            } finally {
+                connection.disconnect()
             }
 
             if (!tempFile.renameTo(outputFile)) {
@@ -212,34 +216,39 @@ class InpaintingEngine @Inject constructor(
 
             onProgress(0.3f)
 
-            val results = session.run(mapOf("image" to imageTensor, "mask" to maskTensor))
-            val outputData = (results[0].value as Array<*>)
+            try {
+                val results = session.run(mapOf("image" to imageTensor, "mask" to maskTensor))
+                try {
+                    val outputData = (results[0].value as Array<*>)
 
-            onProgress(0.8f)
+                    onProgress(0.8f)
 
-            // Postprocess: convert output tensor back to bitmap, resize to original dimensions
-            @Suppress("UNCHECKED_CAST")
-            val outputBitmap = floatTensorToBitmap(
-                outputData as Array<Array<Array<FloatArray>>>,
-                bitmap.width, bitmap.height
-            )
+                    // Postprocess: convert output tensor back to bitmap, resize to original dimensions
+                    @Suppress("UNCHECKED_CAST")
+                    val outputBitmap = floatTensorToBitmap(
+                        outputData as Array<Array<Array<FloatArray>>>,
+                        bitmap.width, bitmap.height
+                    )
 
-            imageTensor.close()
-            maskTensor.close()
-            results.close()
-            session.close()
+                    if (inputBitmap !== bitmap) inputBitmap.recycle()
+                    if (maskBitmap !== mask) maskBitmap.recycle()
 
-            if (inputBitmap !== bitmap) inputBitmap.recycle()
-            if (maskBitmap !== mask) maskBitmap.recycle()
-
-            onProgress(1f)
-            Log.d(TAG, "LaMa inference completed in ${System.currentTimeMillis() - startTime}ms")
-            return@withContext InpaintingResult(
-                outputBitmap = outputBitmap,
-                processingTimeMs = System.currentTimeMillis() - startTime,
-                inputResolution = bitmap.width to bitmap.height,
-                processedResolution = MODEL_INPUT_SIZE to MODEL_INPUT_SIZE
-            )
+                    onProgress(1f)
+                    Log.d(TAG, "LaMa inference completed in ${System.currentTimeMillis() - startTime}ms")
+                    return@withContext InpaintingResult(
+                        outputBitmap = outputBitmap,
+                        processingTimeMs = System.currentTimeMillis() - startTime,
+                        inputResolution = bitmap.width to bitmap.height,
+                        processedResolution = MODEL_INPUT_SIZE to MODEL_INPUT_SIZE
+                    )
+                } finally {
+                    results.close()
+                }
+            } finally {
+                imageTensor.close()
+                maskTensor.close()
+                session.close()
+            }
         } catch (e: Exception) {
             Log.e(TAG, "ONNX inference failed, falling back to pixel-averaging", e)
             // Fallback: simple pixel-averaging inpainting

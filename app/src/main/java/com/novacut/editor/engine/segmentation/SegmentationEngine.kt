@@ -87,29 +87,33 @@ class SegmentationEngine @Inject constructor(
             conn.connectTimeout = 15000
             conn.readTimeout = 30000
             conn.setRequestProperty("User-Agent", "NovaCut/1.8.0")
-            conn.connect()
+            try {
+                conn.connect()
 
-            if (conn.responseCode != 200) {
-                throw Exception("HTTP ${conn.responseCode}")
-            }
+                if (conn.responseCode != 200) {
+                    throw Exception("HTTP ${conn.responseCode}")
+                }
 
-            val totalBytes = conn.contentLengthLong
-            var downloaded = 0L
+                val totalBytes = conn.contentLengthLong
+                var downloaded = 0L
 
-            conn.inputStream.buffered().use { input ->
-                tempFile.outputStream().buffered().use { output ->
-                    val buf = ByteArray(8192)
-                    var read: Int
-                    while (input.read(buf).also { read = it } != -1) {
-                        output.write(buf, 0, read)
-                        downloaded += read
-                        val progress = if (totalBytes > 0) {
-                            downloaded.toFloat() / totalBytes
-                        } else 0.5f
-                        _downloadProgress.value = progress.coerceIn(0f, 0.99f)
-                        onProgress(_downloadProgress.value)
+                conn.inputStream.buffered().use { input ->
+                    tempFile.outputStream().buffered().use { output ->
+                        val buf = ByteArray(8192)
+                        var read: Int
+                        while (input.read(buf).also { read = it } != -1) {
+                            output.write(buf, 0, read)
+                            downloaded += read
+                            val progress = if (totalBytes > 0) {
+                                downloaded.toFloat() / totalBytes
+                            } else 0.5f
+                            _downloadProgress.value = progress.coerceIn(0f, 0.99f)
+                            onProgress(_downloadProgress.value)
+                        }
                     }
                 }
+            } finally {
+                conn.disconnect()
             }
 
             if (!tempFile.renameTo(modelFile)) {

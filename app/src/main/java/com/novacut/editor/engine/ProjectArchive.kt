@@ -92,33 +92,43 @@ object ProjectArchive {
     ): AutoSaveState? = withContext(Dispatchers.IO) {
         try {
             val inputStream = context.contentResolver.openInputStream(archiveUri) ?: return@withContext null
-            val zipInput = java.util.zip.ZipInputStream(inputStream)
-            var projectJson: String? = null
-            val mediaMap = mutableMapOf<String, Uri>() // original filename -> extracted Uri
+            val projectJson: String?
+            inputStream.use {
+                java.util.zip.ZipInputStream(it).use { zipInput ->
+                    var json: String? = null
+                    val mediaMap = mutableMapOf<String, Uri>() // original filename -> extracted Uri
 
-            var entry = zipInput.nextEntry
-            while (entry != null) {
-                if (entry.name == "project.json") {
-                    projectJson = zipInput.bufferedReader().readText()
-                } else if (!entry.isDirectory) {
-                    val outFile = File(targetDir, entry.name)
-                    outFile.parentFile?.mkdirs()
-                    outFile.outputStream().use { out ->
-                        zipInput.copyTo(out, bufferSize = 65536)
+                    var entry = zipInput.nextEntry
+                    while (entry != null) {
+                        if (entry.name == "project.json") {
+                            json = zipInput.bufferedReader().readText()
+                        } else if (!entry.isDirectory) {
+                            val outFile = File(targetDir, entry.name).canonicalFile
+                            if (!outFile.path.startsWith(targetDir.canonicalPath + File.separator)) {
+                                Log.w("ProjectArchive", "Skipping zip entry with path traversal: ${entry.name}")
+                                zipInput.closeEntry()
+                                entry = zipInput.nextEntry
+                                continue
+                            }
+                            outFile.parentFile?.mkdirs()
+                            outFile.outputStream().use { out ->
+                                zipInput.copyTo(out, bufferSize = 65536)
+                            }
+                            mediaMap[entry.name] = Uri.fromFile(outFile)
+                        }
+                        zipInput.closeEntry()
+                        entry = zipInput.nextEntry
                     }
-                    mediaMap[entry.name] = Uri.fromFile(outFile)
+                    projectJson = json
                 }
-                zipInput.closeEntry()
-                entry = zipInput.nextEntry
             }
-            zipInput.close()
 
             if (projectJson == null) {
                 Log.e("ProjectArchive", "No project.json in archive")
                 return@withContext null
             }
 
-            AutoSaveState.deserialize(projectJson)
+            AutoSaveState.deserialize(projectJson!!)
         } catch (e: Exception) {
             Log.e("ProjectArchive", "Archive import failed", e)
             null
