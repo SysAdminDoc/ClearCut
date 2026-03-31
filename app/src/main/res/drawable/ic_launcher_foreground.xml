@@ -7,14 +7,10 @@
     <group
         android:pivotX="512"
         android:pivotY="512"
-        android:scaleX="0.78"
-        android:scaleY="0.78"
+        android:scaleX="0.75"
+        android:scaleY="0.75"
         android:translateX="-29"
         android:translateY="20">
-        <!-- Halo glow behind the N -->
-        <path
-            android:fillColor="#26D2C1A6"
-            android:pathData="M514,410m-336,0a336,336 0,1 1,672 0a336,336 0,1 1,-672 0" />
         <!-- Left vertical bar (cream) -->
         <path
             android:fillColor="#FFF3EEE6"
