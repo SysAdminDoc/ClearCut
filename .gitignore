@@ -15,3 +15,11 @@ local.properties
 *.jks
 *.keystore
 .env
+
+# Private docs — keep local only
+CLAUDE.md
+.claude/
+RESEARCH.md
+ROADMAP.md
+HostShield-Research-Report.md
+research/
