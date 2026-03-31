@@ -257,9 +257,21 @@ private fun copyToLocalMedia(context: android.content.Context, uri: Uri, mediaTy
             "audio" -> ".m4a"
             else -> ".mp4"
         }
-        val destFile = File(mediaDir, "${System.currentTimeMillis()}_${uri.lastPathSegment?.hashCode()?.toUInt() ?: 0}$ext")
-        context.contentResolver.openInputStream(uri)?.use { input ->
-            destFile.outputStream().use { output -> input.copyTo(output) }
+        var destFile = File(mediaDir, "${System.currentTimeMillis()}_${uri.lastPathSegment?.hashCode()?.toUInt() ?: 0}$ext")
+        while (destFile.exists()) {
+            destFile = File(mediaDir, "${System.currentTimeMillis()}_${(0..9999).random()}$ext")
+        }
+        val input = context.contentResolver.openInputStream(uri)
+        if (input == null) {
+            android.util.Log.w("MediaPicker", "Cannot open input stream for $uri")
+            return uri
+        }
+        input.use { src ->
+            destFile.outputStream().use { dst -> src.copyTo(dst) }
+        }
+        if (destFile.length() == 0L) {
+            destFile.delete()
+            return uri
         }
         Uri.fromFile(destFile)
     } catch (e: Exception) {

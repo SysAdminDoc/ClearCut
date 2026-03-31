@@ -207,6 +207,7 @@ class AudioEngine @Inject constructor(
         fadeOutMs: Long = 0
     ): ShortArray {
         val result = pcm.copyOf()
+        if (channels <= 0) return pcm
         val totalSamples = result.size / channels
 
         // Fade in

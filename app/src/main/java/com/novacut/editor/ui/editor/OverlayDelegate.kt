@@ -75,6 +75,7 @@ class OverlayDelegate(
                 ) else o
             })
         }
+        saveProject()
     }
 
     fun removeImageOverlay(id: String) {

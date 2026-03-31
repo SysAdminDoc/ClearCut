@@ -1024,6 +1024,7 @@ class EditorViewModel @Inject constructor(
                 if (track.id == trackId) track.copy(opacity = opacity.coerceIn(0f, 1f)) else track
             })
         }
+        rebuildPlayerTimeline()
         saveProject()
     }
 
