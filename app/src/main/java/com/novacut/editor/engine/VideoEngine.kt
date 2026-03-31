@@ -615,6 +615,14 @@ class VideoEngine @Inject constructor(
     /**
      * Set ExoPlayer playback speed for preview. Does not affect export.
      */
+    fun setPreviewVolume(volume: Float) {
+        try {
+            player?.volume = volume.coerceIn(0f, 2f)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to set preview volume", e)
+        }
+    }
+
     fun setPreviewSpeed(speed: Float) {
         try {
             player?.playbackParameters = androidx.media3.common.PlaybackParameters(speed.coerceIn(0.1f, 100f))

@@ -557,8 +557,8 @@ class EditorViewModel @Inject constructor(
     private fun updatePreview() {
         val clip = getSelectedClip()
         videoEngine.applyPreviewEffects(clip)
-        val speed = clip?.speed ?: 1f
-        videoEngine.setPreviewSpeed(speed)
+        videoEngine.setPreviewSpeed(clip?.speed ?: 1f)
+        videoEngine.setPreviewVolume(clip?.volume ?: 1f)
     }
 
     /**
@@ -2466,6 +2466,7 @@ class EditorViewModel @Inject constructor(
 
     fun setClipVolume(clipId: String, volume: Float) {
         updateClipById(clipId) { it.copy(volume = volume.coerceIn(0f, 2f)) }
+        videoEngine.setPreviewVolume(volume)
         saveProject()
     }
 
