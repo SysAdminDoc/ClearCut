@@ -1,16 +1,6 @@
-# NovaCut v3.20.0
+# NovaCut
 
 A professional Android video editor built with Kotlin and Jetpack Compose. Open alternative to CapCut, PowerDirector, and DaVinci Resolve — with on-device AI, GPU-accelerated effects, and desktop NLE interoperability.
-
-
-
-
-
-
-
-
-
-
 
 
 ![novacut-logo](https://github.com/user-attachments/assets/5187e84f-e9e7-4dc6-b7f5-0c990049f31f)<svg width="1800" height="560" viewBox="0 0 1800 560" fill="none" xmlns="http://www.w3.org/2000/svg">
