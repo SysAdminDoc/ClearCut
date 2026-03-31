@@ -181,6 +181,7 @@ class ClipEditingDelegate(
 
             val track = s.tracks[trackIdx]
             val clipIndex = track.clips.indexOfFirst { it.id == clipId }
+            if (clipIndex < 0) return@update s
             val updatedClips = track.clips.toMutableList().apply { add(clipIndex + 1, newClip) }
 
             // Shift subsequent clips forward

@@ -76,7 +76,8 @@ fun MediaPickerSheet(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         if (uri != null) {
-            onMediaSelected(uri, "video")
+            val localUri = copyToLocalMedia(context, uri, "video")
+            onMediaSelected(localUri, "video")
         }
     }
 
@@ -84,7 +85,8 @@ fun MediaPickerSheet(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         if (uri != null) {
-            onMediaSelected(uri, "image")
+            val localUri = copyToLocalMedia(context, uri, "image")
+            onMediaSelected(localUri, "image")
         }
     }
 
@@ -92,11 +94,6 @@ fun MediaPickerSheet(
         contract = ActivityResultContracts.PickMultipleVisualMedia()
     ) { uris ->
         uris.forEach { uri ->
-            try {
-                context.contentResolver.takePersistableUriPermission(
-                    uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
-                )
-            } catch (_: SecurityException) { }
             val mimeType = context.contentResolver.getType(uri) ?: ""
             val uriStr = uri.toString().lowercase()
             val type = when {
@@ -107,7 +104,8 @@ fun MediaPickerSheet(
                 uriStr.endsWith(".mp3") || uriStr.endsWith(".wav") || uriStr.endsWith(".aac") || uriStr.endsWith(".ogg") -> "audio"
                 else -> "video"
             }
-            onMediaSelected(uri, type)
+            val localUri = copyToLocalMedia(context, uri, type)
+            onMediaSelected(localUri, type)
         }
     }
 
@@ -143,7 +141,7 @@ fun MediaPickerSheet(
         ) {
             Text(stringResource(R.string.media_picker_title), color = Mocha.Text, fontSize = 18.sp)
             IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
-                Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Close, stringResource(R.string.cd_close_media_picker), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
             }
         }
 
@@ -244,6 +242,29 @@ fun MediaPickerSheet(
             Spacer(modifier = Modifier.width(8.dp))
             Text(stringResource(R.string.media_picker_record_video))
         }
+    }
+}
+
+/**
+ * Copy a picker URI to app-local storage so it survives across sessions.
+ * Photo Picker URIs lose permission on app restart.
+ */
+private fun copyToLocalMedia(context: android.content.Context, uri: Uri, mediaType: String): Uri {
+    return try {
+        val mediaDir = File(context.filesDir, "media").apply { mkdirs() }
+        val ext = when (mediaType) {
+            "image" -> ".jpg"
+            "audio" -> ".m4a"
+            else -> ".mp4"
+        }
+        val destFile = File(mediaDir, "${System.currentTimeMillis()}_${uri.lastPathSegment?.hashCode()?.toUInt() ?: 0}$ext")
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            destFile.outputStream().use { output -> input.copyTo(output) }
+        }
+        Uri.fromFile(destFile)
+    } catch (e: Exception) {
+        android.util.Log.w("MediaPicker", "Failed to copy URI to local storage, using original", e)
+        uri
     }
 }
 

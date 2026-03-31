@@ -285,6 +285,7 @@ private fun ProjectTemplateCard(
 ) {
     Column(
         modifier = Modifier
+            .height(150.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(Mocha.Surface0)
             .clickable(onClick = onClick)
@@ -309,10 +310,16 @@ private fun ProjectTemplateCard(
             )
         }
 
-        Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
-            Text(stringResource(template.nameResId), color = Mocha.Text, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-            Text(stringResource(template.descriptionResId), color = Mocha.Subtext0, fontSize = 10.sp, maxLines = 2)
-            Spacer(Modifier.height(4.dp))
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Text(stringResource(template.nameResId), color = Mocha.Text, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                Text(stringResource(template.descriptionResId), color = Mocha.Subtext0, fontSize = 10.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     template.aspectRatio.label,
@@ -331,7 +338,6 @@ private fun ProjectTemplateCard(
                         .padding(horizontal = 4.dp, vertical = 1.dp)
                 )
             }
-            Spacer(Modifier.height(4.dp))
         }
     }
 }

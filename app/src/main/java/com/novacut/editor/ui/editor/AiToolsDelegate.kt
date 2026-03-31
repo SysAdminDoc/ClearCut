@@ -76,8 +76,8 @@ class AiToolsDelegate(
     }
 
     fun saveAsTemplate(name: String) {
-        val s = stateFlow.value
         scope.launch {
+            val s = stateFlow.value
             templateManager.saveTemplate(
                 name = name,
                 description = "${s.tracks.size} tracks, ${s.textOverlays.size} text overlays",
@@ -109,25 +109,25 @@ class AiToolsDelegate(
                     return@launch
                 }
                 when (toolId) {
-                    "scene_detect" -> runSceneDetect(clip)
-                    "auto_captions" -> runAutoCaptions(clip)
-                    "smart_crop" -> runSmartCrop(clip)
-                    "auto_color" -> runAutoColor(clip)
-                    "stabilize" -> runStabilize(clip)
-                    "denoise" -> runDenoise(clip)
-                    "remove_bg" -> runRemoveBg(clip)
-                    "track_motion" -> runTrackMotion(clip)
-                    "style_transfer" -> runStyleTransfer(clip)
-                    "face_track" -> runFaceTrack(clip)
-                    "smart_reframe" -> runSmartReframe(clip)
-                    "upscale" -> runUpscale(clip)
-                    "frame_interp" -> applyFrameInterpolation(clip)
-                    "object_remove" -> applyObjectRemoval(clip)
-                    "video_upscale" -> applyVideoUpscale(clip)
-                    "ai_background" -> applyAiBackground(clip)
-                    "ai_stabilize" -> applyStabilization(clip)
-                    "ai_style_transfer" -> applyStyleTransfer(clip)
-                    "bg_replace" -> runBgReplace(clip)
+                    "scene_detect" -> runSceneDetect(currentClip)
+                    "auto_captions" -> runAutoCaptions(currentClip)
+                    "smart_crop" -> runSmartCrop(currentClip)
+                    "auto_color" -> runAutoColor(currentClip)
+                    "stabilize" -> runStabilize(currentClip)
+                    "denoise" -> runDenoise(currentClip)
+                    "remove_bg" -> runRemoveBg(currentClip)
+                    "track_motion" -> runTrackMotion(currentClip)
+                    "style_transfer" -> runStyleTransfer(currentClip)
+                    "face_track" -> runFaceTrack(currentClip)
+                    "smart_reframe" -> runSmartReframe(currentClip)
+                    "upscale" -> runUpscale(currentClip)
+                    "frame_interp" -> applyFrameInterpolation(currentClip)
+                    "object_remove" -> applyObjectRemoval(currentClip)
+                    "video_upscale" -> applyVideoUpscale(currentClip)
+                    "ai_background" -> applyAiBackground(currentClip)
+                    "ai_stabilize" -> applyStabilization(currentClip)
+                    "ai_style_transfer" -> applyStyleTransfer(currentClip)
+                    "bg_replace" -> runBgReplace(currentClip)
                     else -> showToast("Unknown AI tool: $toolId")
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {

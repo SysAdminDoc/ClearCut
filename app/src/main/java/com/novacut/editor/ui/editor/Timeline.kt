@@ -155,69 +155,12 @@ fun Timeline(
             }
         }
 
-        // Zoom controls + Add Marker
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 2.dp),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Collapse/Expand all tracks
-            IconButton(
-                onClick = {
-                    if (tracks.any { !it.isCollapsed }) onCollapseAllTracks()
-                    else onExpandAllTracks()
-                },
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(
-                    if (tracks.any { !it.isCollapsed }) Icons.Default.UnfoldLess else Icons.Default.UnfoldMore,
-                    contentDescription = if (tracks.any { !it.isCollapsed }) "Collapse all" else "Expand all",
-                    tint = Mocha.Subtext0,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-            // Add Marker button
-            IconButton(
-                onClick = onAddMarker,
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(Icons.Default.Flag, "Add Marker", tint = Mocha.Blue, modifier = Modifier.size(18.dp))
-            }
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                "${(zoomLevel * 100).toInt()}%",
-                color = Mocha.Subtext0,
-                fontSize = 10.sp,
-                modifier = Modifier.padding(end = 4.dp)
-            )
-            IconButton(
-                onClick = { onZoomChanged((zoomLevel * 0.75f).coerceAtLeast(0.1f)) },
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(Icons.Default.ZoomOut, "Zoom Out", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
-            }
-            IconButton(
-                onClick = { onZoomChanged(1f) },
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(Icons.Default.FitScreen, "Fit", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
-            }
-            IconButton(
-                onClick = { onZoomChanged((zoomLevel * 1.33f).coerceAtMost(10f)) },
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(Icons.Default.ZoomIn, "Zoom In", tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
-            }
-        }
-
         // Track headers + timeline content
         Row(modifier = Modifier.fillMaxWidth()) {
             // Track headers
             Column(
                 modifier = Modifier
-                    .width(44.dp)
+                    .width(36.dp)
                     .background(Mocha.Crust)
             ) {
                 // Ruler spacer
@@ -233,21 +176,14 @@ fun Timeline(
                             TrackType.TEXT -> Mocha.Mauve
                             TrackType.ADJUSTMENT -> Mocha.Yellow
                         }
-                        Column(
+                        Box(
                             modifier = Modifier
                                 .height(currentTrackHeight)
                                 .fillMaxWidth()
                                 .background(Mocha.Crust)
                                 .border(0.5.dp, Mocha.Surface0),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
+                            contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                if (track.isCollapsed) Icons.Default.ChevronRight else Icons.Default.ExpandMore,
-                                contentDescription = if (track.isCollapsed) "Expand" else "Collapse",
-                                tint = Mocha.Subtext0,
-                                modifier = Modifier.size(11.dp).clickable { onToggleTrackCollapsed(track.id) }
-                            )
                             Icon(
                                 imageVector = when (track.type) {
                                     TrackType.VIDEO -> Icons.Default.Videocam
@@ -258,52 +194,8 @@ fun Timeline(
                                 },
                                 contentDescription = track.type.name,
                                 tint = if (track.isVisible) trackColor else Mocha.Surface2,
-                                modifier = Modifier
-                                    .size(14.dp)
-                                    .combinedClickable(
-                                        onClick = {},
-                                        onLongClick = {
-                                            val nextHeight = when (track.trackHeight) {
-                                                48 -> 64
-                                                64 -> 80
-                                                80 -> 96
-                                                else -> 48
-                                            }
-                                            onSetTrackHeight(track.id, nextHeight)
-                                        }
-                                    )
+                                modifier = Modifier.size(16.dp)
                             )
-                            Row(
-                                modifier = Modifier.padding(top = 2.dp),
-                                horizontalArrangement = Arrangement.spacedBy(1.dp)
-                            ) {
-                                Icon(
-                                    if (track.isMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
-                                    contentDescription = if (track.isMuted) "Unmute track" else "Mute track",
-                                    tint = if (track.isMuted) Mocha.Red.copy(alpha = 0.7f) else Mocha.Surface2,
-                                    modifier = Modifier.size(11.dp).clickable { onToggleTrackMute(track.id) }
-                                )
-                                Icon(
-                                    if (track.isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                    contentDescription = if (track.isVisible) "Hide track" else "Show track",
-                                    tint = if (!track.isVisible) Mocha.Red.copy(alpha = 0.7f) else Mocha.Surface2,
-                                    modifier = Modifier.size(11.dp).clickable { onToggleTrackVisible(track.id) }
-                                )
-                                Icon(
-                                    if (track.isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
-                                    contentDescription = if (track.isLocked) "Unlock track" else "Lock track",
-                                    tint = if (track.isLocked) Mocha.Peach.copy(alpha = 0.7f) else Mocha.Surface2,
-                                    modifier = Modifier.size(11.dp).clickable { onToggleTrackLock(track.id) }
-                                )
-                                if (track.type == TrackType.AUDIO || track.type == TrackType.VIDEO) {
-                                    Icon(
-                                        Icons.Default.GraphicEq,
-                                        contentDescription = stringResource(R.string.cd_toggle_waveform),
-                                        tint = if (track.showWaveform) Mocha.Teal else Mocha.Surface2,
-                                        modifier = Modifier.size(11.dp).clickable { onToggleTrackWaveform(track.id) }
-                                    )
-                                }
-                            }
                         }
                     }
                 }
@@ -489,6 +381,29 @@ fun Timeline(
                                             if (clip != null) {
                                                 onClipLongPress(clip.id)
                                             }
+                                        }
+                                    )
+                                }
+                                .pointerInput(track.id to "scrub") {
+                                    var trackDragX = 0f
+                                    detectDragGestures(
+                                        onDragStart = { offset ->
+                                            trackDragX = offset.x
+                                            onScrubStart()
+                                            val ppm = currentZoomLevel * BASE_SCALE
+                                            if (ppm > 0.001f) {
+                                                val posMs = currentScrollOffsetMs + (offset.x / ppm).toLong()
+                                                onPlayheadMoved(posMs.coerceIn(0L, currentTotalDurationMs))
+                                            }
+                                        },
+                                        onDragEnd = { onScrubEnd() },
+                                        onDragCancel = { onScrubEnd() },
+                                        onDrag = { _, dragAmount ->
+                                            trackDragX += dragAmount.x
+                                            val ppm = currentZoomLevel * BASE_SCALE
+                                            if (ppm < 0.001f) return@detectDragGestures
+                                            val posMs = currentScrollOffsetMs + (trackDragX / ppm).toLong()
+                                            onPlayheadMoved(posMs.coerceIn(0L, currentTotalDurationMs))
                                         }
                                     )
                                 }
@@ -900,7 +815,7 @@ fun Timeline(
                                         .fillMaxHeight()
                                 ) {
                                     drawRect(
-                                        color = Mocha.Red,
+                                        color = Mocha.Sky,
                                         size = Size(2f * density.density, size.height)
                                     )
                                 }
@@ -924,7 +839,7 @@ fun Timeline(
                             lineTo(size.width, 0f)
                             close()
                         }
-                        drawPath(path, Mocha.Red)
+                        drawPath(path, Mocha.Sky)
                     }
                 }
             }

@@ -15,6 +15,7 @@ class EffectsDelegate(
     private val saveUndoState: (String) -> Unit,
     private val showToast: (String) -> Unit,
     private val updatePreview: () -> Unit,
+    private val rebuildPlayerTimeline: () -> Unit,
     private val saveProject: () -> Unit,
     private val getSelectedClip: () -> com.novacut.editor.model.Clip?,
     private val recalculateDuration: (EditorState) -> EditorState
@@ -60,6 +61,7 @@ class EffectsDelegate(
             state.copy(tracks = tracks)
         }
         updatePreview()
+        saveProject()
     }
 
     fun toggleEffectEnabled(clipId: String, effectId: String) {
@@ -148,7 +150,7 @@ class EffectsDelegate(
             }
             recalculateDuration(state.copy(tracks = tracks))
         }
-        updatePreview()
+        rebuildPlayerTimeline()
         saveProject()
     }
 
@@ -169,7 +171,7 @@ class EffectsDelegate(
             }
             recalculateDuration(state.copy(tracks = tracks))
         }
-        updatePreview()
+        rebuildPlayerTimeline()
         saveProject()
     }
 

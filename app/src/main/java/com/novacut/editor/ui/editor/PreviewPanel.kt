@@ -59,7 +59,7 @@ fun PreviewPanel(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(aspectRatio.toFloat())
+                .weight(1f)
                 .clip(RoundedCornerShape(8.dp))
                 .background(Mocha.Mantle)
                 .then(
@@ -151,117 +151,48 @@ fun PreviewPanel(
             }
         }
 
-        // Playback Controls
+        // Playback Controls — compact PowerDirector-style
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 12.dp, vertical = 2.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Timestamp
+            // Timecode (current / total)
             Text(
-                text = formatTimestamp(playheadMs),
+                text = formatTimecode(playheadMs) + "/" + formatTimecode(totalDurationMs),
                 color = Mocha.Subtext0,
-                fontSize = 12.sp,
-                modifier = Modifier.width(if (totalDurationMs >= 3_600_000) 85.dp else 70.dp)
+                fontSize = 12.sp
             )
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Skip backward
+            // Play/Pause — centered
             IconButton(
-                onClick = { onSeek((playheadMs - 5000).coerceAtLeast(0)) },
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(
-                    Icons.Default.Replay5,
-                    contentDescription = stringResource(R.string.preview_back_5s),
-                    tint = Mocha.Text,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            // Previous frame
-            IconButton(
-                onClick = { onSeek((playheadMs - frameStepMs).coerceAtLeast(0)) },
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(
-                    Icons.Default.SkipPrevious,
-                    contentDescription = stringResource(R.string.preview_previous_frame),
-                    tint = Mocha.Text,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            // Play/Pause
-            FilledIconButton(
                 onClick = onTogglePlayback,
-                modifier = Modifier.size(48.dp),
-                shape = CircleShape,
-                colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = Mocha.Mauve,
-                    contentColor = Mocha.Crust
-                )
+                modifier = Modifier.size(40.dp)
             ) {
                 Icon(
                     if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                     contentDescription = if (isPlaying) stringResource(R.string.preview_pause) else stringResource(R.string.preview_play),
+                    tint = Mocha.Text,
                     modifier = Modifier.size(28.dp)
                 )
             }
 
-            // Next frame
-            IconButton(
-                onClick = { onSeek((playheadMs + frameStepMs).coerceAtMost(totalDurationMs)) },
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(
-                    Icons.Default.SkipNext,
-                    contentDescription = stringResource(R.string.preview_next_frame),
-                    tint = Mocha.Text,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            // Skip forward
-            IconButton(
-                onClick = { onSeek((playheadMs + 5000).coerceAtMost(totalDurationMs)) },
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(
-                    Icons.Default.Forward5,
-                    contentDescription = stringResource(R.string.preview_forward_5s),
-                    tint = Mocha.Text,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            // Loop toggle
-            IconButton(
-                onClick = onToggleLoop,
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(
-                    Icons.Default.Loop,
-                    contentDescription = if (isLooping) stringResource(R.string.preview_disable_loop) else stringResource(R.string.preview_enable_loop),
-                    tint = if (isLooping) Mocha.Mauve else Mocha.Overlay0,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
             Spacer(modifier = Modifier.weight(1f))
-
-            // Duration
-            Text(
-                text = formatTimestamp(totalDurationMs),
-                color = Mocha.Subtext0,
-                fontSize = 12.sp,
-                modifier = Modifier.width(if (totalDurationMs >= 3_600_000) 85.dp else 70.dp)
-            )
         }
     }
+}
+
+fun formatTimecode(ms: Long): String {
+    val totalSeconds = ms / 1000
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+    return if (hours > 0) "%d:%02d:%02d".format(hours, minutes, seconds)
+    else "%02d:%02d".format(minutes, seconds)
 }
 
 fun formatTimestamp(ms: Long): String {

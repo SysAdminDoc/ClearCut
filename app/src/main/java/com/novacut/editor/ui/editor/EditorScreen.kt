@@ -256,7 +256,7 @@ fun EditorScreen(
             // Preview panel with long-press radial menu
             if (hasClips || hasOpenPanel) Box(
                 modifier = Modifier
-                    .weight(0.45f)
+                    .weight(1f)
                     .pointerInput(Unit) {
                         detectTapGestures(
                             onLongPress = { offset ->
@@ -361,31 +361,8 @@ fun EditorScreen(
                 onDismiss = viewModel::dismissAiSuggestion
             )
 
-            // Timeline collapse toggle
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { viewModel.toggleTimelineCollapse() }
-                    .background(Mocha.Mantle)
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(stringResource(R.string.editor_timeline), color = Mocha.Subtext0, fontSize = 11.sp)
-                Icon(
-                    if (state.isTimelineCollapsed) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
-                    contentDescription = stringResource(R.string.editor_toggle_timeline),
-                    tint = Mocha.Subtext0,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
-
             // Timeline
-            AnimatedVisibility(
-                visible = !state.isTimelineCollapsed,
-                enter = expandVertically(),
-                exit = shrinkVertically()
-            ) {
+            if (!state.isTimelineCollapsed) {
                 Timeline(
                     tracks = state.tracks,
                     playheadMs = playheadMs,
@@ -424,7 +401,7 @@ fun EditorScreen(
                     onScrubStart = viewModel::beginScrub,
                     onScrubEnd = viewModel::endScrub,
                     engine = viewModel.engine,
-                    modifier = Modifier.weight(0.55f)
+                    modifier = Modifier.heightIn(max = 200.dp)
                 )
             }
 
@@ -562,17 +539,24 @@ fun EditorScreen(
             visible = state.panels.isOpen(PanelId.EFFECTS),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            EffectsPanel(
-                selectedClip = selectedClip,
-                onAddEffect = { effectType ->
-                    val clipId = state.selectedClipId ?: return@EffectsPanel
-                    val effect = Effect(type = effectType, params = EffectType.defaultParams(effectType))
-                    viewModel.addEffect(clipId, effect)
-                    viewModel.selectEffect(effect.id)
-                    viewModel.hideEffectsPanel()
-                },
-                onClose = viewModel::hideEffectsPanel
-            )
+            Column {
+                MiniPlayerBar(
+                    isPlaying = state.isPlaying, playheadMs = playheadMs,
+                    totalDurationMs = state.totalDurationMs,
+                    onTogglePlayback = viewModel::togglePlayback, onSeek = viewModel::seekTo
+                )
+                EffectsPanel(
+                    selectedClip = selectedClip,
+                    onAddEffect = { effectType ->
+                        val clipId = state.selectedClipId ?: return@EffectsPanel
+                        val effect = Effect(type = effectType, params = EffectType.defaultParams(effectType))
+                        viewModel.addEffect(clipId, effect)
+                        viewModel.selectEffect(effect.id)
+                        viewModel.hideEffectsPanel()
+                    },
+                    onClose = viewModel::hideEffectsPanel
+                )
+            }
         }
 
         // Speed panel
@@ -580,17 +564,24 @@ fun EditorScreen(
             visible = state.currentTool == EditorTool.SPEED && state.selectedClipId != null,
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            val clip = selectedClip
-            if (clip != null) {
-                SpeedPanel(
-                    currentSpeed = clip.speed,
-                    isReversed = clip.isReversed,
-                    onSpeedDragStarted = viewModel::beginSpeedChange,
-                    onSpeedDragEnded = viewModel::endSpeedChange,
-                    onSpeedChanged = { viewModel.setClipSpeed(clip.id, it) },
-                    onReversedChanged = { viewModel.setClipReversed(clip.id, it) },
-                    onClose = { viewModel.setTool(EditorTool.NONE) }
+            Column {
+                MiniPlayerBar(
+                    isPlaying = state.isPlaying, playheadMs = playheadMs,
+                    totalDurationMs = state.totalDurationMs,
+                    onTogglePlayback = viewModel::togglePlayback, onSeek = viewModel::seekTo
                 )
+                val clip = selectedClip
+                if (clip != null) {
+                    SpeedPanel(
+                        currentSpeed = clip.speed,
+                        isReversed = clip.isReversed,
+                        onSpeedDragStarted = viewModel::beginSpeedChange,
+                        onSpeedDragEnded = viewModel::endSpeedChange,
+                        onSpeedChanged = { viewModel.setClipSpeed(clip.id, it) },
+                        onReversedChanged = { viewModel.setClipReversed(clip.id, it) },
+                        onClose = { viewModel.setTool(EditorTool.NONE) }
+                    )
+                }
             }
         }
 
@@ -599,24 +590,31 @@ fun EditorScreen(
             visible = state.panels.isOpen(PanelId.TRANSITION_PICKER),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            val clip = selectedClip
-            TransitionPicker(
-                onTransitionSelected = { type ->
-                    val clipId = state.selectedClipId ?: return@TransitionPicker
-                    viewModel.setTransition(clipId, Transition(type = type))
-                },
-                onRemoveTransition = {
-                    val clipId = state.selectedClipId ?: return@TransitionPicker
-                    viewModel.setTransition(clipId, null)
-                },
-                onDurationChanged = { durationMs ->
-                    val clipId = state.selectedClipId ?: return@TransitionPicker
-                    viewModel.setTransitionDuration(clipId, durationMs)
-                },
-                onDurationDragStarted = viewModel::beginTransitionDurationChange,
-                onClose = viewModel::hideTransitionPicker,
-                currentTransition = clip?.transition
-            )
+            Column {
+                MiniPlayerBar(
+                    isPlaying = state.isPlaying, playheadMs = playheadMs,
+                    totalDurationMs = state.totalDurationMs,
+                    onTogglePlayback = viewModel::togglePlayback, onSeek = viewModel::seekTo
+                )
+                val clip = selectedClip
+                TransitionPicker(
+                    onTransitionSelected = { type ->
+                        val clipId = state.selectedClipId ?: return@TransitionPicker
+                        viewModel.setTransition(clipId, Transition(type = type))
+                    },
+                    onRemoveTransition = {
+                        val clipId = state.selectedClipId ?: return@TransitionPicker
+                        viewModel.setTransition(clipId, null)
+                    },
+                    onDurationChanged = { durationMs ->
+                        val clipId = state.selectedClipId ?: return@TransitionPicker
+                        viewModel.setTransitionDuration(clipId, durationMs)
+                    },
+                    onDurationDragStarted = viewModel::beginTransitionDurationChange,
+                    onClose = viewModel::hideTransitionPicker,
+                    currentTransition = clip?.transition
+                )
+            }
         }
 
         // Text editor
@@ -682,27 +680,36 @@ fun EditorScreen(
             visible = state.panels.isOpen(PanelId.AUDIO),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            val clip = selectedClip
-            AudioPanel(
-                clip = clip,
-                waveform = clip?.let { state.waveforms[it.id] },
-                onVolumeChanged = { volume ->
-                    val clipId = state.selectedClipId ?: return@AudioPanel
-                    viewModel.setClipVolume(clipId, volume)
-                },
-                onVolumeDragStarted = viewModel::beginVolumeChange,
-                onFadeInChanged = { fadeMs ->
-                    val clipId = state.selectedClipId ?: return@AudioPanel
-                    viewModel.setClipFadeIn(clipId, fadeMs)
-                },
-                onFadeOutChanged = { fadeMs ->
-                    val clipId = state.selectedClipId ?: return@AudioPanel
-                    viewModel.setClipFadeOut(clipId, fadeMs)
-                },
-                onFadeDragStarted = viewModel::beginFadeAdjust,
-                onStartVoiceover = viewModel::showVoiceoverPanel,
-                onClose = viewModel::hideAudioPanel
-            )
+            Column {
+                MiniPlayerBar(
+                    isPlaying = state.isPlaying,
+                    playheadMs = playheadMs,
+                    totalDurationMs = state.totalDurationMs,
+                    onTogglePlayback = viewModel::togglePlayback,
+                    onSeek = viewModel::seekTo
+                )
+                val clip = selectedClip
+                AudioPanel(
+                    clip = clip,
+                    waveform = clip?.let { state.waveforms[it.id] },
+                    onVolumeChanged = { volume ->
+                        val clipId = state.selectedClipId ?: return@AudioPanel
+                        viewModel.setClipVolume(clipId, volume)
+                    },
+                    onVolumeDragStarted = viewModel::beginVolumeChange,
+                    onFadeInChanged = { fadeMs ->
+                        val clipId = state.selectedClipId ?: return@AudioPanel
+                        viewModel.setClipFadeIn(clipId, fadeMs)
+                    },
+                    onFadeOutChanged = { fadeMs ->
+                        val clipId = state.selectedClipId ?: return@AudioPanel
+                        viewModel.setClipFadeOut(clipId, fadeMs)
+                    },
+                    onFadeDragStarted = viewModel::beginFadeAdjust,
+                    onStartVoiceover = viewModel::showVoiceoverPanel,
+                    onClose = viewModel::hideAudioPanel
+                )
+            }
         }
 
         // Voiceover recorder
@@ -810,14 +817,21 @@ fun EditorScreen(
             visible = state.panels.isOpen(PanelId.COLOR_GRADING),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            val clip = selectedClip
-            ColorGradingPanel(
-                colorGrade = clip?.colorGrade ?: ColorGrade(),
-                onColorGradeChanged = viewModel::updateClipColorGrade,
-                onDragStarted = viewModel::beginColorGradeAdjust,
-                onLutImport = viewModel::importLut,
-                onClose = viewModel::hideColorGrading
-            )
+            Column {
+                MiniPlayerBar(
+                    isPlaying = state.isPlaying, playheadMs = playheadMs,
+                    totalDurationMs = state.totalDurationMs,
+                    onTogglePlayback = viewModel::togglePlayback, onSeek = viewModel::seekTo
+                )
+                val clip = selectedClip
+                ColorGradingPanel(
+                    colorGrade = clip?.colorGrade ?: ColorGrade(),
+                    onColorGradeChanged = viewModel::updateClipColorGrade,
+                    onDragStarted = viewModel::beginColorGradeAdjust,
+                    onLutImport = viewModel::importLut,
+                    onClose = viewModel::hideColorGrading
+                )
+            }
         }
 
         // Audio Mixer panel
@@ -825,6 +839,12 @@ fun EditorScreen(
             visible = state.panels.isOpen(PanelId.AUDIO_MIXER),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
+            Column {
+            MiniPlayerBar(
+                isPlaying = state.isPlaying, playheadMs = playheadMs,
+                totalDurationMs = state.totalDurationMs,
+                onTogglePlayback = viewModel::togglePlayback, onSeek = viewModel::seekTo
+            )
             AudioMixerPanel(
                 tracks = state.tracks,
                 onTrackVolumeChanged = viewModel::setTrackVolume,
@@ -837,6 +857,7 @@ fun EditorScreen(
                 vuLevels = state.vuLevels,
                 onClose = viewModel::hideAudioMixer
             )
+            }
         }
 
         // Keyframe Curve Editor
@@ -865,6 +886,12 @@ fun EditorScreen(
             visible = state.panels.isOpen(PanelId.SPEED_CURVE),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
+            Column {
+            MiniPlayerBar(
+                isPlaying = state.isPlaying, playheadMs = playheadMs,
+                totalDurationMs = state.totalDurationMs,
+                onTogglePlayback = viewModel::togglePlayback, onSeek = viewModel::seekTo
+            )
             val clip = selectedClip
             if (clip != null) {
                 SpeedCurveEditor(
@@ -878,6 +905,7 @@ fun EditorScreen(
                     onClose = viewModel::hideSpeedCurveEditor
                 )
             }
+            }
         }
 
         // Mask Editor panel
@@ -885,16 +913,23 @@ fun EditorScreen(
             visible = state.panels.isOpen(PanelId.MASK_EDITOR),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            val clip = selectedClip
-            MaskEditorPanel(
-                masks = clip?.masks ?: emptyList(),
-                selectedMaskId = state.selectedMaskId,
-                onMaskSelected = viewModel::selectMask,
-                onMaskAdded = viewModel::addMask,
-                onMaskUpdated = viewModel::updateMask,
-                onMaskDeleted = viewModel::deleteMask,
-                onClose = viewModel::hideMaskEditor
-            )
+            Column {
+                MiniPlayerBar(
+                    isPlaying = state.isPlaying, playheadMs = playheadMs,
+                    totalDurationMs = state.totalDurationMs,
+                    onTogglePlayback = viewModel::togglePlayback, onSeek = viewModel::seekTo
+                )
+                val clip = selectedClip
+                MaskEditorPanel(
+                    masks = clip?.masks ?: emptyList(),
+                    selectedMaskId = state.selectedMaskId,
+                    onMaskSelected = viewModel::selectMask,
+                    onMaskAdded = viewModel::addMask,
+                    onMaskUpdated = viewModel::updateMask,
+                    onMaskDeleted = viewModel::deleteMask,
+                    onClose = viewModel::hideMaskEditor
+                )
+            }
         }
 
         // Blend Mode selector
@@ -1451,7 +1486,7 @@ fun EditorScreen(
                     ) {
                         Text(stringResource(R.string.panel_editor_clip_label), color = Mocha.Text, fontSize = 14.sp, modifier = Modifier.weight(1f))
                         IconButton(onClick = { showClipLabelPicker = false }, modifier = Modifier.size(24.dp)) {
-                            Icon(Icons.Default.Close, "Close", tint = Mocha.Subtext0, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Close, stringResource(R.string.cd_close_color_grading), tint = Mocha.Subtext0, modifier = Modifier.size(16.dp))
                         }
                     }
                     Spacer(Modifier.height(8.dp))
@@ -1459,9 +1494,9 @@ fun EditorScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
+                        val labelClip = state.tracks.flatMap { it.clips }.find { it.id == state.selectedClipId }
                         ClipLabel.entries.forEach { label ->
-                            val selectedClip = state.tracks.flatMap { it.clips }.find { it.id == state.selectedClipId }
-                            val isSelected = selectedClip?.clipLabel == label
+                            val isSelected = labelClip?.clipLabel == label
                             Box(
                                 contentAlignment = Alignment.Center,
                                 modifier = Modifier
@@ -1555,7 +1590,7 @@ private fun EditorTopBar(
     }
 
     if (showSaveTemplateDialog) {
-        var templateName by remember { mutableStateOf("$projectName Template") }
+        var templateName by remember(projectName) { mutableStateOf("$projectName Template") }
         AlertDialog(
             onDismissRequest = { showSaveTemplateDialog = false },
             title = { Text(stringResource(R.string.editor_save_as_template), color = Mocha.Text) },
@@ -1592,7 +1627,7 @@ private fun EditorTopBar(
     }
 
     if (showRenameDialog) {
-        var nameText by remember { mutableStateOf(projectName) }
+        var nameText by remember(projectName) { mutableStateOf(projectName) }
         AlertDialog(
             onDismissRequest = { showRenameDialog = false },
             title = { Text(stringResource(R.string.editor_rename_project), color = Mocha.Text) },
@@ -1629,12 +1664,12 @@ private fun EditorTopBar(
         color = Mocha.Crust,
         modifier = modifier
             .fillMaxWidth()
-            .height(48.dp)
+            .height(44.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 8.dp),
+                .padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(
@@ -1651,52 +1686,29 @@ private fun EditorTopBar(
             IconButton(
                 onClick = onUndo,
                 enabled = canUndo,
-                modifier = Modifier.size(36.dp)
+                modifier = Modifier.size(32.dp)
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.Undo,
                     contentDescription = stringResource(R.string.editor_undo),
                     tint = if (canUndo) Mocha.Text else Mocha.Surface2,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(18.dp)
                 )
             }
             IconButton(
                 onClick = onRedo,
                 enabled = canRedo,
-                modifier = Modifier.size(36.dp)
+                modifier = Modifier.size(32.dp)
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.Redo,
                     contentDescription = stringResource(R.string.editor_redo),
                     tint = if (canRedo) Mocha.Text else Mocha.Surface2,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(18.dp)
                 )
             }
 
-            // Project name (tap to rename)
-            Text(
-                text = projectName,
-                color = Mocha.Subtext1,
-                fontSize = 13.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 8.dp)
-                    .clickable { showRenameDialog = true }
-            )
-
-            // Mode toggle
-            Text(
-                text = editorMode.label,
-                color = if (editorMode == EditorMode.PRO) Mocha.Mauve else Mocha.Green,
-                fontSize = 10.sp,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(Mocha.Surface0)
-                    .clickable { onToggleEditorMode() }
-                    .padding(horizontal = 6.dp, vertical = 2.dp)
-            )
+            Spacer(modifier = Modifier.weight(1f))
 
             if (selectedClipId != null) {
                 IconButton(
@@ -1704,13 +1716,13 @@ private fun EditorTopBar(
                         if (confirmBeforeDelete) showDeleteConfirmation = true
                         else onDelete()
                     },
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(32.dp)
                 ) {
                     Icon(
                         Icons.Default.Delete,
                         contentDescription = stringResource(R.string.editor_delete),
                         tint = Mocha.Red,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }

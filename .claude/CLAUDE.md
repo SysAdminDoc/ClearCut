@@ -102,7 +102,7 @@ proxyWorkflowEngine, sherpaAsrEngine
 - ProGuard rules verified comprehensive (Hilt, Room, Media3, ONNX, MediaPipe, Coil)
 
 ## Build Info
-- `versionCode = 78`, `versionName = "3.18.0"`
+- `versionCode = 80`, `versionName = "3.20.0"`
 - `compileSdk = 35`, `targetSdk = 35`, `minSdk = 26`
 - R8 minify + shrink enabled for release
 - Signing via `keystore.properties` or env vars (`NOVACUT_KS_PASS`, `NOVACUT_KEY_ALIAS`, `NOVACUT_KEY_PASS`)
@@ -135,6 +135,51 @@ Research across CapCut, VN, KineMaster, PowerDirector, DaVinci Resolve iPad, and
 
 ### New PanelIds
 - `DRAWING`, `MULTI_CAM`
+
+## v3.20.0 — Full Audit & Bugfix
+
+### Data Loss Fix (CRITICAL)
+- `importProjectBackup()`: only copied `tracks` + `textOverlays` from imported archive — `imageOverlays`, `timelineMarkers`, `chapterMarkers`, `drawingPaths` were silently dropped. Now copies all 6 state fields.
+- `importProjectBackup()`: called `rebuildTimeline()` (private duration helper) instead of `rebuildPlayerTimeline()` — preview never updated after import. Fixed.
+
+### Race Condition Fixes
+- `AiToolsDelegate.runAiTool()`: re-validated clip existence via `currentClip` but then passed stale pre-launch `clip` to all 19 handler methods. Now passes `currentClip`.
+- `colorMatchToReference()`: captured `refClip`/`targetClip` before coroutine launch — clips could be deleted during async analysis. Moved lookups inside coroutine with null guard.
+
+### Persistence Fixes (7 methods)
+- `addTrack()` — missing `saveProject()`, new tracks lost on restart
+- `setTrackVolume()` — missing `saveProject()`, mixer volume lost
+- `setTrackPan()` — missing `saveProject()`, pan position lost
+- `toggleTrackSolo()` — missing `saveProject()`, solo state lost
+- `updateEffect()` (EffectsDelegate) — missing `saveProject()`, effect param changes lost
+- `updateClipColorGrade()` (ColorGradingDelegate) — missing `saveProject()`, color grades lost
+
+### Boundary Safety Fixes
+- `slideClip()` prev-clip trim: guarded `speed` with `.coerceAtLeast(0.01f)` to prevent zero-speed divide, added `.coerceIn()` with `sourceDurationMs` upper bound
+- `slideClip()` next-clip trim: same speed guard + proper `coerceIn(0L, trimEndMs - 100)` to prevent trimStartMs >= trimEndMs invariant violation
+
+### Null Safety Fixes
+- `duplicateSelectedClip()` (ClipEditingDelegate): `clipIndex` from `indexOfFirst` could be -1 if clip disappeared between `flatMapIndexed` and `indexOfFirst` lookups. Added guard `if (clipIndex < 0) return@update s`.
+
+### Compose Performance Fix
+- `EditorScreen` clip label picker: `flatMap + find` lookup was inside `ClipLabel.entries.forEach` loop (7x redundant O(n) scans). Hoisted to single lookup before loop.
+
+## v3.19.0 — Comprehensive Bug & Quality Audit
+
+### Race Condition Fixes
+- AudioMixerDelegate: `normalizeAudio()` re-validates clip exists inside coroutine after `withContext` (stale state fix)
+- AudioMixerDelegate: `detectBeats()` re-validates clips exist after async operation (stale state fix)
+- AiToolsDelegate: `saveAsTemplate()` captures `stateFlow.value` inside `scope.launch` instead of before it
+
+### Integer Safety Fixes
+- AiFeatures: 10 `getFrameAtTime()` calls changed from `* 1000` to `* 1000L` to prevent Int overflow
+- AiFeatures: 4 division-by-zero guards added for audio channel count from MediaFormat
+
+### UI State Fixes
+- EditorScreen: 2 `remember {}` calls given proper keys (`projectName`) so state resets on project switch
+
+### Final i18n Pass (20+ strings)
+- AiToolsPanel, AudioPanel, CaptionStyleGallery, MarkerListPanel, MaskEditorPanel, MediaPicker, SpeedCurveEditor, SpeedPresets, Timeline: all hardcoded contentDescriptions extracted to string resources
 
 ## v3.18.0 — Code Quality & Remaining i18n
 

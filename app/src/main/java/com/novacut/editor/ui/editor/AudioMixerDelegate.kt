@@ -43,6 +43,7 @@ class AudioMixerDelegate(
                 if (track.id == trackId) track.copy(volume = volume.coerceIn(0f, 2f)) else track
             })
         }
+        saveProject()
     }
 
     fun setTrackPan(trackId: String, pan: Float) {
@@ -51,6 +52,7 @@ class AudioMixerDelegate(
                 if (track.id == trackId) track.copy(pan = pan.coerceIn(-1f, 1f)) else track
             })
         }
+        saveProject()
     }
 
     fun toggleTrackSolo(trackId: String) {
@@ -59,6 +61,7 @@ class AudioMixerDelegate(
                 if (track.id == trackId) track.copy(isSolo = !track.isSolo) else track
             })
         }
+        saveProject()
     }
 
     fun addTrackAudioEffect(trackId: String, type: AudioEffectType) {
@@ -112,11 +115,23 @@ class AudioMixerDelegate(
             showToast("No audio clips to analyze")
             return
         }
+        val sourceUri = audioClips.first().sourceUri
         scope.launch {
             stateFlow.update { it.copy(isAnalyzingBeats = true) }
             showToast("Detecting beats...")
             try {
-                val analysis = withContext(Dispatchers.IO) { beatDetectionEngine.detectBeats(audioClips.first().sourceUri) }
+                val analysis = withContext(Dispatchers.IO) { beatDetectionEngine.detectBeats(sourceUri) }
+
+                // Re-validate clips still exist after async work
+                val currentClips = stateFlow.value.tracks
+                    .filter { it.type == TrackType.AUDIO || it.type == TrackType.VIDEO }
+                    .flatMap { it.clips }
+                if (currentClips.isEmpty()) {
+                    stateFlow.update { it.copy(isAnalyzingBeats = false) }
+                    showToast("Audio clips were deleted during analysis")
+                    return@launch
+                }
+
                 val beatTimestamps = analysis.beats.map { it.timestampMs }
                 stateFlow.update { it.copy(beatMarkers = beatTimestamps, isAnalyzingBeats = false) }
                 val bpmText = if (analysis.bpm > 0f) " (%.0f BPM)".format(analysis.bpm) else ""
@@ -145,6 +160,14 @@ class AudioMixerDelegate(
             showToast("Measuring loudness...")
             try {
                 val measurement = withContext(Dispatchers.IO) { loudnessEngine.measureLoudness(clip.sourceUri) }
+
+                // Re-validate clip still exists after async work
+                val currentClip = stateFlow.value.tracks.flatMap { it.clips }.find { it.id == clipId }
+                if (currentClip == null) {
+                    showToast("Clip was deleted during analysis")
+                    return@launch
+                }
+
                 val preset = LoudnessEngine.LoudnessPreset.entries
                     .firstOrNull { it.targetLufs == targetLufs }
                     ?: LoudnessEngine.LoudnessPreset.YOUTUBE

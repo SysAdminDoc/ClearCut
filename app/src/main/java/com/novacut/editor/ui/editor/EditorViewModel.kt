@@ -303,8 +303,8 @@ class EditorViewModel @Inject constructor(
 
     val effectsDelegate = EffectsDelegate(
         stateFlow = _state, saveUndoState = ::saveUndoState, showToast = ::showToast,
-        updatePreview = ::updatePreview, saveProject = ::saveProject,
-        getSelectedClip = ::getSelectedClip,
+        updatePreview = ::updatePreview, rebuildPlayerTimeline = ::rebuildPlayerTimeline,
+        saveProject = ::saveProject, getSelectedClip = ::getSelectedClip,
         recalculateDuration = ::recalculateDuration
     )
 
@@ -674,6 +674,7 @@ class EditorViewModel @Inject constructor(
             val nextIndex = state.tracks.size
             state.copy(tracks = state.tracks + Track(type = type, index = nextIndex))
         }
+        saveProject()
     }
 
     fun toggleTrackMute(trackId: String) {
@@ -727,20 +728,45 @@ class EditorViewModel @Inject constructor(
         _state.update { it.copy(isLooping = newLooping) }
     }
 
+    private var isScrubbing = false
+    private var scrubSeekJob: kotlinx.coroutines.Job? = null
+
     fun seekTo(positionMs: Long) {
-        videoEngine.seekTo(positionMs)
         _playheadMs.value = positionMs
+        if (isScrubbing) {
+            // During scrub: debounce ExoPlayer seeks to every 80ms, skip full state copy
+            scrubSeekJob?.cancel()
+            scrubSeekJob = viewModelScope.launch {
+                kotlinx.coroutines.delay(80)
+                videoEngine.seekTo(positionMs)
+            }
+            return
+        }
+        videoEngine.seekTo(positionMs)
         _state.update { it.copy(playheadMs = positionMs) }
         if (_state.value.panels.isOpen(PanelId.SCOPES)) updateScopeFrame()
     }
 
     /** Enable scrubbing mode during timeline drag for smoother seeking. */
-    fun beginScrub() { videoEngine.setScrubbingMode(true) }
-    fun endScrub() { videoEngine.setScrubbingMode(false) }
+    fun beginScrub() {
+        isScrubbing = true
+        videoEngine.setScrubbingMode(true)
+    }
+    fun endScrub() {
+        isScrubbing = false
+        scrubSeekJob?.cancel()
+        scrubSeekJob = null
+        videoEngine.setScrubbingMode(false)
+        val pos = _playheadMs.value
+        videoEngine.seekTo(pos)
+        _state.update { it.copy(playheadMs = pos) }
+    }
 
     fun updatePlayheadPosition(positionMs: Long) {
         _playheadMs.value = positionMs
-        _state.update { it.copy(playheadMs = positionMs) }
+        if (!isScrubbing) {
+            _state.update { it.copy(playheadMs = positionMs) }
+        }
     }
 
     // Zoom
@@ -1189,10 +1215,14 @@ class EditorViewModel @Inject constructor(
                     _state.update { s ->
                         s.copy(
                             tracks = state.tracks,
-                            textOverlays = state.textOverlays
+                            textOverlays = state.textOverlays,
+                            imageOverlays = state.imageOverlays,
+                            timelineMarkers = state.timelineMarkers,
+                            chapterMarkers = state.chapterMarkers,
+                            drawingPaths = state.drawingPaths
                         )
                     }
-                    rebuildTimeline()
+                    rebuildPlayerTimeline()
                     showToast("Backup imported successfully")
                 } else {
                     showToast("Failed to import backup")
@@ -1928,9 +1958,9 @@ class EditorViewModel @Inject constructor(
                     val prevClip = updatedClips[clipIndex - 1]
                     if (newStart < prevClip.timelineEndMs) {
                         val trimAmount = prevClip.timelineEndMs - newStart
-                        updatedClips[clipIndex - 1] = prevClip.copy(
-                            trimEndMs = (prevClip.trimEndMs - (trimAmount * prevClip.speed).toLong()).coerceAtLeast(prevClip.trimStartMs + 100)
-                        )
+                        val newTrimEnd = (prevClip.trimEndMs - (trimAmount * prevClip.speed.coerceAtLeast(0.01f)).toLong())
+                            .coerceIn(prevClip.trimStartMs + 100, prevClip.sourceDurationMs)
+                        updatedClips[clipIndex - 1] = prevClip.copy(trimEndMs = newTrimEnd)
                     }
                 }
                 if (clipIndex < updatedClips.size - 1) {
@@ -1938,9 +1968,11 @@ class EditorViewModel @Inject constructor(
                     val newEnd = newStart + clip.durationMs
                     if (newEnd > nextClip.timelineStartMs) {
                         val overlap = newEnd - nextClip.timelineStartMs
+                        val newTrimStart = (nextClip.trimStartMs + (overlap * nextClip.speed.coerceAtLeast(0.01f)).toLong())
+                            .coerceIn(0L, nextClip.trimEndMs - 100)
                         updatedClips[clipIndex + 1] = nextClip.copy(
                             timelineStartMs = newEnd,
-                            trimStartMs = (nextClip.trimStartMs + (overlap * nextClip.speed).toLong()).coerceAtMost(nextClip.trimEndMs - 100)
+                            trimStartMs = newTrimStart
                         )
                     }
                 }
@@ -1993,10 +2025,14 @@ class EditorViewModel @Inject constructor(
     // --- Color Match ---
     fun colorMatchToReference(referenceClipId: String) {
         val targetClipId = _state.value.selectedClipId ?: return
-        val refClip = _state.value.tracks.flatMap { it.clips }.find { it.id == referenceClipId } ?: return
-        val targetClip = _state.value.tracks.flatMap { it.clips }.find { it.id == targetClipId } ?: return
 
         viewModelScope.launch {
+            val refClip = _state.value.tracks.flatMap { it.clips }.find { it.id == referenceClipId }
+            val targetClip = _state.value.tracks.flatMap { it.clips }.find { it.id == targetClipId }
+            if (refClip == null || targetClip == null) {
+                showToast("Clip no longer exists")
+                return@launch
+            }
             showToast("Analyzing colors...")
             val refStats = com.novacut.editor.engine.ColorMatchEngine.analyzeFrame(
                 appContext, refClip.sourceUri, refClip.trimStartMs + refClip.durationMs / 2
@@ -2629,18 +2665,34 @@ class EditorViewModel @Inject constructor(
     // Project persistence
     fun saveProject() {
         viewModelScope.launch {
-            val firstClipUri = _state.value.tracks
+            val s = _state.value
+            val firstClipUri = s.tracks
                 .filter { it.type == TrackType.VIDEO }
                 .flatMap { it.clips }
                 .firstOrNull()?.sourceUri?.toString()
 
-            val project = _state.value.project.copy(
+            val project = s.project.copy(
                 updatedAt = System.currentTimeMillis(),
-                durationMs = _state.value.totalDurationMs,
+                durationMs = s.totalDurationMs,
                 thumbnailUri = firstClipUri
             )
             projectDao.insertProject(project)
             _state.update { it.copy(project = project) }
+
+            // Persist track/clip data immediately (don't wait for auto-save timer)
+            autoSave.saveNow(
+                project.id,
+                AutoSaveState(
+                    projectId = project.id,
+                    tracks = s.tracks,
+                    textOverlays = s.textOverlays,
+                    imageOverlays = s.imageOverlays,
+                    timelineMarkers = s.timelineMarkers,
+                    playheadMs = s.playheadMs,
+                    chapterMarkers = s.chapterMarkers,
+                    drawingPaths = s.drawingPaths
+                )
+            )
         }
     }
 

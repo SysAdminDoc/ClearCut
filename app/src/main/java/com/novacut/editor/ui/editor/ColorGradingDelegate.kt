@@ -55,6 +55,7 @@ class ColorGradingDelegate(
             })
         }
         updatePreview()
+        saveProject()
     }
 
     fun importLut() {
