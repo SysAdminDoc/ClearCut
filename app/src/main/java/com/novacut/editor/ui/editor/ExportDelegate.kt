@@ -118,7 +118,6 @@ class ExportDelegate(
                     ) }
                     showToast("GIF exported: ${gifFile.name}")
                 } catch (e: Exception) {
-                    frames.forEach { it.recycle() }
                     android.util.Log.w("ExportDelegate", "GIF export failed", e)
                     stateFlow.update { it.copy(
                         exportState = ExportState.ERROR,
@@ -294,38 +293,41 @@ class ExportDelegate(
             val outputDir = appContext.getExternalFilesDir(Environment.DIRECTORY_MOVIES)
                 ?: appContext.filesDir
             val originalConfig = stateFlow.value.exportConfig
-            for ((index, item) in queue.withIndex()) {
-                stateFlow.update { s ->
-                    s.copy(batchExportQueue = s.batchExportQueue.map {
-                        if (it.id == item.id) it.copy(status = BatchExportStatus.IN_PROGRESS) else it
-                    })
-                }
-                showToast("Exporting ${index + 1}/${queue.size}: ${item.outputName}")
-                videoEngine.resetExportState()
-                stateFlow.update { it.copy(exportConfig = item.config) }
-                startExport(outputDir)
-                val progressJob = scope.launch {
-                    videoEngine.exportProgress.collect { progress ->
-                        stateFlow.update { s ->
-                            s.copy(batchExportQueue = s.batchExportQueue.map {
-                                if (it.id == item.id) it.copy(progress = progress) else it
-                            })
+            try {
+                for ((index, item) in queue.withIndex()) {
+                    stateFlow.update { s ->
+                        s.copy(batchExportQueue = s.batchExportQueue.map {
+                            if (it.id == item.id) it.copy(status = BatchExportStatus.IN_PROGRESS) else it
+                        })
+                    }
+                    showToast("Exporting ${index + 1}/${queue.size}: ${item.outputName}")
+                    videoEngine.resetExportState()
+                    stateFlow.update { it.copy(exportConfig = item.config) }
+                    startExport(outputDir)
+                    val progressJob = scope.launch {
+                        videoEngine.exportProgress.collect { progress ->
+                            stateFlow.update { s ->
+                                s.copy(batchExportQueue = s.batchExportQueue.map {
+                                    if (it.id == item.id) it.copy(progress = progress) else it
+                                })
+                            }
                         }
                     }
+                    val result = try {
+                        videoEngine.exportState.first { it != ExportState.IDLE && it != ExportState.EXPORTING }
+                    } finally {
+                        progressJob.cancel()
+                    }
+                    val newStatus = if (result == ExportState.COMPLETE) BatchExportStatus.COMPLETED else BatchExportStatus.FAILED
+                    stateFlow.update { s ->
+                        s.copy(batchExportQueue = s.batchExportQueue.map {
+                            if (it.id == item.id) it.copy(status = newStatus) else it
+                        })
+                    }
                 }
-                val result = try {
-                    videoEngine.exportState.first { it != ExportState.IDLE && it != ExportState.EXPORTING }
-                } finally {
-                    progressJob.cancel()
-                }
-                val newStatus = if (result == ExportState.COMPLETE) BatchExportStatus.COMPLETED else BatchExportStatus.FAILED
-                stateFlow.update { s ->
-                    s.copy(batchExportQueue = s.batchExportQueue.map {
-                        if (it.id == item.id) it.copy(status = newStatus) else it
-                    })
-                }
+            } finally {
+                stateFlow.update { it.copy(exportConfig = originalConfig) }
             }
-            stateFlow.update { it.copy(exportConfig = originalConfig) }
             showToast("Batch export complete (${queue.size} items)")
         }
     }

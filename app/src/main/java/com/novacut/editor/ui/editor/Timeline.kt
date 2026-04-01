@@ -148,7 +148,7 @@ fun Timeline(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    "TRIM MODE — Drag clip edges to adjust",
+                    stringResource(R.string.timeline_trim_mode_hint),
                     color = Mocha.Peach,
                     fontSize = 11.sp
                 )

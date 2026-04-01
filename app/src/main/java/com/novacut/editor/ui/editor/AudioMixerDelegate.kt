@@ -38,6 +38,7 @@ class AudioMixerDelegate(
     }
 
     fun setTrackVolume(trackId: String, volume: Float) {
+        saveUndoState("Change track volume")
         stateFlow.update { s ->
             s.copy(tracks = s.tracks.map { track ->
                 if (track.id == trackId) track.copy(volume = volume.coerceIn(0f, 2f)) else track
@@ -47,6 +48,7 @@ class AudioMixerDelegate(
     }
 
     fun setTrackPan(trackId: String, pan: Float) {
+        saveUndoState("Change track pan")
         stateFlow.update { s ->
             s.copy(tracks = s.tracks.map { track ->
                 if (track.id == trackId) track.copy(pan = pan.coerceIn(-1f, 1f)) else track
@@ -56,6 +58,7 @@ class AudioMixerDelegate(
     }
 
     fun toggleTrackSolo(trackId: String) {
+        saveUndoState("Toggle track solo")
         stateFlow.update { s ->
             s.copy(tracks = s.tracks.map { track ->
                 if (track.id == trackId) track.copy(isSolo = !track.isSolo) else track
@@ -104,6 +107,7 @@ class AudioMixerDelegate(
                 } else track
             })
         }
+        saveProject()
     }
 
     fun detectBeats() {

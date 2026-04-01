@@ -103,7 +103,7 @@ class EdlExporter @Inject constructor(
     }
 
     private fun msToTimecode(ms: Long, fps: Int): String {
-        val totalFrames = (ms * fps / 1000)
+        val totalFrames = (ms * fps + 500) / 1000
         val frames = (totalFrames % fps).toInt()
         val totalSeconds = totalFrames / fps
         val seconds = (totalSeconds % 60).toInt()

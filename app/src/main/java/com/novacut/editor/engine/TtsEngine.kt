@@ -140,13 +140,15 @@ class TtsEngine @Inject constructor(
     /**
      * Preview text with TTS (plays through speaker, doesn't save file).
      */
-    fun preview(text: String, style: VoiceStyle = VoiceStyle.NARRATOR, locale: Locale = Locale.US) {
+    suspend fun preview(text: String, style: VoiceStyle = VoiceStyle.NARRATOR, locale: Locale = Locale.US) {
         val engine = tts ?: return
         if (!isReady) return
-        engine.language = locale
-        engine.setPitch(style.pitch)
-        engine.setSpeechRate(style.rate)
-        engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "preview")
+        mutex.withLock {
+            engine.language = locale
+            engine.setPitch(style.pitch)
+            engine.setSpeechRate(style.rate)
+            engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "preview")
+        }
     }
 
     fun stopPreview() {

@@ -95,7 +95,6 @@ class ColorGradingDelegate(
         saveUndoState("Apply LUT")
         val currentGrade = clip.colorGrade ?: ColorGrade()
         updateClipColorGrade(currentGrade.copy(lutPath = lutPath))
-        saveProject()
     }
 
 }

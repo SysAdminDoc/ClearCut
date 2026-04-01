@@ -228,7 +228,7 @@ enum class AudioEffectType(val displayName: String) {
             CHORUS -> mapOf("rate" to 1.5f, "depth" to 0.5f, "wetDry" to 0.3f)
             FLANGER -> mapOf("rate" to 0.5f, "depth" to 0.5f, "feedback" to 0.3f, "wetDry" to 0.3f)
             PITCH_SHIFT -> mapOf("semitones" to 0f, "cents" to 0f)
-            NORMALIZER -> mapOf("targetLufs" to -14f, "mode" to 0f)
+            NORMALIZER -> mapOf("targetPeakDb" to -14f, "mode" to 0f)
             HIGH_PASS -> mapOf("frequency" to 80f, "resonance" to 0.7f)
             LOW_PASS -> mapOf("frequency" to 12000f, "resonance" to 0.7f)
             BAND_PASS -> mapOf("frequency" to 1000f, "bandwidth" to 1f)

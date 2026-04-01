@@ -1,5 +1,39 @@
 # Changelog
 
+## v3.23.0 — Comprehensive Audit: 24 Bug Fixes
+
+### Crash Fixes
+- **LRU cache overflow** — Thumbnail cache size capped to prevent `IllegalArgumentException` on 8 GB+ heap devices
+- **ExportService leak** — Service now stops itself if export is already complete when `onStartCommand` fires
+- **GIF double-recycle** — Removed duplicate `Bitmap.recycle()` in export error path that could crash on recycled bitmaps
+- **Zero-duration clip guards** — `KeyframeCurveEditor` and `VolumeEnvelopeEditor` now return early when `clipDurationMs` is 0
+
+### Correctness Fixes
+- **Clip.getEffectiveSpeed** — Now uses raw trim range (`trimEndMs - trimStartMs`) instead of speed-adjusted `durationMs` for speed curve evaluation
+- **EDL timecode rounding** — `msToTimecode` now rounds instead of truncating, fixing frame-inaccurate EDL exports
+- **deleteMultiSelectedClips** — Now ripple-deletes (shifts subsequent clips backward) instead of leaving timeline gaps
+- **applyFillerRemoval** — Now closes gaps after removing filler clips
+- **splitClipAt** — First half now clears stale transition that belonged to the pre-split boundary
+- **Audio filter stability** — Band-pass and notch filter frequency clamped to \[20 Hz, Nyquist) to prevent NaN coefficients
+- **Waveform RMS** — Guards against empty sample buffer division by zero
+- **Normalizer naming** — Renamed misleading `targetLufs` parameter to `targetPeakDb` (function implements peak normalization, not LUFS)
+
+### Data Persistence
+- **Track volume/pan/solo** — Now save undo state before mutation (changes are undoable)
+- **Audio effect params** — `updateTrackAudioEffectParam` now calls `saveProject()` (changes were lost on restart)
+- **setClipLut** — Removed redundant double `saveProject()` call
+- **Basic stabilization** — Now calls `rebuildPlayerTimeline()` and `saveProject()` (preview and persistence were broken)
+- **Batch export** — Original export config now restored in `finally` block (was lost on cancellation)
+
+### Thread Safety
+- **TtsEngine.preview()** — Now acquires mutex to prevent race with concurrent `synthesize()` calls
+- **ProjectAutoSave.copyAutoSave** — Now acquires `saveMutex` to prevent reading partially-written files
+
+### UI/UX
+- **Touch targets** — Enlarged critically undersized buttons: scopes toggle (28→40dp), text editor close (28→40dp), delete keyframe (24→36dp), search clear (20→36dp)
+- **formatDate localization** — Now uses existing string resources instead of hardcoded English ("Just now", "Xm ago")
+- **Hardcoded strings** — "TRIM MODE" hint and "Untitled" project name now use string resources
+
 ## v3.22.0 — Data Safety, Export Correctness & Bug Fixes
 
 ### ProjectAutoSave — 6 Missing Fields Fixed (Data Loss Prevention)

@@ -87,11 +87,11 @@ class ProjectAutoSave @Inject constructor(
         getAutoSaveFile(projectId).delete()
     }
 
-    fun copyAutoSave(fromProjectId: String, toProjectId: String) {
+    suspend fun copyAutoSave(fromProjectId: String, toProjectId: String) {
         val fromFile = getAutoSaveFile(fromProjectId)
         if (!fromFile.exists()) return
         try {
-            val json = JSONObject(fromFile.readText())
+            val json = saveMutex.withLock { JSONObject(fromFile.readText()) }
             json.put("projectId", toProjectId)
             json.put("timestamp", System.currentTimeMillis())
             val toFile = getAutoSaveFile(toProjectId)

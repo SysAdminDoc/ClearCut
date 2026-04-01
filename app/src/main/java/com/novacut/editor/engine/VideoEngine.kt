@@ -37,7 +37,7 @@ class VideoEngine @Inject constructor(
     // Memory-bounded bitmap cache — uses 1/8 of available heap
     // Don't recycle evicted bitmaps — they may still be referenced by Compose Image nodes
     private val thumbnailCache = object : android.util.LruCache<String, Bitmap>(
-        (Runtime.getRuntime().maxMemory() / 8).toInt()
+        (Runtime.getRuntime().maxMemory() / 8).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
     ) {
         override fun sizeOf(key: String, bitmap: Bitmap): Int {
             return bitmap.byteCount

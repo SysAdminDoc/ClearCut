@@ -102,7 +102,8 @@ object AudioEffectsEngine {
     }
 
     private fun bandPassCoeffs(sampleRate: Int, frequency: Float, bandwidth: Float): BiquadCoeffs {
-        val w0 = 2f * PI.toFloat() * frequency / sampleRate
+        val freq = frequency.coerceIn(20f, sampleRate / 2f - 1f)
+        val w0 = 2f * PI.toFloat() * freq / sampleRate
         val alpha = sin(w0) * sinh(ln(2f) / 2f * bandwidth * w0 / sin(w0))
         val a0 = 1f + alpha
         return BiquadCoeffs(
@@ -115,7 +116,8 @@ object AudioEffectsEngine {
     }
 
     private fun notchCoeffs(sampleRate: Int, frequency: Float, bandwidth: Float): BiquadCoeffs {
-        val w0 = 2f * PI.toFloat() * frequency / sampleRate
+        val freq = frequency.coerceIn(20f, sampleRate / 2f - 1f)
+        val w0 = 2f * PI.toFloat() * freq / sampleRate
         val alpha = sin(w0) * sinh(ln(2f) / 2f * bandwidth * w0 / sin(w0))
         val cosW0 = cos(w0)
         val a0 = 1f + alpha
@@ -451,12 +453,12 @@ object AudioEffectsEngine {
     }
 
     private fun applyNormalizer(buffer: FloatArray, params: Map<String, Float>): FloatArray {
-        val targetLufs = params["targetLufs"] ?: -14f
+        val targetPeakDb = params["targetPeakDb"] ?: -14f
         val peak = buffer.maxOfOrNull { abs(it) } ?: return buffer
         if (peak < 1e-10f) return buffer
 
         val currentDb = 20f * log10(peak)
-        val gainDb = targetLufs - currentDb
+        val gainDb = targetPeakDb - currentDb
         val gain = 10f.pow(gainDb / 20f).coerceIn(0.1f, 10f)
 
         return FloatArray(buffer.size) { (buffer[it] * gain).coerceIn(-1f, 1f) }

@@ -243,7 +243,7 @@ fun KeyframeCurveEditor(
                             onDeleteKeyframe(kf)
                             selectedKeyframe = null
                         },
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(36.dp)
                     ) {
                         Icon(Icons.Default.Delete, stringResource(R.string.cd_keyframe_delete), tint = Mocha.Red, modifier = Modifier.size(16.dp))
                     }
@@ -265,6 +265,8 @@ private fun CurveCanvas(
     onAddKeyframe: (KeyframeProperty, Long, Float) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    if (clipDurationMs <= 0L) return
+
     Canvas(
         modifier = modifier
             .pointerInput(keyframes, activeProperties) {

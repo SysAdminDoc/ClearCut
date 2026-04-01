@@ -119,7 +119,7 @@ fun PreviewPanel(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(4.dp)
-                        .size(28.dp)
+                        .size(40.dp)
                 ) {
                     Icon(
                         Icons.Default.Insights,

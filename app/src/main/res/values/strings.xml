@@ -253,6 +253,7 @@
     <string name="projects_minutes_ago">%1$dm ago</string>
     <string name="projects_hours_ago">%1$dh ago</string>
     <string name="projects_days_ago">%1$dd ago</string>
+    <string name="project_untitled">Untitled</string>
 
     <!-- ProjectTemplateSheet -->
     <string name="template_new_project">New Project</string>
@@ -915,6 +916,7 @@
 
     <!-- Timeline -->
     <string name="cd_toggle_waveform">Toggle waveform</string>
+    <string name="timeline_trim_mode_hint">TRIM MODE — Drag clip edges to adjust</string>
 
     <!-- ColorGradingPanel -->
     <string name="color_wheel_lift">Lift</string>

@@ -1560,6 +1560,25 @@ class EditorViewModel @Inject constructor(
                 }
             }
         }
+        // Close gaps left by removed filler clips (ripple delete)
+        _state.update { s ->
+            val tracks = s.tracks.map { track ->
+                val sorted = track.clips.sortedBy { it.timelineStartMs }
+                var nextStartMs = 0L
+                val rippled = sorted.map { clip ->
+                    if (clip.timelineStartMs > nextStartMs) {
+                        val shifted = clip.copy(timelineStartMs = nextStartMs)
+                        nextStartMs += shifted.durationMs
+                        shifted
+                    } else {
+                        nextStartMs = clip.timelineStartMs + clip.durationMs
+                        clip
+                    }
+                }
+                track.copy(clips = rippled)
+            }
+            recalculateDuration(s.copy(tracks = tracks))
+        }
         rebuildTimeline()
         showToast("Removed ${regions.size} filler regions")
         hideFillerRemoval()
@@ -1648,7 +1667,7 @@ class EditorViewModel @Inject constructor(
     }
 
     fun previewTts(text: String, style: com.novacut.editor.engine.TtsEngine.VoiceStyle) {
-        ttsEngine.preview(text, style)
+        viewModelScope.launch { ttsEngine.preview(text, style) }
     }
 
     fun stopTtsPreview() { ttsEngine.stopPreview() }
@@ -1859,7 +1878,7 @@ class EditorViewModel @Inject constructor(
                 val relativePos = positionMs - clip.timelineStartMs
                 val sourcePos = clip.trimStartMs + (relativePos * clip.speed).toLong()
                 if (sourcePos <= clip.trimStartMs + 100 || sourcePos >= clip.trimEndMs - 100) return@map track
-                val clip1 = clip.copy(trimEndMs = sourcePos)
+                val clip1 = clip.copy(trimEndMs = sourcePos, transition = null)
                 val clip2 = clip.copy(
                     id = java.util.UUID.randomUUID().toString(),
                     trimStartMs = sourcePos,
@@ -2314,7 +2333,21 @@ class EditorViewModel @Inject constructor(
         saveUndoState("Delete ${clipIds.size} clips")
         _state.update { s ->
             val tracks = s.tracks.map { track ->
-                track.copy(clips = track.clips.filter { it.id !in clipIds })
+                val remaining = track.clips.filter { it.id !in clipIds }
+                // Ripple delete: close gaps by recalculating timeline positions
+                val sorted = remaining.sortedBy { it.timelineStartMs }
+                var nextStartMs = 0L
+                val rippled = sorted.map { clip ->
+                    if (clip.timelineStartMs > nextStartMs) {
+                        val shifted = clip.copy(timelineStartMs = nextStartMs)
+                        nextStartMs += shifted.durationMs
+                        shifted
+                    } else {
+                        nextStartMs = clip.timelineStartMs + clip.durationMs
+                        clip
+                    }
+                }
+                track.copy(clips = rippled)
             }
             recalculateDuration(s.copy(
                 tracks = tracks,

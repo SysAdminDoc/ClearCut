@@ -597,6 +597,8 @@ class AiToolsDelegate(
                     })
                 }
                 showToast("Basic stabilization applied (${"%.0f".format(result.shakeMagnitude * 100)}% shake)")
+                rebuildPlayerTimeline()
+                saveProject()
             }
             return
         }

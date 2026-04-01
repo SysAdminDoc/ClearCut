@@ -502,7 +502,7 @@ private fun getParamRange(type: AudioEffectType, param: String): Pair<Float, Flo
         param == "rate" -> 0.1f to 20f
         param == "semitones" -> -12f to 12f
         param == "cents" -> -100f to 100f
-        param == "targetLufs" -> -30f to -5f
+        param == "targetPeakDb" -> -30f to -5f
         param == "hold" -> 1f to 500f
         param == "bandwidth" -> 0.1f to 5f
         param == "mode" -> 0f to 2f
@@ -521,7 +521,7 @@ private fun formatParamValue(param: String, value: Float): String {
     return when {
         param.endsWith("_freq") || param == "frequency" -> "${value.toInt()}Hz"
         param.endsWith("_gain") || param == "gain" || param == "makeupGain" -> "%.1fdB".format(value)
-        param == "threshold" || param == "ceiling" || param == "targetLufs" -> "%.1fdB".format(value)
+        param == "threshold" || param == "ceiling" || param == "targetPeakDb" -> "%.1fdB".format(value)
         param == "ratio" -> "%.1f:1".format(value)
         param == "attack" || param == "release" || param == "delayMs" || param == "hold" || param == "preDelay" -> "${value.toInt()}ms"
         param == "decay" -> "%.1fs".format(value)

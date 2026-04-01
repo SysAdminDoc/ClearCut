@@ -115,6 +115,7 @@ class AudioEngine @Inject constructor(
                             shortBuffer.get(samples)
 
                             // Calculate RMS for this buffer
+                            if (samples.isEmpty()) continue
                             var sum = 0.0
                             for (sample in samples) {
                                 sum += sample.toDouble() * sample.toDouble()

@@ -115,7 +115,7 @@ fun ProjectListScreen(
                             if (searchQuery.isNotEmpty()) {
                                 IconButton(
                                     onClick = { viewModel.setSearchQuery("") },
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(36.dp)
                                 ) {
                                     Icon(
                                         Icons.Default.Clear,
@@ -243,7 +243,7 @@ fun ProjectListScreen(
                     showTemplateSheet = false
                     val templateName = ctx.getString(template.nameResId)
                     viewModel.createProject(
-                        name = if (template.id == "blank") "Untitled" else templateName
+                        name = if (template.id == "blank") ctx.getString(R.string.project_untitled) else templateName
                     ) { id -> onProjectSelected(id) }
                 },
                 onUserTemplateSelected = { userTemplate ->
@@ -472,14 +472,15 @@ private fun formatDuration(ms: Long): String {
     return "$minutes:%02d".format(seconds)
 }
 
+@Composable
 private fun formatDate(timestamp: Long): String {
     val now = System.currentTimeMillis()
     val diff = now - timestamp
     return when {
-        diff < 60_000 -> "Just now"
-        diff < 3_600_000 -> "${diff / 60_000}m ago"
-        diff < 86_400_000 -> "${diff / 3_600_000}h ago"
-        diff < 604_800_000 -> "${diff / 86_400_000}d ago"
+        diff < 60_000 -> stringResource(R.string.projects_just_now)
+        diff < 3_600_000 -> stringResource(R.string.projects_minutes_ago, diff / 60_000)
+        diff < 86_400_000 -> stringResource(R.string.projects_hours_ago, diff / 3_600_000)
+        diff < 604_800_000 -> stringResource(R.string.projects_days_ago, diff / 86_400_000)
         else -> {
             val sdf = java.text.SimpleDateFormat("MMM d", java.util.Locale.getDefault())
             sdf.format(java.util.Date(timestamp))

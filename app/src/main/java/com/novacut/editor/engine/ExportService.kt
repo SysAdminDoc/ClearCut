@@ -57,6 +57,9 @@ class ExportService : Service() {
         val currentState = videoEngine.exportState.value
         if (currentState != ExportState.COMPLETE && currentState != ExportState.ERROR && currentState != ExportState.CANCELLED) {
             startObservingExport()
+        } else {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
         }
         return START_NOT_STICKY
     }

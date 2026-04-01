@@ -30,6 +30,8 @@ fun VolumeEnvelopeEditor(
     onDragStarted: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    if (clipDurationMs <= 0L) return
+
     var selectedKfIndex by remember { mutableIntStateOf(-1) }
     val volumeKeyframes = keyframes.filter { it.property == KeyframeProperty.VOLUME }
         .sortedBy { it.timeOffsetMs }

@@ -160,7 +160,7 @@ data class Clip(
     val timelineEndMs: Long get() = timelineStartMs + durationMs
 
     fun getEffectiveSpeed(timeOffsetMs: Long): Float {
-        return speedCurve?.getSpeedAt(timeOffsetMs, durationMs) ?: speed
+        return speedCurve?.getSpeedAt(timeOffsetMs, trimEndMs - trimStartMs) ?: speed
     }
 }
 
