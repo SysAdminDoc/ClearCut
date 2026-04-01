@@ -56,6 +56,7 @@ fun PreviewPanel(
     ) {
         // Video Preview
         var transformStarted by remember { mutableStateOf(false) }
+        LaunchedEffect(selectedClipId) { transformStarted = false }
         Box(
             modifier = Modifier
                 .fillMaxWidth()

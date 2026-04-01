@@ -1514,10 +1514,10 @@ fun EditorScreen(
                                     }
                             ) {
                                 if (label == ClipLabel.NONE) {
-                                    Icon(Icons.Default.Close, null, tint = Mocha.Subtext0, modifier = Modifier.size(16.dp))
+                                    Icon(Icons.Default.Close, stringResource(R.string.cd_close), tint = Mocha.Subtext0, modifier = Modifier.size(16.dp))
                                 }
                                 if (isSelected && label != ClipLabel.NONE) {
-                                    Icon(Icons.Default.Check, null, tint = Mocha.Crust, modifier = Modifier.size(16.dp))
+                                    Icon(Icons.Default.Check, stringResource(R.string.cd_confirm), tint = Mocha.Crust, modifier = Modifier.size(16.dp))
                                 }
                             }
                         }

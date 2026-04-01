@@ -197,6 +197,7 @@ data class SpeedCurve(
 ) {
     fun getSpeedAt(timeOffsetMs: Long, clipDurationMs: Long): Float {
         if (points.size < 2) return points.firstOrNull()?.speed ?: 1f
+        if (clipDurationMs <= 0L) return points.firstOrNull()?.speed ?: 1f
         val t = (timeOffsetMs.toFloat() / clipDurationMs.toFloat()).coerceIn(0f, 1f)
         val sorted = points.sortedBy { it.position }
 

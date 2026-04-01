@@ -256,7 +256,8 @@ class VideoEngine @Inject constructor(
             val editedItems = videoTrack.clips.map { clip ->
                 buildEditedMediaItem(clip, videoTrack.isMuted, tracks, config, targetW, targetH, textOverlays, lottieOverlays)
             }
-            val videoSequence = EditedMediaItemSequence.Builder(editedItems).build()
+            @Suppress("DEPRECATION")
+            val videoSequence = EditedMediaItemSequence.Builder().addItems(editedItems).build()
 
             val audioSequences = buildAudioSequences(tracks)
             val allSequences = buildList {
@@ -467,7 +468,8 @@ class VideoEngine @Inject constructor(
                     .setRemoveVideo(true)
                     .build()
             }
-            EditedMediaItemSequence.Builder(audioItems).build()
+            @Suppress("DEPRECATION")
+            EditedMediaItemSequence.Builder().addItems(audioItems).build()
         }
     }
 
@@ -514,11 +516,10 @@ class VideoEngine @Inject constructor(
 
             val listener = object : Transformer.Listener {
                 override fun onCompleted(composition: Composition, exportResult: ExportResult) {
-                    android.os.Handler(android.os.Looper.getMainLooper()).post {
-                        _exportState.value = ExportState.COMPLETE
-                        _exportProgress.value = 1f
-                        onComplete()
-                    }
+                    if (_exportState.value == ExportState.CANCELLED) return
+                    _exportState.value = ExportState.COMPLETE
+                    _exportProgress.value = 1f
+                    onComplete()
                 }
 
                 override fun onError(
@@ -526,14 +527,13 @@ class VideoEngine @Inject constructor(
                     exportResult: ExportResult,
                     exportException: ExportException
                 ) {
-                    android.os.Handler(android.os.Looper.getMainLooper()).post {
-                        Log.e(TAG, "Export failed", exportException)
-                        _exportErrorMessage.value = exportException.message ?: "Export encoding failed"
-                        _exportState.value = ExportState.ERROR
-                        _exportProgress.value = 0f
-                        outputFile.delete()
-                        onError(exportException)
-                    }
+                    if (_exportState.value == ExportState.CANCELLED) return
+                    Log.e(TAG, "Export failed", exportException)
+                    _exportErrorMessage.value = exportException.message ?: "Export encoding failed"
+                    _exportState.value = ExportState.ERROR
+                    _exportProgress.value = 0f
+                    outputFile.delete()
+                    onError(exportException)
                 }
             }
 
@@ -617,7 +617,7 @@ class VideoEngine @Inject constructor(
      */
     fun setPreviewVolume(volume: Float) {
         try {
-            player?.volume = volume.coerceIn(0f, 2f)
+            player?.volume = volume.coerceIn(0f, 1f)
         } catch (e: Exception) {
             Log.w(TAG, "Failed to set preview volume", e)
         }
@@ -653,7 +653,8 @@ class VideoEngine @Inject constructor(
             }
             frame.recycle()
             file
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Frame extraction failed", e)
             null
         } finally {
             retriever.release()

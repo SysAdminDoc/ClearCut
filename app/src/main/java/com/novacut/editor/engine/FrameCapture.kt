@@ -6,6 +6,7 @@ import android.view.SurfaceView
 import android.os.Handler
 import android.os.Looper
 import kotlinx.coroutines.suspendCancellableCoroutine
+import android.util.Log
 import kotlin.coroutines.resume
 
 /**
@@ -25,6 +26,7 @@ object FrameCapture {
         return try {
             val bitmap = Bitmap.createBitmap(surfaceView.width, surfaceView.height, Bitmap.Config.ARGB_8888)
             val result = suspendCancellableCoroutine<Boolean> { cont ->
+                cont.invokeOnCancellation { bitmap.recycle() }
                 try {
                     PixelCopy.request(
                         surfaceView, bitmap,
@@ -56,6 +58,7 @@ object FrameCapture {
                 null
             }
         } catch (e: Exception) {
+            Log.w("FrameCapture", "Frame capture failed", e)
             null
         }
     }

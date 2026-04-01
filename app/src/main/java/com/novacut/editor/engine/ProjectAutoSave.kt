@@ -53,7 +53,7 @@ class ProjectAutoSave @Inject constructor(
     }
 
     fun saveNow(projectId: String, state: AutoSaveState) {
-        scope.launch {
+        runBlocking {
             try {
                 saveState(projectId, state)
             } catch (e: Exception) {
@@ -118,6 +118,9 @@ class ProjectAutoSave @Inject constructor(
 
     fun release() {
         autoSaveJob?.cancel()
+        runBlocking {
+            saveMutex.withLock { /* wait for any in-flight save to finish */ }
+        }
         scope.cancel()
     }
 
@@ -198,6 +201,7 @@ data class AutoSaveState(
                             put("timeMs", m.timeMs)
                             put("label", m.label)
                             put("color", m.color.name)
+                            put("notes", m.notes)
                         })
                     }
                 })
@@ -252,7 +256,7 @@ data class AutoSaveState(
                         timeMs = ch.optLong("timeMs", 0L),
                         title = ch.optString("title", "")
                     )
-                } catch (_: Exception) { null }
+                } catch (e: Exception) { Log.w(TAG, "Failed to deserialize chapter marker $i", e); null }
             }
             val imageOverlaysArr = json.optJSONArray("imageOverlays") ?: JSONArray()
             val imageOverlays = (0 until imageOverlaysArr.length()).mapNotNull { i ->
@@ -282,7 +286,8 @@ data class AutoSaveState(
                         id = m.optString("id", java.util.UUID.randomUUID().toString()),
                         timeMs = m.optLong("timeMs", 0L),
                         label = m.optString("label", ""),
-                        color = safeValueOf(m.optString("color", "BLUE"), MarkerColor.BLUE)
+                        color = safeValueOf(m.optString("color", "BLUE"), MarkerColor.BLUE),
+                        notes = m.optString("notes", "")
                     )
                 } catch (e: Exception) { Log.w(TAG, "Failed to deserialize timeline marker $i", e); null }
             }
@@ -406,6 +411,27 @@ data class AutoSaveState(
                         clip.captions.forEach { put(serializeCaption(it)) }
                     })
                 }
+                clip.proxyUri?.let { put("proxyUri", it.toString()) }
+                clip.motionTrackingData?.let { mtd ->
+                    put("motionTrackingData", JSONObject().apply {
+                        put("id", mtd.id)
+                        put("targetType", mtd.targetType.name)
+                        put("isActive", mtd.isActive)
+                        put("trackPoints", JSONArray().apply {
+                            mtd.trackPoints.forEach { tp ->
+                                put(JSONObject().apply {
+                                    put("timeOffsetMs", tp.timeOffsetMs)
+                                    put("x", tp.x.toDouble())
+                                    put("y", tp.y.toDouble())
+                                    put("scaleX", tp.scaleX.toDouble())
+                                    put("scaleY", tp.scaleY.toDouble())
+                                    put("rotation", tp.rotation.toDouble())
+                                    put("confidence", tp.confidence.toDouble())
+                                })
+                            }
+                        })
+                    })
+                }
             }
         }
 
@@ -508,6 +534,27 @@ data class AutoSaveState(
                         })
                     }
                 })
+                if (mask.keyframes.isNotEmpty()) {
+                    put("keyframes", JSONArray().apply {
+                        mask.keyframes.forEach { mkf ->
+                            put(JSONObject().apply {
+                                put("timeOffsetMs", mkf.timeOffsetMs)
+                                put("easing", mkf.easing.name)
+                                put("points", JSONArray().apply {
+                                    mkf.points.forEach { pt ->
+                                        put(JSONObject().apply {
+                                            put("x", pt.x.toDouble()); put("y", pt.y.toDouble())
+                                            put("handleInX", pt.handleInX.toDouble())
+                                            put("handleInY", pt.handleInY.toDouble())
+                                            put("handleOutX", pt.handleOutX.toDouble())
+                                            put("handleOutY", pt.handleOutY.toDouble())
+                                        })
+                                    }
+                                })
+                            })
+                        }
+                    })
+                }
             }
         }
 
@@ -597,6 +644,29 @@ data class AutoSaveState(
                 put("glowRadius", t.glowRadius.toDouble())
                 put("letterSpacing", t.letterSpacing.toDouble())
                 put("lineHeight", t.lineHeight.toDouble())
+                t.textPath?.let { tp ->
+                    put("textPath", JSONObject().apply {
+                        put("type", tp.type.name)
+                        put("progress", tp.progress.toDouble())
+                        put("points", JSONArray().apply {
+                            tp.points.forEach { pt ->
+                                put(JSONObject().apply {
+                                    put("x", pt.x.toDouble()); put("y", pt.y.toDouble())
+                                    put("handleInX", pt.handleInX.toDouble())
+                                    put("handleInY", pt.handleInY.toDouble())
+                                    put("handleOutX", pt.handleOutX.toDouble())
+                                    put("handleOutY", pt.handleOutY.toDouble())
+                                })
+                            }
+                        })
+                    })
+                }
+                t.templateId?.let { put("templateId", it) }
+                if (t.keyframes.isNotEmpty()) {
+                    put("keyframes", JSONArray().apply {
+                        t.keyframes.forEach { put(serializeKeyframe(it)) }
+                    })
+                }
             }
         }
 
@@ -631,7 +701,7 @@ data class AutoSaveState(
                     }
                 },
                 audioEffects = (0 until audioFxArr.length()).mapNotNull { i ->
-                    try { deserializeAudioEffect(audioFxArr.getJSONObject(i)) } catch (e: Exception) { null }
+                    try { deserializeAudioEffect(audioFxArr.getJSONObject(i)) } catch (e: Exception) { Log.w(TAG, "Failed to deserialize track audio effect $i", e); null }
                 }
             )
         }
@@ -693,13 +763,36 @@ data class AutoSaveState(
                 colorGrade = json.optJSONObject("colorGrade")?.let { deserializeColorGrade(it) },
                 speedCurve = json.optJSONObject("speedCurve")?.let { deserializeSpeedCurve(it) },
                 masks = (0 until masksArr.length()).mapNotNull { i ->
-                    try { deserializeMask(masksArr.getJSONObject(i)) } catch (e: Exception) { null }
+                    try { deserializeMask(masksArr.getJSONObject(i)) } catch (e: Exception) { Log.w(TAG, "Failed to deserialize mask $i", e); null }
                 },
                 audioEffects = (0 until audioFxArr.length()).mapNotNull { i ->
-                    try { deserializeAudioEffect(audioFxArr.getJSONObject(i)) } catch (e: Exception) { null }
+                    try { deserializeAudioEffect(audioFxArr.getJSONObject(i)) } catch (e: Exception) { Log.w(TAG, "Failed to deserialize clip audio effect $i", e); null }
                 },
                 captions = (0 until captionsArr.length()).mapNotNull { i ->
-                    try { deserializeCaption(captionsArr.getJSONObject(i)) } catch (e: Exception) { null }
+                    try { deserializeCaption(captionsArr.getJSONObject(i)) } catch (e: Exception) { Log.w(TAG, "Failed to deserialize caption $i", e); null }
+                },
+                proxyUri = json.optString("proxyUri", "").takeIf { it.isNotEmpty() }?.let { Uri.parse(it) },
+                motionTrackingData = json.optJSONObject("motionTrackingData")?.let { mtd ->
+                    val tpArr = mtd.optJSONArray("trackPoints") ?: JSONArray()
+                    MotionTrackingData(
+                        id = mtd.optString("id", java.util.UUID.randomUUID().toString()),
+                        trackPoints = (0 until tpArr.length()).mapNotNull { i ->
+                            try {
+                                val tp = tpArr.getJSONObject(i)
+                                MotionTrackPoint(
+                                    timeOffsetMs = tp.optLong("timeOffsetMs", 0L),
+                                    x = tp.optDouble("x", 0.0).toFloat(),
+                                    y = tp.optDouble("y", 0.0).toFloat(),
+                                    scaleX = tp.optDouble("scaleX", 1.0).toFloat(),
+                                    scaleY = tp.optDouble("scaleY", 1.0).toFloat(),
+                                    rotation = tp.optDouble("rotation", 0.0).toFloat(),
+                                    confidence = tp.optDouble("confidence", 1.0).toFloat()
+                                )
+                            } catch (e: Exception) { Log.w(TAG, "Failed to deserialize motion track point $i", e); null }
+                        },
+                        targetType = safeValueOf(mtd.optString("targetType", "POINT"), TrackTargetType.POINT),
+                        isActive = mtd.optBoolean("isActive", true)
+                    )
                 }
             )
         }
@@ -718,7 +811,7 @@ data class AutoSaveState(
                 enabled = json.optBoolean("enabled", true),
                 params = params,
                 keyframes = (0 until effectKfArr.length()).mapNotNull { i ->
-                    try { deserializeEffectKeyframe(effectKfArr.getJSONObject(i)) } catch (e: Exception) { null }
+                    try { deserializeEffectKeyframe(effectKfArr.getJSONObject(i)) } catch (e: Exception) { Log.w(TAG, "Failed to deserialize effect keyframe $i", e); null }
                 }.distinctBy { Pair(it.timeOffsetMs, it.paramName) }
             )
         }
@@ -810,7 +903,30 @@ data class AutoSaveState(
                         handleOutX = pt.optDouble("handleOutX", 0.0).toFloat(),
                         handleOutY = pt.optDouble("handleOutY", 0.0).toFloat()
                     )
-                }
+                },
+                keyframes = json.optJSONArray("keyframes")?.let { kfArr ->
+                    (0 until kfArr.length()).mapNotNull { i ->
+                        try {
+                            val mkf = kfArr.getJSONObject(i)
+                            val mkfPointsArr = mkf.optJSONArray("points") ?: JSONArray()
+                            MaskKeyframe(
+                                timeOffsetMs = mkf.optLong("timeOffsetMs", 0L),
+                                points = (0 until mkfPointsArr.length()).map { j ->
+                                    val pt = mkfPointsArr.getJSONObject(j)
+                                    MaskPoint(
+                                        x = pt.optDouble("x", 0.0).toFloat(),
+                                        y = pt.optDouble("y", 0.0).toFloat(),
+                                        handleInX = pt.optDouble("handleInX", 0.0).toFloat(),
+                                        handleInY = pt.optDouble("handleInY", 0.0).toFloat(),
+                                        handleOutX = pt.optDouble("handleOutX", 0.0).toFloat(),
+                                        handleOutY = pt.optDouble("handleOutY", 0.0).toFloat()
+                                    )
+                                },
+                                easing = safeValueOf(mkf.optString("easing", "LINEAR"), Easing.LINEAR)
+                            )
+                        } catch (e: Exception) { Log.w(TAG, "Failed to deserialize mask keyframe $i", e); null }
+                    }
+                } ?: emptyList()
             )
         }
 
@@ -905,7 +1021,33 @@ data class AutoSaveState(
                 glowColor = json.optLong("glowColor", 0x00000000),
                 glowRadius = json.optDouble("glowRadius", 0.0).toFloat(),
                 letterSpacing = json.optDouble("letterSpacing", 0.0).toFloat(),
-                lineHeight = json.optDouble("lineHeight", 1.2).toFloat()
+                lineHeight = json.optDouble("lineHeight", 1.2).toFloat(),
+                textPath = json.optJSONObject("textPath")?.let { tp ->
+                    val tpPointsArr = tp.optJSONArray("points") ?: JSONArray()
+                    TextPath(
+                        type = safeValueOf(tp.optString("type", "STRAIGHT"), TextPathType.STRAIGHT),
+                        points = (0 until tpPointsArr.length()).map { i ->
+                            val pt = tpPointsArr.getJSONObject(i)
+                            MaskPoint(
+                                x = pt.optDouble("x", 0.0).toFloat(),
+                                y = pt.optDouble("y", 0.0).toFloat(),
+                                handleInX = pt.optDouble("handleInX", 0.0).toFloat(),
+                                handleInY = pt.optDouble("handleInY", 0.0).toFloat(),
+                                handleOutX = pt.optDouble("handleOutX", 0.0).toFloat(),
+                                handleOutY = pt.optDouble("handleOutY", 0.0).toFloat()
+                            )
+                        },
+                        progress = tp.optDouble("progress", 1.0).toFloat()
+                    )
+                },
+                templateId = json.optString("templateId", "").takeIf { it.isNotEmpty() },
+                keyframes = json.optJSONArray("keyframes")?.let { kfArr ->
+                    (0 until kfArr.length()).mapNotNull { i ->
+                        try { deserializeKeyframe(kfArr.getJSONObject(i)) } catch (e: Exception) {
+                            Log.w(TAG, "Failed to deserialize text overlay keyframe $i", e); null
+                        }
+                    }.distinctBy { Pair(it.timeOffsetMs, it.property) }
+                } ?: emptyList()
             )
         }
     }

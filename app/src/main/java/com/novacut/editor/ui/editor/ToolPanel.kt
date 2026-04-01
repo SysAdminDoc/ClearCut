@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.CallSplit
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.RotateRight
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -907,8 +908,7 @@ fun TransitionPicker(
                     TransitionType.WIPE_LEFT, TransitionType.WIPE_RIGHT,
                     TransitionType.WIPE_UP, TransitionType.WIPE_DOWN -> Icons.Default.SwipeLeft
                     TransitionType.ZOOM_IN, TransitionType.ZOOM_OUT -> Icons.Default.ZoomIn
-                    @Suppress("DEPRECATION")
-                    TransitionType.SPIN -> Icons.Default.RotateRight
+                    TransitionType.SPIN -> Icons.AutoMirrored.Filled.RotateRight
                     TransitionType.FLIP -> Icons.Default.Flip
                     TransitionType.CUBE -> Icons.Default.ViewInAr
                     TransitionType.RIPPLE -> Icons.Default.Water

@@ -91,6 +91,7 @@
     <string name="ai_tool_ai_stabilize_desc">OpenCV optical flow stabilization</string>
     <string name="ai_tool_style_transfer">Style Transfer</string>
     <string name="ai_tool_style_transfer_desc">AnimeGAN / Neural Style Transfer</string>
+    <string name="ai_coming_soon">Coming soon</string>
 
     <!-- NoiseReductionPanel -->
     <string name="noise_reduction_title">AI Noise Reduction</string>
@@ -961,4 +962,73 @@
 
     <!-- AiToolsPanel -->
     <string name="cd_download_model">Download model</string>
+
+    <!-- AudioNormPanel -->
+    <string name="cd_equalizer">Equalizer</string>
+
+    <!-- BlendModeSelector -->
+    <string name="cd_check_mark">Selected</string>
+
+    <!-- CaptionEditorPanel -->
+    <string name="cd_closed_caption">Closed caption</string>
+    <string name="cd_auto_awesome">Auto generate</string>
+
+    <!-- ChapterMarkerPanel -->
+    <string name="cd_bookmarks">Bookmarks</string>
+
+    <!-- CloudBackupPanel -->
+    <string name="cd_backup">Backup</string>
+    <string name="cd_upload">Upload</string>
+    <string name="cd_download">Download</string>
+
+    <!-- EditorScreen -->
+    <string name="cd_close">Close</string>
+    <string name="cd_confirm">Confirm</string>
+
+    <!-- EffectLibraryPanel -->
+    <string name="cd_copy_effect">Copy effect</string>
+    <string name="cd_paste_effect">Paste effect</string>
+    <string name="cd_upload_effect">Upload effect</string>
+    <string name="cd_download_effect">Download effect</string>
+
+    <!-- MarkerListPanel -->
+    <string name="cd_search">Search</string>
+    <string name="cd_marker_check">Marker checked</string>
+    <string name="cd_delete">Delete</string>
+
+    <!-- MediaManagerPanel -->
+    <string name="cd_cleaning_services">Clean unused media</string>
+
+    <!-- RenderPreviewSheet -->
+    <string name="cd_preview">Preview</string>
+    <string name="cd_rocket_launch">Start render</string>
+
+    <!-- SnapshotHistoryPanel -->
+    <string name="cd_history">History</string>
+    <string name="cd_save_snapshot">Save snapshot</string>
+
+    <!-- TextEditorSheet -->
+    <string name="cd_align_left">Align left</string>
+    <string name="cd_align_center">Align center</string>
+    <string name="cd_align_right">Align right</string>
+
+    <!-- BatchExportPanel -->
+    <string name="cd_batch_export">Export all</string>
+
+    <!-- SettingsScreen -->
+    <string name="cd_dropdown">Dropdown</string>
+
+    <!-- MediaPicker -->
+    <string name="cd_library_add">Select media</string>
+    <string name="cd_camera">Record video</string>
+
+    <!-- ProjectListScreen -->
+    <string name="cd_app_logo">NovaCut</string>
+    <string name="cd_video_library">Video library</string>
+    <string name="cd_movie_placeholder">Project thumbnail</string>
+    <string name="cd_duplicate_project">Duplicate project</string>
+    <string name="cd_delete_project">Delete project</string>
+
+    <!-- ProjectTemplateSheet -->
+    <string name="cd_file_open">Import template</string>
 </resources>

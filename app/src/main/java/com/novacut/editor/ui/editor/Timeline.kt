@@ -539,6 +539,7 @@ fun Timeline(
                                         // Audio waveform + volume envelope
                                         if (track.type == TrackType.AUDIO) {
                                             val waveform = waveforms[clip.id]
+                                            val volumeKfs = volumeKeyframesSorted(clip)
                                             Canvas(modifier = Modifier.fillMaxSize()) {
                                                 if (track.showWaveform) {
                                                     if (waveform != null && waveform.isNotEmpty()) {
@@ -547,11 +548,6 @@ fun Timeline(
                                                         drawWaveformPlaceholder(clipColor)
                                                     }
                                                 }
-
-                                                // Volume envelope (keyframe-based volume line)
-                                                val volumeKfs = clip.keyframes.filter {
-                                                    it.property == KeyframeProperty.VOLUME
-                                                }.sortedBy { it.timeOffsetMs }
                                                 if (volumeKfs.size >= 2) {
                                                     val path = Path()
                                                     val steps = 100
@@ -580,76 +576,78 @@ fun Timeline(
                                             }
                                         }
 
-                                        // Trim handles
-                                        if (isSelected) {
-                                            // Left trim handle
-                                            Box(
-                                                modifier = Modifier
-                                                    .align(Alignment.CenterStart)
-                                                    .width(12.dp)
-                                                    .fillMaxHeight()
-                                                    .background(
-                                                        clipColor,
-                                                        RoundedCornerShape(
-                                                            topStart = 6.dp,
-                                                            bottomStart = 6.dp
-                                                        )
+                                        // Trim handles — always visible so users can grab edges
+                                        val trimHandleColor = if (isSelected) clipColor else clipColor.copy(alpha = 0.5f)
+
+                                        // Left trim handle
+                                        Box(
+                                            modifier = Modifier
+                                                .align(Alignment.CenterStart)
+                                                .width(12.dp)
+                                                .fillMaxHeight()
+                                                .background(
+                                                    trimHandleColor,
+                                                    RoundedCornerShape(
+                                                        topStart = 6.dp,
+                                                        bottomStart = 6.dp
                                                     )
-                                                    .pointerInput(clip.id) {
-                                                        detectHorizontalDragGestures(
-                                                            onDragStart = {
-                                                                onTrimDragStarted()
-                                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                            },
-                                                            onDragEnd = { onTrimDragEnded() },
-                                                            onDragCancel = { onTrimDragEnded() },
-                                                            onHorizontalDrag = { _, dragAmount ->
-                                                                val ppm = currentZoomLevel * BASE_SCALE
-                                                                if (ppm < 0.001f) return@detectHorizontalDragGestures
-                                                                val currentClip = currentTracks.flatMap { it.clips }.firstOrNull { it.id == clip.id } ?: return@detectHorizontalDragGestures
-                                                                val deltaMs = (dragAmount / ppm).toLong()
-                                                                val newStart = (currentClip.trimStartMs + deltaMs)
-                                                                    .coerceAtLeast(0L)
-                                                                    .coerceAtMost(currentClip.trimEndMs - 100L)
-                                                                onTrimChanged(clip.id, newStart, null)
-                                                            }
-                                                        )
-                                                    }
-                                            )
-                                            // Right trim handle
-                                            Box(
-                                                modifier = Modifier
-                                                    .align(Alignment.CenterEnd)
-                                                    .width(12.dp)
-                                                    .fillMaxHeight()
-                                                    .background(
-                                                        clipColor,
-                                                        RoundedCornerShape(
-                                                            topEnd = 6.dp,
-                                                            bottomEnd = 6.dp
-                                                        )
+                                                )
+                                                .pointerInput(clip.id) {
+                                                    detectHorizontalDragGestures(
+                                                        onDragStart = {
+                                                            onClipSelected(clip.id, track.id)
+                                                            onTrimDragStarted()
+                                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                        },
+                                                        onDragEnd = { onTrimDragEnded() },
+                                                        onDragCancel = { onTrimDragEnded() },
+                                                        onHorizontalDrag = { _, dragAmount ->
+                                                            val ppm = currentZoomLevel * BASE_SCALE
+                                                            if (ppm < 0.001f) return@detectHorizontalDragGestures
+                                                            val currentClip = currentTracks.flatMap { it.clips }.firstOrNull { it.id == clip.id } ?: return@detectHorizontalDragGestures
+                                                            val deltaMs = (dragAmount / ppm).toLong()
+                                                            val newStart = (currentClip.trimStartMs + deltaMs)
+                                                                .coerceAtLeast(0L)
+                                                                .coerceAtMost(currentClip.trimEndMs - 100L)
+                                                            onTrimChanged(clip.id, newStart, null)
+                                                        }
                                                     )
-                                                    .pointerInput(clip.id) {
-                                                        detectHorizontalDragGestures(
-                                                            onDragStart = {
-                                                                onTrimDragStarted()
-                                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                            },
-                                                            onDragEnd = { onTrimDragEnded() },
-                                                            onDragCancel = { onTrimDragEnded() },
-                                                            onHorizontalDrag = { _, dragAmount ->
-                                                                val ppm = currentZoomLevel * BASE_SCALE
-                                                                if (ppm < 0.001f) return@detectHorizontalDragGestures
-                                                                val currentClip = currentTracks.flatMap { it.clips }.firstOrNull { it.id == clip.id } ?: return@detectHorizontalDragGestures
-                                                                val deltaMs = (dragAmount / ppm).toLong()
-                                                                val newEnd = (currentClip.trimEndMs + deltaMs)
-                                                                    .coerceIn(currentClip.trimStartMs + 100L, currentClip.sourceDurationMs)
-                                                                onTrimChanged(clip.id, null, newEnd)
-                                                            }
-                                                        )
-                                                    }
-                                            )
-                                        }
+                                                }
+                                        )
+                                        // Right trim handle
+                                        Box(
+                                            modifier = Modifier
+                                                .align(Alignment.CenterEnd)
+                                                .width(12.dp)
+                                                .fillMaxHeight()
+                                                .background(
+                                                    trimHandleColor,
+                                                    RoundedCornerShape(
+                                                        topEnd = 6.dp,
+                                                        bottomEnd = 6.dp
+                                                    )
+                                                )
+                                                .pointerInput(clip.id) {
+                                                    detectHorizontalDragGestures(
+                                                        onDragStart = {
+                                                            onClipSelected(clip.id, track.id)
+                                                            onTrimDragStarted()
+                                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                        },
+                                                        onDragEnd = { onTrimDragEnded() },
+                                                        onDragCancel = { onTrimDragEnded() },
+                                                        onHorizontalDrag = { _, dragAmount ->
+                                                            val ppm = currentZoomLevel * BASE_SCALE
+                                                            if (ppm < 0.001f) return@detectHorizontalDragGestures
+                                                            val currentClip = currentTracks.flatMap { it.clips }.firstOrNull { it.id == clip.id } ?: return@detectHorizontalDragGestures
+                                                            val deltaMs = (dragAmount / ppm).toLong()
+                                                            val newEnd = (currentClip.trimEndMs + deltaMs)
+                                                                .coerceIn(currentClip.trimStartMs + 100L, currentClip.sourceDurationMs)
+                                                            onTrimChanged(clip.id, null, newEnd)
+                                                        }
+                                                    )
+                                                }
+                                        )
 
                                         // Transition indicator
                                         if (clip.transition != null) {
@@ -922,6 +920,12 @@ private fun DrawScope.drawWaveform(samples: List<Float>, color: Color) {
         )
     }
 }
+
+/** Extract volume keyframes sorted by time — top-level to avoid deeply nested lambda class names (Windows MAX_PATH). */
+private fun volumeKeyframesSorted(clip: com.novacut.editor.model.Clip): List<com.novacut.editor.model.Keyframe> =
+    clip.keyframes
+        .filter { it.property == KeyframeProperty.VOLUME }
+        .sortedBy { it.timeOffsetMs }
 
 private fun DrawScope.drawWaveformPlaceholder(color: Color) {
     // Deterministic pattern to avoid 30fps flicker from Math.random()

@@ -488,7 +488,7 @@ class WhisperEngine @Inject constructor(
                     }
                 }
             } finally {
-                try { decoder.stop() } catch (_: Exception) {}
+                try { decoder.stop() } catch (e: Exception) { Log.w("WhisperEngine", "Failed to stop decoder", e) }
                 decoder.release()
             }
 

@@ -43,7 +43,10 @@ class OverlayDelegate(
     fun removeTextOverlay(id: String) {
         saveUndoState("Remove text")
         stateFlow.update { state ->
-            state.copy(textOverlays = state.textOverlays.filterNot { it.id == id })
+            state.copy(
+                textOverlays = state.textOverlays.filterNot { it.id == id },
+                editingTextOverlayId = if (state.editingTextOverlayId == id) null else state.editingTextOverlayId
+            )
         }
         saveProject()
     }
@@ -55,7 +58,7 @@ class OverlayDelegate(
         val overlay = ImageOverlay(
             sourceUri = uri,
             startTimeMs = stateFlow.value.playheadMs,
-            endTimeMs = stateFlow.value.playheadMs + 5000L,
+            endTimeMs = minOf(stateFlow.value.playheadMs + 5000L, stateFlow.value.totalDurationMs.coerceAtLeast(stateFlow.value.playheadMs + 1000L)),
             type = type
         )
         stateFlow.update { it.copy(imageOverlays = it.imageOverlays + overlay) }
@@ -64,6 +67,7 @@ class OverlayDelegate(
     }
 
     fun updateImageOverlay(id: String, positionX: Float? = null, positionY: Float? = null, scale: Float? = null, rotation: Float? = null, opacity: Float? = null) {
+        saveUndoState("Edit sticker")
         stateFlow.update { s ->
             s.copy(imageOverlays = s.imageOverlays.map { o ->
                 if (o.id == id) o.copy(

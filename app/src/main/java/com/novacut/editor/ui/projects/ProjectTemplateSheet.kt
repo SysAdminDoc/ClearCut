@@ -143,7 +143,7 @@ fun ProjectTemplateSheet(
             border = BorderStroke(1.dp, Mocha.Blue.copy(alpha = 0.5f)),
             shape = RoundedCornerShape(8.dp)
         ) {
-            Icon(Icons.Default.FileOpen, contentDescription = null, tint = Mocha.Blue, modifier = Modifier.size(16.dp))
+            Icon(Icons.Default.FileOpen, contentDescription = stringResource(R.string.cd_file_open), tint = Mocha.Blue, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
             Text(stringResource(R.string.template_import), color = Mocha.Blue, fontSize = 13.sp)
         }

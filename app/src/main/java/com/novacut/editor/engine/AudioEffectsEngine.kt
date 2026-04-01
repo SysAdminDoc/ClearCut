@@ -172,7 +172,7 @@ object AudioEffectsEngine {
         val output = buffer.copyOf()
         var envelope = 0f
 
-        for (i in buffer.indices step channels) {
+        for (i in 0 until buffer.size - channels + 1 step channels) {
             var peak = 0f
             for (ch in 0 until channels) {
                 peak = maxOf(peak, abs(buffer[i + ch]))
@@ -232,7 +232,7 @@ object AudioEffectsEngine {
         var holdCounter = 0
         var gain = 0f
 
-        for (i in buffer.indices step channels) {
+        for (i in 0 until buffer.size - channels + 1 step channels) {
             var peak = 0f
             for (ch in 0 until channels) peak = maxOf(peak, abs(buffer[i + ch]))
 
@@ -279,7 +279,7 @@ object AudioEffectsEngine {
 
         val output = FloatArray(buffer.size)
 
-        for (i in buffer.indices step channels) {
+        for (i in 0 until buffer.size - channels + 1 step channels) {
             var mono = 0f
             for (ch in 0 until channels) mono += buffer[i + ch] / channels
 
@@ -313,17 +313,23 @@ object AudioEffectsEngine {
 
         val output = FloatArray(buffer.size)
 
-        for (i in buffer.indices step channels) {
+        for (i in 0 until buffer.size - channels + 1 step channels) {
+            // Read delayed values and compute output first
+            val delayedValues = FloatArray(channels)
             for (ch in 0 until channels) {
                 val readIdx = writePos * channels + ch
-                val delayed = if (readIdx < delayBuffer.size) delayBuffer[readIdx] else 0f
-                val inputSample = buffer[i + ch]
-                output[i + ch] = inputSample * (1f - wetDry) + delayed * wetDry
-
+                delayedValues[ch] = if (readIdx < delayBuffer.size) delayBuffer[readIdx] else 0f
+                if (i + ch < buffer.size) {
+                    output[i + ch] = buffer[i + ch] * (1f - wetDry) + delayedValues[ch] * wetDry
+                }
+            }
+            // Write feedback after reading all channels to avoid clobbering
+            for (ch in 0 until channels) {
+                if (i + ch >= buffer.size) continue
                 val feedbackCh = if (pingPong && channels == 2) (ch + 1) % 2 else ch
                 val feedbackIdx = writePos * channels + feedbackCh
                 if (feedbackIdx < delayBuffer.size) {
-                    delayBuffer[feedbackIdx] = inputSample + delayed * feedback
+                    delayBuffer[feedbackIdx] = buffer[i + ch] + delayedValues[ch] * feedback
                 }
             }
             writePos = (writePos + 1) % delaySamples
@@ -340,7 +346,7 @@ object AudioEffectsEngine {
         val sibilanceDetect = biquadProcess(buffer, channels, bpCoeffs)
 
         val output = buffer.copyOf()
-        for (i in buffer.indices step channels) {
+        for (i in 0 until buffer.size - channels + 1 step channels) {
             var sibilance = 0f
             for (ch in 0 until channels) sibilance = maxOf(sibilance, abs(sibilanceDetect[i + ch]))
 
@@ -370,7 +376,7 @@ object AudioEffectsEngine {
         val output = FloatArray(buffer.size)
         val phaseInc = rate / sampleRate
 
-        for (i in buffer.indices step channels) {
+        for (i in 0 until buffer.size - channels + 1 step channels) {
             phase += phaseInc
             val modDelay = (maxDelay * 0.5f * (1f + sin(2f * PI.toFloat() * phase) * depth)).toInt()
                 .coerceIn(1, maxDelay - 1)
@@ -400,7 +406,7 @@ object AudioEffectsEngine {
 
         val output = FloatArray(buffer.size)
 
-        for (i in buffer.indices step channels) {
+        for (i in 0 until buffer.size - channels + 1 step channels) {
             phase += rate / sampleRate
             val modDelay = (maxDelay * 0.5f * (1f + sin(2f * PI.toFloat() * phase) * depth)).toInt()
                 .coerceIn(1, maxDelay - 1)

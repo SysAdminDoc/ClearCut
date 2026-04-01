@@ -195,7 +195,7 @@ fun TextEditorSheet(
             )
             FilterChip(
                 onClick = { alignment = TextAlignment.LEFT },
-                label = { Icon(Icons.AutoMirrored.Filled.FormatAlignLeft, null, modifier = Modifier.size(16.dp)) },
+                label = { Icon(Icons.AutoMirrored.Filled.FormatAlignLeft, stringResource(R.string.cd_align_left), modifier = Modifier.size(16.dp)) },
                 selected = alignment == TextAlignment.LEFT,
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = Mocha.Mauve.copy(alpha = 0.3f)
@@ -203,7 +203,7 @@ fun TextEditorSheet(
             )
             FilterChip(
                 onClick = { alignment = TextAlignment.CENTER },
-                label = { Icon(Icons.Default.FormatAlignCenter, null, modifier = Modifier.size(16.dp)) },
+                label = { Icon(Icons.Default.FormatAlignCenter, stringResource(R.string.cd_align_center), modifier = Modifier.size(16.dp)) },
                 selected = alignment == TextAlignment.CENTER,
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = Mocha.Mauve.copy(alpha = 0.3f)
@@ -211,7 +211,7 @@ fun TextEditorSheet(
             )
             FilterChip(
                 onClick = { alignment = TextAlignment.RIGHT },
-                label = { Icon(Icons.AutoMirrored.Filled.FormatAlignRight, null, modifier = Modifier.size(16.dp)) },
+                label = { Icon(Icons.AutoMirrored.Filled.FormatAlignRight, stringResource(R.string.cd_align_right), modifier = Modifier.size(16.dp)) },
                 selected = alignment == TextAlignment.RIGHT,
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = Mocha.Mauve.copy(alpha = 0.3f)

@@ -202,7 +202,7 @@ class InpaintingEngine @Inject constructor(
             val env = OrtEnvironment.getEnvironment()
             val sessionOptions = OrtSession.SessionOptions().apply {
                 // Try NNAPI first (Qualcomm NPU), fall back to CPU
-                try { addNnapi() } catch (_: Exception) { }
+                try { addNnapi() } catch (e: Exception) { Log.w(TAG, "NNAPI not available, falling back to CPU", e) }
             }
             val modelPath = File(context.filesDir, "models/inpainting/$MODEL_FILENAME").absolutePath
             val session = env.createSession(modelPath, sessionOptions)
@@ -245,6 +245,7 @@ class InpaintingEngine @Inject constructor(
                 imageTensor.close()
                 maskTensor.close()
                 session.close()
+                sessionOptions.close()
                 if (inputBitmap !== bitmap) inputBitmap.recycle()
                 if (maskBitmap !== mask) maskBitmap.recycle()
             }

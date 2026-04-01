@@ -158,7 +158,7 @@ fun AudioNormPanel(
             colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve),
             shape = RoundedCornerShape(8.dp)
         ) {
-            Icon(Icons.Default.Equalizer, null, modifier = Modifier.size(18.dp))
+            Icon(Icons.Default.Equalizer, stringResource(R.string.cd_equalizer), modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             Text(stringResource(R.string.audio_norm_normalize_button))
         }

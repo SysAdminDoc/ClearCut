@@ -75,7 +75,7 @@ fun ProjectListScreen(
                     ) {
                         Icon(
                             Icons.Default.Movie,
-                            contentDescription = null,
+                            contentDescription = stringResource(R.string.cd_app_logo),
                             tint = Mocha.Mauve,
                             modifier = Modifier.size(28.dp)
                         )
@@ -181,7 +181,7 @@ fun ProjectListScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
                             Icons.Default.VideoLibrary,
-                            contentDescription = null,
+                            contentDescription = stringResource(R.string.cd_video_library),
                             tint = Mocha.Overlay0,
                             modifier = Modifier.size(72.dp)
                         )
@@ -343,7 +343,7 @@ private fun ProjectCard(
                     } else {
                         Icon(
                             Icons.Default.Movie,
-                            contentDescription = null,
+                            contentDescription = stringResource(R.string.cd_movie_placeholder),
                             tint = Mocha.Overlay0,
                             modifier = Modifier.size(24.dp)
                         )
@@ -409,7 +409,7 @@ private fun ProjectCard(
                             leadingIcon = {
                                 Icon(
                                     Icons.Default.ContentCopy,
-                                    contentDescription = null,
+                                    contentDescription = stringResource(R.string.cd_duplicate_project),
                                     tint = Mocha.Subtext0,
                                     modifier = Modifier.size(18.dp)
                                 )
@@ -424,7 +424,7 @@ private fun ProjectCard(
                             leadingIcon = {
                                 Icon(
                                     Icons.Default.Delete,
-                                    contentDescription = null,
+                                    contentDescription = stringResource(R.string.cd_delete_project),
                                     tint = Mocha.Red,
                                     modifier = Modifier.size(18.dp)
                                 )

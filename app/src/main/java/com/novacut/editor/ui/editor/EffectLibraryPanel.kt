@@ -71,7 +71,7 @@ fun EffectLibraryPanel(
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Mauve),
                 border = BorderStroke(1.dp, Mocha.Mauve.copy(alpha = if (hasClipSelected) 0.5f else 0.2f))
             ) {
-                Icon(Icons.Default.ContentCopy, null, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.ContentCopy, stringResource(R.string.cd_copy_effect), modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
                 Text(stringResource(R.string.panel_effect_library_copy), fontSize = 12.sp)
             }
@@ -84,7 +84,7 @@ fun EffectLibraryPanel(
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Green),
                 border = BorderStroke(1.dp, Mocha.Green.copy(alpha = if (hasCopiedEffects) 0.5f else 0.2f))
             ) {
-                Icon(Icons.Default.ContentPaste, null, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.ContentPaste, stringResource(R.string.cd_paste_effect), modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
                 Text(stringResource(R.string.panel_effect_library_paste), fontSize = 12.sp)
             }
@@ -106,7 +106,7 @@ fun EffectLibraryPanel(
                     contentColor = Mocha.Base
                 )
             ) {
-                Icon(Icons.Default.Upload, null, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.Upload, stringResource(R.string.cd_upload_effect), modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
                 Text(stringResource(R.string.panel_effect_library_export), fontSize = 12.sp)
             }
@@ -120,7 +120,7 @@ fun EffectLibraryPanel(
                     contentColor = Mocha.Base
                 )
             ) {
-                Icon(Icons.Default.Download, null, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.Download, stringResource(R.string.cd_download_effect), modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
                 Text(stringResource(R.string.panel_effect_library_import), fontSize = 12.sp)
             }

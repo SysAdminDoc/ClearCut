@@ -614,7 +614,7 @@ class EditorViewModel @Inject constructor(
         _state.update { s ->
             s.copy(tracks = s.tracks.map { track ->
                 track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == selectedId) clip.copy(effects = state.copiedEffects.map { it.copy(id = java.util.UUID.randomUUID().toString()) })
+                    if (clip.id == selectedId) clip.copy(effects = s.copiedEffects.map { it.copy(id = java.util.UUID.randomUUID().toString()) })
                     else clip
                 })
             })
@@ -732,18 +732,19 @@ class EditorViewModel @Inject constructor(
     private var scrubSeekJob: kotlinx.coroutines.Job? = null
 
     fun seekTo(positionMs: Long) {
-        _playheadMs.value = positionMs
+        val clamped = positionMs.coerceIn(0L, _state.value.totalDurationMs.coerceAtLeast(0L))
+        _playheadMs.value = clamped
         if (isScrubbing) {
             // During scrub: debounce ExoPlayer seeks to every 80ms, skip full state copy
             scrubSeekJob?.cancel()
             scrubSeekJob = viewModelScope.launch {
                 kotlinx.coroutines.delay(80)
-                videoEngine.seekTo(positionMs)
+                videoEngine.seekTo(clamped)
             }
             return
         }
-        videoEngine.seekTo(positionMs)
-        _state.update { it.copy(playheadMs = positionMs) }
+        videoEngine.seekTo(clamped)
+        _state.update { it.copy(playheadMs = clamped) }
         if (_state.value.panels.isOpen(PanelId.SCOPES)) updateScopeFrame()
     }
 
@@ -1016,6 +1017,8 @@ class EditorViewModel @Inject constructor(
                 if (track.id == trackId) track.copy(blendMode = blendMode) else track
             })
         }
+        rebuildPlayerTimeline()
+        saveProject()
     }
 
     fun setTrackOpacity(trackId: String, opacity: Float) {
@@ -1414,7 +1417,7 @@ class EditorViewModel @Inject constructor(
         hideBeatSync()
     }
     fun tapBeatMarker() {
-        val currentMs = _state.value.playheadMs
+        val currentMs = _playheadMs.value
         _state.update { s ->
             val existing = s.beatMarkers
             val tooClose = existing.any { kotlin.math.abs(it - currentMs) < 50L }
@@ -1860,7 +1863,7 @@ class EditorViewModel @Inject constructor(
                 val clip2 = clip.copy(
                     id = java.util.UUID.randomUUID().toString(),
                     trimStartMs = sourcePos,
-                    timelineStartMs = clip.timelineStartMs + clip1.durationMs,
+                    timelineStartMs = positionMs,
                     transition = null
                 )
                 val newClips = track.clips.toMutableList()
@@ -1901,11 +1904,17 @@ class EditorViewModel @Inject constructor(
                     saveUndoState("Multi-cam sync")
                     // Build offset list: first clip stays at 0, rest get offsets from sync results
                     val offsets = listOf(0L) + results.map { it.offsetMs }
+                    // Build clip-id-to-offset map using the same order as videoClips
+                    val clipIds = _state.value.tracks
+                        .filter { it.type == TrackType.VIDEO }
+                        .flatMap { it.clips }
+                        .map { it.id }
+                    val offsetMap = clipIds.zip(offsets).toMap()
                     _state.update { s ->
                         s.copy(tracks = s.tracks.map { track ->
                             if (track.type == TrackType.VIDEO) {
-                                track.copy(clips = track.clips.mapIndexed { idx, clip ->
-                                    val offset = offsets.getOrNull(idx) ?: 0L
+                                track.copy(clips = track.clips.map { clip ->
+                                    val offset = offsetMap[clip.id] ?: 0L
                                     clip.copy(timelineStartMs = (clip.timelineStartMs + offset).coerceAtLeast(0L))
                                 })
                             } else track
@@ -1923,8 +1932,15 @@ class EditorViewModel @Inject constructor(
     }
 
     // --- Slip/Slide Edit ---
-    fun slipClip(clipId: String, slipAmountMs: Long) {
+    fun beginSlipEdit() {
         saveUndoState("Slip edit")
+    }
+
+    fun beginSlideEdit() {
+        saveUndoState("Slide edit")
+    }
+
+    fun slipClip(clipId: String, slipAmountMs: Long) {
         _state.update { s ->
             s.copy(tracks = s.tracks.map { track ->
                 track.copy(clips = track.clips.map { clip ->
@@ -1941,7 +1957,6 @@ class EditorViewModel @Inject constructor(
     }
 
     fun slideClip(clipId: String, slideAmountMs: Long) {
-        saveUndoState("Slide edit")
         _state.update { s ->
             s.copy(tracks = s.tracks.map { track ->
                 val clipIndex = track.clips.indexOfFirst { it.id == clipId }
@@ -2305,7 +2320,8 @@ class EditorViewModel @Inject constructor(
                 tracks = tracks,
                 selectedClipIds = emptySet(),
                 selectedClipId = null,
-                selectedTrackId = null
+                selectedTrackId = null,
+                waveforms = s.waveforms - clipIds
             ))
         }
         rebuildPlayerTimeline()
@@ -2314,7 +2330,12 @@ class EditorViewModel @Inject constructor(
 
     // --- Subtitle Export ---
     fun exportSubtitles(format: SubtitleFormat) {
-        val captions = _state.value.tracks.flatMap { it.clips }.flatMap { it.captions }
+        val captions = _state.value.tracks.flatMap { it.clips }.flatMap { clip ->
+            clip.captions.map { c -> c.copy(
+                startTimeMs = c.startTimeMs + clip.timelineStartMs,
+                endTimeMs = c.endTimeMs + clip.timelineStartMs
+            ) }
+        }
         if (captions.isEmpty()) {
             showToast("No captions to export")
             return

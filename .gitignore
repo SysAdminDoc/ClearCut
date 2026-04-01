@@ -15,6 +15,7 @@ local.properties
 *.jks
 *.keystore
 .env
+.zombie-build/
 
 # Private docs — keep local only
 CLAUDE.md
