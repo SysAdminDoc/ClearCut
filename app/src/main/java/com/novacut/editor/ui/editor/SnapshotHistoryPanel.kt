@@ -107,7 +107,7 @@ fun SnapshotHistoryPanel(
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.History, null, tint = Mocha.Subtext0.copy(alpha = 0.3f), modifier = Modifier.size(32.dp))
+                    Icon(Icons.Default.History, stringResource(R.string.cd_history), tint = Mocha.Subtext0.copy(alpha = 0.3f), modifier = Modifier.size(32.dp))
                     Spacer(Modifier.height(4.dp))
                     Text(stringResource(R.string.snapshot_empty), color = Mocha.Subtext0, fontSize = 12.sp)
                     Spacer(Modifier.height(4.dp))
@@ -136,7 +136,7 @@ fun SnapshotHistoryPanel(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Icon(Icons.Default.SaveAlt, null, tint = Mocha.Yellow, modifier = Modifier.size(20.dp))
+                            Icon(Icons.Default.SaveAlt, stringResource(R.string.cd_save_snapshot), tint = Mocha.Yellow, modifier = Modifier.size(20.dp))
                             Column {
                                 Text(
                                     snapshot.label.ifEmpty { stringResource(R.string.panel_snapshot_untitled) },

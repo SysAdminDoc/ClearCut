@@ -96,7 +96,7 @@ class TtsEngine @Inject constructor(
                     override fun onDone(id: String?) {
                         if (id == utteranceId) {
                             onProgress(1f)
-                            cont.resume(outputFile)
+                            if (cont.isActive) cont.resume(outputFile)
                         }
                     }
 
@@ -105,7 +105,7 @@ class TtsEngine @Inject constructor(
                         if (id == utteranceId) {
                             Log.e("TtsEngine", "TTS error for utterance $id")
                             outputFile.delete()
-                            cont.resume(null)
+                            if (cont.isActive) cont.resume(null)
                         }
                     }
 
@@ -113,13 +113,13 @@ class TtsEngine @Inject constructor(
                         if (id == utteranceId) {
                             Log.e("TtsEngine", "TTS error code $errorCode for $id")
                             outputFile.delete()
-                            cont.resume(null)
+                            if (cont.isActive) cont.resume(null)
                         }
                     }
                 })
 
                 val result = engine.synthesizeToFile(text, null, outputFile, utteranceId)
-                if (result != TextToSpeech.SUCCESS) {
+                if (result != TextToSpeech.SUCCESS && cont.isActive) {
                     outputFile.delete()
                     cont.resume(null)
                 }

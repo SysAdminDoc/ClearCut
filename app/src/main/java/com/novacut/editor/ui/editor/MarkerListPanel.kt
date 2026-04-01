@@ -85,7 +85,7 @@ fun MarkerListPanel(
                 unfocusedBorderColor = Mocha.Surface1,
                 cursorColor = Mocha.Mauve
             ),
-            leadingIcon = { Icon(Icons.Default.Search, null, tint = Mocha.Subtext0, modifier = Modifier.size(16.dp)) }
+            leadingIcon = { Icon(Icons.Default.Search, stringResource(R.string.cd_search), tint = Mocha.Subtext0, modifier = Modifier.size(16.dp)) }
         )
 
         // Color filter chips
@@ -182,7 +182,7 @@ fun MarkerListPanel(
                                         onClick = { onUpdateLabel(marker.id, labelText); editingLabel = false },
                                         modifier = Modifier.size(16.dp)
                                     ) {
-                                        Icon(Icons.Default.Check, null, tint = Mocha.Green, modifier = Modifier.size(12.dp))
+                                        Icon(Icons.Default.Check, stringResource(R.string.cd_marker_check), tint = Mocha.Green, modifier = Modifier.size(12.dp))
                                     }
                                 }
                             )
@@ -215,7 +215,7 @@ fun MarkerListPanel(
                             onClick = { onDelete(marker.id) },
                             modifier = Modifier.size(24.dp)
                         ) {
-                            Icon(Icons.Default.Delete, null, tint = Mocha.Red.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
+                            Icon(Icons.Default.Delete, stringResource(R.string.cd_delete), tint = Mocha.Red.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
                         }
                     }
                 }

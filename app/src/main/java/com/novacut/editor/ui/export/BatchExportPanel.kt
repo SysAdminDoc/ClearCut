@@ -146,7 +146,7 @@ fun BatchExportPanel(
                 colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Icon(Icons.Default.RocketLaunch, null, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.RocketLaunch, stringResource(R.string.cd_batch_export), modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(stringResource(R.string.batch_export_export_all, queue.size))
             }

@@ -1,0 +1,51 @@
+<svg width="1800" height="560" viewBox="0 0 1800 560" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="panel" x1="84" y1="66" x2="1718" y2="512" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0A0C12"/>
+      <stop offset="0.48" stop-color="#151D2C"/>
+      <stop offset="1" stop-color="#1C1622"/>
+    </linearGradient>
+    <linearGradient id="panelStroke" x1="92" y1="82" x2="1710" y2="504" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F6E0B7" stop-opacity="0.72"/>
+      <stop offset="0.45" stop-color="#778096" stop-opacity="0.20"/>
+      <stop offset="1" stop-color="#F6E0B7" stop-opacity="0.26"/>
+    </linearGradient>
+    <linearGradient id="markBorder" x1="156" y1="126" x2="444" y2="414" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F2DAB1" stop-opacity="0.78"/>
+      <stop offset="0.55" stop-color="#5B6372" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="#BFA06A" stop-opacity="0.62"/>
+    </linearGradient>
+    <radialGradient id="markGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(300 238) rotate(90) scale(188)">
+      <stop stop-color="#D6C6A8" stop-opacity="0.30"/>
+      <stop offset="1" stop-color="#D6C6A8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="word" x1="542" y1="170" x2="1294" y2="344" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F5F1E8"/>
+      <stop offset="0.52" stop-color="#E4D8C2"/>
+      <stop offset="1" stop-color="#D2B17B"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="24" y="30" width="1752" height="500" rx="64" fill="url(#panel)"/>
+  <rect x="24.75" y="30.75" width="1750.5" height="498.5" rx="63.25" stroke="url(#panelStroke)" stroke-width="1.5"/>
+  <path d="M74 110C214 86 392 86 520 116" stroke="#FFF8EC" stroke-opacity="0.05" stroke-width="2"/>
+  <path d="M1252 446C1400 432 1574 436 1716 470" stroke="#FFF8EC" stroke-opacity="0.05" stroke-width="2"/>
+
+  <circle cx="300" cy="256" r="188" fill="url(#markGlow)"/>
+  <rect x="116" y="102" width="368" height="368" rx="92" fill="#0E121B"/>
+  <rect x="116.75" y="102.75" width="366.5" height="366.5" rx="91.25" stroke="url(#markBorder)" stroke-width="1.5"/>
+
+  <path d="M194 174C194 163.507 202.507 155 213 155H274C284.493 155 293 163.507 293 174V370C293 380.493 284.493 389 274 389H213C202.507 389 194 380.493 194 370V174Z" fill="#F3EEE6"/>
+  <path d="M340 174C340 163.507 348.507 155 359 155H420C430.493 155 439 163.507 439 174V370C439 380.493 430.493 389 420 389H359C348.507 389 340 380.493 340 370V174Z" fill="#D1D9E4"/>
+  <path d="M300.834 155H361.059C370.14 155 378.202 160.755 381.086 169.368L459.464 403.416C464.16 417.43 453.731 431.738 438.947 431.738H378.799C369.515 431.738 361.322 425.793 358.705 416.883L280.328 182.835C276.114 168.778 286.654 155 300.834 155Z" fill="#D1B07A"/>
+  <path d="M333.082 129H366.546C378.417 129 388.367 137.969 389.603 149.775L416.927 410.883C418.462 425.559 406.963 438.477 392.206 438.477H358.743C346.871 438.477 336.922 429.508 335.686 417.702L308.362 156.594C306.826 141.918 318.326 129 333.082 129Z" fill="#E2C393"/>
+  <path d="M420 118L433.351 155.649L471 169L433.351 182.351L420 220L406.649 182.351L369 169L406.649 155.649L420 118Z" fill="#F8ECD7"/>
+
+  <path d="M548 112V448" stroke="#F1DEBC" stroke-opacity="0.18" stroke-width="1.5"/>
+  <path d="M566 140H1694" stroke="#F1DEBC" stroke-opacity="0.07" stroke-width="1.5"/>
+
+  <text x="618" y="270" fill="url(#word)" font-family="'Georgia', 'Times New Roman', serif" font-size="172" font-weight="700" letter-spacing="-2">NovaCut</text>
+  <text x="626" y="340" fill="#A9B0BC" font-family="'Segoe UI', Arial, sans-serif" font-size="38" font-weight="600" letter-spacing="7">PREMIUM MOBILE VIDEO EDITING</text>
+  <path d="M626 382H1118" stroke="#D2B17B" stroke-opacity="0.7" stroke-width="3"/>
+  <path d="M1142 382H1242" stroke="#EDE3CF" stroke-opacity="0.28" stroke-width="3"/>
+</svg>

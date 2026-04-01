@@ -54,7 +54,10 @@ class ExportService : Service() {
             startForeground(NOTIFICATION_ID, notification)
         }
 
-        startObservingExport()
+        val currentState = videoEngine.exportState.value
+        if (currentState != ExportState.COMPLETE && currentState != ExportState.ERROR && currentState != ExportState.CANCELLED) {
+            startObservingExport()
+        }
         return START_NOT_STICKY
     }
 

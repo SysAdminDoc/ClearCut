@@ -42,7 +42,7 @@ fun CloudBackupPanel(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.Backup, null, tint = Mocha.Blue, modifier = Modifier.size(20.dp))
+                Icon(Icons.Default.Backup, stringResource(R.string.cd_backup), tint = Mocha.Blue, modifier = Modifier.size(20.dp))
                 Text(stringResource(R.string.panel_cloud_backup_title), color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
             IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
@@ -109,7 +109,7 @@ fun CloudBackupPanel(
                     Spacer(Modifier.width(4.dp))
                     Text(stringResource(R.string.panel_cloud_backup_exporting), fontSize = 12.sp)
                 } else {
-                    Icon(Icons.Default.Upload, null, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.Upload, stringResource(R.string.cd_upload), modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
                     Text(stringResource(R.string.panel_cloud_backup_export), fontSize = 12.sp)
                 }
@@ -121,7 +121,7 @@ fun CloudBackupPanel(
                 border = BorderStroke(1.dp, Mocha.Blue.copy(alpha = 0.5f)),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Icon(Icons.Default.Download, null, tint = Mocha.Blue, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.Download, stringResource(R.string.cd_download), tint = Mocha.Blue, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
                 Text(stringResource(R.string.panel_cloud_backup_import), color = Mocha.Blue, fontSize = 12.sp)
             }

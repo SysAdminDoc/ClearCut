@@ -50,7 +50,9 @@ fun MediaPickerSheet(
                     uri,
                     android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
-            } catch (_: SecurityException) { }
+            } catch (e: SecurityException) {
+                android.util.Log.w("MediaPicker", "Failed to persist URI permission", e)
+            }
             onMediaSelected(uri, "video")
         }
     }
@@ -64,7 +66,9 @@ fun MediaPickerSheet(
                     uri,
                     android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
-            } catch (_: SecurityException) { }
+            } catch (e: SecurityException) {
+                android.util.Log.w("MediaPicker", "Failed to persist URI permission", e)
+            }
             onMediaSelected(uri, pendingMediaType)
         }
     }
@@ -214,7 +218,7 @@ fun MediaPickerSheet(
             ),
             border = BorderStroke(1.dp, Mocha.Surface1)
         ) {
-            Icon(Icons.Default.LibraryAdd, contentDescription = null, modifier = Modifier.size(18.dp))
+            Icon(Icons.Default.LibraryAdd, contentDescription = stringResource(R.string.cd_library_add), modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text(stringResource(R.string.media_picker_select_multiple))
         }
@@ -238,7 +242,7 @@ fun MediaPickerSheet(
             ),
             border = BorderStroke(1.dp, Mocha.Surface1)
         ) {
-            Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
+            Icon(Icons.Default.CameraAlt, contentDescription = stringResource(R.string.cd_camera), modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text(stringResource(R.string.media_picker_record_video))
         }

@@ -7,6 +7,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.BaseGlShaderProgram
 import androidx.media3.effect.GlEffect
 import androidx.media3.effect.GlShaderProgram
+import android.util.Log
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
@@ -55,6 +56,7 @@ object LutEngine {
                 Lut3D(size, data.toFloatArray())
             } else null
         } catch (e: Exception) {
+            Log.w("LutEngine", "LUT parse failed", e)
             null
         }
     }
@@ -96,6 +98,7 @@ object LutEngine {
                 Lut3D(size, data.toFloatArray())
             } else null
         } catch (e: Exception) {
+            Log.w("LutEngine", "LUT parse failed", e)
             null
         }
     }
@@ -215,12 +218,20 @@ private class LutShaderProgram(
         GLES30.glTexParameteri(GLES30.GL_TEXTURE_3D, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE)
         GLES30.glTexParameteri(GLES30.GL_TEXTURE_3D, GLES30.GL_TEXTURE_WRAP_R, GLES30.GL_CLAMP_TO_EDGE)
 
-        val lutBuf = ByteBuffer.allocateDirect(lut.data.size * 4).order(ByteOrder.nativeOrder())
-            .asFloatBuffer().put(lut.data).apply { position(0) }
+        // Pad RGB data to RGBA for guaranteed filterability on GLES 3.0
+        val rgbaData = FloatArray(lut.size * lut.size * lut.size * 4)
+        for (i in 0 until lut.size * lut.size * lut.size) {
+            rgbaData[i * 4] = lut.data[i * 3]
+            rgbaData[i * 4 + 1] = lut.data[i * 3 + 1]
+            rgbaData[i * 4 + 2] = lut.data[i * 3 + 2]
+            rgbaData[i * 4 + 3] = 1.0f
+        }
+        val lutBuf = ByteBuffer.allocateDirect(rgbaData.size * 4).order(ByteOrder.nativeOrder())
+            .asFloatBuffer().put(rgbaData).apply { position(0) }
         GLES30.glTexImage3D(
-            GLES30.GL_TEXTURE_3D, 0, GLES30.GL_RGB32F,
+            GLES30.GL_TEXTURE_3D, 0, GLES30.GL_RGBA16F,
             lut.size, lut.size, lut.size, 0,
-            GLES30.GL_RGB, GLES30.GL_FLOAT, lutBuf
+            GLES30.GL_RGBA, GLES30.GL_FLOAT, lutBuf
         )
         GLES30.glBindTexture(GLES30.GL_TEXTURE_3D, 0)
     }

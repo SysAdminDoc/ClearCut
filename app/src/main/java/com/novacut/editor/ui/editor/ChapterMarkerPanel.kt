@@ -80,7 +80,7 @@ fun ChapterMarkerPanel(
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.Bookmarks, null, tint = Mocha.Subtext0.copy(alpha = 0.3f), modifier = Modifier.size(32.dp))
+                    Icon(Icons.Default.Bookmarks, stringResource(R.string.cd_bookmarks), tint = Mocha.Subtext0.copy(alpha = 0.3f), modifier = Modifier.size(32.dp))
                     Spacer(Modifier.height(4.dp))
                     Text(stringResource(R.string.chapter_empty), color = Mocha.Subtext0, fontSize = 12.sp)
                 }

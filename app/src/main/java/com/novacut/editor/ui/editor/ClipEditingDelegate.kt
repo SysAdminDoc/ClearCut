@@ -190,7 +190,11 @@ class ClipEditingDelegate(
             }
 
             val tracks = s.tracks.mapIndexed { i, t -> if (i == trackIdx) t.copy(clips = shifted) else t }
-            recalculateDuration(s.copy(tracks = tracks, selectedClipId = newClip.id))
+            val waveforms = s.waveforms.let { wf ->
+                val existing = wf[clipId]
+                if (existing != null) wf + (newClip.id to existing) else wf
+            }
+            recalculateDuration(s.copy(tracks = tracks, selectedClipId = newClip.id, waveforms = waveforms))
         }
         rebuildPlayerTimeline()
         saveProject()
@@ -408,6 +412,8 @@ class ClipEditingDelegate(
                 } else track
             }
             val movedClip = clipToMove ?: return@update state
+            val targetTrack = tracksWithRemoved.find { it.id == targetTrackId } ?: return@update state
+            if (targetTrack.type == TrackType.AUDIO && movedClip.sourceUri.toString().contains("video")) return@update state
             val tracks = tracksWithRemoved.map { track ->
                 if (track.id == targetTrackId) {
                     val endMs = track.clips.maxOfOrNull { it.timelineEndMs } ?: 0L

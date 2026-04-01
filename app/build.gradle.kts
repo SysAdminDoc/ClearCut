@@ -16,8 +16,8 @@ android {
         applicationId = "com.novacut.editor"
         minSdk = 26
         targetSdk = 35
-        versionCode = 80
-        versionName = "3.20.0"
+        versionCode = 82
+        versionName = "3.22.0"
     }
 
     signingConfigs {
@@ -74,6 +74,17 @@ android {
 
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
+}
+
+// Workaround: VMware HGFS cannot delete files whose names contain '$' via standard
+// Java/Windows APIs (ERROR_INVALID_NAME). Ensure output dirs exist before AGP tasks
+// that call FileUtils.deleteDirectoryContents (which asserts isDirectory).
+tasks.configureEach {
+    if (name.contains("ClassesWithAsm") || name.contains("dexBuilder")) {
+        doFirst {
+            outputs.files.forEach { it.mkdirs() }
+        }
+    }
 }
 
 dependencies {

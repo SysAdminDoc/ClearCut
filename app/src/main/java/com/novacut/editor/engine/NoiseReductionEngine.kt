@@ -94,6 +94,18 @@ class NoiseReductionEngine @Inject constructor(
         }
 
         if (mode == NoiseReductionMode.OFF) {
+            // Copy input to output for pass-through
+            try {
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    outputFile.outputStream().use { output -> input.copyTo(output) }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to copy for OFF pass-through: ${e.message}")
+                throw IllegalStateException("Noise reduction OFF pass-through failed: could not copy input", e)
+            }
+            if (!outputFile.exists() || outputFile.length() == 0L) {
+                throw IllegalStateException("Noise reduction OFF pass-through failed: output file is missing or empty")
+            }
             onProgress(1f)
             return@withContext NoiseReductionResult(
                 outputFile = outputFile,
@@ -115,6 +127,9 @@ class NoiseReductionEngine @Inject constructor(
             }
         } catch (e: Exception) {
             Log.w(TAG, "Failed to copy input audio for pass-through: ${e.message}")
+        }
+        if (!outputFile.exists() || outputFile.length() == 0L) {
+            throw IllegalStateException("Noise reduction pass-through failed: output file is missing or empty")
         }
 
         onProgress(1f)

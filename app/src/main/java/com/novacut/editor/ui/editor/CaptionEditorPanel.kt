@@ -110,7 +110,7 @@ fun CaptionEditorPanel(
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.ClosedCaption, null, tint = Mocha.Subtext0.copy(alpha = 0.3f), modifier = Modifier.size(32.dp))
+                    Icon(Icons.Default.ClosedCaption, stringResource(R.string.cd_closed_caption), tint = Mocha.Subtext0.copy(alpha = 0.3f), modifier = Modifier.size(32.dp))
                     Spacer(Modifier.height(4.dp))
                     Text(stringResource(R.string.caption_no_captions), color = Mocha.Subtext0, fontSize = 12.sp)
                     Spacer(Modifier.height(8.dp))
@@ -118,7 +118,7 @@ fun CaptionEditorPanel(
                         onClick = onGenerateAutoCaption,
                         border = BorderStroke(1.dp, Mocha.Yellow.copy(alpha = 0.5f))
                     ) {
-                        Icon(Icons.Default.AutoAwesome, null, tint = Mocha.Yellow, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.AutoAwesome, stringResource(R.string.cd_auto_awesome), tint = Mocha.Yellow, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
                         Text(stringResource(R.string.panel_caption_auto_generate), color = Mocha.Yellow, fontSize = 12.sp)
                     }

@@ -4,6 +4,7 @@ import android.content.Context
 import android.media.MediaRecorder
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,7 +26,7 @@ class VoiceoverRecorderEngine @Inject constructor(
     fun startRecording(): File? {
         // Release any existing recorder to prevent resource leak on double-start
         if (recorder != null) {
-            try { recorder?.stop() } catch (_: Exception) { }
+            try { recorder?.stop() } catch (e: Exception) { Log.w("VoiceoverRecorder", "Failed to stop recorder on re-start", e) }
             recorder?.release()
             recorder = null
             _isRecording.value = false
@@ -92,7 +93,7 @@ class VoiceoverRecorderEngine @Inject constructor(
     }
 
     fun release() {
-        try { recorder?.stop() } catch (_: Exception) { }
+        try { recorder?.stop() } catch (e: Exception) { Log.w("VoiceoverRecorder", "Failed to stop recorder on release", e) }
         recorder?.release()
         recorder = null
         outputFile = null

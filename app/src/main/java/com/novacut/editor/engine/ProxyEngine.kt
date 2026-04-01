@@ -90,10 +90,10 @@ class ProxyEngine @Inject constructor(
                     })
                     .build()
 
+                @Suppress("DEPRECATION")
+                val sequence = EditedMediaItemSequence.Builder().addItem(editedItem).build()
                 transformer.start(
-                    Composition.Builder(
-                        EditedMediaItemSequence.Builder(editedItem).build()
-                    ).build(),
+                    Composition.Builder(sequence).build(),
                     outFile.absolutePath
                 )
 

@@ -137,7 +137,7 @@ class EffectShareEngine @Inject constructor(
             if (effectsArr != null) {
                 for (i in 0 until effectsArr.length()) {
                     val eo = effectsArr.getJSONObject(i)
-                    val type = try { EffectType.valueOf(eo.getString("type")) } catch (_: Exception) { continue }
+                    val type = try { EffectType.valueOf(eo.getString("type")) } catch (e: Exception) { Log.w("EffectShareEngine", "Unknown effect type in JSON", e); continue }
                     val params = mutableMapOf<String, Float>()
                     val po = eo.optJSONObject("params")
                     if (po != null) {
@@ -165,7 +165,9 @@ class EffectShareEngine @Inject constructor(
                     offsetR = cg.optDouble("offsetR", 0.0).toFloat(),
                     offsetG = cg.optDouble("offsetG", 0.0).toFloat(),
                     offsetB = cg.optDouble("offsetB", 0.0).toFloat(),
-                    lutPath = cg.optString("lutFileName", cg.optString("lutPath", null)),
+                    lutPath = cg.optString("lutFileName", "").ifEmpty { cg.optString("lutPath", "") }.ifEmpty { null }?.let {
+                        File(File(context.filesDir, "luts"), it).absolutePath
+                    },
                     lutIntensity = cg.optDouble("lutIntensity", 1.0).toFloat()
                 )
             }
@@ -176,7 +178,7 @@ class EffectShareEngine @Inject constructor(
             if (audioArr != null) {
                 for (i in 0 until audioArr.length()) {
                     val ao = audioArr.getJSONObject(i)
-                    val type = try { AudioEffectType.valueOf(ao.getString("type")) } catch (_: Exception) { continue }
+                    val type = try { AudioEffectType.valueOf(ao.getString("type")) } catch (e: Exception) { Log.w("EffectShareEngine", "Unknown audio effect type in JSON", e); continue }
                     val params = mutableMapOf<String, Float>()
                     val po = ao.optJSONObject("params")
                     if (po != null) {

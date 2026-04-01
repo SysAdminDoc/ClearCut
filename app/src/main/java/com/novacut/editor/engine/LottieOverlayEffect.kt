@@ -102,6 +102,12 @@ private class LottieOverlayProgram(
             GLES30.glUniform1i(overlayLoc, 1)
             GLES30.glUniform1f(alphaLoc, 1.0f)
         } else {
+            // Bind texture unit 1 to the input video texture as a safe fallback
+            // (alpha is 0 so it won't affect output, but avoids undefined texture reads)
+            GLES30.glActiveTexture(GLES30.GL_TEXTURE1)
+            GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, inputTexId)
+            val overlayLoc = GLES30.glGetUniformLocation(glProgram, "uOverlayTex")
+            GLES30.glUniform1i(overlayLoc, 1)
             GLES30.glUniform1f(alphaLoc, 0.0f)
         }
 

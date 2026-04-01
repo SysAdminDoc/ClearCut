@@ -177,7 +177,7 @@ fun RenderPreviewSheet(
                 border = BorderStroke(1.dp, Mocha.Peach.copy(alpha = 0.5f)),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Icon(Icons.Default.Preview, null, tint = Mocha.Peach, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.Preview, stringResource(R.string.cd_preview), tint = Mocha.Peach, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
                 Text(stringResource(R.string.panel_render_preview), color = Mocha.Peach, fontSize = 12.sp)
             }
@@ -189,7 +189,7 @@ fun RenderPreviewSheet(
                 colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Icon(Icons.Default.RocketLaunch, null, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.RocketLaunch, stringResource(R.string.cd_rocket_launch), modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
                 Text(stringResource(R.string.panel_render_export), fontSize = 12.sp)
             }

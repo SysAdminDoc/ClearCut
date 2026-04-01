@@ -71,7 +71,7 @@ fun BlendModeSelector(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         if (selected) {
-                            Icon(Icons.Default.Check, null, tint = Mocha.Mauve, modifier = Modifier.size(14.dp))
+                            Icon(Icons.Default.Check, stringResource(R.string.cd_check_mark), tint = Mocha.Mauve, modifier = Modifier.size(14.dp))
                         }
                         Text(
                             mode.displayName,

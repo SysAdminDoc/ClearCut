@@ -834,6 +834,7 @@ class AiFeatures @Inject constructor(
             var currentMs = 0L
 
             while (currentMs < durationMs) {
+                ensureActive()
                 val frame = retriever.getFrameAtTime(
                     currentMs * 1000L, MediaMetadataRetriever.OPTION_CLOSEST_SYNC
                 )
@@ -848,6 +849,8 @@ class AiFeatures @Inject constructor(
                                    else SceneChangeType.TRANSITION
                         ))
                     }
+                    previousFrame.recycle()
+                } else if (frame == null && previousFrame != null) {
                     previousFrame.recycle()
                 }
                 previousFrame = frame
@@ -1293,10 +1296,10 @@ class AiFeatures @Inject constructor(
                 val dr = abs((p1 shr 16 and 0xFF) - (p2 shr 16 and 0xFF))
                 val dg = abs((p1 shr 8 and 0xFF) - (p2 shr 8 and 0xFF))
                 val db = abs((p1 and 0xFF) - (p2 and 0xFF))
-                totalDiff += (dr + dg + db) / 3
+                totalDiff += (dr + dg + db).toLong()
             }
 
-            return (totalDiff.toFloat() / totalPixels / 255f).coerceIn(0f, 1f)
+            return (totalDiff.toFloat() / totalPixels / 765f).coerceIn(0f, 1f)
         } finally {
             if (scaled1 !== frame1) scaled1.recycle()
             if (scaled2 !== frame2) scaled2.recycle()
@@ -1902,10 +1905,10 @@ class AiFeatures @Inject constructor(
 
         // Phase 1: Analyze each clip for quality metrics
         val scored = mutableListOf<Pair<Int, Float>>() // clipIndex to score
-        val retriever = MediaMetadataRetriever()
-        try {
-            for ((idx, clip) in clips.withIndex()) {
-                ensureActive()
+        for ((idx, clip) in clips.withIndex()) {
+            ensureActive()
+            val retriever = MediaMetadataRetriever()
+            try {
                 var qualityScore = 0f
                 var motionScore = 0f
                 var faceScore = 0f
@@ -1950,9 +1953,9 @@ class AiFeatures @Inject constructor(
                 scored.add(idx to combinedScore)
 
                 onProgress(0.05f + 0.5f * (idx + 1) / clips.size)
+            } finally {
+                retriever.release()
             }
-        } finally {
-            retriever.release()
         }
 
         // Phase 2: Optionally detect beats for synced cuts

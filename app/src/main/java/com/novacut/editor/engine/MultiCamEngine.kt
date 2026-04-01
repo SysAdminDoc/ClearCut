@@ -226,7 +226,8 @@ class MultiCamEngine @Inject constructor(
                 } finally {
                     try {
                         decoder.stop()
-                    } catch (_: Exception) {
+                    } catch (e: Exception) {
+                        Log.w("MultiCamEngine", "Failed to stop decoder", e)
                     }
                     decoder.release()
                 }

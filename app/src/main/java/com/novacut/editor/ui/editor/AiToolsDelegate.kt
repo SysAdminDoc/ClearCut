@@ -2,6 +2,7 @@ package com.novacut.editor.ui.editor
 
 import android.content.Context
 import android.net.Uri
+import com.novacut.editor.R
 import com.novacut.editor.ai.AiFeatures
 import com.novacut.editor.engine.*
 
@@ -556,25 +557,8 @@ class AiToolsDelegate(
     // --- Tier 3: ML Engine Wrapper Methods ---
 
     private suspend fun applyFrameInterpolation(clip: Clip) {
-        if (!frameInterpolationEngine.isModelReady()) {
-            showToast("Frame interpolation requires RIFE model download (~10MB)")
-            return
-        }
-        val config = FrameInterpolationEngine.SlowMotionConfig(
-            multiplier = 2, quality = FrameInterpolationEngine.SlowMotionConfig.Quality.PREVIEW
-        )
-        val outputFile = File(appContext.cacheDir, "interp_${clip.id}.mp4")
-        showToast("Generating slow-motion (2x)...")
-        val result = frameInterpolationEngine.interpolateFrames(
-            inputUri = clip.sourceUri, outputUri = Uri.fromFile(outputFile),
-            config = config, onProgress = { }
-        )
-        if (result != null) {
-            saveUndoState("AI frame interpolation")
-            showToast("Slow-motion applied: ${result.interpolatedFrameCount} frames (${if (result.usedMlModel) "RIFE ML" else "frame duplication"})")
-        } else {
-            showToast("Frame interpolation not yet available \u2014 model integration pending")
-        }
+        showToast(appContext.getString(R.string.ai_coming_soon))
+        return
     }
 
     private suspend fun applyObjectRemoval(clip: Clip) {
@@ -586,47 +570,13 @@ class AiToolsDelegate(
     }
 
     private suspend fun applyVideoUpscale(clip: Clip) {
-        val variant = UpscaleEngine.UpscaleConfig.ModelVariant.GENERAL_X4V3
-        if (!upscaleEngine.isModelReady(variant)) {
-            showToast("Video upscale requires Real-ESRGAN model download (~12MB)")
-            return
-        }
-        val config = UpscaleEngine.UpscaleConfig(
-            scaleFactor = 4, modelVariant = variant, quality = UpscaleEngine.UpscaleConfig.Quality.BALANCED
-        )
-        val outputFile = File(appContext.cacheDir, "upscale_${clip.id}.mp4")
-        showToast("Upscaling video with Real-ESRGAN...")
-        val result = upscaleEngine.upscaleVideo(
-            uri = clip.sourceUri, config = config, outputUri = Uri.fromFile(outputFile), onProgress = { }
-        )
-        if (result != null) {
-            saveUndoState("AI video upscale")
-            showToast("Upscaled to ${result.outputWidth}x${result.outputHeight}")
-        } else {
-            showToast("Video upscale not yet available \u2014 model integration pending")
-        }
+        showToast(appContext.getString(R.string.ai_coming_soon))
+        return
     }
 
     private suspend fun applyAiBackground(clip: Clip) {
-        if (!videoMattingEngine.isModelReady()) {
-            showToast("AI background requires RVM model download (~15MB)")
-            return
-        }
-        val config = VideoMattingEngine.MattingConfig(
-            quality = VideoMattingEngine.MattingConfig.Quality.PREVIEW,
-            backgroundMode = VideoMattingEngine.MattingConfig.BackgroundMode.BLUR
-        )
-        val outputFile = File(appContext.cacheDir, "matting_${clip.id}.mp4")
-        showToast("Processing AI background removal...")
-        val result = videoMattingEngine.processVideo(
-            uri = clip.sourceUri, outputUri = Uri.fromFile(outputFile), config = config, onProgress = { }
-        )
-        if (result != null) {
-            saveUndoState("AI background replacement")
-            showToast("Background replaced (${result.framesProcessed} frames, ${"%.1f".format(result.averageFps)} fps)")
-        } else {
-            showToast("AI background not yet available \u2014 model integration pending")
-        }
+        showToast(appContext.getString(R.string.ai_coming_soon))
+        return
     }
 
     private suspend fun applyStabilization(clip: Clip) {
@@ -637,6 +587,15 @@ class AiToolsDelegate(
                 showToast("Video is already stable")
             } else {
                 saveUndoState("AI stabilize (basic)")
+                // Apply 2% crop-based stabilization via scale
+                val stabilizeScale = 1f + (result.shakeMagnitude * 0.5f).coerceAtMost(0.1f)
+                stateFlow.update { s ->
+                    s.copy(tracks = s.tracks.map { track ->
+                        track.copy(clips = track.clips.map { c ->
+                            if (c.id == clip.id) c.copy(scaleX = c.scaleX * stabilizeScale, scaleY = c.scaleY * stabilizeScale) else c
+                        })
+                    })
+                }
                 showToast("Basic stabilization applied (${"%.0f".format(result.shakeMagnitude * 100)}% shake)")
             }
             return
@@ -659,6 +618,14 @@ class AiToolsDelegate(
         )
         if (result != null) {
             saveUndoState("AI stabilize (OpenCV)")
+            stateFlow.update { s ->
+                s.copy(tracks = s.tracks.map { track ->
+                    track.copy(clips = track.clips.map { c ->
+                        if (c.id == clip.id) c.copy(sourceUri = Uri.fromFile(outputFile)) else c
+                    })
+                })
+            }
+            rebuildPlayerTimeline()
             showToast("Stabilized with ${"%.0f".format(result.cropApplied * 100)}% crop")
         } else {
             showToast("Stabilization not yet available \u2014 OpenCV integration pending")
@@ -666,23 +633,8 @@ class AiToolsDelegate(
     }
 
     private suspend fun applyStyleTransfer(clip: Clip) {
-        val available = styleTransferEngine.getAvailableStyles()
-        if (available.isEmpty()) {
-            showToast("Style transfer requires model download \u2014 no styles available yet")
-            return
-        }
-        val style = available.first()
-        showToast("Applying '${style.displayName}' style...")
-        val outputFile = File(appContext.cacheDir, "styled_${clip.id}.mp4")
-        val result = styleTransferEngine.applyStyleToVideo(
-            uri = clip.sourceUri, style = style, outputUri = Uri.fromFile(outputFile), onProgress = { }
-        )
-        if (result != null) {
-            saveUndoState("AI style transfer (${style.displayName})")
-            showToast("Applied '${style.displayName}' to ${result.framesProcessed} frames (${"%.1f".format(result.averageFps)} fps)")
-        } else {
-            showToast("Style transfer not yet available \u2014 model integration pending")
-        }
+        showToast(appContext.getString(R.string.ai_coming_soon))
+        return
     }
 
 }

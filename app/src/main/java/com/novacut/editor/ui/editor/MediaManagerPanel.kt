@@ -123,7 +123,7 @@ fun MediaManagerPanel(
                 modifier = Modifier.fillMaxWidth(),
                 border = BorderStroke(1.dp, Mocha.Yellow.copy(alpha = 0.5f))
             ) {
-                Icon(Icons.Default.CleaningServices, null, tint = Mocha.Yellow, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.CleaningServices, stringResource(R.string.cd_cleaning_services), tint = Mocha.Yellow, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
                 Text(stringResource(R.string.panel_media_manager_remove_unused), color = Mocha.Yellow, fontSize = 12.sp)
             }

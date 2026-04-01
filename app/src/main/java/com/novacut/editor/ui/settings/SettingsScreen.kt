@@ -335,7 +335,7 @@ private fun SettingsDropdown(
         Text(label, color = Mocha.Text, fontSize = 14.sp)
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(value, color = Mocha.Subtext0, fontSize = 13.sp)
-            Icon(Icons.Default.ArrowDropDown, null, tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+            Icon(Icons.Default.ArrowDropDown, stringResource(R.string.cd_dropdown), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEachIndexed { idx, opt ->

@@ -132,7 +132,7 @@ class AudioEngine @Inject constructor(
                     }
                 }
             } finally {
-                try { decoder.stop() } catch (_: Exception) { }
+                try { decoder.stop() } catch (e: Exception) { Log.w(TAG, "Failed to stop decoder", e) }
                 decoder.release()
             }
 
@@ -308,7 +308,7 @@ class AudioEngine @Inject constructor(
                     }
                 }
             } finally {
-                try { decoder.stop() } catch (_: Exception) { }
+                try { decoder.stop() } catch (e: Exception) { Log.w(TAG, "Failed to stop decoder", e) }
                 decoder.release()
             }
 

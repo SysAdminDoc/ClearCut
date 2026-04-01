@@ -3,6 +3,7 @@ package com.novacut.editor.engine
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.util.Log
 import android.content.Context
 import com.novacut.editor.model.ColorGrade
 import kotlinx.coroutines.Dispatchers
@@ -38,7 +39,7 @@ object ColorMatchEngine {
         } catch (e: Exception) {
             null
         } finally {
-            try { retriever.release() } catch (_: Exception) { }
+            try { retriever.release() } catch (e: Exception) { Log.w("ColorMatchEngine", "Failed to release retriever", e) }
         }
     }
 
