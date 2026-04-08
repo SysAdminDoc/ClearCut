@@ -1312,6 +1312,7 @@ class EditorViewModel @Inject constructor(
                 if (it.id == trackId) it.copy(showWaveform = !it.showWaveform) else it
             })
         }
+        saveProject()
     }
     fun setTrackHeight(trackId: String, height: Int) {
         _state.update { state ->
@@ -1327,16 +1328,19 @@ class EditorViewModel @Inject constructor(
                 if (it.id == trackId) it.copy(isCollapsed = !it.isCollapsed) else it
             })
         }
+        saveProject()
     }
     fun collapseAllTracks() {
         _state.update { state ->
             state.copy(tracks = state.tracks.map { it.copy(isCollapsed = true) })
         }
+        saveProject()
     }
     fun expandAllTracks() {
         _state.update { state ->
             state.copy(tracks = state.tracks.map { it.copy(isCollapsed = false) })
         }
+        saveProject()
     }
 
     // --- Caption Style Gallery ---
@@ -1668,6 +1672,7 @@ class EditorViewModel @Inject constructor(
                 saveUndoState("Add TTS voice")
                 addClipToTrack(uri, durationMs, TrackType.AUDIO)
                 rebuildTimeline()
+                saveProject()
                 showToast("Voice added to audio track")
                 hideTts()
             } else {
@@ -1844,7 +1849,9 @@ class EditorViewModel @Inject constructor(
 
     // Helper: add clip to a track by type (used by TTS)
     private fun addClipToTrack(uri: android.net.Uri, durationMs: Long, trackType: TrackType) {
-        val track = _state.value.tracks.firstOrNull { it.type == trackType } ?: return
+        val currentTracks = _state.value.tracks
+        val track = currentTracks.firstOrNull { it.type == trackType }
+            ?: Track(type = trackType, index = currentTracks.size)
         val timelineStart = track.clips.maxOfOrNull { it.timelineEndMs } ?: 0L
         val clipId = UUID.randomUUID().toString()
         val clip = Clip(
@@ -1855,7 +1862,12 @@ class EditorViewModel @Inject constructor(
             trimEndMs = durationMs
         )
         _state.update { s ->
-            s.copy(tracks = s.tracks.map { t ->
+            val baseTracks = if (s.tracks.any { it.id == track.id }) {
+                s.tracks
+            } else {
+                s.tracks + track
+            }
+            s.copy(tracks = baseTracks.map { t ->
                 if (t.id == track.id) t.copy(clips = t.clips + clip) else t
             })
         }
@@ -1963,15 +1975,38 @@ class EditorViewModel @Inject constructor(
     }
 
     // --- Slip/Slide Edit ---
+    private var isSlipEditActive = false
+    private var isSlideEditActive = false
+
     fun beginSlipEdit() {
+        if (isSlipEditActive) return
+        isSlipEditActive = true
         saveUndoState("Slip edit")
     }
 
+    fun endSlipEdit() {
+        if (!isSlipEditActive) return
+        isSlipEditActive = false
+        saveProject()
+    }
+
     fun beginSlideEdit() {
+        if (isSlideEditActive) return
+        isSlideEditActive = true
         saveUndoState("Slide edit")
     }
 
+    fun endSlideEdit() {
+        if (!isSlideEditActive) return
+        isSlideEditActive = false
+        saveProject()
+    }
+
     fun slipClip(clipId: String, slipAmountMs: Long) {
+        val track = _state.value.tracks.firstOrNull { currentTrack ->
+            currentTrack.clips.any { it.id == clipId }
+        } ?: return
+        if (track.isLocked) return
         _state.update { s ->
             s.copy(tracks = s.tracks.map { track ->
                 track.copy(clips = track.clips.map { clip ->
@@ -1988,6 +2023,10 @@ class EditorViewModel @Inject constructor(
     }
 
     fun slideClip(clipId: String, slideAmountMs: Long) {
+        val track = _state.value.tracks.firstOrNull { currentTrack ->
+            currentTrack.clips.any { it.id == clipId }
+        } ?: return
+        if (track.isLocked) return
         _state.update { s ->
             s.copy(tracks = s.tracks.map { track ->
                 val clipIndex = track.clips.indexOfFirst { it.id == clipId }

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.25.0</string>
+    <string name="app_version">v3.25.1</string>
 
     <!-- Common -->
     <string name="close">Close</string>
@@ -339,6 +339,7 @@
     <string name="editor_empty_title">Build your first cut.</string>
     <string name="editor_empty_body">Bring in clips, photos, or audio to start shaping the story on the timeline.</string>
     <string name="editor_add_media_hint">Tap the + button or use the menu to add media</string>
+    <string name="editor_selection">Selection</string>
     <string name="editor_selected_count">%1$d selected</string>
     <string name="editor_delete">Delete</string>
     <string name="editor_delete_selected">Delete selected</string>
@@ -985,6 +986,27 @@
 
     <!-- Timeline -->
     <string name="cd_toggle_waveform">Toggle waveform</string>
+    <string name="timeline_title">Timeline</string>
+    <string name="timeline_mode_arrange">Arrange</string>
+    <string name="timeline_mode_trim">Trim</string>
+    <string name="timeline_zoom_value">Zoom %1$d%%</string>
+    <string name="timeline_visible_value">View %1$s</string>
+    <string name="timeline_marker_count">%1$d markers</string>
+    <string name="timeline_tracks_label">Tracks</string>
+    <string name="timeline_clip_count">%1$d clips</string>
+    <string name="timeline_locked_short">Locked</string>
+    <string name="timeline_muted_short">Muted</string>
+    <string name="timeline_hidden_short">Hidden</string>
+    <string name="timeline_track_empty">No clips on this track yet</string>
+    <string name="timeline_toggle_visibility">Toggle track visibility</string>
+    <string name="timeline_toggle_mute">Toggle track mute</string>
+    <string name="timeline_toggle_lock">Toggle track lock</string>
+    <string name="timeline_adjustment_track">Adjustment Track</string>
+    <string name="timeline_video_clip">Video Clip</string>
+    <string name="timeline_audio_clip">Audio Clip</string>
+    <string name="timeline_overlay_clip">Overlay</string>
+    <string name="timeline_text_clip">Text Layer</string>
+    <string name="timeline_adjustment_clip">Adjustment Layer</string>
     <string name="timeline_trim_mode_hint">TRIM MODE — Drag clip edges to adjust</string>
 
     <!-- ColorGradingPanel -->

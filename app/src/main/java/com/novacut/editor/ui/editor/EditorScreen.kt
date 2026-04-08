@@ -379,26 +379,87 @@ fun EditorScreen(
 
             // Multi-select action bar
             if (state.selectedClipIds.isNotEmpty()) {
-                Row(
+                Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Mocha.Peach.copy(alpha = 0.15f))
-                        .padding(horizontal = 12.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    color = Color.Transparent,
+                    shape = RoundedCornerShape(22.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Peach.copy(alpha = 0.2f))
                 ) {
-                    Text(
-                        stringResource(R.string.editor_selected_count, state.selectedClipIds.size),
-                        color = Mocha.Peach,
-                        fontSize = 13.sp,
-                        modifier = Modifier.weight(1f)
-                    )
-                    TextButton(onClick = viewModel::deleteMultiSelectedClips) {
-                        Icon(Icons.Default.Delete, stringResource(R.string.editor_delete_selected), tint = Mocha.Red, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text(stringResource(R.string.editor_delete), color = Mocha.Red, fontSize = 12.sp)
-                    }
-                    TextButton(onClick = viewModel::clearMultiSelect) {
-                        Text(stringResource(R.string.editor_cancel), color = Mocha.Subtext0, fontSize = 12.sp)
+                    Row(
+                        modifier = Modifier
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        Mocha.Peach.copy(alpha = 0.18f),
+                                        Mocha.PanelHighest.copy(alpha = 0.96f),
+                                        Mocha.Panel.copy(alpha = 0.98f)
+                                    )
+                                )
+                            )
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.editor_selection),
+                                color = Mocha.Peach,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                            Text(
+                                text = stringResource(R.string.editor_selected_count, state.selectedClipIds.size),
+                                color = Mocha.Text,
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(999.dp),
+                            color = Mocha.Red.copy(alpha = 0.14f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Red.copy(alpha = 0.2f))
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .clickable(onClick = viewModel::deleteMultiSelectedClips)
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = stringResource(R.string.editor_delete_selected),
+                                    tint = Mocha.Red,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    text = stringResource(R.string.editor_delete),
+                                    color = Mocha.Red,
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                            }
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Surface(
+                            shape = RoundedCornerShape(999.dp),
+                            color = Mocha.Surface0.copy(alpha = 0.7f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .clickable(onClick = viewModel::clearMultiSelect)
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.editor_cancel),
+                                    color = Mocha.Subtext0,
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -450,6 +511,10 @@ fun EditorScreen(
                     onClipLongPress = viewModel::toggleClipMultiSelect,
                     onSlideClip = viewModel::slideClip,
                     onSlipClip = viewModel::slipClip,
+                    onSlideEditStarted = viewModel::beginSlideEdit,
+                    onSlideEditEnded = viewModel::endSlideEdit,
+                    onSlipEditStarted = viewModel::beginSlipEdit,
+                    onSlipEditEnded = viewModel::endSlipEdit,
                     onToggleTrackCollapsed = viewModel::toggleTrackCollapsed,
                     onToggleTrackWaveform = viewModel::toggleTrackWaveform,
                     onCollapseAllTracks = viewModel::collapseAllTracks,
@@ -458,7 +523,7 @@ fun EditorScreen(
                     onScrubStart = viewModel::beginScrub,
                     onScrubEnd = viewModel::endScrub,
                     engine = viewModel.engine,
-                    modifier = Modifier.heightIn(max = 200.dp)
+                    modifier = Modifier.heightIn(min = 240.dp, max = 330.dp)
                 )
             }
 
