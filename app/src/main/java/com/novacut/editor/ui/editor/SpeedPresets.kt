@@ -2,6 +2,8 @@ package com.novacut.editor.ui.editor
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -29,43 +31,77 @@ fun SpeedPresetsPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(Mocha.Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .padding(12.dp)
+    val sections = remember {
+        speedPresetSections()
+    }
+
+    PremiumEditorPanel(
+        title = "Speed Presets",
+        subtitle = "Shape tempo, impact, and rhythm with reusable speed curves instead of rebuilding them point by point.",
+        icon = Icons.Default.Speed,
+        accent = Mocha.Peach,
+        onClose = onClose,
+        modifier = modifier.heightIn(max = 560.dp),
+        scrollable = true
     ) {
-        // Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "Speed Presets",
-                color = Mocha.Text,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
-            )
-            IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Close, stringResource(R.string.cd_close_speed_presets), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+        PremiumPanelCard(accent = Mocha.Peach) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                PremiumPanelPill(
+                    text = "${SpeedPresetType.entries.size} presets",
+                    accent = Mocha.Peach
+                )
+                PremiumPanelPill(
+                    text = "Reusable curves",
+                    accent = Mocha.Sapphire
+                )
+                PremiumPanelPill(
+                    text = "Clip mode",
+                    accent = Mocha.Green
+                )
             }
+
+            Text(
+                text = "Speed language",
+                color = Mocha.Rosewater,
+                style = MaterialTheme.typography.labelLarge
+            )
+            Text(
+                text = "Preset curves are best when you want a repeatable editorial feel: hero slow motion, rhythmic pulses, stutters, or bold fast-forward beats.",
+                color = Mocha.Subtext0,
+                style = MaterialTheme.typography.bodyMedium
+            )
         }
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // Horizontal scrolling preset cards
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            SpeedPresetType.entries.forEach { presetType ->
-                SpeedPresetCard(
-                    presetType = presetType,
-                    onClick = { onPresetSelected(generatePresetCurve(presetType)) }
+        sections.forEachIndexed { index, section ->
+            if (index > 0) Spacer(modifier = Modifier.height(12.dp))
+
+            PremiumPanelCard(accent = section.accent) {
+                Text(
+                    text = section.title,
+                    color = section.accent,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
                 )
+                Text(
+                    text = section.subtitle,
+                    color = Mocha.Subtext0,
+                    style = MaterialTheme.typography.bodySmall
+                )
+
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    items(section.presets) { presetType ->
+                        SpeedPresetCard(
+                            presetType = presetType,
+                            accent = section.accent,
+                            onClick = { onPresetSelected(generatePresetCurve(presetType)) }
+                        )
+                    }
+                }
             }
         }
     }
@@ -74,84 +110,166 @@ fun SpeedPresetsPanel(
 @Composable
 private fun SpeedPresetCard(
     presetType: SpeedPresetType,
+    accent: Color,
     onClick: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .width(120.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(Mocha.Surface0)
-            .clickable(onClick = onClick)
-    ) {
-        // Mini curve preview
-        val curve = remember(presetType) { generatePresetCurve(presetType) }
-
-        Canvas(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(64.dp)
-                .padding(8.dp)
-        ) {
-            val w = size.width
-            val h = size.height
-            val minSpeed = 0.1f
-            val maxSpeed = 4.5f
-            val speedRange = maxSpeed - minSpeed
-
-            // 1x reference line
-            val refY = (1f - (1f - minSpeed) / speedRange) * h
-            drawLine(
-                Mocha.Surface2,
-                Offset(0f, refY),
-                Offset(w, refY),
-                strokeWidth = 0.5f
-            )
-
-            // Draw the curve
-            val path = Path()
-            val steps = 100
-            for (i in 0..steps) {
-                val t = i.toFloat() / steps
-                val speed = curve.getSpeedAt((t * 10000).toLong(), 10000L)
-                val x = t * w
-                val y = (1f - (speed - minSpeed) / speedRange) * h
-                if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
-            }
-            drawPath(path, Mocha.Peach, style = Stroke(2f))
-
-            // Draw control points
-            curve.points.forEach { point ->
-                val px = point.position * w
-                val py = (1f - (point.speed - minSpeed) / speedRange) * h
-                drawCircle(Mocha.Peach, 3f, Offset(px, py))
-            }
+    val curve = remember(presetType) { generatePresetCurve(presetType) }
+    val minMax = remember(curve) {
+        curve.points.map { it.speed }.let { speeds ->
+            (speeds.minOrNull() ?: 1f) to (speeds.maxOrNull() ?: 1f)
         }
+    }
 
-        // Info
+    Surface(
+        modifier = Modifier.width(164.dp),
+        onClick = onClick,
+        color = Mocha.PanelHighest,
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.24f))
+    ) {
         Column(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            Surface(
+                color = accent.copy(alpha = 0.08f),
+                shape = RoundedCornerShape(18.dp),
+                border = BorderStroke(1.dp, Mocha.CardStroke)
+            ) {
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(86.dp)
+                        .padding(10.dp)
+                ) {
+                    val width = size.width
+                    val height = size.height
+                    val minSpeed = 0.1f
+                    val maxSpeed = 4.5f
+                    val speedRange = maxSpeed - minSpeed
+
+                    val referenceY = (1f - (1f - minSpeed) / speedRange) * height
+                    drawLine(
+                        color = Mocha.Surface2,
+                        start = Offset(0f, referenceY),
+                        end = Offset(width, referenceY),
+                        strokeWidth = 1f
+                    )
+
+                    val path = Path()
+                    val steps = 100
+                    for (index in 0..steps) {
+                        val t = index.toFloat() / steps
+                        val speed = curve.getSpeedAt((t * 10000).toLong(), 10000L)
+                        val x = t * width
+                        val y = (1f - (speed - minSpeed) / speedRange) * height
+                        if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                    }
+                    drawPath(path = path, color = accent, style = Stroke(3f))
+
+                    curve.points.forEach { point ->
+                        val px = point.position * width
+                        val py = (1f - (point.speed - minSpeed) / speedRange) * height
+                        drawCircle(
+                            color = accent,
+                            radius = 3.8f,
+                            center = Offset(px, py)
+                        )
+                    }
+                }
+            }
+
             Text(
-                presetType.displayName,
+                text = presetType.displayName,
                 color = Mocha.Text,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                presetType.description,
+                text = presetType.description,
                 color = Mocha.Subtext0,
-                fontSize = 9.sp,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                lineHeight = 11.sp
+                style = MaterialTheme.typography.bodySmall,
+                minLines = 2
             )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PremiumPanelPill(
+                    text = "${formatSpeed(minMax.first)}-${formatSpeed(minMax.second)}",
+                    accent = accent
+                )
+                PremiumPanelPill(
+                    text = speedPresetFeel(presetType),
+                    accent = Mocha.Sky
+                )
+            }
         }
-
-        Spacer(Modifier.height(4.dp))
     }
 }
+
+private data class SpeedPresetSection(
+    val title: String,
+    val subtitle: String,
+    val accent: Color,
+    val presets: List<SpeedPresetType>
+)
+
+private fun speedPresetSections(): List<SpeedPresetSection> = listOf(
+    SpeedPresetSection(
+        title = "Cinematic ramps",
+        subtitle = "Use these when you want entrance, release, or crescendo moments to feel composed and deliberate.",
+        accent = Mocha.Peach,
+        presets = listOf(
+            SpeedPresetType.BULLET_TIME,
+            SpeedPresetType.HERO_TIME,
+            SpeedPresetType.SMOOTH_RAMP_UP,
+            SpeedPresetType.SMOOTH_RAMP_DOWN,
+            SpeedPresetType.CRESCENDO,
+            SpeedPresetType.DREAMY
+        )
+    ),
+    SpeedPresetSection(
+        title = "Rhythm and pulse",
+        subtitle = "Great for music-driven edits, montage pacing, and beats that need a more graphic editorial pattern.",
+        accent = Mocha.Mauve,
+        presets = listOf(
+            SpeedPresetType.MONTAGE,
+            SpeedPresetType.PULSE,
+            SpeedPresetType.HEARTBEAT,
+            SpeedPresetType.FILM_REEL
+        )
+    ),
+    SpeedPresetSection(
+        title = "Punch and disruption",
+        subtitle = "Reach for these when the cut needs freeze moments, stutters, flashes, or aggressive tempo changes.",
+        accent = Mocha.Sapphire,
+        presets = listOf(
+            SpeedPresetType.JUMP_CUT,
+            SpeedPresetType.FLASH,
+            SpeedPresetType.TIME_FREEZE,
+            SpeedPresetType.REWIND
+        )
+    )
+)
+
+private fun speedPresetFeel(type: SpeedPresetType): String = when (type) {
+    SpeedPresetType.BULLET_TIME -> "Hero"
+    SpeedPresetType.HERO_TIME -> "Entrance"
+    SpeedPresetType.MONTAGE -> "Rhythm"
+    SpeedPresetType.JUMP_CUT -> "Punch"
+    SpeedPresetType.SMOOTH_RAMP_UP -> "Lift"
+    SpeedPresetType.SMOOTH_RAMP_DOWN -> "Ease"
+    SpeedPresetType.PULSE -> "Pulse"
+    SpeedPresetType.FLASH -> "Hit"
+    SpeedPresetType.DREAMY -> "Float"
+    SpeedPresetType.REWIND -> "Retro"
+    SpeedPresetType.TIME_FREEZE -> "Freeze"
+    SpeedPresetType.FILM_REEL -> "Stutter"
+    SpeedPresetType.HEARTBEAT -> "Beat"
+    SpeedPresetType.CRESCENDO -> "Build"
+}
+
+private fun formatSpeed(speed: Float): String = "%.1fx".format(speed)
 
 fun generatePresetCurve(type: SpeedPresetType): SpeedCurve = when (type) {
     SpeedPresetType.BULLET_TIME -> SpeedCurve(

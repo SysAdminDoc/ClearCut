@@ -2,8 +2,11 @@ package com.novacut.editor.engine
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.media.MediaExtractor
+import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.webkit.MimeTypeMap
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
@@ -24,16 +27,25 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import android.util.Log
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val TAG = "VideoEngine"
+private const val DEFAULT_STILL_IMAGE_DURATION_MS = 3_000L
 
 @Singleton
+@androidx.annotation.OptIn(UnstableApi::class)
 class VideoEngine @Inject constructor(
     @ApplicationContext private val context: Context,
     private val segmentationEngine: SegmentationEngine
 ) {
+    private data class MediaCharacteristics(
+        val isStillImage: Boolean,
+        val hasVisual: Boolean,
+        val hasAudio: Boolean
+    )
+
     private var player: ExoPlayer? = null
     private var playerListener: Player.Listener? = null
     private var transitionListener: Player.Listener? = null
@@ -59,6 +71,8 @@ class VideoEngine @Inject constructor(
 
     // Active Transformer for export cancellation
     @Volatile private var activeTransformer: Transformer? = null
+
+    private val mediaCharacteristicsCache = ConcurrentHashMap<String, MediaCharacteristics>()
 
     private val _exportProgress = MutableStateFlow(0f)
     val exportProgress: StateFlow<Float> = _exportProgress
@@ -116,7 +130,15 @@ class VideoEngine @Inject constructor(
 
     fun prepareClip(uri: Uri) {
         val p = getPlayer()
-        p.setMediaItem(MediaItem.fromUri(uri))
+        val mediaItem = if (isImageUri(uri)) {
+            MediaItem.Builder()
+                .setUri(uri)
+                .setImageDurationMs(DEFAULT_STILL_IMAGE_DURATION_MS)
+                .build()
+        } else {
+            MediaItem.fromUri(uri)
+        }
+        p.setMediaItem(mediaItem)
         p.prepare()
     }
 
@@ -132,15 +154,7 @@ class VideoEngine @Inject constructor(
         clipDurationsMs = videoClips.map { it.durationMs }
         val mediaItems = videoClips.map { clip ->
             val mediaUri = clip.proxyUri ?: clip.sourceUri
-            MediaItem.Builder()
-                .setUri(mediaUri)
-                .setClippingConfiguration(
-                    MediaItem.ClippingConfiguration.Builder()
-                        .setStartPositionMs(clip.trimStartMs)
-                        .setEndPositionMs(clip.trimEndMs)
-                        .build()
-                )
-                .build()
+            buildMediaItemForClip(clip, mediaUri)
         }
         p.setMediaItems(mediaItems)
         p.prepare()
@@ -195,6 +209,21 @@ class VideoEngine @Inject constructor(
         } finally {
             retriever.release()
         }
+    }
+
+    fun getMediaDuration(uri: Uri): Long {
+        return if (isImageUri(uri)) DEFAULT_STILL_IMAGE_DURATION_MS else getVideoDuration(uri)
+    }
+
+    fun isStillImage(uri: Uri): Boolean = getMediaCharacteristics(uri).isStillImage
+
+    fun hasVisualTrack(uri: Uri): Boolean = getMediaCharacteristics(uri).hasVisual
+
+    fun hasAudioTrack(uri: Uri): Boolean = getMediaCharacteristics(uri).hasAudio
+
+    fun isMotionVideo(uri: Uri): Boolean {
+        val media = getMediaCharacteristics(uri)
+        return media.hasVisual && !media.isStillImage
     }
 
     fun getVideoResolution(uri: Uri): Pair<Int, Int> {
@@ -335,15 +364,7 @@ class VideoEngine @Inject constructor(
         lottieOverlays: List<LottieOverlaySpec>,
         nextClipTransition: Transition? = null
     ): EditedMediaItem {
-        val mediaItem = MediaItem.Builder()
-            .setUri(clip.sourceUri)
-            .setClippingConfiguration(
-                MediaItem.ClippingConfiguration.Builder()
-                    .setStartPositionMs(clip.trimStartMs)
-                    .setEndPositionMs(clip.trimEndMs)
-                    .build()
-            )
-            .build()
+        val mediaItem = buildMediaItemForClip(clip, clip.sourceUri)
 
         val videoEffects = buildList<androidx.media3.common.Effect> {
             for (effect in clip.effects.filter { it.enabled }) {
@@ -473,6 +494,106 @@ class VideoEngine @Inject constructor(
         }
 
         return itemBuilder.build()
+    }
+
+    private fun buildMediaItemForClip(
+        clip: Clip,
+        mediaUri: Uri
+    ): MediaItem {
+        val builder = MediaItem.Builder().setUri(mediaUri)
+        return if (isImageUri(mediaUri)) {
+            builder
+                .setImageDurationMs(clip.durationMs.coerceAtLeast(DEFAULT_STILL_IMAGE_DURATION_MS))
+                .build()
+        } else {
+            builder
+                .setClippingConfiguration(
+                    MediaItem.ClippingConfiguration.Builder()
+                        .setStartPositionMs(clip.trimStartMs)
+                        .setEndPositionMs(clip.trimEndMs)
+                        .build()
+                )
+                .build()
+        }
+    }
+
+    private fun isImageUri(uri: Uri): Boolean {
+        val mimeType = resolveMimeType(uri)
+        if (!mimeType.isNullOrBlank()) {
+            return mimeType.startsWith("image/")
+        }
+        val extension = uri.lastPathSegment
+            ?.substringAfterLast('.', missingDelimiterValue = "")
+            ?.lowercase()
+            ?: return false
+        return extension in setOf("jpg", "jpeg", "png", "webp", "bmp", "gif", "heic", "heif")
+    }
+
+    private fun resolveMimeType(uri: Uri): String? {
+        context.contentResolver.getType(uri)?.let { return it }
+        val extension = uri.lastPathSegment
+            ?.substringAfterLast('.', missingDelimiterValue = "")
+            ?.lowercase()
+            ?.takeIf { it.isNotBlank() }
+            ?: return null
+        return MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
+    }
+
+    private fun getMediaCharacteristics(uri: Uri): MediaCharacteristics {
+        val key = uri.toString()
+        mediaCharacteristicsCache[key]?.let { return it }
+
+        val probed = probeMediaCharacteristics(uri)
+        mediaCharacteristicsCache.putIfAbsent(key, probed)
+        return mediaCharacteristicsCache[key] ?: probed
+    }
+
+    private fun probeMediaCharacteristics(uri: Uri): MediaCharacteristics {
+        if (isImageUri(uri)) {
+            return MediaCharacteristics(
+                isStillImage = true,
+                hasVisual = true,
+                hasAudio = false
+            )
+        }
+
+        val mimeType = resolveMimeType(uri)
+        val fallbackHasVisual = mimeType?.startsWith("video/") == true
+        val fallbackHasAudio = mimeType?.startsWith("audio/") == true
+        val extractor = MediaExtractor()
+
+        return try {
+            extractor.setDataSource(context, uri, emptyMap())
+            var hasVisual = false
+            var hasAudio = false
+
+            for (trackIndex in 0 until extractor.trackCount) {
+                val format = extractor.getTrackFormat(trackIndex)
+                val trackMimeType = format.getString(MediaFormat.KEY_MIME).orEmpty()
+                when {
+                    trackMimeType.startsWith("video/") -> hasVisual = true
+                    trackMimeType.startsWith("audio/") -> hasAudio = true
+                }
+            }
+
+            MediaCharacteristics(
+                isStillImage = false,
+                hasVisual = hasVisual || fallbackHasVisual,
+                hasAudio = hasAudio || fallbackHasAudio
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "Unable to probe media characteristics for $uri", e)
+            MediaCharacteristics(
+                isStillImage = false,
+                hasVisual = fallbackHasVisual,
+                hasAudio = fallbackHasAudio
+            )
+        } finally {
+            try {
+                extractor.release()
+            } catch (_: Exception) {
+            }
+        }
     }
 
     @androidx.annotation.OptIn(UnstableApi::class)

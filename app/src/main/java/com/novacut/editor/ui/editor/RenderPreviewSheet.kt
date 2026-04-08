@@ -1,22 +1,33 @@
 package com.novacut.editor.ui.editor
 
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Preview
+import androidx.compose.material.icons.filled.RocketLaunch
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.res.stringResource
 import com.novacut.editor.R
 import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.ui.theme.Mocha
@@ -30,183 +41,306 @@ fun RenderPreviewSheet(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(Mocha.Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .padding(12.dp)
+    val reEncodeRatio = if (summary.totalDurationMs > 0L) {
+        summary.reEncodeDurationMs.toFloat() / summary.totalDurationMs.toFloat()
+    } else {
+        0f
+    }
+    val speedupLabel = when {
+        summary.reEncodeSegments == 0 -> "Instant"
+        summary.estimatedSpeedup >= 100f -> "100x+"
+        else -> "%.1fx".format(summary.estimatedSpeedup)
+    }
+
+    PremiumEditorPanel(
+        title = stringResource(R.string.render_preview_title),
+        subtitle = "See which sections can stream through untouched and which shots still need a full render pass.",
+        icon = Icons.Default.Preview,
+        accent = Mocha.Peach,
+        onClose = onClose,
+        modifier = modifier,
+        scrollable = true
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(stringResource(R.string.render_preview_title), color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Close, stringResource(R.string.render_preview_close_cd), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+        PremiumPanelCard(accent = if (summary.reEncodeSegments > 0) Mocha.Peach else Mocha.Green) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Smart render outlook",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Mocha.Text
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "NovaCut can skip untouched sections and focus encode time only where the timeline changed.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Mocha.Subtext0
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    PremiumPanelPill(
+                        text = formatDuration(summary.totalDurationMs),
+                        accent = Mocha.Blue
+                    )
+                    PremiumPanelPill(
+                        text = speedupLabel,
+                        accent = if (summary.reEncodeSegments > 0) Mocha.Peach else Mocha.Green
+                    )
+                }
             }
-        }
 
-        Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                RenderMetric(
+                    label = stringResource(R.string.panel_render_pass_through),
+                    value = summary.passThroughSegments.toString(),
+                    accent = Mocha.Green,
+                    modifier = Modifier.weight(1f)
+                )
+                RenderMetric(
+                    label = stringResource(R.string.panel_render_re_encode),
+                    value = summary.reEncodeSegments.toString(),
+                    accent = if (summary.reEncodeSegments > 0) Mocha.Yellow else Mocha.Green,
+                    modifier = Modifier.weight(1f)
+                )
+                RenderMetric(
+                    label = stringResource(R.string.panel_render_speedup),
+                    value = speedupLabel,
+                    accent = Mocha.Peach,
+                    modifier = Modifier.weight(1f)
+                )
+            }
 
-        // Smart render summary
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Mocha.Surface0, RoundedCornerShape(8.dp))
-                .padding(10.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            SummaryChip(
-                label = stringResource(R.string.panel_render_pass_through),
-                value = "${summary.passThroughSegments}",
-                color = Mocha.Green
-            )
-            SummaryChip(
-                label = stringResource(R.string.panel_render_re_encode),
-                value = "${summary.reEncodeSegments}",
-                color = if (summary.reEncodeSegments > 0) Mocha.Yellow else Mocha.Green
-            )
-            SummaryChip(
-                label = stringResource(R.string.panel_render_speedup),
-                value = if (summary.estimatedSpeedup < 100f) "%.1fx".format(summary.estimatedSpeedup) else "Max",
-                color = Mocha.Mauve
-            )
-        }
-
-        Spacer(Modifier.height(4.dp))
-
-        // Duration breakdown
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                stringResource(R.string.render_re_encode_duration, formatMs(summary.reEncodeDurationMs)),
-                color = Mocha.Yellow,
-                fontSize = 10.sp
-            )
-            Text(
-                stringResource(R.string.render_pass_through_duration, formatMs(summary.passThroughDurationMs)),
-                color = Mocha.Green,
-                fontSize = 10.sp
-            )
-        }
-
-        // Progress bar showing re-encode vs pass-through ratio
-        if (summary.totalDurationMs > 0) {
-            Spacer(Modifier.height(4.dp))
-            val reEncodeRatio = summary.reEncodeDurationMs.toFloat() / summary.totalDurationMs
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(Mocha.Green.copy(alpha = 0.3f))
+                    .height(10.dp)
+                    .background(Mocha.Green.copy(alpha = 0.22f), RoundedCornerShape(999.dp))
             ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxHeight()
-                        .fillMaxWidth(reEncodeRatio)
-                        .background(Mocha.Yellow.copy(alpha = 0.6f))
+                        .fillMaxWidth(reEncodeRatio.coerceIn(0f, 1f))
+                        .height(10.dp)
+                        .background(Mocha.Yellow.copy(alpha = 0.72f), RoundedCornerShape(999.dp))
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = stringResource(
+                        R.string.render_pass_through_duration,
+                        formatDuration(summary.passThroughDurationMs)
+                    ),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Mocha.Green
+                )
+                Text(
+                    text = stringResource(
+                        R.string.render_re_encode_duration,
+                        formatDuration(summary.reEncodeDurationMs)
+                    ),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (summary.reEncodeSegments > 0) Mocha.Yellow else Mocha.Subtext0
                 )
             }
         }
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // Segment list
-        Text(stringResource(R.string.panel_render_segments), color = Mocha.Subtext0, fontSize = 11.sp)
-        Spacer(Modifier.height(4.dp))
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = 180.dp),
-            verticalArrangement = Arrangement.spacedBy(3.dp)
-        ) {
-            items(segments) { segment ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(Mocha.Surface0)
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+        PremiumPanelCard(accent = Mocha.Blue) {
+            Text(
+                text = "Timeline segments",
+                style = MaterialTheme.typography.titleMedium,
+                color = Mocha.Text
+            )
+            Text(
+                text = "Each block shows whether NovaCut can copy that range directly or has to render it again.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Mocha.Subtext0
+            )
+
+            if (segments.isEmpty()) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Mocha.PanelRaised,
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, Mocha.CardStroke)
                 ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .background(
-                                    if (segment.needsReEncode) Mocha.Yellow else Mocha.Green,
-                                    RoundedCornerShape(4.dp)
-                                )
-                        )
-                        Text(
-                            "${formatMs(segment.startMs)} - ${formatMs(segment.endMs)}",
-                            color = Mocha.Subtext0,
-                            fontSize = 10.sp
-                        )
-                    }
                     Text(
-                        segment.reason,
-                        color = if (segment.needsReEncode) Mocha.Yellow else Mocha.Green,
-                        fontSize = 9.sp
+                        text = "No clips are on the timeline yet, so there is nothing to analyze.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Mocha.Subtext0,
+                        modifier = Modifier.padding(16.dp)
                     )
+                }
+            } else {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    segments.forEach { segment ->
+                        RenderSegmentRow(segment = segment)
+                    }
                 }
             }
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // Action buttons
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // Quick preview (low-res)
-            OutlinedButton(
-                onClick = onRenderPreview,
-                modifier = Modifier.weight(1f),
-                border = BorderStroke(1.dp, Mocha.Peach.copy(alpha = 0.5f)),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Icon(Icons.Default.Preview, stringResource(R.string.cd_preview), tint = Mocha.Peach, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(4.dp))
-                Text(stringResource(R.string.panel_render_preview), color = Mocha.Peach, fontSize = 12.sp)
-            }
+        PremiumPanelCard(accent = Mocha.Mauve) {
+            Text(
+                text = "Render choices",
+                style = MaterialTheme.typography.titleMedium,
+                color = Mocha.Text
+            )
+            Text(
+                text = "Generate a lightweight check render first, or jump straight into the full export flow with the current settings.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Mocha.Subtext0
+            )
 
-            // Full quality export
-            Button(
-                onClick = onRenderFull,
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve),
-                shape = RoundedCornerShape(8.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Icon(Icons.Default.RocketLaunch, stringResource(R.string.cd_rocket_launch), modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(4.dp))
-                Text(stringResource(R.string.panel_render_export), fontSize = 12.sp)
+                OutlinedButton(
+                    onClick = onRenderPreview,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(18.dp),
+                    border = BorderStroke(1.dp, Mocha.Peach.copy(alpha = 0.4f)),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Peach)
+                ) {
+                    androidx.compose.material3.Icon(
+                        imageVector = Icons.Default.Preview,
+                        contentDescription = stringResource(R.string.panel_render_preview)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = stringResource(R.string.panel_render_preview))
+                }
+
+                Button(
+                    onClick = onRenderFull,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve)
+                ) {
+                    androidx.compose.material3.Icon(
+                        imageVector = Icons.Default.RocketLaunch,
+                        contentDescription = stringResource(R.string.panel_render_export)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = stringResource(R.string.panel_render_export))
+                }
             }
         }
     }
 }
 
 @Composable
-private fun SummaryChip(label: String, value: String, color: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, color = color, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-        Text(label, color = Mocha.Subtext0, fontSize = 9.sp)
+private fun RenderMetric(
+    label: String,
+    value: String,
+    accent: Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        color = accent.copy(alpha = 0.12f),
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleLarge,
+                color = accent,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                color = Mocha.Subtext0
+            )
+        }
     }
 }
 
-private fun formatMs(ms: Long): String {
-    val s = ms / 1000
-    val m = s / 60
-    return if (m > 0) "%d:%02d".format(m, s % 60) else "${s}s"
+@Composable
+private fun RenderSegmentRow(segment: SmartRenderEngine.RenderSegment) {
+    val accent = if (segment.needsReEncode) Mocha.Yellow else Mocha.Green
+    val statusLabel = if (segment.needsReEncode) "Re-encode" else "Pass-through"
+    val detail = if (segment.needsReEncode) {
+        segment.reason.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+    } else {
+        "Stream copied directly with no image-processing work."
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = if (segment.needsReEncode) accent.copy(alpha = 0.12f) else Mocha.PanelRaised,
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(
+            1.dp,
+            if (segment.needsReEncode) accent.copy(alpha = 0.2f) else Mocha.CardStroke
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "${formatDuration(segment.startMs)} - ${formatDuration(segment.endMs)}",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = Mocha.Text,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = detail,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Mocha.Subtext0
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            PremiumPanelPill(
+                text = statusLabel,
+                accent = accent
+            )
+        }
+    }
+}
+
+private fun formatDuration(ms: Long): String {
+    val totalSeconds = (ms / 1000L).coerceAtLeast(0L)
+    val hours = totalSeconds / 3600L
+    val minutes = (totalSeconds % 3600L) / 60L
+    val seconds = totalSeconds % 60L
+    return when {
+        hours > 0L -> "%d:%02d:%02d".format(hours, minutes, seconds)
+        minutes > 0L -> "%d:%02d".format(minutes, seconds)
+        else -> "${seconds}s"
+    }
 }

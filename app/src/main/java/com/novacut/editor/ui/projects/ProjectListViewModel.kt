@@ -1,19 +1,39 @@
 package com.novacut.editor.ui.projects
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.provider.OpenableColumns
+import android.webkit.MimeTypeMap
+import android.widget.Toast
+import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.novacut.editor.engine.AutoSaveState
 import com.novacut.editor.engine.ProjectAutoSave
 import com.novacut.editor.engine.TemplateManager
 import com.novacut.editor.engine.UserTemplate
+import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.engine.db.ProjectDao
+import com.novacut.editor.model.AspectRatio
+import com.novacut.editor.model.Clip
 import com.novacut.editor.model.Project
+import com.novacut.editor.model.Resolution
 import com.novacut.editor.model.SortMode
 import com.novacut.editor.model.Track
 import com.novacut.editor.model.TrackType
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 import java.util.UUID
 import javax.inject.Inject
 
@@ -21,7 +41,9 @@ import javax.inject.Inject
 class ProjectListViewModel @Inject constructor(
     private val projectDao: ProjectDao,
     private val autoSave: ProjectAutoSave,
-    private val templateManager: TemplateManager
+    private val templateManager: TemplateManager,
+    private val videoEngine: VideoEngine,
+    @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
@@ -29,6 +51,9 @@ class ProjectListViewModel @Inject constructor(
 
     private val _sortMode = MutableStateFlow(SortMode.DATE_DESC)
     val sortMode: StateFlow<SortMode> = _sortMode.asStateFlow()
+
+    private val _userTemplates = MutableStateFlow<List<UserTemplate>>(emptyList())
+    val userTemplates: StateFlow<List<UserTemplate>> = _userTemplates.asStateFlow()
 
     private val allProjects: StateFlow<List<Project>> = projectDao.getAllProjects()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -48,6 +73,10 @@ class ProjectListViewModel @Inject constructor(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    init {
+        refreshUserTemplates()
+    }
+
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
     }
@@ -56,18 +85,46 @@ class ProjectListViewModel @Inject constructor(
         _sortMode.value = mode
     }
 
-    fun createProject(name: String = "Untitled", onCreated: (String) -> Unit = {}) {
-        val project = Project(name = name)
+    fun createProject(
+        name: String = "Untitled",
+        aspectRatio: AspectRatio = AspectRatio.RATIO_16_9,
+        frameRate: Int = 30,
+        resolution: Resolution = Resolution.FHD_1080P,
+        templateId: String? = null,
+        trackTypes: List<TrackType> = listOf(TrackType.VIDEO, TrackType.AUDIO),
+        onCreated: (String) -> Unit = {}
+    ) {
+        val project = Project(
+            name = name,
+            aspectRatio = aspectRatio,
+            frameRate = frameRate,
+            resolution = resolution,
+            templateId = templateId
+        )
+        val initialTracks = buildTracks(trackTypes)
+
         viewModelScope.launch {
-            projectDao.insertProject(project)
+            withContext(Dispatchers.IO) {
+                projectDao.insertProject(project)
+                autoSave.saveNow(
+                    project.id,
+                    AutoSaveState(
+                        projectId = project.id,
+                        tracks = initialTracks,
+                        textOverlays = emptyList()
+                    )
+                )
+            }
             onCreated(project.id)
         }
     }
 
     fun deleteProject(project: Project) {
         viewModelScope.launch {
-            projectDao.deleteProject(project)
-            autoSave.clearRecoveryData(project.id)
+            withContext(Dispatchers.IO) {
+                projectDao.deleteProject(project)
+                autoSave.clearRecoveryData(project.id)
+            }
         }
     }
 
@@ -77,10 +134,66 @@ class ProjectListViewModel @Inject constructor(
         }
     }
 
-    fun getUserTemplates(): List<UserTemplate> = templateManager.listTemplates()
-
     fun deleteUserTemplate(id: String) {
-        templateManager.deleteTemplate(id)
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                templateManager.deleteTemplate(id)
+            }
+            refreshUserTemplates()
+        }
+    }
+
+    fun importTemplate(uri: Uri) {
+        viewModelScope.launch {
+            val template = withContext(Dispatchers.IO) {
+                templateManager.importTemplateFromUri(uri)
+            }
+            refreshUserTemplates()
+
+            if (template != null) {
+                showToast("Imported template: ${template.name}")
+            } else {
+                showToast("Failed to import template")
+            }
+        }
+    }
+
+    fun shareTemplate(name: String) {
+        viewModelScope.launch {
+            try {
+                val shareUri = withContext(Dispatchers.IO) {
+                    val dir = File(appContext.getExternalFilesDir(null), "archives/templates").apply { mkdirs() }
+                    val sanitized = name.replace(Regex("[^a-zA-Z0-9._\\- ]"), "_")
+                    val outputFile = File(dir, "$sanitized.novacut-template")
+                    val success = templateManager.exportTemplateToFile(name, outputFile)
+                    if (!success) return@withContext null
+
+                    FileProvider.getUriForFile(
+                        appContext,
+                        "${appContext.packageName}.fileprovider",
+                        outputFile
+                    )
+                }
+
+                if (shareUri == null) {
+                    showToast("Template export failed")
+                    return@launch
+                }
+
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "application/json"
+                    putExtra(Intent.EXTRA_STREAM, shareUri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                appContext.startActivity(
+                    Intent.createChooser(shareIntent, "Share Template")
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
+            } catch (e: Exception) {
+                showToast("Template export failed: ${e.message}")
+            }
+        }
     }
 
     fun createFromTemplate(template: UserTemplate, onCreated: (String) -> Unit) {
@@ -90,20 +203,27 @@ class ProjectListViewModel @Inject constructor(
             name = template.name,
             aspectRatio = template.aspectRatio,
             frameRate = template.frameRate,
-            resolution = template.resolution
+            resolution = template.resolution,
+            templateId = template.id
         )
         viewModelScope.launch {
-            projectDao.insertProject(project)
-            // Save the template's tracks/overlays as auto-save state for the new project
-            val autoState = AutoSaveState(
-                projectId = project.id,
-                tracks = tracks.map { track ->
-                    // Clear clips from media tracks, keep structure from non-media tracks
-                    track.copy(clips = if (track.type == TrackType.VIDEO || track.type == TrackType.AUDIO) emptyList() else track.clips)
-                },
-                textOverlays = textOverlays
-            )
-            autoSave.saveNow(project.id, autoState)
+            withContext(Dispatchers.IO) {
+                projectDao.insertProject(project)
+                val autoState = AutoSaveState(
+                    projectId = project.id,
+                    tracks = tracks.map { track ->
+                        track.copy(
+                            clips = if (track.type == TrackType.VIDEO || track.type == TrackType.AUDIO) {
+                                emptyList()
+                            } else {
+                                track.clips
+                            }
+                        )
+                    },
+                    textOverlays = textOverlays
+                )
+                autoSave.saveNow(project.id, autoState)
+            }
             onCreated(project.id)
         }
     }
@@ -125,22 +245,154 @@ class ProjectListViewModel @Inject constructor(
             updatedAt = System.currentTimeMillis()
         )
         viewModelScope.launch {
-            projectDao.insertProject(newProject)
-            autoSave.copyAutoSave(project.id, newId)
+            withContext(Dispatchers.IO) {
+                projectDao.insertProject(newProject)
+                autoSave.copyAutoSave(project.id, newId)
+            }
         }
     }
 
-    fun createProjectFromImport(videoUri: android.net.Uri, onCreated: (String) -> Unit) {
-        val fileName = videoUri.lastPathSegment?.substringAfterLast('/')?.substringBeforeLast('.') ?: "Imported"
-        val project = Project(
-            name = fileName,
-            createdAt = System.currentTimeMillis(),
-            updatedAt = System.currentTimeMillis()
-        )
+    fun createProjectFromImport(videoUri: Uri, onCreated: (String) -> Unit) {
         viewModelScope.launch {
-            projectDao.insertProject(project)
-            // The editor will handle adding the clip when it opens
+            val importedUri = withContext(Dispatchers.IO) {
+                copyToLocalMedia(videoUri, "video")
+            }
+            val durationMs = withContext(Dispatchers.IO) {
+                videoEngine.getVideoDuration(importedUri).takeIf { it > 0 } ?: 3_000L
+            }
+            val fileName = resolveDisplayName(videoUri)
+                ?.substringBeforeLast('.')
+                ?.takeIf { it.isNotBlank() }
+                ?: "Imported"
+
+            val project = Project(
+                name = fileName,
+                durationMs = durationMs,
+                thumbnailUri = importedUri.toString()
+            )
+
+            val clip = Clip(
+                sourceUri = importedUri,
+                sourceDurationMs = durationMs,
+                timelineStartMs = 0L,
+                trimStartMs = 0L,
+                trimEndMs = durationMs
+            )
+            val importedTracks = buildTracks(listOf(TrackType.VIDEO, TrackType.AUDIO)).map { track ->
+                if (track.type == TrackType.VIDEO && track.index == 0) {
+                    track.copy(clips = listOf(clip))
+                } else {
+                    track
+                }
+            }
+
+            withContext(Dispatchers.IO) {
+                projectDao.insertProject(project)
+                autoSave.saveNow(
+                    project.id,
+                    AutoSaveState(
+                        projectId = project.id,
+                        tracks = importedTracks,
+                        textOverlays = emptyList()
+                    )
+                )
+            }
+
             onCreated(project.id)
         }
+    }
+
+    private fun refreshUserTemplates() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _userTemplates.value = templateManager.listTemplates()
+        }
+    }
+
+    private fun buildTracks(trackTypes: List<TrackType>): List<Track> {
+        val normalizedTypes = trackTypes.ifEmpty { listOf(TrackType.VIDEO, TrackType.AUDIO) }
+        return normalizedTypes.mapIndexed { index, type ->
+            Track(type = type, index = index)
+        }
+    }
+
+    private fun resolveDisplayName(uri: Uri): String? {
+        if (uri.scheme == "file") {
+            return uri.lastPathSegment
+        }
+
+        return runCatching {
+            appContext.contentResolver.query(
+                uri,
+                arrayOf(OpenableColumns.DISPLAY_NAME),
+                null,
+                null,
+                null
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    cursor.getString(cursor.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME))
+                } else {
+                    null
+                }
+            }
+        }.getOrNull() ?: uri.lastPathSegment
+    }
+
+    private fun copyToLocalMedia(uri: Uri, mediaType: String): Uri {
+        return try {
+            if (uri.scheme == "file") {
+                val path = uri.path.orEmpty()
+                if (path.startsWith(appContext.filesDir.absolutePath) || path.startsWith(appContext.cacheDir.absolutePath)) {
+                    return uri
+                }
+            }
+
+            val mediaDir = File(appContext.filesDir, "media").apply { mkdirs() }
+            val ext = resolveFileExtension(uri, mediaType)
+            var destFile = File(
+                mediaDir,
+                "${System.currentTimeMillis()}_${uri.lastPathSegment?.hashCode()?.toUInt() ?: 0}$ext"
+            )
+            while (destFile.exists()) {
+                destFile = File(mediaDir, "${System.currentTimeMillis()}_${(0..9999).random()}$ext")
+            }
+
+            val input = appContext.contentResolver.openInputStream(uri) ?: return uri
+            input.use { src ->
+                destFile.outputStream().use { dst -> src.copyTo(dst) }
+            }
+
+            if (destFile.length() == 0L) {
+                destFile.delete()
+                uri
+            } else {
+                Uri.fromFile(destFile)
+            }
+        } catch (e: Exception) {
+            uri
+        }
+    }
+
+    private fun resolveFileExtension(uri: Uri, mediaType: String): String {
+        val mimeType = appContext.contentResolver.getType(uri)
+        val mimeExt = mimeType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) }
+        if (!mimeExt.isNullOrBlank()) {
+            return ".${mimeExt.lowercase()}"
+        }
+
+        val displayName = resolveDisplayName(uri)
+        val nameExt = displayName?.substringAfterLast('.', "")
+        if (!nameExt.isNullOrBlank()) {
+            return ".${nameExt.lowercase()}"
+        }
+
+        return when (mediaType) {
+            "image" -> ".jpg"
+            "audio" -> ".m4a"
+            else -> ".mp4"
+        }
+    }
+
+    private fun showToast(message: String) {
+        Toast.makeText(appContext, message, Toast.LENGTH_SHORT).show()
     }
 }

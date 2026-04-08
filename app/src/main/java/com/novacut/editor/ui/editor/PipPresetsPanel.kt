@@ -1,24 +1,45 @@
 package com.novacut.editor.ui.editor
 
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.PictureInPicture
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import com.novacut.editor.R
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.novacut.editor.R
 import com.novacut.editor.ui.theme.Mocha
 
 data class PipPreset(
@@ -50,88 +71,78 @@ fun PipPresetsPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(Mocha.Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .padding(12.dp)
+    val sections = rememberPipSections()
+
+    PremiumEditorPanel(
+        title = stringResource(R.string.pip_title),
+        subtitle = "Stage facecam, commentary, and split-screen layouts without manually repositioning every shot.",
+        icon = Icons.Default.PictureInPicture,
+        accent = Mocha.Sapphire,
+        onClose = onClose,
+        modifier = modifier.heightIn(max = 520.dp),
+        scrollable = true
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(stringResource(R.string.pip_title), color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Close, stringResource(R.string.pip_close_cd), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
-            }
-        }
-
-        Spacer(Modifier.height(8.dp))
-
-        // Preset grid
-        val rows = pipPresets.chunked(4)
-        rows.forEach { row ->
+        PremiumPanelCard(accent = Mocha.Sapphire) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                row.forEach { preset ->
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Mocha.Surface0)
-                            .clickable { onPresetSelected(preset) }
-                            .padding(6.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        // Mini preview
-                        Canvas(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(Mocha.Base)
-                        ) {
-                            // Main frame
-                            drawRect(
-                                Mocha.Subtext0.copy(alpha = 0.2f),
-                                Offset(2f, 2f),
-                                Size(size.width - 4f, size.height - 4f),
-                                style = Stroke(1f)
-                            )
-                            // PiP position
-                            val pipW = size.width * preset.scaleX * 0.8f
-                            val pipH = size.height * preset.scaleY * 0.8f
-                            val pipX = size.width / 2f + preset.posX * size.width / 2f * 0.8f - pipW / 2f
-                            val pipY = size.height / 2f + preset.posY * size.height / 2f * 0.8f - pipH / 2f
-                            drawRect(
-                                Mocha.Mauve.copy(alpha = 0.4f),
-                                Offset(pipX, pipY),
-                                Size(pipW, pipH)
-                            )
-                            drawRect(
-                                Mocha.Mauve,
-                                Offset(pipX, pipY),
-                                Size(pipW, pipH),
-                                style = Stroke(1f)
-                            )
-                        }
-                        Spacer(Modifier.height(2.dp))
-                        Text(preset.name, color = Mocha.Subtext0, fontSize = 8.sp, maxLines = 1)
+                PremiumPanelPill(
+                    text = "${pipPresets.size} layouts",
+                    accent = Mocha.Sapphire
+                )
+                PremiumPanelPill(
+                    text = "Corners, splits, hero",
+                    accent = Mocha.Teal
+                )
+            }
+
+            Text(
+                text = "Layout presets",
+                color = Mocha.Rosewater,
+                style = MaterialTheme.typography.labelLarge
+            )
+            Text(
+                text = "Choose a starting composition, then fine-tune transform and crop only if the shot needs something custom.",
+                color = Mocha.Subtext0,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        sections.forEachIndexed { index, section ->
+            if (index > 0) Spacer(modifier = Modifier.height(12.dp))
+
+            PremiumPanelCard(accent = section.accent) {
+                Text(
+                    text = section.title,
+                    color = section.accent,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = section.subtitle,
+                    color = Mocha.Subtext0,
+                    style = MaterialTheme.typography.bodySmall
+                )
+
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    section.presets.forEach { preset ->
+                        PipPresetCard(
+                            preset = preset,
+                            accent = section.accent,
+                            onClick = { onPresetSelected(preset) }
+                        )
                     }
                 }
-                // Fill remaining slots
-                repeat(4 - row.size) {
-                    Spacer(Modifier.weight(1f))
-                }
             }
-            Spacer(Modifier.height(6.dp))
         }
     }
 }
-
-// --- Chroma Key Refinement Panel ---
 
 @Composable
 fun ChromaKeyPanel(
@@ -149,95 +160,267 @@ fun ChromaKeyPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(Mocha.Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .padding(12.dp)
+    val keyColor = Color(
+        red = keyColorR.coerceIn(0f, 1f),
+        green = keyColorG.coerceIn(0f, 1f),
+        blue = keyColorB.coerceIn(0f, 1f)
+    )
+
+    PremiumEditorPanel(
+        title = stringResource(R.string.panel_chroma_key_title),
+        subtitle = "Cleanly isolate keyed footage, reduce spill, and refine the matte before you composite it over the timeline.",
+        icon = Icons.Default.Visibility,
+        accent = Mocha.Green,
+        onClose = onClose,
+        modifier = modifier.heightIn(max = 560.dp),
+        scrollable = true,
+        headerActions = {
+            PremiumPanelIconButton(
+                icon = Icons.Default.Visibility,
+                contentDescription = stringResource(R.string.panel_chroma_key_alpha_matte),
+                onClick = onShowAlphaMatte,
+                tint = Mocha.Peach
+            )
+        }
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(stringResource(R.string.panel_chroma_key_title), color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Row {
-                IconButton(onClick = onShowAlphaMatte, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Visibility, stringResource(R.string.panel_chroma_key_alpha_matte), tint = Mocha.Peach, modifier = Modifier.size(18.dp))
+        PremiumPanelCard(accent = Mocha.Green) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                PremiumPanelPill(
+                    text = "Similarity ${formatUnit(similarity)}",
+                    accent = Mocha.Green
+                )
+                PremiumPanelPill(
+                    text = "Smoothness ${formatUnit(smoothness)}",
+                    accent = Mocha.Sapphire
+                )
+                PremiumPanelPill(
+                    text = "Spill ${formatUnit(spillSuppression)}",
+                    accent = Mocha.Yellow
+                )
+            }
+
+            Text(
+                text = "Key source",
+                color = Mocha.Rosewater,
+                style = MaterialTheme.typography.labelLarge
+            )
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Surface(
+                    color = keyColor.copy(alpha = 0.22f),
+                    shape = CircleShape,
+                    border = BorderStroke(1.dp, keyColor.copy(alpha = 0.36f))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .background(keyColor, CircleShape)
+                    )
                 }
-                IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Close, stringResource(R.string.close), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
-                }
+                Text(
+                    text = "Use a clean screen color first, then open the matte view if edges or spill need more attention.",
+                    color = Mocha.Subtext0,
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
         }
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // Key color presets
-        Text(stringResource(R.string.panel_chroma_key_color), color = Mocha.Subtext0, fontSize = 11.sp)
-        Row(
-            modifier = Modifier.padding(vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // Green screen
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(Color(0xFF00FF00))
-                    .then(
-                        if (keyColorG > 0.8f && keyColorR < 0.3f && keyColorB < 0.3f)
-                            Modifier.border(2.dp, Mocha.Mauve, RoundedCornerShape(6.dp))
-                        else Modifier
-                    )
-                    .clickable { onKeyColorChanged(0f, 1f, 0f) },
-                contentAlignment = Alignment.Center
-            ) {
-                Text("G", color = Color.Black, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        PremiumPanelCard(accent = Mocha.Peach) {
+            Text(
+                text = stringResource(R.string.panel_chroma_key_color),
+                color = Mocha.Rosewater,
+                style = MaterialTheme.typography.labelLarge
+            )
+
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                KeyColorSwatch(
+                    label = "Green",
+                    color = Color(0xFF00FF00),
+                    selected = keyColorG > 0.8f && keyColorR < 0.3f && keyColorB < 0.3f,
+                    onClick = { onKeyColorChanged(0f, 1f, 0f) }
+                )
+                KeyColorSwatch(
+                    label = "Blue",
+                    color = Color(0xFF0044FF),
+                    selected = keyColorB > 0.8f && keyColorR < 0.3f && keyColorG < 0.3f,
+                    onClick = { onKeyColorChanged(0f, 0f, 1f) }
+                )
+                KeyColorSwatch(
+                    label = "Red",
+                    color = Color(0xFFFF0000),
+                    selected = keyColorR > 0.8f && keyColorG < 0.3f && keyColorB < 0.3f,
+                    onClick = { onKeyColorChanged(1f, 0f, 0f) }
+                )
             }
-            // Blue screen
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(Color(0xFF0044FF))
-                    .then(
-                        if (keyColorB > 0.8f && keyColorR < 0.3f && keyColorG < 0.3f)
-                            Modifier.border(2.dp, Mocha.Mauve, RoundedCornerShape(6.dp))
-                        else Modifier
-                    )
-                    .clickable { onKeyColorChanged(0f, 0f, 1f) },
-                contentAlignment = Alignment.Center
-            ) {
-                Text("B", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-            }
-            // Red screen
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(Color(0xFFFF0000))
-                    .clickable { onKeyColorChanged(1f, 0f, 0f) },
-                contentAlignment = Alignment.Center
-            ) {
-                Text("R", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-            }
+
+            ChromaSlider(
+                label = stringResource(R.string.chroma_red),
+                value = keyColorR,
+                color = Color(0xFFF38BA8),
+                onChanged = { onKeyColorChanged(it, keyColorG, keyColorB) }
+            )
+            ChromaSlider(
+                label = stringResource(R.string.chroma_green),
+                value = keyColorG,
+                color = Color(0xFFA6E3A1),
+                onChanged = { onKeyColorChanged(keyColorR, it, keyColorB) }
+            )
+            ChromaSlider(
+                label = stringResource(R.string.chroma_blue),
+                value = keyColorB,
+                color = Color(0xFF89B4FA),
+                onChanged = { onKeyColorChanged(keyColorR, keyColorG, it) }
+            )
         }
 
-        Spacer(Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // Key color RGB sliders
-        ChromaSlider(stringResource(R.string.chroma_red), keyColorR, Color(0xFFF38BA8)) { onKeyColorChanged(it, keyColorG, keyColorB) }
-        ChromaSlider(stringResource(R.string.chroma_green), keyColorG, Color(0xFFA6E3A1)) { onKeyColorChanged(keyColorR, it, keyColorB) }
-        ChromaSlider(stringResource(R.string.chroma_blue), keyColorB, Color(0xFF89B4FA)) { onKeyColorChanged(keyColorR, keyColorG, it) }
+        PremiumPanelCard(accent = Mocha.Sapphire) {
+            Text(
+                text = stringResource(R.string.panel_chroma_key_refinement),
+                color = Mocha.Rosewater,
+                style = MaterialTheme.typography.labelLarge
+            )
+            Text(
+                text = "Raise similarity to catch more of the screen, add smoothness to soften harsh edges, and suppress spill once the matte feels stable.",
+                color = Mocha.Subtext0,
+                style = MaterialTheme.typography.bodyMedium
+            )
 
-        Spacer(Modifier.height(8.dp))
+            ChromaSlider(
+                label = stringResource(R.string.chroma_similarity),
+                value = similarity,
+                color = Mocha.Green,
+                onChanged = onSimilarityChanged
+            )
+            ChromaSlider(
+                label = stringResource(R.string.chroma_smoothness),
+                value = smoothness,
+                color = Mocha.Sapphire,
+                onChanged = onSmoothnessChanged
+            )
+            ChromaSlider(
+                label = stringResource(R.string.chroma_spill_suppress),
+                value = spillSuppression,
+                color = Mocha.Yellow,
+                onChanged = onSpillChanged
+            )
+        }
+    }
+}
 
-        // Refinement controls
-        Text(stringResource(R.string.panel_chroma_key_refinement), color = Mocha.Subtext0, fontSize = 11.sp)
-        ChromaSlider(stringResource(R.string.chroma_similarity), similarity, Mocha.Mauve, onSimilarityChanged)
-        ChromaSlider(stringResource(R.string.chroma_smoothness), smoothness, Mocha.Mauve, onSmoothnessChanged)
-        ChromaSlider(stringResource(R.string.chroma_spill_suppress), spillSuppression, Mocha.Mauve, onSpillChanged)
+@Composable
+private fun PipPresetCard(
+    preset: PipPreset,
+    accent: Color,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.width(148.dp),
+        onClick = onClick,
+        color = Mocha.PanelHighest,
+        shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.22f))
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(116.dp)
+                    .height(84.dp)
+                    .background(Mocha.Base, RoundedCornerShape(18.dp))
+            ) {
+                androidx.compose.foundation.Canvas(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .padding(10.dp)
+                ) {
+                    drawRect(
+                        color = Mocha.Subtext0.copy(alpha = 0.18f),
+                        topLeft = Offset(4f, 4f),
+                        size = Size(size.width - 8f, size.height - 8f),
+                        style = Stroke(1.3f)
+                    )
+
+                    val pipWidth = size.width * preset.scaleX * 0.72f
+                    val pipHeight = size.height * preset.scaleY * 0.72f
+                    val pipX = size.width / 2f + preset.posX * size.width / 2f * 0.78f - pipWidth / 2f
+                    val pipY = size.height / 2f + preset.posY * size.height / 2f * 0.78f - pipHeight / 2f
+
+                    drawRect(
+                        color = accent.copy(alpha = 0.24f),
+                        topLeft = Offset(pipX, pipY),
+                        size = Size(pipWidth, pipHeight)
+                    )
+                    drawRect(
+                        color = accent,
+                        topLeft = Offset(pipX, pipY),
+                        size = Size(pipWidth, pipHeight),
+                        style = Stroke(1.5f)
+                    )
+                }
+            }
+
+            Text(
+                text = preset.name,
+                color = Mocha.Text,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = pipPresetDescription(preset.name),
+                color = Mocha.Subtext0,
+                style = MaterialTheme.typography.bodySmall,
+                minLines = 2
+            )
+        }
+    }
+}
+
+@Composable
+private fun KeyColorSwatch(
+    label: String,
+    color: Color,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        color = color.copy(alpha = 0.14f),
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(
+            1.dp,
+            if (selected) Mocha.Mauve else color.copy(alpha = 0.28f)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(18.dp)
+                    .background(color, CircleShape)
+            )
+            Text(
+                text = label,
+                color = if (selected) Mocha.Mauve else Mocha.Text,
+                style = MaterialTheme.typography.labelMedium
+            )
+        }
     }
 }
 
@@ -248,26 +431,80 @@ private fun ChromaSlider(
     color: Color,
     onChanged: (Float) -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 1.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(label, color = Mocha.Subtext0, fontSize = 10.sp, modifier = Modifier.width(80.dp))
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                color = Mocha.Subtext1,
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = formatUnit(value),
+                color = color,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
         Slider(
             value = value,
             onValueChange = onChanged,
             valueRange = 0f..1f,
-            modifier = Modifier
-                .weight(1f)
-                .height(24.dp),
             colors = SliderDefaults.colors(
                 thumbColor = color,
-                activeTrackColor = color.copy(alpha = 0.6f),
+                activeTrackColor = color.copy(alpha = 0.68f),
                 inactiveTrackColor = Mocha.Surface0
             )
         )
-        Text("%.2f".format(value), color = Mocha.Subtext0, fontSize = 9.sp, modifier = Modifier.width(30.dp))
     }
 }
+
+private data class PipPresetSection(
+    val title: String,
+    val subtitle: String,
+    val accent: Color,
+    val presets: List<PipPreset>
+)
+
+@Composable
+private fun rememberPipSections(): List<PipPresetSection> = listOf(
+    PipPresetSection(
+        title = "Corners and cams",
+        subtitle = "Use these for facecam reactions, webcam inserts, and creator commentary.",
+        accent = Mocha.Sapphire,
+        presets = pipPresets.filter { it.name in setOf("Top Left", "Top Right", "Bottom Left", "Bottom Right", "Circle Cam", "Center Small") }
+    ),
+    PipPresetSection(
+        title = "Split layouts",
+        subtitle = "Balanced side-by-side and stacked frames for interviews, explainers, and comparisons.",
+        accent = Mocha.Green,
+        presets = pipPresets.filter { it.name in setOf("Left Half", "Right Half", "Top Half", "Bottom Half") }
+    ),
+    PipPresetSection(
+        title = "Hero treatments",
+        subtitle = "Larger overlays for lower-thirds, focus windows, and full takeover layouts.",
+        accent = Mocha.Peach,
+        presets = pipPresets.filter { it.name in setOf("Lower Third", "Full Screen") }
+    )
+)
+
+private fun pipPresetDescription(name: String): String = when (name) {
+    "Top Left" -> "Classic reaction-cam position with the frame out of the subtitle lane."
+    "Top Right" -> "Great when lower-third graphics or captions sit on the left."
+    "Bottom Left" -> "Keeps the inset near the presenter while leaving the top clean."
+    "Bottom Right" -> "A familiar commentary layout for tutorials and gaming edits."
+    "Center Small" -> "Floating inset for quick comparisons or cutaway emphasis."
+    "Left Half" -> "Balanced split for side-by-side demos or dual interviews."
+    "Right Half" -> "Use when the main subject should remain left-weighted."
+    "Top Half" -> "Stacked layout for narration over reference footage."
+    "Bottom Half" -> "Ideal for screen records with presenter footage beneath."
+    "Full Screen" -> "Take over the frame and reset the clip to a neutral full-size layout."
+    "Lower Third" -> "Wide overlay band for presenter boxes and callout plates."
+    "Circle Cam" -> "Compact round-cam style framing for creator and stream looks."
+    else -> "Start with this layout, then refine scale and transform if needed."
+}
+
+private fun formatUnit(value: Float): String = "%.2f".format(value)

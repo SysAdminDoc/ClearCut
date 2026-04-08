@@ -1,28 +1,56 @@
 package com.novacut.editor.ui.editor
 
-import androidx.compose.animation.*
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.ClosedCaption
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.res.stringResource
 import com.novacut.editor.R
-import com.novacut.editor.model.*
+import com.novacut.editor.model.Caption
+import com.novacut.editor.model.CaptionStyle
+import com.novacut.editor.model.CaptionStyleType
 import com.novacut.editor.ui.theme.Mocha
+import java.util.Locale
 
 @Composable
 fun CaptionEditorPanel(
@@ -38,190 +66,386 @@ fun CaptionEditorPanel(
 ) {
     var editingCaption by remember { mutableStateOf<Caption?>(null) }
     var selectedStyleType by remember { mutableStateOf(CaptionStyleType.SUBTITLE_BAR) }
+    val activeCaptionCount = captions.count { playheadMs in it.startTimeMs..it.endTimeMs }
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(Mocha.Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .padding(12.dp)
+    fun createCaption() {
+        val newCaption = Caption(
+            text = "New Caption",
+            startTimeMs = playheadMs,
+            endTimeMs = (playheadMs + 2_000L).coerceAtMost(clipDurationMs),
+            style = CaptionStyle(type = selectedStyleType)
+        )
+        onAddCaption(newCaption)
+        editingCaption = newCaption
+    }
+
+    PremiumEditorPanel(
+        title = stringResource(R.string.caption_title),
+        subtitle = "Write, time, and style captions that feel polished instead of bolted onto the cut.",
+        icon = Icons.Default.ClosedCaption,
+        accent = Mocha.Yellow,
+        onClose = onClose,
+        modifier = modifier,
+        scrollable = true,
+        headerActions = {
+            PremiumPanelIconButton(
+                icon = Icons.Default.AutoAwesome,
+                contentDescription = stringResource(R.string.cd_caption_auto),
+                onClick = onGenerateAutoCaption,
+                tint = Mocha.Yellow
+            )
+            PremiumPanelIconButton(
+                icon = Icons.Default.Add,
+                contentDescription = stringResource(R.string.caption_add_cd),
+                onClick = ::createCaption,
+                tint = Mocha.Green
+            )
+        }
     ) {
-        // Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(stringResource(R.string.caption_title), color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Row {
-                // Auto-generate button
-                IconButton(onClick = onGenerateAutoCaption, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.AutoAwesome, stringResource(R.string.cd_caption_auto), tint = Mocha.Yellow, modifier = Modifier.size(18.dp))
-                }
-                IconButton(onClick = {
-                    val newCaption = Caption(
-                        text = "New Caption",
-                        startTimeMs = playheadMs,
-                        endTimeMs = (playheadMs + 2000L).coerceAtMost(clipDurationMs),
-                        style = CaptionStyle(type = selectedStyleType)
+        PremiumPanelCard(accent = if (activeCaptionCount > 0) Mocha.Green else Mocha.Yellow) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Caption system",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Mocha.Text
                     )
-                    onAddCaption(newCaption)
-                    editingCaption = newCaption
-                }, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Add, stringResource(R.string.caption_add_cd), tint = Mocha.Green, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Manage timing, coverage, and default styling for every subtitle block on the selected clip.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Mocha.Subtext0
+                    )
                 }
-                IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Close, stringResource(R.string.caption_close_cd), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    PremiumPanelPill(text = "${captions.size} total", accent = Mocha.Blue)
+                    PremiumPanelPill(
+                        text = if (activeCaptionCount > 0) "$activeCaptionCount live" else "Ready",
+                        accent = if (activeCaptionCount > 0) Mocha.Green else Mocha.Yellow
+                    )
                 }
             }
-        }
 
-        Spacer(Modifier.height(8.dp))
-
-        // Style selector
-        Text(stringResource(R.string.panel_caption_style), color = Mocha.Subtext0, fontSize = 11.sp)
-        Spacer(Modifier.height(4.dp))
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            items(CaptionStyleType.entries.toList()) { styleType ->
-                val selected = styleType == selectedStyleType
-                FilterChip(
-                    selected = selected,
-                    onClick = { selectedStyleType = styleType },
-                    label = { Text(styleType.displayName, fontSize = 10.sp) },
-                    modifier = Modifier.height(28.dp),
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = Mocha.Mauve.copy(alpha = 0.2f),
-                        selectedLabelColor = Mocha.Mauve,
-                        labelColor = Mocha.Subtext0
-                    )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                CaptionMetric(
+                    title = "Playhead",
+                    value = formatSeconds(playheadMs),
+                    accent = Mocha.Peach,
+                    modifier = Modifier.weight(1f)
+                )
+                CaptionMetric(
+                    title = "Default Style",
+                    value = selectedStyleType.displayName,
+                    accent = Mocha.Mauve,
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // Caption list
-        if (captions.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
+        PremiumPanelCard(accent = Mocha.Mauve) {
+            Text(
+                text = "Default style for new captions",
+                style = MaterialTheme.typography.titleMedium,
+                color = Mocha.Text
+            )
+            Text(
+                text = "Pick the starting treatment here, then fine-tune any individual caption below.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Mocha.Subtext0
+            )
+
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.ClosedCaption, stringResource(R.string.cd_closed_caption), tint = Mocha.Subtext0.copy(alpha = 0.3f), modifier = Modifier.size(32.dp))
-                    Spacer(Modifier.height(4.dp))
-                    Text(stringResource(R.string.caption_no_captions), color = Mocha.Subtext0, fontSize = 12.sp)
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedButton(
-                        onClick = onGenerateAutoCaption,
-                        border = BorderStroke(1.dp, Mocha.Yellow.copy(alpha = 0.5f))
-                    ) {
-                        Icon(Icons.Default.AutoAwesome, stringResource(R.string.cd_auto_awesome), tint = Mocha.Yellow, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.panel_caption_auto_generate), color = Mocha.Yellow, fontSize = 12.sp)
-                    }
-                }
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 200.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                items(captions, key = { it.id }) { caption ->
-                    CaptionRow(
-                        caption = caption,
-                        isEditing = editingCaption?.id == caption.id,
-                        playheadMs = playheadMs,
-                        onEdit = { editingCaption = caption },
-                        onDelete = { onDeleteCaption(caption.id) }
+                CaptionStyleType.entries.forEach { styleType ->
+                    FilterChip(
+                        selected = styleType == selectedStyleType,
+                        onClick = { selectedStyleType = styleType },
+                        label = {
+                            Text(
+                                text = styleType.displayName,
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Mocha.Mauve.copy(alpha = 0.18f),
+                            selectedLabelColor = Mocha.Mauve,
+                            containerColor = Mocha.PanelRaised,
+                            labelColor = Mocha.Subtext0
+                        )
                     )
                 }
             }
         }
 
-        // Editing panel
-        editingCaption?.let { caption ->
-            Spacer(Modifier.height(8.dp))
-            HorizontalDivider(color = Mocha.Surface1, thickness = 1.dp)
-            Spacer(Modifier.height(8.dp))
-            CaptionEditForm(
-                caption = caption,
-                clipDurationMs = clipDurationMs,
-                onUpdate = { updated ->
-                    onUpdateCaption(updated)
-                    editingCaption = updated
+        Spacer(modifier = Modifier.height(12.dp))
+
+        PremiumPanelCard(accent = Mocha.Blue) {
+            Text(
+                text = "Caption list",
+                style = MaterialTheme.typography.titleMedium,
+                color = Mocha.Text
+            )
+            Text(
+                text = if (captions.isEmpty()) {
+                    "Generate a pass automatically or write your first caption by hand."
+                } else {
+                    "Tap a caption to refine its text, timing, and placement."
                 },
-                onDone = { editingCaption = null }
+                style = MaterialTheme.typography.bodyMedium,
+                color = Mocha.Subtext0
+            )
+
+            if (captions.isEmpty()) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Mocha.PanelRaised,
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, Mocha.CardStroke)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = stringResource(R.string.caption_no_captions),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = Mocha.Text
+                        )
+                        Text(
+                            text = "Auto-captions are best for a quick first pass. Manual captions are great for hero text and exact pacing.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Mocha.Subtext0
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = onGenerateAutoCaption,
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(18.dp),
+                                border = BorderStroke(1.dp, Mocha.Yellow.copy(alpha = 0.35f)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Yellow)
+                            ) {
+                                androidx.compose.material3.Icon(
+                                    imageVector = Icons.Default.AutoAwesome,
+                                    contentDescription = stringResource(R.string.cd_auto_awesome)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(text = stringResource(R.string.panel_caption_auto_generate))
+                            }
+
+                            Button(
+                                onClick = ::createCaption,
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(18.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve)
+                            ) {
+                                androidx.compose.material3.Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = stringResource(R.string.caption_add_cd)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(text = stringResource(R.string.caption_add))
+                            }
+                        }
+                    }
+                }
+            } else {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    captions.sortedBy { it.startTimeMs }.forEach { caption ->
+                        CaptionListCard(
+                            caption = caption,
+                            playheadMs = playheadMs,
+                            isEditing = editingCaption?.id == caption.id,
+                            onEdit = { editingCaption = caption },
+                            onDelete = { onDeleteCaption(caption.id) }
+                        )
+                    }
+                }
+            }
+        }
+
+        editingCaption?.let { caption ->
+            Spacer(modifier = Modifier.height(12.dp))
+
+            PremiumPanelCard(accent = Mocha.Yellow) {
+                Text(
+                    text = "Edit caption",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Mocha.Text
+                )
+                Text(
+                    text = "Refine the line, tighten the timing, and place it exactly where it belongs.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Mocha.Subtext0
+                )
+
+                CaptionEditForm(
+                    caption = caption,
+                    clipDurationMs = clipDurationMs,
+                    onUpdate = { updated ->
+                        onUpdateCaption(updated)
+                        editingCaption = updated
+                    },
+                    onDone = { editingCaption = null }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CaptionMetric(
+    title: String,
+    value: String,
+    accent: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        color = accent.copy(alpha = 0.12f),
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                color = Mocha.Subtext0
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleSmall,
+                color = accent,
+                fontWeight = FontWeight.Medium
             )
         }
     }
 }
 
 @Composable
-private fun CaptionRow(
+private fun CaptionListCard(
     caption: Caption,
-    isEditing: Boolean,
     playheadMs: Long,
+    isEditing: Boolean,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     val isActive = playheadMs in caption.startTimeMs..caption.endTimeMs
+    val accent = when {
+        isEditing -> Mocha.Mauve
+        isActive -> Mocha.Green
+        else -> Mocha.Blue
+    }
 
-    Row(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(
-                when {
-                    isEditing -> Mocha.Mauve.copy(alpha = 0.15f)
-                    isActive -> Mocha.Green.copy(alpha = 0.1f)
-                    else -> Mocha.Surface0
-                }
-            )
-            .clickable(onClick = onEdit)
-            .padding(8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+            .clickable(onClick = onEdit),
+        color = if (isEditing) accent.copy(alpha = 0.12f) else Mocha.PanelRaised,
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(
+            1.dp,
+            if (isEditing || isActive) accent.copy(alpha = 0.2f) else Mocha.CardStroke
+        )
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                caption.text,
-                color = Mocha.Text,
-                fontSize = 13.sp,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    "%.1fs - %.1fs".format(caption.startTimeMs / 1000f, caption.endTimeMs / 1000f),
-                    color = Mocha.Subtext0,
-                    fontSize = 10.sp
-                )
-                Text(
-                    caption.style.type.displayName,
-                    color = Mocha.Mauve.copy(alpha = 0.7f),
-                    fontSize = 10.sp
-                )
-                if (caption.words.isNotEmpty()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        stringResource(R.string.caption_word_count, caption.words.size),
-                        color = Mocha.Peach.copy(alpha = 0.7f),
-                        fontSize = 10.sp
+                        text = caption.text,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = Mocha.Text,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "${formatSeconds(caption.startTimeMs)} - ${formatSeconds(caption.endTimeMs)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Mocha.Subtext0
                     )
                 }
-            }
-        }
 
-        Row {
-            IconButton(onClick = onEdit, modifier = Modifier.size(24.dp)) {
-                Icon(Icons.Default.Edit, stringResource(R.string.cd_caption_edit), tint = Mocha.Subtext0, modifier = Modifier.size(14.dp))
+                Spacer(modifier = Modifier.width(12.dp))
+
+                PremiumPanelPill(
+                    text = when {
+                        isEditing -> "Editing"
+                        isActive -> "Live"
+                        else -> caption.style.type.displayName
+                    },
+                    accent = accent
+                )
             }
-            IconButton(onClick = onDelete, modifier = Modifier.size(24.dp)) {
-                Icon(Icons.Default.Delete, stringResource(R.string.caption_delete_cd), tint = Mocha.Red.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (caption.words.isNotEmpty()) {
+                        stringResource(R.string.caption_word_count, caption.words.size)
+                    } else {
+                        "Manual caption"
+                    },
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (caption.words.isNotEmpty()) Mocha.Peach else Mocha.Subtext0
+                )
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    PremiumPanelIconButton(
+                        icon = Icons.Default.Edit,
+                        contentDescription = stringResource(R.string.cd_caption_edit),
+                        onClick = onEdit,
+                        tint = Mocha.Blue
+                    )
+                    PremiumPanelIconButton(
+                        icon = Icons.Default.Delete,
+                        contentDescription = stringResource(R.string.caption_delete_cd),
+                        onClick = onDelete,
+                        tint = Mocha.Red
+                    )
+                }
             }
         }
     }
@@ -241,114 +465,183 @@ private fun CaptionEditForm(
     var positionY by remember(caption.id) { mutableFloatStateOf(caption.style.positionY) }
     var styleType by remember(caption.id) { mutableStateOf(caption.style.type) }
 
-    Column(modifier = Modifier.fillMaxWidth()) {
-        // Text input
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(
             value = text,
             onValueChange = { text = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text(stringResource(R.string.caption_text_hint), fontSize = 12.sp) },
+            label = { Text(stringResource(R.string.caption_text_hint)) },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Mocha.Mauve,
-                unfocusedBorderColor = Mocha.Surface1,
+                unfocusedBorderColor = Mocha.CardStroke,
                 focusedTextColor = Mocha.Text,
                 unfocusedTextColor = Mocha.Text,
-                cursorColor = Mocha.Mauve
+                cursorColor = Mocha.Mauve,
+                focusedLabelColor = Mocha.Mauve,
+                unfocusedLabelColor = Mocha.Subtext0
             ),
             maxLines = 3,
-            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 13.sp)
+            textStyle = TextStyle(fontSize = 15.sp)
         )
 
-        Spacer(Modifier.height(8.dp))
-
-        // Timing
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.caption_start_time), color = Mocha.Subtext0, fontSize = 10.sp)
-                Slider(
-                    value = startTime,
-                    onValueChange = { startTime = it.coerceAtMost(endTime) },
-                    valueRange = 0f..(clipDurationMs / 1000f),
-                    modifier = Modifier.height(24.dp),
-                    colors = SliderDefaults.colors(thumbColor = Mocha.Mauve, activeTrackColor = Mocha.Mauve.copy(alpha = 0.6f))
-                )
-                Text("%.1fs".format(startTime), color = Mocha.Subtext0, fontSize = 9.sp)
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.caption_end_time), color = Mocha.Subtext0, fontSize = 10.sp)
-                Slider(
-                    value = endTime,
-                    onValueChange = { endTime = it.coerceAtLeast(startTime) },
-                    valueRange = 0f..(clipDurationMs / 1000f),
-                    modifier = Modifier.height(24.dp),
-                    colors = SliderDefaults.colors(thumbColor = Mocha.Mauve, activeTrackColor = Mocha.Mauve.copy(alpha = 0.6f))
-                )
-                Text("%.1fs".format(endTime), color = Mocha.Subtext0, fontSize = 9.sp)
-            }
+            CaptionMetric(
+                title = "Start",
+                value = formatSeconds((startTime * 1000f).toLong()),
+                accent = Mocha.Blue,
+                modifier = Modifier.weight(1f)
+            )
+            CaptionMetric(
+                title = "End",
+                value = formatSeconds((endTime * 1000f).toLong()),
+                accent = Mocha.Green,
+                modifier = Modifier.weight(1f)
+            )
         }
 
-        // Style
-        Text(stringResource(R.string.panel_caption_style_label), color = Mocha.Subtext0, fontSize = 10.sp)
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            items(CaptionStyleType.entries.toList()) { type ->
-                FilterChip(
-                    selected = type == styleType,
-                    onClick = { styleType = type },
-                    label = { Text(type.displayName, fontSize = 9.sp) },
-                    modifier = Modifier.height(26.dp),
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = Mocha.Mauve.copy(alpha = 0.2f),
-                        selectedLabelColor = Mocha.Mauve
+        CaptionSlider(
+            label = stringResource(R.string.caption_start_time),
+            value = startTime,
+            valueRange = 0f..(clipDurationMs / 1000f),
+            accent = Mocha.Blue,
+            onValueChange = { startTime = it.coerceAtMost(endTime) }
+        )
+        CaptionSlider(
+            label = stringResource(R.string.caption_end_time),
+            value = endTime,
+            valueRange = 0f..(clipDurationMs / 1000f),
+            accent = Mocha.Green,
+            onValueChange = { endTime = it.coerceAtLeast(startTime) }
+        )
+
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = stringResource(R.string.panel_caption_style_label),
+                style = MaterialTheme.typography.labelLarge,
+                color = Mocha.Subtext0
+            )
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                CaptionStyleType.entries.forEach { type ->
+                    FilterChip(
+                        selected = type == styleType,
+                        onClick = { styleType = type },
+                        label = { Text(type.displayName) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Mocha.Mauve.copy(alpha = 0.18f),
+                            selectedLabelColor = Mocha.Mauve,
+                            containerColor = Mocha.PanelRaised,
+                            labelColor = Mocha.Subtext0
+                        )
                     )
-                )
+                }
             }
         }
 
-        // Size + Position
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.caption_font_size), color = Mocha.Subtext0, fontSize = 10.sp)
-                Slider(
-                    value = fontSize, onValueChange = { fontSize = it },
-                    valueRange = 16f..72f, modifier = Modifier.height(24.dp),
-                    colors = SliderDefaults.colors(thumbColor = Mocha.Mauve, activeTrackColor = Mocha.Mauve.copy(alpha = 0.6f))
-                )
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.panel_caption_position_y), color = Mocha.Subtext0, fontSize = 10.sp)
-                Slider(
-                    value = positionY, onValueChange = { positionY = it },
-                    valueRange = 0.1f..0.95f, modifier = Modifier.height(24.dp),
-                    colors = SliderDefaults.colors(thumbColor = Mocha.Mauve, activeTrackColor = Mocha.Mauve.copy(alpha = 0.6f))
-                )
-            }
-        }
+        CaptionSlider(
+            label = stringResource(R.string.caption_font_size),
+            value = fontSize,
+            valueRange = 16f..72f,
+            accent = Mocha.Mauve,
+            onValueChange = { fontSize = it },
+            valueFormatter = { "${it.toInt()} pt" }
+        )
+        CaptionSlider(
+            label = stringResource(R.string.panel_caption_position_y),
+            value = positionY,
+            valueRange = 0.1f..0.95f,
+            accent = Mocha.Yellow,
+            onValueChange = { positionY = it },
+            valueFormatter = { "%.0f%%".format(it * 100f) }
+        )
 
-        Spacer(Modifier.height(8.dp))
-
-        // Save button
-        Button(
-            onClick = {
-                onUpdate(caption.copy(
-                    text = text,
-                    startTimeMs = (startTime * 1000).toLong(),
-                    endTimeMs = (endTime * 1000).toLong(),
-                    style = caption.style.copy(
-                        type = styleType,
-                        fontSize = fontSize,
-                        positionY = positionY
-                    )
-                ))
-                onDone()
-            },
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve),
-            shape = RoundedCornerShape(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text(stringResource(R.string.panel_caption_save))
+            OutlinedButton(
+                onClick = onDone,
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(18.dp),
+                border = BorderStroke(1.dp, Mocha.CardStroke),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Subtext0)
+            ) {
+                Text(text = stringResource(R.string.done))
+            }
+
+            Button(
+                onClick = {
+                    onUpdate(
+                        caption.copy(
+                            text = text,
+                            startTimeMs = (startTime * 1000f).toLong(),
+                            endTimeMs = (endTime * 1000f).toLong(),
+                            style = caption.style.copy(
+                                type = styleType,
+                                fontSize = fontSize,
+                                positionY = positionY
+                            )
+                        )
+                    )
+                    onDone()
+                },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve),
+                shape = RoundedCornerShape(18.dp)
+            ) {
+                Text(text = stringResource(R.string.panel_caption_save))
+            }
         }
+    }
+}
+
+@Composable
+private fun CaptionSlider(
+    label: String,
+    value: Float,
+    valueRange: ClosedFloatingPointRange<Float>,
+    accent: androidx.compose.ui.graphics.Color,
+    onValueChange: (Float) -> Unit,
+    valueFormatter: (Float) -> String = { "%.1fs".format(it) }
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                color = Mocha.Subtext0
+            )
+            PremiumPanelPill(text = valueFormatter(value), accent = accent)
+        }
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = valueRange,
+            colors = SliderDefaults.colors(
+                thumbColor = accent,
+                activeTrackColor = accent,
+                inactiveTrackColor = Mocha.Surface1
+            )
+        )
+    }
+}
+
+private fun formatSeconds(ms: Long): String {
+    val totalSeconds = (ms / 1000f).coerceAtLeast(0f)
+    return if (totalSeconds >= 60f) {
+        val minutes = (totalSeconds / 60f).toInt()
+        val seconds = totalSeconds % 60f
+        String.format(Locale.getDefault(), "%d:%04.1f", minutes, seconds)
+    } else {
+        String.format(Locale.getDefault(), "%.1fs", totalSeconds)
     }
 }

@@ -16,6 +16,7 @@ local.properties
 *.keystore
 .env
 .zombie-build/
+.kotlin/
 
 # Private docs — keep local only
 CLAUDE.md

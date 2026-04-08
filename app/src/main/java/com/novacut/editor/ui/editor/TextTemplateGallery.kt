@@ -19,10 +19,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
@@ -201,143 +203,151 @@ fun TextTemplateGallery(
 ) {
     var selectedCategory by remember { mutableStateOf<TextTemplateCategory?>(null) }
     var showAnimated by remember { mutableStateOf(false) }
-    val filteredTemplates = if (selectedCategory != null) {
-        builtInTextTemplates.filter { it.category == selectedCategory }
-    } else builtInTextTemplates
+    val animatedTemplates = remember { animatedTextTemplates() }
+    val visibleStaticTemplates = remember(selectedCategory) {
+        if (selectedCategory == null) {
+            builtInTextTemplates
+        } else {
+            builtInTextTemplates.filter { it.category == selectedCategory }
+        }
+    }
+    val visibleAnimatedTemplates = remember(selectedCategory) {
+        if (selectedCategory == null) {
+            animatedTemplates
+        } else {
+            animatedTemplates.filter { it.category == selectedCategory }
+        }
+    }
+    val accent = if (showAnimated) Mocha.Yellow else Mocha.Sapphire
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(Mocha.Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .padding(12.dp)
+    PremiumEditorPanel(
+        title = stringResource(R.string.panel_text_template_title),
+        subtitle = "Start from polished lower thirds, title cards, and CTAs instead of styling every text layer by hand.",
+        icon = Icons.Default.Dashboard,
+        accent = accent,
+        onClose = onClose,
+        modifier = modifier.heightIn(max = 560.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(stringResource(R.string.panel_text_template_title), color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Close, stringResource(R.string.close), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
-            }
-        }
-
-        Spacer(Modifier.height(8.dp))
-
-        // Static / Animated tab selector
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            FilterChip(
-                selected = !showAnimated,
-                onClick = { showAnimated = false },
-                label = { Text(stringResource(R.string.panel_text_template_static), fontSize = 11.sp) }
-            )
-            FilterChip(
-                selected = showAnimated,
-                onClick = { showAnimated = true },
-                label = { Text(stringResource(R.string.panel_text_template_animated), fontSize = 11.sp) }
-            )
-        }
-
-        // Category filter
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            item {
-                FilterChip(
-                    selected = selectedCategory == null,
-                    onClick = { selectedCategory = null },
-                    label = { Text(stringResource(R.string.panel_text_template_all), fontSize = 10.sp) },
-                    modifier = Modifier.height(28.dp),
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = Mocha.Mauve.copy(alpha = 0.2f),
-                        selectedLabelColor = Mocha.Mauve
-                    )
-                )
-            }
-            items(TextTemplateCategory.entries.toList()) { cat ->
-                FilterChip(
-                    selected = selectedCategory == cat,
-                    onClick = { selectedCategory = cat },
-                    label = { Text(cat.displayName, fontSize = 10.sp) },
-                    modifier = Modifier.height(28.dp),
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = Mocha.Mauve.copy(alpha = 0.2f),
-                        selectedLabelColor = Mocha.Mauve
-                    )
-                )
-            }
-        }
-
-        Spacer(Modifier.height(8.dp))
-
-        if (showAnimated) {
-            // Animated Lottie templates
-            val lottieTemplates = listOf(
-                "Slide In Lower Third" to "lower_third",
-                "Modern Lower Third" to "lower_third",
-                "Bounce Title" to "full_screen",
-                "Typewriter" to "full_screen",
-                "Glitch Reveal" to "full_screen",
-                "Neon Glow" to "full_screen",
-                "Fade Subtitle" to "subtitle",
-                "Circle Logo Reveal" to "logo_reveal",
-                "3-2-1 Countdown" to "full_screen",
-                "Subscribe Button" to "lower_third"
-            )
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.heightIn(max = 300.dp)
+        PremiumPanelCard(accent = accent) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(lottieTemplates.size) { idx ->
-                    val (name, category) = lottieTemplates[idx]
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(80.dp)
-                            .clickable {
-                                onTemplateSelected(TextTemplate(
-                                    name = name,
-                                    category = TextTemplateCategory.TITLE_CARD,
-                                    layers = listOf(
-                                        TextOverlay(
-                                            text = "Your Text",
-                                            fontSize = 48f,
-                                            color = 0xFFFFFFFF,
-                                            backgroundColor = 0x00000000,
-                                            animationIn = TextAnimation.FADE,
-                                            animationOut = TextAnimation.FADE
-                                        )
-                                    ),
-                                    durationMs = 3000L
-                                ))
-                            },
-                        colors = CardDefaults.cardColors(containerColor = Mocha.Surface0)
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxSize().padding(8.dp),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(name, color = Mocha.Text, fontSize = 11.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
-                            Text(category, color = Mocha.Subtext0, fontSize = 9.sp)
-                        }
-                    }
+                PremiumPanelPill(
+                    text = "${builtInTextTemplates.size + animatedTemplates.size} looks",
+                    accent = accent
+                )
+                PremiumPanelPill(
+                    text = "Insert at ${formatTemplateTime(playheadMs)}",
+                    accent = Mocha.Sky
+                )
+                PremiumPanelPill(
+                    text = if (showAnimated) stringResource(R.string.panel_text_template_animated) else stringResource(R.string.panel_text_template_static),
+                    accent = Mocha.Pink
+                )
+            }
+
+            Text(
+                text = "Template modes",
+                color = Mocha.Rosewater,
+                style = MaterialTheme.typography.labelLarge
+            )
+            Text(
+                text = "Static presets are great for fast lower thirds and branded text. Animated presets help build more theatrical intros, callouts, and end cards.",
+                color = Mocha.Subtext0,
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                TemplateModeCard(
+                    title = stringResource(R.string.panel_text_template_static),
+                    subtitle = "Fast styled overlays",
+                    selected = !showAnimated,
+                    accent = Mocha.Sapphire,
+                    onClick = { showAnimated = false },
+                    modifier = Modifier.weight(1f)
+                )
+                TemplateModeCard(
+                    title = stringResource(R.string.panel_text_template_animated),
+                    subtitle = "Motion-first heroes",
+                    selected = showAnimated,
+                    accent = Mocha.Yellow,
+                    onClick = { showAnimated = true },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                TemplateCategoryChip(
+                    label = stringResource(R.string.panel_text_template_all),
+                    selected = selectedCategory == null,
+                    accent = accent,
+                    onClick = { selectedCategory = null }
+                )
+                TextTemplateCategory.entries.forEach { category ->
+                    TemplateCategoryChip(
+                        label = category.displayName,
+                        selected = selectedCategory == category,
+                        accent = templateCategoryAccent(category),
+                        onClick = { selectedCategory = category }
+                    )
                 }
             }
-        } else {
-            // Static template grid
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        PremiumPanelCard(accent = if (showAnimated) Mocha.Peach else Mocha.Blue) {
+            Text(
+                text = if (showAnimated) "Animated collection" else "Static collection",
+                color = Mocha.Rosewater,
+                style = MaterialTheme.typography.labelLarge
+            )
+            Text(
+                text = if (showAnimated) {
+                    "These templates lean into reveals, countdowns, and punchy motion. They are ideal when the title card needs to feel like part of the edit."
+                } else {
+                    "These presets apply layered typography instantly, so you can keep moving and only fine-tune the moments that matter."
+                },
+                color = Mocha.Subtext0,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        if (showAnimated) {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 350.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    .heightIn(max = 320.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                items(filteredTemplates, key = { it.id }) { template ->
+                items(visibleAnimatedTemplates, key = { it.id }) { template ->
+                    AnimatedTemplateCard(
+                        template = template,
+                        onClick = { onTemplateSelected(template.toTemplate()) }
+                    )
+                }
+            }
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 360.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                items(visibleStaticTemplates, key = { it.id }) { template ->
                     TemplateCard(
                         template = template,
                         onClick = { onTemplateSelected(template) }
@@ -353,62 +363,397 @@ private fun TemplateCard(
     template: TextTemplate,
     onClick: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(Mocha.Surface0)
-            .clickable(onClick = onClick)
+    val accent = templateCategoryAccent(template.category)
+
+    Surface(
+        onClick = onClick,
+        color = Mocha.PanelHighest,
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, Mocha.CardStrokeStrong.copy(alpha = 0.9f))
     ) {
-        // Preview area
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(80.dp)
-                .background(
-                    Brush.verticalGradient(
-                        listOf(Color(0xFF181825), Mocha.Base)
+        Column {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(118.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(accent.copy(alpha = 0.24f), Color(0xFF181825), Mocha.Panel)
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    template.layers.take(2).forEach { layer ->
+                        val previewFontSize = (layer.fontSize * 0.33f).coerceIn(10f, 20f)
+                        Text(
+                            text = layer.text,
+                            color = Color(layer.color),
+                            fontSize = previewFontSize.sp,
+                            fontWeight = if (layer.bold) FontWeight.Bold else FontWeight.Normal,
+                            textAlign = TextAlign.Center,
+                            style = TextStyle(
+                                shadow = if (layer.shadowBlur > 0) {
+                                    Shadow(
+                                        color = Color(layer.shadowColor),
+                                        offset = Offset(layer.shadowOffsetX, layer.shadowOffsetY),
+                                        blurRadius = layer.shadowBlur
+                                    )
+                                } else {
+                                    null
+                                },
+                                letterSpacing = (layer.letterSpacing * 0.3f).sp,
+                                fontFamily = when (layer.fontFamily) {
+                                    "serif" -> FontFamily.Serif
+                                    "monospace" -> FontFamily.Monospace
+                                    "cursive" -> FontFamily.Cursive
+                                    else -> FontFamily.SansSerif
+                                }
+                            ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+
+            Column(
+                modifier = Modifier.padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = template.name,
+                    color = Mocha.Text,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = templateCategorySummary(template.category),
+                    color = Mocha.Subtext0,
+                    style = MaterialTheme.typography.bodySmall,
+                    minLines = 2
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PremiumPanelPill(
+                        text = template.category.displayName,
+                        accent = accent
                     )
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            // Render template preview
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                template.layers.forEach { layer ->
-                    val previewFontSize = (layer.fontSize * 0.35f).coerceIn(8f, 18f)
-                    Text(
-                        layer.text,
-                        color = Color(layer.color),
-                        fontSize = previewFontSize.sp,
-                        fontWeight = if (layer.bold) FontWeight.Bold else FontWeight.Normal,
-                        textAlign = TextAlign.Center,
-                        style = TextStyle(
-                            shadow = if (layer.shadowBlur > 0) Shadow(
-                                Color(layer.shadowColor),
-                                Offset(layer.shadowOffsetX, layer.shadowOffsetY),
-                                layer.shadowBlur
-                            ) else null,
-                            letterSpacing = (layer.letterSpacing * 0.3f).sp,
-                            fontFamily = when (layer.fontFamily) {
-                                "serif" -> FontFamily.Serif
-                                "monospace" -> FontFamily.Monospace
-                                "cursive" -> FontFamily.Cursive
-                                else -> FontFamily.SansSerif
-                            }
-                        ),
-                        maxLines = 1
+                    PremiumPanelPill(
+                        text = "${template.durationMs / 1000}s",
+                        accent = Mocha.Sky
                     )
                 }
             }
         }
+    }
+}
 
-        // Info
-        Column(modifier = Modifier.padding(6.dp)) {
-            Text(template.name, color = Mocha.Text, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+@Composable
+private fun TemplateModeCard(
+    title: String,
+    subtitle: String,
+    selected: Boolean,
+    accent: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier,
+        color = if (selected) accent.copy(alpha = 0.14f) else Mocha.PanelHighest,
+        shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(
+            1.dp,
+            if (selected) accent.copy(alpha = 0.28f) else Mocha.CardStroke
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
             Text(
-                "${template.category.displayName} | ${template.durationMs / 1000}s",
+                text = title,
+                color = if (selected) accent else Mocha.Text,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = subtitle,
                 color = Mocha.Subtext0,
-                fontSize = 9.sp
+                style = MaterialTheme.typography.bodySmall
             )
         }
     }
+}
+
+@Composable
+private fun TemplateCategoryChip(
+    label: String,
+    selected: Boolean,
+    accent: Color,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        color = if (selected) accent.copy(alpha = 0.14f) else Mocha.PanelHighest,
+        shape = RoundedCornerShape(999.dp),
+        border = BorderStroke(
+            1.dp,
+            if (selected) accent.copy(alpha = 0.28f) else Mocha.CardStroke
+        )
+    ) {
+        Text(
+            text = label,
+            color = if (selected) accent else Mocha.Subtext0,
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+        )
+    }
+}
+
+@Composable
+private fun AnimatedTemplateCard(
+    template: AnimatedTextTemplateDefinition,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        color = Mocha.PanelHighest,
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, template.accent.copy(alpha = 0.24f))
+    ) {
+        Column {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(118.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                template.accent.copy(alpha = 0.26f),
+                                Color(0xFF181825),
+                                Mocha.Panel
+                            )
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = template.previewText,
+                        color = template.accent,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 2.sp
+                    )
+                    Text(
+                        text = template.previewNote,
+                        color = Mocha.Text,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier.padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = template.name,
+                    color = Mocha.Text,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = template.description,
+                    color = Mocha.Subtext0,
+                    style = MaterialTheme.typography.bodySmall,
+                    minLines = 2
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PremiumPanelPill(
+                        text = template.category.displayName,
+                        accent = template.accent
+                    )
+                    PremiumPanelPill(
+                        text = template.animation.displayName,
+                        accent = Mocha.Pink
+                    )
+                }
+            }
+        }
+    }
+}
+
+private data class AnimatedTextTemplateDefinition(
+    val id: String,
+    val name: String,
+    val category: TextTemplateCategory,
+    val previewText: String,
+    val previewNote: String,
+    val description: String,
+    val accent: Color,
+    val animation: TextAnimation,
+    val durationMs: Long
+) {
+    fun toTemplate(): TextTemplate {
+        val accentArgb = accent.toArgb().toLong()
+        return TextTemplate(
+            id = id,
+            name = name,
+            category = category,
+            layers = listOf(
+                TextOverlay(
+                    text = previewText,
+                    fontSize = 52f,
+                    color = accentArgb,
+                    bold = true,
+                    positionX = 0.5f,
+                    positionY = 0.46f,
+                    letterSpacing = 6f,
+                    animationIn = animation,
+                    animationOut = TextAnimation.FADE,
+                    glowColor = accentArgb,
+                    glowRadius = 8f
+                ),
+                TextOverlay(
+                    text = previewNote,
+                    fontSize = 22f,
+                    color = 0xFFCDD6F4,
+                    positionX = 0.5f,
+                    positionY = 0.57f,
+                    animationIn = TextAnimation.FADE,
+                    animationOut = TextAnimation.FADE
+                )
+            ),
+            durationMs = durationMs
+        )
+    }
+}
+
+private fun animatedTextTemplates(): List<AnimatedTextTemplateDefinition> = listOf(
+    AnimatedTextTemplateDefinition(
+        id = "anim_lower_third_slide",
+        name = "Slide In Lower Third",
+        category = TextTemplateCategory.LOWER_THIRD,
+        previewText = "HOST NAME",
+        previewNote = "New episode",
+        description = "A polished host intro with strong lateral movement.",
+        accent = Mocha.Sapphire,
+        animation = TextAnimation.SLIDE_LEFT,
+        durationMs = 3500L
+    ),
+    AnimatedTextTemplateDefinition(
+        id = "anim_promo_countdown",
+        name = "Countdown Burst",
+        category = TextTemplateCategory.TITLE_CARD,
+        previewText = "3 2 1",
+        previewNote = "Launch",
+        description = "Great for cold opens, beats, and punchy scene intros.",
+        accent = Mocha.Yellow,
+        animation = TextAnimation.BOUNCE,
+        durationMs = 3000L
+    ),
+    AnimatedTextTemplateDefinition(
+        id = "anim_neon_title",
+        name = "Neon Glow",
+        category = TextTemplateCategory.TITLE_CARD,
+        previewText = "NEON",
+        previewNote = "Night drive",
+        description = "A vivid hero title with glow-led reveal energy.",
+        accent = Mocha.Pink,
+        animation = TextAnimation.SCALE,
+        durationMs = 3200L
+    ),
+    AnimatedTextTemplateDefinition(
+        id = "anim_subscribe",
+        name = "Subscribe Push",
+        category = TextTemplateCategory.CALL_TO_ACTION,
+        previewText = "SUBSCRIBE",
+        previewNote = "Weekly drops",
+        description = "A clean CTA for end cards and creator reminders.",
+        accent = Mocha.Red,
+        animation = TextAnimation.ELASTIC,
+        durationMs = 3600L
+    ),
+    AnimatedTextTemplateDefinition(
+        id = "anim_social_handle",
+        name = "Handle Reveal",
+        category = TextTemplateCategory.SOCIAL,
+        previewText = "@NOVA",
+        previewNote = "Follow along",
+        description = "Fast social ID tag for reels, shorts, and cutdowns.",
+        accent = Mocha.Mauve,
+        animation = TextAnimation.SLIDE_UP,
+        durationMs = 2800L
+    ),
+    AnimatedTextTemplateDefinition(
+        id = "anim_end_screen",
+        name = "Thanks Outro",
+        category = TextTemplateCategory.END_SCREEN,
+        previewText = "THANK YOU",
+        previewNote = "See you next cut",
+        description = "A softer sign-off treatment for polished endings.",
+        accent = Mocha.Teal,
+        animation = TextAnimation.FADE,
+        durationMs = 4000L
+    ),
+    AnimatedTextTemplateDefinition(
+        id = "anim_quote",
+        name = "Quote Drift",
+        category = TextTemplateCategory.MINIMAL,
+        previewText = "\"BREATHE\"",
+        previewNote = "Scene note",
+        description = "A restrained pull-quote for narrative or documentary edits.",
+        accent = Mocha.Lavender,
+        animation = TextAnimation.SLIDE_RIGHT,
+        durationMs = 3600L
+    ),
+    AnimatedTextTemplateDefinition(
+        id = "anim_cta_link",
+        name = "Link Pulse",
+        category = TextTemplateCategory.CALL_TO_ACTION,
+        previewText = "LINK IN BIO",
+        previewNote = "Open now",
+        description = "A bold conversion card designed for vertical social posts.",
+        accent = Mocha.Peach,
+        animation = TextAnimation.BOUNCE,
+        durationMs = 2800L
+    )
+)
+
+private fun templateCategoryAccent(category: TextTemplateCategory): Color = when (category) {
+    TextTemplateCategory.LOWER_THIRD -> Mocha.Sapphire
+    TextTemplateCategory.TITLE_CARD -> Mocha.Yellow
+    TextTemplateCategory.END_SCREEN -> Mocha.Teal
+    TextTemplateCategory.CALL_TO_ACTION -> Mocha.Red
+    TextTemplateCategory.SOCIAL -> Mocha.Mauve
+    TextTemplateCategory.MINIMAL -> Mocha.Lavender
+}
+
+private fun templateCategorySummary(category: TextTemplateCategory): String = when (category) {
+    TextTemplateCategory.LOWER_THIRD -> "Speaker IDs, headlines, and lower-third overlays."
+    TextTemplateCategory.TITLE_CARD -> "Full-frame openers and cinematic title moments."
+    TextTemplateCategory.END_SCREEN -> "Outro cards, thank-you screens, and sign-offs."
+    TextTemplateCategory.CALL_TO_ACTION -> "Conversion-focused prompts for product and creator edits."
+    TextTemplateCategory.SOCIAL -> "Handles, social tags, and creator identity treatments."
+    TextTemplateCategory.MINIMAL -> "Clean typography for chapter markers and quotes."
+}
+
+private fun formatTemplateTime(playheadMs: Long): String {
+    val totalSeconds = (playheadMs / 1000L).coerceAtLeast(0L)
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return "%02d:%02d".format(minutes, seconds)
 }

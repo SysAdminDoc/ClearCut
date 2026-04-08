@@ -3,29 +3,51 @@ package com.novacut.editor.ui.editor
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.BrokenImage
+import androidx.compose.material.icons.filled.CleaningServices
+import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.PermMedia
+import androidx.compose.material.icons.filled.VideoFile
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import com.novacut.editor.R
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.Track
 import com.novacut.editor.ui.theme.Mocha
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.util.Locale
 
 data class MediaAsset(
     val uri: Uri,
@@ -46,158 +68,400 @@ fun MediaManagerPanel(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val assets by produceState(initialValue = emptyList<MediaAsset>(), key1 = tracks) {
-        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+    var assets by remember(tracks) { mutableStateOf(emptyList<MediaAsset>()) }
+    var isAnalyzing by remember(tracks) { mutableStateOf(true) }
+
+    LaunchedEffect(context, tracks) {
+        isAnalyzing = true
+        assets = withContext(Dispatchers.IO) {
             analyzeMediaAssets(context, tracks)
         }
+        isAnalyzing = false
     }
+
     val totalSize = assets.sumOf { it.fileSize }
     val missingCount = assets.count { !it.isAccessible }
+    val emptyTrackCount = remember(tracks) {
+        tracks.count { it.index >= 2 && it.clips.isEmpty() }
+    }
+    val statusLabel = when {
+        isAnalyzing -> "Scanning"
+        missingCount > 0 -> "$missingCount missing"
+        emptyTrackCount > 0 -> "$emptyTrackCount empty"
+        else -> "Healthy"
+    }
+    val statusAccent = when {
+        isAnalyzing -> Mocha.Blue
+        missingCount > 0 -> Mocha.Red
+        emptyTrackCount > 0 -> Mocha.Yellow
+        else -> Mocha.Green
+    }
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(Mocha.Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .padding(12.dp)
+    PremiumEditorPanel(
+        title = stringResource(R.string.media_manager_title),
+        subtitle = "Review linked source files, spot missing footage, and keep the timeline stack lean before export.",
+        icon = Icons.Default.PermMedia,
+        accent = if (missingCount > 0) Mocha.Red else Mocha.Blue,
+        onClose = onClose,
+        modifier = modifier,
+        scrollable = true
     ) {
-        // Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(stringResource(R.string.media_manager_title), color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Close, stringResource(R.string.media_manager_close_cd), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
-            }
-        }
-
-        Spacer(Modifier.height(4.dp))
-
-        // Summary stats
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Mocha.Surface0, RoundedCornerShape(8.dp))
-                .padding(10.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            StatChip(stringResource(R.string.media_stat_assets), "${assets.size}", Mocha.Mauve)
-            StatChip(stringResource(R.string.media_stat_size), formatFileSize(totalSize), Mocha.Peach)
-            StatChip(stringResource(R.string.media_stat_missing), "$missingCount", if (missingCount > 0) Mocha.Red else Mocha.Green)
-        }
-
-        Spacer(Modifier.height(8.dp))
-
-        // Asset list
-        if (assets.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
-                contentAlignment = Alignment.Center
+        PremiumPanelCard(accent = if (missingCount > 0) Mocha.Red else Mocha.Blue) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
             ) {
-                Text(stringResource(R.string.media_manager_empty), color = Mocha.Subtext0, fontSize = 13.sp)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Project media health",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Mocha.Text
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Check what is linked, what is offline, and whether any empty tracks can be trimmed out of the stack.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Mocha.Subtext0
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    PremiumPanelPill(
+                        text = if (isAnalyzing) "Analyzing..." else formatFileSize(totalSize),
+                        accent = Mocha.Peach
+                    )
+                    PremiumPanelPill(
+                        text = statusLabel,
+                        accent = statusAccent
+                    )
+                }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 300.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(assets, key = { it.uri.toString() }) { asset ->
-                    MediaAssetRow(
-                        asset = asset,
-                        onJumpToClip = { clipId -> onJumpToClip(clipId) }
+                MediaHealthMetric(
+                    title = stringResource(R.string.media_stat_assets),
+                    value = if (isAnalyzing) "..." else assets.size.toString(),
+                    accent = Mocha.Blue,
+                    modifier = Modifier.weight(1f)
+                )
+                MediaHealthMetric(
+                    title = stringResource(R.string.media_stat_size),
+                    value = if (isAnalyzing) "..." else formatFileSize(totalSize),
+                    accent = Mocha.Peach,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                MediaHealthMetric(
+                    title = stringResource(R.string.media_stat_missing),
+                    value = if (isAnalyzing) "..." else missingCount.toString(),
+                    accent = if (missingCount > 0) Mocha.Red else Mocha.Green,
+                    modifier = Modifier.weight(1f)
+                )
+                MediaHealthMetric(
+                    title = stringResource(R.string.media_stat_empty_tracks),
+                    value = emptyTrackCount.toString(),
+                    accent = if (emptyTrackCount > 0) Mocha.Yellow else Mocha.Green,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            if (isAnalyzing) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Mocha.PanelRaised,
+                    shape = RoundedCornerShape(18.dp),
+                    border = BorderStroke(1.dp, Mocha.CardStroke)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .height(18.dp)
+                                .width(18.dp),
+                            color = Mocha.Blue,
+                            strokeWidth = 2.dp
+                        )
+                        Text(
+                            text = "Scanning media references on the timeline...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Mocha.Subtext0
+                        )
+                    }
+                }
+            } else if (assets.isNotEmpty() && missingCount == 0) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Mocha.Green.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(18.dp),
+                    border = BorderStroke(1.dp, Mocha.Green.copy(alpha = 0.18f))
+                ) {
+                    Text(
+                        text = "All linked files are available on this device.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Mocha.Green,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
                     )
                 }
             }
         }
 
-        // Actions
-        if (assets.any { it.usedInClipIds.isEmpty() }) {
-            Spacer(Modifier.height(8.dp))
-            OutlinedButton(
+        Spacer(modifier = Modifier.height(12.dp))
+
+        PremiumPanelCard(accent = Mocha.Blue) {
+            Text(
+                text = "Linked files",
+                style = MaterialTheme.typography.titleMedium,
+                color = Mocha.Text
+            )
+            Text(
+                text = "Jump straight to the first use of a clip or review missing files before they turn into export surprises.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Mocha.Subtext0
+            )
+
+            when {
+                isAnalyzing -> Unit
+                assets.isEmpty() -> {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = Mocha.PanelRaised,
+                        shape = RoundedCornerShape(20.dp),
+                        border = BorderStroke(1.dp, Mocha.CardStroke)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.media_manager_empty),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Mocha.Subtext0,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                }
+
+                else -> {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        assets.forEach { asset ->
+                            MediaAssetCard(
+                                asset = asset,
+                                onJumpToClip = onJumpToClip
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        PremiumPanelCard(accent = if (emptyTrackCount > 0) Mocha.Yellow else Mocha.Green) {
+            Text(
+                text = "Timeline cleanup",
+                style = MaterialTheme.typography.titleMedium,
+                color = Mocha.Text
+            )
+            Text(
+                text = if (emptyTrackCount > 0) {
+                    "NovaCut found empty non-default tracks that can be removed to tighten the edit stack."
+                } else {
+                    "No empty non-default tracks are hanging around right now."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = Mocha.Subtext0
+            )
+
+            PremiumPanelPill(
+                text = "$emptyTrackCount empty track${if (emptyTrackCount == 1) "" else "s"}",
+                accent = if (emptyTrackCount > 0) Mocha.Yellow else Mocha.Green
+            )
+
+            Button(
                 onClick = onRemoveUnused,
+                enabled = emptyTrackCount > 0,
                 modifier = Modifier.fillMaxWidth(),
-                border = BorderStroke(1.dp, Mocha.Yellow.copy(alpha = 0.5f))
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Mocha.Yellow,
+                    contentColor = Mocha.Base,
+                    disabledContainerColor = Mocha.Surface1,
+                    disabledContentColor = Mocha.Subtext0
+                ),
+                shape = RoundedCornerShape(18.dp)
             ) {
-                Icon(Icons.Default.CleaningServices, stringResource(R.string.cd_cleaning_services), tint = Mocha.Yellow, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(stringResource(R.string.panel_media_manager_remove_unused), color = Mocha.Yellow, fontSize = 12.sp)
+                androidx.compose.material3.Icon(
+                    imageVector = Icons.Default.CleaningServices,
+                    contentDescription = stringResource(R.string.cd_cleaning_services)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = stringResource(R.string.panel_media_manager_remove_unused))
             }
         }
     }
 }
 
 @Composable
-private fun StatChip(label: String, value: String, color: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, color = color, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-        Text(label, color = Mocha.Subtext0, fontSize = 10.sp)
+private fun MediaHealthMetric(
+    title: String,
+    value: String,
+    accent: Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        color = accent.copy(alpha = 0.12f),
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                color = Mocha.Subtext0
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleSmall,
+                color = accent,
+                fontWeight = FontWeight.Medium
+            )
+        }
     }
 }
 
 @Composable
-private fun MediaAssetRow(
+private fun MediaAssetCard(
     asset: MediaAsset,
     onJumpToClip: (String) -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(Mocha.Surface0)
-            .padding(8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+    val accent = if (asset.isAccessible) Mocha.Blue else Mocha.Red
+    val statusLabel = if (asset.isAccessible) "Online" else "Missing"
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = if (asset.isAccessible) Mocha.PanelRaised else Mocha.Red.copy(alpha = 0.08f),
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(
+            1.dp,
+            if (asset.isAccessible) Mocha.CardStroke else Mocha.Red.copy(alpha = 0.2f)
+        )
     ) {
-        // Icon + info
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.weight(1f)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Icon(
-                if (asset.isAccessible) Icons.Default.VideoFile else Icons.Default.BrokenImage,
-                null,
-                tint = if (asset.isAccessible) Mocha.Mauve else Mocha.Red,
-                modifier = Modifier.size(24.dp)
-            )
-            Column {
-                Text(
-                    asset.fileName,
-                    color = if (asset.isAccessible) Mocha.Text else Mocha.Red,
-                    fontSize = 12.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        color = accent.copy(alpha = 0.12f),
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
+                    ) {
+                        androidx.compose.material3.Icon(
+                            imageVector = if (asset.isAccessible) Icons.Default.VideoFile else Icons.Default.BrokenImage,
+                            contentDescription = null,
+                            tint = accent,
+                            modifier = Modifier.padding(10.dp)
+                        )
+                    }
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = asset.fileName,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = if (asset.isAccessible) Mocha.Text else Mocha.Red,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "${formatFileSize(asset.fileSize)} • ${formatDuration(asset.durationMs)} • ${
+                                stringResource(
+                                    R.string.media_used_count,
+                                    asset.usedInClipIds.size
+                                )
+                            }",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Mocha.Subtext0
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                PremiumPanelPill(
+                    text = statusLabel,
+                    accent = accent
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(formatFileSize(asset.fileSize), color = Mocha.Subtext0, fontSize = 10.sp)
-                    Text(formatDuration(asset.durationMs), color = Mocha.Subtext0, fontSize = 10.sp)
-                    Text(
-                        stringResource(R.string.media_used_count, asset.usedInClipIds.size),
-                        color = if (asset.usedInClipIds.isEmpty()) Mocha.Yellow else Mocha.Green,
-                        fontSize = 10.sp
-                    )
+            }
+
+            if (!asset.isAccessible) {
+                Text(
+                    text = "This source file is unavailable on this device. Relink support is not available yet, so NovaCut will need the original file path restored.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Mocha.Subtext0
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (asset.usedInClipIds.size == 1) "Used in 1 clip" else "Used in ${asset.usedInClipIds.size} clips",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (asset.usedInClipIds.isEmpty()) Mocha.Yellow else Mocha.Green
+                )
+
+                if (asset.usedInClipIds.isNotEmpty()) {
+                    OutlinedButton(
+                        onClick = { onJumpToClip(asset.usedInClipIds.first()) },
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, accent.copy(alpha = 0.25f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = accent)
+                    ) {
+                        androidx.compose.material3.Icon(
+                            imageVector = Icons.Default.MyLocation,
+                            contentDescription = stringResource(R.string.cd_media_goto)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = "Go to first use")
+                    }
                 }
             }
-        }
-
-        // Jump to first usage
-        if (asset.usedInClipIds.isNotEmpty()) {
-            IconButton(
-                onClick = { onJumpToClip(asset.usedInClipIds.first()) },
-                modifier = Modifier.size(24.dp)
-            ) {
-                Icon(Icons.Default.MyLocation, stringResource(R.string.cd_media_goto), tint = Mocha.Subtext0, modifier = Modifier.size(14.dp))
-            }
-        }
-
-        // Missing indicator
-        if (!asset.isAccessible) {
-            Icon(Icons.Default.Warning, stringResource(R.string.cd_media_missing), tint = Mocha.Red, modifier = Modifier.size(16.dp))
         }
     }
 }
@@ -212,24 +476,50 @@ private fun analyzeMediaAssets(context: Context, tracks: List<Track>): List<Medi
         }
     }
 
-    return clipsByUri.map { (uriStr, clips) ->
+    return clipsByUri.map { (_, clips) ->
         val uri = clips.first().sourceUri
         var fileName = "Unknown"
         var fileSize = 0L
         var accessible = false
 
         try {
-            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val nameIdx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                    val sizeIdx = cursor.getColumnIndex(OpenableColumns.SIZE)
-                    if (nameIdx >= 0) fileName = cursor.getString(nameIdx) ?: fileName
-                    if (sizeIdx >= 0) fileSize = cursor.getLong(sizeIdx)
-                    accessible = true
+            if (uri.scheme == "file") {
+                val localFile = uri.path?.let(::File)
+                if (localFile != null) {
+                    if (localFile.name.isNotBlank()) {
+                        fileName = localFile.name
+                    }
+                    accessible = localFile.exists()
+                    if (accessible) {
+                        fileSize = localFile.length()
+                    }
+                }
+            } else {
+                context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val nameIdx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                        val sizeIdx = cursor.getColumnIndex(OpenableColumns.SIZE)
+                        if (nameIdx >= 0) fileName = cursor.getString(nameIdx) ?: fileName
+                        if (sizeIdx >= 0) fileSize = cursor.getLong(sizeIdx)
+                        accessible = true
+                    }
+                }
+
+                if (!accessible) {
+                    context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { descriptor ->
+                        accessible = true
+                        if (fileSize <= 0L && descriptor.length > 0L) {
+                            fileSize = descriptor.length
+                        }
+                    }
                 }
             }
         } catch (e: Exception) {
             fileName = uri.lastPathSegment ?: "Unknown"
+        }
+
+        if (fileName == "Unknown") {
+            fileName = uri.lastPathSegment ?: fileName
         }
 
         MediaAsset(
@@ -245,13 +535,17 @@ private fun analyzeMediaAssets(context: Context, tracks: List<Track>): List<Medi
 
 private fun formatFileSize(bytes: Long): String = when {
     bytes < 1024 -> "${bytes}B"
-    bytes < 1024 * 1024 -> "%.1fKB".format(bytes / 1024f)
-    bytes < 1024 * 1024 * 1024 -> "%.1fMB".format(bytes / (1024f * 1024f))
-    else -> "%.2fGB".format(bytes / (1024f * 1024f * 1024f))
+    bytes < 1024 * 1024 -> String.format(Locale.getDefault(), "%.1fKB", bytes / 1024f)
+    bytes < 1024 * 1024 * 1024 -> String.format(Locale.getDefault(), "%.1fMB", bytes / (1024f * 1024f))
+    else -> String.format(Locale.getDefault(), "%.2fGB", bytes / (1024f * 1024f * 1024f))
 }
 
 private fun formatDuration(ms: Long): String {
     val s = ms / 1000
     val m = s / 60
-    return if (m > 0) "%d:%02d".format(m, s % 60) else "${s}s"
+    return if (m > 0) {
+        String.format(Locale.getDefault(), "%d:%02d", m, s % 60)
+    } else {
+        String.format(Locale.getDefault(), "%ds", s)
+    }
 }

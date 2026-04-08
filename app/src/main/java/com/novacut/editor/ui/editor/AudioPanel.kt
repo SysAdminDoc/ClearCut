@@ -36,113 +36,134 @@ fun AudioPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    PremiumEditorPanel(
+        title = stringResource(R.string.audio_title),
+        subtitle = stringResource(R.string.panel_audio_subtitle),
+        icon = Icons.Default.GraphicEq,
+        accent = Mocha.Green,
+        onClose = onClose,
         modifier = modifier
-            .fillMaxWidth()
-            .background(Mocha.Mantle, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .padding(16.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(stringResource(R.string.audio_title), color = Mocha.Text, fontSize = 16.sp)
-            IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
-                Icon(Icons.Default.Close, stringResource(R.string.cd_close_audio_panel), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
         if (clip == null) {
-            Text(
-                stringResource(R.string.audio_select_clip),
-                color = Mocha.Subtext0,
-                fontSize = 13.sp,
-                modifier = Modifier.padding(vertical = 24.dp).fillMaxWidth(),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-            )
-            return@Column
-        }
-
-        // Waveform visualization with fade envelope
-        if (waveform != null && waveform.isNotEmpty()) {
-            Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(60.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Mocha.Surface0)
-            ) {
-                drawWaveform(waveform, Mocha.Green)
-                // Draw fade envelope overlay
-                val fadeInMs = clip?.fadeInMs ?: 0L
-                val fadeOutMs = clip?.fadeOutMs ?: 0L
-                val durationMs = clip?.durationMs ?: 1L
-                if (fadeInMs > 0 || fadeOutMs > 0) {
-                    drawFadeEnvelope(fadeInMs, fadeOutMs, durationMs, Mocha.Mauve)
+            PremiumPanelCard(accent = Mocha.Sapphire) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Mocha.Panel),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.LibraryMusic,
+                            contentDescription = stringResource(R.string.audio_select_clip),
+                            tint = Mocha.Sapphire,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    Text(
+                        text = stringResource(R.string.audio_select_clip),
+                        color = Mocha.Text,
+                        style = MaterialTheme.typography.titleMedium
+                    )
                 }
             }
-            Spacer(modifier = Modifier.height(12.dp))
+            return@PremiumEditorPanel
         }
 
-        // Volume
-        var volumeDragStarted by remember { mutableStateOf(false) }
-        Column(modifier = Modifier.padding(vertical = 4.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(stringResource(R.string.audio_volume), color = Mocha.Subtext1, fontSize = 12.sp)
-                Text("%.2f".format(clip?.volume ?: 1f), color = Mocha.Subtext0, fontSize = 12.sp)
-            }
-            Slider(
-                value = clip?.volume ?: 1f,
-                onValueChange = {
-                    if (!volumeDragStarted) {
-                        volumeDragStarted = true
-                        onVolumeDragStarted()
-                    }
-                    onVolumeChanged(it)
-                },
-                onValueChangeFinished = { volumeDragStarted = false },
-                valueRange = 0f..2f,
-                colors = SliderDefaults.colors(
-                    thumbColor = Mocha.Mauve,
-                    activeTrackColor = Mocha.Mauve,
-                    inactiveTrackColor = Mocha.Surface1
+        val clipDuration = clip.durationMs.toFloat().coerceAtLeast(100f)
+        val fadeOutMs = clip.fadeOutMs.toFloat()
+        val fadeInMs = clip.fadeInMs.toFloat()
+        val fadeInMax = (clipDuration - fadeOutMs).coerceAtLeast(0f)
+        val fadeOutMax = (clipDuration - fadeInMs).coerceAtLeast(0f)
+
+        PremiumPanelCard(accent = Mocha.Green) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PremiumPanelPill(
+                    text = stringResource(R.string.audio_clip_duration, formatTimestamp(clip.durationMs)),
+                    accent = Mocha.Sapphire
                 )
+                PremiumPanelPill(
+                    text = "${(clip.volume * 100).toInt()}%",
+                    accent = Mocha.Rosewater
+                )
+            }
+
+            if (waveform != null && waveform.isNotEmpty()) {
+                Text(
+                    text = stringResource(R.string.audio_waveform_label),
+                    color = Mocha.Rosewater,
+                    style = MaterialTheme.typography.labelLarge
+                )
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(88.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Mocha.Panel)
+                        .padding(horizontal = 8.dp, vertical = 10.dp)
+                ) {
+                    drawWaveform(waveform, Mocha.Green)
+                    if (clip.fadeInMs > 0 || clip.fadeOutMs > 0) {
+                        drawFadeEnvelope(clip.fadeInMs, clip.fadeOutMs, clip.durationMs.coerceAtLeast(1L), Mocha.Mauve)
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        PremiumPanelCard(accent = Mocha.Mauve) {
+            EffectSlider(
+                label = stringResource(R.string.audio_volume),
+                value = clip.volume,
+                min = 0f,
+                max = 2f,
+                onDragStarted = onVolumeDragStarted,
+                onValueChange = onVolumeChanged
+            )
+            EffectSlider(
+                label = stringResource(R.string.audio_fade_in),
+                value = fadeInMs,
+                min = 0f,
+                max = fadeInMax,
+                onDragStarted = onFadeDragStarted,
+                onValueChange = { onFadeInChanged(it.toLong()) }
+            )
+            EffectSlider(
+                label = stringResource(R.string.audio_fade_out),
+                value = fadeOutMs,
+                min = 0f,
+                max = fadeOutMax,
+                onDragStarted = onFadeDragStarted,
+                onValueChange = { onFadeOutChanged(it.toLong()) }
             )
         }
 
-        // Fade In (constrained so fade in + fade out <= clip duration)
-        val clipDuration = (clip?.durationMs ?: 5000L).toFloat().coerceAtLeast(100f)
-        val fadeOutMs = (clip?.fadeOutMs ?: 0L).toFloat()
-        val fadeInMs = (clip?.fadeInMs ?: 0L).toFloat()
-        val fadeInMax = (clipDuration - fadeOutMs).coerceAtLeast(0f)
-        val fadeOutMax = (clipDuration - fadeInMs).coerceAtLeast(0f)
-        EffectSlider("Fade In (ms)", fadeInMs, 0f, fadeInMax, onFadeDragStarted) {
-            onFadeInChanged(it.toLong())
-        }
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // Fade Out
-        EffectSlider("Fade Out (ms)", fadeOutMs, 0f, fadeOutMax, onFadeDragStarted) {
-            onFadeOutChanged(it.toLong())
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Voiceover button
-        OutlinedButton(
+        Button(
             onClick = onStartVoiceover,
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Red),
-            border = BorderStroke(1.dp, Mocha.Red.copy(alpha = 0.5f))
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Mocha.Rosewater,
+                contentColor = Mocha.Midnight
+            ),
+            shape = RoundedCornerShape(18.dp)
         ) {
-            Icon(Icons.Default.Mic, contentDescription = stringResource(R.string.audio_record_voiceover), modifier = Modifier.size(18.dp))
+            Icon(
+                Icons.Default.Mic,
+                contentDescription = stringResource(R.string.audio_record_voiceover),
+                modifier = Modifier.size(18.dp)
+            )
             Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.audio_record_voiceover))
+            Text(
+                text = stringResource(R.string.audio_record_voiceover),
+                style = MaterialTheme.typography.titleSmall
+            )
         }
     }
 }
@@ -230,69 +251,88 @@ fun VoiceoverRecorder(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    PremiumEditorPanel(
+        title = stringResource(R.string.audio_voiceover),
+        subtitle = stringResource(R.string.panel_voiceover_subtitle),
+        icon = Icons.Default.Mic,
+        accent = if (isRecording) Mocha.Red else Mocha.Sapphire,
+        onClose = onClose,
         modifier = modifier
-            .fillMaxWidth()
-            .background(Mocha.Mantle, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(stringResource(R.string.audio_voiceover), color = Mocha.Text, fontSize = 18.sp)
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Recording time
-        Text(
-            formatTimestamp(recordingDurationMs),
-            color = if (isRecording) Mocha.Red else Mocha.Subtext0,
-            fontSize = 32.sp
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Record button
-        Box(
-            modifier = Modifier
-                .size(72.dp)
-                .clip(CircleShape)
-                .background(
-                    if (isRecording) Mocha.Red.copy(alpha = 0.2f)
-                    else Mocha.Surface0
+        PremiumPanelCard(accent = if (isRecording) Mocha.Red else Mocha.Sapphire) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                PremiumPanelPill(
+                    text = if (isRecording) {
+                        stringResource(R.string.audio_status_recording)
+                    } else {
+                        stringResource(R.string.audio_status_ready)
+                    },
+                    accent = if (isRecording) Mocha.Red else Mocha.Sapphire
                 )
-                .border(3.dp, if (isRecording) Mocha.Red else Mocha.Subtext0, CircleShape)
-                .clickable {
-                    if (isRecording) onStopRecording() else onStartRecording()
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            if (isRecording) {
-                // Stop icon (square)
+
+                Text(
+                    text = formatTimestamp(recordingDurationMs),
+                    color = if (isRecording) Mocha.Rosewater else Mocha.Text,
+                    style = MaterialTheme.typography.displayMedium
+                )
+
                 Box(
                     modifier = Modifier
-                        .size(24.dp)
-                        .background(Mocha.Red, RoundedCornerShape(4.dp))
-                )
-            } else {
-                // Record icon (circle)
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .background(Mocha.Red, CircleShape)
+                        .size(112.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (isRecording) Mocha.Red.copy(alpha = 0.14f)
+                            else Mocha.Panel
+                        )
+                        .border(
+                            width = 2.dp,
+                            color = if (isRecording) Mocha.Red.copy(alpha = 0.7f) else Mocha.CardStrokeStrong,
+                            shape = CircleShape
+                        )
+                        .clickable {
+                            if (isRecording) onStopRecording() else onStartRecording()
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isRecording) {
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Mocha.Red)
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(CircleShape)
+                                .background(Mocha.Red)
+                        )
+                    }
+                }
+
+                Text(
+                    text = if (isRecording) stringResource(R.string.audio_tap_to_stop) else stringResource(R.string.audio_tap_to_record),
+                    color = Mocha.Subtext0,
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        Text(
-            if (isRecording) stringResource(R.string.audio_tap_to_stop) else stringResource(R.string.audio_tap_to_record),
-            color = Mocha.Subtext0,
-            fontSize = 13.sp
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        TextButton(onClick = onClose) {
-            Text(stringResource(R.string.audio_cancel), color = Mocha.Subtext0)
+        TextButton(
+            onClick = onClose,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        ) {
+            Text(
+                text = stringResource(R.string.audio_cancel),
+                color = Mocha.Subtext0,
+                style = MaterialTheme.typography.labelLarge
+            )
         }
     }
 }

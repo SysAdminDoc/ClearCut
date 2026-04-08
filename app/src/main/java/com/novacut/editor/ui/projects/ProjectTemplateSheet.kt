@@ -118,45 +118,144 @@ fun ProjectTemplateSheet(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(Mocha.Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .padding(16.dp)
+            .background(Mocha.Panel, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+            .padding(horizontal = 16.dp, vertical = 14.dp)
     ) {
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .width(44.dp)
+                .height(4.dp)
+                .clip(RoundedCornerShape(999.dp))
+                .background(Mocha.Surface2.copy(alpha = 0.8f))
+        )
+
+        Spacer(Modifier.height(14.dp))
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(stringResource(R.string.template_new_project), color = Mocha.Text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.template_new_project),
+                    color = Mocha.Text,
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    stringResource(R.string.template_headline),
+                    color = Mocha.Rosewater,
+                    style = MaterialTheme.typography.headlineMedium
+                )
+            }
             IconButton(onClick = onDismiss) {
                 Icon(Icons.Default.Close, stringResource(R.string.close), tint = Mocha.Subtext0)
             }
         }
 
-        Spacer(Modifier.height(4.dp))
-        Text(stringResource(R.string.template_choose), color = Mocha.Subtext0, fontSize = 13.sp)
+        Spacer(Modifier.height(6.dp))
+        Text(
+            stringResource(R.string.template_subtitle),
+            color = Mocha.Subtext0,
+            style = MaterialTheme.typography.bodyMedium
+        )
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(12.dp))
 
-        OutlinedButton(
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Surface(
+                color = Mocha.Mauve.copy(alpha = 0.12f),
+                shape = RoundedCornerShape(999.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Mauve.copy(alpha = 0.2f))
+            ) {
+                Text(
+                    text = stringResource(R.string.projects_templates_count, projectTemplates.size),
+                    color = Mocha.Mauve,
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                )
+            }
+            if (userTemplates.isNotEmpty()) {
+                Surface(
+                    color = Mocha.Sapphire.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(999.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Sapphire.copy(alpha = 0.2f))
+                ) {
+                    Text(
+                        text = stringResource(R.string.template_saved_count, userTemplates.size),
+                        color = Mocha.Sapphire,
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(14.dp))
+
+        Surface(
             onClick = onImportTemplate,
             modifier = Modifier.fillMaxWidth(),
-            border = BorderStroke(1.dp, Mocha.Blue.copy(alpha = 0.5f)),
-            shape = RoundedCornerShape(8.dp)
+            color = Mocha.PanelHighest,
+            shape = RoundedCornerShape(22.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStrokeStrong)
         ) {
-            Icon(Icons.Default.FileOpen, contentDescription = stringResource(R.string.cd_file_open), tint = Mocha.Blue, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(stringResource(R.string.template_import), color = Mocha.Blue, fontSize = 13.sp)
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Mocha.Sapphire.copy(alpha = 0.14f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.FileOpen,
+                        contentDescription = stringResource(R.string.cd_file_open),
+                        tint = Mocha.Sapphire,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Spacer(Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.template_import),
+                        color = Mocha.Text,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        stringResource(R.string.template_import_description),
+                        color = Mocha.Subtext0,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
         }
 
         Spacer(Modifier.height(12.dp))
+
+        Text(
+            stringResource(R.string.template_built_in_section),
+            color = Mocha.Text,
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Spacer(Modifier.height(8.dp))
 
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = if (userTemplates.isEmpty()) 400.dp else 300.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                .heightIn(max = if (userTemplates.isEmpty()) 460.dp else 320.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             items(projectTemplates, key = { it.id }) { template ->
                 ProjectTemplateCard(
@@ -168,16 +267,20 @@ fun ProjectTemplateSheet(
 
         // User templates section
         if (userTemplates.isNotEmpty()) {
-            Spacer(Modifier.height(12.dp))
-            Text(stringResource(R.string.template_my_templates), color = Mocha.Text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.height(14.dp))
+            Text(
+                stringResource(R.string.template_my_templates),
+                color = Mocha.Text,
+                style = MaterialTheme.typography.titleMedium
+            )
             Spacer(Modifier.height(8.dp))
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = 200.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(userTemplates, key = { it.id }) { ut ->
                     UserTemplateCard(
@@ -201,17 +304,18 @@ private fun UserTemplateCard(
 ) {
     Column(
         modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(Mocha.Surface0)
+            .height(164.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .background(Mocha.PanelHighest)
             .clickable(onClick = onClick)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp)
+                .height(74.dp)
                 .background(
                     Brush.verticalGradient(
-                        listOf(Mocha.Mauve.copy(alpha = 0.15f), Color.Transparent)
+                        listOf(Mocha.Mauve.copy(alpha = 0.24f), Color.Transparent)
                     )
                 ),
             contentAlignment = Alignment.Center
@@ -223,7 +327,10 @@ private fun UserTemplateCard(
                 modifier = Modifier.size(24.dp)
             )
         }
-        Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
+        Column(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -232,8 +339,7 @@ private fun UserTemplateCard(
                 Text(
                     template.name,
                     color = Mocha.Text,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
+                    style = MaterialTheme.typography.titleSmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
@@ -243,7 +349,7 @@ private fun UserTemplateCard(
                     "Share",
                     tint = Mocha.Blue.copy(alpha = 0.7f),
                     modifier = Modifier
-                        .size(14.dp)
+                        .size(16.dp)
                         .clickable(onClick = onShare)
                 )
                 Spacer(Modifier.width(4.dp))
@@ -252,7 +358,7 @@ private fun UserTemplateCard(
                     stringResource(R.string.template_delete),
                     tint = Mocha.Subtext0.copy(alpha = 0.5f),
                     modifier = Modifier
-                        .size(14.dp)
+                        .size(16.dp)
                         .clickable(onClick = onDelete)
                 )
             }
@@ -260,20 +366,19 @@ private fun UserTemplateCard(
                 if (template.textOverlayCount > 0) stringResource(R.string.template_tracks_texts_format, template.trackTypes.size, template.textOverlayCount)
                 else stringResource(R.string.template_tracks_format, template.trackTypes.size),
                 color = Mocha.Subtext0,
-                fontSize = 9.sp,
+                style = MaterialTheme.typography.bodySmall,
                 maxLines = 1
             )
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     template.aspectRatio.label,
                     color = Mocha.Mauve,
-                    fontSize = 9.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier
-                        .background(Mocha.Mauve.copy(alpha = 0.1f), RoundedCornerShape(3.dp))
-                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                        .background(Mocha.Mauve.copy(alpha = 0.12f), RoundedCornerShape(999.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
                 )
             }
-            Spacer(Modifier.height(2.dp))
         }
     }
 }
@@ -285,59 +390,100 @@ private fun ProjectTemplateCard(
 ) {
     Column(
         modifier = Modifier
-            .height(150.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(Mocha.Surface0)
+            .height(184.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .background(Mocha.PanelHighest)
             .clickable(onClick = onClick)
     ) {
-        // Header with gradient
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(60.dp)
+                .height(86.dp)
                 .background(
                     Brush.verticalGradient(
-                        listOf(template.accentColor.copy(alpha = 0.2f), Color.Transparent)
+                        listOf(template.accentColor.copy(alpha = 0.3f), Color.Transparent)
                     )
                 ),
-            contentAlignment = Alignment.Center
+            contentAlignment = Alignment.TopStart
         ) {
-            Icon(
-                template.icon,
-                stringResource(template.nameResId),
-                tint = template.accentColor,
-                modifier = Modifier.size(28.dp)
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Color.Black.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        template.icon,
+                        stringResource(template.nameResId),
+                        tint = template.accentColor,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+                Text(
+                    template.aspectRatio.label,
+                    color = template.accentColor,
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier
+                        .background(Color.Black.copy(alpha = 0.16f), RoundedCornerShape(999.dp))
+                        .padding(horizontal = 8.dp, vertical = 5.dp)
+                )
+            }
         }
 
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(horizontal = 10.dp, vertical = 6.dp),
+                .padding(horizontal = 12.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Column {
-                Text(stringResource(template.nameResId), color = Mocha.Text, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                Text(stringResource(template.descriptionResId), color = Mocha.Subtext0, fontSize = 10.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(
+                    stringResource(template.nameResId),
+                    color = Mocha.Text,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    stringResource(template.descriptionResId),
+                    color = Mocha.Subtext0,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    template.aspectRatio.label,
+                    formatCategory(template.category),
                     color = template.accentColor,
-                    fontSize = 9.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier
-                        .background(template.accentColor.copy(alpha = 0.1f), RoundedCornerShape(3.dp))
-                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                        .background(template.accentColor.copy(alpha = 0.1f), RoundedCornerShape(999.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
                 )
                 Text(
                     stringResource(template.suggestedDurationResId),
                     color = Mocha.Subtext0,
-                    fontSize = 9.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier
-                        .background(Mocha.Surface0, RoundedCornerShape(3.dp))
-                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                        .background(Mocha.Panel.copy(alpha = 0.7f), RoundedCornerShape(999.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
                 )
             }
         }
     }
+}
+
+private fun formatCategory(category: TemplateCategory): String {
+    return category.name
+        .replace('_', ' ')
+        .lowercase()
+        .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
 }

@@ -52,6 +52,7 @@ val clipTabs = listOf(
     TabItem("back", Icons.AutoMirrored.Filled.ArrowBack, 0),
     TabItem("edit", Icons.Default.Edit, R.string.tool_tab_edit),
     TabItem("audio", Icons.Default.MusicNote, R.string.tool_tab_audio),
+    TabItem("text", Icons.Default.Title, R.string.tool_tab_text),
     TabItem("speed", Icons.Default.Speed, R.string.tool_tab_speed),
     TabItem("transform", Icons.Default.Transform, R.string.tool_tab_motion),
     TabItem("effects", Icons.Default.AutoFixHigh, R.string.tool_tab_fx),
@@ -79,6 +80,7 @@ private val clipEditSubMenu = listOf(
     SubMenuItem("freeze", Icons.Default.AcUnit, R.string.tool_freeze_frame),
     SubMenuItem("copy_fx", Icons.Default.FileCopy, R.string.tool_copy_effects),
     SubMenuItem("paste_fx", Icons.Default.ContentPaste, R.string.tool_paste_effects),
+    SubMenuItem("effect_library", Icons.Default.CollectionsBookmark, R.string.effect_library_title),
     SubMenuItem("unlink_av", Icons.Default.LinkOff, R.string.tool_unlink_av),
     SubMenuItem("compound", Icons.Default.ViewModule, R.string.tool_compound_clip),
     SubMenuItem("speed_presets", Icons.Default.Speed, R.string.tool_speed_presets),
@@ -108,6 +110,7 @@ private val clipColorSubMenu = listOf(
 
 // Clip mode — AI Magic tab sub-menu (expanded)
 private val clipAiSubMenu = listOf(
+    SubMenuItem("ai_hub", Icons.Default.AutoAwesome, R.string.tool_ai_hub),
     SubMenuItem("scene_detect", Icons.Default.ContentCut, R.string.tool_scene_detect),
     SubMenuItem("remove_bg", Icons.Default.Wallpaper, R.string.tool_remove_bg),
     SubMenuItem("bg_replace", Icons.Default.PhotoFilter, R.string.tool_replace_bg),
@@ -190,6 +193,7 @@ fun BottomToolArea(
         !isClipMode && activeTabId == "text" -> textSubMenu
         !isClipMode && activeTabId == "project_tools" -> projectToolsSubMenu
         isClipMode && activeTabId == "edit" -> clipEditSubMenu
+        isClipMode && activeTabId == "text" -> textSubMenu
         isClipMode && activeTabId == "transform" -> clipMotionSubMenu
         isClipMode && activeTabId == "color" -> clipColorSubMenu
         isClipMode && activeTabId == "ai" -> clipAiSubMenu
@@ -253,9 +257,7 @@ fun BottomToolArea(
                         onAction(if (isClipMode) "audio_tool" else "audio_add")
                     }
                     "text" -> {
-                        if (!isClipMode) {
-                            activeTabId = if (activeTabId == "text") null else "text"
-                        }
+                        activeTabId = if (activeTabId == "text") null else "text"
                     }
                     "speed" -> {
                         activeTabId = null
@@ -307,15 +309,16 @@ private fun BottomTabBar(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        color = Mocha.Crust,
+        color = Mocha.Panel,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         modifier = modifier.fillMaxWidth()
     ) {
         LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 6.dp),
+                .padding(horizontal = 8.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(0.dp),
-            contentPadding = PaddingValues(horizontal = 4.dp)
+            contentPadding = PaddingValues(horizontal = 0.dp)
         ) {
             items(tabs, key = { it.id }) { tab ->
                 val isActive = activeTabId == tab.id
@@ -323,29 +326,40 @@ private fun BottomTabBar(
 
                 Column(
                     modifier = Modifier
-                        .width(64.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .width(72.dp)
+                        .clip(RoundedCornerShape(16.dp))
                         .clickable { onTabTapped(tab.id) }
                         .background(
-                            if (isActive && !isBack) Mocha.Mauve.copy(alpha = 0.2f)
+                            if (isActive && !isBack) Mocha.Mauve.copy(alpha = 0.18f)
                             else Color.Transparent
                         )
-                        .padding(vertical = 6.dp),
+                        .padding(vertical = 8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     val tabLabel = if (tab.labelRes != 0) stringResource(tab.labelRes) else ""
-                    Icon(
-                        tab.icon,
-                        contentDescription = tabLabel.ifEmpty { tab.id },
-                        tint = if (isActive && !isBack) Mocha.Mauve else Mocha.Subtext0,
-                        modifier = Modifier.size(24.dp)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isActive && !isBack) Mocha.Mauve.copy(alpha = 0.14f)
+                                else Mocha.PanelHighest
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            tab.icon,
+                            contentDescription = tabLabel.ifEmpty { tab.id },
+                            tint = if (isActive && !isBack) Mocha.Rosewater else Mocha.Subtext0,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                     if (tabLabel.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(2.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = tabLabel,
                             fontSize = 10.sp,
-                            color = if (isActive) Mocha.Mauve else Mocha.Subtext0,
+                            color = if (isActive) Mocha.Rosewater else Mocha.Subtext0,
                             textAlign = TextAlign.Center,
                             maxLines = 2,
                             lineHeight = 12.sp,
@@ -369,8 +383,8 @@ private fun SubMenuGrid(
     val rows = items.chunked(itemsPerRow)
 
     Surface(
-        color = Mocha.Mantle,
-        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+        color = Mocha.Panel,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         modifier = modifier.fillMaxWidth()
     ) {
         Column(
@@ -379,6 +393,15 @@ private fun SubMenuGrid(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 12.dp, vertical = 16.dp)
         ) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .width(40.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(Mocha.Surface2.copy(alpha = 0.8f))
+            )
+            Spacer(modifier = Modifier.height(14.dp))
             rows.forEach { rowItems ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -388,20 +411,29 @@ private fun SubMenuGrid(
                         val isDisabled = item.id in disabledIds
                         Column(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(RoundedCornerShape(14.dp))
                                 .then(if (!isDisabled) Modifier.clickable { onItemSelected(item.id) } else Modifier)
-                                .padding(8.dp)
-                                .width(56.dp)
+                                .background(Mocha.PanelHighest.copy(alpha = 0.86f))
+                                .padding(horizontal = 6.dp, vertical = 10.dp)
+                                .width(60.dp)
                                 .then(if (isDisabled) Modifier.alpha(0.35f) else Modifier),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             val itemLabel = stringResource(item.labelRes)
-                            Icon(
-                                item.icon,
-                                contentDescription = itemLabel,
-                                tint = Mocha.Text,
-                                modifier = Modifier.size(28.dp)
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .clip(CircleShape)
+                                    .background(Mocha.Mauve.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    item.icon,
+                                    contentDescription = itemLabel,
+                                    tint = Mocha.Text,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = itemLabel,
@@ -431,102 +463,132 @@ fun EffectsPanel(
     modifier: Modifier = Modifier
 ) {
     var selectedCategory by remember { mutableStateOf(EffectCategory.COLOR) }
+    val accent = effectAccent(selectedCategory)
+    val effects = remember(selectedCategory) { EffectType.entries.filter { it.category == selectedCategory } }
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .heightIn(max = 300.dp)
-            .background(Mocha.Mantle, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .padding(16.dp)
+    PremiumEditorPanel(
+        title = stringResource(R.string.tool_effects),
+        subtitle = stringResource(R.string.panel_effects_subtitle),
+        icon = Icons.Default.AutoFixHigh,
+        accent = accent,
+        onClose = onClose,
+        modifier = modifier.heightIn(max = 360.dp)
     ) {
-        // Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(stringResource(R.string.tool_effects), color = Mocha.Text, fontSize = 16.sp)
-            IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
-                Icon(Icons.Default.Close, stringResource(R.string.tool_close), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Category tabs
-        ScrollableTabRow(
-            selectedTabIndex = EffectCategory.entries.indexOf(selectedCategory),
-            containerColor = Color.Transparent,
-            contentColor = Mocha.Mauve,
-            edgePadding = 0.dp,
-            divider = {}
-        ) {
-            EffectCategory.entries.forEach { category ->
-                Tab(
-                    selected = selectedCategory == category,
-                    onClick = { selectedCategory = category },
-                    text = {
-                        Text(
-                            category.displayName,
-                            fontSize = 12.sp,
-                            color = if (selectedCategory == category) Mocha.Mauve else Mocha.Subtext0
-                        )
-                    }
+        PremiumPanelCard(accent = accent) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                PremiumPanelPill(
+                    text = stringResource(R.string.panel_effects_available_count, effects.size),
+                    accent = Mocha.Sapphire
                 )
+                if (selectedClip != null) {
+                    PremiumPanelPill(
+                        text = stringResource(R.string.panel_effects_applied_count, selectedClip.effects.size),
+                        accent = accent
+                    )
+                }
+            }
+
+            Text(
+                text = stringResource(R.string.panel_effects_categories),
+                color = Mocha.Rosewater,
+                style = MaterialTheme.typography.labelLarge
+            )
+
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                EffectCategory.entries.forEach { category ->
+                    val isSelected = selectedCategory == category
+                    val categoryAccent = effectAccent(category)
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = { selectedCategory = category },
+                        label = {
+                            Text(
+                                text = category.displayName,
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            containerColor = Mocha.Panel,
+                            labelColor = Mocha.Subtext0,
+                            selectedContainerColor = categoryAccent.copy(alpha = 0.18f),
+                            selectedLabelColor = categoryAccent
+                        )
+                    )
+                }
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // Effects grid
-        val effects = EffectType.entries.filter { it.category == selectedCategory }
         LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(end = 4.dp)
         ) {
             items(effects) { effectType ->
                 val isApplied = selectedClip?.effects?.any { it.type == effectType } == true
-
-                Column(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { onAddEffect(effectType) }
-                        .background(
-                            if (isApplied) Mocha.Mauve.copy(alpha = 0.2f)
-                            else Mocha.Surface0
-                        )
-                        .padding(12.dp)
-                        .width(70.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                Surface(
+                    modifier = Modifier.width(112.dp),
+                    onClick = { onAddEffect(effectType) },
+                    color = Mocha.PanelHighest,
+                    shape = RoundedCornerShape(22.dp),
+                    border = BorderStroke(
+                        width = 1.dp,
+                        color = if (isApplied) accent.copy(alpha = 0.34f) else Mocha.CardStroke
+                    )
                 ) {
-                    Icon(
-                        imageVector = when (selectedCategory) {
-                            EffectCategory.COLOR -> Icons.Default.Palette
-                            EffectCategory.FILTER -> Icons.Default.FilterVintage
-                            EffectCategory.BLUR -> Icons.Default.BlurOn
-                            EffectCategory.DISTORTION -> Icons.Default.Waves
-                            EffectCategory.KEYING -> Icons.Default.Wallpaper
-                            EffectCategory.SPEED -> Icons.Default.Speed
-                        },
-                        contentDescription = effectType.displayName,
-                        tint = if (isApplied) Mocha.Mauve else Mocha.Subtext0,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        effectType.displayName,
-                        fontSize = 10.sp,
-                        color = if (isApplied) Mocha.Mauve else Mocha.Text,
-                        textAlign = TextAlign.Center,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    if (isApplied) {
-                        Icon(
-                            Icons.Default.Check,
-                            contentDescription = stringResource(R.string.tool_applied),
-                            tint = Mocha.Green,
-                            modifier = Modifier.size(14.dp)
-                        )
+                    Column(
+                        modifier = Modifier
+                            .background(
+                                if (isApplied) accent.copy(alpha = 0.08f) else Color.Transparent
+                            )
+                            .padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(
+                                    if (isApplied) accent.copy(alpha = 0.18f)
+                                    else Mocha.Panel
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = effectIcon(selectedCategory),
+                                contentDescription = effectType.displayName,
+                                tint = if (isApplied) accent else Mocha.Subtext0,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = effectType.displayName,
+                                color = Mocha.Text,
+                                style = MaterialTheme.typography.titleSmall,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = selectedCategory.displayName,
+                                color = Mocha.Subtext0,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+
+                        if (isApplied) {
+                            PremiumPanelPill(
+                                text = stringResource(R.string.tool_applied),
+                                accent = Mocha.Green
+                            )
+                        }
                     }
                 }
             }
@@ -544,50 +606,54 @@ fun EffectAdjustmentPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(Mocha.Mantle, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .padding(16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                effect.type.displayName,
-                color = if (effect.enabled) Mocha.Text else Mocha.Subtext0,
-                fontSize = 16.sp
+    val accent = effectAccent(effect.type.category)
+
+    PremiumEditorPanel(
+        title = effect.type.displayName,
+        subtitle = stringResource(R.string.panel_effect_adjust_subtitle),
+        icon = effectIcon(effect.type.category),
+        accent = accent,
+        onClose = onClose,
+        modifier = modifier,
+        headerActions = {
+            PremiumPanelIconButton(
+                icon = if (effect.enabled) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                contentDescription = if (effect.enabled) stringResource(R.string.tool_disable) else stringResource(R.string.tool_enable),
+                tint = if (effect.enabled) Mocha.Green else Mocha.Subtext0,
+                onClick = onToggleEnabled
             )
-            Row {
-                IconButton(onClick = onToggleEnabled, modifier = Modifier.size(28.dp)) {
-                    Icon(
-                        if (effect.enabled) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                        contentDescription = if (effect.enabled) stringResource(R.string.tool_disable) else stringResource(R.string.tool_enable),
-                        tint = if (effect.enabled) Mocha.Green else Mocha.Surface2,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-                IconButton(onClick = onRemove, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Default.Delete, stringResource(R.string.tool_remove), tint = Mocha.Red, modifier = Modifier.size(18.dp))
-                }
-                IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Default.Close, stringResource(R.string.tool_close), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
-                }
-            }
+            PremiumPanelIconButton(
+                icon = Icons.Default.Delete,
+                contentDescription = stringResource(R.string.tool_remove),
+                tint = Mocha.Red,
+                onClick = onRemove
+            )
+        }
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PremiumPanelPill(
+                text = if (effect.enabled) {
+                    stringResource(R.string.panel_effect_status_enabled)
+                } else {
+                    stringResource(R.string.panel_effect_status_disabled)
+                },
+                accent = if (effect.enabled) Mocha.Green else Mocha.Subtext0
+            )
+            PremiumPanelPill(
+                text = effect.type.category.displayName,
+                accent = accent
+            )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Auto-generated parameter sliders from EffectType metadata
-        val ranges = EffectType.paramRangesForType(effect.type)
-        val defaults = EffectType.defaultParams(effect.type)
-        val ds = onEffectDragStarted
-        for ((key, range) in ranges) {
-            val currentValue = effect.params[key] ?: defaults[key] ?: 0f
-            EffectSlider(range.label, currentValue, range.min, range.max, ds) {
-                onUpdateParams(effect.params + (key to it))
+        PremiumPanelCard(accent = accent) {
+            val ranges = EffectType.paramRangesForType(effect.type)
+            val defaults = EffectType.defaultParams(effect.type)
+            val ds = onEffectDragStarted
+            for ((key, range) in ranges) {
+                val currentValue = effect.params[key] ?: defaults[key] ?: 0f
+                EffectSlider(range.label, currentValue, range.min, range.max, ds) {
+                    onUpdateParams(effect.params + (key to it))
+                }
             }
         }
     }
@@ -604,31 +670,47 @@ fun EffectSlider(
     onValueChange: (Float) -> Unit
 ) {
     var isDragging by remember { mutableStateOf(false) }
-    Column(modifier = Modifier.padding(vertical = 4.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(label, color = Mocha.Subtext1, fontSize = 12.sp)
-            Text("%.2f".format(value), color = Mocha.Subtext0, fontSize = 12.sp)
-        }
-        Slider(
-            value = value,
-            onValueChange = {
-                if (!isDragging) {
-                    isDragging = true
-                    onDragStarted()
-                }
-                onValueChange(it)
-            },
-            onValueChangeFinished = { isDragging = false; onDragEnded() },
-            valueRange = min..max,
-            colors = SliderDefaults.colors(
-                thumbColor = Mocha.Mauve,
-                activeTrackColor = Mocha.Mauve,
-                inactiveTrackColor = Mocha.Surface1
+    Surface(
+        color = Mocha.PanelHighest.copy(alpha = 0.92f),
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, Mocha.CardStroke),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = label,
+                    color = Mocha.Subtext1,
+                    style = MaterialTheme.typography.labelLarge
+                )
+                Text(
+                    text = formatEffectValue(value, min, max),
+                    color = Mocha.Rosewater,
+                    style = MaterialTheme.typography.labelLarge
+                )
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Slider(
+                value = value,
+                onValueChange = {
+                    if (!isDragging) {
+                        isDragging = true
+                        onDragStarted()
+                    }
+                    onValueChange(it)
+                },
+                onValueChangeFinished = { isDragging = false; onDragEnded() },
+                valueRange = min..max,
+                colors = SliderDefaults.colors(
+                    thumbColor = Mocha.Rosewater,
+                    activeTrackColor = Mocha.Mauve,
+                    inactiveTrackColor = Mocha.Surface1
+                )
             )
-        )
+        }
     }
 }
 
@@ -645,65 +727,109 @@ fun SpeedPanel(
 ) {
     val presetSpeeds = listOf(0.25f, 0.5f, 0.75f, 1f, 1.5f, 2f, 4f, 8f)
 
-    Column(
+    PremiumEditorPanel(
+        title = stringResource(R.string.tool_speed),
+        subtitle = stringResource(R.string.panel_speed_subtitle),
+        icon = Icons.Default.Speed,
+        accent = Mocha.Peach,
+        onClose = onClose,
         modifier = modifier
-            .fillMaxWidth()
-            .background(Mocha.Mantle, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .padding(16.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(stringResource(R.string.tool_speed), color = Mocha.Text, fontSize = 16.sp)
-            IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
-                Icon(Icons.Default.Close, stringResource(R.string.tool_close), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+        PremiumPanelCard(accent = Mocha.Peach) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PremiumPanelPill(
+                    text = "${formatEffectValue(currentSpeed, 0.1f, 100f)}x",
+                    accent = Mocha.Rosewater
+                )
+                PremiumPanelPill(
+                    text = if (isReversed) {
+                        stringResource(R.string.panel_speed_reverse_on)
+                    } else {
+                        stringResource(R.string.panel_speed_reverse_off)
+                    },
+                    accent = if (isReversed) Mocha.Red else Mocha.Subtext0
+                )
             }
-        }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Speed presets
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(presetSpeeds) { speed ->
-                val isActive = kotlin.math.abs(currentSpeed - speed) < 0.01f
-                FilterChip(
-                    onClick = { onSpeedDragStarted(); onSpeedChanged(speed) },
-                    label = { Text("${speed}x", fontSize = 12.sp) },
-                    selected = isActive,
-                    colors = FilterChipDefaults.filterChipColors(
-                        containerColor = Mocha.Surface0,
-                        labelColor = Mocha.Text,
-                        selectedContainerColor = Mocha.Mauve.copy(alpha = 0.3f),
-                        selectedLabelColor = Mocha.Mauve
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                presetSpeeds.forEach { speed ->
+                    val isActive = kotlin.math.abs(currentSpeed - speed) < 0.01f
+                    FilterChip(
+                        onClick = {
+                            onSpeedDragStarted()
+                            onSpeedChanged(speed)
+                        },
+                        label = {
+                            Text(
+                                text = "${formatEffectValue(speed, 0.1f, 100f)}x",
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        },
+                        selected = isActive,
+                        colors = FilterChipDefaults.filterChipColors(
+                            containerColor = Mocha.Panel,
+                            labelColor = Mocha.Text,
+                            selectedContainerColor = Mocha.Peach.copy(alpha = 0.2f),
+                            selectedLabelColor = Mocha.Peach
+                        )
                     )
-                )
+                }
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // Custom speed slider with drag start for undo debounce
-        EffectSlider(stringResource(R.string.tool_custom_speed), currentSpeed, 0.1f, 100f, onSpeedDragStarted, onSpeedDragEnded) { onSpeedChanged(it) }
-
-        // Reverse toggle
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(stringResource(R.string.tool_reverse), color = Mocha.Text, fontSize = 14.sp)
-            Spacer(modifier = Modifier.weight(1f))
-            Switch(
-                checked = isReversed,
-                onCheckedChange = onReversedChanged,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = Mocha.Mauve,
-                    checkedTrackColor = Mocha.Mauve.copy(alpha = 0.3f)
-                )
+        PremiumPanelCard(accent = Mocha.Mauve) {
+            EffectSlider(
+                label = stringResource(R.string.tool_custom_speed),
+                value = currentSpeed,
+                min = 0.1f,
+                max = 100f,
+                onDragStarted = onSpeedDragStarted,
+                onDragEnded = onSpeedDragEnded,
+                onValueChange = onSpeedChanged
             )
+
+            Surface(
+                color = Mocha.Panel,
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.dp, Mocha.CardStroke)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.tool_reverse),
+                            color = Mocha.Text,
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                        Text(
+                            text = if (isReversed) {
+                                stringResource(R.string.panel_speed_reverse_hint_on)
+                            } else {
+                                stringResource(R.string.panel_speed_reverse_hint_off)
+                            },
+                            color = Mocha.Subtext0,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    Switch(
+                        checked = isReversed,
+                        onCheckedChange = onReversedChanged,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Mocha.Rosewater,
+                            checkedTrackColor = Mocha.Mauve.copy(alpha = 0.4f)
+                        )
+                    )
+                }
+            }
         }
     }
 }
@@ -718,47 +844,81 @@ fun TransformPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(Mocha.Mantle, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .padding(16.dp)
+    PremiumEditorPanel(
+        title = stringResource(R.string.tool_transform),
+        subtitle = stringResource(R.string.panel_transform_subtitle),
+        icon = Icons.Default.Transform,
+        accent = Mocha.Sapphire,
+        onClose = onClose,
+        modifier = modifier,
+        headerActions = {
+            TextButton(onClick = onReset) {
+                Text(
+                    text = stringResource(R.string.tool_reset),
+                    color = Mocha.Peach,
+                    style = MaterialTheme.typography.labelLarge
+                )
+            }
+        }
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(stringResource(R.string.tool_transform), color = Mocha.Text, fontSize = 16.sp)
-            Row {
-                TextButton(onClick = onReset) {
-                    Text(stringResource(R.string.tool_reset), color = Mocha.Peach, fontSize = 12.sp)
-                }
-                IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Default.Close, stringResource(R.string.tool_close), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
-                }
+        PremiumPanelCard(accent = Mocha.Sapphire) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                TransformMetricCard(
+                    label = stringResource(R.string.text_editor_position),
+                    value = "${formatSigned(clip.positionX)} / ${formatSigned(clip.positionY)}",
+                    accent = Mocha.Sapphire,
+                    modifier = Modifier.weight(1f)
+                )
+                TransformMetricCard(
+                    label = stringResource(R.string.panel_transform_scale),
+                    value = "${formatEffectValue(clip.scaleX, 0.1f, 5f)}x / ${formatEffectValue(clip.scaleY, 0.1f, 5f)}x",
+                    accent = Mocha.Peach,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                TransformMetricCard(
+                    label = stringResource(R.string.tool_rotation),
+                    value = "${formatSigned(clip.rotation)}deg",
+                    accent = Mocha.Mauve,
+                    modifier = Modifier.weight(1f)
+                )
+                TransformMetricCard(
+                    label = stringResource(R.string.tool_opacity),
+                    value = "${(clip.opacity * 100).toInt()}%",
+                    accent = Mocha.Green,
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        EffectSlider(stringResource(R.string.tool_position_x), clip.positionX, -1f, 1f, onTransformDragStarted) {
-            onTransformChanged(it, null, null, null, null)
-        }
-        EffectSlider(stringResource(R.string.tool_position_y), clip.positionY, -1f, 1f, onTransformDragStarted) {
-            onTransformChanged(null, it, null, null, null)
-        }
-        EffectSlider(stringResource(R.string.tool_scale_x), clip.scaleX, 0.1f, 5f, onTransformDragStarted) {
-            onTransformChanged(null, null, it, null, null)
-        }
-        EffectSlider(stringResource(R.string.tool_scale_y), clip.scaleY, 0.1f, 5f, onTransformDragStarted) {
-            onTransformChanged(null, null, null, it, null)
-        }
-        EffectSlider(stringResource(R.string.tool_rotation), clip.rotation, -360f, 360f, onTransformDragStarted) {
-            onTransformChanged(null, null, null, null, it)
-        }
-        EffectSlider(stringResource(R.string.tool_opacity), clip.opacity, 0f, 1f, onTransformDragStarted) {
-            onOpacityChanged(it)
+        PremiumPanelCard(accent = Mocha.Mauve) {
+            EffectSlider(stringResource(R.string.tool_position_x), clip.positionX, -1f, 1f, onTransformDragStarted) {
+                onTransformChanged(it, null, null, null, null)
+            }
+            EffectSlider(stringResource(R.string.tool_position_y), clip.positionY, -1f, 1f, onTransformDragStarted) {
+                onTransformChanged(null, it, null, null, null)
+            }
+            EffectSlider(stringResource(R.string.tool_scale_x), clip.scaleX, 0.1f, 5f, onTransformDragStarted) {
+                onTransformChanged(null, null, it, null, null)
+            }
+            EffectSlider(stringResource(R.string.tool_scale_y), clip.scaleY, 0.1f, 5f, onTransformDragStarted) {
+                onTransformChanged(null, null, null, it, null)
+            }
+            EffectSlider(stringResource(R.string.tool_rotation), clip.rotation, -360f, 360f, onTransformDragStarted) {
+                onTransformChanged(null, null, null, null, it)
+            }
+            EffectSlider(stringResource(R.string.tool_opacity), clip.opacity, 0f, 1f, onTransformDragStarted) {
+                onOpacityChanged(it)
+            }
         }
     }
 }
@@ -785,77 +945,105 @@ fun CropPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    PremiumEditorPanel(
+        title = stringResource(R.string.tool_crop_aspect_ratio),
+        subtitle = stringResource(R.string.panel_crop_subtitle),
+        icon = Icons.Default.Crop,
+        accent = Mocha.Sapphire,
+        onClose = onClose,
         modifier = modifier
-            .fillMaxWidth()
-            .background(Mocha.Mantle, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .padding(16.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(stringResource(R.string.tool_crop_aspect_ratio), color = Mocha.Text, fontSize = 16.sp)
-            IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
-                Icon(Icons.Default.Close, stringResource(R.string.tool_close), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+        PremiumPanelCard(accent = Mocha.Sapphire) {
+            Text(
+                text = currentAspect.label,
+                color = Mocha.Text,
+                style = MaterialTheme.typography.headlineMedium
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PremiumPanelPill(
+                    text = aspectUseCase(currentAspect),
+                    accent = Mocha.Sapphire
+                )
+                PremiumPanelPill(
+                    text = stringResource(R.string.panel_crop_live_canvas),
+                    accent = Mocha.Rosewater
+                )
             }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
         LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(end = 4.dp)
         ) {
             items(cropPresets) { preset ->
                 val isActive = currentAspect == preset.ratio
-                Column(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { onCropSelected(preset.ratio) }
-                        .background(
-                            if (isActive) Mocha.Mauve.copy(alpha = 0.2f) else Mocha.Surface0
-                        )
-                        .padding(12.dp)
-                        .width(80.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                Surface(
+                    modifier = Modifier.width(112.dp),
+                    onClick = { onCropSelected(preset.ratio) },
+                    color = Mocha.PanelHighest,
+                    shape = RoundedCornerShape(22.dp),
+                    border = BorderStroke(
+                        width = 1.dp,
+                        color = if (isActive) Mocha.Sapphire.copy(alpha = 0.32f) else Mocha.CardStroke
+                    )
                 ) {
-                    // Aspect ratio preview box
-                    val previewW: Float
-                    val previewH: Float
-                    val maxDim = 32f
-                    if (preset.ratio.toFloat() >= 1f) {
-                        previewW = maxDim
-                        previewH = maxDim / preset.ratio.toFloat()
-                    } else {
-                        previewH = maxDim
-                        previewW = maxDim * preset.ratio.toFloat()
-                    }
-                    Box(
+                    Column(
                         modifier = Modifier
-                            .size(width = previewW.dp, height = previewH.dp)
-                            .border(
-                                width = 2.dp,
-                                color = if (isActive) Mocha.Mauve else Mocha.Subtext0,
-                                shape = RoundedCornerShape(2.dp)
+                            .background(
+                                if (isActive) Mocha.Sapphire.copy(alpha = 0.08f) else Color.Transparent
                             )
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        preset.ratio.label,
-                        fontSize = 12.sp,
-                        color = if (isActive) Mocha.Mauve else Mocha.Text,
-                        textAlign = TextAlign.Center,
-                        maxLines = 1
-                    )
-                    Text(
-                        preset.platform,
-                        fontSize = 9.sp,
-                        color = if (isActive) Mocha.Mauve.copy(alpha = 0.7f) else Mocha.Subtext0,
-                        textAlign = TextAlign.Center,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                            .padding(horizontal = 14.dp, vertical = 16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        val previewW: Float
+                        val previewH: Float
+                        val maxDim = 40f
+                        if (preset.ratio.toFloat() >= 1f) {
+                            previewW = maxDim
+                            previewH = maxDim / preset.ratio.toFloat()
+                        } else {
+                            previewH = maxDim
+                            previewW = maxDim * preset.ratio.toFloat()
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(RoundedCornerShape(18.dp))
+                                .background(Mocha.Panel),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(width = previewW.dp, height = previewH.dp)
+                                    .border(
+                                        width = 2.dp,
+                                        color = if (isActive) Mocha.Sapphire else Mocha.Subtext0,
+                                        shape = RoundedCornerShape(4.dp)
+                                    )
+                            )
+                        }
+
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = preset.ratio.label,
+                                color = if (isActive) Mocha.Sapphire else Mocha.Text,
+                                style = MaterialTheme.typography.titleSmall,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = preset.platform,
+                                color = Mocha.Subtext0,
+                                style = MaterialTheme.typography.bodySmall,
+                                textAlign = TextAlign.Center,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -872,123 +1060,218 @@ fun TransitionPicker(
     currentTransition: Transition?,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(Mocha.Mantle, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .padding(16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(stringResource(R.string.tool_transitions), color = Mocha.Text, fontSize = 16.sp)
-            Row {
-                if (currentTransition != null) {
-                    TextButton(onClick = onRemoveTransition) {
-                        Text(stringResource(R.string.tool_remove), color = Mocha.Red, fontSize = 12.sp)
-                    }
+    PremiumEditorPanel(
+        title = stringResource(R.string.tool_transitions),
+        subtitle = stringResource(R.string.panel_transition_subtitle),
+        icon = Icons.Default.SwapHoriz,
+        accent = Mocha.Mauve,
+        onClose = onClose,
+        modifier = modifier,
+        headerActions = {
+            if (currentTransition != null) {
+                TextButton(onClick = onRemoveTransition) {
+                    Text(
+                        text = stringResource(R.string.tool_remove),
+                        color = Mocha.Red,
+                        style = MaterialTheme.typography.labelLarge
+                    )
                 }
-                IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Default.Close, stringResource(R.string.tool_close), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+            }
+        }
+    ) {
+        PremiumPanelCard(accent = Mocha.Mauve) {
+            Text(
+                text = if (currentTransition != null) {
+                    currentTransition.type.displayName
+                } else {
+                    stringResource(R.string.panel_transition_none_selected)
+                },
+                color = Mocha.Text,
+                style = MaterialTheme.typography.headlineMedium
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PremiumPanelPill(
+                    text = if (currentTransition != null) {
+                        stringResource(R.string.panel_transition_active)
+                    } else {
+                        stringResource(R.string.panel_transition_pick_one)
+                    },
+                    accent = Mocha.Rosewater
+                )
+                if (currentTransition != null) {
+                    PremiumPanelPill(
+                        text = "${currentTransition.durationMs}ms",
+                        accent = Mocha.Peach
+                    )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(end = 4.dp)
         ) {
             items(TransitionType.entries.toList()) { type ->
                 val isActive = currentTransition?.type == type
-                val icon = when (type) {
-                    TransitionType.DISSOLVE -> Icons.Default.Gradient
-                    TransitionType.WIPE_LEFT, TransitionType.WIPE_RIGHT,
-                    TransitionType.WIPE_UP, TransitionType.WIPE_DOWN -> Icons.Default.SwipeLeft
-                    TransitionType.ZOOM_IN, TransitionType.ZOOM_OUT -> Icons.Default.ZoomIn
-                    TransitionType.SPIN -> Icons.AutoMirrored.Filled.RotateRight
-                    TransitionType.FLIP -> Icons.Default.Flip
-                    TransitionType.CUBE -> Icons.Default.ViewInAr
-                    TransitionType.RIPPLE -> Icons.Default.Water
-                    TransitionType.PIXELATE -> Icons.Default.GridOn
-                    TransitionType.MORPH -> Icons.Default.Transform
-                    TransitionType.GLITCH -> Icons.Default.BrokenImage
-                    TransitionType.SWIRL -> Icons.Default.Cyclone
-                    TransitionType.HEART -> Icons.Default.Favorite
-                    TransitionType.DREAMY -> Icons.Default.AutoAwesome
-                    TransitionType.BURN -> Icons.Default.LocalFireDepartment
-                    TransitionType.LENS_FLARE -> Icons.Default.LensBlur
-                    TransitionType.PAGE_CURL -> Icons.Default.AutoStories
-                    TransitionType.KALEIDOSCOPE -> Icons.Default.FilterVintage
-                    else -> Icons.Default.SwapHoriz
-                }
-                Column(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { onTransitionSelected(type) }
-                        .background(
-                            if (isActive) Mocha.Mauve.copy(alpha = 0.2f) else Mocha.Surface0
-                        )
-                        .border(
-                            width = if (isActive) 1.dp else 0.dp,
-                            color = if (isActive) Mocha.Mauve else Color.Transparent,
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .padding(12.dp)
-                        .width(70.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                val icon = transitionIcon(type)
+                Surface(
+                    modifier = Modifier.width(108.dp),
+                    onClick = { onTransitionSelected(type) },
+                    color = Mocha.PanelHighest,
+                    shape = RoundedCornerShape(22.dp),
+                    border = BorderStroke(
+                        width = 1.dp,
+                        color = if (isActive) Mocha.Mauve.copy(alpha = 0.32f) else Mocha.CardStroke
+                    )
                 ) {
-                    Icon(
-                        icon,
-                        contentDescription = type.displayName,
-                        tint = if (isActive) Mocha.Mauve else Mocha.Subtext0,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        type.displayName,
-                        fontSize = 10.sp,
-                        color = if (isActive) Mocha.Mauve else Mocha.Text,
-                        textAlign = TextAlign.Center,
-                        maxLines = 2
-                    )
+                    Column(
+                        modifier = Modifier
+                            .background(
+                                if (isActive) Mocha.Mauve.copy(alpha = 0.08f) else Color.Transparent
+                            )
+                            .padding(horizontal = 14.dp, vertical = 16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(if (isActive) Mocha.Mauve.copy(alpha = 0.16f) else Mocha.Panel),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                icon,
+                                contentDescription = type.displayName,
+                                tint = if (isActive) Mocha.Mauve else Mocha.Subtext0,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Text(
+                            text = type.displayName,
+                            color = if (isActive) Mocha.Mauve else Mocha.Text,
+                            style = MaterialTheme.typography.titleSmall,
+                            textAlign = TextAlign.Center,
+                            maxLines = 2
+                        )
+                    }
                 }
             }
         }
 
-        // Duration control (visible when a transition is applied)
         if (currentTransition != null) {
             Spacer(modifier = Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(stringResource(R.string.tool_duration), color = Mocha.Subtext1, fontSize = 12.sp)
-                Text("${currentTransition.durationMs}ms", color = Mocha.Subtext0, fontSize = 12.sp)
-            }
-            var isDragging by remember { mutableStateOf(false) }
-            Slider(
-                value = currentTransition.durationMs.toFloat(),
-                onValueChange = {
-                    if (!isDragging) {
-                        isDragging = true
-                        onDurationDragStarted()
-                    }
-                    onDurationChanged(it.toLong())
-                },
-                onValueChangeFinished = { isDragging = false },
-                valueRange = 100f..2000f,
-                steps = 18,
-                colors = SliderDefaults.colors(
-                    thumbColor = Mocha.Mauve,
-                    activeTrackColor = Mocha.Mauve,
-                    inactiveTrackColor = Mocha.Surface1
+            PremiumPanelCard(accent = Mocha.Peach) {
+                EffectSlider(
+                    label = stringResource(R.string.tool_duration),
+                    value = currentTransition.durationMs.toFloat(),
+                    min = 100f,
+                    max = 2000f,
+                    onDragStarted = onDurationDragStarted,
+                    onValueChange = { onDurationChanged(it.toLong()) }
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TransformMetricCard(
+    label: String,
+    value: String,
+    accent: Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        color = Mocha.Panel,
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, Mocha.CardStroke)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = label,
+                color = Mocha.Subtext0,
+                style = MaterialTheme.typography.labelMedium
+            )
+            Text(
+                text = value,
+                color = accent,
+                style = MaterialTheme.typography.titleSmall
             )
         }
     }
+}
+
+private fun effectAccent(category: EffectCategory): Color = when (category) {
+    EffectCategory.COLOR -> Mocha.Sapphire
+    EffectCategory.FILTER -> Mocha.Mauve
+    EffectCategory.BLUR -> Mocha.Sky
+    EffectCategory.DISTORTION -> Mocha.Peach
+    EffectCategory.KEYING -> Mocha.Green
+    EffectCategory.SPEED -> Mocha.Yellow
+}
+
+private fun effectIcon(category: EffectCategory): ImageVector = when (category) {
+    EffectCategory.COLOR -> Icons.Default.Palette
+    EffectCategory.FILTER -> Icons.Default.FilterVintage
+    EffectCategory.BLUR -> Icons.Default.BlurOn
+    EffectCategory.DISTORTION -> Icons.Default.Waves
+    EffectCategory.KEYING -> Icons.Default.Wallpaper
+    EffectCategory.SPEED -> Icons.Default.Speed
+}
+
+private fun transitionIcon(type: TransitionType): ImageVector = when (type) {
+    TransitionType.DISSOLVE -> Icons.Default.Gradient
+    TransitionType.WIPE_LEFT, TransitionType.WIPE_RIGHT,
+    TransitionType.WIPE_UP, TransitionType.WIPE_DOWN -> Icons.Default.SwipeLeft
+    TransitionType.ZOOM_IN, TransitionType.ZOOM_OUT -> Icons.Default.ZoomIn
+    TransitionType.SPIN -> Icons.AutoMirrored.Filled.RotateRight
+    TransitionType.FLIP -> Icons.Default.Flip
+    TransitionType.CUBE -> Icons.Default.ViewInAr
+    TransitionType.RIPPLE -> Icons.Default.Water
+    TransitionType.PIXELATE -> Icons.Default.GridOn
+    TransitionType.MORPH -> Icons.Default.Transform
+    TransitionType.GLITCH -> Icons.Default.BrokenImage
+    TransitionType.SWIRL -> Icons.Default.Cyclone
+    TransitionType.HEART -> Icons.Default.Favorite
+    TransitionType.DREAMY -> Icons.Default.AutoAwesome
+    TransitionType.BURN -> Icons.Default.LocalFireDepartment
+    TransitionType.LENS_FLARE -> Icons.Default.LensBlur
+    TransitionType.PAGE_CURL -> Icons.Default.AutoStories
+    TransitionType.KALEIDOSCOPE -> Icons.Default.FilterVintage
+    else -> Icons.Default.SwapHoriz
+}
+
+private fun aspectUseCase(ratio: AspectRatio): String = when (ratio) {
+    AspectRatio.RATIO_9_16 -> "Short form ready"
+    AspectRatio.RATIO_1_1 -> "Square social"
+    AspectRatio.RATIO_4_5 -> "Feed optimized"
+    AspectRatio.RATIO_21_9 -> "Cinematic widescreen"
+    else -> "Landscape master"
+}
+
+private fun formatEffectValue(value: Float, min: Float, max: Float): String {
+    val span = max - min
+    return when {
+        span <= 2f -> "%.2f".format(value)
+        span <= 20f -> "%.1f".format(value)
+        else -> value.toInt().toString()
+    }
+}
+
+private fun formatSigned(value: Float): String {
+    val formatted = if (kotlin.math.abs(value) < 10f) {
+        "%.2f".format(value)
+    } else {
+        "%.1f".format(value)
+    }
+    return if (value > 0f) "+$formatted" else formatted
 }
 
 @Composable

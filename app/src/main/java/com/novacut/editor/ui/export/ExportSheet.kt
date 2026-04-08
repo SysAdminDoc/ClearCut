@@ -2,6 +2,7 @@ package com.novacut.editor.ui.export
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -9,6 +10,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,23 +42,74 @@ fun ExportSheet(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val availableCodecs = remember { ExportConfig.getAvailableCodecs() }
+    val (w, h) = config.resolution.forAspect(aspectRatio)
+    val estimatedSize = remember(config, totalDurationMs) { estimateExportSize(totalDurationMs, config) }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(Mocha.Mantle, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .padding(16.dp)
+            .background(Mocha.Panel, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
             .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 14.dp)
     ) {
-        // Header
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .width(44.dp)
+                .height(4.dp)
+                .background(Mocha.Surface2.copy(alpha = 0.8f), RoundedCornerShape(999.dp))
+        )
+
+        Spacer(modifier = Modifier.height(14.dp))
+
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(stringResource(R.string.export_title), color = Mocha.Text, fontSize = 18.sp)
+            Surface(
+                color = Mocha.Mauve.copy(alpha = 0.14f),
+                shape = RoundedCornerShape(18.dp),
+                border = BorderStroke(1.dp, Mocha.Mauve.copy(alpha = 0.22f))
+            ) {
+                Box(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.FileUpload,
+                        contentDescription = stringResource(R.string.export_title),
+                        tint = Mocha.Rosewater,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.export_title),
+                    color = Mocha.Text,
+                    style = MaterialTheme.typography.headlineMedium
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    stringResource(R.string.export_subtitle),
+                    color = Mocha.Subtext0,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+
             if (exportState != ExportState.EXPORTING) {
-                IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Default.Close, stringResource(R.string.close), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+                Surface(
+                    color = Mocha.PanelHighest,
+                    shape = CircleShape,
+                    border = BorderStroke(1.dp, Mocha.CardStroke)
+                ) {
+                    IconButton(onClick = onClose, modifier = Modifier.size(40.dp)) {
+                        Icon(Icons.Default.Close, stringResource(R.string.close), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+                    }
                 }
             }
         }
@@ -63,167 +117,130 @@ fun ExportSheet(
         Spacer(modifier = Modifier.height(16.dp))
 
         if (exportState == ExportState.EXPORTING) {
-            // Export progress with elapsed time and ETA
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    stringResource(R.string.export_exporting),
-                    color = Mocha.Text,
-                    fontSize = 16.sp
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                LinearProgressIndicator(
-                    progress = { exportProgress },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(8.dp),
-                    color = Mocha.Mauve,
-                    trackColor = Mocha.Surface0,
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+            val pct = (exportProgress * 100).toInt().coerceIn(0, 100)
+            val elapsedMs = if (exportStartTime > 0L) System.currentTimeMillis() - exportStartTime else 0L
+            val elapsedSec = (elapsedMs / 1000).toInt()
+            val elapsedStr = "%d:%02d".format(elapsedSec / 60, elapsedSec % 60)
+            val etaStr = if (exportProgress > 0.05f && elapsedMs > 2000L) {
+                val totalEstMs = (elapsedMs / exportProgress).toLong()
+                val remainMs = (totalEstMs - elapsedMs).coerceAtLeast(0L)
+                val remainSec = (remainMs / 1000).toInt()
+                stringResource(R.string.export_eta_remaining, "%d:%02d".format(remainSec / 60, remainSec % 60))
+            } else null
 
-                val pct = (exportProgress * 100).toInt().coerceIn(0, 100)
-                val elapsedMs = if (exportStartTime > 0L) System.currentTimeMillis() - exportStartTime else 0L
-                val elapsedSec = (elapsedMs / 1000).toInt()
-                val elapsedStr = "%d:%02d".format(elapsedSec / 60, elapsedSec % 60)
-                val etaStr = if (exportProgress > 0.05f && elapsedMs > 2000L) {
-                    val totalEstMs = (elapsedMs / exportProgress).toLong()
-                    val remainMs = (totalEstMs - elapsedMs).coerceAtLeast(0L)
-                    val remainSec = (remainMs / 1000).toInt()
-                    "%d:%02d remaining".format(remainSec / 60, remainSec % 60)
-                } else ""
-
-                Text(
-                    "$pct%",
-                    color = Mocha.Text,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(stringResource(R.string.export_elapsed, elapsedStr), color = Mocha.Subtext0, fontSize = 12.sp)
-                    if (etaStr.isNotEmpty()) {
-                        Text(etaStr, color = Mocha.Blue, fontSize = 12.sp)
-                    }
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                TextButton(onClick = onCancel) {
-                    Text(stringResource(R.string.export_cancel), color = Mocha.Red)
-                }
-            }
+            ExportStateCard(
+                icon = Icons.Default.FileUpload,
+                tint = Mocha.Mauve,
+                title = stringResource(R.string.export_exporting),
+                body = stringResource(R.string.export_elapsed, elapsedStr),
+                progress = exportProgress,
+                progressLabel = "$pct%",
+                secondaryBody = etaStr,
+                primaryLabel = stringResource(R.string.export_cancel),
+                onPrimary = onCancel
+            )
             return
         }
 
         if (exportState == ExportState.COMPLETE) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Icon(
-                    Icons.Default.CheckCircle,
-                    contentDescription = stringResource(R.string.complete),
-                    tint = Mocha.Green,
-                    modifier = Modifier.size(48.dp)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(stringResource(R.string.export_complete), color = Mocha.Green, fontSize = 16.sp)
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Button(
-                        onClick = onShare,
-                        colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve)
-                    ) {
-                        Icon(Icons.Default.Share, contentDescription = stringResource(R.string.share), modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(stringResource(R.string.share), color = Mocha.Crust)
-                    }
-                    Button(
-                        onClick = onSaveToGallery,
-                        colors = ButtonDefaults.buttonColors(containerColor = Mocha.Green)
-                    ) {
-                        Icon(Icons.Default.SaveAlt, contentDescription = stringResource(R.string.export_save_to_gallery_cd), modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(stringResource(R.string.export_save_to_gallery), color = Mocha.Crust)
-                    }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                TextButton(onClick = onClose) {
-                    Text(stringResource(R.string.done), color = Mocha.Subtext0)
-                }
-            }
+            ExportStateCard(
+                icon = Icons.Default.CheckCircle,
+                tint = Mocha.Green,
+                title = stringResource(R.string.export_complete),
+                body = stringResource(R.string.export_subtitle),
+                primaryLabel = stringResource(R.string.share),
+                onPrimary = onShare,
+                secondaryLabel = stringResource(R.string.export_save_to_gallery),
+                onSecondary = onSaveToGallery,
+                tertiaryLabel = stringResource(R.string.done),
+                onTertiary = onClose
+            )
             return
         }
 
         if (exportState == ExportState.CANCELLED) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Icon(
-                    Icons.Default.Cancel,
-                    contentDescription = stringResource(R.string.cancelled),
-                    tint = Mocha.Peach,
-                    modifier = Modifier.size(48.dp)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(stringResource(R.string.export_cancelled), color = Mocha.Peach, fontSize = 16.sp)
-                Spacer(modifier = Modifier.height(16.dp))
-                TextButton(onClick = onClose) {
-                    Text(stringResource(R.string.done), color = Mocha.Subtext0)
-                }
-            }
+            ExportStateCard(
+                icon = Icons.Default.Cancel,
+                tint = Mocha.Peach,
+                title = stringResource(R.string.export_cancelled),
+                body = stringResource(R.string.export_subtitle),
+                primaryLabel = stringResource(R.string.done),
+                onPrimary = onClose
+            )
             return
         }
 
         if (exportState == ExportState.ERROR) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Icon(
-                    Icons.Default.Error,
-                    contentDescription = stringResource(R.string.error),
-                    tint = Mocha.Red,
-                    modifier = Modifier.size(48.dp)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(stringResource(R.string.export_failed), color = Mocha.Red, fontSize = 16.sp)
-                if (!errorMessage.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        errorMessage,
-                        color = Mocha.Subtext0,
-                        fontSize = 12.sp,
-                        maxLines = 3
-                    )
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        onClick = onStartExport,
-                        colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve)
-                    ) {
-                        Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.retry), modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(stringResource(R.string.retry), color = Mocha.Crust)
-                    }
-                    Button(
-                        onClick = onClose,
-                        colors = ButtonDefaults.buttonColors(containerColor = Mocha.Surface1)
-                    ) {
-                        Text(stringResource(R.string.close), color = Mocha.Text)
-                    }
-                }
-            }
+            ExportStateCard(
+                icon = Icons.Default.Error,
+                tint = Mocha.Red,
+                title = stringResource(R.string.export_failed),
+                body = errorMessage ?: stringResource(R.string.error),
+                primaryLabel = stringResource(R.string.retry),
+                onPrimary = onStartExport,
+                secondaryLabel = stringResource(R.string.close),
+                onSecondary = onClose
+            )
             return
         }
 
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Mocha.Panel),
+            border = BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
+            shape = RoundedCornerShape(24.dp)
+        ) {
+            Box(
+                modifier = Modifier.background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Mocha.PanelHighest.copy(alpha = 0.9f),
+                            Mocha.Panel
+                        )
+                    )
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        stringResource(R.string.export_delivery_summary),
+                        color = Mocha.Rosewater,
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                    Text(
+                        "${w}x${h} - ${aspectRatio.label}",
+                        color = Mocha.Text,
+                        style = MaterialTheme.typography.headlineMedium
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ExportPill("${config.frameRate}fps", Mocha.Mauve)
+                        ExportPill(config.codec.label, Mocha.Sapphire)
+                        ExportPill(config.quality.label, Mocha.Teal)
+                    }
+                    val bitrateDesc = when {
+                        config.videoBitrate >= 40_000_000 -> stringResource(R.string.export_studio_quality)
+                        config.videoBitrate >= 15_000_000 -> stringResource(R.string.export_great_for_youtube)
+                        config.videoBitrate >= 6_000_000 -> stringResource(R.string.export_good_for_sharing)
+                        else -> stringResource(R.string.export_compact_file_size)
+                    }
+                    Text(
+                        buildString {
+                            append("${config.videoBitrate / 1_000_000}Mbps - $bitrateDesc")
+                            if (estimatedSize != null) append(" - ~$estimatedSize")
+                        },
+                        color = Mocha.Subtext0,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
         // Platform Presets
-        Text(stringResource(R.string.export_quick_presets), color = Mocha.Subtext1, fontSize = 12.sp)
+        Text(stringResource(R.string.export_quick_presets), color = Mocha.Rosewater, style = MaterialTheme.typography.labelLarge)
         Spacer(modifier = Modifier.height(4.dp))
         Row(
             modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -240,11 +257,12 @@ fun ExportSheet(
                             platformPreset = preset
                         ))
                     },
-                    label = { Text(preset.displayName, fontSize = 11.sp) },
+                    label = { Text(preset.displayName, style = MaterialTheme.typography.labelMedium) },
                     selected = isSelected,
                     colors = FilterChipDefaults.filterChipColors(
-                        containerColor = Mocha.Surface0,
-                        selectedContainerColor = Mocha.Green.copy(alpha = 0.3f),
+                        containerColor = Mocha.PanelHighest,
+                        labelColor = Mocha.Subtext0,
+                        selectedContainerColor = Mocha.Green.copy(alpha = 0.16f),
                         selectedLabelColor = Mocha.Green
                     )
                 )
@@ -261,7 +279,7 @@ fun ExportSheet(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(stringResource(R.string.export_audio_only), color = Mocha.Text, fontSize = 13.sp)
+            Text(stringResource(R.string.export_audio_only), color = Mocha.Text, style = MaterialTheme.typography.titleSmall)
             Switch(
                 checked = config.exportAudioOnly,
                 onCheckedChange = { onConfigChanged(config.copy(exportAudioOnly = it, exportAsGif = false, captureFrameOnly = false)) },
@@ -280,7 +298,7 @@ fun ExportSheet(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(stringResource(R.string.export_subtitles), color = Mocha.Text, fontSize = 13.sp)
+            Text(stringResource(R.string.export_subtitles), color = Mocha.Text, style = MaterialTheme.typography.titleSmall)
             Switch(
                 checked = config.subtitleFormat != null,
                 onCheckedChange = {
@@ -296,11 +314,12 @@ fun ExportSheet(
                 SubtitleFormat.entries.forEach { fmt ->
                     FilterChip(
                         onClick = { onConfigChanged(config.copy(subtitleFormat = fmt)) },
-                        label = { Text(fmt.displayName, fontSize = 12.sp) },
+                        label = { Text(fmt.displayName, style = MaterialTheme.typography.labelMedium) },
                         selected = config.subtitleFormat == fmt,
                         colors = FilterChipDefaults.filterChipColors(
-                            containerColor = Mocha.Surface0,
-                            selectedContainerColor = Mocha.Mauve.copy(alpha = 0.3f),
+                            containerColor = Mocha.PanelHighest,
+                            labelColor = Mocha.Subtext0,
+                            selectedContainerColor = Mocha.Mauve.copy(alpha = 0.16f),
                             selectedLabelColor = Mocha.Mauve
                         )
                     )
@@ -315,7 +334,7 @@ fun ExportSheet(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(stringResource(R.string.export_stems), color = Mocha.Text, fontSize = 13.sp)
+            Text(stringResource(R.string.export_stems), color = Mocha.Text, style = MaterialTheme.typography.titleSmall)
             Switch(
                 checked = config.exportStemsOnly,
                 onCheckedChange = { onConfigChanged(config.copy(exportStemsOnly = it, exportAudioOnly = false)) },
@@ -331,7 +350,7 @@ fun ExportSheet(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(stringResource(R.string.export_chapter_markers), color = Mocha.Text, fontSize = 13.sp)
+            Text(stringResource(R.string.export_chapter_markers), color = Mocha.Text, style = MaterialTheme.typography.titleSmall)
             Switch(
                 checked = config.includeChapterMarkers,
                 onCheckedChange = { onConfigChanged(config.copy(includeChapterMarkers = it)) },
@@ -352,7 +371,7 @@ fun ExportSheet(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(stringResource(R.string.export_transparent_bg), color = Mocha.Text, fontSize = 13.sp)
+            Text(stringResource(R.string.export_transparent_bg), color = Mocha.Text, style = MaterialTheme.typography.titleSmall)
             Switch(
                 checked = config.transparentBackground,
                 onCheckedChange = { onConfigChanged(config.copy(transparentBackground = it)) },
@@ -368,18 +387,19 @@ fun ExportSheet(
         Spacer(modifier = Modifier.height(12.dp))
 
         // Resolution
-        Text(stringResource(R.string.export_resolution), color = Mocha.Subtext1, fontSize = 12.sp)
+        Text(stringResource(R.string.export_resolution), color = Mocha.Rosewater, style = MaterialTheme.typography.labelLarge)
         Spacer(modifier = Modifier.height(4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Resolution.entries.forEach { res ->
                 FilterChip(
                     onClick = { onConfigChanged(config.copy(resolution = res)) },
-                    label = { Text(res.label, fontSize = 12.sp) },
+                    label = { Text(res.label, style = MaterialTheme.typography.labelMedium) },
                     selected = config.resolution == res,
                     colors = FilterChipDefaults.filterChipColors(
-                        containerColor = Mocha.Surface0,
-                        selectedContainerColor = Mocha.Mauve.copy(alpha = 0.3f),
-                        selectedLabelColor = Mocha.Mauve
+                        containerColor = Mocha.PanelHighest,
+                        labelColor = Mocha.Subtext0,
+                        selectedContainerColor = Mocha.Rosewater.copy(alpha = 0.16f),
+                        selectedLabelColor = Mocha.Rosewater
                     )
                 )
             }
@@ -388,17 +408,18 @@ fun ExportSheet(
         Spacer(modifier = Modifier.height(12.dp))
 
         // Frame rate
-        Text(stringResource(R.string.export_frame_rate), color = Mocha.Subtext1, fontSize = 12.sp)
+        Text(stringResource(R.string.export_frame_rate), color = Mocha.Subtext0, style = MaterialTheme.typography.labelLarge)
         Spacer(modifier = Modifier.height(4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(24, 30, 60).forEach { fps ->
                 FilterChip(
                     onClick = { onConfigChanged(config.copy(frameRate = fps)) },
-                    label = { Text("${fps}fps", fontSize = 12.sp) },
+                    label = { Text("${fps}fps", style = MaterialTheme.typography.labelMedium) },
                     selected = config.frameRate == fps,
                     colors = FilterChipDefaults.filterChipColors(
-                        containerColor = Mocha.Surface0,
-                        selectedContainerColor = Mocha.Mauve.copy(alpha = 0.3f),
+                        containerColor = Mocha.PanelHighest,
+                        labelColor = Mocha.Subtext0,
+                        selectedContainerColor = Mocha.Mauve.copy(alpha = 0.16f),
                         selectedLabelColor = Mocha.Mauve
                     )
                 )
@@ -408,22 +429,22 @@ fun ExportSheet(
         Spacer(modifier = Modifier.height(12.dp))
 
         // Codec (filtered by device hardware support)
-        val availableCodecs = remember { ExportConfig.getAvailableCodecs() }
-        Text(stringResource(R.string.export_codec), color = Mocha.Subtext1, fontSize = 12.sp)
+        Text(stringResource(R.string.export_codec), color = Mocha.Subtext0, style = MaterialTheme.typography.labelLarge)
         Spacer(modifier = Modifier.height(4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             VideoCodec.entries.forEach { codec ->
                 val isAvailable = codec in availableCodecs
                 FilterChip(
                     onClick = { if (isAvailable) onConfigChanged(config.copy(codec = codec)) },
-                    label = { Text(codec.label, fontSize = 12.sp) },
+                    label = { Text(codec.label, style = MaterialTheme.typography.labelMedium) },
                     selected = config.codec == codec,
                     enabled = isAvailable,
                     colors = FilterChipDefaults.filterChipColors(
-                        containerColor = Mocha.Surface0,
-                        selectedContainerColor = Mocha.Mauve.copy(alpha = 0.3f),
+                        containerColor = Mocha.PanelHighest,
+                        labelColor = Mocha.Subtext0,
+                        selectedContainerColor = Mocha.Mauve.copy(alpha = 0.16f),
                         selectedLabelColor = Mocha.Mauve,
-                        disabledContainerColor = Mocha.Surface0.copy(alpha = 0.3f),
+                        disabledContainerColor = Mocha.PanelHighest.copy(alpha = 0.45f),
                         disabledLabelColor = Mocha.Subtext0.copy(alpha = 0.4f)
                     )
                 )
@@ -433,17 +454,18 @@ fun ExportSheet(
         Spacer(modifier = Modifier.height(12.dp))
 
         // Audio Codec
-        Text(stringResource(R.string.export_audio_codec), color = Mocha.Subtext1, fontSize = 12.sp)
+        Text(stringResource(R.string.export_audio_codec), color = Mocha.Subtext0, style = MaterialTheme.typography.labelLarge)
         Spacer(modifier = Modifier.height(4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             AudioCodec.entries.forEach { codec ->
                 FilterChip(
                     onClick = { onConfigChanged(config.copy(audioCodec = codec)) },
-                    label = { Text(codec.label, fontSize = 12.sp) },
+                    label = { Text(codec.label, style = MaterialTheme.typography.labelMedium) },
                     selected = config.audioCodec == codec,
                     colors = FilterChipDefaults.filterChipColors(
-                        containerColor = Mocha.Surface0,
-                        selectedContainerColor = Mocha.Teal.copy(alpha = 0.3f),
+                        containerColor = Mocha.PanelHighest,
+                        labelColor = Mocha.Subtext0,
+                        selectedContainerColor = Mocha.Teal.copy(alpha = 0.16f),
                         selectedLabelColor = Mocha.Teal
                     )
                 )
@@ -453,17 +475,18 @@ fun ExportSheet(
         Spacer(modifier = Modifier.height(12.dp))
 
         // Quality
-        Text(stringResource(R.string.export_quality), color = Mocha.Subtext1, fontSize = 12.sp)
+        Text(stringResource(R.string.export_quality), color = Mocha.Subtext0, style = MaterialTheme.typography.labelLarge)
         Spacer(modifier = Modifier.height(4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ExportQuality.entries.forEach { quality ->
                 FilterChip(
                     onClick = { onConfigChanged(config.copy(quality = quality)) },
-                    label = { Text(quality.label, fontSize = 12.sp) },
+                    label = { Text(quality.label, style = MaterialTheme.typography.labelMedium) },
                     selected = config.quality == quality,
                     colors = FilterChipDefaults.filterChipColors(
-                        containerColor = Mocha.Surface0,
-                        selectedContainerColor = Mocha.Mauve.copy(alpha = 0.3f),
+                        containerColor = Mocha.PanelHighest,
+                        labelColor = Mocha.Subtext0,
+                        selectedContainerColor = Mocha.Mauve.copy(alpha = 0.16f),
                         selectedLabelColor = Mocha.Mauve
                     )
                 )
@@ -473,16 +496,17 @@ fun ExportSheet(
         Spacer(modifier = Modifier.height(8.dp))
 
         // Estimated file info
-        val (w, h) = config.resolution.forAspect(aspectRatio)
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Mocha.Surface0)
+            colors = CardDefaults.cardColors(containerColor = Mocha.PanelHighest),
+            border = BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
+            shape = RoundedCornerShape(20.dp)
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text(stringResource(R.string.export_output_details), color = Mocha.Subtext1, fontSize = 12.sp)
+                Text(stringResource(R.string.export_output_details), color = Mocha.Rosewater, style = MaterialTheme.typography.labelLarge)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text("${w}x${h} @ ${config.frameRate}fps", color = Mocha.Text, fontSize = 13.sp)
-                Text("${config.codec.label} / ${config.quality.label}", color = Mocha.Text, fontSize = 13.sp)
+                Text("${w}x${h} @ ${config.frameRate}fps", color = Mocha.Text, style = MaterialTheme.typography.titleSmall)
+                Text("${config.codec.label} / ${config.quality.label}", color = Mocha.Text, style = MaterialTheme.typography.titleSmall)
                 val bitrateDesc = when {
                     config.videoBitrate >= 40_000_000 -> stringResource(R.string.export_studio_quality)
                     config.videoBitrate >= 15_000_000 -> stringResource(R.string.export_great_for_youtube)
@@ -490,23 +514,16 @@ fun ExportSheet(
                     else -> stringResource(R.string.export_compact_file_size)
                 }
                 Text(
-                    "${config.videoBitrate / 1_000_000}Mbps — $bitrateDesc",
+                    "${config.videoBitrate / 1_000_000}Mbps - $bitrateDesc",
                     color = Mocha.Subtext0,
-                    fontSize = 12.sp
+                    style = MaterialTheme.typography.bodySmall
                 )
                 // Estimated file size
-                if (totalDurationMs > 0L) {
-                    val totalBitrate = config.videoBitrate + config.audioBitrate
-                    val estBytes = (totalBitrate.toLong() * totalDurationMs) / 8000L
-                    val estStr = when {
-                        estBytes >= 1_073_741_824L -> "%.1f GB".format(estBytes / 1_073_741_824.0)
-                        estBytes >= 1_048_576L -> "%.0f MB".format(estBytes / 1_048_576.0)
-                        else -> "%.0f KB".format(estBytes / 1024.0)
-                    }
+                if (estimatedSize != null) {
                     Text(
-                        "~$estStr estimated",
+                        "~$estimatedSize estimated",
                         color = Mocha.Peach,
-                        fontSize = 12.sp
+                        style = MaterialTheme.typography.bodySmall
                     )
                 }
             }
@@ -522,7 +539,7 @@ fun ExportSheet(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(stringResource(R.string.export_gif), color = Mocha.Text, fontSize = 13.sp)
+            Text(stringResource(R.string.export_gif), color = Mocha.Text, style = MaterialTheme.typography.titleSmall)
             Switch(
                 checked = config.exportAsGif,
                 onCheckedChange = { onConfigChanged(config.copy(exportAsGif = it, captureFrameOnly = false, exportAudioOnly = false)) },
@@ -535,34 +552,36 @@ fun ExportSheet(
             )
         }
         if (config.exportAsGif) {
-            Text(stringResource(R.string.export_gif_frame_rate), color = Mocha.Subtext1, fontSize = 12.sp)
+            Text(stringResource(R.string.export_gif_frame_rate), color = Mocha.Subtext0, style = MaterialTheme.typography.labelLarge)
             Spacer(modifier = Modifier.height(4.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(10, 15, 20).forEach { fps ->
                     FilterChip(
                         onClick = { onConfigChanged(config.copy(gifFrameRate = fps)) },
-                        label = { Text("${fps}fps", fontSize = 12.sp) },
+                        label = { Text("${fps}fps", style = MaterialTheme.typography.labelMedium) },
                         selected = config.gifFrameRate == fps,
                         colors = FilterChipDefaults.filterChipColors(
-                            containerColor = Mocha.Surface0,
-                            selectedContainerColor = Mocha.Mauve.copy(alpha = 0.3f),
+                            containerColor = Mocha.PanelHighest,
+                            labelColor = Mocha.Subtext0,
+                            selectedContainerColor = Mocha.Mauve.copy(alpha = 0.16f),
                             selectedLabelColor = Mocha.Mauve
                         )
                     )
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Text(stringResource(R.string.export_gif_max_width), color = Mocha.Subtext1, fontSize = 12.sp)
+            Text(stringResource(R.string.export_gif_max_width), color = Mocha.Subtext0, style = MaterialTheme.typography.labelLarge)
             Spacer(modifier = Modifier.height(4.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(320, 480, 640).forEach { w ->
                     FilterChip(
                         onClick = { onConfigChanged(config.copy(gifMaxWidth = w)) },
-                        label = { Text("${w}px", fontSize = 12.sp) },
+                        label = { Text("${w}px", style = MaterialTheme.typography.labelMedium) },
                         selected = config.gifMaxWidth == w,
                         colors = FilterChipDefaults.filterChipColors(
-                            containerColor = Mocha.Surface0,
-                            selectedContainerColor = Mocha.Mauve.copy(alpha = 0.3f),
+                            containerColor = Mocha.PanelHighest,
+                            labelColor = Mocha.Subtext0,
+                            selectedContainerColor = Mocha.Mauve.copy(alpha = 0.16f),
                             selectedLabelColor = Mocha.Mauve
                         )
                     )
@@ -580,7 +599,7 @@ fun ExportSheet(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(stringResource(R.string.export_capture_frame), color = Mocha.Text, fontSize = 13.sp)
+            Text(stringResource(R.string.export_capture_frame), color = Mocha.Text, style = MaterialTheme.typography.titleSmall)
             Switch(
                 checked = config.captureFrameOnly,
                 onCheckedChange = { onConfigChanged(config.copy(captureFrameOnly = it, exportAsGif = false, exportAudioOnly = false)) },
@@ -593,17 +612,18 @@ fun ExportSheet(
             )
         }
         if (config.captureFrameOnly) {
-            Text(stringResource(R.string.export_capture_format), color = Mocha.Subtext1, fontSize = 12.sp)
+            Text(stringResource(R.string.export_capture_format), color = Mocha.Subtext0, style = MaterialTheme.typography.labelLarge)
             Spacer(modifier = Modifier.height(4.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FrameCaptureFormat.entries.forEach { fmt ->
                     FilterChip(
                         onClick = { onConfigChanged(config.copy(captureFormat = fmt)) },
-                        label = { Text(fmt.displayName, fontSize = 12.sp) },
+                        label = { Text(fmt.displayName, style = MaterialTheme.typography.labelMedium) },
                         selected = config.captureFormat == fmt,
                         colors = FilterChipDefaults.filterChipColors(
-                            containerColor = Mocha.Surface0,
-                            selectedContainerColor = Mocha.Mauve.copy(alpha = 0.3f),
+                            containerColor = Mocha.PanelHighest,
+                            labelColor = Mocha.Subtext0,
+                            selectedContainerColor = Mocha.Mauve.copy(alpha = 0.16f),
                             selectedLabelColor = Mocha.Mauve
                         )
                     )
@@ -623,12 +643,12 @@ fun ExportSheet(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp),
+                .height(52.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Mocha.Mauve,
-                contentColor = Mocha.Crust
+                containerColor = Mocha.Rosewater,
+                contentColor = Mocha.Midnight
             ),
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(18.dp)
         ) {
             Icon(Icons.Default.FileUpload, contentDescription = stringResource(R.string.export_video_cd), modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(8.dp))
@@ -638,31 +658,184 @@ fun ExportSheet(
                     config.captureFrameOnly -> stringResource(R.string.export_capture_button)
                     else -> stringResource(R.string.export_video_button)
                 },
-                fontSize = 15.sp
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold
             )
         }
 
         // Timeline Exchange section
         Spacer(modifier = Modifier.height(12.dp))
-        Text(stringResource(R.string.export_timeline_exchange), color = Mocha.Subtext0, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+        Text(stringResource(R.string.export_timeline_exchange), color = Mocha.Rosewater, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Medium)
         Spacer(modifier = Modifier.height(4.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(
                 onClick = onExportOtio,
                 modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Blue),
-                border = BorderStroke(1.dp, Mocha.Blue.copy(alpha = 0.4f))
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Sapphire),
+                border = BorderStroke(1.dp, Mocha.CardStrokeStrong),
+                shape = RoundedCornerShape(16.dp)
             ) {
-                Text(stringResource(R.string.export_otio), fontSize = 11.sp)
+                Text(stringResource(R.string.export_otio), style = MaterialTheme.typography.labelLarge)
             }
             OutlinedButton(
                 onClick = onExportFcpxml,
                 modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Blue),
-                border = BorderStroke(1.dp, Mocha.Blue.copy(alpha = 0.4f))
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Sapphire),
+                border = BorderStroke(1.dp, Mocha.CardStrokeStrong),
+                shape = RoundedCornerShape(16.dp)
             ) {
-                Text(stringResource(R.string.export_fcpxml), fontSize = 11.sp)
+                Text(stringResource(R.string.export_fcpxml), style = MaterialTheme.typography.labelLarge)
             }
         }
+    }
+}
+
+@Composable
+private fun ExportStateCard(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    tint: Color,
+    title: String,
+    body: String,
+    primaryLabel: String,
+    onPrimary: () -> Unit,
+    progress: Float? = null,
+    progressLabel: String? = null,
+    secondaryBody: String? = null,
+    secondaryLabel: String? = null,
+    onSecondary: (() -> Unit)? = null,
+    tertiaryLabel: String? = null,
+    onTertiary: (() -> Unit)? = null
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Mocha.Panel),
+        border = BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
+        shape = RoundedCornerShape(26.dp)
+    ) {
+        Box(
+            modifier = Modifier.background(
+                Brush.verticalGradient(
+                    listOf(
+                        tint.copy(alpha = 0.12f),
+                        Mocha.PanelHighest.copy(alpha = 0.82f),
+                        Mocha.Panel
+                    )
+                )
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Surface(
+                    color = tint.copy(alpha = 0.14f),
+                    shape = CircleShape,
+                    border = BorderStroke(1.dp, tint.copy(alpha = 0.22f))
+                ) {
+                    Box(
+                        modifier = Modifier.padding(18.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            icon,
+                            contentDescription = title,
+                            tint = tint,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(title, color = Mocha.Text, style = MaterialTheme.typography.headlineMedium)
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(body, color = Mocha.Subtext0, style = MaterialTheme.typography.bodyMedium)
+
+                if (progress != null) {
+                    Spacer(modifier = Modifier.height(14.dp))
+                    LinearProgressIndicator(
+                        progress = { progress.coerceIn(0f, 1f) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp),
+                        color = tint,
+                        trackColor = Mocha.PanelHighest
+                    )
+                }
+                if (progressLabel != null) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(progressLabel, color = Mocha.Text, style = MaterialTheme.typography.titleMedium)
+                }
+                if (!secondaryBody.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(secondaryBody, color = tint, style = MaterialTheme.typography.labelLarge)
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = onPrimary,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (tint == Mocha.Red) Mocha.Red else Mocha.Rosewater,
+                        contentColor = if (tint == Mocha.Red) Mocha.Crust else Mocha.Midnight
+                    ),
+                    shape = RoundedCornerShape(18.dp)
+                ) {
+                    Text(primaryLabel, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                }
+
+                if (secondaryLabel != null && onSecondary != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = onSecondary,
+                        modifier = Modifier.fillMaxWidth(),
+                        border = BorderStroke(1.dp, Mocha.CardStrokeStrong),
+                        shape = RoundedCornerShape(18.dp)
+                    ) {
+                        Text(secondaryLabel, color = Mocha.Text, style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+
+                if (tertiaryLabel != null && onTertiary != null) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    TextButton(onClick = onTertiary) {
+                        Text(tertiaryLabel, color = Mocha.Subtext0, style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExportPill(
+    text: String,
+    accent: Color
+) {
+    Surface(
+        color = accent.copy(alpha = 0.12f),
+        shape = RoundedCornerShape(999.dp),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.2f))
+    ) {
+        Text(
+            text = text,
+            color = accent,
+            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+        )
+    }
+}
+
+private fun estimateExportSize(
+    totalDurationMs: Long,
+    config: ExportConfig
+): String? {
+    if (totalDurationMs <= 0L) return null
+
+    val totalBitrate = config.videoBitrate + config.audioBitrate
+    val estimatedBytes = (totalBitrate.toLong() * totalDurationMs) / 8000L
+    return when {
+        estimatedBytes >= 1_073_741_824L -> "%.1f GB".format(estimatedBytes / 1_073_741_824.0)
+        estimatedBytes >= 1_048_576L -> "%.0f MB".format(estimatedBytes / 1_048_576.0)
+        else -> "%.0f KB".format(estimatedBytes / 1024.0)
     }
 }

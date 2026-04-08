@@ -1439,8 +1439,10 @@ class EditorViewModel @Inject constructor(
         }
         val s = _state.value
         val clip = s.tracks.flatMap { it.clips }.firstOrNull { it.id == clipId } ?: return
+        val clipHasVisual = clipHasVisual(clip)
+        val clipHasAudio = clipHasAudio(clip)
         val suggestion: AiSuggestion? = when {
-            clip.effects.isEmpty() && clip.durationMs > 5000L ->
+            clipHasVisual && clip.effects.isEmpty() && clip.durationMs > 5000L ->
                 AiSuggestion(
                     id = "auto_color_${clip.id}",
                     message = "This clip could use color correction",
@@ -1456,9 +1458,10 @@ class EditorViewModel @Inject constructor(
             else -> {
                 val waveform = s.waveforms[clip.id]
                 if (waveform != null && waveform.size > 10) {
+                    val peak = waveform.maxOf { kotlin.math.abs(it) }
                     val avg = waveform.map { kotlin.math.abs(it) }.average().toFloat()
                     val variance = waveform.map { val d = kotlin.math.abs(it) - avg; d * d }.average().toFloat()
-                    if (variance < 0.005f) AiSuggestion(
+                    if (clipHasAudio && peak > 0.01f && variance < 0.005f) AiSuggestion(
                         id = "denoise_${clip.id}",
                         message = "Low audio variance detected - try Denoise",
                         actionId = "denoise"
@@ -1477,12 +1480,15 @@ class EditorViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 // Analyze video for subject positions
-                val firstClip = _state.value.tracks.flatMap { it.clips }.firstOrNull()
-                if (firstClip != null) {
+                val reframeSourceClip = getSelectedClip()?.takeIf(::clipHasVisual)
+                    ?: _state.value.tracks
+                        .flatMap { it.clips }
+                        .firstOrNull(::clipHasVisual)
+                if (reframeSourceClip != null) {
                     val config = SmartReframeEngine.ReframeConfig(
                         targetAspectRatio = targetAspect.toFloat()
                     )
-                    smartReframeEngine.analyzeForReframe(firstClip.sourceUri, config) { progress ->
+                    smartReframeEngine.analyzeForReframe(reframeSourceClip.sourceUri, config) { progress ->
                         // Progress tracked via isReframing state
                     }
                 }
@@ -1520,6 +1526,10 @@ class EditorViewModel @Inject constructor(
 
     fun analyzeFillers() {
         val clip = getSelectedClip() ?: return
+        if (!clipHasAudio(clip)) {
+            showToast("Selected clip has no audio to analyze")
+            return
+        }
         _state.update { it.copy(isAnalyzingFillers = true) }
         viewModelScope.launch {
             try {
@@ -1780,6 +1790,10 @@ class EditorViewModel @Inject constructor(
 
     fun analyzeAndReduceNoise() {
         val clip = getSelectedClip() ?: return
+        if (!clipHasAudio(clip)) {
+            showToast("Selected clip has no audio to analyze")
+            return
+        }
         _state.update { it.copy(isAnalyzingNoise = true, noiseAnalysisResult = null) }
         viewModelScope.launch {
             try {
@@ -1903,17 +1917,18 @@ class EditorViewModel @Inject constructor(
 
     // --- Multi-Cam Sync ---
     fun syncMultiCamClips() {
-        val videoClips = _state.value.tracks
+        val syncEligibleClips = _state.value.tracks
             .filter { it.type == TrackType.VIDEO }
             .flatMap { it.clips }
-        if (videoClips.size < 2) {
-            showToast("Need at least 2 video clips for multi-cam sync")
+            .filter(::clipSupportsAudioSync)
+        if (syncEligibleClips.size < 2) {
+            showToast("Need at least 2 video clips with audio for multi-cam sync")
             return
         }
         viewModelScope.launch {
             showToast("Syncing clips by audio...")
             try {
-                val uris = videoClips.map { it.sourceUri }
+                val uris = syncEligibleClips.map { it.sourceUri }
                 val referenceUri = uris.first()
                 val otherUris = uris.drop(1)
                 val results = withContext(Dispatchers.IO) {
@@ -1923,11 +1938,8 @@ class EditorViewModel @Inject constructor(
                     saveUndoState("Multi-cam sync")
                     // Build offset list: first clip stays at 0, rest get offsets from sync results
                     val offsets = listOf(0L) + results.map { it.offsetMs }
-                    // Build clip-id-to-offset map using the same order as videoClips
-                    val clipIds = _state.value.tracks
-                        .filter { it.type == TrackType.VIDEO }
-                        .flatMap { it.clips }
-                        .map { it.id }
+                    // Build clip-id-to-offset map using the same order as syncEligibleClips
+                    val clipIds = syncEligibleClips.map { it.id }
                     val offsetMap = clipIds.zip(offsets).toMap()
                     _state.update { s ->
                         s.copy(tracks = s.tracks.map { track ->
@@ -2446,7 +2458,15 @@ class EditorViewModel @Inject constructor(
         viewModelScope.launch {
             showToast("Analyzing speech regions...")
             try {
-                val voiceClip = voiceTracks.flatMap { it.clips }.firstOrNull() ?: return@launch
+                val voiceClip = voiceTracks
+                    .flatMap { it.clips }
+                    .firstOrNull(::clipHasAudio)
+
+                if (voiceClip == null) {
+                    showToast("Need a video clip with audio for ducking")
+                    return@launch
+                }
+
                 val waveform = withContext(Dispatchers.IO) {
                     audioEngine.extractWaveform(voiceClip.sourceUri, 44100)
                 }
@@ -2682,6 +2702,14 @@ class EditorViewModel @Inject constructor(
 
     fun trackEffectUsage(effectType: EffectType) {
         viewModelScope.launch { settingsRepo.addRecentEffect(effectType.name) }
+    }
+
+    private fun clipHasVisual(clip: Clip): Boolean = videoEngine.hasVisualTrack(clip.sourceUri)
+
+    private fun clipHasAudio(clip: Clip): Boolean = videoEngine.hasAudioTrack(clip.sourceUri)
+
+    private fun clipSupportsAudioSync(clip: Clip): Boolean {
+        return videoEngine.isMotionVideo(clip.sourceUri) && videoEngine.hasAudioTrack(clip.sourceUri)
     }
 
     fun getSelectedClip(): Clip? {

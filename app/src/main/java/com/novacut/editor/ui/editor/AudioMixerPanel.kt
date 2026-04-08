@@ -1,37 +1,68 @@
 package com.novacut.editor.ui.editor
 
-import androidx.compose.animation.*
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.ui.res.stringResource
 import com.novacut.editor.R
-import com.novacut.editor.model.*
+import com.novacut.editor.model.AudioEffect
+import com.novacut.editor.model.AudioEffectType
+import com.novacut.editor.model.Track
+import com.novacut.editor.model.TrackType
 import com.novacut.editor.ui.theme.Mocha
-
 
 @Composable
 fun AudioMixerPanel(
@@ -49,115 +80,163 @@ fun AudioMixerPanel(
 ) {
     var selectedEffectTrack by remember { mutableStateOf<String?>(null) }
     var selectedEffectId by remember { mutableStateOf<String?>(null) }
+    val selectedTrack = tracks.find { it.id == selectedEffectTrack }
+    val activeEffects = tracks.sumOf { it.audioEffects.size }
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(Mocha.Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .padding(12.dp)
+    PremiumEditorPanel(
+        title = androidx.compose.ui.res.stringResource(R.string.panel_audio_mixer_title),
+        subtitle = "Balance channels, shape stereo placement, and stack live FX from one stage.",
+        icon = Icons.Default.Tune,
+        accent = Mocha.Sapphire,
+        onClose = onClose,
+        modifier = modifier,
+        scrollable = true
     ) {
-        // Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(stringResource(R.string.panel_audio_mixer_title), color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Close, stringResource(R.string.close), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
-            }
-        }
+        PremiumPanelCard(accent = Mocha.Sapphire) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Session overview",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Mocha.Text
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = if (selectedTrack != null) {
+                            "Fine-tune ${selectedTrack.type.displayLabel()} ${selectedTrack.index + 1} with live metering and effect edits below."
+                        } else {
+                            "Scroll the strips to stage levels, then open FX on any track to dial in the chain."
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Mocha.Subtext0
+                    )
+                }
 
-        Spacer(Modifier.height(8.dp))
-
-        // Channel strips
-        LazyRow(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(280.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            items(tracks, key = { it.id }) { track ->
-                ChannelStrip(
-                    track = track,
-                    vuLevel = vuLevels[track.id] ?: (0f to 0f),
-                    onVolumeChanged = { onTrackVolumeChanged(track.id, it) },
-                    onPanChanged = { onTrackPanChanged(track.id, it) },
-                    onMuteToggled = { onTrackMuteToggled(track.id) },
-                    onSoloToggled = { onTrackSoloToggled(track.id) },
-                    onEffectsClicked = {
-                        selectedEffectTrack = if (selectedEffectTrack == track.id) null else track.id
-                        selectedEffectId = null
-                    },
-                    isEffectsExpanded = selectedEffectTrack == track.id
-                )
-            }
-
-            // Master bus
-            item {
-                MasterBusStrip()
-            }
-        }
-
-        // Audio effects section
-        AnimatedVisibility(
-            visible = selectedEffectTrack != null,
-            enter = slideInVertically { it } + fadeIn(),
-            exit = slideOutVertically { it } + fadeOut()
-        ) {
-            selectedEffectTrack?.let { trackId ->
-                val track = tracks.find { it.id == trackId } ?: return@let
+                Spacer(modifier = Modifier.width(12.dp))
 
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp)
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    HorizontalDivider(color = Mocha.Surface1, thickness = 1.dp)
-                    Spacer(Modifier.height(8.dp))
+                    PremiumPanelPill(
+                        text = "${tracks.size} tracks live",
+                        accent = Mocha.Sapphire
+                    )
+                    PremiumPanelPill(
+                        text = "$activeEffects FX staged",
+                        accent = if (activeEffects > 0) Mocha.Mauve else Mocha.Overlay1
+                    )
+                }
+            }
+        }
 
-                    // Effect chain
+        Spacer(modifier = Modifier.height(12.dp))
+
+        PremiumPanelCard(
+            accent = Mocha.Blue
+        ) {
+            Text(
+                text = "Channel strips",
+                style = MaterialTheme.typography.titleMedium,
+                color = Mocha.Text
+            )
+            Text(
+                text = "Each strip now exposes real volume and pan control, plus mute, solo, and effect routing.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Mocha.Subtext0
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            LazyRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(404.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                items(tracks, key = { it.id }) { track ->
+                    ChannelStrip(
+                        track = track,
+                        vuLevel = vuLevels[track.id] ?: (0f to 0f),
+                        onVolumeChanged = { onTrackVolumeChanged(track.id, it) },
+                        onPanChanged = { onTrackPanChanged(track.id, it) },
+                        onMuteToggled = { onTrackMuteToggled(track.id) },
+                        onSoloToggled = { onTrackSoloToggled(track.id) },
+                        onEffectsClicked = {
+                            selectedEffectTrack = if (selectedEffectTrack == track.id) null else track.id
+                            selectedEffectId = null
+                        },
+                        isEffectsExpanded = selectedEffectTrack == track.id
+                    )
+                }
+
+                item {
+                    MasterBusStrip()
+                }
+            }
+        }
+
+        AnimatedVisibility(
+            visible = selectedTrack != null,
+            enter = slideInVertically { it / 3 } + fadeIn(),
+            exit = slideOutVertically { it / 3 } + fadeOut()
+        ) {
+            selectedTrack?.let { track ->
+                Spacer(modifier = Modifier.height(12.dp))
+
+                PremiumPanelCard(accent = track.type.mixerAccent()) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            stringResource(R.string.mixer_effects_track, track.type.name, tracks.indexOf(track) + 1),
-                            color = Mocha.Text, fontSize = 13.sp
-                        )
-                        // Add effect dropdown
-                        var showAddMenu by remember { mutableStateOf(false) }
-                        Box {
-                            IconButton(onClick = { showAddMenu = true }, modifier = Modifier.size(28.dp)) {
-                                Icon(Icons.Default.Add, stringResource(R.string.cd_mixer_add_effect), tint = Mocha.Green, modifier = Modifier.size(18.dp))
-                            }
-                            DropdownMenu(
-                                expanded = showAddMenu,
-                                onDismissRequest = { showAddMenu = false }
-                            ) {
-                                AudioEffectType.entries.forEach { type ->
-                                    DropdownMenuItem(
-                                        text = { Text(type.displayName, fontSize = 13.sp) },
-                                        onClick = {
-                                            onTrackAudioEffectAdded(trackId, type)
-                                            showAddMenu = false
-                                        }
-                                    )
-                                }
-                            }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = androidx.compose.ui.res.stringResource(
+                                    R.string.mixer_effects_track,
+                                    track.type.displayLabel(),
+                                    tracks.indexOf(track) + 1
+                                ),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Mocha.Text
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = if (track.audioEffects.isEmpty()) {
+                                    "Build a chain for cleanup, tone shaping, and loudness control."
+                                } else {
+                                    "Tap a processor to tweak its parameters or remove it from the chain."
+                                },
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Mocha.Subtext0
+                            )
                         }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+                        AddEffectButton(
+                            onAdd = { type -> onTrackAudioEffectAdded(track.id, type) }
+                        )
                     }
 
-                    Spacer(Modifier.height(4.dp))
-
-                    // Effect chain list
                     if (track.audioEffects.isEmpty()) {
-                        Text(stringResource(R.string.panel_audio_mixer_no_effects), color = Mocha.Subtext0, fontSize = 12.sp, modifier = Modifier.padding(8.dp))
-                    } else {
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        Surface(
+                            color = Mocha.PanelRaised,
+                            shape = RoundedCornerShape(20.dp),
+                            border = BorderStroke(1.dp, Mocha.CardStroke)
                         ) {
+                            Text(
+                                text = androidx.compose.ui.res.stringResource(R.string.panel_audio_mixer_no_effects),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Mocha.Subtext0,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)
+                            )
+                        }
+                    } else {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(track.audioEffects, key = { it.id }) { effect ->
                                 AudioEffectChip(
                                     effect = effect,
@@ -165,24 +244,72 @@ fun AudioMixerPanel(
                                     onClick = {
                                         selectedEffectId = if (selectedEffectId == effect.id) null else effect.id
                                     },
-                                    onRemove = { onTrackAudioEffectRemoved(trackId, effect.id) }
+                                    onRemove = { onTrackAudioEffectRemoved(track.id, effect.id) }
                                 )
                             }
                         }
                     }
 
-                    // Effect parameter editor
                     selectedEffectId?.let { effectId ->
                         val effect = track.audioEffects.find { it.id == effectId } ?: return@let
-                        Spacer(Modifier.height(8.dp))
                         AudioEffectParams(
                             effect = effect,
                             onParamChanged = { param, value ->
-                                onTrackAudioEffectParamChanged(trackId, effectId, param, value)
+                                onTrackAudioEffectParamChanged(track.id, effectId, param, value)
                             }
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AddEffectButton(
+    onAdd: (AudioEffectType) -> Unit
+) {
+    var showAddMenu by remember { mutableStateOf(false) }
+
+    Box {
+        Surface(
+            color = Mocha.Green.copy(alpha = 0.14f),
+            shape = RoundedCornerShape(18.dp),
+            border = BorderStroke(1.dp, Mocha.Green.copy(alpha = 0.24f))
+        ) {
+            Row(
+                modifier = Modifier
+                    .clickable { showAddMenu = true }
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = androidx.compose.ui.res.stringResource(R.string.cd_mixer_add_effect),
+                    tint = Mocha.Green,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    text = "Add FX",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Mocha.Green
+                )
+            }
+        }
+
+        DropdownMenu(
+            expanded = showAddMenu,
+            onDismissRequest = { showAddMenu = false }
+        ) {
+            AudioEffectType.entries.forEach { type ->
+                DropdownMenuItem(
+                    text = { Text(type.displayName) },
+                    onClick = {
+                        onAdd(type)
+                        showAddMenu = false
+                    }
+                )
             }
         }
     }
@@ -199,117 +326,210 @@ private fun ChannelStrip(
     onEffectsClicked: () -> Unit,
     isEffectsExpanded: Boolean
 ) {
-    val trackLabel = when (track.type) {
-        TrackType.VIDEO -> "V${track.index + 1}"
-        TrackType.AUDIO -> "A${track.index + 1}"
-        TrackType.OVERLAY -> "OV${track.index + 1}"
-        TrackType.TEXT -> "T${track.index + 1}"
-        TrackType.ADJUSTMENT -> "ADJ"
-    }
-    val panDesc = stringResource(R.string.cd_mixer_pan)
-    val muteDesc = stringResource(if (track.isMuted) R.string.cd_mixer_unmute else R.string.cd_mixer_mute)
-    val soloDesc = stringResource(if (track.isSolo) R.string.cd_mixer_unsolo else R.string.cd_mixer_solo)
-    val fxDesc = stringResource(R.string.cd_mixer_audio_effects)
+    val accent = track.type.mixerAccent()
+    val panDesc = androidx.compose.ui.res.stringResource(R.string.cd_mixer_pan)
+    val muteDesc = androidx.compose.ui.res.stringResource(
+        if (track.isMuted) R.string.cd_mixer_unmute else R.string.cd_mixer_mute
+    )
+    val soloDesc = androidx.compose.ui.res.stringResource(
+        if (track.isSolo) R.string.cd_mixer_unsolo else R.string.cd_mixer_solo
+    )
+    val fxDesc = androidx.compose.ui.res.stringResource(R.string.cd_mixer_audio_effects)
 
-    Column(
+    Surface(
         modifier = Modifier
-            .width(56.dp)
-            .fillMaxHeight()
-            .background(Mocha.Surface0, RoundedCornerShape(8.dp))
-            .padding(4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
+            .width(132.dp)
+            .fillMaxHeight(),
+        color = Mocha.PanelHighest,
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(
+            1.dp,
+            if (isEffectsExpanded) accent.copy(alpha = 0.55f) else Mocha.CardStrokeStrong
+        )
     ) {
-        // Track label
-        Text(trackLabel, color = Mocha.Text, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-
-        // VU Meter
-        VUMeter(
-            left = vuLevel.first,
-            right = vuLevel.second,
-            modifier = Modifier
-                .width(20.dp)
-                .weight(1f)
-                .padding(vertical = 4.dp)
-        )
-
-        // Volume value
-        Text(
-            "${(track.volume * 100).toInt()}%",
-            color = Mocha.Subtext0,
-            fontSize = 9.sp
-        )
-
-        // Pan control
-        Text(
-            when {
-                track.pan < -0.1f -> "L${(-track.pan * 100).toInt()}"
-                track.pan > 0.1f -> "R${(track.pan * 100).toInt()}"
-                else -> "C"
-            },
-            color = Mocha.Subtext0,
-            fontSize = 8.sp
-        )
-        Slider(
-            value = track.pan,
-            onValueChange = { onPanChanged(it) },
-            valueRange = -1f..1f,
-            modifier = Modifier
-                .width(48.dp)
-                .height(16.dp)
-                .semantics { contentDescription = panDesc },
-            colors = SliderDefaults.colors(
-                thumbColor = Mocha.Mauve,
-                activeTrackColor = Mocha.Mauve.copy(alpha = 0.5f),
-                inactiveTrackColor = Mocha.Surface1
+        Box(
+            modifier = Modifier.background(
+                Brush.verticalGradient(
+                    listOf(
+                        accent.copy(alpha = 0.12f),
+                        Mocha.PanelHighest,
+                        Mocha.PanelRaised
+                    )
+                )
             )
-        )
-
-        Spacer(Modifier.height(2.dp))
-
-        // Mute button
-        Box(
-            modifier = Modifier
-                .size(24.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .background(if (track.isMuted) Mocha.Red.copy(alpha = 0.3f) else Mocha.Surface1)
-                .clickable { onMuteToggled() }
-                .semantics { contentDescription = muteDesc },
-            contentAlignment = Alignment.Center
         ) {
-            Text(stringResource(R.string.panel_audio_mixer_mute), color = if (track.isMuted) Mocha.Red else Mocha.Subtext0, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-        }
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 10.dp, vertical = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    PremiumPanelPill(
+                        text = track.trackLabel(),
+                        accent = accent
+                    )
+                    Text(
+                        text = track.type.displayLabel(),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Mocha.Subtext0
+                    )
+                }
 
-        // Solo button
-        Box(
-            modifier = Modifier
-                .size(24.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .background(if (track.isSolo) Mocha.Yellow.copy(alpha = 0.3f) else Mocha.Surface1)
-                .clickable { onSoloToggled() }
-                .semantics { contentDescription = soloDesc },
-            contentAlignment = Alignment.Center
-        ) {
-            Text(stringResource(R.string.panel_audio_mixer_solo), color = if (track.isSolo) Mocha.Yellow else Mocha.Subtext0, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-        }
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    VUMeter(
+                        left = vuLevel.first,
+                        right = vuLevel.second,
+                        modifier = Modifier
+                            .width(34.dp)
+                            .height(84.dp)
+                    )
+                    Text(
+                        text = formatVolume(track.volume),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = Mocha.Text
+                    )
+                }
 
-        // FX button
-        Box(
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    MixerControlBlock(
+                        label = "Level",
+                        valueLabel = formatVolume(track.volume),
+                        accent = accent
+                    ) {
+                        Slider(
+                            value = track.volume,
+                            onValueChange = onVolumeChanged,
+                            valueRange = 0f..2f,
+                            colors = SliderDefaults.colors(
+                                thumbColor = accent,
+                                activeTrackColor = accent.copy(alpha = 0.65f),
+                                inactiveTrackColor = Mocha.Surface1
+                            )
+                        )
+                    }
+
+                    MixerControlBlock(
+                        label = "Pan",
+                        valueLabel = formatPan(track.pan),
+                        accent = accent
+                    ) {
+                        Slider(
+                            value = track.pan,
+                            onValueChange = onPanChanged,
+                            valueRange = -1f..1f,
+                            modifier = Modifier.semantics { contentDescription = panDesc },
+                            colors = SliderDefaults.colors(
+                                thumbColor = Mocha.Mauve,
+                                activeTrackColor = Mocha.Mauve.copy(alpha = 0.65f),
+                                inactiveTrackColor = Mocha.Surface1
+                            )
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    MixerToggleButton(
+                        label = androidx.compose.ui.res.stringResource(R.string.panel_audio_mixer_mute),
+                        accent = Mocha.Red,
+                        active = track.isMuted,
+                        contentDescription = muteDesc,
+                        onClick = onMuteToggled,
+                        modifier = Modifier.weight(1f)
+                    )
+                    MixerToggleButton(
+                        label = androidx.compose.ui.res.stringResource(R.string.panel_audio_mixer_solo),
+                        accent = Mocha.Yellow,
+                        active = track.isSolo,
+                        contentDescription = soloDesc,
+                        onClick = onSoloToggled,
+                        modifier = Modifier.weight(1f)
+                    )
+                    MixerToggleButton(
+                        label = androidx.compose.ui.res.stringResource(R.string.panel_audio_mixer_fx),
+                        accent = accent,
+                        active = isEffectsExpanded || track.audioEffects.isNotEmpty(),
+                        contentDescription = fxDesc,
+                        onClick = onEffectsClicked,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MixerControlBlock(
+    label: String,
+    valueLabel: String,
+    accent: Color,
+    content: @Composable () -> Unit
+) {
+    Surface(
+        color = Mocha.PanelRaised.copy(alpha = 0.92f),
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.12f))
+    ) {
+        Column(
             modifier = Modifier
-                .size(24.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .background(if (isEffectsExpanded) Mocha.Mauve.copy(alpha = 0.3f) else Mocha.Surface1)
-                .clickable { onEffectsClicked() }
-                .semantics { contentDescription = fxDesc },
-            contentAlignment = Alignment.Center
+                .width(104.dp)
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Text(
-                stringResource(R.string.panel_audio_mixer_fx),
-                color = if (track.audioEffects.isNotEmpty()) Mocha.Mauve else Mocha.Subtext0,
-                fontSize = 9.sp,
-                fontWeight = FontWeight.Bold
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = Mocha.Subtext0
             )
+            Text(
+                text = valueLabel,
+                style = MaterialTheme.typography.labelLarge,
+                color = accent
+            )
+            content()
         }
+    }
+}
+
+@Composable
+private fun MixerToggleButton(
+    label: String,
+    accent: Color,
+    active: Boolean,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.semantics { this.contentDescription = contentDescription },
+        color = if (active) accent.copy(alpha = 0.18f) else Mocha.PanelRaised,
+        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(1.dp, if (active) accent.copy(alpha = 0.26f) else Mocha.CardStroke)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = if (active) accent else Mocha.Subtext0,
+            modifier = Modifier
+                .clickable(onClick = onClick)
+                .padding(horizontal = 8.dp, vertical = 8.dp)
+        )
     }
 }
 
@@ -319,7 +539,6 @@ private fun VUMeter(
     right: Float,
     modifier: Modifier = Modifier
 ) {
-    // Smooth VU meter with ballistic decay
     val smoothedLeft by animateFloatAsState(
         targetValue = left.coerceIn(0f, 1f),
         animationSpec = tween(durationMillis = if (left > 0f) 50 else 150),
@@ -330,16 +549,23 @@ private fun VUMeter(
         animationSpec = tween(durationMillis = if (right > 0f) 50 else 150),
         label = "vuRight"
     )
+
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
-        val barWidth = w * 0.35f
-        val gap = w * 0.1f
+        val barWidth = w * 0.34f
+        val gap = w * 0.12f
 
-        // Background
-        drawRoundRect(Mocha.Surface1, cornerRadius = CornerRadius(2f, 2f))
+        drawRoundRect(
+            color = Mocha.Panel,
+            cornerRadius = CornerRadius(20f, 20f)
+        )
+        drawRoundRect(
+            color = Mocha.CardStrokeStrong,
+            cornerRadius = CornerRadius(20f, 20f),
+            style = Stroke(width = 1f)
+        )
 
-        // Left bar
         val leftHeight = h * smoothedLeft
         val leftColor = when {
             smoothedLeft > 0.9f -> Mocha.Red
@@ -347,12 +573,11 @@ private fun VUMeter(
             else -> Mocha.Green
         }
         drawRect(
-            leftColor,
+            color = leftColor,
             topLeft = Offset(gap, h - leftHeight),
             size = Size(barWidth, leftHeight)
         )
 
-        // Right bar
         val rightHeight = h * smoothedRight
         val rightColor = when {
             smoothedRight > 0.9f -> Mocha.Red
@@ -360,34 +585,76 @@ private fun VUMeter(
             else -> Mocha.Green
         }
         drawRect(
-            rightColor,
+            color = rightColor,
             topLeft = Offset(gap + barWidth + gap, h - rightHeight),
             size = Size(barWidth, rightHeight)
         )
 
-        // Tick marks
-        for (i in 0..4) {
-            val y = h * i / 4f
-            drawLine(Mocha.Surface2, Offset(0f, y), Offset(w, y), 0.5f)
+        for (i in 1..4) {
+            val y = h * i / 5f
+            drawLine(
+                color = Mocha.Surface2.copy(alpha = 0.45f),
+                start = Offset(0f, y),
+                end = Offset(w, y),
+                strokeWidth = 1f
+            )
         }
     }
 }
 
 @Composable
 private fun MasterBusStrip() {
-    Column(
+    Surface(
         modifier = Modifier
-            .width(56.dp)
-            .fillMaxHeight()
-            .background(Mocha.Surface0.copy(alpha = 0.8f), RoundedCornerShape(8.dp))
-            .border(1.dp, Mocha.Mauve.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-            .padding(4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .width(132.dp)
+            .fillMaxHeight(),
+        color = Mocha.PanelHighest,
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, Mocha.Mauve.copy(alpha = 0.32f))
     ) {
-        Text(stringResource(R.string.panel_audio_mixer_master), color = Mocha.Mauve, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(4.dp))
-        Icon(Icons.Default.GraphicEq, stringResource(R.string.cd_mixer_master), tint = Mocha.Mauve, modifier = Modifier.size(24.dp))
+        Box(
+            modifier = Modifier.background(
+                Brush.verticalGradient(
+                    listOf(
+                        Mocha.Mauve.copy(alpha = 0.16f),
+                        Mocha.PanelHighest,
+                        Mocha.PanelRaised
+                    )
+                )
+            )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(14.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                PremiumPanelPill(
+                    text = androidx.compose.ui.res.stringResource(R.string.panel_audio_mixer_master),
+                    accent = Mocha.Mauve
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Icon(
+                    imageVector = Icons.Default.GraphicEq,
+                    contentDescription = androidx.compose.ui.res.stringResource(R.string.cd_mixer_master),
+                    tint = Mocha.Mauve,
+                    modifier = Modifier.size(34.dp)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "Master bus",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = Mocha.Text
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Reference output",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Mocha.Subtext0
+                )
+            }
+        }
     }
 }
 
@@ -398,35 +665,45 @@ private fun AudioEffectChip(
     onClick: () -> Unit,
     onRemove: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(if (isSelected) Mocha.Mauve.copy(alpha = 0.2f) else Mocha.Surface1)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    Surface(
+        color = if (isSelected) Mocha.Mauve.copy(alpha = 0.16f) else Mocha.PanelRaised,
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(
+            1.dp,
+            if (isSelected) Mocha.Mauve.copy(alpha = 0.3f) else Mocha.CardStroke
+        )
     ) {
-        Box(
+        Row(
             modifier = Modifier
-                .size(6.dp)
-                .background(if (effect.enabled) Mocha.Green else Mocha.Red, RoundedCornerShape(3.dp))
-        )
-        Text(
-            effect.type.displayName,
-            color = if (isSelected) Mocha.Mauve else Mocha.Text,
-            fontSize = 11.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Icon(
-            Icons.Default.Close,
-            stringResource(R.string.cd_mixer_remove_effect),
-            tint = Mocha.Subtext0,
-            modifier = Modifier
-                .size(14.dp)
-                .clickable(onClick = onRemove)
-        )
+                .clickable(onClick = onClick)
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .background(
+                        if (effect.enabled) Mocha.Green else Mocha.Red,
+                        RoundedCornerShape(999.dp)
+                    )
+            )
+            Text(
+                text = effect.type.displayName,
+                style = MaterialTheme.typography.labelLarge,
+                color = if (isSelected) Mocha.Mauve else Mocha.Text,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = androidx.compose.ui.res.stringResource(R.string.cd_mixer_remove_effect),
+                tint = Mocha.Subtext0,
+                modifier = Modifier
+                    .size(16.dp)
+                    .clickable(onClick = onRemove)
+            )
+        }
     }
 }
 
@@ -435,50 +712,56 @@ private fun AudioEffectParams(
     effect: AudioEffect,
     onParamChanged: (String, Float) -> Unit
 ) {
-    val defaults = AudioEffectType.defaultParams(effect.type)
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Mocha.Surface0, RoundedCornerShape(8.dp))
-            .padding(8.dp)
+    Surface(
+        color = Mocha.PanelRaised,
+        shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(1.dp, Mocha.CardStrokeStrong)
     ) {
-        Text(effect.type.displayName, color = Mocha.Text, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(4.dp))
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = effect.type.displayName,
+                style = MaterialTheme.typography.titleMedium,
+                color = Mocha.Text
+            )
+            Text(
+                text = "Adjust the selected processor in real time while the preview keeps playing above.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Mocha.Subtext0
+            )
 
-        effect.params.forEach { (param, value) ->
-            val range = getParamRange(effect.type, param)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 1.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    formatParamName(param),
-                    color = Mocha.Subtext0,
-                    fontSize = 10.sp,
-                    modifier = Modifier.width(60.dp)
-                )
-                Slider(
-                    value = value,
-                    onValueChange = { onParamChanged(param, it) },
-                    valueRange = range.first..range.second,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(20.dp),
-                    colors = SliderDefaults.colors(
-                        thumbColor = Mocha.Mauve,
-                        activeTrackColor = Mocha.Mauve.copy(alpha = 0.6f),
-                        inactiveTrackColor = Mocha.Surface1
+            effect.params.toSortedMap().forEach { (param, value) ->
+                val range = getParamRange(effect.type, param)
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = formatParamName(param),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = Mocha.Text
+                        )
+                        Text(
+                            text = formatParamValue(param, value),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = Mocha.Mauve
+                        )
+                    }
+                    Slider(
+                        value = value,
+                        onValueChange = { onParamChanged(param, it) },
+                        valueRange = range.first..range.second,
+                        colors = SliderDefaults.colors(
+                            thumbColor = Mocha.Mauve,
+                            activeTrackColor = Mocha.Mauve.copy(alpha = 0.6f),
+                            inactiveTrackColor = Mocha.Surface1
+                        )
                     )
-                )
-                Text(
-                    formatParamValue(param, value),
-                    color = Mocha.Subtext0,
-                    fontSize = 9.sp,
-                    modifier = Modifier.width(40.dp)
-                )
+                }
             }
         }
     }
@@ -530,4 +813,36 @@ private fun formatParamValue(param: String, value: Float): String {
         param == "rate" -> "%.1fHz".format(value)
         else -> "%.2f".format(value)
     }
+}
+
+private fun Track.trackLabel(): String = when (type) {
+    TrackType.VIDEO -> "V${index + 1}"
+    TrackType.AUDIO -> "A${index + 1}"
+    TrackType.OVERLAY -> "OV${index + 1}"
+    TrackType.TEXT -> "T${index + 1}"
+    TrackType.ADJUSTMENT -> "ADJ"
+}
+
+private fun TrackType.displayLabel(): String = when (this) {
+    TrackType.VIDEO -> "Video"
+    TrackType.AUDIO -> "Audio"
+    TrackType.OVERLAY -> "Overlay"
+    TrackType.TEXT -> "Text"
+    TrackType.ADJUSTMENT -> "Adjust"
+}
+
+private fun TrackType.mixerAccent(): Color = when (this) {
+    TrackType.VIDEO -> Mocha.Blue
+    TrackType.AUDIO -> Mocha.Green
+    TrackType.OVERLAY -> Mocha.Peach
+    TrackType.TEXT -> Mocha.Mauve
+    TrackType.ADJUSTMENT -> Mocha.Yellow
+}
+
+private fun formatVolume(value: Float): String = "${(value * 100).toInt()}%"
+
+private fun formatPan(value: Float): String = when {
+    value < -0.1f -> "L${(-value * 100).toInt()}"
+    value > 0.1f -> "R${(value * 100).toInt()}"
+    else -> "C"
 }

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.14.0</string>
+    <string name="app_version">v3.25.0</string>
 
     <!-- Common -->
     <string name="close">Close</string>
@@ -19,6 +19,7 @@
 
     <!-- ExportSheet -->
     <string name="export_title">Export</string>
+    <string name="export_subtitle">Choose a delivery-ready master, a lightweight share render, or a single frame capture.</string>
     <string name="export_exporting">Exporting\u2026</string>
     <string name="export_cancel">Cancel Export</string>
     <string name="export_complete">Export Complete!</string>
@@ -32,6 +33,7 @@
     <string name="export_codec">Codec</string>
     <string name="export_quality">Quality</string>
     <string name="export_output_details">Output Details</string>
+    <string name="export_delivery_summary">Delivery Summary</string>
     <string name="export_video_button">Export Video</string>
     <string name="export_video_cd">Export video</string>
     <string name="export_subtitles">Export Subtitles</string>
@@ -115,6 +117,7 @@
 
     <!-- SettingsScreen -->
     <string name="settings_title">Settings</string>
+    <string name="settings_subtitle">Tune performance, defaults, and editing behavior for the way you like to work.</string>
     <string name="settings_export_defaults">Export Defaults</string>
     <string name="settings_default_resolution">Default Resolution</string>
     <string name="settings_default_frame_rate">Default Frame Rate</string>
@@ -146,6 +149,7 @@
 
     <!-- PreviewPanel -->
     <string name="preview_scopes">Scopes</string>
+    <string name="preview_live">Live Preview</string>
     <string name="preview_add_media">Add media to get started</string>
     <string name="preview_back_5s">Back 5s</string>
     <string name="preview_previous_frame">Previous frame</string>
@@ -170,13 +174,37 @@
     <string name="text_editor_off">Off</string>
     <string name="text_editor_typography">Typography</string>
     <string name="text_editor_your_text">Your Text</string>
+    <string name="panel_text_editor_subtitle">Shape overlays that feel designed, timed, and intentional.</string>
+    <string name="panel_text_editor_preview">Live Preview</string>
+    <string name="panel_text_editor_style">Style</string>
+    <string name="panel_text_editor_timing">Timing &amp; Motion</string>
+    <string name="panel_text_editor_appearance">Depth &amp; Finish</string>
+    <string name="panel_text_editor_horizontal">Horizontal</string>
+    <string name="panel_text_editor_vertical">Vertical</string>
+    <string name="panel_text_editor_duration_seconds">Duration (sec)</string>
+    <string name="panel_text_editor_shadow_x">Shadow X</string>
+    <string name="panel_text_editor_shadow_y">Shadow Y</string>
+    <string name="panel_text_editor_shadow_blur">Shadow Blur</string>
+    <string name="panel_text_editor_glow_radius">Glow Radius</string>
+    <string name="panel_text_editor_letter_spacing">Letter Spacing</string>
+    <string name="panel_text_editor_line_height">Line Height</string>
+    <string name="panel_text_editor_rotation">Rotation</string>
 
     <!-- AudioPanel -->
     <string name="audio_title">Audio</string>
     <string name="audio_volume">Volume</string>
     <string name="audio_record_voiceover">Record Voiceover</string>
     <string name="audio_voiceover">Voiceover</string>
+    <string name="audio_mic_permission_required">Microphone permission is needed to record voiceovers.</string>
     <string name="audio_cancel">Cancel</string>
+    <string name="panel_audio_subtitle">Balance the clip mix, fades, and voiceover without leaving the edit.</string>
+    <string name="panel_voiceover_subtitle">Record narration directly over the cut.</string>
+    <string name="audio_waveform_label">Waveform</string>
+    <string name="audio_clip_duration">Length %1$s</string>
+    <string name="audio_fade_in">Fade In (ms)</string>
+    <string name="audio_fade_out">Fade Out (ms)</string>
+    <string name="audio_status_ready">Ready to record</string>
+    <string name="audio_status_recording">Recording</string>
 
     <!-- ColorGradingPanel -->
     <string name="color_grading_title">Color Grading</string>
@@ -224,23 +252,34 @@
 
     <!-- MediaPicker -->
     <string name="media_picker_title">Add Media</string>
+    <string name="media_picker_subtitle">Bring in footage, photos, and audio or capture something new without leaving the edit.</string>
     <string name="media_picker_video">Video</string>
     <string name="media_picker_image">Image</string>
     <string name="media_picker_audio">Audio</string>
     <string name="media_picker_select_multiple">Select Multiple Files</string>
     <string name="media_picker_record_video">Record Video</string>
+    <string name="media_picker_camera_permission_required">Camera permission is needed to record video.</string>
 
     <!-- ProjectListScreen -->
     <string name="projects_app_title">NovaCut</string>
     <string name="projects_count">%1$d project%2$s</string>
     <string name="projects_settings">Settings</string>
+    <string name="projects_headline">Create sharper edits with less friction.</string>
+    <string name="projects_subtitle">Jump into a fresh template, pick up a recent cut, or import work from storage.</string>
     <string name="projects_search_placeholder">Search projects\u2026</string>
     <string name="projects_search">Search</string>
     <string name="projects_clear">Clear</string>
+    <string name="projects_recent">Recent Projects</string>
     <string name="projects_no_matching">No matching projects</string>
     <string name="projects_no_projects_yet">No projects yet</string>
+    <string name="projects_ready_title">Your studio starts here.</string>
+    <string name="projects_ready_body">Start with a polished template or open a blank timeline and build something original.</string>
+    <string name="projects_create_first">Create First Project</string>
     <string name="projects_try_different_search">Try a different search</string>
     <string name="projects_tap_to_create">Tap + to create your first project</string>
+    <string name="projects_updated">Updated %1$s</string>
+    <string name="projects_templates_count">%1$d built-in templates</string>
+    <string name="projects_saved_templates_count">%1$d saved templates</string>
     <string name="projects_new_project">New Project</string>
     <string name="projects_duplicate">Duplicate</string>
     <string name="projects_delete">Delete</string>
@@ -258,6 +297,11 @@
     <!-- ProjectTemplateSheet -->
     <string name="template_new_project">New Project</string>
     <string name="template_choose">Choose a template to get started</string>
+    <string name="template_headline">Start from a polished canvas.</string>
+    <string name="template_subtitle">Use a built-in workflow, reopen one of your saved templates, or import a setup from storage.</string>
+    <string name="template_import_description">Load a template file and continue editing with the same layout, aspect ratio, and tracks.</string>
+    <string name="template_built_in_section">Built-In Templates</string>
+    <string name="template_saved_count">%1$d saved templates</string>
     <string name="template_my_templates">My Templates</string>
     <string name="template_blank_name">Blank Project</string>
     <string name="template_blank_desc">Start from scratch</string>
@@ -292,6 +336,8 @@
 
     <!-- EditorScreen -->
     <string name="editor_no_clips_yet">No clips yet</string>
+    <string name="editor_empty_title">Build your first cut.</string>
+    <string name="editor_empty_body">Bring in clips, photos, or audio to start shaping the story on the timeline.</string>
     <string name="editor_add_media_hint">Tap the + button or use the menu to add media</string>
     <string name="editor_selected_count">%1$d selected</string>
     <string name="editor_delete">Delete</string>
@@ -409,6 +455,7 @@
     <string name="tool_ai_background">AI\nBackground</string>
     <string name="tool_ai_stabilize">AI\nStabilize</string>
     <string name="tool_ai_style">AI\nStyle</string>
+    <string name="tool_ai_hub">AI\nHub</string>
     <string name="tool_remove_fillers">Remove\nFillers</string>
     <string name="tool_reduce_noise">Reduce\nNoise</string>
 
@@ -458,6 +505,26 @@
     <string name="tool_text_overlay_cd">Text overlay</string>
     <string name="tool_edit">Edit</string>
     <string name="tool_delete">Delete</string>
+    <string name="panel_effects_subtitle">Layer tasteful looks, filters, and stylized treatments.</string>
+    <string name="panel_effects_categories">Categories</string>
+    <string name="panel_effects_available_count">%1$d looks</string>
+    <string name="panel_effects_applied_count">%1$d applied</string>
+    <string name="panel_effect_adjust_subtitle">Dial the effect in, then keep only what helps the shot.</string>
+    <string name="panel_effect_status_enabled">Live</string>
+    <string name="panel_effect_status_disabled">Muted</string>
+    <string name="panel_speed_subtitle">Control tempo, punch, and reverse playback with precision.</string>
+    <string name="panel_speed_reverse_on">Reverse on</string>
+    <string name="panel_speed_reverse_off">Forward</string>
+    <string name="panel_speed_reverse_hint_on">The clip is currently playing backward.</string>
+    <string name="panel_speed_reverse_hint_off">Play the clip in its natural direction.</string>
+    <string name="panel_transform_subtitle">Refine framing, scale, rotation, and overall presence.</string>
+    <string name="panel_transform_scale">Scale</string>
+    <string name="panel_crop_subtitle">Pick the canvas that matches where this cut will live.</string>
+    <string name="panel_crop_live_canvas">Live canvas</string>
+    <string name="panel_transition_subtitle">Blend between shots with transitions that feel intentional.</string>
+    <string name="panel_transition_none_selected">No transition selected</string>
+    <string name="panel_transition_active">Transition live</string>
+    <string name="panel_transition_pick_one">Pick a style</string>
 
     <!-- UndoHistoryPanel -->
     <string name="undo_history_title">History</string>
@@ -716,7 +783,7 @@
     <string name="panel_keyframes_title">Keyframes</string>
 
     <!-- MediaManagerPanel -->
-    <string name="panel_media_manager_remove_unused">Remove Unused Media</string>
+    <string name="panel_media_manager_remove_unused">Remove Empty Tracks</string>
 
     <!-- SpeedCurveEditor -->
     <string name="panel_speed_constant">Constant</string>
@@ -805,7 +872,7 @@
     <string name="tutorial_get_started">Get Started</string>
     <string name="tutorial_step_counter">%1$d of %2$d</string>
     <string name="tutorial_title_add_media">Add Your Media</string>
-    <string name="tutorial_desc_add_media">Tap the + button to import videos, photos, or audio from your device. You can also capture new footage with your camera.</string>
+    <string name="tutorial_desc_add_media">Open the Add Media menu to import videos, photos, or audio from your device. You can also capture new footage with your camera.</string>
     <string name="tutorial_title_timeline">Your Timeline</string>
     <string name="tutorial_desc_timeline">Drag, trim, and arrange your clips on the multi-track timeline. Pinch to zoom and swipe to scroll through your project.</string>
     <string name="tutorial_title_edit">Edit &amp; Enhance</string>
@@ -852,6 +919,7 @@
     <string name="media_stat_assets">Assets</string>
     <string name="media_stat_size">Size</string>
     <string name="media_stat_missing">Missing</string>
+    <string name="media_stat_empty_tracks">Empty Tracks</string>
     <string name="media_used_count">Used %1$dx</string>
     <string name="cd_media_goto">Go to clip</string>
     <string name="cd_media_missing">Missing</string>
@@ -905,6 +973,7 @@
 
     <!-- AiSuggestionBanner -->
     <string name="cd_dismiss_suggestion">Dismiss suggestion</string>
+    <string name="ai_apply">Apply</string>
 
     <!-- DrawingOverlayPanel -->
     <string name="cd_drawing_undo">Undo</string>
@@ -999,7 +1068,7 @@
     <string name="cd_delete">Delete</string>
 
     <!-- MediaManagerPanel -->
-    <string name="cd_cleaning_services">Clean unused media</string>
+    <string name="cd_cleaning_services">Clean empty tracks</string>
 
     <!-- RenderPreviewSheet -->
     <string name="cd_preview">Preview</string>

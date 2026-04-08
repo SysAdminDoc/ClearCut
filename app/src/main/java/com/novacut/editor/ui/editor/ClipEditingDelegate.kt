@@ -35,7 +35,7 @@ class ClipEditingDelegate(
         scope.launch {
             val duration = try {
                 withContext(Dispatchers.IO) {
-                    videoEngine.getVideoDuration(uri)
+                    videoEngine.getMediaDuration(uri)
                 }
             } catch (e: Exception) {
                 showToast("Could not read media: ${e.message ?: "Unknown error"}")
@@ -401,19 +401,53 @@ class ClipEditingDelegate(
 
     // --- Move Clip to Track ---
     fun moveClipToTrack(clipId: String, targetTrackId: String) {
+        val state = stateFlow.value
+        val sourceTrack = state.tracks.firstOrNull { track -> track.clips.any { it.id == clipId } }
+        val movedClip = sourceTrack?.clips?.firstOrNull { it.id == clipId }
+        val targetTrack = state.tracks.firstOrNull { it.id == targetTrackId }
+
+        if (movedClip == null || targetTrack == null) {
+            showToast("Could not move clip")
+            return
+        }
+
+        if (sourceTrack.id == targetTrackId) {
+            showToast("Clip is already on that track")
+            return
+        }
+
+        val clipHasVisual = videoEngine.hasVisualTrack(movedClip.sourceUri)
+        val clipHasAudio = videoEngine.hasAudioTrack(movedClip.sourceUri)
+        val incompatibilityMessage = when (targetTrack.type) {
+            TrackType.AUDIO -> {
+                if (clipHasVisual || !clipHasAudio) {
+                    "Only audio-only clips can go on audio tracks"
+                } else {
+                    null
+                }
+            }
+            TrackType.VIDEO, TrackType.OVERLAY -> {
+                if (!clipHasVisual) {
+                    "Only photo or video clips can go on visual tracks"
+                } else {
+                    null
+                }
+            }
+            else -> "Clips can't be moved to this track type"
+        }
+
+        if (incompatibilityMessage != null) {
+            showToast(incompatibilityMessage)
+            return
+        }
+
         saveUndoState("Move clip to track")
         stateFlow.update { state ->
-            var clipToMove: Clip? = null
             val tracksWithRemoved = state.tracks.map { track ->
-                val clip = track.clips.find { it.id == clipId }
-                if (clip != null) {
-                    clipToMove = clip
+                if (track.id == sourceTrack.id) {
                     track.copy(clips = track.clips.filter { it.id != clipId })
                 } else track
             }
-            val movedClip = clipToMove ?: return@update state
-            val targetTrack = tracksWithRemoved.find { it.id == targetTrackId } ?: return@update state
-            if (targetTrack.type == TrackType.AUDIO && movedClip.sourceUri.toString().contains("video")) return@update state
             val tracks = tracksWithRemoved.map { track ->
                 if (track.id == targetTrackId) {
                     val endMs = track.clips.maxOfOrNull { it.timelineEndMs } ?: 0L

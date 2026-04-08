@@ -44,6 +44,38 @@ class AiToolsDelegate(
 ) {
     private var aiJob: Job? = null
 
+    private val audioRequiredTools = setOf(
+        "auto_captions",
+        "denoise"
+    )
+
+    private val motionVideoRequiredTools = setOf(
+        "scene_detect",
+        "stabilize",
+        "track_motion",
+        "ai_stabilize"
+    )
+
+    private val visualRequiredTools = setOf(
+        "scene_detect",
+        "smart_crop",
+        "auto_color",
+        "stabilize",
+        "remove_bg",
+        "track_motion",
+        "style_transfer",
+        "face_track",
+        "smart_reframe",
+        "upscale",
+        "frame_interp",
+        "object_remove",
+        "video_upscale",
+        "ai_background",
+        "ai_stabilize",
+        "ai_style_transfer",
+        "bg_replace"
+    )
+
     // Whisper model state (exposed for UI binding)
     val whisperModelState get() = aiFeatures.whisperEngine.modelState
     val whisperDownloadProgress get() = aiFeatures.whisperEngine.downloadProgress
@@ -96,6 +128,10 @@ class AiToolsDelegate(
             showToast("Select a clip first")
             return
         }
+        getToolCompatibilityMessage(toolId, clip)?.let { incompatibilityMessage ->
+            showToast(incompatibilityMessage)
+            return
+        }
 
         stateFlow.update { it.copy(aiProcessingTool = toolId) }
         val clipId = clip.id
@@ -145,6 +181,25 @@ class AiToolsDelegate(
 
     fun cancelAiTool() {
         aiJob?.cancel()
+    }
+
+    private fun getToolCompatibilityMessage(toolId: String, clip: Clip): String? {
+        return when {
+            toolId in audioRequiredTools && !videoEngine.hasAudioTrack(clip.sourceUri) -> {
+                if (toolId == "auto_captions") {
+                    "Auto Captions needs a clip with audio."
+                } else {
+                    "Denoise needs a clip with audio."
+                }
+            }
+            toolId in motionVideoRequiredTools && !videoEngine.isMotionVideo(clip.sourceUri) -> {
+                "Select a video clip for this AI tool."
+            }
+            toolId in visualRequiredTools && !videoEngine.hasVisualTrack(clip.sourceUri) -> {
+                "Select a photo or video clip for this AI tool."
+            }
+            else -> null
+        }
     }
 
     // --- Individual AI tool implementations ---

@@ -21,7 +21,9 @@ import javax.inject.Singleton
  * serializer that produces valid OTIO JSON (schema version 0.15).
  */
 @Singleton
-class TimelineExchangeEngine @Inject constructor() {
+class TimelineExchangeEngine @Inject constructor(
+    private val videoEngine: VideoEngine
+) {
 
     /**
      * Supported timeline interchange formats.
@@ -479,7 +481,9 @@ class TimelineExchangeEngine @Inject constructor() {
 
         mediaRefs.entries.forEachIndexed { index, (uri, clip) ->
             val assetId = "r${index + 1}"
-            sb.appendLine("""    <asset id="$assetId" name="${clipDisplayName(clip)}" src="$uri" start="0s" duration="${msToFcpxmlTime(clip.sourceDurationMs, frameRate)}" hasVideo="1" hasAudio="1">""")
+            val hasVideo = if (videoEngine.hasVisualTrack(clip.sourceUri)) "1" else "0"
+            val hasAudio = if (videoEngine.hasAudioTrack(clip.sourceUri)) "1" else "0"
+            sb.appendLine("""    <asset id="$assetId" name="${clipDisplayName(clip)}" src="$uri" start="0s" duration="${msToFcpxmlTime(clip.sourceDurationMs, frameRate)}" hasVideo="$hasVideo" hasAudio="$hasAudio">""")
             sb.appendLine("""      <media-rep kind="original-media" src="$uri"/>""")
             sb.appendLine("""    </asset>""")
         }

@@ -1,36 +1,44 @@
 package com.novacut.editor.ui.editor
 
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Subtitles
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
 import com.novacut.editor.R
-import com.novacut.editor.model.*
+import com.novacut.editor.model.CaptionStyleTemplate
+import com.novacut.editor.model.CaptionTemplateType
+import com.novacut.editor.model.TextAnimation
 import com.novacut.editor.ui.theme.Mocha
 
 @Composable
@@ -40,98 +48,174 @@ fun CaptionStyleGallery(
     modifier: Modifier = Modifier
 ) {
     val templates = remember { defaultTemplates() }
-    val karaokeTemplates = remember { templates.filter { it.wordByWord || it.type == CaptionTemplateType.KARAOKE } }
-    val otherTemplates = remember { templates.filter { !it.wordByWord && it.type != CaptionTemplateType.KARAOKE } }
+    val karaokeTemplates = remember(templates) {
+        templates.filter { it.wordByWord || it.type == CaptionTemplateType.KARAOKE }
+    }
+    val editorialTemplates = remember(templates) {
+        templates.filter { !it.wordByWord && it.type != CaptionTemplateType.KARAOKE }
+    }
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(Mocha.Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .padding(12.dp)
+    PremiumEditorPanel(
+        title = stringResource(R.string.caption_styles_title),
+        subtitle = "Pick a more expressive caption look, from understated subtitles to bold karaoke moments.",
+        icon = Icons.Default.Subtitles,
+        accent = Mocha.Mauve,
+        onClose = onClose,
+        modifier = modifier,
+        scrollable = true
     ) {
-        // Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                stringResource(R.string.caption_styles_title),
-                color = Mocha.Text,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
-            )
-            IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Close, stringResource(R.string.caption_styles_title), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
+        PremiumPanelCard(accent = Mocha.Mauve) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Style library",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Mocha.Text
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "These templates update the selected clip’s captions in one shot, so it is easy to move from utility subtitles to a branded treatment.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Mocha.Subtext0
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    PremiumPanelPill(text = "${templates.size} looks", accent = Mocha.Blue)
+                    PremiumPanelPill(text = "${karaokeTemplates.size} motion", accent = Mocha.Yellow)
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                StyleMetric(
+                    title = "Karaoke",
+                    value = karaokeTemplates.size.toString(),
+                    accent = Mocha.Yellow,
+                    modifier = Modifier.weight(1f)
+                )
+                StyleMetric(
+                    title = "Editorial",
+                    value = editorialTemplates.size.toString(),
+                    accent = Mocha.Mauve,
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = 400.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+        CaptionStyleSection(
+            title = stringResource(R.string.caption_karaoke_title),
+            subtitle = "Word-by-word, bounce, and sing-along styles built to feel animated and rhythmic.",
+            accent = Mocha.Yellow,
+            templates = karaokeTemplates,
+            onStyleSelected = onStyleSelected
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        CaptionStyleSection(
+            title = "Editorial Styles",
+            subtitle = "Classic subtitle, lower-third, neon, and bold center treatments for more intentional framing.",
+            accent = Mocha.Blue,
+            templates = editorialTemplates,
+            onStyleSelected = onStyleSelected
+        )
+    }
+}
+
+@Composable
+private fun StyleMetric(
+    title: String,
+    value: String,
+    accent: Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        color = accent.copy(alpha = 0.12f),
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                color = Mocha.Subtext0
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleSmall,
+                color = accent,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+@Composable
+private fun CaptionStyleSection(
+    title: String,
+    subtitle: String,
+    accent: Color,
+    templates: List<CaptionStyleTemplate>,
+    onStyleSelected: (CaptionStyleTemplate) -> Unit
+) {
+    PremiumPanelCard(accent = accent) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Karaoke section header
-            item(span = { GridItemSpan(2) }) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.padding(vertical = 4.dp)
-                ) {
-                    Icon(
-                        Icons.Default.MusicNote,
-                        contentDescription = stringResource(R.string.cd_karaoke_section),
-                        tint = Mocha.Mauve,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        stringResource(R.string.caption_karaoke_title),
-                        color = Mocha.Mauve,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
-
-            items(karaokeTemplates, key = { it.id }) { template ->
-                CaptionStyleCard(
-                    template = template,
-                    onClick = { onStyleSelected(template) }
+            androidx.compose.material3.Icon(
+                imageVector = if (accent == Mocha.Yellow) Icons.Default.MusicNote else Icons.Default.Subtitles,
+                contentDescription = title,
+                tint = accent
+            )
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Mocha.Text
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Mocha.Subtext0
                 )
             }
+        }
 
-            // Other styles header
-            item(span = { GridItemSpan(2) }) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.padding(vertical = 4.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Subtitles,
-                        contentDescription = stringResource(R.string.cd_caption_styles_section),
-                        tint = Mocha.Subtext0,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        stringResource(R.string.caption_styles_title),
-                        color = Mocha.Subtext0,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold
+        templates.chunked(2).forEach { row ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                row.forEach { template ->
+                    CaptionStyleCard(
+                        template = template,
+                        accent = accent,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onStyleSelected(template) }
                     )
                 }
-            }
-
-            items(otherTemplates, key = { it.id }) { template ->
-                CaptionStyleCard(
-                    template = template,
-                    onClick = { onStyleSelected(template) }
-                )
+                if (row.size == 1) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
             }
         }
     }
@@ -140,148 +224,162 @@ fun CaptionStyleGallery(
 @Composable
 private fun CaptionStyleCard(
     template: CaptionStyleTemplate,
+    accent: Color,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(Mocha.Surface0)
-            .clickable(onClick = onClick)
+    Surface(
+        modifier = modifier.clickable(onClick = onClick),
+        color = Mocha.PanelRaised,
+        shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(1.dp, Mocha.CardStroke)
     ) {
-        // Preview area
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(72.dp)
-                .background(
-                    Brush.verticalGradient(
-                        listOf(Mocha.Mantle, Mocha.Base)
-                    )
-                ),
-            contentAlignment = when {
-                template.positionY > 0.7f -> Alignment.BottomCenter
-                template.positionY < 0.3f -> Alignment.TopCenter
-                else -> Alignment.Center
-            }
-        ) {
-            val previewText = if (template.wordByWord) "Hello World" else "Sample Text"
-            val textColor = Color(template.textColor)
-            val bgColor = Color(template.backgroundColor)
-            val outlineCol = Color(template.outlineColor)
-            val shadowCol = Color(template.shadowColor)
-            val highlightCol = Color(template.highlightColor)
-            val previewSize = (template.fontSize * 0.5f).coerceIn(10f, 20f)
-
-            val fontFamily = when (template.fontFamily) {
-                "serif" -> FontFamily.Serif
-                "monospace" -> FontFamily.Monospace
-                "cursive" -> FontFamily.Cursive
-                else -> FontFamily.SansSerif
-            }
-
-            if (template.wordByWord) {
-                // Word-by-word / karaoke preview: highlight first word
-                Row(
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        "Hello ",
-                        color = highlightCol,
-                        fontSize = previewSize.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = fontFamily,
-                        style = TextStyle(
-                            shadow = if (template.outlineWidth > 0f) Shadow(
-                                outlineCol, Offset(1f, 1f), 2f
-                            ) else if (template.shadowOffsetX != 0f || template.shadowOffsetY != 0f) Shadow(
-                                shadowCol,
-                                Offset(template.shadowOffsetX * 0.5f, template.shadowOffsetY * 0.5f),
-                                3f
-                            ) else null
+        Column {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(126.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                accent.copy(alpha = 0.28f),
+                                Mocha.PanelHighest,
+                                Mocha.Base
+                            )
                         )
-                    )
-                    Text(
-                        "World",
-                        color = textColor,
-                        fontSize = previewSize.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = fontFamily,
-                        style = TextStyle(
-                            shadow = if (template.outlineWidth > 0f) Shadow(
-                                outlineCol, Offset(1f, 1f), 2f
-                            ) else if (template.shadowOffsetX != 0f || template.shadowOffsetY != 0f) Shadow(
-                                shadowCol,
-                                Offset(template.shadowOffsetX * 0.5f, template.shadowOffsetY * 0.5f),
-                                3f
-                            ) else null
-                        )
-                    )
+                    ),
+                contentAlignment = when {
+                    template.positionY > 0.7f -> Alignment.BottomCenter
+                    template.positionY < 0.3f -> Alignment.TopCenter
+                    else -> Alignment.Center
                 }
-            } else {
-                // Standard caption preview
-                val bgAlpha = (template.backgroundColor shr 24 and 0xFF) / 255f
-                Box(
-                    modifier = Modifier
-                        .padding(horizontal = 6.dp, vertical = 4.dp)
-                        .then(
-                            if (bgAlpha > 0.05f) Modifier
-                                .background(bgColor, RoundedCornerShape(4.dp))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                            else Modifier
-                        )
+            ) {
+                CaptionStylePreview(template = template)
+            }
+
+            Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = template.type.displayName,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = Mocha.Text,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    fontWeight = FontWeight.Medium
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    PremiumPanelPill(
+                        text = template.animation.displayName,
+                        accent = accent
+                    )
                     Text(
-                        previewText,
-                        color = textColor,
-                        fontSize = previewSize.sp,
-                        fontWeight = if (template.type == CaptionTemplateType.BOLD_CENTER) FontWeight.ExtraBold else FontWeight.Medium,
-                        fontFamily = fontFamily,
-                        textAlign = TextAlign.Center,
-                        style = TextStyle(
-                            shadow = if (template.outlineWidth > 0f) Shadow(
-                                outlineCol, Offset(1f, 1f), template.outlineWidth
-                            ) else if (template.shadowOffsetX != 0f || template.shadowOffsetY != 0f) Shadow(
-                                shadowCol,
-                                Offset(template.shadowOffsetX * 0.5f, template.shadowOffsetY * 0.5f),
-                                3f
-                            ) else null
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        text = if (template.wordByWord) "Word-by-word" else "Static look",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Mocha.Subtext0
                     )
                 }
             }
         }
+    }
+}
 
-        // Info row
+@Composable
+private fun CaptionStylePreview(template: CaptionStyleTemplate) {
+    val previewText = if (template.wordByWord) "Hello World" else "Sample Text"
+    val textColor = Color(template.textColor)
+    val backgroundColor = Color(template.backgroundColor)
+    val outlineColor = Color(template.outlineColor)
+    val shadowColor = Color(template.shadowColor)
+    val highlightColor = Color(template.highlightColor)
+    val previewSize = (template.fontSize * 0.48f).coerceIn(10f, 22f)
+    val fontFamily = when (template.fontFamily) {
+        "serif" -> FontFamily.Serif
+        "monospace" -> FontFamily.Monospace
+        "cursive" -> FontFamily.Cursive
+        else -> FontFamily.SansSerif
+    }
+
+    if (template.wordByWord) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 6.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.Center
         ) {
             Text(
-                template.type.displayName,
-                color = Mocha.Text,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
+                text = "Hello ",
+                color = highlightColor,
+                fontSize = previewSize.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = fontFamily,
+                style = TextStyle(
+                    shadow = if (template.outlineWidth > 0f) {
+                        Shadow(outlineColor, Offset(1f, 1f), 2f)
+                    } else {
+                        Shadow(shadowColor, Offset(1f, 1f), 3f)
+                    }
+                )
             )
             Text(
-                template.animation.displayName,
-                color = Mocha.Subtext0,
-                fontSize = 9.sp
+                text = "World",
+                color = textColor,
+                fontSize = previewSize.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = fontFamily,
+                style = TextStyle(
+                    shadow = if (template.outlineWidth > 0f) {
+                        Shadow(outlineColor, Offset(1f, 1f), 2f)
+                    } else {
+                        Shadow(shadowColor, Offset(1f, 1f), 3f)
+                    }
+                )
+            )
+        }
+    } else {
+        val backgroundAlpha = (template.backgroundColor shr 24 and 0xFF) / 255f
+        Box(
+            modifier = Modifier
+                .padding(horizontal = 10.dp, vertical = 12.dp)
+                .then(
+                    if (backgroundAlpha > 0.05f) {
+                        Modifier
+                            .background(backgroundColor, RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    } else {
+                        Modifier
+                    }
+                )
+        ) {
+            Text(
+                text = previewText,
+                color = textColor,
+                fontSize = previewSize.sp,
+                fontWeight = if (template.type == CaptionTemplateType.BOLD_CENTER) {
+                    FontWeight.ExtraBold
+                } else {
+                    FontWeight.Medium
+                },
+                fontFamily = fontFamily,
+                textAlign = TextAlign.Center,
+                style = TextStyle(
+                    shadow = if (template.outlineWidth > 0f) {
+                        Shadow(outlineColor, Offset(1f, 1f), template.outlineWidth)
+                    } else {
+                        Shadow(shadowColor, Offset(1f, 1f), 3f)
+                    }
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
 }
 
 fun defaultTemplates(): List<CaptionStyleTemplate> = listOf(
-    // Karaoke / word-by-word styles
     CaptionStyleTemplate(
         type = CaptionTemplateType.KARAOKE,
         fontFamily = "sans-serif",
@@ -320,7 +418,6 @@ fun defaultTemplates(): List<CaptionStyleTemplate> = listOf(
         highlightColor = 0xFFF38BA8,
         wordByWord = true
     ),
-    // Standard styles
     CaptionStyleTemplate(
         type = CaptionTemplateType.CLASSIC,
         fontFamily = "sans-serif",

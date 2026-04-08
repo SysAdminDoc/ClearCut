@@ -45,77 +45,82 @@ fun ColorGradingPanel(
 ) {
     var activeTab by remember { mutableStateOf(ColorGradingTab.WHEELS) }
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(Mocha.Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .padding(12.dp)
-    ) {
-        // Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(stringResource(R.string.color_grading_title), color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Row {
-                IconButton(onClick = {
-                    onColorGradeChanged(ColorGrade())
-                }, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Refresh, stringResource(R.string.cd_reset), tint = Mocha.Peach, modifier = Modifier.size(18.dp))
-                }
-                IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Close, stringResource(R.string.cd_close_color_grading), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
-                }
-            }
+    PremiumEditorPanel(
+        title = stringResource(R.string.color_grading_title),
+        subtitle = "Shape primary tone, curves, qualifiers, and LUTs while preview stays in motion.",
+        icon = Icons.Default.Palette,
+        accent = Mocha.Peach,
+        onClose = onClose,
+        modifier = modifier,
+        scrollable = true,
+        headerActions = {
+            PremiumPanelIconButton(
+                icon = Icons.Default.Refresh,
+                contentDescription = stringResource(R.string.cd_reset),
+                onClick = { onColorGradeChanged(ColorGrade()) },
+                tint = Mocha.Peach
+            )
         }
-
-        Spacer(Modifier.height(8.dp))
-
-        // Tab bar
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Mocha.Surface0, RoundedCornerShape(8.dp))
-                .padding(2.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            ColorGradingTab.entries.forEach { tab ->
-                val selected = activeTab == tab
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(if (selected) Mocha.Mauve.copy(alpha = 0.2f) else Color.Transparent)
-                        .clickable { activeTab = tab }
-                        .padding(vertical = 6.dp),
-                    contentAlignment = Alignment.Center
-                ) {
+    ) {
+        PremiumPanelCard(accent = Mocha.Peach) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        tab.label,
-                        color = if (selected) Mocha.Mauve else Mocha.Subtext0,
-                        fontSize = 12.sp,
-                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                        text = "Grade summary",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Mocha.Text
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = colorGradeSummary(colorGrade),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Mocha.Subtext0
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    PremiumPanelPill(text = activeTab.label, accent = Mocha.Peach)
+                    PremiumPanelPill(
+                        text = if (colorGrade.hslQualifier != null) "Qualifier on" else "Qualifier off",
+                        accent = if (colorGrade.hslQualifier != null) Mocha.Mauve else Mocha.Overlay1
                     )
                 }
             }
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // Content
-        Box(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = 350.dp)
-                .verticalScroll(rememberScrollState())
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            when (activeTab) {
-                ColorGradingTab.WHEELS -> ColorWheelsContent(colorGrade, onColorGradeChanged, onDragStarted)
-                ColorGradingTab.CURVES -> CurvesContent(colorGrade, onColorGradeChanged, onDragStarted)
-                ColorGradingTab.HSL -> HslContent(colorGrade, onColorGradeChanged, onDragStarted)
-                ColorGradingTab.LUT -> LutContent(colorGrade, onColorGradeChanged, onLutImport)
+            ColorGradingTab.entries.forEach { tab ->
+                ColorGradingTabChip(
+                    tab = tab,
+                    selected = activeTab == tab,
+                    onClick = { activeTab = tab }
+                )
             }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        when (activeTab) {
+            ColorGradingTab.WHEELS -> ColorWheelsContent(colorGrade, onColorGradeChanged, onDragStarted)
+            ColorGradingTab.CURVES -> CurvesContent(colorGrade, onColorGradeChanged, onDragStarted)
+            ColorGradingTab.HSL -> HslContent(colorGrade, onColorGradeChanged, onDragStarted)
+            ColorGradingTab.LUT -> LutContent(colorGrade, onColorGradeChanged, onLutImport)
         }
     }
 }
@@ -126,42 +131,64 @@ private fun ColorWheelsContent(
     onChange: (ColorGrade) -> Unit,
     onDragStarted: () -> Unit = {}
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        // Three color wheels: Lift, Gamma, Gain
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            ColorWheel(
-                label = stringResource(R.string.color_wheel_lift),
-                r = grade.liftR, g = grade.liftG, b = grade.liftB,
-                onChanged = { r, g, b -> onChange(grade.copy(liftR = r, liftG = g, liftB = b)) },
-                onDragStarted = onDragStarted,
-                modifier = Modifier.weight(1f)
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        PremiumPanelCard(accent = Mocha.Rosewater) {
+            Text(
+                text = "Tone wheels",
+                style = MaterialTheme.typography.titleMedium,
+                color = Mocha.Text
             )
-            ColorWheel(
-                label = stringResource(R.string.color_wheel_gamma),
-                r = grade.gammaR - 1f, g = grade.gammaG - 1f, b = grade.gammaB - 1f,
-                onChanged = { r, g, b -> onChange(grade.copy(gammaR = r + 1f, gammaG = g + 1f, gammaB = b + 1f)) },
-                onDragStarted = onDragStarted,
-                modifier = Modifier.weight(1f)
+            Text(
+                text = "Lift shapes the shadows, gamma handles the mids, and gain pushes the highlights.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Mocha.Subtext0
             )
-            ColorWheel(
-                label = stringResource(R.string.color_wheel_gain),
-                r = grade.gainR - 1f, g = grade.gainG - 1f, b = grade.gainB - 1f,
-                onChanged = { r, g, b -> onChange(grade.copy(gainR = r + 1f, gainG = g + 1f, gainB = b + 1f)) },
-                onDragStarted = onDragStarted,
-                modifier = Modifier.weight(1f)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                ColorWheel(
+                    label = stringResource(R.string.color_wheel_lift),
+                    r = grade.liftR, g = grade.liftG, b = grade.liftB,
+                    onChanged = { r, g, b -> onChange(grade.copy(liftR = r, liftG = g, liftB = b)) },
+                    onDragStarted = onDragStarted,
+                    modifier = Modifier.weight(1f)
+                )
+                ColorWheel(
+                    label = stringResource(R.string.color_wheel_gamma),
+                    r = grade.gammaR - 1f, g = grade.gammaG - 1f, b = grade.gammaB - 1f,
+                    onChanged = { r, g, b -> onChange(grade.copy(gammaR = r + 1f, gammaG = g + 1f, gammaB = b + 1f)) },
+                    onDragStarted = onDragStarted,
+                    modifier = Modifier.weight(1f)
+                )
+                ColorWheel(
+                    label = stringResource(R.string.color_wheel_gain),
+                    r = grade.gainR - 1f, g = grade.gainG - 1f, b = grade.gainB - 1f,
+                    onChanged = { r, g, b -> onChange(grade.copy(gainR = r + 1f, gainG = g + 1f, gainB = b + 1f)) },
+                    onDragStarted = onDragStarted,
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
 
-        Spacer(Modifier.height(12.dp))
-
-        // Offset sliders
-        Text(stringResource(R.string.color_grading_offset), color = Mocha.Subtext0, fontSize = 11.sp, modifier = Modifier.padding(start = 4.dp))
-        GradingSlider("R", grade.offsetR, -0.5f, 0.5f, Mocha.Red) { onChange(grade.copy(offsetR = it)) }
-        GradingSlider("G", grade.offsetG, -0.5f, 0.5f, Mocha.Green) { onChange(grade.copy(offsetG = it)) }
-        GradingSlider("B", grade.offsetB, -0.5f, 0.5f, Mocha.Blue) { onChange(grade.copy(offsetB = it)) }
+        PremiumPanelCard(accent = Mocha.Sapphire) {
+            Text(
+                text = stringResource(R.string.color_grading_offset),
+                style = MaterialTheme.typography.titleMedium,
+                color = Mocha.Text
+            )
+            Text(
+                text = "Offset adds or subtracts overall channel energy before the rest of the grade.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Mocha.Subtext0
+            )
+            GradingSlider("R", grade.offsetR, -0.5f, 0.5f, Mocha.Red) { onChange(grade.copy(offsetR = it)) }
+            GradingSlider("G", grade.offsetG, -0.5f, 0.5f, Mocha.Green) { onChange(grade.copy(offsetG = it)) }
+            GradingSlider("B", grade.offsetB, -0.5f, 0.5f, Mocha.Blue) { onChange(grade.copy(offsetB = it)) }
+        }
     }
 }
 
@@ -177,20 +204,18 @@ private fun ColorWheel(
         modifier = modifier.padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(label, color = Mocha.Subtext0, fontSize = 10.sp)
-        Spacer(Modifier.height(4.dp))
+        PremiumPanelPill(text = label, accent = Mocha.Peach)
+        Spacer(Modifier.height(8.dp))
 
         Box(
             modifier = Modifier
-                .size(90.dp)
+                .size(98.dp)
                 .clip(CircleShape)
-                .background(Mocha.Surface0)
+                .background(Mocha.PanelRaised)
                 .drawBehind {
-                    // Draw color wheel background
                     val center = Offset(size.width / 2, size.height / 2)
                     val radius = size.minDimension / 2
 
-                    // Simple color wheel: draw concentric rainbow
                     for (angle in 0 until 360 step 3) {
                         val rad = angle * PI.toFloat() / 180f
                         val hue = angle.toFloat()
@@ -206,7 +231,6 @@ private fun ColorWheel(
                         )
                     }
 
-                    // Indicator dot
                     val dotX = center.x + r * radius
                     val dotY = center.y + g * radius
                     drawCircle(Color.White, 6f, Offset(dotX, dotY))
@@ -228,14 +252,13 @@ private fun ColorWheel(
             contentAlignment = Alignment.Center
         ) {}
 
-        // Reset button
         Text(
-            "Reset",
-            color = Mocha.Peach.copy(alpha = 0.7f),
-            fontSize = 9.sp,
+            text = stringResource(R.string.cd_reset),
+            color = Mocha.Peach,
+            style = MaterialTheme.typography.labelMedium,
             modifier = Modifier
                 .clickable { onChanged(0f, 0f, 0f) }
-                .padding(2.dp)
+                .padding(top = 6.dp)
         )
     }
 }
@@ -249,31 +272,32 @@ private fun GradingSlider(
     color: Color,
     onChanged: (Float) -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Text(label, color = color, fontSize = 11.sp, modifier = Modifier.width(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(label, color = color, style = MaterialTheme.typography.labelLarge)
+            Text(
+                text = "%.2f".format(value),
+                color = color,
+                style = MaterialTheme.typography.labelLarge
+            )
+        }
         Slider(
             value = value,
             onValueChange = onChanged,
             valueRange = min..max,
-            modifier = Modifier
-                .weight(1f)
-                .height(24.dp),
+            modifier = Modifier.fillMaxWidth(),
             colors = SliderDefaults.colors(
                 thumbColor = color,
                 activeTrackColor = color.copy(alpha = 0.6f),
                 inactiveTrackColor = Mocha.Surface1
             )
-        )
-        Text(
-            "%.2f".format(value),
-            color = Mocha.Subtext0,
-            fontSize = 10.sp,
-            modifier = Modifier.width(36.dp)
         )
     }
 }
@@ -287,33 +311,10 @@ private fun CurvesContent(
     var activeCurve by remember { mutableStateOf("master") }
     val curves = grade.curves
 
-    Column(modifier = Modifier.fillMaxWidth()) {
-        // Curve channel selector
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            listOf("master" to Mocha.Text, "red" to Mocha.Red, "green" to Mocha.Green, "blue" to Mocha.Blue).forEach { (id, color) ->
-                val selected = activeCurve == id
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(if (selected) color.copy(alpha = 0.2f) else Color.Transparent)
-                        .clickable { activeCurve = id }
-                        .padding(horizontal = 12.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        id.replaceFirstChar { it.uppercase() },
-                        color = if (selected) color else Mocha.Subtext0,
-                        fontSize = 11.sp
-                    )
-                }
-            }
-        }
-
-        Spacer(Modifier.height(8.dp))
-
-        // Curve canvas
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         val points = when (activeCurve) {
             "red" -> curves.red
             "green" -> curves.green
@@ -327,24 +328,58 @@ private fun CurvesContent(
             else -> Mocha.Text
         }
 
-        CurveEditor(
-            points = points,
-            color = curveColor,
-            onDragStarted = onDragStarted,
-            onPointsChanged = { newPoints ->
-                val newCurves = when (activeCurve) {
-                    "red" -> curves.copy(red = newPoints)
-                    "green" -> curves.copy(green = newPoints)
-                    "blue" -> curves.copy(blue = newPoints)
-                    else -> curves.copy(master = newPoints)
+        PremiumPanelCard(accent = curveColor) {
+            Text(
+                text = "Curve response",
+                style = MaterialTheme.typography.titleMedium,
+                color = Mocha.Text
+            )
+            Text(
+                text = "Add points directly on the graph to remap tonal response for each channel.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Mocha.Subtext0
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf("master" to Mocha.Text, "red" to Mocha.Red, "green" to Mocha.Green, "blue" to Mocha.Blue).forEach { (id, color) ->
+                    val selected = activeCurve == id
+                    Surface(
+                        color = if (selected) color.copy(alpha = 0.16f) else Mocha.PanelRaised,
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, if (selected) color.copy(alpha = 0.24f) else Mocha.CardStroke)
+                    ) {
+                        Text(
+                            text = id.replaceFirstChar { it.uppercase() },
+                            color = if (selected) color else Mocha.Subtext0,
+                            style = MaterialTheme.typography.labelLarge,
+                            modifier = Modifier
+                                .clickable { activeCurve = id }
+                                .padding(horizontal = 14.dp, vertical = 9.dp)
+                        )
+                    }
                 }
-                onChange(grade.copy(curves = newCurves))
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(200.dp)
-                .background(Mocha.Surface0, RoundedCornerShape(8.dp))
-        )
+            }
+            CurveEditor(
+                points = points,
+                color = curveColor,
+                onDragStarted = onDragStarted,
+                onPointsChanged = { newPoints ->
+                    val newCurves = when (activeCurve) {
+                        "red" -> curves.copy(red = newPoints)
+                        "green" -> curves.copy(green = newPoints)
+                        "blue" -> curves.copy(blue = newPoints)
+                        else -> curves.copy(master = newPoints)
+                    }
+                    onChange(grade.copy(curves = newCurves))
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp)
+                    .background(Mocha.PanelRaised, RoundedCornerShape(20.dp))
+            )
+        }
     }
 }
 
@@ -469,57 +504,84 @@ private fun HslContent(
 ) {
     val hsl = grade.hslQualifier ?: HslQualifier()
 
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(stringResource(R.string.color_grading_hsl_qualifier), color = Mocha.Text, fontSize = 13.sp)
-            Switch(
-                checked = grade.hslQualifier != null,
-                onCheckedChange = { enabled ->
-                    onChange(grade.copy(hslQualifier = if (enabled) HslQualifier() else null))
-                },
-                colors = SwitchDefaults.colors(checkedTrackColor = Mocha.Mauve)
-            )
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        PremiumPanelCard(accent = Mocha.Mauve) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.color_grading_hsl_qualifier),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Mocha.Text
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Isolate a color range before nudging hue, saturation, or luminance.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Mocha.Subtext0
+                    )
+                }
+                Switch(
+                    checked = grade.hslQualifier != null,
+                    onCheckedChange = { enabled ->
+                        onChange(grade.copy(hslQualifier = if (enabled) HslQualifier() else null))
+                    },
+                    colors = SwitchDefaults.colors(checkedTrackColor = Mocha.Mauve)
+                )
+            }
         }
 
         if (grade.hslQualifier != null) {
-            Spacer(Modifier.height(8.dp))
-            Text(stringResource(R.string.color_grading_selection), color = Mocha.Subtext0, fontSize = 11.sp)
-            GradingSlider("Hue", hsl.hueCenter, 0f, 360f, Mocha.Yellow) {
-                onChange(grade.copy(hslQualifier = hsl.copy(hueCenter = it)))
-            }
-            GradingSlider("Width", hsl.hueWidth, 1f, 180f, Mocha.Yellow) {
-                onChange(grade.copy(hslQualifier = hsl.copy(hueWidth = it)))
-            }
-            GradingSlider("Sat Min", hsl.satMin, 0f, 1f, Mocha.Mauve) {
-                onChange(grade.copy(hslQualifier = hsl.copy(satMin = it)))
-            }
-            GradingSlider("Sat Max", hsl.satMax, 0f, 1f, Mocha.Mauve) {
-                onChange(grade.copy(hslQualifier = hsl.copy(satMax = it)))
-            }
-            GradingSlider("Lum Min", hsl.lumMin, 0f, 1f, Mocha.Text) {
-                onChange(grade.copy(hslQualifier = hsl.copy(lumMin = it)))
-            }
-            GradingSlider("Lum Max", hsl.lumMax, 0f, 1f, Mocha.Text) {
-                onChange(grade.copy(hslQualifier = hsl.copy(lumMax = it)))
-            }
-            GradingSlider("Soft", hsl.softness, 0f, 0.5f, Mocha.Peach) {
-                onChange(grade.copy(hslQualifier = hsl.copy(softness = it)))
+            PremiumPanelCard(accent = Mocha.Yellow) {
+                Text(
+                    text = stringResource(R.string.color_grading_selection),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Mocha.Text
+                )
+                GradingSlider("Hue", hsl.hueCenter, 0f, 360f, Mocha.Yellow) {
+                    onChange(grade.copy(hslQualifier = hsl.copy(hueCenter = it)))
+                }
+                GradingSlider("Width", hsl.hueWidth, 1f, 180f, Mocha.Yellow) {
+                    onChange(grade.copy(hslQualifier = hsl.copy(hueWidth = it)))
+                }
+                GradingSlider("Sat Min", hsl.satMin, 0f, 1f, Mocha.Mauve) {
+                    onChange(grade.copy(hslQualifier = hsl.copy(satMin = it)))
+                }
+                GradingSlider("Sat Max", hsl.satMax, 0f, 1f, Mocha.Mauve) {
+                    onChange(grade.copy(hslQualifier = hsl.copy(satMax = it)))
+                }
+                GradingSlider("Lum Min", hsl.lumMin, 0f, 1f, Mocha.Text) {
+                    onChange(grade.copy(hslQualifier = hsl.copy(lumMin = it)))
+                }
+                GradingSlider("Lum Max", hsl.lumMax, 0f, 1f, Mocha.Text) {
+                    onChange(grade.copy(hslQualifier = hsl.copy(lumMax = it)))
+                }
+                GradingSlider("Soft", hsl.softness, 0f, 0.5f, Mocha.Peach) {
+                    onChange(grade.copy(hslQualifier = hsl.copy(softness = it)))
+                }
             }
 
-            Spacer(Modifier.height(8.dp))
-            Text(stringResource(R.string.color_grading_adjustment), color = Mocha.Subtext0, fontSize = 11.sp)
-            GradingSlider("Hue", hsl.adjustHue, -180f, 180f, Mocha.Yellow) {
-                onChange(grade.copy(hslQualifier = hsl.copy(adjustHue = it)))
-            }
-            GradingSlider("Sat", hsl.adjustSat, -1f, 1f, Mocha.Mauve) {
-                onChange(grade.copy(hslQualifier = hsl.copy(adjustSat = it)))
-            }
-            GradingSlider("Lum", hsl.adjustLum, -1f, 1f, Mocha.Text) {
-                onChange(grade.copy(hslQualifier = hsl.copy(adjustLum = it)))
+            PremiumPanelCard(accent = Mocha.Sapphire) {
+                Text(
+                    text = stringResource(R.string.color_grading_adjustment),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Mocha.Text
+                )
+                GradingSlider("Hue", hsl.adjustHue, -180f, 180f, Mocha.Yellow) {
+                    onChange(grade.copy(hslQualifier = hsl.copy(adjustHue = it)))
+                }
+                GradingSlider("Sat", hsl.adjustSat, -1f, 1f, Mocha.Mauve) {
+                    onChange(grade.copy(hslQualifier = hsl.copy(adjustSat = it)))
+                }
+                GradingSlider("Lum", hsl.adjustLum, -1f, 1f, Mocha.Text) {
+                    onChange(grade.copy(hslQualifier = hsl.copy(adjustLum = it)))
+                }
             }
         }
     }
@@ -531,47 +593,115 @@ private fun LutContent(
     onChange: (ColorGrade) -> Unit,
     onLutImport: () -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        if (grade.lutPath != null) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(stringResource(R.string.color_grading_active_lut), color = Mocha.Text, fontSize = 13.sp)
-                    Text(
-                        grade.lutPath.substringAfterLast("/"),
-                        color = Mocha.Subtext0,
-                        fontSize = 11.sp
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        PremiumPanelCard(accent = Mocha.Mauve) {
+            if (grade.lutPath != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.color_grading_active_lut),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Mocha.Text
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = grade.lutPath.substringAfterLast("/"),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Mocha.Subtext0
+                        )
+                    }
+                    PremiumPanelIconButton(
+                        icon = Icons.Default.Delete,
+                        contentDescription = stringResource(R.string.cd_remove_lut),
+                        onClick = { onChange(grade.copy(lutPath = null, lutIntensity = 1f)) },
+                        tint = Mocha.Red
                     )
                 }
-                IconButton(onClick = {
-                    onChange(grade.copy(lutPath = null, lutIntensity = 1f))
-                }) {
-                    Icon(Icons.Default.Delete, stringResource(R.string.cd_remove_lut), tint = Mocha.Red)
+
+                GradingSlider("Intensity", grade.lutIntensity, 0f, 1f, Mocha.Mauve) {
+                    onChange(grade.copy(lutIntensity = it))
                 }
+            } else {
+                Text(
+                    text = stringResource(R.string.color_grading_no_lut_loaded),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Mocha.Subtext0
+                )
             }
-
-            Spacer(Modifier.height(8.dp))
-            GradingSlider("Intensity", grade.lutIntensity, 0f, 1f, Mocha.Mauve) {
-                onChange(grade.copy(lutIntensity = it))
-            }
-        } else {
-            Text(stringResource(R.string.color_grading_no_lut_loaded), color = Mocha.Subtext0, fontSize = 13.sp)
         }
-
-        Spacer(Modifier.height(12.dp))
 
         Button(
             onClick = onLutImport,
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve.copy(alpha = 0.2f)),
-            shape = RoundedCornerShape(8.dp)
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Mocha.Mauve.copy(alpha = 0.18f),
+                contentColor = Mocha.Mauve
+            ),
+            shape = RoundedCornerShape(18.dp)
         ) {
-            Icon(Icons.Default.FileOpen, stringResource(R.string.cd_import_lut), tint = Mocha.Mauve, modifier = Modifier.size(18.dp))
+            Icon(Icons.Default.FileOpen, stringResource(R.string.cd_import_lut), modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.color_grading_import_lut), color = Mocha.Mauve)
+            Text(stringResource(R.string.color_grading_import_lut))
         }
     }
+}
+
+@Composable
+private fun ColorGradingTabChip(
+    tab: ColorGradingTab,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val accent = when (tab) {
+        ColorGradingTab.WHEELS -> Mocha.Peach
+        ColorGradingTab.CURVES -> Mocha.Sapphire
+        ColorGradingTab.HSL -> Mocha.Mauve
+        ColorGradingTab.LUT -> Mocha.Lavender
+    }
+
+    Surface(
+        color = if (selected) accent.copy(alpha = 0.16f) else Mocha.PanelRaised,
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, if (selected) accent.copy(alpha = 0.24f) else Mocha.CardStroke)
+    ) {
+        Text(
+            text = tab.label,
+            color = if (selected) accent else Mocha.Subtext0,
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier
+                .clickable(onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 10.dp)
+        )
+    }
+}
+
+private fun colorGradeSummary(grade: ColorGrade): String {
+    return when {
+        grade.lutPath != null -> "A LUT is loaded and ready to blend with the current primary correction."
+        grade.hslQualifier != null -> "The qualifier is active, so secondary hue and luma refinements are available."
+        grade.hasPrimaryAdjustments() -> "Primary corrections are active across the tone wheels or channel offsets."
+        else -> "No correction has been pushed yet, so this clip is ready for a clean starting grade."
+    }
+}
+
+private fun ColorGrade.hasPrimaryAdjustments(): Boolean {
+    return liftR != 0f ||
+        liftG != 0f ||
+        liftB != 0f ||
+        gammaR != 1f ||
+        gammaG != 1f ||
+        gammaB != 1f ||
+        gainR != 1f ||
+        gainG != 1f ||
+        gainB != 1f ||
+        offsetR != 0f ||
+        offsetG != 0f ||
+        offsetB != 0f
 }

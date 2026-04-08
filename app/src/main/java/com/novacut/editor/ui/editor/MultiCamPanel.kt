@@ -1,23 +1,37 @@
 package com.novacut.editor.ui.editor
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.sp
-import com.novacut.editor.R
 import com.novacut.editor.model.Track
 import com.novacut.editor.model.TrackType
 import com.novacut.editor.ui.theme.Mocha
@@ -33,118 +47,227 @@ fun MultiCamPanel(
     val videoClips = tracks
         .filter { it.type == TrackType.VIDEO }
         .flatMap { it.clips }
+        .filterNot { clip -> isStillImagePath(clip.sourceUri.lastPathSegment) }
         .take(4)
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Mocha.Mantle, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .padding(16.dp)
+    PremiumEditorPanel(
+        title = "Multi-Cam",
+        subtitle = "Sync angles, compare coverage, and switch the active shot without leaving the edit context.",
+        icon = Icons.Default.Videocam,
+        accent = Mocha.Blue,
+        onClose = onClose,
+        scrollable = true
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(stringResource(R.string.panel_multi_cam_title), color = Mocha.Text, fontSize = 16.sp)
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedButton(
-                    onClick = onSyncClips,
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Mauve),
-                    border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(
-                        brush = androidx.compose.ui.graphics.SolidColor(Mocha.Mauve)
-                    ),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                ) {
-                    Icon(Icons.Default.Sync, contentDescription = stringResource(R.string.cd_multicam_sync), modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text(stringResource(R.string.panel_multi_cam_sync), fontSize = 12.sp)
+        PremiumPanelCard(accent = Mocha.Blue) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Angle overview",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Mocha.Text
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = if (videoClips.isEmpty()) {
+                            "Add at least two motion clips to start a multi-cam review pass."
+                        } else {
+                            "Choose an angle to make it active, then sync clips if the cameras need alignment. Still photos stay hidden here so the angle grid remains camera-focused."
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Mocha.Subtext0
+                    )
                 }
-                IconButton(onClick = onClose, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cd_multicam_close), tint = Mocha.Subtext0, modifier = Modifier.size(20.dp))
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    PremiumPanelPill(
+                        text = "${videoClips.size} angles",
+                        accent = Mocha.Blue
+                    )
+                    PremiumPanelPill(
+                        text = if (selectedClipId != null) "Angle live" else "No angle selected",
+                        accent = if (selectedClipId != null) Mocha.Green else Mocha.Overlay1
+                    )
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        if (videoClips.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(100.dp),
-                contentAlignment = Alignment.Center
+        PremiumPanelCard(accent = Mocha.Mauve) {
+            Text(
+                text = "Sync cameras",
+                style = MaterialTheme.typography.titleMedium,
+                color = Mocha.Text
+            )
+            Text(
+                text = "Run a sync pass before switching angles if the camera starts or audio reference drifted across tracks.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Mocha.Subtext0
+            )
+
+            Button(
+                onClick = onSyncClips,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Mocha.Mauve,
+                    contentColor = Mocha.Base
+                ),
+                shape = RoundedCornerShape(18.dp)
             ) {
-                Text(stringResource(R.string.panel_multi_cam_no_clips), color = Mocha.Overlay0, fontSize = 13.sp)
+                Icon(
+                    imageVector = Icons.Default.Sync,
+                    contentDescription = "Sync cameras"
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = "Sync angles")
             }
-        } else {
-            val rows = videoClips.chunked(2)
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                rows.forEach { rowClips ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        rowClips.forEach { clip ->
-                            val isActive = clip.id == selectedClipId
-                            val borderColor = if (isActive) Mocha.Mauve else Mocha.Surface0
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .aspectRatio(16f / 9f)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .border(2.dp, borderColor, RoundedCornerShape(8.dp))
-                                    .background(Mocha.Surface0)
-                                    .clickable { onAngleSelected(clip.id) },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
-                                ) {
-                                    Icon(
-                                        Icons.Default.Videocam,
-                                        contentDescription = stringResource(R.string.cd_multicam_angle),
-                                        tint = if (isActive) Mocha.Mauve else Mocha.Overlay0,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                    Spacer(Modifier.height(4.dp))
-                                    val fileName = clip.sourceUri.lastPathSegment?.substringAfterLast('/') ?: "Clip"
-                                    Text(
-                                        fileName,
-                                        color = if (isActive) Mocha.Text else Mocha.Subtext0,
-                                        fontSize = 10.sp,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        textAlign = TextAlign.Center,
-                                        modifier = Modifier.padding(horizontal = 4.dp)
-                                    )
-                                }
-                                if (isActive) {
-                                    Box(
-                                        modifier = Modifier
-                                            .align(Alignment.TopEnd)
-                                            .padding(4.dp)
-                                            .size(16.dp)
-                                            .background(Mocha.Mauve, RoundedCornerShape(4.dp)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Check,
-                                            contentDescription = stringResource(R.string.cd_multicam_selected),
-                                            tint = Mocha.Crust,
-                                            modifier = Modifier.size(12.dp)
-                                        )
-                                    }
-                                }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        PremiumPanelCard(accent = if (videoClips.isEmpty()) Mocha.Overlay1 else Mocha.Green) {
+            Text(
+                text = "Available angles",
+                style = MaterialTheme.typography.titleMedium,
+                color = Mocha.Text
+            )
+
+            if (videoClips.isEmpty()) {
+                Text(
+                    text = "No motion clips available for multi-cam yet.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Mocha.Subtext0
+                )
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    videoClips.chunked(2).forEachIndexed { rowIndex, rowClips ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            rowClips.forEachIndexed { index, clip ->
+                                val cameraIndex = rowIndex * 2 + index
+                                MultiCamAngleCard(
+                                    label = "Cam ${'A' + cameraIndex}",
+                                    fileName = clip.sourceUri.lastPathSegment?.substringAfterLast('/') ?: "Clip",
+                                    isActive = clip.id == selectedClipId,
+                                    onClick = { onAngleSelected(clip.id) },
+                                    modifier = Modifier.weight(1f)
+                                )
                             }
-                        }
-                        if (rowClips.size == 1) {
-                            Spacer(modifier = Modifier.weight(1f))
+                            if (rowClips.size == 1) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+private fun isStillImagePath(pathSegment: String?): Boolean {
+    val extension = pathSegment
+        ?.substringAfterLast('.', missingDelimiterValue = "")
+        ?.lowercase()
+        ?: return false
+    return extension in setOf("jpg", "jpeg", "png", "webp", "bmp", "gif", "heic", "heif")
+}
+
+@Composable
+private fun MultiCamAngleCard(
+    label: String,
+    fileName: String,
+    isActive: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val accent = if (isActive) Mocha.Mauve else Mocha.Blue
+
+    Surface(
+        modifier = modifier,
+        color = if (isActive) accent.copy(alpha = 0.12f) else Mocha.PanelRaised,
+        shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (isActive) accent.copy(alpha = 0.28f) else Mocha.CardStroke
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(16f / 9f)
+                    .background(
+                        color = if (isActive) accent.copy(alpha = 0.2f) else Mocha.Base,
+                        shape = RoundedCornerShape(18.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Videocam,
+                    contentDescription = label,
+                    tint = if (isActive) accent else Mocha.Overlay1,
+                    modifier = Modifier.size(28.dp)
+                )
+
+                if (isActive) {
+                    Surface(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp),
+                        color = Mocha.Mauve,
+                        shape = CircleShape
+                    ) {
+                        Box(
+                            modifier = Modifier.size(20.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Selected angle",
+                                tint = Mocha.Crust,
+                                modifier = Modifier.size(12.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = Mocha.Text
+                )
+                Text(
+                    text = fileName,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Mocha.Subtext0,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            PremiumPanelPill(
+                text = if (isActive) "Active angle" else "Tap to switch",
+                accent = accent
+            )
         }
     }
 }

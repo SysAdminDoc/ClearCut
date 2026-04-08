@@ -1,31 +1,64 @@
 package com.novacut.editor.ui.editor
 
-import androidx.compose.foundation.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.BlurCircular
+import androidx.compose.material.icons.filled.Circle
+import androidx.compose.material.icons.filled.CropSquare
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Gesture
+import androidx.compose.material.icons.filled.Gradient
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.novacut.editor.R
-import com.novacut.editor.model.*
+import com.novacut.editor.model.Mask
+import com.novacut.editor.model.MaskPoint
+import com.novacut.editor.model.MaskType
 import com.novacut.editor.ui.theme.Mocha
-
 
 @Composable
 fun MaskEditorPanel(
@@ -39,128 +72,274 @@ fun MaskEditorPanel(
     modifier: Modifier = Modifier
 ) {
     val selectedMask = masks.find { it.id == selectedMaskId }
+    val trackedMasks = masks.count { it.trackToMotion }
+    var showAddMenu by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(Mocha.Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .padding(12.dp)
-    ) {
-        // Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(stringResource(R.string.mask_title), color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Row {
-                var showAddMenu by remember { mutableStateOf(false) }
-                Box {
-                    IconButton(onClick = { showAddMenu = true }, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.Add, stringResource(R.string.cd_add_mask), tint = Mocha.Green, modifier = Modifier.size(18.dp))
+    PremiumEditorPanel(
+        title = stringResource(R.string.mask_title),
+        subtitle = "Shape attention, blur, and reveal areas directly over the frame without leaving the cut.",
+        icon = Icons.Default.Gesture,
+        accent = if (selectedMask != null) Mocha.Mauve else Mocha.Blue,
+        onClose = onClose,
+        modifier = modifier,
+        scrollable = true,
+        headerActions = {
+            Box {
+                PremiumPanelIconButton(
+                    icon = Icons.Default.Add,
+                    contentDescription = stringResource(R.string.cd_add_mask),
+                    onClick = { showAddMenu = true },
+                    tint = Mocha.Green
+                )
+                DropdownMenu(
+                    expanded = showAddMenu,
+                    onDismissRequest = { showAddMenu = false }
+                ) {
+                    MaskType.entries.forEach { type ->
+                        DropdownMenuItem(
+                            text = { Text(type.displayName) },
+                            onClick = {
+                                onMaskAdded(type)
+                                showAddMenu = false
+                            }
+                        )
                     }
-                    DropdownMenu(expanded = showAddMenu, onDismissRequest = { showAddMenu = false }) {
-                        MaskType.entries.forEach { type ->
-                            DropdownMenuItem(
-                                text = { Text(type.displayName, fontSize = 13.sp) },
-                                onClick = {
-                                    onMaskAdded(type)
-                                    showAddMenu = false
-                                }
-                            )
-                        }
-                    }
-                }
-                IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Close, stringResource(R.string.cd_close_mask_editor), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
                 }
             }
         }
-
-        Spacer(Modifier.height(8.dp))
-
-        // Mask list
-        if (masks.isEmpty()) {
-            Text(stringResource(R.string.mask_empty), color = Mocha.Subtext0, fontSize = 12.sp, modifier = Modifier.padding(8.dp))
-        } else {
+    ) {
+        PremiumPanelCard(accent = if (selectedMask != null) Mocha.Mauve else Mocha.Blue) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
             ) {
-                masks.forEach { mask ->
-                    val selected = mask.id == selectedMaskId
-                    MaskChip(
-                        mask = mask,
-                        isSelected = selected,
-                        onClick = { onMaskSelected(if (selected) null else mask.id) },
-                        onDelete = { onMaskDeleted(mask.id) }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Mask stack",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Mocha.Text
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Create geometric or freehand masks, then tune feather, opacity, inversion, and motion behavior from one place.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Mocha.Subtext0
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    PremiumPanelPill(text = "${masks.size} masks", accent = Mocha.Blue)
+                    PremiumPanelPill(
+                        text = if (selectedMask != null) selectedMask.type.displayName else "No selection",
+                        accent = if (selectedMask != null) Mocha.Mauve else Mocha.Subtext0
                     )
                 }
             }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                MaskMetric(
+                    title = "Tracked",
+                    value = trackedMasks.toString(),
+                    accent = if (trackedMasks > 0) Mocha.Yellow else Mocha.Green,
+                    modifier = Modifier.weight(1f)
+                )
+                MaskMetric(
+                    title = "Selected",
+                    value = selectedMask?.points?.size?.toString() ?: "0",
+                    accent = Mocha.Mauve,
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
 
-        // Selected mask controls
-        selectedMask?.let { mask ->
-            Spacer(Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-            // Feather
-            MaskSlider("Feather", mask.feather, 0f, 100f) {
-                onMaskUpdated(mask.copy(feather = it))
-            }
+        PremiumPanelCard(accent = Mocha.Blue) {
+            Text(
+                text = "Mask shapes",
+                style = MaterialTheme.typography.titleMedium,
+                color = Mocha.Text
+            )
+            Text(
+                text = if (masks.isEmpty()) {
+                    stringResource(R.string.mask_empty)
+                } else {
+                    "Select a mask to refine it, or add another shape for layered reveals and local adjustments."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = Mocha.Subtext0
+            )
 
-            // Opacity
-            MaskSlider("Opacity", mask.opacity, 0f, 1f) {
-                onMaskUpdated(mask.copy(opacity = it))
-            }
-
-            // Expansion
-            MaskSlider("Expansion", mask.expansion, -50f, 50f) {
-                onMaskUpdated(mask.copy(expansion = it))
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            // Invert toggle
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Mocha.Surface0)
-                    .clickable { onMaskUpdated(mask.copy(inverted = !mask.inverted)) }
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(stringResource(R.string.mask_invert), color = Mocha.Text, fontSize = 13.sp)
-                Switch(
-                    checked = mask.inverted,
-                    onCheckedChange = { onMaskUpdated(mask.copy(inverted = it)) },
-                    colors = SwitchDefaults.colors(checkedTrackColor = Mocha.Mauve)
+                MaskType.entries.forEach { type ->
+                    OutlinedButton(
+                        onClick = { onMaskAdded(type) },
+                        shape = RoundedCornerShape(18.dp),
+                        border = BorderStroke(1.dp, Mocha.Blue.copy(alpha = 0.25f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Blue)
+                    ) {
+                        androidx.compose.material3.Icon(
+                            imageVector = maskTypeIcon(type),
+                            contentDescription = type.displayName
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = type.displayName)
+                    }
+                }
+            }
+
+            if (masks.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    masks.forEach { mask ->
+                        MaskChip(
+                            mask = mask,
+                            isSelected = mask.id == selectedMaskId,
+                            onClick = { onMaskSelected(if (mask.id == selectedMaskId) null else mask.id) }
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        if (selectedMask != null) {
+            PremiumPanelCard(accent = Mocha.Mauve) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Selected mask",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Mocha.Text
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = selectedMask.type.displayName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Mocha.Subtext0
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = { onMaskDeleted(selectedMask.id) },
+                        shape = RoundedCornerShape(18.dp),
+                        border = BorderStroke(1.dp, Mocha.Red.copy(alpha = 0.25f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Red)
+                    ) {
+                        androidx.compose.material3.Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = stringResource(R.string.cd_delete)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = stringResource(R.string.remove))
+                    }
+                }
+
+                MaskSliderRow(
+                    label = "Feather",
+                    value = selectedMask.feather,
+                    min = 0f,
+                    max = 100f,
+                    accent = Mocha.Mauve,
+                    onChanged = { onMaskUpdated(selectedMask.copy(feather = it)) }
+                )
+                MaskSliderRow(
+                    label = "Opacity",
+                    value = selectedMask.opacity,
+                    min = 0f,
+                    max = 1f,
+                    accent = Mocha.Blue,
+                    onChanged = { onMaskUpdated(selectedMask.copy(opacity = it)) },
+                    valueFormatter = { "%.0f%%".format(it * 100f) }
+                )
+                MaskSliderRow(
+                    label = "Expansion",
+                    value = selectedMask.expansion,
+                    min = -50f,
+                    max = 50f,
+                    accent = Mocha.Peach,
+                    onChanged = { onMaskUpdated(selectedMask.copy(expansion = it)) }
+                )
+
+                MaskToggleRow(
+                    label = stringResource(R.string.mask_invert),
+                    subtitle = "Flip the inside and outside of the mask.",
+                    checked = selectedMask.inverted,
+                    accent = Mocha.Mauve,
+                    onCheckedChange = { onMaskUpdated(selectedMask.copy(inverted = it)) }
+                )
+                MaskToggleRow(
+                    label = stringResource(R.string.mask_track_to_motion),
+                    subtitle = "Keep the mask attached to tracked movement when supported by the shot.",
+                    checked = selectedMask.trackToMotion,
+                    accent = Mocha.Yellow,
+                    onCheckedChange = { onMaskUpdated(selectedMask.copy(trackToMotion = it)) }
                 )
             }
-
-            Spacer(Modifier.height(4.dp))
-
-            // Track to motion toggle
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Mocha.Surface0)
-                    .clickable { onMaskUpdated(mask.copy(trackToMotion = !mask.trackToMotion)) }
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(stringResource(R.string.mask_track_to_motion), color = Mocha.Text, fontSize = 13.sp)
-                Switch(
-                    checked = mask.trackToMotion,
-                    onCheckedChange = { onMaskUpdated(mask.copy(trackToMotion = it)) },
-                    colors = SwitchDefaults.colors(checkedTrackColor = Mocha.Yellow)
+        } else {
+            PremiumPanelCard(accent = Mocha.Green) {
+                Text(
+                    text = "No mask selected",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Mocha.Text
+                )
+                Text(
+                    text = "Add a shape above or tap an existing mask to adjust feather, opacity, inversion, and motion behavior.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Mocha.Subtext0
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun MaskMetric(
+    title: String,
+    value: String,
+    accent: Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        color = accent.copy(alpha = 0.12f),
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                color = Mocha.Subtext0
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleSmall,
+                color = accent,
+                fontWeight = FontWeight.Medium
+            )
         }
     }
 }
@@ -169,84 +348,138 @@ fun MaskEditorPanel(
 private fun MaskChip(
     mask: Mask,
     isSelected: Boolean,
-    onClick: () -> Unit,
-    onDelete: () -> Unit
+    onClick: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(if (isSelected) Mocha.Mauve.copy(alpha = 0.2f) else Mocha.Surface0)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    val accent = if (isSelected) Mocha.Mauve else Mocha.Blue
+    val invLabel = stringResource(R.string.mask_inv_label)
+
+    Surface(
+        color = if (isSelected) accent.copy(alpha = 0.12f) else Mocha.PanelRaised,
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(
+            1.dp,
+            if (isSelected) accent.copy(alpha = 0.2f) else Mocha.CardStroke
+        ),
+        modifier = Modifier.clickable(onClick = onClick)
     ) {
-        Icon(
-            when (mask.type) {
-                MaskType.RECTANGLE -> Icons.Default.CropSquare
-                MaskType.ELLIPSE -> Icons.Default.Circle
-                MaskType.FREEHAND -> Icons.Default.Gesture
-                MaskType.LINEAR_GRADIENT -> Icons.Default.Gradient
-                MaskType.RADIAL_GRADIENT -> Icons.Default.BlurCircular
-            },
-            mask.type.displayName,
-            tint = if (isSelected) Mocha.Mauve else Mocha.Subtext0,
-            modifier = Modifier.size(16.dp)
-        )
-        Text(
-            mask.type.displayName,
-            color = if (isSelected) Mocha.Mauve else Mocha.Text,
-            fontSize = 11.sp
-        )
-        if (mask.inverted) {
-            Text(stringResource(R.string.mask_inv_label), color = Mocha.Yellow, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            androidx.compose.material3.Icon(
+                imageVector = maskTypeIcon(mask.type),
+                contentDescription = mask.type.displayName,
+                tint = accent
+            )
+            Column {
+                Text(
+                    text = mask.type.displayName,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (isSelected) accent else Mocha.Text
+                )
+                Text(
+                    text = buildString {
+                        append("${mask.points.size} pts")
+                        if (mask.inverted) append(" • $invLabel")
+                        if (mask.trackToMotion) append(" • tracked")
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Mocha.Subtext0
+                )
+            }
         }
-        Icon(
-            Icons.Default.Close,
-            "Delete",
-            tint = Mocha.Subtext0.copy(alpha = 0.5f),
-            modifier = Modifier
-                .size(14.dp)
-                .clickable(onClick = onDelete)
+    }
+}
+
+@Composable
+private fun MaskSliderRow(
+    label: String,
+    value: Float,
+    min: Float,
+    max: Float,
+    accent: Color,
+    onChanged: (Float) -> Unit,
+    valueFormatter: (Float) -> String = { "%.1f".format(it) }
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                color = Mocha.Subtext0
+            )
+            PremiumPanelPill(text = valueFormatter(value), accent = accent)
+        }
+        Slider(
+            value = value,
+            onValueChange = onChanged,
+            valueRange = min..max,
+            colors = SliderDefaults.colors(
+                thumbColor = accent,
+                activeTrackColor = accent,
+                inactiveTrackColor = Mocha.Surface1
+            )
         )
     }
 }
 
 @Composable
-private fun MaskSlider(
+private fun MaskToggleRow(
     label: String,
-    value: Float,
-    min: Float,
-    max: Float,
-    onChanged: (Float) -> Unit
+    subtitle: String,
+    checked: Boolean,
+    accent: Color,
+    onCheckedChange: (Boolean) -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Surface(
+        color = Mocha.PanelRaised,
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, Mocha.CardStroke)
     ) {
-        Text(label, color = Mocha.Subtext0, fontSize = 11.sp, modifier = Modifier.width(70.dp))
-        Slider(
-            value = value,
-            onValueChange = onChanged,
-            valueRange = min..max,
+        Row(
             modifier = Modifier
-                .weight(1f)
-                .height(24.dp),
-            colors = SliderDefaults.colors(
-                thumbColor = Mocha.Mauve,
-                activeTrackColor = Mocha.Mauve.copy(alpha = 0.6f),
-                inactiveTrackColor = Mocha.Surface1
+                .fillMaxWidth()
+                .clickable { onCheckedChange(!checked) }
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = Mocha.Text
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Mocha.Subtext0
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                colors = SwitchDefaults.colors(checkedTrackColor = accent)
             )
-        )
-        Text(
-            "%.1f".format(value),
-            color = Mocha.Subtext0,
-            fontSize = 10.sp,
-            modifier = Modifier.width(36.dp)
-        )
+        }
     }
+}
+
+private fun maskTypeIcon(type: MaskType): ImageVector = when (type) {
+    MaskType.RECTANGLE -> Icons.Default.CropSquare
+    MaskType.ELLIPSE -> Icons.Default.Circle
+    MaskType.FREEHAND -> Icons.Default.Gesture
+    MaskType.LINEAR_GRADIENT -> Icons.Default.Gradient
+    MaskType.RADIAL_GRADIENT -> Icons.Default.BlurCircular
 }
 
 /**
@@ -290,14 +523,15 @@ fun MaskPreviewOverlay(
                 } else {
                     detectDragGestures(
                         onDragStart = { startOffset ->
-                            // Find the closest point at drag start
                             val hitRadius = 30f
                             var bestIdx = -1
                             var bestDist = Float.MAX_VALUE
                             mask.points.forEachIndexed { idx, point ->
                                 val px = point.x * size.width
                                 val py = point.y * size.height
-                                val dist = (startOffset.x - px) * (startOffset.x - px) + (startOffset.y - py) * (startOffset.y - py)
+                                val dist =
+                                    (startOffset.x - px) * (startOffset.x - px) +
+                                        (startOffset.y - py) * (startOffset.y - py)
                                 if (dist < hitRadius * hitRadius && dist < bestDist) {
                                     bestDist = dist
                                     bestIdx = idx
@@ -309,7 +543,8 @@ fun MaskPreviewOverlay(
                         val idx = draggedPointIndex
                         if (idx >= 0 && idx < mask.points.size) {
                             onMaskPointMoved(
-                                selectedMaskId, idx,
+                                selectedMaskId,
+                                idx,
                                 (change.position.x / size.width).coerceIn(0f, 1f),
                                 (change.position.y / size.height).coerceIn(0f, 1f)
                             )
@@ -346,6 +581,7 @@ fun MaskPreviewOverlay(
                         )
                     }
                 }
+
                 MaskType.ELLIPSE -> {
                     if (mask.points.size >= 2) {
                         val center = mask.points[0]
@@ -375,6 +611,7 @@ fun MaskPreviewOverlay(
                         )
                     }
                 }
+
                 MaskType.FREEHAND -> {
                     if (mask.points.size >= 2) {
                         val path = Path()
@@ -388,7 +625,9 @@ fun MaskPreviewOverlay(
                         drawPath(path, color, style = Stroke(if (isSelected) 2f else 1f))
                     }
                 }
-                MaskType.LINEAR_GRADIENT, MaskType.RADIAL_GRADIENT -> {
+
+                MaskType.LINEAR_GRADIENT,
+                MaskType.RADIAL_GRADIENT -> {
                     if (mask.points.size >= 2) {
                         val start = mask.points[0]
                         val end = mask.points[1]
@@ -402,7 +641,6 @@ fun MaskPreviewOverlay(
                 }
             }
 
-            // Draw control points for selected mask
             if (isSelected) {
                 mask.points.forEach { point ->
                     drawCircle(
@@ -419,7 +657,6 @@ fun MaskPreviewOverlay(
             }
         }
 
-        // Draw in-progress freehand path
         if (drawingPoints.size >= 2) {
             val path = Path()
             drawingPoints.forEachIndexed { idx, pt ->

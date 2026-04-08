@@ -44,7 +44,7 @@ class ExportService : Service() {
         }
 
         val notification = buildNotification(0)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             startForeground(
                 NOTIFICATION_ID,
                 notification,

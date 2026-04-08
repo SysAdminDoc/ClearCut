@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import android.Manifest
+import android.content.pm.PackageManager
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -32,6 +34,7 @@ import androidx.compose.ui.input.key.*
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.focusable
+import androidx.compose.ui.graphics.Brush
 import com.novacut.editor.engine.ExportState
 import com.novacut.editor.model.*
 import com.novacut.editor.model.ClipLabel
@@ -44,6 +47,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.res.stringResource
+import androidx.core.content.ContextCompat
 import com.novacut.editor.R
 import java.io.File
 
@@ -62,6 +66,15 @@ fun EditorScreen(
     val scopeFrame by viewModel.scopeFrame.collectAsStateWithLifecycle()
     val showLutPicker by viewModel.showLutPicker.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val recordAudioPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            viewModel.startVoiceover()
+        } else {
+            viewModel.showToast(context.getString(R.string.audio_mic_permission_required))
+        }
+    }
 
     // LUT file picker
     val lutPickerLauncher = rememberLauncherForActivityResult(
@@ -227,27 +240,71 @@ fun EditorScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = Mocha.Surface0.copy(alpha = 0.9f)),
-                        shape = RoundedCornerShape(16.dp)
+                        colors = CardDefaults.cardColors(containerColor = Mocha.Panel),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
+                        shape = RoundedCornerShape(26.dp)
                     ) {
-                        Column(
-                            modifier = Modifier.padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                        Box(
+                            modifier = Modifier.background(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        Mocha.PanelHighest.copy(alpha = 0.86f),
+                                        Mocha.Panel
+                                    )
+                                )
+                            )
                         ) {
-                            Icon(
-                                Icons.Default.VideoLibrary,
-                                contentDescription = stringResource(R.string.editor_no_clips_yet),
-                                tint = Mocha.Mauve,
-                                modifier = Modifier.size(48.dp)
-                            )
-                            Spacer(Modifier.height(12.dp))
-                            Text(stringResource(R.string.editor_no_clips_yet), color = Mocha.Text, fontSize = 16.sp)
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                stringResource(R.string.editor_add_media_hint),
-                                color = Mocha.Subtext0,
-                                fontSize = 12.sp
-                            )
+                            Column(
+                                modifier = Modifier.padding(horizontal = 28.dp, vertical = 30.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Surface(
+                                    color = Mocha.Mauve.copy(alpha = 0.14f),
+                                    shape = CircleShape,
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Mauve.copy(alpha = 0.22f))
+                                ) {
+                                    Icon(
+                                        Icons.Default.VideoLibrary,
+                                        contentDescription = stringResource(R.string.editor_no_clips_yet),
+                                        tint = Mocha.Rosewater,
+                                        modifier = Modifier
+                                            .padding(16.dp)
+                                            .size(28.dp)
+                                    )
+                                }
+                                Spacer(Modifier.height(14.dp))
+                                Text(
+                                    stringResource(R.string.editor_empty_title),
+                                    color = Mocha.Text,
+                                    style = MaterialTheme.typography.headlineMedium
+                                )
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    stringResource(R.string.editor_empty_body),
+                                    color = Mocha.Subtext0,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Spacer(Modifier.height(14.dp))
+                                Button(
+                                    onClick = viewModel::showMediaPicker,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Mocha.Rosewater,
+                                        contentColor = Mocha.Midnight
+                                    ),
+                                    shape = RoundedCornerShape(18.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Add,
+                                        contentDescription = stringResource(R.string.editor_add_media),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        stringResource(R.string.editor_add_media),
+                                        style = MaterialTheme.typography.labelLarge
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -493,6 +550,7 @@ fun EditorScreen(
                         "multi_cam" -> viewModel.showMultiCam()
                         "marker_list" -> viewModel.showMarkerList()
                         // AI tools
+                        "ai_hub" -> viewModel.showAiToolsPanel()
                         "auto_captions" -> viewModel.runAiTool("auto_captions")
                         "scene_detect" -> viewModel.runAiTool("scene_detect")
                         "smart_crop" -> viewModel.runAiTool("smart_crop")
@@ -720,7 +778,13 @@ fun EditorScreen(
             VoiceoverRecorder(
                 isRecording = state.isRecordingVoiceover,
                 recordingDurationMs = state.voiceoverDurationMs,
-                onStartRecording = viewModel::startVoiceover,
+                onStartRecording = {
+                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                        viewModel.startVoiceover()
+                    } else {
+                        recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                    }
+                },
                 onStopRecording = viewModel::stopVoiceover,
                 onClose = viewModel::hideVoiceoverPanel
             )
@@ -1661,167 +1725,242 @@ private fun EditorTopBar(
     }
 
     Surface(
-        color = Mocha.Crust,
+        color = Mocha.Panel,
         modifier = modifier
             .fillMaxWidth()
-            .height(44.dp)
+            .height(62.dp)
     ) {
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            Mocha.PanelHighest.copy(alpha = 0.9f),
+                            Mocha.Panel,
+                            Mocha.Mantle
+                        )
+                    )
+                )
         ) {
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier.size(36.dp)
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    Icons.Default.Home,
-                    contentDescription = stringResource(R.string.editor_home),
-                    tint = Mocha.Text,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-            IconButton(
-                onClick = onUndo,
-                enabled = canUndo,
-                modifier = Modifier.size(32.dp)
-            ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.Undo,
-                    contentDescription = stringResource(R.string.editor_undo),
-                    tint = if (canUndo) Mocha.Text else Mocha.Surface2,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-            IconButton(
-                onClick = onRedo,
-                enabled = canRedo,
-                modifier = Modifier.size(32.dp)
-            ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.Redo,
-                    contentDescription = stringResource(R.string.editor_redo),
-                    tint = if (canRedo) Mocha.Text else Mocha.Surface2,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            if (selectedClipId != null) {
-                IconButton(
-                    onClick = {
-                        if (confirmBeforeDelete) showDeleteConfirmation = true
-                        else onDelete()
-                    },
-                    modifier = Modifier.size(32.dp)
+                Surface(
+                    color = Mocha.PanelHighest,
+                    shape = RoundedCornerShape(18.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke)
                 ) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = stringResource(R.string.editor_delete),
-                        tint = Mocha.Red,
-                        modifier = Modifier.size(18.dp)
-                    )
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Home,
+                            contentDescription = stringResource(R.string.editor_home),
+                            tint = Mocha.Text,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
-            }
 
-            Box {
-                IconButton(
-                    onClick = { showOverflow = true },
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        Icons.Default.MoreVert,
-                        contentDescription = stringResource(R.string.editor_more),
-                        tint = Mocha.Text,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-                DropdownMenu(
-                    expanded = showOverflow,
-                    onDismissRequest = { showOverflow = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.editor_add_media)) },
-                        onClick = {
-                            showOverflow = false
-                            onAddMedia()
-                        },
-                        leadingIcon = {
-                            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.editor_add_media_cd))
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.editor_add_track)) },
-                        onClick = {
-                            showOverflow = false
-                            showAddTrackMenu = true
-                        },
-                        leadingIcon = {
-                            Icon(Icons.Default.VideoLibrary, contentDescription = stringResource(R.string.editor_add_track_cd))
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.editor_rename_project)) },
-                        onClick = {
-                            showOverflow = false
-                            showRenameDialog = true
-                        },
-                        leadingIcon = {
-                            Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.editor_rename_project_cd))
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.editor_save_as_template)) },
-                        onClick = {
-                            showOverflow = false
-                            showSaveTemplateDialog = true
-                        },
-                        leadingIcon = {
-                            Icon(Icons.Default.SaveAs, contentDescription = stringResource(R.string.editor_save_as_template_cd))
-                        }
-                    )
-                }
-                DropdownMenu(
-                    expanded = showAddTrackMenu,
-                    onDismissRequest = { showAddTrackMenu = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.editor_video_track)) },
-                        onClick = { showAddTrackMenu = false; onAddTrack(TrackType.VIDEO) },
-                        leadingIcon = { Icon(Icons.Default.Videocam, contentDescription = stringResource(R.string.editor_video_track_cd)) }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.editor_audio_track)) },
-                        onClick = { showAddTrackMenu = false; onAddTrack(TrackType.AUDIO) },
-                        leadingIcon = { Icon(Icons.Default.MusicNote, contentDescription = stringResource(R.string.editor_audio_track_cd)) }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.editor_overlay_track)) },
-                        onClick = { showAddTrackMenu = false; onAddTrack(TrackType.OVERLAY) },
-                        leadingIcon = { Icon(Icons.Default.Layers, contentDescription = stringResource(R.string.editor_overlay_track_cd)) }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.editor_text_track)) },
-                        onClick = { showAddTrackMenu = false; onAddTrack(TrackType.TEXT) },
-                        leadingIcon = { Icon(Icons.Default.TextFields, contentDescription = stringResource(R.string.editor_text_track_cd)) }
-                    )
-                }
-            }
+                Spacer(modifier = Modifier.width(10.dp))
 
-            Button(
-                onClick = onExport,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Mocha.Mauve,
-                    contentColor = Mocha.Crust
-                ),
-                shape = RoundedCornerShape(8.dp),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-                modifier = Modifier.height(32.dp)
-            ) {
-                Text(stringResource(R.string.editor_export), fontSize = 13.sp)
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    Text(
+                        text = projectName,
+                        color = Mocha.Text,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Surface(
+                        color = if (editorMode == EditorMode.PRO) Mocha.Mauve.copy(alpha = 0.14f) else Mocha.Sapphire.copy(alpha = 0.14f),
+                        shape = RoundedCornerShape(999.dp)
+                    ) {
+                        Text(
+                            text = if (editorMode == EditorMode.PRO) {
+                                stringResource(R.string.settings_mode_pro)
+                            } else {
+                                stringResource(R.string.settings_mode_easy)
+                            },
+                            color = if (editorMode == EditorMode.PRO) Mocha.Rosewater else Mocha.Sapphire,
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+
+                Surface(
+                    color = Mocha.PanelHighest,
+                    shape = RoundedCornerShape(16.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = onUndo,
+                            enabled = canUndo,
+                            modifier = Modifier.size(34.dp)
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.Undo,
+                                contentDescription = stringResource(R.string.editor_undo),
+                                tint = if (canUndo) Mocha.Text else Mocha.Surface2,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        IconButton(
+                            onClick = onRedo,
+                            enabled = canRedo,
+                            modifier = Modifier.size(34.dp)
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.Redo,
+                                contentDescription = stringResource(R.string.editor_redo),
+                                tint = if (canRedo) Mocha.Text else Mocha.Surface2,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
+
+                if (selectedClipId != null) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Surface(
+                        color = Mocha.Red.copy(alpha = 0.12f),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        IconButton(
+                            onClick = {
+                                if (confirmBeforeDelete) showDeleteConfirmation = true
+                                else onDelete()
+                            },
+                            modifier = Modifier.size(34.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = stringResource(R.string.editor_delete),
+                                tint = Mocha.Red,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Box {
+                    Surface(
+                        color = Mocha.PanelHighest,
+                        shape = RoundedCornerShape(16.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke)
+                    ) {
+                        IconButton(
+                            onClick = { showOverflow = true },
+                            modifier = Modifier.size(38.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.MoreVert,
+                                contentDescription = stringResource(R.string.editor_more),
+                                tint = Mocha.Text,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    DropdownMenu(
+                        expanded = showOverflow,
+                        onDismissRequest = { showOverflow = false },
+                        containerColor = Mocha.PanelHighest
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.editor_add_media)) },
+                            onClick = {
+                                showOverflow = false
+                                onAddMedia()
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.editor_add_media_cd))
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.editor_add_track)) },
+                            onClick = {
+                                showOverflow = false
+                                showAddTrackMenu = true
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.VideoLibrary, contentDescription = stringResource(R.string.editor_add_track_cd))
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.editor_rename_project)) },
+                            onClick = {
+                                showOverflow = false
+                                showRenameDialog = true
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.editor_rename_project_cd))
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.editor_save_as_template)) },
+                            onClick = {
+                                showOverflow = false
+                                showSaveTemplateDialog = true
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.SaveAs, contentDescription = stringResource(R.string.editor_save_as_template_cd))
+                            }
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showAddTrackMenu,
+                        onDismissRequest = { showAddTrackMenu = false },
+                        containerColor = Mocha.PanelHighest
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.editor_video_track)) },
+                            onClick = { showAddTrackMenu = false; onAddTrack(TrackType.VIDEO) },
+                            leadingIcon = { Icon(Icons.Default.Videocam, contentDescription = stringResource(R.string.editor_video_track_cd)) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.editor_audio_track)) },
+                            onClick = { showAddTrackMenu = false; onAddTrack(TrackType.AUDIO) },
+                            leadingIcon = { Icon(Icons.Default.MusicNote, contentDescription = stringResource(R.string.editor_audio_track_cd)) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.editor_overlay_track)) },
+                            onClick = { showAddTrackMenu = false; onAddTrack(TrackType.OVERLAY) },
+                            leadingIcon = { Icon(Icons.Default.Layers, contentDescription = stringResource(R.string.editor_overlay_track_cd)) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.editor_text_track)) },
+                            onClick = { showAddTrackMenu = false; onAddTrack(TrackType.TEXT) },
+                            leadingIcon = { Icon(Icons.Default.TextFields, contentDescription = stringResource(R.string.editor_text_track_cd)) }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Button(
+                    onClick = onExport,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Mocha.Rosewater,
+                        contentColor = Mocha.Midnight
+                    ),
+                    shape = RoundedCornerShape(16.dp),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
+                    modifier = Modifier.height(38.dp)
+                ) {
+                    Text(stringResource(R.string.editor_export), style = MaterialTheme.typography.labelLarge)
+                }
             }
         }
     }

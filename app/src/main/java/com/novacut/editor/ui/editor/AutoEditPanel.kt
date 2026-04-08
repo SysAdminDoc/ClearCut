@@ -1,20 +1,38 @@
 package com.novacut.editor.ui.editor
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.ui.theme.Mocha
 
@@ -28,111 +46,202 @@ fun AutoEditPanel(
     modifier: Modifier = Modifier
 ) {
     var scriptText by remember { mutableStateOf("") }
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(Mocha.Mantle, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .padding(16.dp)
+
+    PremiumEditorPanel(
+        title = stringResource(R.string.auto_edit_title),
+        subtitle = "Turn rough footage into a first-cut highlight reel with a concise creative brief and an AI-assisted timing pass.",
+        icon = Icons.Default.AutoFixHigh,
+        accent = Mocha.Mauve,
+        onClose = onClose,
+        modifier = modifier,
+        scrollable = true
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(stringResource(R.string.auto_edit_title), color = Mocha.Text, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            IconButton(onClick = onClose) {
-                Icon(Icons.Default.Close, stringResource(R.string.auto_edit_close_cd), tint = Mocha.Subtext0)
+        PremiumPanelCard(accent = Mocha.Mauve) {
+            Text(
+                text = "Source overview",
+                style = MaterialTheme.typography.titleMedium,
+                color = Mocha.Text
+            )
+            Text(
+                text = stringResource(R.string.auto_edit_description),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Mocha.Subtext0
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                AutoEditInfoCard(
+                    label = stringResource(R.string.auto_edit_info_clips),
+                    value = clipCount.toString(),
+                    icon = Icons.Default.Videocam,
+                    accent = Mocha.Blue,
+                    modifier = Modifier.weight(1f)
+                )
+                AutoEditInfoCard(
+                    label = stringResource(R.string.auto_edit_info_music),
+                    value = if (hasAudio) stringResource(R.string.auto_edit_info_yes) else stringResource(R.string.auto_edit_info_no),
+                    icon = Icons.Default.MusicNote,
+                    accent = if (hasAudio) Mocha.Green else Mocha.Overlay1,
+                    modifier = Modifier.weight(1f)
+                )
+                AutoEditInfoCard(
+                    label = stringResource(R.string.auto_edit_info_target),
+                    value = stringResource(R.string.auto_edit_info_target_value),
+                    icon = Icons.Default.Timer,
+                    accent = Mocha.Peach,
+                    modifier = Modifier.weight(1f)
+                )
             }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            stringResource(R.string.auto_edit_description),
-            color = Mocha.Subtext0,
-            fontSize = 12.sp
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Info cards
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            InfoCard(stringResource(R.string.auto_edit_info_clips), "$clipCount", Icons.Default.Videocam, Mocha.Blue, Modifier.weight(1f))
-            InfoCard(stringResource(R.string.auto_edit_info_music), if (hasAudio) stringResource(R.string.auto_edit_info_yes) else stringResource(R.string.auto_edit_info_no), Icons.Default.MusicNote, if (hasAudio) Mocha.Green else Mocha.Surface1, Modifier.weight(1f))
-            InfoCard(stringResource(R.string.auto_edit_info_target), stringResource(R.string.auto_edit_info_target_value), Icons.Default.Timer, Mocha.Peach, Modifier.weight(1f))
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        OutlinedTextField(
-            value = scriptText,
-            onValueChange = { scriptText = it },
-            label = { Text(stringResource(R.string.panel_auto_edit_script_label), color = Mocha.Subtext0, fontSize = 12.sp) },
-            placeholder = { Text(stringResource(R.string.panel_auto_edit_script_placeholder), color = Mocha.Surface2, fontSize = 12.sp) },
-            modifier = Modifier.fillMaxWidth(),
-            minLines = 2,
-            maxLines = 4,
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedTextColor = Mocha.Text,
-                unfocusedTextColor = Mocha.Text,
-                cursorColor = Mocha.Mauve,
-                focusedBorderColor = Mocha.Mauve,
-                unfocusedBorderColor = Mocha.Surface1,
-                focusedLabelColor = Mocha.Mauve,
-                unfocusedLabelColor = Mocha.Subtext0
+        PremiumPanelCard(accent = Mocha.Blue) {
+            Text(
+                text = "Edit brief",
+                style = MaterialTheme.typography.titleMedium,
+                color = Mocha.Text
             )
-        )
+            Text(
+                text = "Guide the first cut with a short prompt like \"fast travel recap with strongest reactions first\" or leave it blank for a neutral highlight reel.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Mocha.Subtext0
+            )
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
-            onClick = { onGenerate(scriptText.takeIf { it.isNotBlank() }) },
-            enabled = clipCount > 0 && !isProcessing,
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve, contentColor = Mocha.Base)
-        ) {
-            if (isProcessing) {
-                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Mocha.Base, strokeWidth = 2.dp)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.panel_auto_edit_generating))
-            } else {
-                Icon(Icons.Default.AutoFixHigh, contentDescription = stringResource(R.string.cd_auto_edit_generate), modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.auto_edit_start))
-            }
+            OutlinedTextField(
+                value = scriptText,
+                onValueChange = { scriptText = it },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 3,
+                maxLines = 5,
+                label = {
+                    Text(
+                        text = stringResource(R.string.panel_auto_edit_script_label),
+                        color = Mocha.Subtext0
+                    )
+                },
+                placeholder = {
+                    Text(
+                        text = stringResource(R.string.panel_auto_edit_script_placeholder),
+                        color = Mocha.Overlay1
+                    )
+                },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Mocha.Mauve,
+                    unfocusedBorderColor = Mocha.CardStroke,
+                    focusedLabelColor = Mocha.Mauve,
+                    unfocusedLabelColor = Mocha.Subtext0,
+                    focusedTextColor = Mocha.Text,
+                    unfocusedTextColor = Mocha.Text,
+                    cursorColor = Mocha.Mauve
+                )
+            )
         }
 
-        if (!hasAudio) {
-            Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
+
+        PremiumPanelCard(accent = if (hasAudio) Mocha.Green else Mocha.Peach) {
             Text(
-                stringResource(R.string.panel_auto_edit_add_music_hint),
-                color = Mocha.Subtext0,
-                fontSize = 11.sp
+                text = "Generate highlight reel",
+                style = MaterialTheme.typography.titleMedium,
+                color = Mocha.Text
             )
+            Text(
+                text = if (hasAudio) {
+                    "NovaCut can pace the reel against your current audio bed while it scores the strongest moments."
+                } else {
+                    "You can still generate a first cut now, but adding music or guide audio usually improves pacing."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = Mocha.Subtext0
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                PremiumPanelPill(
+                    text = "$clipCount clips",
+                    accent = Mocha.Blue
+                )
+                PremiumPanelPill(
+                    text = if (hasAudio) "Audio ready" else "No soundtrack",
+                    accent = if (hasAudio) Mocha.Green else Mocha.Peach
+                )
+            }
+
+            Button(
+                onClick = { onGenerate(scriptText.takeIf { it.isNotBlank() }) },
+                enabled = clipCount > 0 && !isProcessing,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Mocha.Mauve,
+                    contentColor = Mocha.Base,
+                    disabledContainerColor = Mocha.Surface1,
+                    disabledContentColor = Mocha.Subtext0
+                ),
+                shape = RoundedCornerShape(18.dp)
+            ) {
+                if (isProcessing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        color = Mocha.Base,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = stringResource(R.string.panel_auto_edit_generating))
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.AutoFixHigh,
+                        contentDescription = stringResource(R.string.cd_auto_edit_generate)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = stringResource(R.string.auto_edit_start))
+                }
+            }
+
+            if (!hasAudio) {
+                Text(
+                    text = stringResource(R.string.panel_auto_edit_add_music_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Mocha.Subtext0
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun InfoCard(
+private fun AutoEditInfoCard(
     label: String,
     value: String,
     icon: ImageVector,
-    color: Color,
+    accent: Color,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier
-            .background(Mocha.Surface0, RoundedCornerShape(8.dp))
-            .padding(12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(icon, contentDescription = label, tint = color, modifier = Modifier.size(20.dp))
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(value, color = Mocha.Text, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-        Text(label, color = Mocha.Subtext0, fontSize = 10.sp)
+    PremiumPanelCard(accent = accent, modifier = modifier) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = accent
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                color = Mocha.Text
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                color = Mocha.Subtext0
+            )
+        }
     }
 }

@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.projects
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -16,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -38,16 +41,26 @@ fun ProjectListScreen(
     onProjectSelected: (String) -> Unit,
     onSettings: () -> Unit = {},
     pendingImportUri: android.net.Uri? = null,
+    onPendingImportHandled: () -> Unit = {},
     viewModel: ProjectListViewModel = hiltViewModel()
 ) {
     val projects by viewModel.projects.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val sortMode by viewModel.sortMode.collectAsStateWithLifecycle()
+    val userTemplates by viewModel.userTemplates.collectAsStateWithLifecycle()
     var showTemplateSheet by remember { mutableStateOf(false) }
+    val templateImportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.importTemplate(uri)
+        }
+    }
 
     // Handle incoming video from external intent (ACTION_VIEW)
     LaunchedEffect(pendingImportUri) {
         if (pendingImportUri != null) {
+            onPendingImportHandled()
             viewModel.createProjectFromImport(pendingImportUri) { projectId ->
                 onProjectSelected(projectId)
             }
@@ -57,157 +70,67 @@ fun ProjectListScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Mocha.Base)
+            .background(Mocha.Midnight)
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Header
-            Surface(
-                color = Mocha.Crust,
-                tonalElevation = 2.dp,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Default.Movie,
-                            contentDescription = stringResource(R.string.cd_app_logo),
-                            tint = Mocha.Mauve,
-                            modifier = Modifier.size(28.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Mocha.Midnight,
+                            Mocha.Base.copy(alpha = 0.98f),
+                            Mocha.Midnight
                         )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            stringResource(R.string.projects_app_title),
-                            color = Mocha.Text,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.weight(1f))
-                        Text(
-                            stringResource(R.string.projects_count, projects.size, if (projects.size != 1) "s" else ""),
-                            color = Mocha.Subtext0,
-                            fontSize = 13.sp
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        IconButton(onClick = onSettings, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.Settings, stringResource(R.string.projects_settings), tint = Mocha.Subtext0, modifier = Modifier.size(20.dp))
-                        }
-                    }
-
-                    // Search bar
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = viewModel::setSearchQuery,
-                        placeholder = { Text(stringResource(R.string.projects_search_placeholder), fontSize = 14.sp) },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Search,
-                                contentDescription = stringResource(R.string.projects_search),
-                                tint = Mocha.Subtext0,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        },
-                        trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
-                                IconButton(
-                                    onClick = { viewModel.setSearchQuery("") },
-                                    modifier = Modifier.size(36.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.Clear,
-                                        contentDescription = stringResource(R.string.projects_clear),
-                                        tint = Mocha.Subtext0,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            }
-                        },
-                        singleLine = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Mocha.Surface0,
-                            unfocusedContainerColor = Mocha.Surface0,
-                            focusedBorderColor = Mocha.Mauve,
-                            unfocusedBorderColor = Mocha.Surface1,
-                            cursorColor = Mocha.Mauve,
-                            focusedTextColor = Mocha.Text,
-                            unfocusedTextColor = Mocha.Text,
-                            focusedPlaceholderColor = Mocha.Overlay0,
-                            unfocusedPlaceholderColor = Mocha.Overlay0
-                        ),
-                        textStyle = LocalTextStyle.current.copy(fontSize = 14.sp)
                     )
+                )
+        )
 
-                    // Sort chips
-                    LazyRow(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(SortMode.entries.toList()) { mode ->
-                            FilterChip(
-                                onClick = { viewModel.setSortMode(mode) },
-                                label = { Text(mode.label, fontSize = 12.sp) },
-                                selected = sortMode == mode,
-                                colors = FilterChipDefaults.filterChipColors(
-                                    containerColor = Mocha.Surface0,
-                                    selectedContainerColor = Mocha.Mauve.copy(alpha = 0.3f),
-                                    selectedLabelColor = Mocha.Mauve,
-                                    labelColor = Mocha.Subtext0
-                                ),
-                                modifier = Modifier.height(32.dp)
-                            )
-                        }
-                    }
-                }
-            }
+        val importTemplate = { templateImportLauncher.launch(arrayOf("*/*")) }
+
+        Column(modifier = Modifier.fillMaxSize()) {
+            ProjectHomeHero(
+                projectCount = projects.size,
+                savedTemplateCount = userTemplates.size,
+                searchQuery = searchQuery,
+                sortMode = sortMode,
+                onSearchQueryChanged = viewModel::setSearchQuery,
+                onClearSearch = { viewModel.setSearchQuery("") },
+                onSortModeChanged = viewModel::setSortMode,
+                onCreateProject = { showTemplateSheet = true },
+                onImportTemplate = importTemplate,
+                onSettings = onSettings
+            )
 
             if (projects.isEmpty()) {
-                // Empty state
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .weight(1f),
+                        .weight(1f)
+                        .padding(horizontal = 16.dp, vertical = 20.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            Icons.Default.VideoLibrary,
-                            contentDescription = stringResource(R.string.cd_video_library),
-                            tint = Mocha.Overlay0,
-                            modifier = Modifier.size(72.dp)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            if (searchQuery.isNotEmpty()) stringResource(R.string.projects_no_matching)
-                            else stringResource(R.string.projects_no_projects_yet),
-                            color = Mocha.Subtext0,
-                            fontSize = 16.sp
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            if (searchQuery.isNotEmpty()) stringResource(R.string.projects_try_different_search)
-                            else stringResource(R.string.projects_tap_to_create),
-                            color = Mocha.Overlay0,
-                            fontSize = 13.sp
-                        )
-                    }
+                    ProjectEmptyState(
+                        hasActiveSearch = searchQuery.isNotEmpty(),
+                        onCreateProject = { showTemplateSheet = true },
+                        onImportTemplate = importTemplate,
+                        onClearSearch = { viewModel.setSearchQuery("") }
+                    )
                 }
             } else {
+                Text(
+                    text = stringResource(R.string.projects_recent),
+                    color = Mocha.Text,
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 8.dp)
+                )
+
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
                         .weight(1f),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 104.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(projects, key = { it.id }) { project ->
                         ProjectCard(
@@ -221,29 +144,39 @@ fun ProjectListScreen(
             }
         }
 
-        // FAB
-        FloatingActionButton(
+        ExtendedFloatingActionButton(
             onClick = { showTemplateSheet = true },
-            containerColor = Mocha.Mauve,
-            contentColor = Mocha.Crust,
-            shape = CircleShape,
+            containerColor = Mocha.Rosewater,
+            contentColor = Mocha.Midnight,
+            shape = RoundedCornerShape(20.dp),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(24.dp)
+                .padding(20.dp)
         ) {
-            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.projects_new_project))
+            Icon(
+                Icons.Default.Add,
+                contentDescription = stringResource(R.string.projects_new_project)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = stringResource(R.string.projects_new_project),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold
+            )
         }
 
         // Template picker
         if (showTemplateSheet) {
-            val userTemplates = remember { viewModel.getUserTemplates() }
             val ctx = LocalContext.current
             ProjectTemplateSheet(
                 onTemplateSelected = { template ->
                     showTemplateSheet = false
                     val templateName = ctx.getString(template.nameResId)
                     viewModel.createProject(
-                        name = if (template.id == "blank") ctx.getString(R.string.project_untitled) else templateName
+                        name = if (template.id == "blank") ctx.getString(R.string.project_untitled) else templateName,
+                        aspectRatio = template.aspectRatio,
+                        templateId = template.id,
+                        trackTypes = template.tracks
                     ) { id -> onProjectSelected(id) }
                 },
                 onUserTemplateSelected = { userTemplate ->
@@ -252,11 +185,384 @@ fun ProjectListScreen(
                         onProjectSelected(id)
                     }
                 },
+                onShareTemplate = viewModel::shareTemplate,
+                onImportTemplate = importTemplate,
                 onDeleteUserTemplate = viewModel::deleteUserTemplate,
                 userTemplates = userTemplates,
                 onDismiss = { showTemplateSheet = false },
                 modifier = Modifier.align(Alignment.BottomCenter)
             )
+        }
+    }
+}
+
+@Composable
+private fun ProjectHomeHero(
+    projectCount: Int,
+    savedTemplateCount: Int,
+    searchQuery: String,
+    sortMode: SortMode,
+    onSearchQueryChanged: (String) -> Unit,
+    onClearSearch: () -> Unit,
+    onSortModeChanged: (SortMode) -> Unit,
+    onCreateProject: () -> Unit,
+    onImportTemplate: () -> Unit,
+    onSettings: () -> Unit
+) {
+    Surface(
+        color = Mocha.Panel,
+        shape = RoundedCornerShape(bottomStart = 30.dp, bottomEnd = 30.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.8f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Box(
+            modifier = Modifier
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Mocha.PanelHighest.copy(alpha = 0.94f),
+                            Mocha.Panel.copy(alpha = 0.98f),
+                            Mocha.Mantle
+                        )
+                    )
+                )
+                .padding(horizontal = 20.dp, vertical = 18.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        color = Mocha.Mauve.copy(alpha = 0.14f),
+                        shape = RoundedCornerShape(999.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Mauve.copy(alpha = 0.22f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Movie,
+                                contentDescription = stringResource(R.string.cd_app_logo),
+                                tint = Mocha.Rosewater,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = stringResource(R.string.projects_app_title),
+                                color = Mocha.Text,
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
+                    Surface(
+                        color = Mocha.PanelHighest,
+                        shape = CircleShape,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke)
+                    ) {
+                        IconButton(
+                            onClick = onSettings,
+                            modifier = Modifier.size(42.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = stringResource(R.string.projects_settings),
+                                tint = Mocha.Subtext1
+                            )
+                        }
+                    }
+                }
+
+                Text(
+                    text = stringResource(R.string.projects_headline),
+                    color = Mocha.Text,
+                    style = MaterialTheme.typography.displayMedium
+                )
+
+                Text(
+                    text = stringResource(R.string.projects_subtitle),
+                    color = Mocha.Subtext0,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    item {
+                        HeroMetricPill(
+                            label = stringResource(
+                                R.string.projects_count,
+                                projectCount,
+                                if (projectCount != 1) "s" else ""
+                            ),
+                            accent = Mocha.Mauve
+                        )
+                    }
+                    item {
+                        HeroMetricPill(
+                            label = stringResource(R.string.projects_templates_count, projectTemplates.size),
+                            accent = Mocha.Sapphire
+                        )
+                    }
+                    if (savedTemplateCount > 0) {
+                        item {
+                            HeroMetricPill(
+                                label = stringResource(R.string.projects_saved_templates_count, savedTemplateCount),
+                                accent = Mocha.Rosewater
+                            )
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Button(
+                        onClick = onCreateProject,
+                        shape = RoundedCornerShape(18.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Mocha.Rosewater,
+                            contentColor = Mocha.Midnight
+                        ),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = stringResource(R.string.projects_new_project),
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.projects_new_project),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = onImportTemplate,
+                        shape = RoundedCornerShape(18.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStrokeStrong),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Text),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FileOpen,
+                            contentDescription = stringResource(R.string.template_import),
+                            tint = Mocha.Subtext1,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.template_import),
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+                }
+
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = onSearchQueryChanged,
+                    placeholder = {
+                        Text(
+                            text = stringResource(R.string.projects_search_placeholder),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = stringResource(R.string.projects_search),
+                            tint = Mocha.Subtext0,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = onClearSearch) {
+                                Icon(
+                                    imageVector = Icons.Default.Clear,
+                                    contentDescription = stringResource(R.string.projects_clear),
+                                    tint = Mocha.Subtext0,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Mocha.PanelRaised.copy(alpha = 0.92f),
+                        unfocusedContainerColor = Mocha.PanelRaised.copy(alpha = 0.82f),
+                        focusedBorderColor = Mocha.Mauve.copy(alpha = 0.55f),
+                        unfocusedBorderColor = Mocha.CardStroke,
+                        cursorColor = Mocha.Rosewater,
+                        focusedTextColor = Mocha.Text,
+                        unfocusedTextColor = Mocha.Text,
+                        focusedPlaceholderColor = Mocha.Overlay1,
+                        unfocusedPlaceholderColor = Mocha.Overlay1
+                    ),
+                    textStyle = LocalTextStyle.current.copy(color = Mocha.Text)
+                )
+
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(SortMode.entries.toList()) { mode ->
+                        FilterChip(
+                            onClick = { onSortModeChanged(mode) },
+                            label = {
+                                Text(
+                                    text = mode.label,
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            },
+                            selected = sortMode == mode,
+                            colors = FilterChipDefaults.filterChipColors(
+                                containerColor = Mocha.PanelRaised,
+                                selectedContainerColor = Mocha.Mauve.copy(alpha = 0.16f),
+                                selectedLabelColor = Mocha.Rosewater,
+                                labelColor = Mocha.Subtext0
+                            )
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HeroMetricPill(
+    label: String,
+    accent: androidx.compose.ui.graphics.Color
+) {
+    Surface(
+        color = accent.copy(alpha = 0.12f),
+        shape = RoundedCornerShape(999.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, accent.copy(alpha = 0.2f))
+    ) {
+        Text(
+            text = label,
+            color = accent,
+            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+        )
+    }
+}
+
+@Composable
+private fun ProjectEmptyState(
+    hasActiveSearch: Boolean,
+    onCreateProject: () -> Unit,
+    onImportTemplate: () -> Unit,
+    onClearSearch: () -> Unit
+) {
+    Surface(
+        color = Mocha.Panel,
+        shape = RoundedCornerShape(28.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Box(
+            modifier = Modifier
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Mocha.PanelHighest.copy(alpha = 0.92f),
+                            Mocha.Panel
+                        )
+                    )
+                )
+                .padding(horizontal = 24.dp, vertical = 28.dp)
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Surface(
+                    color = Mocha.Mauve.copy(alpha = 0.14f),
+                    shape = CircleShape,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Mauve.copy(alpha = 0.22f))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.VideoLibrary,
+                        contentDescription = stringResource(R.string.cd_video_library),
+                        tint = Mocha.Rosewater,
+                        modifier = Modifier
+                            .padding(18.dp)
+                            .size(30.dp)
+                    )
+                }
+
+                Text(
+                    text = if (hasActiveSearch) {
+                        stringResource(R.string.projects_no_matching)
+                    } else {
+                        stringResource(R.string.projects_ready_title)
+                    },
+                    color = Mocha.Text,
+                    style = MaterialTheme.typography.headlineMedium
+                )
+
+                Text(
+                    text = if (hasActiveSearch) {
+                        stringResource(R.string.projects_try_different_search)
+                    } else {
+                        stringResource(R.string.projects_ready_body)
+                    },
+                    color = Mocha.Subtext0,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+
+                if (hasActiveSearch) {
+                    OutlinedButton(
+                        onClick = onClearSearch,
+                        shape = RoundedCornerShape(18.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStrokeStrong)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.projects_clear),
+                            color = Mocha.Text,
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+                } else {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Button(
+                            onClick = onCreateProject,
+                            shape = RoundedCornerShape(18.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Mocha.Rosewater,
+                                contentColor = Mocha.Midnight
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = stringResource(R.string.projects_create_first),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = onImportTemplate,
+                            shape = RoundedCornerShape(18.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStrokeStrong),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = stringResource(R.string.template_import),
+                                color = Mocha.Text,
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -286,16 +592,17 @@ private fun ProjectCard(
         backgroundContent = {
             val color by animateColorAsState(
                 if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart)
-                    Mocha.Red.copy(alpha = 0.3f)
-                else Mocha.Surface0.copy(alpha = 0.1f),
+                    Mocha.Red.copy(alpha = 0.24f)
+                else Mocha.Panel.copy(alpha = 0.45f),
                 label = "swipeBg"
             )
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(12.dp))
+                    .fillMaxWidth()
+                    .height(120.dp)
+                    .clip(RoundedCornerShape(24.dp))
                     .background(color)
-                    .padding(horizontal = 20.dp),
+                    .padding(horizontal = 24.dp),
                 contentAlignment = Alignment.CenterEnd
             ) {
                 Icon(
@@ -311,129 +618,110 @@ private fun ProjectCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick),
-            colors = CardDefaults.cardColors(containerColor = Mocha.Surface0),
-            shape = RoundedCornerShape(12.dp)
+            colors = CardDefaults.cardColors(containerColor = Mocha.Panel),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
+            shape = RoundedCornerShape(24.dp)
         ) {
-            Row(
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(
+                                Mocha.PanelHighest.copy(alpha = 0.72f),
+                                Mocha.Panel.copy(alpha = 0.98f)
+                            )
+                        )
+                    )
+                    .padding(14.dp)
             ) {
-                // Project thumbnail
-                Box(
+                Row(
                     modifier = Modifier
-                        .size(56.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Mocha.Mantle),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (project.thumbnailUri != null) {
-                        val context = LocalContext.current
-                        AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(android.net.Uri.parse(project.thumbnailUri))
-                                .decoderFactory(VideoFrameDecoder.Factory())
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = stringResource(R.string.projects_thumbnail_cd),
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } else {
-                        Icon(
-                            Icons.Default.Movie,
-                            contentDescription = stringResource(R.string.cd_movie_placeholder),
-                            tint = Mocha.Overlay0,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
+                    ProjectThumbnail(project = project)
 
-                Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(14.dp))
 
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        project.name,
-                        color = Mocha.Text,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row {
-                        Text(
-                            formatDuration(project.durationMs),
-                            color = Mocha.Subtext0,
-                            fontSize = 12.sp
-                        )
-                        Text(
-                            " \u00B7 ",
-                            color = Mocha.Overlay0,
-                            fontSize = 12.sp
-                        )
-                        Text(
-                            formatDate(project.updatedAt),
-                            color = Mocha.Subtext0,
-                            fontSize = 12.sp
-                        )
-                    }
-                    Text(
-                        "${project.resolution.label} \u00B7 ${project.aspectRatio.label}",
-                        color = Mocha.Overlay0,
-                        fontSize = 11.sp
-                    )
-                }
-
-                // Overflow menu
-                Box {
-                    IconButton(
-                        onClick = { showOverflowMenu = true },
-                        modifier = Modifier.size(28.dp)
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(
-                            Icons.Default.MoreVert,
-                            contentDescription = stringResource(R.string.projects_more_cd),
-                            tint = Mocha.Overlay0,
-                            modifier = Modifier.size(20.dp)
+                        Text(
+                            project.name,
+                            color = Mocha.Text,
+                            style = MaterialTheme.typography.titleLarge,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            ProjectMetadataChip(text = project.resolution.label, accent = Mocha.Rosewater)
+                            ProjectMetadataChip(text = project.aspectRatio.label, accent = Mocha.Mauve)
+                            ProjectMetadataChip(text = formatDuration(project.durationMs), accent = Mocha.Sapphire)
+                        }
+
+                        Text(
+                            text = stringResource(R.string.projects_updated, formatDate(project.updatedAt)),
+                            color = Mocha.Subtext0,
+                            style = MaterialTheme.typography.bodySmall
                         )
                     }
-                    DropdownMenu(
-                        expanded = showOverflowMenu,
-                        onDismissRequest = { showOverflowMenu = false },
-                        containerColor = Mocha.Surface1
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.projects_duplicate), color = Mocha.Text, fontSize = 14.sp) },
-                            leadingIcon = {
+
+                    Box {
+                        Surface(
+                            color = Mocha.PanelHighest,
+                            shape = RoundedCornerShape(16.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke)
+                        ) {
+                            IconButton(
+                                onClick = { showOverflowMenu = true },
+                                modifier = Modifier.size(36.dp)
+                            ) {
                                 Icon(
-                                    Icons.Default.ContentCopy,
-                                    contentDescription = stringResource(R.string.cd_duplicate_project),
+                                    Icons.Default.MoreVert,
+                                    contentDescription = stringResource(R.string.projects_more_cd),
                                     tint = Mocha.Subtext0,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(20.dp)
                                 )
-                            },
-                            onClick = {
-                                onDuplicate()
-                                showOverflowMenu = false
                             }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.projects_delete), color = Mocha.Red, fontSize = 14.sp) },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.Delete,
-                                    contentDescription = stringResource(R.string.cd_delete_project),
-                                    tint = Mocha.Red,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            },
-                            onClick = {
-                                showOverflowMenu = false
-                                showDeleteConfirm = true
-                            }
-                        )
+                        }
+                        DropdownMenu(
+                            expanded = showOverflowMenu,
+                            onDismissRequest = { showOverflowMenu = false },
+                            containerColor = Mocha.PanelHighest
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.projects_duplicate), color = Mocha.Text) },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.ContentCopy,
+                                        contentDescription = stringResource(R.string.cd_duplicate_project),
+                                        tint = Mocha.Subtext0,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                },
+                                onClick = {
+                                    onDuplicate()
+                                    showOverflowMenu = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.projects_delete), color = Mocha.Red) },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = stringResource(R.string.cd_delete_project),
+                                        tint = Mocha.Red,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    showDeleteConfirm = true
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -458,8 +746,83 @@ private fun ProjectCard(
                     Text(stringResource(R.string.cancel), color = Mocha.Subtext0)
                 }
             },
-            containerColor = Mocha.Surface0,
-            shape = RoundedCornerShape(16.dp)
+            containerColor = Mocha.PanelHighest,
+            shape = RoundedCornerShape(24.dp)
+        )
+    }
+}
+
+@Composable
+private fun ProjectThumbnail(project: Project) {
+    val context = LocalContext.current
+
+    Box(
+        modifier = Modifier
+            .size(92.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        Mocha.Mauve.copy(alpha = 0.26f),
+                        Mocha.PanelHighest
+                    )
+                )
+            )
+    ) {
+        if (project.thumbnailUri != null) {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(android.net.Uri.parse(project.thumbnailUri))
+                    .decoderFactory(VideoFrameDecoder.Factory())
+                    .crossfade(true)
+                    .build(),
+                contentDescription = stringResource(R.string.projects_thumbnail_cd),
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Default.Movie,
+                contentDescription = stringResource(R.string.cd_movie_placeholder),
+                tint = Mocha.Rosewater,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(28.dp)
+            )
+        }
+
+        Surface(
+            color = Mocha.Midnight.copy(alpha = 0.78f),
+            shape = RoundedCornerShape(10.dp),
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(8.dp)
+        ) {
+            Text(
+                text = project.aspectRatio.label,
+                color = Mocha.Text,
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProjectMetadataChip(
+    text: String,
+    accent: androidx.compose.ui.graphics.Color
+) {
+    Surface(
+        color = accent.copy(alpha = 0.12f),
+        shape = RoundedCornerShape(999.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, accent.copy(alpha = 0.2f))
+    ) {
+        Text(
+            text = text,
+            color = accent,
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
         )
     }
 }

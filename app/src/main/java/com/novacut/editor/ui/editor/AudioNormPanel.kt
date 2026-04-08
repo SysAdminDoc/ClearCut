@@ -1,20 +1,41 @@
 package com.novacut.editor.ui.editor
 
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Equalizer
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.novacut.editor.R
 import com.novacut.editor.ui.theme.Mocha
 
@@ -37,130 +58,244 @@ fun AudioNormPanel(
 ) {
     var selectedMode by remember { mutableStateOf(NormalizationMode.YOUTUBE) }
     var customLufs by remember { mutableFloatStateOf(-14f) }
+    val targetLufs = if (selectedMode == NormalizationMode.CUSTOM) customLufs else selectedMode.targetLufs
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(Mocha.Crust, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .padding(12.dp)
+    PremiumEditorPanel(
+        title = stringResource(R.string.audio_norm_title),
+        subtitle = "Match clip loudness to the delivery target before you export or stack more effects.",
+        icon = Icons.Default.GraphicEq,
+        accent = Mocha.Mauve,
+        onClose = onClose,
+        modifier = modifier,
+        scrollable = true
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(stringResource(R.string.audio_norm_title), color = Mocha.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Close, stringResource(R.string.close), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
-            }
-        }
-
-        Spacer(Modifier.height(4.dp))
-        Text(
-            stringResource(R.string.audio_norm_description),
-            color = Mocha.Subtext0,
-            fontSize = 11.sp
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        // Mode selector
-        NormalizationMode.entries.forEach { mode ->
-            val selected = selectedMode == mode
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (selected) Mocha.Mauve.copy(alpha = 0.15f) else Color.Transparent)
-                    .clickable { selectedMode = mode }
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    RadioButton(
-                        selected = selected,
-                        onClick = { selectedMode = mode },
-                        colors = RadioButtonDefaults.colors(selectedColor = Mocha.Mauve)
-                    )
-                    Column {
-                        Text(
-                            stringResource(mode.labelResId),
-                            color = if (selected) Mocha.Text else Mocha.Subtext0,
-                            fontSize = 13.sp
-                        )
-                    }
-                }
-                if (mode != NormalizationMode.CUSTOM) {
-                    Text(
-                        "${mode.targetLufs} LUFS",
-                        color = if (selected) Mocha.Mauve else Mocha.Subtext0,
-                        fontSize = 11.sp
-                    )
-                }
-            }
-        }
-
-        // Custom LUFS slider
-        if (selectedMode == NormalizationMode.CUSTOM) {
-            Spacer(Modifier.height(8.dp))
+        PremiumPanelCard(accent = Mocha.Mauve) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
             ) {
-                Text(stringResource(R.string.audio_norm_target), color = Mocha.Subtext0, fontSize = 11.sp, modifier = Modifier.width(50.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Loudness target",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Mocha.Text
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Choose a delivery profile and NovaCut will rebalance the selected clip around that LUFS target.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Mocha.Subtext0
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    PremiumPanelPill(
+                        text = "${(currentVolume * 100f).toInt()}% current",
+                        accent = Mocha.Blue
+                    )
+                    PremiumPanelPill(
+                        text = formatLufs(targetLufs),
+                        accent = Mocha.Mauve
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        PremiumPanelCard(accent = Mocha.Blue) {
+            Text(
+                text = "Normalization profiles",
+                style = MaterialTheme.typography.titleMedium,
+                color = Mocha.Text
+            )
+            Text(
+                text = stringResource(R.string.audio_norm_description),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Mocha.Subtext0
+            )
+
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                NormalizationMode.entries.forEach { mode ->
+                    NormalizationModeRow(
+                        mode = mode,
+                        selected = selectedMode == mode,
+                        onSelect = { selectedMode = mode }
+                    )
+                }
+            }
+        }
+
+        if (selectedMode == NormalizationMode.CUSTOM) {
+            Spacer(modifier = Modifier.height(12.dp))
+
+            PremiumPanelCard(accent = Mocha.Peach) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.audio_norm_target),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Mocha.Text
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Dial the exact target when you are matching an existing delivery spec or audio chain.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Mocha.Subtext0
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+                    PremiumPanelPill(
+                        text = formatLufs(customLufs),
+                        accent = Mocha.Peach
+                    )
+                }
+
                 Slider(
                     value = customLufs,
                     onValueChange = { customLufs = it },
                     valueRange = -30f..-5f,
-                    modifier = Modifier.weight(1f),
                     colors = SliderDefaults.colors(
-                        thumbColor = Mocha.Mauve,
-                        activeTrackColor = Mocha.Mauve.copy(alpha = 0.6f),
-                        inactiveTrackColor = Mocha.Surface0
+                        thumbColor = Mocha.Peach,
+                        activeTrackColor = Mocha.Peach.copy(alpha = 0.7f),
+                        inactiveTrackColor = Mocha.Surface1
                     )
                 )
-                Text(
-                    "%.0f LUFS".format(customLufs),
-                    color = Mocha.Mauve,
-                    fontSize = 11.sp,
-                    modifier = Modifier.width(60.dp)
-                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("-30 LUFS", style = MaterialTheme.typography.labelMedium, color = Mocha.Subtext0)
+                    Text("-5 LUFS", style = MaterialTheme.typography.labelMedium, color = Mocha.Subtext0)
+                }
             }
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // Current level info
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Mocha.Surface0, RoundedCornerShape(8.dp))
-                .padding(10.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(stringResource(R.string.audio_norm_current_volume), color = Mocha.Subtext0, fontSize = 12.sp)
-            Text("%.0f%%".format(currentVolume * 100f), color = Mocha.Text, fontSize = 12.sp)
-        }
+        PremiumPanelCard(accent = Mocha.Green) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Apply normalization",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Mocha.Text
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "This keeps your level strategy aligned before you export, publish, or mix against music.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Mocha.Subtext0
+                    )
+                }
 
-        Spacer(Modifier.height(8.dp))
+                Spacer(modifier = Modifier.width(12.dp))
+                PremiumPanelPill(
+                    text = stringResource(selectedMode.labelResId),
+                    accent = Mocha.Green
+                )
+            }
 
-        // Apply button
-        Button(
-            onClick = {
-                val targetLufs = if (selectedMode == NormalizationMode.CUSTOM) customLufs else selectedMode.targetLufs
-                onNormalize(targetLufs)
-            },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve),
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Icon(Icons.Default.Equalizer, stringResource(R.string.cd_equalizer), modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.audio_norm_normalize_button))
+            Button(
+                onClick = { onNormalize(targetLufs) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve),
+                shape = RoundedCornerShape(18.dp)
+            ) {
+                androidx.compose.material3.Icon(
+                    imageVector = Icons.Default.Equalizer,
+                    contentDescription = stringResource(R.string.cd_equalizer)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = stringResource(R.string.audio_norm_normalize_button))
+            }
         }
     }
 }
+
+@Composable
+private fun NormalizationModeRow(
+    mode: NormalizationMode,
+    selected: Boolean,
+    onSelect: () -> Unit
+) {
+    val accent = when (mode) {
+        NormalizationMode.CUSTOM -> Mocha.Peach
+        NormalizationMode.LOUD -> Mocha.Red
+        NormalizationMode.BROADCAST, NormalizationMode.CINEMA -> Mocha.Blue
+        else -> Mocha.Mauve
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = if (selected) accent.copy(alpha = 0.14f) else Mocha.PanelRaised,
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(
+            1.dp,
+            if (selected) accent.copy(alpha = 0.28f) else Mocha.CardStroke
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onSelect)
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                RadioButton(
+                    selected = selected,
+                    onClick = onSelect,
+                    colors = RadioButtonDefaults.colors(selectedColor = accent)
+                )
+                Column {
+                    Text(
+                        text = stringResource(mode.labelResId),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = Mocha.Text
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = if (mode == NormalizationMode.CUSTOM) {
+                            "Set a manual loudness target"
+                        } else {
+                            "Recommended for ${stringResource(mode.labelResId).lowercase()}"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Mocha.Subtext0
+                    )
+                }
+            }
+
+            if (mode != NormalizationMode.CUSTOM) {
+                PremiumPanelPill(
+                    text = formatLufs(mode.targetLufs),
+                    accent = accent
+                )
+            }
+        }
+    }
+}
+
+private fun formatLufs(value: Float): String = "${value.toInt()} LUFS"

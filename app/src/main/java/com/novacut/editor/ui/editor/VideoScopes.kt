@@ -47,13 +47,17 @@ fun VideoScopesOverlay(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val scopeData by produceState<ScopeData?>(initialValue = null, key1 = frameBitmap, key2 = activeScope) {
+    var scopeData by remember(frameBitmap, activeScope) { mutableStateOf<ScopeData?>(null) }
+
+    LaunchedEffect(frameBitmap, activeScope) {
         val bitmap = frameBitmap
-        value = if (bitmap != null && !bitmap.isRecycled) {
+        scopeData = if (bitmap != null && !bitmap.isRecycled) {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
                 analyzeBitmap(bitmap, activeScope)
             }
-        } else null
+        } else {
+            null
+        }
     }
 
     Column(
