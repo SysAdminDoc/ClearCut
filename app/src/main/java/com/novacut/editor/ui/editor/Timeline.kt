@@ -5,8 +5,10 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
@@ -14,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
@@ -28,6 +31,7 @@ import androidx.compose.ui.text.*
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
@@ -36,6 +40,7 @@ import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.model.*
 import com.novacut.editor.ui.theme.Mocha
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
 private const val BASE_SCALE = 0.15f // pixels per ms at zoom 1.0
@@ -74,6 +79,10 @@ fun Timeline(
     onClipLongPress: (String) -> Unit = {},
     onSlideClip: (clipId: String, deltaMs: Long) -> Unit = { _, _ -> },
     onSlipClip: (clipId: String, deltaMs: Long) -> Unit = { _, _ -> },
+    onSlideEditStarted: () -> Unit = {},
+    onSlideEditEnded: () -> Unit = {},
+    onSlipEditStarted: () -> Unit = {},
+    onSlipEditEnded: () -> Unit = {},
     onToggleTrackCollapsed: (String) -> Unit = {},
     onToggleTrackWaveform: (String) -> Unit = {},
     onCollapseAllTracks: () -> Unit = {},
@@ -93,6 +102,57 @@ fun Timeline(
     val pixelsPerMs = zoomLevel * BASE_SCALE
     val coroutineScope = rememberCoroutineScope()
     val textMeasurer = rememberTextMeasurer()
+    var timelineWidthPx by remember { mutableFloatStateOf(0f) }
+    val selectedTrackId = remember(tracks, selectedClipId) {
+        tracks.firstOrNull { track -> track.clips.any { clip -> clip.id == selectedClipId } }?.id
+    }
+    val totalClipCount = remember(tracks) { tracks.sumOf { it.clips.size } }
+    val fitZoomLevel = remember(timelineWidthPx, totalDurationMs) {
+        if (timelineWidthPx <= 0f || totalDurationMs <= 0L) {
+            1f
+        } else {
+            ((timelineWidthPx / totalDurationMs.toFloat()) / BASE_SCALE * 0.92f).coerceIn(0.1f, 10f)
+        }
+    }
+    val visibleDurationMs = remember(timelineWidthPx, pixelsPerMs, totalDurationMs) {
+        if (timelineWidthPx <= 0f || pixelsPerMs <= 0.001f) {
+            totalDurationMs
+        } else {
+            (timelineWidthPx / pixelsPerMs).toLong().coerceAtLeast(0L)
+        }
+    }
+    val headerWidth = 150.dp
+    val videoTrackLabel = stringResource(R.string.editor_video_track)
+    val audioTrackLabel = stringResource(R.string.editor_audio_track)
+    val overlayTrackLabel = stringResource(R.string.editor_overlay_track)
+    val textTrackLabel = stringResource(R.string.editor_text_track)
+    val adjustmentTrackLabel = stringResource(R.string.timeline_adjustment_track)
+    val videoClipLabel = stringResource(R.string.timeline_video_clip)
+    val audioClipLabel = stringResource(R.string.timeline_audio_clip)
+    val overlayClipLabel = stringResource(R.string.timeline_overlay_clip)
+    val textClipLabel = stringResource(R.string.timeline_text_clip)
+    val adjustmentClipLabel = stringResource(R.string.timeline_adjustment_clip)
+    val lockedShortLabel = stringResource(R.string.timeline_locked_short)
+    val mutedShortLabel = stringResource(R.string.timeline_muted_short)
+    val hiddenShortLabel = stringResource(R.string.timeline_hidden_short)
+    val trackLabelForType: (TrackType) -> String = { trackType ->
+        when (trackType) {
+            TrackType.VIDEO -> videoTrackLabel
+            TrackType.AUDIO -> audioTrackLabel
+            TrackType.OVERLAY -> overlayTrackLabel
+            TrackType.TEXT -> textTrackLabel
+            TrackType.ADJUSTMENT -> adjustmentTrackLabel
+        }
+    }
+    val clipLabelForType: (TrackType) -> String = { trackType ->
+        when (trackType) {
+            TrackType.VIDEO -> videoClipLabel
+            TrackType.AUDIO -> audioClipLabel
+            TrackType.OVERLAY -> overlayClipLabel
+            TrackType.TEXT -> textClipLabel
+            TrackType.ADJUSTMENT -> adjustmentClipLabel
+        }
+    }
 
     // Use rememberUpdatedState for values that change frequently so pointerInput
     // blocks always see the latest value without recreating gesture detectors.
@@ -114,7 +174,9 @@ fun Timeline(
     LaunchedEffect(tracks, quantizedZoom) {
         thumbnails.keys.filter { !it.endsWith("_$quantizedZoom") }
             .forEach { thumbnails.remove(it) }
-        tracks.forEach { track ->
+        tracks
+            .filter { it.type == TrackType.VIDEO || it.type == TrackType.OVERLAY }
+            .forEach { track ->
             track.clips.forEach { clip ->
                 val key = "${clip.id}_${quantizedZoom}"
                 if (!thumbnails.containsKey(key)) {
@@ -133,102 +195,361 @@ fun Timeline(
         }
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(Mocha.Mantle)
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = Mocha.Panel,
+        shape = RoundedCornerShape(28.dp),
+        border = BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.92f))
     ) {
-        // Trim mode indicator
-        if (isTrimMode && selectedClipId != null) {
-            Box(
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Mocha.PanelHighest.copy(alpha = 0.96f),
+                            Mocha.Panel,
+                            Mocha.Mantle
+                        )
+                    )
+                )
+        ) {
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Mocha.Peach.copy(alpha = 0.15f))
-                    .padding(horizontal = 12.dp, vertical = 4.dp),
-                contentAlignment = Alignment.Center
+                    .padding(start = 16.dp, top = 16.dp, end = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    stringResource(R.string.timeline_trim_mode_hint),
-                    color = Mocha.Peach,
-                    fontSize = 11.sp
-                )
-            }
-        }
-
-        // Track headers + timeline content
-        Row(modifier = Modifier.fillMaxWidth()) {
-            // Track headers
-            Column(
-                modifier = Modifier
-                    .width(36.dp)
-                    .background(Mocha.Crust)
-            ) {
-                // Ruler spacer
-                Spacer(modifier = Modifier.height(rulerHeight))
-
-                for (track in tracks) {
-                    key(track.id) {
-                        val currentTrackHeight = if (track.isCollapsed) 24.dp else track.trackHeight.dp
-                        val trackColor = when (track.type) {
-                            TrackType.VIDEO -> Mocha.Blue
-                            TrackType.AUDIO -> Mocha.Green
-                            TrackType.OVERLAY -> Mocha.Peach
-                            TrackType.TEXT -> Mocha.Mauve
-                            TrackType.ADJUSTMENT -> Mocha.Yellow
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.timeline_title),
+                        color = Mocha.Text,
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                    Text(
+                        text = "${formatTimelineTime(playheadMs)} / ${formatTimelineTime(totalDurationMs)}",
+                        color = Mocha.Subtext0,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TimelineToolbarButton(
+                        icon = Icons.Default.Remove,
+                        contentDescription = stringResource(R.string.cd_zoom_out),
+                        onClick = { onZoomChanged((zoomLevel * 0.75f).coerceAtLeast(0.1f)) }
+                    )
+                    TimelineToolbarButton(
+                        icon = Icons.Default.FitScreen,
+                        contentDescription = stringResource(R.string.cd_fit_timeline),
+                        onClick = {
+                            onZoomChanged(fitZoomLevel)
+                            onScrollChanged(0L)
                         }
-                        Box(
-                            modifier = Modifier
-                                .height(currentTrackHeight)
-                                .fillMaxWidth()
-                                .background(Mocha.Crust)
-                                .border(0.5.dp, Mocha.Surface0),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = when (track.type) {
-                                    TrackType.VIDEO -> Icons.Default.Videocam
-                                    TrackType.AUDIO -> Icons.Default.MusicNote
-                                    TrackType.OVERLAY -> Icons.Default.Layers
-                                    TrackType.TEXT -> Icons.Default.Title
-                                    TrackType.ADJUSTMENT -> Icons.Default.Tune
-                                },
-                                contentDescription = track.type.name,
-                                tint = if (track.isVisible) trackColor else Mocha.Surface2,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
+                    )
+                    TimelineToolbarButton(
+                        icon = Icons.Default.Add,
+                        contentDescription = stringResource(R.string.cd_zoom_in),
+                        onClick = { onZoomChanged((zoomLevel * 1.33f).coerceAtMost(10f)) }
+                    )
+                    TimelineToolbarButton(
+                        icon = Icons.Default.BookmarkAdd,
+                        contentDescription = stringResource(R.string.cd_add_marker),
+                        onClick = onAddMarker
+                    )
                 }
             }
 
-            // Scrollable timeline area
-            var timelineWidthPx by remember { mutableFloatStateOf(0f) }
-            Box(
+            Row(
                 modifier = Modifier
-                    .weight(1f)
-                    .clipToBounds()
-                    .onSizeChanged {
-                        timelineWidthPx = it.width.toFloat()
-                        onTimelineWidthChanged(timelineWidthPx)
-                    }
-                    .pointerInput(Unit) {
-                        detectTransformGestures { centroid, pan, zoom, _ ->
-                            val oldPpm = currentZoomLevel * BASE_SCALE
-                            val newZoom = (currentZoomLevel * zoom).coerceIn(0.1f, 10f)
-                            val newPpm = newZoom * BASE_SCALE
-                            // Adjust scroll to keep the pinch center point stable
-                            val centerMs = currentScrollOffsetMs + (centroid.x / oldPpm).toLong()
-                            val newScroll = centerMs - (centroid.x / newPpm).toLong()
-                            onZoomChanged(newZoom)
-                            val panMs = (pan.x / newPpm).toLong()
-                            onScrollChanged((newScroll - panMs).coerceAtLeast(0L))
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                TimelineInfoChip(
+                    text = if (isTrimMode) {
+                        stringResource(R.string.timeline_mode_trim)
+                    } else {
+                        stringResource(R.string.timeline_mode_arrange)
+                    },
+                    accent = if (isTrimMode) Mocha.Peach else Mocha.Sky
+                )
+                TimelineInfoChip(
+                    text = stringResource(R.string.timeline_zoom_value, (zoomLevel * 100f).roundToInt()),
+                    accent = Mocha.Blue
+                )
+                TimelineInfoChip(
+                    text = stringResource(R.string.timeline_visible_value, formatTimelineTime(visibleDurationMs)),
+                    accent = Mocha.Lavender
+                )
+                TimelineInfoChip(
+                    text = stringResource(R.string.timeline_marker_count, markers.size),
+                    accent = Mocha.Yellow
+                )
+                if (snapToBeat) {
+                    TimelineInfoChip(
+                        text = stringResource(R.string.settings_snap_beat),
+                        accent = Mocha.Green
+                    )
+                }
+                if (snapToMarker) {
+                    TimelineInfoChip(
+                        text = stringResource(R.string.settings_snap_markers),
+                        accent = Mocha.Mauve
+                    )
+                }
+                TimelineTextActionChip(
+                    text = stringResource(R.string.collapse_all_tracks),
+                    onClick = onCollapseAllTracks
+                )
+                TimelineTextActionChip(
+                    text = stringResource(R.string.expand_all_tracks),
+                    onClick = onExpandAllTracks
+                )
+            }
+
+            if (isTrimMode && selectedClipId != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Mocha.Peach.copy(alpha = 0.12f))
+                        .border(1.dp, Mocha.Peach.copy(alpha = 0.18f), RoundedCornerShape(16.dp))
+                        .padding(horizontal = 12.dp, vertical = 7.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        stringResource(R.string.timeline_trim_mode_hint),
+                        color = Mocha.Peach,
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 12.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .width(headerWidth)
+                        .padding(end = 10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(rulerHeight)
+                            .padding(horizontal = 8.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                            Text(
+                                text = stringResource(R.string.timeline_tracks_label),
+                                color = Mocha.Text,
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                            Text(
+                                text = stringResource(R.string.timeline_clip_count, totalClipCount),
+                                color = Mocha.Subtext0,
+                                style = MaterialTheme.typography.labelSmall
+                            )
                         }
                     }
-            ) {
-                // Tapped marker tooltip state
-                var tappedMarkerId by remember { mutableStateOf<String?>(null) }
 
-                Column {
+                    tracks.forEach { track ->
+                        key(track.id) {
+                            val currentTrackHeight = if (track.isCollapsed) 28.dp else track.trackHeight.dp
+                            val trackColor = trackAccentColor(track.type)
+                            val statusBits = buildList {
+                                if (track.isLocked) add(lockedShortLabel)
+                                if (track.isMuted) add(mutedShortLabel)
+                                if (!track.isVisible) add(hiddenShortLabel)
+                            }
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(currentTrackHeight)
+                                    .padding(bottom = 6.dp),
+                                color = Mocha.Crust.copy(alpha = 0.98f),
+                                shape = RoundedCornerShape(if (track.isCollapsed) 16.dp else 20.dp),
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (track.id == selectedTrackId) {
+                                        trackColor.copy(alpha = 0.52f)
+                                    } else {
+                                        Mocha.CardStroke.copy(alpha = 0.72f)
+                                    }
+                                )
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(
+                                            Brush.horizontalGradient(
+                                                listOf(
+                                                    trackColor.copy(alpha = 0.12f),
+                                                    Mocha.Crust,
+                                                    Mocha.Mantle
+                                                )
+                                            )
+                                        )
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(horizontal = 10.dp, vertical = if (track.isCollapsed) 6.dp else 8.dp),
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Surface(
+                                                color = trackColor.copy(alpha = 0.14f),
+                                                shape = CircleShape
+                                            ) {
+                                                Icon(
+                                                    imageVector = trackIcon(track.type),
+                                                    contentDescription = null,
+                                                    tint = trackColor,
+                                                    modifier = Modifier
+                                                        .padding(7.dp)
+                                                        .size(14.dp)
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = "${trackLabelForType(track.type)} ${track.index + 1}",
+                                                    color = Mocha.Text,
+                                                    style = MaterialTheme.typography.labelLarge,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                                Text(
+                                                    text = statusBits.joinToString(" · ").ifEmpty {
+                                                        stringResource(R.string.timeline_clip_count, track.clips.size)
+                                                    },
+                                                    color = Mocha.Subtext0,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+                                            TimelineMiniIconButton(
+                                                icon = if (track.isCollapsed) {
+                                                    Icons.AutoMirrored.Filled.KeyboardArrowRight
+                                                } else {
+                                                    Icons.Default.KeyboardArrowDown
+                                                },
+                                                contentDescription = stringResource(
+                                                    if (track.isCollapsed) R.string.track_expand else R.string.track_collapse
+                                                ),
+                                                active = true,
+                                                accent = trackColor,
+                                                onClick = { onToggleTrackCollapsed(track.id) }
+                                            )
+                                        }
+
+                                        if (!track.isCollapsed) {
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                if (track.type == TrackType.AUDIO) {
+                                                    TimelineMiniIconButton(
+                                                        icon = Icons.Default.GraphicEq,
+                                                        contentDescription = stringResource(R.string.track_waveform_toggle),
+                                                        active = track.showWaveform,
+                                                        accent = trackColor,
+                                                        onClick = { onToggleTrackWaveform(track.id) }
+                                                    )
+                                                } else {
+                                                    TimelineMiniIconButton(
+                                                        icon = if (track.isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                                        contentDescription = stringResource(R.string.timeline_toggle_visibility),
+                                                        active = track.isVisible,
+                                                        accent = trackColor,
+                                                        onClick = { onToggleTrackVisible(track.id) }
+                                                    )
+                                                }
+                                                TimelineMiniIconButton(
+                                                    icon = if (track.isMuted) {
+                                                        Icons.AutoMirrored.Filled.VolumeOff
+                                                    } else {
+                                                        Icons.AutoMirrored.Filled.VolumeUp
+                                                    },
+                                                    contentDescription = stringResource(R.string.timeline_toggle_mute),
+                                                    active = !track.isMuted,
+                                                    accent = trackColor,
+                                                    onClick = { onToggleTrackMute(track.id) }
+                                                )
+                                                TimelineMiniIconButton(
+                                                    icon = if (track.isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
+                                                    contentDescription = stringResource(R.string.timeline_toggle_lock),
+                                                    active = !track.isLocked,
+                                                    accent = trackColor,
+                                                    onClick = { onToggleTrackLock(track.id) }
+                                                )
+                                                TimelineMiniIconButton(
+                                                    icon = Icons.Default.Remove,
+                                                    contentDescription = stringResource(R.string.track_height_adjust),
+                                                    active = true,
+                                                    accent = trackColor,
+                                                    onClick = { onSetTrackHeight(track.id, track.trackHeight - 16) }
+                                                )
+                                                TimelineMiniIconButton(
+                                                    icon = Icons.Default.Add,
+                                                    contentDescription = stringResource(R.string.track_height_adjust),
+                                                    active = true,
+                                                    accent = trackColor,
+                                                    onClick = { onSetTrackHeight(track.id, track.trackHeight + 16) }
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    Mocha.Mantle.copy(alpha = 0.98f),
+                                    Mocha.Base
+                                )
+                            )
+                        )
+                        .border(1.dp, Mocha.CardStroke.copy(alpha = 0.6f), RoundedCornerShape(24.dp))
+                        .clipToBounds()
+                        .onSizeChanged {
+                            timelineWidthPx = it.width.toFloat()
+                            onTimelineWidthChanged(timelineWidthPx)
+                        }
+                        .pointerInput(Unit) {
+                            detectTransformGestures { centroid, pan, zoom, _ ->
+                                val oldPpm = currentZoomLevel * BASE_SCALE
+                                val newZoom = (currentZoomLevel * zoom).coerceIn(0.1f, 10f)
+                                val newPpm = newZoom * BASE_SCALE
+                                // Adjust scroll to keep the pinch center point stable
+                                val centerMs = currentScrollOffsetMs + (centroid.x / oldPpm).toLong()
+                                val newScroll = centerMs - (centroid.x / newPpm).toLong()
+                                onZoomChanged(newZoom)
+                                val panMs = (pan.x / newPpm).toLong()
+                                onScrollChanged((newScroll - panMs).coerceAtLeast(0L))
+                            }
+                        }
+                ) {
+                    // Tapped marker tooltip state
+                    var tappedMarkerId by remember { mutableStateOf<String?>(null) }
+
+                    Column {
                     // Time ruler — tap and drag to position playhead
                     var rulerDragX by remember { mutableFloatStateOf(0f) }
                     Box {
@@ -236,7 +557,14 @@ fun Timeline(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(rulerHeight)
-                                .background(Mocha.Crust)
+                                .background(
+                                    Brush.horizontalGradient(
+                                        listOf(
+                                            Mocha.Crust,
+                                            Mocha.Mantle
+                                        )
+                                    )
+                                )
                                 .pointerInput(Unit) {
                                     detectTapGestures { offset ->
                                         // Check if tap is on a marker flag
@@ -345,13 +673,22 @@ fun Timeline(
 
                     // Tracks
                     for (track in tracks) {
-                    val currentTrackHeight = if (track.isCollapsed) 24.dp else track.trackHeight.dp
+                    val currentTrackHeight = if (track.isCollapsed) 28.dp else track.trackHeight.dp
                     key(track.id) {
+                        val trackColor = trackAccentColor(track.type)
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(currentTrackHeight)
-                                .background(Mocha.Base)
+                                .background(
+                                    Brush.horizontalGradient(
+                                        listOf(
+                                            trackColor.copy(alpha = 0.06f),
+                                            Mocha.Base,
+                                            Mocha.Mantle
+                                        )
+                                    )
+                                )
                                 .border(
                                     width = 0.5.dp,
                                     color = Mocha.Surface0.copy(alpha = 0.5f),
@@ -384,39 +721,8 @@ fun Timeline(
                                         }
                                     )
                                 }
-                                .pointerInput(track.id to "scrub") {
-                                    var trackDragX = 0f
-                                    detectDragGestures(
-                                        onDragStart = { offset ->
-                                            trackDragX = offset.x
-                                            onScrubStart()
-                                            val ppm = currentZoomLevel * BASE_SCALE
-                                            if (ppm > 0.001f) {
-                                                val posMs = currentScrollOffsetMs + (offset.x / ppm).toLong()
-                                                onPlayheadMoved(posMs.coerceIn(0L, currentTotalDurationMs))
-                                            }
-                                        },
-                                        onDragEnd = { onScrubEnd() },
-                                        onDragCancel = { onScrubEnd() },
-                                        onDrag = { _, dragAmount ->
-                                            trackDragX += dragAmount.x
-                                            val ppm = currentZoomLevel * BASE_SCALE
-                                            if (ppm < 0.001f) return@detectDragGestures
-                                            val posMs = currentScrollOffsetMs + (trackDragX / ppm).toLong()
-                                            onPlayheadMoved(posMs.coerceIn(0L, currentTotalDurationMs))
-                                        }
-                                    )
-                                }
                         ) {
                             if (track.isCollapsed) {
-                                // Show minimal collapsed indicator
-                                val trackColor = when (track.type) {
-                                    TrackType.VIDEO -> Mocha.Blue
-                                    TrackType.AUDIO -> Mocha.Green
-                                    TrackType.OVERLAY -> Mocha.Peach
-                                    TrackType.TEXT -> Mocha.Mauve
-                                    TrackType.ADJUSTMENT -> Mocha.Yellow
-                                }
                                 for (clip in track.clips) {
                                     val clipStartPx = (clip.timelineStartMs - scrollOffsetMs) * pixelsPerMs
                                     val clipWidthPx = clip.durationMs * pixelsPerMs
@@ -432,6 +738,16 @@ fun Timeline(
                                     }
                                 }
                             } else {
+                            if (track.clips.isEmpty()) {
+                                Text(
+                                    text = stringResource(R.string.timeline_track_empty),
+                                    color = Mocha.Subtext0,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    modifier = Modifier
+                                        .align(Alignment.CenterStart)
+                                        .padding(start = 12.dp)
+                                )
+                            }
                             // Draw clips
                             track.clips.forEachIndexed { clipIdx, clip ->
                                 val clipStartPx = ((clip.timelineStartMs - scrollOffsetMs) * pixelsPerMs)
@@ -441,42 +757,76 @@ fun Timeline(
                                 if (clipStartPx + clipWidthPx > 0 && clipStartPx < timelineWidthPx) {
                                     val isSelected = clip.id == selectedClipId
                                     val isMultiSelected = clip.id in selectedClipIds
-                                    val clipColor = when (track.type) {
-                                        TrackType.VIDEO -> Mocha.Blue
-                                        TrackType.AUDIO -> Mocha.Green
-                                        TrackType.OVERLAY -> Mocha.Peach
-                                        TrackType.TEXT -> Mocha.Mauve
-                                        TrackType.ADJUSTMENT -> Mocha.Yellow
-                                    }
+                                    val clipColor = trackColor
+                                    val clipFileName = formatTimelineClipName(
+                                        rawName = clip.sourceUri.lastPathSegment,
+                                        fallback = clipLabelForType(track.type)
+                                    )
 
                                     Box(
                                         modifier = Modifier
                                             .offset(x = with(density) { clipStartPx.toDp() })
                                             .width(with(density) { clipWidthPx.toDp() })
                                             .fillMaxHeight()
-                                            .padding(vertical = 2.dp)
-                                            .clip(RoundedCornerShape(6.dp))
+                                            .padding(vertical = 4.dp, horizontal = 1.dp)
+                                            .clip(RoundedCornerShape(12.dp))
                                             .background(
-                                                when {
-                                                    isSelected -> clipColor.copy(alpha = 0.5f)
-                                                    isMultiSelected -> Mocha.Peach.copy(alpha = 0.4f)
-                                                    else -> clipColor.copy(alpha = 0.3f)
-                                                }
+                                                Brush.horizontalGradient(
+                                                    when {
+                                                        isSelected -> listOf(
+                                                            clipColor.copy(alpha = 0.64f),
+                                                            Mocha.PanelHighest.copy(alpha = 0.94f)
+                                                        )
+                                                        isMultiSelected -> listOf(
+                                                            Mocha.Peach.copy(alpha = 0.58f),
+                                                            Mocha.PanelHighest.copy(alpha = 0.9f)
+                                                        )
+                                                        else -> listOf(
+                                                            clipColor.copy(alpha = 0.44f),
+                                                            Mocha.Panel.copy(alpha = 0.92f)
+                                                        )
+                                                    }
+                                                )
+                                            )
+                                            .alpha(if (track.isLocked) 0.7f else 1f)
+                                            .then(
+                                                Modifier.border(
+                                                    if (isSelected) 2.dp else 1.dp,
+                                                    when {
+                                                        isSelected -> clipColor
+                                                        isMultiSelected -> Mocha.Peach.copy(alpha = 0.85f)
+                                                        else -> clipColor.copy(alpha = 0.25f)
+                                                    },
+                                                    RoundedCornerShape(12.dp)
+                                                )
                                             )
                                             .then(
-                                                if (isSelected) Modifier.border(
-                                                    2.dp,
-                                                    clipColor,
-                                                    RoundedCornerShape(6.dp)
-                                                ) else Modifier
-                                            )
-                                            .then(
-                                                if (isSelected) Modifier.pointerInput(clip.id) {
+                                                if (isSelected && !track.isLocked) Modifier.pointerInput(clip.id, currentIsTrimMode) {
                                                     val trimHandleWidthPx = 12.dp.toPx()
                                                     detectDragGestures(
-                                                        onDragStart = { },
-                                                        onDragEnd = {},
-                                                        onDragCancel = {},
+                                                        onDragStart = {
+                                                            onClipSelected(clip.id, track.id)
+                                                            if (currentIsTrimMode) {
+                                                                onSlipEditStarted()
+                                                            } else {
+                                                                onSlideEditStarted()
+                                                            }
+                                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                        },
+                                                        onDragEnd = {
+                                                            if (currentIsTrimMode) {
+                                                                onSlipEditEnded()
+                                                            } else {
+                                                                onSlideEditEnded()
+                                                            }
+                                                        },
+                                                        onDragCancel = {
+                                                            if (currentIsTrimMode) {
+                                                                onSlipEditEnded()
+                                                            } else {
+                                                                onSlideEditEnded()
+                                                            }
+                                                        },
                                                         onDrag = { change, dragAmount ->
                                                             val ppm = currentZoomLevel * BASE_SCALE
                                                             if (ppm < 0.001f) return@detectDragGestures
@@ -577,6 +927,84 @@ fun Timeline(
                                             }
                                         }
 
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(
+                                                    Brush.verticalGradient(
+                                                        listOf(
+                                                            Color.Transparent,
+                                                            Mocha.Crust.copy(alpha = 0.18f),
+                                                            Mocha.Crust.copy(alpha = 0.42f)
+                                                        )
+                                                    )
+                                                )
+                                        )
+
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(horizontal = 8.dp, vertical = 7.dp),
+                                            verticalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                TimelineClipBadge(
+                                                    text = trackLabelForType(track.type),
+                                                    accent = clipColor
+                                                )
+                                                if (clip.speed != 1f && clipWidthPx > 92f) {
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                    TimelineClipBadge(
+                                                        text = formatSpeedLabel(clip.speed),
+                                                        accent = Mocha.Yellow
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.weight(1f))
+                                                if (track.isLocked) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Lock,
+                                                        contentDescription = null,
+                                                        tint = Mocha.Text.copy(alpha = 0.72f),
+                                                        modifier = Modifier.size(12.dp)
+                                                    )
+                                                }
+                                                if (clip.effects.isNotEmpty()) {
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                    TimelineClipBadge(
+                                                        text = "FX ${clip.effects.size}",
+                                                        accent = Mocha.Mauve
+                                                    )
+                                                }
+                                            }
+
+                                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                if (clipWidthPx > 64f) {
+                                                    Text(
+                                                        text = clipFileName,
+                                                        color = Mocha.Text,
+                                                        style = MaterialTheme.typography.labelLarge,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                }
+                                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                    TimelineClipBadge(
+                                                        text = formatTimelineTime(clip.durationMs),
+                                                        accent = Mocha.Sky
+                                                    )
+                                                    if (clip.keyframes.isNotEmpty() && clipWidthPx > 96f) {
+                                                        TimelineClipBadge(
+                                                            text = "${clip.keyframes.size} KF",
+                                                            accent = Mocha.Rosewater
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+
                                         // Trim handles — always visible so users can grab edges
                                         val trimHandleColor = if (isSelected) clipColor else clipColor.copy(alpha = 0.5f)
 
@@ -589,11 +1017,12 @@ fun Timeline(
                                                 .background(
                                                     trimHandleColor,
                                                     RoundedCornerShape(
-                                                        topStart = 6.dp,
-                                                        bottomStart = 6.dp
+                                                        topStart = 12.dp,
+                                                        bottomStart = 12.dp
                                                     )
                                                 )
-                                                .pointerInput(clip.id) {
+                                                .then(
+                                                    if (!track.isLocked) Modifier.pointerInput(clip.id) {
                                                     detectHorizontalDragGestures(
                                                         onDragStart = {
                                                             onClipSelected(clip.id, track.id)
@@ -613,7 +1042,8 @@ fun Timeline(
                                                             onTrimChanged(clip.id, newStart, null)
                                                         }
                                                     )
-                                                }
+                                                } else Modifier
+                                                )
                                         )
                                         // Right trim handle
                                         Box(
@@ -624,11 +1054,12 @@ fun Timeline(
                                                 .background(
                                                     trimHandleColor,
                                                     RoundedCornerShape(
-                                                        topEnd = 6.dp,
-                                                        bottomEnd = 6.dp
+                                                        topEnd = 12.dp,
+                                                        bottomEnd = 12.dp
                                                     )
                                                 )
-                                                .pointerInput(clip.id) {
+                                                .then(
+                                                    if (!track.isLocked) Modifier.pointerInput(clip.id) {
                                                     detectHorizontalDragGestures(
                                                         onDragStart = {
                                                             onClipSelected(clip.id, track.id)
@@ -647,7 +1078,8 @@ fun Timeline(
                                                             onTrimChanged(clip.id, null, newEnd)
                                                         }
                                                     )
-                                                }
+                                                } else Modifier
+                                                )
                                         )
 
                                         // Transition-in zone overlay
@@ -697,51 +1129,6 @@ fun Timeline(
                                                         )
                                                     )
                                             )
-                                        }
-
-                                        // Clip filename label
-                                        if (clipWidthPx > 60) {
-                                            val fileName = clip.sourceUri.lastPathSegment
-                                                ?.substringAfterLast('/')
-                                                ?.substringBeforeLast('.') ?: ""
-                                            if (fileName.isNotEmpty()) {
-                                                Text(
-                                                    text = fileName,
-                                                    color = Mocha.Text.copy(alpha = 0.7f),
-                                                    fontSize = 8.sp,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis,
-                                                    modifier = Modifier
-                                                        .align(Alignment.BottomStart)
-                                                        .padding(start = 4.dp, bottom = 2.dp)
-                                                        .background(
-                                                            Mocha.Crust.copy(alpha = 0.6f),
-                                                            RoundedCornerShape(2.dp)
-                                                        )
-                                                        .padding(horizontal = 2.dp)
-                                                )
-                                            }
-                                        }
-
-                                        // Effects count badge
-                                        if (clip.effects.isNotEmpty()) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .align(Alignment.TopEnd)
-                                                    .padding(2.dp)
-                                                    .background(
-                                                        Mocha.Mauve.copy(alpha = 0.8f),
-                                                        RoundedCornerShape(4.dp)
-                                                    )
-                                                    .padding(horizontal = 3.dp, vertical = 1.dp)
-                                            ) {
-                                                Text(
-                                                    "FX${clip.effects.size}",
-                                                    color = Mocha.Crust,
-                                                    fontSize = 7.sp,
-                                                    lineHeight = 8.sp
-                                                )
-                                            }
                                         }
 
                                         // Keyframe dots
@@ -880,6 +1267,179 @@ fun Timeline(
         }
     }
     }
+}
+}
+
+@Composable
+private fun TimelineToolbarButton(
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        color = Mocha.PanelHighest,
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, Mocha.CardStroke)
+    ) {
+        IconButton(
+            onClick = onClick,
+            modifier = Modifier.size(38.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = Mocha.Text,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun TimelineInfoChip(
+    text: String,
+    accent: Color
+) {
+    Surface(
+        color = accent.copy(alpha = 0.13f),
+        shape = RoundedCornerShape(999.dp),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.2f))
+    ) {
+        Text(
+            text = text,
+            color = accent,
+            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+        )
+    }
+}
+
+@Composable
+private fun TimelineTextActionChip(
+    text: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        color = Mocha.PanelHighest,
+        shape = RoundedCornerShape(999.dp),
+        border = BorderStroke(1.dp, Mocha.CardStroke)
+    ) {
+        Text(
+            text = text,
+            color = Mocha.Text,
+            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier
+                .clickable(onClick = onClick)
+                .padding(horizontal = 12.dp, vertical = 6.dp)
+        )
+    }
+}
+
+@Composable
+private fun TimelineMiniIconButton(
+    icon: ImageVector,
+    contentDescription: String,
+    active: Boolean,
+    accent: Color,
+    onClick: () -> Unit
+) {
+    Surface(
+        color = if (active) accent.copy(alpha = 0.14f) else Mocha.Surface0.copy(alpha = 0.8f),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(
+            1.dp,
+            if (active) accent.copy(alpha = 0.26f) else Mocha.CardStroke.copy(alpha = 0.5f)
+        )
+    ) {
+        IconButton(
+            onClick = onClick,
+            modifier = Modifier.size(28.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = if (active) accent else Mocha.Subtext0,
+                modifier = Modifier.size(14.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun TimelineClipBadge(
+    text: String,
+    accent: Color
+) {
+    Surface(
+        color = accent.copy(alpha = 0.18f),
+        shape = RoundedCornerShape(999.dp),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.24f))
+    ) {
+        Text(
+            text = text,
+            color = Mocha.Text,
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        )
+    }
+}
+
+private fun trackAccentColor(trackType: TrackType): Color = when (trackType) {
+    TrackType.VIDEO -> Mocha.Blue
+    TrackType.AUDIO -> Mocha.Green
+    TrackType.OVERLAY -> Mocha.Peach
+    TrackType.TEXT -> Mocha.Mauve
+    TrackType.ADJUSTMENT -> Mocha.Yellow
+}
+
+private fun trackIcon(trackType: TrackType): ImageVector = when (trackType) {
+    TrackType.VIDEO -> Icons.Default.Videocam
+    TrackType.AUDIO -> Icons.Default.MusicNote
+    TrackType.OVERLAY -> Icons.Default.Layers
+    TrackType.TEXT -> Icons.Default.Title
+    TrackType.ADJUSTMENT -> Icons.Default.Tune
+}
+
+private fun formatTimelineClipName(
+    rawName: String?,
+    fallback: String
+): String {
+    val cleaned = rawName
+        ?.substringAfterLast('/')
+        ?.substringBeforeLast('.')
+        ?.replace("%20", " ")
+        ?.replace(Regex("[_-]+"), " ")
+        ?.replace(Regex("\\s+"), " ")
+        ?.trim()
+        ?.takeIf { it.isNotBlank() }
+        ?: return fallback
+
+    val looksGenerated = !cleaned.any { it.isLetter() } ||
+        Regex("^(img|vid|pxl|mvimg|screenshot|image|video)\\s*\\d[\\w\\s-]*$", RegexOption.IGNORE_CASE)
+            .matches(cleaned)
+
+    return if (looksGenerated) fallback else cleaned
+}
+
+private fun formatTimelineTime(ms: Long): String {
+    val totalSeconds = (ms.coerceAtLeast(0L) / 1000L).toInt()
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+    return if (hours > 0) {
+        "%d:%02d:%02d".format(hours, minutes, seconds)
+    } else {
+        "%d:%02d".format(minutes, seconds)
+    }
+}
+
+private fun formatSpeedLabel(speed: Float): String {
+    val rounded = if (abs(speed - speed.roundToInt()) < 0.05f) {
+        speed.roundToInt().toString()
+    } else {
+        "%.1f".format(speed)
+    }
+    return "${rounded}x"
 }
 
 private fun DrawScope.drawTimeRuler(

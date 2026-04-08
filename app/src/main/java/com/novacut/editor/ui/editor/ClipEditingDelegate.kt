@@ -4,6 +4,7 @@ import android.net.Uri
 import com.novacut.editor.engine.AudioEngine
 import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.model.Clip
+import com.novacut.editor.model.Track
 import com.novacut.editor.model.TrackType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -52,10 +53,13 @@ class ClipEditingDelegate(
             val clipId = UUID.randomUUID().toString()
 
             stateFlow.update { state ->
-                val trackIndex = state.tracks.indexOfFirst { it.type == trackType }
-                if (trackIndex < 0) return@update state
-
-                val track = state.tracks[trackIndex]
+                val baseTracks = if (state.tracks.any { it.type == trackType }) {
+                    state.tracks
+                } else {
+                    state.tracks + Track(type = trackType, index = state.tracks.size)
+                }
+                val trackIndex = baseTracks.indexOfFirst { it.type == trackType }
+                val track = baseTracks[trackIndex]
                 val timelineStart = track.clips.maxOfOrNull { it.timelineEndMs } ?: 0L
 
                 val clip = Clip(
@@ -67,7 +71,7 @@ class ClipEditingDelegate(
                     trimEndMs = duration
                 )
 
-                val tracks = state.tracks.mapIndexed { i, t ->
+                val tracks = baseTracks.mapIndexed { i, t ->
                     if (i == trackIndex) t.copy(clips = t.clips + clip) else t
                 }
 
@@ -323,11 +327,23 @@ class ClipEditingDelegate(
 
     // --- Trim ---
     fun beginTrim() {
+        val selectedClipId = stateFlow.value.selectedClipId ?: return
+        val owningTrack = stateFlow.value.tracks.firstOrNull { track ->
+            track.clips.any { it.id == selectedClipId }
+        } ?: return
+        if (owningTrack.isLocked) {
+            showToast("Track is locked")
+            return
+        }
         saveUndoState("Trim clip")
         videoEngine.setScrubbingMode(true)
     }
 
     fun trimClip(clipId: String, newTrimStartMs: Long? = null, newTrimEndMs: Long? = null) {
+        val owningTrack = stateFlow.value.tracks.firstOrNull { track ->
+            track.clips.any { it.id == clipId }
+        } ?: return
+        if (owningTrack.isLocked) return
         stateFlow.update { state ->
             val tracks = state.tracks.map { track ->
                 track.copy(clips = track.clips.map { clip ->
@@ -420,8 +436,8 @@ class ClipEditingDelegate(
         val clipHasAudio = videoEngine.hasAudioTrack(movedClip.sourceUri)
         val incompatibilityMessage = when (targetTrack.type) {
             TrackType.AUDIO -> {
-                if (clipHasVisual || !clipHasAudio) {
-                    "Only audio-only clips can go on audio tracks"
+                if (!clipHasAudio) {
+                    "Only clips with audio can go on audio tracks"
                 } else {
                     null
                 }
