@@ -38,7 +38,6 @@ class ColorGradingDelegate(
 
     fun hideColorGrading() {
         stateFlow.update { it.copy(panels = it.panels.close(PanelId.COLOR_GRADING)) }
-        saveProject()
     }
 
     fun beginColorGradeAdjust() {

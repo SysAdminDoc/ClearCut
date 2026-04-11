@@ -37,6 +37,8 @@ fun SpeedCurveEditor(
     isReversed: Boolean,
     onReversedChanged: (Boolean) -> Unit,
     onClose: () -> Unit,
+    onSpeedDragStarted: () -> Unit = {},
+    onSpeedDragEnded: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var curveMode by remember { mutableStateOf(speedCurve != null) }
@@ -156,7 +158,11 @@ fun SpeedCurveEditor(
                     val selected = abs(constantSpeed - speed) < 0.01f
                     FilterChip(
                         selected = selected,
-                        onClick = { onConstantSpeedChanged(speed) },
+                        onClick = {
+                            onSpeedDragStarted()
+                            onConstantSpeedChanged(speed)
+                            onSpeedDragEnded()
+                        },
                         label = { Text("${speed}x", fontSize = 10.sp) },
                         modifier = Modifier.height(28.dp),
                         colors = FilterChipDefaults.filterChipColors(
@@ -174,12 +180,23 @@ fun SpeedCurveEditor(
             val logMin = kotlin.math.ln(0.1f)
             val logMax = kotlin.math.ln(100f)
             val sliderPosition = (kotlin.math.ln(constantSpeed.coerceIn(0.1f, 100f)) - logMin) / (logMax - logMin)
+            var sliderDragActive by remember { mutableStateOf(false) }
             Slider(
                 value = sliderPosition,
                 onValueChange = { pos ->
+                    if (!sliderDragActive) {
+                        sliderDragActive = true
+                        onSpeedDragStarted()
+                    }
                     val logSpeed = logMin + pos * (logMax - logMin)
                     val newSpeed = kotlin.math.exp(logSpeed).coerceIn(0.1f, 100f)
                     onConstantSpeedChanged(newSpeed)
+                },
+                onValueChangeFinished = {
+                    if (sliderDragActive) {
+                        sliderDragActive = false
+                        onSpeedDragEnded()
+                    }
                 },
                 modifier = Modifier.fillMaxWidth(),
                 colors = SliderDefaults.colors(

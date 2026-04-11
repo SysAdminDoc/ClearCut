@@ -1031,7 +1031,9 @@ fun EditorScreen(
                     onConstantSpeedChanged = { speed -> state.selectedClipId?.let { viewModel.setClipSpeed(it, speed) } },
                     isReversed = clip.isReversed,
                     onReversedChanged = { rev -> state.selectedClipId?.let { viewModel.setClipReversed(it, rev) } },
-                    onClose = viewModel::hideSpeedCurveEditor
+                    onClose = viewModel::hideSpeedCurveEditor,
+                    onSpeedDragStarted = viewModel::beginSpeedChange,
+                    onSpeedDragEnded = viewModel::endSpeedChange
                 )
             }
             }

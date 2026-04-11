@@ -204,19 +204,24 @@ class InpaintingEngine @Inject constructor(
                 // Try NNAPI first (Qualcomm NPU), fall back to CPU
                 try { addNnapi() } catch (e: Exception) { Log.w(TAG, "NNAPI not available, falling back to CPU", e) }
             }
-            val modelPath = File(context.filesDir, "models/inpainting/$MODEL_FILENAME").absolutePath
-            val session = env.createSession(modelPath, sessionOptions)
-
-            // Preprocess: resize to 512x512, normalize to [0,1]
-            val inputBitmap = Bitmap.createScaledBitmap(bitmap, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE, true)
-            val maskBitmap = Bitmap.createScaledBitmap(mask, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE, true)
-
-            val imageTensor = bitmapToFloatTensor(env, inputBitmap, channels = 3)  // [1, 3, 512, 512]
-            val maskTensor = bitmapToFloatTensor(env, maskBitmap, channels = 1)     // [1, 1, 512, 512]
-
-            onProgress(0.3f)
-
+            var session: OrtSession? = null
+            var inputBitmap: Bitmap? = null
+            var maskBitmap: Bitmap? = null
+            var imageTensor: OnnxTensor? = null
+            var maskTensor: OnnxTensor? = null
             try {
+                val modelPath = File(context.filesDir, "models/inpainting/$MODEL_FILENAME").absolutePath
+                session = env.createSession(modelPath, sessionOptions)
+
+                // Preprocess: resize to 512x512, normalize to [0,1]
+                inputBitmap = Bitmap.createScaledBitmap(bitmap, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE, true)
+                maskBitmap = Bitmap.createScaledBitmap(mask, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE, true)
+
+                imageTensor = bitmapToFloatTensor(env, inputBitmap, channels = 3)  // [1, 3, 512, 512]
+                maskTensor = bitmapToFloatTensor(env, maskBitmap, channels = 1)     // [1, 1, 512, 512]
+
+                onProgress(0.3f)
+
                 val results = session.run(mapOf("image" to imageTensor, "mask" to maskTensor))
                 try {
                     val outputData = (results[0].value as Array<*>)
@@ -242,12 +247,12 @@ class InpaintingEngine @Inject constructor(
                     results.close()
                 }
             } finally {
-                imageTensor.close()
-                maskTensor.close()
-                session.close()
+                imageTensor?.close()
+                maskTensor?.close()
+                session?.close()
                 sessionOptions.close()
-                if (inputBitmap !== bitmap) inputBitmap.recycle()
-                if (maskBitmap !== mask) maskBitmap.recycle()
+                if (inputBitmap != null && inputBitmap !== bitmap) inputBitmap.recycle()
+                if (maskBitmap != null && maskBitmap !== mask) maskBitmap.recycle()
             }
         } catch (e: Exception) {
             Log.e(TAG, "ONNX inference failed, falling back to pixel-averaging", e)

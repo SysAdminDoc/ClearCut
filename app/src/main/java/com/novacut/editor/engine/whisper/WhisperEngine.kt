@@ -254,7 +254,7 @@ class WhisperEngine @Inject constructor(
 
         return try {
             val results = session.run(mapOf("input_features" to inputTensor))
-            val output = results.first().value
+            val output = results.firstOrNull()?.value
             if (output is OnnxTensor) {
                 // Clone the tensor data before closing results
                 val data = output.floatBuffer
@@ -298,7 +298,12 @@ class WhisperEngine @Inject constructor(
                     "encoder_hidden_states" to encoderOutput
                 ))
 
-                val logits = results.first().value as? OnnxTensor ?: break
+                val logits = results.firstOrNull()?.value as? OnnxTensor
+                if (logits == null) {
+                    results.close()
+                    idTensor.close()
+                    break
+                }
                 val logitsData = logits.floatBuffer
                 val vocabSize = logits.info.shape[2].toInt()
                 val seqLen = logits.info.shape[1].toInt()

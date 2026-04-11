@@ -370,6 +370,7 @@ class EditorViewModel @Inject constructor(
                         drawingPaths = recovery.drawingPaths,
                         playheadMs = recovery.playheadMs,
                         chapterMarkers = recovery.chapterMarkers,
+                        beatMarkers = recovery.beatMarkers,
                         totalDurationMs = recovery.tracks.maxOfOrNull { t ->
                             t.clips.maxOfOrNull { c -> c.timelineEndMs } ?: 0L
                         } ?: 0L
@@ -522,7 +523,8 @@ class EditorViewModel @Inject constructor(
                                 timelineMarkers = s.timelineMarkers,
                                 playheadMs = s.playheadMs,
                                 chapterMarkers = s.chapterMarkers,
-                                drawingPaths = s.drawingPaths
+                                drawingPaths = s.drawingPaths,
+                                beatMarkers = s.beatMarkers
                             )
                             viewModelScope.launch {
                                 delay(500)
@@ -1086,7 +1088,7 @@ class EditorViewModel @Inject constructor(
     // --- Project Snapshots ---
     fun createSnapshot(label: String = "") {
         val s = _state.value
-        val autoSaveState = AutoSaveState(projectId = s.project.id, tracks = s.tracks, textOverlays = s.textOverlays, imageOverlays = s.imageOverlays, timelineMarkers = s.timelineMarkers, playheadMs = s.playheadMs, chapterMarkers = s.chapterMarkers, drawingPaths = s.drawingPaths)
+        val autoSaveState = AutoSaveState(projectId = s.project.id, tracks = s.tracks, textOverlays = s.textOverlays, imageOverlays = s.imageOverlays, timelineMarkers = s.timelineMarkers, playheadMs = s.playheadMs, chapterMarkers = s.chapterMarkers, drawingPaths = s.drawingPaths, beatMarkers = s.beatMarkers)
         val json = autoSaveState.serialize()
         val snapshot = ProjectSnapshot(
             projectId = s.project.id,
@@ -1422,14 +1424,20 @@ class EditorViewModel @Inject constructor(
     }
     fun tapBeatMarker() {
         val currentMs = _playheadMs.value
+        var changed = false
         _state.update { s ->
             val existing = s.beatMarkers
             val tooClose = existing.any { kotlin.math.abs(it - currentMs) < 50L }
-            if (tooClose) s else s.copy(beatMarkers = (existing + currentMs).sorted())
+            if (tooClose) s else {
+                changed = true
+                s.copy(beatMarkers = (existing + currentMs).sorted())
+            }
         }
+        if (changed) saveProject()
     }
     fun clearBeatMarkers() {
         _state.update { it.copy(beatMarkers = emptyList()) }
+        saveProject()
     }
 
     // --- AI Suggestions ---
@@ -2813,7 +2821,8 @@ class EditorViewModel @Inject constructor(
                     timelineMarkers = s.timelineMarkers,
                     playheadMs = s.playheadMs,
                     chapterMarkers = s.chapterMarkers,
-                    drawingPaths = s.drawingPaths
+                    drawingPaths = s.drawingPaths,
+                    beatMarkers = s.beatMarkers
                 )
             )
         }

@@ -155,7 +155,8 @@ data class AutoSaveState(
     val chapterMarkers: List<ChapterMarker> = emptyList(),
     val imageOverlays: List<ImageOverlay> = emptyList(),
     val timelineMarkers: List<TimelineMarker> = emptyList(),
-    val drawingPaths: List<com.novacut.editor.model.DrawingPath> = emptyList()
+    val drawingPaths: List<com.novacut.editor.model.DrawingPath> = emptyList(),
+    val beatMarkers: List<Long> = emptyList()
 ) {
     fun serialize(): String {
         val json = JSONObject().apply {
@@ -222,6 +223,11 @@ data class AutoSaveState(
                             })
                         })
                     }
+                })
+            }
+            if (beatMarkers.isNotEmpty()) {
+                put("beatMarkers", JSONArray().apply {
+                    beatMarkers.forEach { put(it) }
                 })
             }
         }
@@ -307,6 +313,11 @@ data class AutoSaveState(
                     )
                 } catch (e: Exception) { Log.w(TAG, "Failed to deserialize drawing path $i", e); null }
             }
+            val beatMarkersArr = json.optJSONArray("beatMarkers") ?: JSONArray()
+            val beatMarkers = (0 until beatMarkersArr.length()).mapNotNull { i ->
+                try { beatMarkersArr.getLong(i) }
+                catch (e: Exception) { Log.w(TAG, "Failed to deserialize beat marker $i", e); null }
+            }
             return AutoSaveState(
                 projectId = json.optString("projectId", ""),
                 timestamp = json.optLong("timestamp", System.currentTimeMillis()),
@@ -316,7 +327,8 @@ data class AutoSaveState(
                 chapterMarkers = chapters,
                 imageOverlays = imageOverlays,
                 timelineMarkers = timelineMarkers,
-                drawingPaths = drawingPaths
+                drawingPaths = drawingPaths,
+                beatMarkers = beatMarkers
             )
         }
 

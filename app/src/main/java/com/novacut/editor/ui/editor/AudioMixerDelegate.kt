@@ -138,6 +138,7 @@ class AudioMixerDelegate(
 
                 val beatTimestamps = analysis.beats.map { it.timestampMs }
                 stateFlow.update { it.copy(beatMarkers = beatTimestamps, isAnalyzingBeats = false) }
+                saveProject()
                 val bpmText = if (analysis.bpm > 0f) " (%.0f BPM)".format(analysis.bpm) else ""
                 showToast("Found ${analysis.beats.size} beats$bpmText")
             } catch (e: Exception) {

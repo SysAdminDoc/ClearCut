@@ -35,27 +35,31 @@ fun TextEditorSheet(
     modifier: Modifier = Modifier
 ) {
     val defaultText = stringResource(R.string.text_editor_your_text)
-    var text by remember { mutableStateOf(existingOverlay?.text ?: defaultText) }
-    var fontSize by remember { mutableFloatStateOf(existingOverlay?.fontSize ?: 48f) }
-    var bold by remember { mutableStateOf(existingOverlay?.bold ?: false) }
-    var italic by remember { mutableStateOf(existingOverlay?.italic ?: false) }
-    var alignment by remember { mutableStateOf(existingOverlay?.alignment ?: TextAlignment.CENTER) }
-    var selectedColor by remember { mutableLongStateOf(existingOverlay?.color ?: 0xFFFFFFFF) }
-    var animIn by remember { mutableStateOf(existingOverlay?.animationIn ?: TextAnimation.FADE) }
-    var animOut by remember { mutableStateOf(existingOverlay?.animationOut ?: TextAnimation.FADE) }
-    var fontFamily by remember { mutableStateOf(existingOverlay?.fontFamily ?: "sans-serif") }
-    var duration by remember { mutableFloatStateOf((existingOverlay?.let { it.endTimeMs - it.startTimeMs } ?: 3000L).toFloat()) }
-    var positionX by remember { mutableFloatStateOf(existingOverlay?.positionX ?: 0.5f) }
-    var positionY by remember { mutableFloatStateOf(existingOverlay?.positionY ?: 0.5f) }
-    var shadowOffsetX by remember { mutableFloatStateOf(existingOverlay?.shadowOffsetX ?: 0f) }
-    var shadowOffsetY by remember { mutableFloatStateOf(existingOverlay?.shadowOffsetY ?: 0f) }
-    var shadowBlur by remember { mutableFloatStateOf(existingOverlay?.shadowBlur ?: 0f) }
-    var shadowColor by remember { mutableLongStateOf(existingOverlay?.shadowColor ?: 0x80000000) }
-    var glowColor by remember { mutableLongStateOf(existingOverlay?.glowColor ?: 0x00000000) }
-    var glowRadius by remember { mutableFloatStateOf(existingOverlay?.glowRadius ?: 0f) }
-    var letterSpacing by remember { mutableFloatStateOf(existingOverlay?.letterSpacing ?: 0f) }
-    var lineHeight by remember { mutableFloatStateOf(existingOverlay?.lineHeight ?: 1.2f) }
-    var textRotation by remember { mutableFloatStateOf(existingOverlay?.rotation ?: 0f) }
+    // Key all state to the overlay id (or "new" sentinel) so editing a different
+    // overlay without disposing the sheet resets all fields to that overlay's values
+    // rather than retaining stale state from the prior edit.
+    val overlayKey = existingOverlay?.id ?: "__new__"
+    var text by remember(overlayKey) { mutableStateOf(existingOverlay?.text ?: defaultText) }
+    var fontSize by remember(overlayKey) { mutableFloatStateOf(existingOverlay?.fontSize ?: 48f) }
+    var bold by remember(overlayKey) { mutableStateOf(existingOverlay?.bold ?: false) }
+    var italic by remember(overlayKey) { mutableStateOf(existingOverlay?.italic ?: false) }
+    var alignment by remember(overlayKey) { mutableStateOf(existingOverlay?.alignment ?: TextAlignment.CENTER) }
+    var selectedColor by remember(overlayKey) { mutableLongStateOf(existingOverlay?.color ?: 0xFFFFFFFF) }
+    var animIn by remember(overlayKey) { mutableStateOf(existingOverlay?.animationIn ?: TextAnimation.FADE) }
+    var animOut by remember(overlayKey) { mutableStateOf(existingOverlay?.animationOut ?: TextAnimation.FADE) }
+    var fontFamily by remember(overlayKey) { mutableStateOf(existingOverlay?.fontFamily ?: "sans-serif") }
+    var duration by remember(overlayKey) { mutableFloatStateOf((existingOverlay?.let { it.endTimeMs - it.startTimeMs } ?: 3000L).toFloat()) }
+    var positionX by remember(overlayKey) { mutableFloatStateOf(existingOverlay?.positionX ?: 0.5f) }
+    var positionY by remember(overlayKey) { mutableFloatStateOf(existingOverlay?.positionY ?: 0.5f) }
+    var shadowOffsetX by remember(overlayKey) { mutableFloatStateOf(existingOverlay?.shadowOffsetX ?: 0f) }
+    var shadowOffsetY by remember(overlayKey) { mutableFloatStateOf(existingOverlay?.shadowOffsetY ?: 0f) }
+    var shadowBlur by remember(overlayKey) { mutableFloatStateOf(existingOverlay?.shadowBlur ?: 0f) }
+    var shadowColor by remember(overlayKey) { mutableLongStateOf(existingOverlay?.shadowColor ?: 0x80000000) }
+    var glowColor by remember(overlayKey) { mutableLongStateOf(existingOverlay?.glowColor ?: 0x00000000) }
+    var glowRadius by remember(overlayKey) { mutableFloatStateOf(existingOverlay?.glowRadius ?: 0f) }
+    var letterSpacing by remember(overlayKey) { mutableFloatStateOf(existingOverlay?.letterSpacing ?: 0f) }
+    var lineHeight by remember(overlayKey) { mutableFloatStateOf(existingOverlay?.lineHeight ?: 1.2f) }
+    var textRotation by remember(overlayKey) { mutableFloatStateOf(existingOverlay?.rotation ?: 0f) }
 
     val fontFamilies = listOf(
         "sans-serif" to "Sans Serif",
