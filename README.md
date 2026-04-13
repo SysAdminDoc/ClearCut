@@ -1,5 +1,7 @@
 # NovaCut
 
+![Version](https://img.shields.io/badge/version-v3.26.0-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Platform](https://img.shields.io/badge/platform-Kotlin-lightgrey)
+
 A professional Android video editor built with Kotlin and Jetpack Compose. Open alternative to CapCut, PowerDirector, and DaVinci Resolve — with on-device AI, GPU-accelerated effects, and desktop NLE interoperability.
 
 
