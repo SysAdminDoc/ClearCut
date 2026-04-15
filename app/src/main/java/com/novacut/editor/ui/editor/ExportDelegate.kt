@@ -3,6 +3,7 @@ package com.novacut.editor.ui.editor
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.media.MediaScannerConnection
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
@@ -11,6 +12,7 @@ import com.novacut.editor.engine.ExportService
 import com.novacut.editor.engine.ExportState
 import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.engine.VideoEngine
+import com.novacut.editor.engine.sanitizeFileName
 import com.novacut.editor.model.BatchExportItem
 import com.novacut.editor.model.BatchExportStatus
 import com.novacut.editor.model.ChapterMarker
@@ -42,7 +44,7 @@ class ExportDelegate(
         videoEngine.cancelExport()
     }
 
-    fun startExport(outputDir: File) {
+    fun startExport(outputDir: File, preferredOutputName: String? = null) {
         val currentState = stateFlow.value
         if (currentState.tracks.flatMap { it.clips }.isEmpty()) {
             showToast("No clips to export")
@@ -70,8 +72,12 @@ class ExportDelegate(
             scope.launch {
                 val frames = mutableListOf<android.graphics.Bitmap>()
                 try {
-                    val gifFile = File(outputDir, "NovaCut_${System.currentTimeMillis()}.gif")
                     withContext(Dispatchers.IO) { outputDir.mkdirs() }
+                    val gifFile = createOutputFile(
+                        outputDir = outputDir,
+                        extension = "gif",
+                        preferredOutputName = preferredOutputName ?: currentState.project.name
+                    )
                     val allClips = tracks.flatMap { it.clips }.sortedBy { it.timelineStartMs }
                     val totalDurationMs = allClips.maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L
                     val frameIntervalMs = (1000 / configWithChapters.gifFrameRate.coerceAtLeast(1)).toLong()
@@ -137,8 +143,12 @@ class ExportDelegate(
 
         scope.launch {
             val ext = if (currentState.exportConfig.transparentBackground) "webm" else "mp4"
-            val outputFile = File(outputDir, "NovaCut_${System.currentTimeMillis()}.$ext")
             withContext(Dispatchers.IO) { outputDir.mkdirs() }
+            val outputFile = createOutputFile(
+                outputDir = outputDir,
+                extension = ext,
+                preferredOutputName = preferredOutputName ?: currentState.project.name
+            )
 
             val serviceIntent = Intent(appContext, ExportService::class.java)
             appContext.startForegroundService(serviceIntent)
@@ -213,45 +223,8 @@ class ExportDelegate(
         scope.launch {
             withContext(Dispatchers.IO) {
                 try {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        val isGif = file.name.endsWith(".gif", ignoreCase = true)
-                        val values = ContentValues().apply {
-                            put(MediaStore.Video.Media.DISPLAY_NAME, file.name)
-                            put(MediaStore.Video.Media.MIME_TYPE,
-                                if (isGif) "image/gif"
-                                else if (file.name.endsWith(".webm", ignoreCase = true)) "video/webm"
-                                else "video/mp4"
-                            )
-                            put(MediaStore.Video.Media.RELATIVE_PATH,
-                                if (isGif) "${Environment.DIRECTORY_PICTURES}/NovaCut"
-                                else "${Environment.DIRECTORY_MOVIES}/NovaCut"
-                            )
-                            put(MediaStore.Video.Media.IS_PENDING, 1)
-                        }
-                        val resolver = appContext.contentResolver
-                        val collection = if (isGif) MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-                                         else MediaStore.Video.Media.EXTERNAL_CONTENT_URI
-                        val contentUri = resolver.insert(collection, values)
-                        if (contentUri != null) {
-                            resolver.openOutputStream(contentUri)?.use { out ->
-                                file.inputStream().use { input -> input.copyTo(out) }
-                            }
-                            values.clear()
-                            values.put(MediaStore.Video.Media.IS_PENDING, 0)
-                            resolver.update(contentUri, values, null, null)
-                        } else {
-                            withContext(Dispatchers.Main) { showToast("Failed to save to gallery") }
-                            return@withContext
-                        }
-                    } else {
-                        @Suppress("DEPRECATION")
-                        val moviesDir = File(
-                            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES),
-                            "NovaCut"
-                        ).apply { mkdirs() }
-                        file.copyTo(File(moviesDir, file.name), overwrite = true)
-                    }
-                    withContext(Dispatchers.Main) { showToast("Saved to gallery") }
+                    val savedMessage = saveExportedFile(file)
+                    withContext(Dispatchers.Main) { showToast(savedMessage) }
                 } catch (e: Exception) {
                     withContext(Dispatchers.Main) { showToast("Save failed: ${e.message}") }
                 }
@@ -299,7 +272,7 @@ class ExportDelegate(
                     showToast("Exporting ${index + 1}/${queue.size}: ${item.outputName}")
                     videoEngine.resetExportState()
                     stateFlow.update { it.copy(exportConfig = item.config) }
-                    startExport(outputDir)
+                    startExport(outputDir, item.outputName)
                     val progressJob = scope.launch {
                         videoEngine.exportProgress.collect { progress ->
                             stateFlow.update { s ->
@@ -324,7 +297,90 @@ class ExportDelegate(
             } finally {
                 stateFlow.update { it.copy(exportConfig = originalConfig) }
             }
-            showToast("Batch export complete (${queue.size} items)")
+            val finalQueue = stateFlow.value.batchExportQueue
+            val completedCount = finalQueue.count { it.status == BatchExportStatus.COMPLETED }
+            val failedCount = finalQueue.count { it.status == BatchExportStatus.FAILED }
+            val summary = when {
+                failedCount == 0 -> "Batch export complete ($completedCount items)"
+                completedCount == 0 -> "Batch export failed ($failedCount items)"
+                else -> "Batch export finished ($completedCount succeeded, $failedCount failed)"
+            }
+            showToast(summary)
+        }
+    }
+
+    private fun createOutputFile(
+        outputDir: File,
+        extension: String,
+        preferredOutputName: String?
+    ): File {
+        val trimmedOutputName = preferredOutputName?.trim().orEmpty()
+        val baseName = trimmedOutputName
+            .substringBeforeLast('.', missingDelimiterValue = trimmedOutputName)
+            .takeIf { it.isNotBlank() }
+            ?: "NovaCut"
+        val sanitizedBase = sanitizeFileName(baseName, fallback = "NovaCut", maxLength = 64)
+        var candidate = File(outputDir, "$sanitizedBase.$extension")
+        if (!candidate.exists()) {
+            return candidate
+        }
+
+        var index = 2
+        while (candidate.exists()) {
+            val numberedBase = sanitizeFileName("$sanitizedBase ($index)", fallback = sanitizedBase, maxLength = 64)
+            candidate = File(outputDir, "$numberedBase.$extension")
+            index++
+        }
+        return candidate
+    }
+
+    private fun saveExportedFile(file: File): String {
+        val isGif = file.name.endsWith(".gif", ignoreCase = true)
+        val relativeDirectory = if (isGif) Environment.DIRECTORY_PICTURES else Environment.DIRECTORY_MOVIES
+        val mimeType = when {
+            isGif -> "image/gif"
+            file.name.endsWith(".webm", ignoreCase = true) -> "video/webm"
+            else -> "video/mp4"
+        }
+
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val resolver = appContext.contentResolver
+            val values = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, file.name)
+                put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+                put(MediaStore.MediaColumns.RELATIVE_PATH, "$relativeDirectory/NovaCut")
+                put(MediaStore.MediaColumns.IS_PENDING, 1)
+            }
+            val collection = if (isGif) MediaStore.Images.Media.EXTERNAL_CONTENT_URI else MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+            val contentUri = resolver.insert(collection, values)
+                ?: throw IllegalStateException("Failed to create media destination")
+
+            try {
+                resolver.openOutputStream(contentUri)?.use { out ->
+                    file.inputStream().use { input -> input.copyTo(out) }
+                } ?: throw IllegalStateException("Failed to open media destination")
+
+                values.clear()
+                values.put(MediaStore.MediaColumns.IS_PENDING, 0)
+                resolver.update(contentUri, values, null, null)
+                "Saved to gallery: ${file.name}"
+            } catch (e: Exception) {
+                resolver.delete(contentUri, null, null)
+                throw e
+            }
+        } else {
+            val externalRoot = appContext.getExternalFilesDir(relativeDirectory)
+                ?: File(appContext.filesDir, relativeDirectory.lowercase())
+            val destinationDir = File(externalRoot, "NovaCut").apply { mkdirs() }
+            val destinationFile = createOutputFile(destinationDir, file.extension.ifBlank { if (isGif) "gif" else "mp4" }, file.name)
+            file.copyTo(destinationFile, overwrite = true)
+            MediaScannerConnection.scanFile(
+                appContext,
+                arrayOf(destinationFile.absolutePath),
+                arrayOf(mimeType),
+                null
+            )
+            "Saved to app media folder: ${destinationFile.name}"
         }
     }
 

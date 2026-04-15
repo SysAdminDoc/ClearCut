@@ -130,40 +130,20 @@ fun ProjectListScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .weight(1f),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 104.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 28.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(projects, key = { it.id }) { project ->
                         ProjectCard(
                             project = project,
                             onClick = { onProjectSelected(project.id) },
+                            onRename = { newName -> viewModel.renameProject(project, newName) },
                             onDelete = { viewModel.deleteProject(project) },
                             onDuplicate = { viewModel.duplicateProject(project) }
                         )
                     }
                 }
             }
-        }
-
-        ExtendedFloatingActionButton(
-            onClick = { showTemplateSheet = true },
-            containerColor = Mocha.Rosewater,
-            contentColor = Mocha.Midnight,
-            shape = RoundedCornerShape(20.dp),
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(20.dp)
-        ) {
-            Icon(
-                Icons.Default.Add,
-                contentDescription = stringResource(R.string.projects_new_project)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = stringResource(R.string.projects_new_project),
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold
-            )
         }
 
         // Template picker
@@ -573,11 +553,13 @@ private fun ProjectEmptyState(
 private fun ProjectCard(
     project: Project,
     onClick: () -> Unit,
+    onRename: (String) -> Unit,
     onDelete: () -> Unit,
     onDuplicate: () -> Unit
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showOverflowMenu by remember { mutableStateOf(false) }
+    var showRenameDialog by remember { mutableStateOf(false) }
 
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
@@ -693,6 +675,21 @@ private fun ProjectCard(
                             containerColor = Mocha.PanelHighest
                         ) {
                             DropdownMenuItem(
+                                text = { Text(stringResource(R.string.projects_rename), color = Mocha.Text) },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Edit,
+                                        contentDescription = stringResource(R.string.projects_rename),
+                                        tint = Mocha.Subtext0,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    showRenameDialog = true
+                                }
+                            )
+                            DropdownMenuItem(
                                 text = { Text(stringResource(R.string.projects_duplicate), color = Mocha.Text) },
                                 leadingIcon = {
                                     Icon(
@@ -744,6 +741,53 @@ private fun ProjectCard(
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) {
+                    Text(stringResource(R.string.cancel), color = Mocha.Subtext0)
+                }
+            },
+            containerColor = Mocha.PanelHighest,
+            shape = RoundedCornerShape(24.dp)
+        )
+    }
+
+    if (showRenameDialog) {
+        var projectName by remember(project.name) { mutableStateOf(project.name) }
+        AlertDialog(
+            onDismissRequest = { showRenameDialog = false },
+            title = { Text(stringResource(R.string.projects_rename_title), color = Mocha.Text) },
+            text = {
+                OutlinedTextField(
+                    value = projectName,
+                    onValueChange = { projectName = it },
+                    singleLine = true,
+                    placeholder = {
+                        Text(
+                            text = stringResource(R.string.projects_rename_hint),
+                            color = Mocha.Overlay1
+                        )
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Mocha.Text,
+                        unfocusedTextColor = Mocha.Text,
+                        cursorColor = Mocha.Rosewater,
+                        focusedBorderColor = Mocha.Mauve,
+                        unfocusedBorderColor = Mocha.CardStroke,
+                        focusedContainerColor = Mocha.PanelRaised,
+                        unfocusedContainerColor = Mocha.PanelRaised
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onRename(projectName)
+                        showRenameDialog = false
+                    }
+                ) {
+                    Text(stringResource(R.string.done), color = Mocha.Rosewater)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRenameDialog = false }) {
                     Text(stringResource(R.string.cancel), color = Mocha.Subtext0)
                 }
             },

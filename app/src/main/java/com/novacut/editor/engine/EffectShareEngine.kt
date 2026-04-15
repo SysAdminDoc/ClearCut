@@ -87,7 +87,7 @@ class EffectShareEngine @Inject constructor(
                 }
             }
 
-            val sanitized = name.replace(Regex("[^a-zA-Z0-9_-]"), "_").take(50)
+            val sanitized = sanitizeFileName(name, fallback = "effects", maxLength = 50)
             val file = File(shareDir, "${sanitized}_${System.currentTimeMillis()}.ncfx")
             file.writeText(json.toString(2))
             file

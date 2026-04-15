@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.26.0</string>
+    <string name="app_version">v3.27.0</string>
 
     <!-- Common -->
     <string name="close">Close</string>
@@ -27,19 +27,31 @@
     <string name="export_cancelled">Export Cancelled</string>
     <string name="export_failed">Export Failed</string>
     <string name="export_quick_presets">Quick Presets</string>
+    <string name="export_presets_description">Start with a platform-ready preset, then fine-tune the details if this render needs something custom.</string>
     <string name="export_audio_only">Audio Only</string>
+    <string name="export_audio_only_description">Skip video rendering and export a single audio master.</string>
     <string name="export_resolution">Resolution</string>
     <string name="export_frame_rate">Frame Rate</string>
     <string name="export_codec">Codec</string>
     <string name="export_quality">Quality</string>
     <string name="export_output_details">Output Details</string>
     <string name="export_delivery_summary">Delivery Summary</string>
+    <string name="export_delivery_options">Delivery Options</string>
+    <string name="export_delivery_options_description">Adjust the specs NovaCut will use for this export.</string>
+    <string name="export_special_outputs">Special Outputs</string>
+    <string name="export_special_outputs_description">Turn on alternate deliverables like subtitles, stems, GIFs, or still captures.</string>
     <string name="export_video_button">Export Video</string>
+    <string name="export_audio_button">Export Audio</string>
+    <string name="export_stems_button">Export Stems</string>
     <string name="export_video_cd">Export video</string>
     <string name="export_subtitles">Export Subtitles</string>
+    <string name="export_subtitles_description">Save subtitles alongside the main export in your chosen format.</string>
     <string name="export_stems">Export Audio Stems</string>
+    <string name="export_stems_description">Export separate audio files for each track in the timeline.</string>
     <string name="export_chapter_markers">Include Chapter Markers</string>
+    <string name="export_chapter_markers_description">Include chapter markers in supported timeline exports.</string>
     <string name="export_timeline_exchange">Timeline Exchange</string>
+    <string name="export_timeline_exchange_description">Hand the edit off to another timeline tool without committing to a media render.</string>
     <string name="export_save_to_gallery_cd">Save to gallery</string>
     <string name="export_studio_quality">Studio quality</string>
     <string name="export_great_for_youtube">Great for YouTube/social</string>
@@ -49,12 +61,24 @@
     <string name="export_resolution_format">%1$dx%2$d @ %3$dfps</string>
     <string name="export_codec_quality_format">%1$s / %2$s</string>
     <string name="export_gif">Export as GIF</string>
+    <string name="export_gif_description">Create a lightweight looping GIF instead of a video file.</string>
     <string name="export_gif_frame_rate">GIF Frame Rate</string>
     <string name="export_gif_max_width">GIF Max Width</string>
     <string name="export_capture_frame">Capture Frame</string>
+    <string name="export_capture_frame_description">Export the current frame as a still image.</string>
     <string name="export_capture_format">Format</string>
     <string name="export_gif_button">Export GIF</string>
     <string name="export_capture_button">Capture Frame</string>
+    <string name="export_audio_summary">Audio master</string>
+    <string name="export_audio_details_format">%1$s at %2$dkbps</string>
+    <string name="export_stems_summary">Per-track stems</string>
+    <string name="export_stems_details_format">%1$s stems at %2$dkbps</string>
+    <string name="export_gif_summary_format">%1$dpx animated loop</string>
+    <string name="export_gif_details_format">%1$dpx wide at %2$dfps</string>
+    <string name="export_capture_summary_format">%1$dx%2$d still frame</string>
+    <string name="export_capture_details_format">%1$s still image</string>
+    <string name="export_ready_to_export">Ready to Export</string>
+    <string name="export_ready_to_export_description">Double-check the destination, then render the version you need.</string>
 
     <!-- AiToolsPanel -->
     <string name="ai_tools_title">AI Tools</string>
@@ -119,15 +143,22 @@
     <string name="settings_title">Settings</string>
     <string name="settings_subtitle">Tune performance, defaults, and editing behavior for the way you like to work.</string>
     <string name="settings_export_defaults">Export Defaults</string>
+    <string name="settings_export_defaults_description">Choose the defaults NovaCut reaches for when you start a new export.</string>
     <string name="settings_default_resolution">Default Resolution</string>
+    <string name="settings_default_resolution_description">Used for fresh renders until you override it.</string>
     <string name="settings_default_frame_rate">Default Frame Rate</string>
+    <string name="settings_default_frame_rate_description">Sets the playback cadence for new deliveries.</string>
     <string name="settings_default_aspect_ratio">Default Aspect Ratio</string>
+    <string name="settings_default_aspect_ratio_description">Applied when you start a new project or template.</string>
     <string name="settings_default_codec">Default Codec</string>
+    <string name="settings_default_codec_description">Pick the delivery format NovaCut suggests first.</string>
     <string name="settings_timeline">Timeline</string>
+    <string name="settings_timeline_description">Keep navigation, snapping, and playback feeling crisp.</string>
     <string name="settings_auto_save">Auto-save</string>
     <string name="settings_auto_save_description">Periodically save project state</string>
     <string name="settings_auto_save_interval">Auto-save interval</string>
     <string name="settings_proxy_resolution">Proxy Resolution</string>
+    <string name="settings_proxy_resolution_description">Controls how lightweight generated proxy media should be.</string>
     <string name="settings_enable_proxy">Enable Proxy Editing</string>
     <string name="settings_enable_proxy_description">Generate low-res proxies for smoother editing on slower devices</string>
     <string name="settings_ai_models">AI Models</string>
@@ -140,12 +171,15 @@
     <string name="settings_piper_size">15–65 MB each</string>
     <string name="settings_download_size_format">Download size: %1$s</string>
     <string name="settings_tutorial">Tutorial</string>
+    <string name="settings_tutorial_description">Replay the first-run walkthrough whenever you need a refresher.</string>
     <string name="settings_reset_tutorial">Reset First-Run Tutorial</string>
     <string name="settings_about">About</string>
+    <string name="settings_about_description">Build and engine details for troubleshooting and support.</string>
     <string name="settings_version">Version</string>
     <string name="settings_engine">Engine</string>
     <string name="settings_engine_value">Media3 Transformer 1.9.2</string>
     <string name="settings_ai_models_value">Whisper ONNX + MediaPipe</string>
+    <string name="settings_off">Off</string>
 
     <!-- PreviewPanel -->
     <string name="preview_scopes">Scopes</string>
@@ -242,7 +276,7 @@
 
     <!-- BatchExportPanel -->
     <string name="batch_export_title">Batch Export</string>
-    <string name="batch_export_add_platform_preset">Add Platform Preset</string>
+    <string name="batch_export_add_platform_preset">Add Export Targets</string>
     <string name="batch_export_audio_only">Audio Only</string>
     <string name="batch_export_audio_stems">Audio Stems</string>
     <string name="batch_export_empty_queue">No exports queued. Tap + to add.</string>
@@ -253,8 +287,20 @@
     <string name="batch_export_done_cd">Done</string>
     <string name="batch_export_failed_cd">Failed</string>
     <string name="batch_export_cancelled_cd">Cancelled</string>
-    <string name="batch_export_suffix_audio_only"> | Audio Only</string>
-    <string name="batch_export_suffix_stems"> | Stems</string>
+    <string name="batch_export_suffix_audio_only">Audio Only</string>
+    <string name="batch_export_suffix_stems">Stems</string>
+    <string name="batch_export_queue_title">Delivery Queue</string>
+    <string name="batch_export_queue_description">Build a stack of exports for different platforms and let NovaCut run them back-to-back.</string>
+    <string name="batch_export_add_targets_description">Tap any preset to add it to the queue, then keep stacking utility exports for audio-only or stems if you need them.</string>
+    <string name="batch_export_queued_title">Queued Exports</string>
+    <string name="batch_export_queued_description">Review the stack, remove anything you no longer need, and launch the batch when it looks right.</string>
+    <string name="batch_export_empty_title">Nothing queued yet</string>
+    <string name="batch_export_empty_description">Leave the add panel open and tap the targets you want to stack up.</string>
+    <string name="batch_export_run_title">Run the Batch</string>
+    <string name="batch_export_run_description">NovaCut will export each item in order and keep its status here.</string>
+    <string name="batch_export_status_ready">Ready</string>
+    <string name="batch_export_status_queued">Queued</string>
+    <string name="batch_export_status_in_progress">Export in progress</string>
 
     <!-- MediaPicker -->
     <string name="media_picker_title">Add Media</string>
@@ -262,8 +308,19 @@
     <string name="media_picker_video">Video</string>
     <string name="media_picker_image">Image</string>
     <string name="media_picker_audio">Audio</string>
+    <string name="media_picker_library_title">Import from Library</string>
+    <string name="media_picker_library_description">Choose the kind of source you want to bring into the timeline.</string>
+    <string name="media_picker_video_description">Pick clips from your gallery or files.</string>
+    <string name="media_picker_image_description">Bring in stills, graphics, or overlays.</string>
+    <string name="media_picker_audio_description">Browse music, voiceover, or sound effects.</string>
     <string name="media_picker_select_multiple">Select Multiple Files</string>
+    <string name="media_picker_multi_description">Select multiple photos or videos in one pass.</string>
     <string name="media_picker_record_video">Record Video</string>
+    <string name="media_picker_capture_title">Capture on Device</string>
+    <string name="media_picker_capture_description">Record a clip without leaving NovaCut. Camera permission is only requested when you start recording.</string>
+    <string name="media_picker_source_photo_picker">System photo picker</string>
+    <string name="media_picker_source_files">File picker</string>
+    <string name="media_picker_source_audio">Audio files</string>
     <string name="media_picker_camera_permission_required">Camera permission is needed to record video.</string>
 
     <!-- ProjectListScreen -->
@@ -288,6 +345,9 @@
     <string name="projects_saved_templates_count">%1$d saved templates</string>
     <string name="projects_new_project">New Project</string>
     <string name="projects_duplicate">Duplicate</string>
+    <string name="projects_rename">Rename</string>
+    <string name="projects_rename_title">Rename Project</string>
+    <string name="projects_rename_hint">Project name</string>
     <string name="projects_delete">Delete</string>
     <string name="projects_delete_title">Delete Project</string>
     <string name="projects_delete_message">Delete \"%1$s\"? This cannot be undone.</string>
@@ -307,8 +367,12 @@
     <string name="template_subtitle">Use a built-in workflow, reopen one of your saved templates, or import a setup from storage.</string>
     <string name="template_import_description">Load a template file and continue editing with the same layout, aspect ratio, and tracks.</string>
     <string name="template_built_in_section">Built-In Templates</string>
+    <string name="template_built_in_description">Pick a starting layout tuned for the kind of project you are making.</string>
     <string name="template_saved_count">%1$d saved templates</string>
     <string name="template_my_templates">My Templates</string>
+    <string name="template_my_templates_description">Saved setups stay here so you can reuse your favorite structure in new edits.</string>
+    <string name="template_saved_empty_title">No saved templates yet</string>
+    <string name="template_saved_empty_body">Save a project as a template to keep favorite track layouts, aspect ratios, and starter overlays ready.</string>
     <string name="template_blank_name">Blank Project</string>
     <string name="template_blank_desc">Start from scratch</string>
     <string name="template_blank_duration">Any</string>
@@ -831,6 +895,7 @@
 
     <!-- Settings — v3.13.0 string extraction -->
     <string name="settings_editor">Editor</string>
+    <string name="settings_editor_description">Choose how much control and guidance the editor surfaces by default.</string>
     <string name="settings_show_waveforms">Show Waveforms</string>
     <string name="settings_show_waveforms_desc">Display audio waveforms on timeline clips</string>
     <string name="settings_snap_beat">Snap to Beat</string>
@@ -838,7 +903,9 @@
     <string name="settings_snap_markers">Snap to Markers</string>
     <string name="settings_snap_markers_desc">Snap clip edges to timeline markers</string>
     <string name="settings_default_track_height">Default Track Height</string>
+    <string name="settings_default_track_height_description">Choose how roomy new tracks should feel.</string>
     <string name="settings_default_mode">Default Mode</string>
+    <string name="settings_default_mode_description">Pick the editing depth NovaCut opens with.</string>
     <string name="settings_mode_easy">Easy</string>
     <string name="settings_mode_pro">Pro</string>
     <string name="settings_haptic_feedback">Haptic Feedback</string>
@@ -846,7 +913,9 @@
     <string name="settings_confirm_delete">Confirm Before Delete</string>
     <string name="settings_confirm_delete_desc">Show confirmation dialog before deleting clips</string>
     <string name="settings_thumbnail_cache">Thumbnail Cache</string>
+    <string name="settings_thumbnail_cache_description">Reserve more memory for faster thumbnail scrubbing.</string>
     <string name="settings_export_quality">Default Export Quality</string>
+    <string name="settings_export_quality_description">Set the quality balance for quick one-tap exports.</string>
     <string name="settings_quality_small">Small File</string>
     <string name="settings_quality_balanced">Balanced</string>
     <string name="settings_quality_best">Best Quality</string>
@@ -890,6 +959,7 @@
     <!-- ExportSheet — v3.14.0 -->
     <string name="export_elapsed">Elapsed: %1$s</string>
     <string name="export_transparent_bg">Transparent Background (WebM VP9)</string>
+    <string name="export_transparent_bg_description">Force a transparent WebM render for overlays, stingers, or alpha assets.</string>
     <string name="export_audio_codec">Audio Codec</string>
     <string name="export_otio">OTIO</string>
     <string name="export_fcpxml">FCPXML</string>

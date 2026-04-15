@@ -52,13 +52,11 @@ class ProjectAutoSave @Inject constructor(
         }
     }
 
-    fun saveNow(projectId: String, state: AutoSaveState) {
-        runBlocking {
-            try {
-                saveState(projectId, state)
-            } catch (e: Exception) {
-                Log.e(TAG, "Manual save failed for $projectId", e)
-            }
+    suspend fun saveNow(projectId: String, state: AutoSaveState) = withContext(Dispatchers.IO) {
+        try {
+            saveState(projectId, state)
+        } catch (e: Exception) {
+            Log.e(TAG, "Manual save failed for $projectId", e)
         }
     }
 

@@ -24,10 +24,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.novacut.editor.R
+import com.novacut.editor.ui.editor.PremiumEditorPanel
+import com.novacut.editor.ui.editor.PremiumPanelCard
+import com.novacut.editor.ui.editor.PremiumPanelPill
 import com.novacut.editor.ui.theme.Mocha
 import java.io.File
 
@@ -40,6 +42,7 @@ fun MediaPickerSheet(
     val context = LocalContext.current
     var pendingMediaType by remember { mutableStateOf("video") }
     var cameraVideoUri by remember { mutableStateOf<Uri?>(null) }
+    var cameraVideoFile by remember { mutableStateOf<File?>(null) }
 
     val videoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenMultipleDocuments()
@@ -111,17 +114,22 @@ fun MediaPickerSheet(
     ) { success ->
         if (success) {
             cameraVideoUri?.let { uri -> onMediaSelected(uri, "video") }
+        } else {
+            cameraVideoFile?.delete()
         }
+        cameraVideoUri = null
+        cameraVideoFile = null
     }
 
     fun startCameraCapture() {
-        val cameraDir = File(context.cacheDir, "camera").apply { mkdirs() }
+        val cameraDir = File(context.filesDir, "media").apply { mkdirs() }
         val videoFile = File(cameraDir, "novacut_${System.currentTimeMillis()}.mp4")
         val uri = FileProvider.getUriForFile(
             context,
             "${context.packageName}.fileprovider",
             videoFile
         )
+        cameraVideoFile = videoFile
         cameraVideoUri = uri
         cameraLauncher.launch(uri)
     }
@@ -149,148 +157,142 @@ fun MediaPickerSheet(
         }
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .heightIn(min = 200.dp, max = 400.dp)
-            .background(Mocha.Panel, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-            .padding(horizontal = 16.dp, vertical = 14.dp)
+    val librarySourceLabel = if (usePhotoPicker) {
+        stringResource(R.string.media_picker_source_photo_picker)
+    } else {
+        stringResource(R.string.media_picker_source_files)
+    }
+
+    PremiumEditorPanel(
+        title = stringResource(R.string.media_picker_title),
+        subtitle = stringResource(R.string.media_picker_subtitle),
+        icon = Icons.Default.PermMedia,
+        accent = Mocha.Blue,
+        onClose = onClose,
+        modifier = modifier.heightIn(min = 240.dp, max = 560.dp),
+        scrollable = true
     ) {
-        Box(
-            modifier = Modifier
-                .align(Alignment.CenterHorizontally)
-                .width(44.dp)
-                .height(4.dp)
-                .clip(RoundedCornerShape(999.dp))
-                .background(Mocha.Surface2.copy(alpha = 0.8f))
-        )
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    stringResource(R.string.media_picker_title),
-                    color = Mocha.Text,
-                    style = MaterialTheme.typography.headlineMedium
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    stringResource(R.string.media_picker_subtitle),
-                    color = Mocha.Subtext0,
-                    style = MaterialTheme.typography.bodyMedium
-                )
+        PremiumPanelCard(accent = Mocha.Blue) {
+            Text(
+                text = stringResource(R.string.media_picker_library_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = Mocha.Text
+            )
+            Text(
+                text = stringResource(R.string.media_picker_library_description),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Mocha.Subtext0
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PremiumPanelPill(text = librarySourceLabel, accent = Mocha.Blue)
+                PremiumPanelPill(text = stringResource(R.string.media_picker_source_audio), accent = Mocha.Peach)
             }
-            Surface(
-                color = Mocha.PanelHighest,
-                shape = RoundedCornerShape(18.dp),
-                border = BorderStroke(1.dp, Mocha.CardStroke)
-            ) {
-                IconButton(onClick = onClose, modifier = Modifier.size(40.dp)) {
-                    Icon(Icons.Default.Close, stringResource(R.string.cd_close_media_picker), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
-                }
-            }
-        }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Media type buttons
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            MediaTypeButton(
+            MediaSourceActionCard(
                 icon = Icons.Default.Videocam,
                 label = stringResource(R.string.media_picker_video),
+                description = stringResource(R.string.media_picker_video_description),
                 color = Mocha.Blue,
-                modifier = Modifier.weight(1f)
-            ) {
-                if (usePhotoPicker) {
-                    photoPickerVideoLauncher.launch(
-                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly)
-                    )
-                } else {
-                    pendingMediaType = "video"
-                    singlePickerLauncher.launch(arrayOf("video/*"))
+                onClick = {
+                    if (usePhotoPicker) {
+                        photoPickerVideoLauncher.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly)
+                        )
+                    } else {
+                        pendingMediaType = "video"
+                        singlePickerLauncher.launch(arrayOf("video/*"))
+                    }
                 }
-            }
+            )
 
-            MediaTypeButton(
+            MediaSourceActionCard(
                 icon = Icons.Default.Image,
                 label = stringResource(R.string.media_picker_image),
+                description = stringResource(R.string.media_picker_image_description),
                 color = Mocha.Green,
-                modifier = Modifier.weight(1f)
-            ) {
-                if (usePhotoPicker) {
-                    photoPickerImageLauncher.launch(
-                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                    )
-                } else {
-                    pendingMediaType = "image"
-                    singlePickerLauncher.launch(arrayOf("image/*"))
+                onClick = {
+                    if (usePhotoPicker) {
+                        photoPickerImageLauncher.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )
+                    } else {
+                        pendingMediaType = "image"
+                        singlePickerLauncher.launch(arrayOf("image/*"))
+                    }
                 }
-            }
+            )
 
-            MediaTypeButton(
+            MediaSourceActionCard(
                 icon = Icons.Default.MusicNote,
                 label = stringResource(R.string.media_picker_audio),
+                description = stringResource(R.string.media_picker_audio_description),
                 color = Mocha.Peach,
-                modifier = Modifier.weight(1f)
+                onClick = {
+                    pendingMediaType = "audio"
+                    singlePickerLauncher.launch(arrayOf("audio/*"))
+                }
+            )
+
+            OutlinedButton(
+                onClick = {
+                    if (usePhotoPicker) {
+                        photoPickerMultiLauncher.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
+                        )
+                    } else {
+                        videoPickerLauncher.launch(arrayOf("video/*", "image/*"))
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Mauve),
+                border = BorderStroke(1.dp, Mocha.CardStrokeStrong),
+                shape = RoundedCornerShape(18.dp)
             ) {
-                pendingMediaType = "audio"
-                singlePickerLauncher.launch(arrayOf("audio/*"))
+                Icon(
+                    Icons.Default.LibraryAdd,
+                    contentDescription = stringResource(R.string.cd_library_add),
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(stringResource(R.string.media_picker_select_multiple), style = MaterialTheme.typography.labelLarge)
             }
+            Text(
+                text = stringResource(R.string.media_picker_multi_description),
+                style = MaterialTheme.typography.bodySmall,
+                color = Mocha.Subtext0
+            )
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Multi-select button
-        OutlinedButton(
-            onClick = {
-                if (usePhotoPicker) {
-                    photoPickerMultiLauncher.launch(
-                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
-                    )
-                } else {
-                    videoPickerLauncher.launch(arrayOf("video/*", "image/*"))
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = Mocha.Mauve
-            ),
-            border = BorderStroke(1.dp, Mocha.CardStrokeStrong),
-            shape = RoundedCornerShape(18.dp)
-        ) {
-            Icon(Icons.Default.LibraryAdd, contentDescription = stringResource(R.string.cd_library_add), modifier = Modifier.size(18.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.media_picker_select_multiple), style = MaterialTheme.typography.labelLarge)
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Record option
-        OutlinedButton(
-            onClick = {
-                if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-                    startCameraCapture()
-                } else {
-                    cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = Mocha.Red
-            ),
-            border = BorderStroke(1.dp, Mocha.CardStrokeStrong),
-            shape = RoundedCornerShape(18.dp)
-        ) {
-            Icon(Icons.Default.CameraAlt, contentDescription = stringResource(R.string.cd_camera), modifier = Modifier.size(18.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.media_picker_record_video), style = MaterialTheme.typography.labelLarge)
+        PremiumPanelCard(accent = Mocha.Red) {
+            Text(
+                text = stringResource(R.string.media_picker_capture_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = Mocha.Text
+            )
+            Text(
+                text = stringResource(R.string.media_picker_capture_description),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Mocha.Subtext0
+            )
+            OutlinedButton(
+                onClick = {
+                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                        startCameraCapture()
+                    } else {
+                        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Red),
+                border = BorderStroke(1.dp, Mocha.CardStrokeStrong),
+                shape = RoundedCornerShape(18.dp)
+            ) {
+                Icon(Icons.Default.CameraAlt, contentDescription = stringResource(R.string.cd_camera), modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(stringResource(R.string.media_picker_record_video), style = MaterialTheme.typography.labelLarge)
+            }
         }
     }
 }
@@ -400,16 +402,16 @@ private fun resolveDisplayName(context: android.content.Context, uri: Uri): Stri
 }
 
 @Composable
-private fun MediaTypeButton(
+private fun MediaSourceActionCard(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
+    description: String,
     color: androidx.compose.ui.graphics.Color,
-    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     Card(
         onClick = onClick,
-        modifier = modifier.height(96.dp),
+        modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = Mocha.PanelHighest
         ),
@@ -424,12 +426,12 @@ private fun MediaTypeButton(
                         listOf(color.copy(alpha = 0.2f), Color.Transparent)
                     )
                 )
-                .padding(10.dp)
+                .padding(horizontal = 14.dp, vertical = 12.dp)
         ) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
                     modifier = Modifier
@@ -445,8 +447,25 @@ private fun MediaTypeButton(
                         modifier = Modifier.size(22.dp)
                     )
                 }
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(label, color = Mocha.Text, style = MaterialTheme.typography.titleSmall)
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(label, color = Mocha.Text, style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        text = description,
+                        color = Mocha.Subtext0,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = label,
+                    tint = Mocha.Subtext0,
+                    modifier = Modifier.size(18.dp)
+                )
             }
         }
     }

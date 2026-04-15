@@ -56,7 +56,7 @@ private fun Clip.containsTimelinePosition(positionMs: Long): Boolean {
     return positionMs >= timelineStartMs && positionMs < timelineEndMs
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun Timeline(
     tracks: List<Track>,
@@ -103,7 +103,7 @@ fun Timeline(
     engine: VideoEngine
 ) {
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
-    val isCompactTimeline = screenWidth < 380.dp
+    val isCompactTimeline = screenWidth < 430.dp
     val density = LocalDensity.current
     val haptic = LocalHapticFeedback.current
     val rulerHeight = 28.dp
@@ -129,7 +129,7 @@ fun Timeline(
             (timelineWidthPx / pixelsPerMs).toLong().coerceAtLeast(0L)
         }
     }
-    val headerWidth = if (isCompactTimeline) 116.dp else 132.dp
+    val headerWidth = if (isCompactTimeline) 132.dp else 140.dp
     val chromePadding = if (isCompactTimeline) 12.dp else 16.dp
     val contentPadding = if (isCompactTimeline) 10.dp else 12.dp
     val videoTrackLabel = stringResource(R.string.editor_video_track)
@@ -310,12 +310,12 @@ fun Timeline(
                 }
             }
 
-            Row(
+            FlowRow(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
                     .padding(horizontal = chromePadding, vertical = if (isCompactTimeline) 10.dp else 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 TimelineInfoChip(
                     text = if (isTrimMode) {

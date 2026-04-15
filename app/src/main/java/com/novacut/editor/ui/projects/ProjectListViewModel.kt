@@ -14,6 +14,7 @@ import com.novacut.editor.engine.ProjectAutoSave
 import com.novacut.editor.engine.TemplateManager
 import com.novacut.editor.engine.UserTemplate
 import com.novacut.editor.engine.VideoEngine
+import com.novacut.editor.engine.sanitizeFileName
 import com.novacut.editor.engine.db.ProjectDao
 import com.novacut.editor.model.AspectRatio
 import com.novacut.editor.model.Clip
@@ -94,8 +95,9 @@ class ProjectListViewModel @Inject constructor(
         trackTypes: List<TrackType> = listOf(TrackType.VIDEO, TrackType.AUDIO),
         onCreated: (String) -> Unit = {}
     ) {
+        val normalizedName = normalizeProjectName(name)
         val project = Project(
-            name = name,
+            name = normalizedName,
             aspectRatio = aspectRatio,
             frameRate = frameRate,
             resolution = resolution,
@@ -129,8 +131,9 @@ class ProjectListViewModel @Inject constructor(
     }
 
     fun renameProject(project: Project, newName: String) {
+        val normalizedName = normalizeProjectName(newName)
         viewModelScope.launch {
-            projectDao.updateProject(project.copy(name = newName, updatedAt = System.currentTimeMillis()))
+            projectDao.updateProject(project.copy(name = normalizedName, updatedAt = System.currentTimeMillis()))
         }
     }
 
@@ -158,14 +161,15 @@ class ProjectListViewModel @Inject constructor(
         }
     }
 
-    fun shareTemplate(name: String) {
+    fun shareTemplate(templateId: String) {
         viewModelScope.launch {
             try {
                 val shareUri = withContext(Dispatchers.IO) {
+                    val template = templateManager.getTemplate(templateId) ?: return@withContext null
                     val dir = File(appContext.getExternalFilesDir(null), "archives/templates").apply { mkdirs() }
-                    val sanitized = name.replace(Regex("[^a-zA-Z0-9._\\- ]"), "_")
+                    val sanitized = sanitizeFileName(template.name, fallback = "template")
                     val outputFile = File(dir, "$sanitized.novacut-template")
-                    val success = templateManager.exportTemplateToFile(name, outputFile)
+                    val success = templateManager.exportTemplateToFile(template.id, outputFile)
                     if (!success) return@withContext null
 
                     FileProvider.getUriForFile(
@@ -197,10 +201,14 @@ class ProjectListViewModel @Inject constructor(
     }
 
     fun createFromTemplate(template: UserTemplate, onCreated: (String) -> Unit) {
-        val state = templateManager.loadTemplateState(template) ?: return
+        val state = templateManager.loadTemplateState(template)
+        if (state == null) {
+            showToast("Template could not be opened")
+            return
+        }
         val (tracks, textOverlays) = state
         val project = Project(
-            name = template.name,
+            name = normalizeProjectName(template.name),
             aspectRatio = template.aspectRatio,
             frameRate = template.frameRate,
             resolution = template.resolution,
@@ -262,7 +270,7 @@ class ProjectListViewModel @Inject constructor(
             }
             val fileName = resolveDisplayName(videoUri)
                 ?.substringBeforeLast('.')
-                ?.takeIf { it.isNotBlank() }
+                ?.let(::normalizeProjectName)
                 ?: "Imported"
 
             val project = Project(
@@ -313,6 +321,10 @@ class ProjectListViewModel @Inject constructor(
         return normalizedTypes.mapIndexed { index, type ->
             Track(type = type, index = index)
         }
+    }
+
+    private fun normalizeProjectName(raw: String): String {
+        return raw.trim().ifBlank { "Untitled" }
     }
 
     private fun resolveDisplayName(uri: Uri): String? {

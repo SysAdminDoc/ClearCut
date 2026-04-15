@@ -2,6 +2,8 @@ package com.novacut.editor.ui.projects
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -17,11 +19,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.novacut.editor.R
 import com.novacut.editor.engine.UserTemplate
 import com.novacut.editor.model.*
@@ -104,6 +103,7 @@ val projectTemplates = listOf(
     )
 )
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ProjectTemplateSheet(
     onTemplateSelected: (ProjectTemplateUI) -> Unit,
@@ -164,7 +164,10 @@ fun ProjectTemplateSheet(
 
         Spacer(Modifier.height(12.dp))
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             Surface(
                 color = Mocha.Mauve.copy(alpha = 0.12f),
                 shape = RoundedCornerShape(999.dp),
@@ -241,16 +244,13 @@ fun ProjectTemplateSheet(
 
         Spacer(Modifier.height(12.dp))
 
-        Text(
-            stringResource(R.string.template_built_in_section),
-            color = Mocha.Text,
-            style = MaterialTheme.typography.titleMedium
+        TemplateSectionHeader(
+            title = stringResource(R.string.template_built_in_section),
+            description = stringResource(R.string.template_built_in_description)
         )
 
-        Spacer(Modifier.height(8.dp))
-
         LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
+            columns = GridCells.Adaptive(minSize = 168.dp),
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(max = if (userTemplates.isEmpty()) 460.dp else 320.dp),
@@ -268,17 +268,15 @@ fun ProjectTemplateSheet(
         // User templates section
         if (userTemplates.isNotEmpty()) {
             Spacer(Modifier.height(14.dp))
-            Text(
-                stringResource(R.string.template_my_templates),
-                color = Mocha.Text,
-                style = MaterialTheme.typography.titleMedium
+            TemplateSectionHeader(
+                title = stringResource(R.string.template_my_templates),
+                description = stringResource(R.string.template_my_templates_description)
             )
-            Spacer(Modifier.height(8.dp))
             LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
+                columns = GridCells.Adaptive(minSize = 168.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 200.dp),
+                    .heightIn(max = 240.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
@@ -287,14 +285,22 @@ fun ProjectTemplateSheet(
                         template = ut,
                         onClick = { onUserTemplateSelected(ut) },
                         onDelete = { onDeleteUserTemplate(ut.id) },
-                        onShare = { onShareTemplate(ut.name) }
+                        onShare = { onShareTemplate(ut.id) }
                     )
                 }
             }
+        } else {
+            Spacer(Modifier.height(14.dp))
+            TemplateSectionHeader(
+                title = stringResource(R.string.template_my_templates),
+                description = stringResource(R.string.template_my_templates_description)
+            )
+            EmptyTemplateStateCard()
         }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun UserTemplateCard(
     template: UserTemplate,
@@ -307,6 +313,7 @@ private fun UserTemplateCard(
             .height(164.dp)
             .clip(RoundedCornerShape(22.dp))
             .background(Mocha.PanelHighest)
+            .border(1.dp, Mocha.CardStrokeStrong, RoundedCornerShape(22.dp))
             .clickable(onClick = onClick)
     ) {
         Box(
@@ -344,23 +351,20 @@ private fun UserTemplateCard(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
-                Icon(
-                    Icons.Default.Share,
-                    "Share",
-                    tint = Mocha.Blue.copy(alpha = 0.7f),
-                    modifier = Modifier
-                        .size(16.dp)
-                        .clickable(onClick = onShare)
-                )
-                Spacer(Modifier.width(4.dp))
-                Icon(
-                    Icons.Default.Close,
-                    stringResource(R.string.template_delete),
-                    tint = Mocha.Subtext0.copy(alpha = 0.5f),
-                    modifier = Modifier
-                        .size(16.dp)
-                        .clickable(onClick = onDelete)
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    TemplateActionButton(
+                        icon = Icons.Default.Share,
+                        contentDescription = stringResource(R.string.share),
+                        tint = Mocha.Blue,
+                        onClick = onShare
+                    )
+                    TemplateActionButton(
+                        icon = Icons.Default.Close,
+                        contentDescription = stringResource(R.string.template_delete),
+                        tint = Mocha.Subtext0,
+                        onClick = onDelete
+                    )
+                }
             }
             Text(
                 if (template.textOverlayCount > 0) stringResource(R.string.template_tracks_texts_format, template.trackTypes.size, template.textOverlayCount)
@@ -369,7 +373,10 @@ private fun UserTemplateCard(
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = 1
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
                 Text(
                     template.aspectRatio.label,
                     color = Mocha.Mauve,
@@ -383,6 +390,7 @@ private fun UserTemplateCard(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ProjectTemplateCard(
     template: ProjectTemplateUI,
@@ -393,6 +401,7 @@ private fun ProjectTemplateCard(
             .height(184.dp)
             .clip(RoundedCornerShape(22.dp))
             .background(Mocha.PanelHighest)
+            .border(1.dp, Mocha.CardStrokeStrong, RoundedCornerShape(22.dp))
             .clickable(onClick = onClick)
     ) {
         Box(
@@ -459,7 +468,10 @@ private fun ProjectTemplateCard(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
                 Text(
                     formatCategory(template.category),
                     color = template.accentColor,
@@ -476,7 +488,85 @@ private fun ProjectTemplateCard(
                         .background(Mocha.Panel.copy(alpha = 0.7f), RoundedCornerShape(999.dp))
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 )
+                Text(
+                    stringResource(R.string.template_tracks_format, template.tracks.size),
+                    color = Mocha.Subtext0,
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier
+                        .background(Mocha.Panel.copy(alpha = 0.7f), RoundedCornerShape(999.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                )
             }
+        }
+    }
+}
+
+@Composable
+private fun TemplateSectionHeader(
+    title: String,
+    description: String
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            text = title,
+            color = Mocha.Text,
+            style = MaterialTheme.typography.titleMedium
+        )
+        Text(
+            text = description,
+            color = Mocha.Subtext0,
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+
+    Spacer(Modifier.height(8.dp))
+}
+
+@Composable
+private fun EmptyTemplateStateCard() {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = Mocha.PanelHighest,
+        shape = RoundedCornerShape(22.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStrokeStrong)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.template_saved_empty_title),
+                color = Mocha.Text,
+                style = MaterialTheme.typography.titleSmall
+            )
+            Text(
+                text = stringResource(R.string.template_saved_empty_body),
+                color = Mocha.Subtext0,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+}
+
+@Composable
+private fun TemplateActionButton(
+    icon: ImageVector,
+    contentDescription: String,
+    tint: Color,
+    onClick: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = tint.copy(alpha = 0.12f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, tint.copy(alpha = 0.18f))
+    ) {
+        IconButton(onClick = onClick, modifier = Modifier.size(34.dp)) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = tint,
+                modifier = Modifier.size(16.dp)
+            )
         }
     }
 }

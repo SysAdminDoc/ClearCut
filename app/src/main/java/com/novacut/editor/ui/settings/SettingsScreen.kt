@@ -1,5 +1,6 @@
 package com.novacut.editor.ui.settings
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,8 +12,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -23,6 +26,7 @@ import com.novacut.editor.engine.AppSettings
 import com.novacut.editor.model.*
 import com.novacut.editor.ui.theme.Mocha
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
@@ -55,27 +59,42 @@ fun SettingsScreen(
         Spacer(Modifier.height(10.dp))
 
         // Export Defaults
-        SettingsSection(stringResource(R.string.settings_export_defaults)) {
+        SettingsSection(
+            title = stringResource(R.string.settings_export_defaults),
+            description = stringResource(R.string.settings_export_defaults_description)
+        ) {
             SettingsDropdown(
+                icon = Icons.Default.Movie,
+                accent = Mocha.Rosewater,
                 label = stringResource(R.string.settings_default_resolution),
+                description = stringResource(R.string.settings_default_resolution_description),
                 value = settings.defaultResolution.label,
                 options = Resolution.entries.map { it.label },
                 onSelected = { idx -> viewModel.setResolution(Resolution.entries[idx]) }
             )
             SettingsDropdown(
+                icon = Icons.Default.Schedule,
+                accent = Mocha.Sapphire,
                 label = stringResource(R.string.settings_default_frame_rate),
+                description = stringResource(R.string.settings_default_frame_rate_description),
                 value = "${settings.defaultFrameRate}fps",
                 options = listOf("24fps", "30fps", "60fps"),
                 onSelected = { idx -> viewModel.setFrameRate(listOf(24, 30, 60)[idx]) }
             )
             SettingsDropdown(
+                icon = Icons.Default.CropSquare,
+                accent = Mocha.Mauve,
                 label = stringResource(R.string.settings_default_aspect_ratio),
+                description = stringResource(R.string.settings_default_aspect_ratio_description),
                 value = settings.defaultAspectRatio.label,
                 options = AspectRatio.entries.map { it.label },
                 onSelected = { idx -> viewModel.setAspectRatio(AspectRatio.entries[idx]) }
             )
             SettingsDropdown(
+                icon = Icons.Default.Memory,
+                accent = Mocha.Peach,
                 label = stringResource(R.string.settings_default_codec),
+                description = stringResource(R.string.settings_default_codec_description),
                 value = listOf("H.264", "H.265 (HEVC)", "AV1", "VP9")[
                     listOf("H264", "HEVC", "AV1", "VP9").indexOf(settings.defaultCodec).coerceAtLeast(0)
                 ],
@@ -85,8 +104,13 @@ fun SettingsScreen(
         }
 
         // Timeline
-        SettingsSection(stringResource(R.string.settings_timeline)) {
+        SettingsSection(
+            title = stringResource(R.string.settings_timeline),
+            description = stringResource(R.string.settings_timeline_description)
+        ) {
             SettingsToggle(
+                icon = Icons.Default.Save,
+                accent = Mocha.Mauve,
                 label = stringResource(R.string.settings_auto_save),
                 description = stringResource(R.string.settings_auto_save_description),
                 checked = settings.autoSaveEnabled,
@@ -94,7 +118,10 @@ fun SettingsScreen(
             )
             if (settings.autoSaveEnabled) {
                 SettingsSlider(
+                    icon = Icons.Default.Schedule,
+                    accent = Mocha.Sapphire,
                     label = stringResource(R.string.settings_auto_save_interval),
+                    description = stringResource(R.string.settings_auto_save_description),
                     value = settings.autoSaveIntervalSec.toFloat(),
                     range = 15f..300f,
                     valueLabel = "${settings.autoSaveIntervalSec}s",
@@ -102,52 +129,75 @@ fun SettingsScreen(
                 )
             }
             SettingsDropdown(
+                icon = Icons.Default.Tune,
+                accent = Mocha.Sky,
                 label = stringResource(R.string.settings_proxy_resolution),
+                description = stringResource(R.string.settings_proxy_resolution_description),
                 value = settings.proxyResolution.label,
                 options = ProxyResolution.entries.map { it.label },
                 onSelected = { idx -> viewModel.setProxyResolution(ProxyResolution.entries[idx]) }
             )
             SettingsSwitch(
+                icon = Icons.Default.Layers,
+                accent = Mocha.Blue,
                 label = stringResource(R.string.settings_enable_proxy),
                 description = stringResource(R.string.settings_enable_proxy_description),
                 checked = settings.proxyEnabled,
                 onChanged = { viewModel.setProxyEnabled(it) }
             )
             SettingsSwitch(
+                icon = Icons.Default.GraphicEq,
+                accent = Mocha.Green,
                 label = stringResource(R.string.settings_show_waveforms),
                 description = stringResource(R.string.settings_show_waveforms_desc),
                 checked = settings.showWaveforms,
                 onChanged = { viewModel.setShowWaveforms(it) }
             )
             SettingsSwitch(
+                icon = Icons.Default.MusicNote,
+                accent = Mocha.Green,
                 label = stringResource(R.string.settings_snap_beat),
                 description = stringResource(R.string.settings_snap_beat_desc),
                 checked = settings.snapToBeat,
                 onChanged = { viewModel.setSnapToBeat(it) }
             )
             SettingsSwitch(
+                icon = Icons.Default.Bookmark,
+                accent = Mocha.Yellow,
                 label = stringResource(R.string.settings_snap_markers),
                 description = stringResource(R.string.settings_snap_markers_desc),
                 checked = settings.snapToMarker,
                 onChanged = { viewModel.setSnapToMarker(it) }
             )
-            // Default Track Height chips
-            Text(stringResource(R.string.settings_default_track_height), color = Mocha.Text, fontSize = 14.sp,
-                modifier = Modifier.padding(top = 8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            SettingsChoiceHeader(
+                icon = Icons.Default.ViewStream,
+                accent = Mocha.Teal,
+                label = stringResource(R.string.settings_default_track_height),
+                description = stringResource(R.string.settings_default_track_height_description)
+            )
+            FlowRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 listOf(48, 64, 80, 96).forEach { height ->
                     FilterChip(
                         selected = settings.defaultTrackHeight == height,
                         onClick = { viewModel.setDefaultTrackHeight(height) },
-                        label = { Text("${height}dp", fontSize = 12.sp) },
+                        label = { Text("${height}dp", style = MaterialTheme.typography.labelMedium) },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Mocha.Mauve,
-                            selectedLabelColor = Mocha.Crust,
-                            containerColor = Mocha.Surface0,
+                            selectedContainerColor = Mocha.Teal.copy(alpha = 0.18f),
+                            selectedLabelColor = Mocha.Teal,
+                            containerColor = Mocha.PanelHighest,
                             labelColor = Mocha.Text
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = settings.defaultTrackHeight == height,
+                            borderColor = Mocha.CardStroke,
+                            selectedBorderColor = Mocha.Teal.copy(alpha = 0.32f)
                         )
                     )
                 }
@@ -155,101 +205,124 @@ fun SettingsScreen(
         }
 
         // AI Models
-        SettingsSection(stringResource(R.string.settings_ai_models)) {
-            Text(
-                stringResource(R.string.settings_ai_models_description),
-                color = Mocha.Subtext0,
-                fontSize = 11.sp
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Model info rows
+        SettingsSection(
+            title = stringResource(R.string.settings_ai_models),
+            description = stringResource(R.string.settings_ai_models_description)
+        ) {
             val models = listOf(
-                stringResource(R.string.settings_whisper_model) to stringResource(R.string.settings_whisper_size),
-                stringResource(R.string.settings_segmentation_model) to stringResource(R.string.settings_segmentation_size),
-                stringResource(R.string.settings_piper_model) to stringResource(R.string.settings_piper_size)
+                Triple(Icons.Default.AutoAwesome, stringResource(R.string.settings_whisper_model), stringResource(R.string.settings_whisper_size)),
+                Triple(Icons.Default.Movie, stringResource(R.string.settings_segmentation_model), stringResource(R.string.settings_segmentation_size)),
+                Triple(Icons.Default.Mic, stringResource(R.string.settings_piper_model), stringResource(R.string.settings_piper_size))
             )
-            models.forEach { (name, size) ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(name, color = Mocha.Text, fontSize = 13.sp)
-                        Text(stringResource(R.string.settings_download_size_format, size), color = Mocha.Subtext0, fontSize = 10.sp)
-                    }
-                    Text(stringResource(R.string.manage), color = Mocha.Mauve, fontSize = 11.sp,
-                        modifier = Modifier.clickable { onNavigateToAiModels() })
-                }
+            models.forEach { (icon, name, size) ->
+                SettingsActionRow(
+                    icon = icon,
+                    accent = Mocha.Mauve,
+                    label = name,
+                    description = stringResource(R.string.settings_download_size_format, size),
+                    actionLabel = stringResource(R.string.manage),
+                    onClick = onNavigateToAiModels
+                )
             }
         }
 
         // Editor
-        SettingsSection(stringResource(R.string.settings_editor)) {
+        SettingsSection(
+            title = stringResource(R.string.settings_editor),
+            description = stringResource(R.string.settings_editor_description)
+        ) {
             SettingsDropdown(
+                icon = Icons.Default.Tune,
+                accent = Mocha.Mauve,
                 label = stringResource(R.string.settings_default_mode),
+                description = stringResource(R.string.settings_default_mode_description),
                 value = settings.editorMode,
                 options = listOf(stringResource(R.string.settings_mode_easy), stringResource(R.string.settings_mode_pro)),
                 onSelected = { viewModel.setEditorMode(listOf("Easy", "Pro")[it]) }
             )
             SettingsToggle(
+                icon = Icons.Default.TouchApp,
+                accent = Mocha.Sapphire,
                 label = stringResource(R.string.settings_haptic_feedback),
                 description = stringResource(R.string.settings_haptic_desc),
                 checked = settings.hapticEnabled,
                 onChanged = { viewModel.setHapticEnabled(it) }
             )
             SettingsSwitch(
+                icon = Icons.Default.Delete,
+                accent = Mocha.Red,
                 label = stringResource(R.string.settings_confirm_delete),
                 description = stringResource(R.string.settings_confirm_delete_desc),
                 checked = settings.confirmBeforeDelete,
                 onChanged = { viewModel.setConfirmBeforeDelete(it) }
             )
-            // Thumbnail Cache chips
-            Text(stringResource(R.string.settings_thumbnail_cache), color = Mocha.Text, fontSize = 14.sp,
-                modifier = Modifier.padding(top = 8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            SettingsChoiceHeader(
+                icon = Icons.Default.PhotoLibrary,
+                accent = Mocha.Peach,
+                label = stringResource(R.string.settings_thumbnail_cache),
+                description = stringResource(R.string.settings_thumbnail_cache_description)
+            )
+            FlowRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 listOf(64 to "64 MB", 128 to "128 MB", 256 to "256 MB").forEach { (size, label) ->
                     FilterChip(
                         selected = settings.thumbnailCacheSizeMb == size,
                         onClick = { viewModel.setThumbnailCacheSize(size) },
-                        label = { Text(label, fontSize = 12.sp) },
+                        label = { Text(label, style = MaterialTheme.typography.labelMedium) },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Mocha.Mauve,
-                            selectedLabelColor = Mocha.Crust,
-                            containerColor = Mocha.Surface0,
+                            selectedContainerColor = Mocha.Peach.copy(alpha = 0.18f),
+                            selectedLabelColor = Mocha.Peach,
+                            containerColor = Mocha.PanelHighest,
                             labelColor = Mocha.Text
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = settings.thumbnailCacheSizeMb == size,
+                            borderColor = Mocha.CardStroke,
+                            selectedBorderColor = Mocha.Peach.copy(alpha = 0.32f)
                         )
                     )
                 }
             }
-            // Default Export Quality chips
-            Text(stringResource(R.string.settings_export_quality), color = Mocha.Text, fontSize = 14.sp,
-                modifier = Modifier.padding(top = 8.dp))
+            SettingsChoiceHeader(
+                icon = Icons.Default.HighQuality,
+                accent = Mocha.Yellow,
+                label = stringResource(R.string.settings_export_quality),
+                description = stringResource(R.string.settings_export_quality_description)
+            )
             val qualityLabels = listOf(
                 "LOW" to stringResource(R.string.settings_quality_small),
                 "MEDIUM" to stringResource(R.string.settings_quality_balanced),
                 "HIGH" to stringResource(R.string.settings_quality_best)
             )
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            FlowRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 qualityLabels.forEach { (key, label) ->
                     FilterChip(
                         selected = settings.defaultExportQuality == key,
                         onClick = { viewModel.setDefaultExportQuality(key) },
-                        label = { Text(label, fontSize = 12.sp) },
+                        label = { Text(label, style = MaterialTheme.typography.labelMedium) },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Mocha.Mauve,
-                            selectedLabelColor = Mocha.Crust,
-                            containerColor = Mocha.Surface0,
+                            selectedContainerColor = Mocha.Yellow.copy(alpha = 0.18f),
+                            selectedLabelColor = Mocha.Yellow,
+                            containerColor = Mocha.PanelHighest,
                             labelColor = Mocha.Text
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = settings.defaultExportQuality == key,
+                            borderColor = Mocha.CardStroke,
+                            selectedBorderColor = Mocha.Yellow.copy(alpha = 0.32f)
                         )
                     )
                 }
@@ -258,11 +331,22 @@ fun SettingsScreen(
 
         // Tutorial
         var showResetConfirm by remember { mutableStateOf(false) }
-        SettingsSection(stringResource(R.string.settings_tutorial)) {
+        SettingsSection(
+            title = stringResource(R.string.settings_tutorial),
+            description = stringResource(R.string.settings_tutorial_description)
+        ) {
             OutlinedButton(
                 onClick = { showResetConfirm = true },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = Mocha.PanelHighest,
+                    contentColor = Mocha.Text
+                ),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStrokeStrong),
+                shape = RoundedCornerShape(18.dp)
             ) {
+                Icon(Icons.Default.School, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
                 Text(stringResource(R.string.settings_reset_tutorial))
             }
         }
@@ -287,10 +371,13 @@ fun SettingsScreen(
         }
 
         // About
-        SettingsSection(stringResource(R.string.settings_about)) {
-            SettingsInfo(stringResource(R.string.settings_version), NovaCutApp.VERSION)
-            SettingsInfo(stringResource(R.string.settings_engine), stringResource(R.string.settings_engine_value))
-            SettingsInfo(stringResource(R.string.settings_ai_models), stringResource(R.string.settings_ai_models_value))
+        SettingsSection(
+            title = stringResource(R.string.settings_about),
+            description = stringResource(R.string.settings_about_description)
+        ) {
+            SettingsInfo(Icons.Default.Info, stringResource(R.string.settings_version), NovaCutApp.VERSION, Mocha.Sapphire)
+            SettingsInfo(Icons.Default.Movie, stringResource(R.string.settings_engine), stringResource(R.string.settings_engine_value), Mocha.Peach)
+            SettingsInfo(Icons.Default.AutoAwesome, stringResource(R.string.settings_ai_models), stringResource(R.string.settings_ai_models_value), Mocha.Mauve)
         }
 
         Spacer(Modifier.height(24.dp))
@@ -375,7 +462,7 @@ private fun SettingsHero(
                         )
                         SettingsOverviewStat(
                             label = stringResource(R.string.settings_auto_save),
-                            value = if (settings.autoSaveEnabled) "${settings.autoSaveIntervalSec}s" else stringResource(R.string.cancelled),
+                            value = if (settings.autoSaveEnabled) "${settings.autoSaveIntervalSec}s" else stringResource(R.string.settings_off),
                             accent = Mocha.Sapphire,
                             modifier = Modifier.weight(1f)
                         )
@@ -427,15 +514,27 @@ private fun SettingsOverviewStat(
 }
 
 @Composable
-private fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
+private fun SettingsSection(
+    title: String,
+    description: String? = null,
+    content: @Composable ColumnScope.() -> Unit
+) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
         Text(
             title,
             color = Mocha.Rosewater,
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(bottom = 8.dp)
+            modifier = Modifier.padding(bottom = 4.dp)
         )
+        description?.let {
+            Text(
+                text = it,
+                color = Mocha.Subtext0,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
         Card(
             colors = CardDefaults.cardColors(containerColor = Mocha.Panel),
             shape = RoundedCornerShape(22.dp),
@@ -453,7 +552,9 @@ private fun SettingsSection(title: String, content: @Composable ColumnScope.() -
                 )
             ) {
                 Column(
-                    modifier = Modifier.padding(14.dp),
+                    modifier = Modifier
+                        .animateContentSize()
+                        .padding(14.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     content = content
                 )
@@ -464,32 +565,37 @@ private fun SettingsSection(title: String, content: @Composable ColumnScope.() -
 
 @Composable
 private fun SettingsDropdown(
+    icon: ImageVector,
+    accent: androidx.compose.ui.graphics.Color,
     label: String,
+    description: String? = null,
     value: String,
     options: List<String>,
     onSelected: (Int) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    Surface(
-        color = Mocha.PanelHighest,
-        shape = RoundedCornerShape(18.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f))
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { expanded = true }
-                .padding(horizontal = 14.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+    Box {
+        SettingsTile(
+            icon = icon,
+            accent = accent,
+            label = label,
+            description = description,
+            onClick = { expanded = true }
         ) {
-            Text(label, color = Mocha.Text, style = MaterialTheme.typography.titleSmall)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(value, color = Mocha.Subtext0, style = MaterialTheme.typography.bodyMedium)
-                Icon(Icons.Default.ArrowDropDown, stringResource(R.string.cd_dropdown), tint = Mocha.Subtext0, modifier = Modifier.size(18.dp))
-            }
+            Text(value, color = Mocha.Subtext0, style = MaterialTheme.typography.bodyMedium)
+            Spacer(Modifier.width(4.dp))
+            Icon(
+                Icons.Default.ArrowDropDown,
+                stringResource(R.string.cd_dropdown),
+                tint = Mocha.Subtext0,
+                modifier = Modifier.size(18.dp)
+            )
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            containerColor = Mocha.PanelHighest
+        ) {
             options.forEachIndexed { idx, opt ->
                 DropdownMenuItem(
                     text = { Text(opt, style = MaterialTheme.typography.bodyMedium) },
@@ -502,83 +608,34 @@ private fun SettingsDropdown(
 
 @Composable
 private fun SettingsToggle(
+    icon: ImageVector,
+    accent: androidx.compose.ui.graphics.Color,
     label: String,
     description: String,
     checked: Boolean,
     onChanged: (Boolean) -> Unit
 ) {
-    Surface(
-        color = Mocha.PanelHighest,
-        shape = RoundedCornerShape(18.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f))
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(label, color = Mocha.Text, style = MaterialTheme.typography.titleSmall)
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(description, color = Mocha.Subtext0, style = MaterialTheme.typography.bodySmall)
-            }
-            Switch(
-                checked = checked,
-                onCheckedChange = onChanged,
-                colors = SwitchDefaults.colors(
-                    checkedTrackColor = Mocha.Mauve,
-                    checkedThumbColor = Mocha.Crust,
-                    uncheckedTrackColor = Mocha.Surface1,
-                    uncheckedThumbColor = Mocha.Subtext0
-                )
-            )
-        }
-    }
+    SettingsSwitchTile(icon, accent, label, description, checked, onChanged)
 }
 
 @Composable
 private fun SettingsSwitch(
+    icon: ImageVector,
+    accent: androidx.compose.ui.graphics.Color,
     label: String,
     description: String,
     checked: Boolean,
     onChanged: (Boolean) -> Unit
 ) {
-    Surface(
-        color = Mocha.PanelHighest,
-        shape = RoundedCornerShape(18.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f))
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(label, color = Mocha.Text, style = MaterialTheme.typography.titleSmall)
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(description, color = Mocha.Subtext0, style = MaterialTheme.typography.bodySmall)
-            }
-            Switch(
-                checked = checked,
-                onCheckedChange = onChanged,
-                colors = SwitchDefaults.colors(
-                    checkedTrackColor = Mocha.Mauve,
-                    checkedThumbColor = Mocha.Crust,
-                    uncheckedTrackColor = Mocha.Surface1,
-                    uncheckedThumbColor = Mocha.Subtext0
-                )
-            )
-        }
-    }
+    SettingsSwitchTile(icon, accent, label, description, checked, onChanged)
 }
 
 @Composable
 private fun SettingsSlider(
+    icon: ImageVector,
+    accent: androidx.compose.ui.graphics.Color,
     label: String,
+    description: String? = null,
     value: Float,
     range: ClosedFloatingPointRange<Float>,
     valueLabel: String,
@@ -592,10 +649,23 @@ private fun SettingsSlider(
         Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
             ) {
-                Text(label, color = Mocha.Text, style = MaterialTheme.typography.titleSmall)
-                Text(valueLabel, color = Mocha.Subtext0, style = MaterialTheme.typography.bodyMedium)
+                Row(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    SettingsTileIcon(icon = icon, accent = accent)
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(label, color = Mocha.Text, style = MaterialTheme.typography.titleSmall)
+                        description?.let {
+                            Text(it, color = Mocha.Subtext0, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+                Spacer(Modifier.width(12.dp))
+                Text(valueLabel, color = accent, style = MaterialTheme.typography.titleSmall)
             }
             Spacer(modifier = Modifier.height(6.dp))
             Slider(
@@ -603,8 +673,8 @@ private fun SettingsSlider(
                 onValueChange = onChanged,
                 valueRange = range,
                 colors = SliderDefaults.colors(
-                    thumbColor = Mocha.Mauve,
-                    activeTrackColor = Mocha.Mauve,
+                    thumbColor = accent,
+                    activeTrackColor = accent,
                     inactiveTrackColor = Mocha.Surface1
                 )
             )
@@ -613,7 +683,109 @@ private fun SettingsSlider(
 }
 
 @Composable
-private fun SettingsInfo(label: String, value: String) {
+private fun SettingsInfo(
+    icon: ImageVector,
+    label: String,
+    value: String,
+    accent: androidx.compose.ui.graphics.Color
+) {
+    SettingsTile(
+        icon = icon,
+        accent = accent,
+        label = label
+    ) {
+        Text(
+            text = value,
+            color = Mocha.Subtext0,
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun SettingsActionRow(
+    icon: ImageVector,
+    accent: androidx.compose.ui.graphics.Color,
+    label: String,
+    description: String,
+    actionLabel: String,
+    onClick: () -> Unit
+) {
+    SettingsTile(
+        icon = icon,
+        accent = accent,
+        label = label,
+        description = description,
+        onClick = onClick
+    ) {
+        Text(
+            text = actionLabel,
+            color = accent,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+}
+
+@Composable
+private fun SettingsChoiceHeader(
+    icon: ImageVector,
+    accent: androidx.compose.ui.graphics.Color,
+    label: String,
+    description: String
+) {
+    Row(
+        modifier = Modifier.padding(top = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        SettingsTileIcon(icon = icon, accent = accent)
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(label, color = Mocha.Text, style = MaterialTheme.typography.titleSmall)
+            Text(description, color = Mocha.Subtext0, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+@Composable
+private fun SettingsSwitchTile(
+    icon: ImageVector,
+    accent: androidx.compose.ui.graphics.Color,
+    label: String,
+    description: String,
+    checked: Boolean,
+    onChanged: (Boolean) -> Unit
+) {
+    SettingsTile(
+        icon = icon,
+        accent = accent,
+        label = label,
+        description = description
+    ) {
+        Switch(
+            checked = checked,
+            onCheckedChange = onChanged,
+            colors = SwitchDefaults.colors(
+                checkedTrackColor = accent.copy(alpha = 0.8f),
+                checkedThumbColor = Mocha.Crust,
+                uncheckedTrackColor = Mocha.Surface1,
+                uncheckedThumbColor = Mocha.Subtext0
+            )
+        )
+    }
+}
+
+@Composable
+private fun SettingsTile(
+    icon: ImageVector,
+    accent: androidx.compose.ui.graphics.Color,
+    label: String,
+    description: String? = null,
+    onClick: (() -> Unit)? = null,
+    trailing: @Composable RowScope.() -> Unit
+) {
     Surface(
         color = Mocha.PanelHighest,
         shape = RoundedCornerShape(18.dp),
@@ -622,11 +794,47 @@ private fun SettingsInfo(label: String, value: String) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
                 .padding(horizontal = 14.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(label, color = Mocha.Text, style = MaterialTheme.typography.titleSmall)
-            Text(value, color = Mocha.Subtext0, style = MaterialTheme.typography.bodyMedium)
+            SettingsTileIcon(icon = icon, accent = accent)
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(label, color = Mocha.Text, style = MaterialTheme.typography.titleSmall)
+                description?.let {
+                    Text(it, color = Mocha.Subtext0, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                content = trailing
+            )
         }
+    }
+}
+
+@Composable
+private fun SettingsTileIcon(
+    icon: ImageVector,
+    accent: androidx.compose.ui.graphics.Color
+) {
+    Surface(
+        color = accent.copy(alpha = 0.14f),
+        shape = RoundedCornerShape(14.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, accent.copy(alpha = 0.2f))
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = accent,
+            modifier = Modifier
+                .padding(10.dp)
+                .size(18.dp)
+        )
     }
 }

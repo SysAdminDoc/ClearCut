@@ -33,6 +33,8 @@ class TemplateManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private val templateDir = File(context.filesDir, "templates")
+    private val defaultTemplateTrackTypes = listOf(TrackType.VIDEO, TrackType.AUDIO)
+    private val templateSchemaVersion = 1
 
     fun listTemplates(): List<UserTemplate> {
         if (!templateDir.exists()) return emptyList()
@@ -40,6 +42,11 @@ class TemplateManager @Inject constructor(
             ?.mapNotNull { loadTemplate(it) }
             ?.sortedByDescending { it.createdAt }
             ?: emptyList()
+    }
+
+    fun getTemplate(templateId: String): UserTemplate? {
+        val templateFile = File(templateDir, "$templateId.json")
+        return if (templateFile.exists()) loadTemplate(templateFile) else null
     }
 
     suspend fun saveTemplate(
@@ -63,32 +70,18 @@ class TemplateManager @Inject constructor(
             else effectTypes.joinToString(", ")
 
         val template = UserTemplate(
-            name = name,
-            description = description,
+            name = normalizeTemplateName(name),
+            description = description.trim(),
             aspectRatio = project.aspectRatio,
             frameRate = project.frameRate,
             resolution = project.resolution,
-            trackTypes = tracks.map { it.type },
+            trackTypes = tracks.map { it.type }.ifEmpty { defaultTemplateTrackTypes },
             textOverlayCount = textOverlays.size,
             effectSummary = effectSummary,
             stateJson = stateJson
         )
 
-        val json = JSONObject().apply {
-            put("id", template.id)
-            put("name", template.name)
-            put("description", template.description)
-            put("aspectRatio", template.aspectRatio.name)
-            put("frameRate", template.frameRate)
-            put("resolution", template.resolution.name)
-            put("trackTypes", JSONArray(template.trackTypes.map { it.name }))
-            put("textOverlayCount", template.textOverlayCount)
-            put("effectSummary", template.effectSummary)
-            put("createdAt", template.createdAt)
-            put("stateJson", template.stateJson)
-        }
-
-        File(templateDir, "${template.id}.json").writeText(json.toString(2))
+        File(templateDir, "${template.id}.json").writeText(templateToJson(template).toString(2))
         template
     }
 
@@ -106,28 +99,14 @@ class TemplateManager @Inject constructor(
         }
     }
 
-    suspend fun exportTemplateToFile(templateName: String, outputFile: File): Boolean = withContext(Dispatchers.IO) {
+    suspend fun exportTemplateToFile(templateId: String, outputFile: File): Boolean = withContext(Dispatchers.IO) {
         try {
-            val template = listTemplates().find { it.name == templateName } ?: return@withContext false
-            val json = JSONObject().apply {
-                put("novacut_template_version", 1)
-                put("id", template.id)
-                put("name", template.name)
-                put("description", template.description)
-                put("aspectRatio", template.aspectRatio.name)
-                put("frameRate", template.frameRate)
-                put("resolution", template.resolution.name)
-                put("trackTypes", JSONArray(template.trackTypes.map { it.name }))
-                put("textOverlayCount", template.textOverlayCount)
-                put("effectSummary", template.effectSummary)
-                put("createdAt", template.createdAt)
-                put("stateJson", template.stateJson)
-            }
+            val template = getTemplate(templateId) ?: return@withContext false
             outputFile.parentFile?.mkdirs()
-            outputFile.writeText(json.toString(2))
+            outputFile.writeText(templateToJson(template).toString(2))
             true
         } catch (e: Exception) {
-            Log.e("TemplateManager", "Failed to export template '$templateName'", e)
+            Log.e("TemplateManager", "Failed to export template '$templateId'", e)
             false
         }
     }
@@ -137,43 +116,15 @@ class TemplateManager @Inject constructor(
             val text = context.contentResolver.openInputStream(uri)?.use { it.bufferedReader().readText() }
                 ?: return@withContext null
             val json = JSONObject(text)
-            val template = UserTemplate(
-                id = UUID.randomUUID().toString(),
-                name = json.optString("name", "Imported Template"),
-                description = json.optString("description", ""),
-                aspectRatio = try {
-                    AspectRatio.valueOf(json.optString("aspectRatio", "RATIO_16_9"))
-                } catch (_: Exception) { AspectRatio.RATIO_16_9 },
-                frameRate = json.optInt("frameRate", 30),
-                resolution = try {
-                    Resolution.valueOf(json.optString("resolution", "FHD_1080P"))
-                } catch (_: Exception) { Resolution.FHD_1080P },
-                trackTypes = json.optJSONArray("trackTypes")?.let { arr ->
-                    (0 until arr.length()).mapNotNull { i ->
-                        try { TrackType.valueOf(arr.getString(i)) } catch (_: Exception) { null }
-                    }
-                } ?: listOf(TrackType.VIDEO, TrackType.AUDIO),
-                textOverlayCount = json.optInt("textOverlayCount", 0),
-                effectSummary = json.optString("effectSummary", ""),
-                createdAt = System.currentTimeMillis(),
-                stateJson = json.optString("stateJson", "{}")
-            )
+            val importedTemplate = parseTemplateJson(
+                json = json,
+                fallbackId = UUID.randomUUID().toString(),
+                defaultCreatedAt = System.currentTimeMillis()
+            ) ?: return@withContext null
+            val template = normalizeImportedTemplate(importedTemplate, listTemplates())
             // Save locally
             templateDir.mkdirs()
-            val saveJson = JSONObject().apply {
-                put("id", template.id)
-                put("name", template.name)
-                put("description", template.description)
-                put("aspectRatio", template.aspectRatio.name)
-                put("frameRate", template.frameRate)
-                put("resolution", template.resolution.name)
-                put("trackTypes", JSONArray(template.trackTypes.map { it.name }))
-                put("textOverlayCount", template.textOverlayCount)
-                put("effectSummary", template.effectSummary)
-                put("createdAt", template.createdAt)
-                put("stateJson", template.stateJson)
-            }
-            File(templateDir, "${template.id}.json").writeText(saveJson.toString(2))
+            File(templateDir, "${template.id}.json").writeText(templateToJson(template).toString(2))
             template
         } catch (e: Exception) {
             Log.e("TemplateManager", "Failed to import template from URI", e)
@@ -184,30 +135,138 @@ class TemplateManager @Inject constructor(
     private fun loadTemplate(file: File): UserTemplate? {
         return try {
             val json = JSONObject(file.readText())
-            UserTemplate(
-                id = json.optString("id", file.nameWithoutExtension),
-                name = json.optString("name", "Untitled Template"),
-                description = json.optString("description", ""),
-                aspectRatio = try {
-                    AspectRatio.valueOf(json.optString("aspectRatio", "RATIO_16_9"))
-                } catch (_: Exception) { AspectRatio.RATIO_16_9 },
-                frameRate = json.optInt("frameRate", 30),
-                resolution = try {
-                    Resolution.valueOf(json.optString("resolution", "FHD_1080P"))
-                } catch (_: Exception) { Resolution.FHD_1080P },
-                trackTypes = json.optJSONArray("trackTypes")?.let { arr ->
-                    (0 until arr.length()).mapNotNull { i ->
-                        try { TrackType.valueOf(arr.getString(i)) } catch (_: Exception) { null }
-                    }
-                } ?: listOf(TrackType.VIDEO, TrackType.AUDIO),
-                textOverlayCount = json.optInt("textOverlayCount", 0),
-                effectSummary = json.optString("effectSummary", ""),
-                createdAt = json.optLong("createdAt", 0L),
-                stateJson = json.optString("stateJson", "{}")
+            parseTemplateJson(
+                json = json,
+                fallbackId = file.nameWithoutExtension,
+                defaultCreatedAt = file.lastModified().takeIf { it > 0L } ?: System.currentTimeMillis()
             )
         } catch (e: Exception) {
             Log.e("TemplateManager", "Failed to load template ${file.name}", e)
             null
         }
+    }
+
+    private fun parseTemplateJson(
+        json: JSONObject,
+        fallbackId: String,
+        defaultCreatedAt: Long
+    ): UserTemplate? {
+        val stateJson = json.optString("stateJson", "").trim()
+        if (stateJson.isBlank()) {
+            Log.w("TemplateManager", "Template JSON missing stateJson payload")
+            return null
+        }
+
+        val state = try {
+            AutoSaveState.deserialize(stateJson)
+        } catch (e: Exception) {
+            Log.e("TemplateManager", "Template stateJson is invalid", e)
+            return null
+        }
+
+        val trackTypesFromState = state.tracks.map { it.type }
+        val normalizedTrackTypes = trackTypesFromState.ifEmpty {
+            parseTrackTypes(json.optJSONArray("trackTypes"), defaultTemplateTrackTypes)
+        }
+        val effectSummary = state.tracks
+            .flatMap { it.clips }
+            .flatMap { it.effects }
+            .map { it.type.displayName }
+            .distinct()
+            .take(3)
+            .joinToString(", ")
+            .ifBlank { "No effects" }
+
+        return UserTemplate(
+            id = json.optString("id", fallbackId).ifBlank { fallbackId },
+            name = normalizeTemplateName(json.optString("name", "Untitled Template")),
+            description = json.optString("description", "").trim(),
+            aspectRatio = parseAspectRatio(json.optString("aspectRatio", "RATIO_16_9")),
+            frameRate = json.optInt("frameRate", 30).coerceIn(1, 240),
+            resolution = parseResolution(json.optString("resolution", "FHD_1080P")),
+            trackTypes = normalizedTrackTypes,
+            textOverlayCount = state.textOverlays.size,
+            effectSummary = effectSummary,
+            createdAt = json.optLong("createdAt", defaultCreatedAt).takeIf { it > 0L } ?: defaultCreatedAt,
+            stateJson = stateJson
+        )
+    }
+
+    private fun templateToJson(template: UserTemplate): JSONObject {
+        return JSONObject().apply {
+            put("novacut_template_version", templateSchemaVersion)
+            put("id", template.id)
+            put("name", template.name)
+            put("description", template.description)
+            put("aspectRatio", template.aspectRatio.name)
+            put("frameRate", template.frameRate)
+            put("resolution", template.resolution.name)
+            put("trackTypes", JSONArray(template.trackTypes.map { it.name }))
+            put("textOverlayCount", template.textOverlayCount)
+            put("effectSummary", template.effectSummary)
+            put("createdAt", template.createdAt)
+            put("stateJson", template.stateJson)
+        }
+    }
+
+    private fun normalizeImportedTemplate(
+        template: UserTemplate,
+        existingTemplates: List<UserTemplate>
+    ): UserTemplate {
+        val existingIds = existingTemplates.asSequence().map { it.id }.toHashSet()
+        val existingNames = existingTemplates.asSequence().map { it.name.lowercase() }.toHashSet()
+        val resolvedId = if (template.id in existingIds) UUID.randomUUID().toString() else template.id
+        val resolvedName = ensureUniqueImportedName(template.name, existingNames)
+
+        return if (resolvedId == template.id && resolvedName == template.name) {
+            template
+        } else {
+            template.copy(id = resolvedId, name = resolvedName)
+        }
+    }
+
+    private fun ensureUniqueImportedName(name: String, existingNames: Set<String>): String {
+        if (name.lowercase() !in existingNames) return name
+
+        val baseName = name.trim().ifBlank { "Untitled Template" }
+        var candidate = "$baseName (Imported)"
+        var counter = 2
+        while (candidate.lowercase() in existingNames) {
+            candidate = "$baseName (Imported $counter)"
+            counter++
+        }
+        return candidate
+    }
+
+    private fun parseTrackTypes(jsonArray: JSONArray?, fallback: List<TrackType>): List<TrackType> {
+        return jsonArray?.let { arr ->
+            (0 until arr.length()).mapNotNull { index ->
+                try {
+                    TrackType.valueOf(arr.getString(index))
+                } catch (_: Exception) {
+                    null
+                }
+            }.ifEmpty { fallback }
+        } ?: fallback
+    }
+
+    private fun parseAspectRatio(raw: String): AspectRatio {
+        return try {
+            AspectRatio.valueOf(raw)
+        } catch (_: Exception) {
+            AspectRatio.RATIO_16_9
+        }
+    }
+
+    private fun parseResolution(raw: String): Resolution {
+        return try {
+            Resolution.valueOf(raw)
+        } catch (_: Exception) {
+            Resolution.FHD_1080P
+        }
+    }
+
+    private fun normalizeTemplateName(raw: String): String {
+        return raw.trim().ifBlank { "Untitled Template" }
     }
 }

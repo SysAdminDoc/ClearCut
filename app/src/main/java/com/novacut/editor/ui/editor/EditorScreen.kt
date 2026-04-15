@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.*
@@ -18,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.zIndex
@@ -1749,6 +1751,7 @@ private fun EditorTopBar(
     var showSaveTemplateDialog by remember { mutableStateOf(false) }
     var showAddTrackMenu by remember { mutableStateOf(false) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
+    val isCompactBar = LocalConfiguration.current.screenWidthDp < 430
 
     if (showDeleteConfirmation) {
         AlertDialog(
@@ -1845,7 +1848,7 @@ private fun EditorTopBar(
         color = Mocha.Panel,
         modifier = modifier
             .fillMaxWidth()
-            .height(62.dp)
+            .height(if (isCompactBar) 58.dp else 62.dp)
     ) {
         Box(
             modifier = Modifier
@@ -1863,28 +1866,28 @@ private fun EditorTopBar(
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 10.dp),
+                    .padding(horizontal = if (isCompactBar) 8.dp else 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(
                     color = Mocha.PanelHighest,
-                    shape = RoundedCornerShape(18.dp),
+                    shape = RoundedCornerShape(if (isCompactBar) 16.dp else 18.dp),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke)
                 ) {
                     IconButton(
                         onClick = onBack,
-                        modifier = Modifier.size(38.dp)
+                        modifier = Modifier.size(if (isCompactBar) 36.dp else 38.dp)
                     ) {
                         Icon(
-                            Icons.Default.Home,
-                            contentDescription = stringResource(R.string.editor_home),
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back),
                             tint = Mocha.Text,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(if (isCompactBar) 18.dp else 20.dp)
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.width(10.dp))
+                Spacer(modifier = Modifier.width(if (isCompactBar) 8.dp else 10.dp))
 
                 Column(
                     modifier = Modifier.weight(1f),
@@ -1909,7 +1912,10 @@ private fun EditorTopBar(
                             },
                             color = if (editorMode == EditorMode.PRO) Mocha.Rosewater else Mocha.Sapphire,
                             style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            modifier = Modifier.padding(
+                                horizontal = if (isCompactBar) 7.dp else 8.dp,
+                                vertical = if (isCompactBar) 3.dp else 4.dp
+                            )
                         )
                     }
                 }
@@ -1923,32 +1929,32 @@ private fun EditorTopBar(
                         IconButton(
                             onClick = onUndo,
                             enabled = canUndo,
-                            modifier = Modifier.size(34.dp)
+                            modifier = Modifier.size(if (isCompactBar) 32.dp else 34.dp)
                         ) {
                             Icon(
                                 Icons.AutoMirrored.Filled.Undo,
                                 contentDescription = stringResource(R.string.editor_undo),
                                 tint = if (canUndo) Mocha.Text else Mocha.Surface2,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(if (isCompactBar) 16.dp else 18.dp)
                             )
                         }
                         IconButton(
                             onClick = onRedo,
                             enabled = canRedo,
-                            modifier = Modifier.size(34.dp)
+                            modifier = Modifier.size(if (isCompactBar) 32.dp else 34.dp)
                         ) {
                             Icon(
                                 Icons.AutoMirrored.Filled.Redo,
                                 contentDescription = stringResource(R.string.editor_redo),
                                 tint = if (canRedo) Mocha.Text else Mocha.Surface2,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(if (isCompactBar) 16.dp else 18.dp)
                             )
                         }
                     }
                 }
 
                 if (selectedClipId != null) {
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     Surface(
                         color = Mocha.Red.copy(alpha = 0.12f),
                         shape = RoundedCornerShape(16.dp)
@@ -1958,19 +1964,19 @@ private fun EditorTopBar(
                                 if (confirmBeforeDelete) showDeleteConfirmation = true
                                 else onDelete()
                             },
-                            modifier = Modifier.size(34.dp)
+                            modifier = Modifier.size(if (isCompactBar) 32.dp else 34.dp)
                         ) {
                             Icon(
                                 Icons.Default.Delete,
                                 contentDescription = stringResource(R.string.editor_delete),
                                 tint = Mocha.Red,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(if (isCompactBar) 16.dp else 18.dp)
                             )
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(6.dp))
 
                 Box {
                     Surface(
@@ -1980,13 +1986,13 @@ private fun EditorTopBar(
                     ) {
                         IconButton(
                             onClick = { showOverflow = true },
-                            modifier = Modifier.size(38.dp)
+                            modifier = Modifier.size(if (isCompactBar) 36.dp else 38.dp)
                         ) {
                             Icon(
                                 Icons.Default.MoreVert,
                                 contentDescription = stringResource(R.string.editor_more),
                                 tint = Mocha.Text,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(if (isCompactBar) 18.dp else 20.dp)
                             )
                         }
                     }
@@ -2087,7 +2093,7 @@ private fun EditorTopBar(
                     }
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(6.dp))
 
                 Button(
                     onClick = onExport,
@@ -2096,8 +2102,8 @@ private fun EditorTopBar(
                         contentColor = Mocha.Midnight
                     ),
                     shape = RoundedCornerShape(16.dp),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
-                    modifier = Modifier.height(38.dp)
+                    contentPadding = PaddingValues(horizontal = if (isCompactBar) 12.dp else 14.dp, vertical = 0.dp),
+                    modifier = Modifier.height(if (isCompactBar) 36.dp else 38.dp)
                 ) {
                     Text(stringResource(R.string.editor_export), style = MaterialTheme.typography.labelLarge)
                 }

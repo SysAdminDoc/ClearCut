@@ -16,8 +16,8 @@ android {
         applicationId = "com.novacut.editor"
         minSdk = 26
         targetSdk = 36
-        versionCode = 87
-        versionName = "3.26.0"
+        versionCode = 88
+        versionName = "3.27.0"
     }
 
     signingConfigs {
@@ -155,4 +155,6 @@ dependencies {
 
     // Tier 4: OkHttp (cloud inpainting API)
     implementation(libs.okhttp)
+
+    testImplementation(libs.junit4)
 }

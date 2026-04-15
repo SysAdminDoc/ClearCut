@@ -34,6 +34,7 @@ import com.novacut.editor.engine.MultiCamEngine
 import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.engine.VoiceoverRecorderEngine
 import com.novacut.editor.engine.TemplateManager
+import com.novacut.editor.engine.sanitizeFileName
 import com.novacut.editor.engine.db.ProjectDao
 import com.novacut.editor.model.*
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -541,17 +542,7 @@ class EditorViewModel @Inject constructor(
                         ) {
                             showSaveIndicator(com.novacut.editor.model.SaveIndicatorState.SAVING)
                             val s = _state.value
-                            val state = AutoSaveState(
-                                projectId = s.project.id,
-                                tracks = s.tracks,
-                                textOverlays = s.textOverlays,
-                                imageOverlays = s.imageOverlays,
-                                timelineMarkers = s.timelineMarkers,
-                                playheadMs = s.playheadMs,
-                                chapterMarkers = s.chapterMarkers,
-                                drawingPaths = s.drawingPaths,
-                                beatMarkers = s.beatMarkers
-                            )
+                            val state = buildAutoSaveState(s)
                             viewModelScope.launch {
                                 delay(500)
                                 showSaveIndicator(com.novacut.editor.model.SaveIndicatorState.SAVED)
@@ -1264,7 +1255,7 @@ class EditorViewModel @Inject constructor(
     // --- Project Snapshots ---
     fun createSnapshot(label: String = "") {
         val s = _state.value
-        val autoSaveState = AutoSaveState(projectId = s.project.id, tracks = s.tracks, textOverlays = s.textOverlays, imageOverlays = s.imageOverlays, timelineMarkers = s.timelineMarkers, playheadMs = s.playheadMs, chapterMarkers = s.chapterMarkers, drawingPaths = s.drawingPaths, beatMarkers = s.beatMarkers)
+        val autoSaveState = buildAutoSaveState(s)
         val json = autoSaveState.serialize()
         val snapshot = ProjectSnapshot(
             projectId = s.project.id,
@@ -1350,8 +1341,49 @@ class EditorViewModel @Inject constructor(
 
     fun estimateBackupSize() {
         viewModelScope.launch(Dispatchers.IO) {
-            val size = com.novacut.editor.engine.ProjectArchive.estimateArchiveSize(appContext, _state.value.tracks)
+            val size = com.novacut.editor.engine.ProjectArchive.estimateArchiveSize(
+                appContext,
+                buildAutoSaveState(_state.value)
+            )
             _backupEstimatedSize.value = size
+        }
+    }
+
+    private fun writeBackupToDownloads(sourceFile: File, fileName: String): String {
+        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            val resolver = appContext.contentResolver
+            val values = android.content.ContentValues().apply {
+                put(android.provider.MediaStore.Downloads.DISPLAY_NAME, fileName)
+                put(android.provider.MediaStore.Downloads.MIME_TYPE, "application/zip")
+                put(
+                    android.provider.MediaStore.Downloads.RELATIVE_PATH,
+                    "${android.os.Environment.DIRECTORY_DOWNLOADS}/NovaCut"
+                )
+                put(android.provider.MediaStore.Downloads.IS_PENDING, 1)
+            }
+            val contentUri = resolver.insert(
+                android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                values
+            ) ?: throw IllegalStateException("Could not create backup destination")
+            try {
+                resolver.openOutputStream(contentUri)?.use { output ->
+                    sourceFile.inputStream().use { input -> input.copyTo(output) }
+                } ?: throw IllegalStateException("Could not open backup destination")
+                values.clear()
+                values.put(android.provider.MediaStore.Downloads.IS_PENDING, 0)
+                resolver.update(contentUri, values, null, null)
+                fileName
+            } catch (e: Exception) {
+                resolver.delete(contentUri, null, null)
+                throw e
+            }
+        } else {
+            val downloadsRoot = appContext.getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS)
+                ?: File(appContext.filesDir, "downloads")
+            val backupDir = File(downloadsRoot, "NovaCut").apply { mkdirs() }
+            val destination = File(backupDir, fileName)
+            sourceFile.copyTo(destination, overwrite = true)
+            destination.name
         }
     }
 
@@ -1360,28 +1392,32 @@ class EditorViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val s = _state.value
-                val dir = File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "NovaCut")
-                dir.mkdirs()
-                val fileName = "${s.project.name.replace(Regex("[^a-zA-Z0-9._\\- ]"), "_")}.novacut"
-                val file = File(dir, fileName)
-                val success = com.novacut.editor.engine.ProjectArchive.exportArchive(
-                    context = appContext,
-                    projectId = s.project.id,
-                    tracks = s.tracks,
-                    textOverlays = s.textOverlays,
-                    playheadMs = s.playheadMs,
-                    outputFile = file
-                )
-                _isExportingBackup.value = false
-                if (success) {
+                val fileName = "${sanitizedProjectFileStem(s.project.name)}.novacut"
+                val savedName = withContext(Dispatchers.IO) {
+                    val tempDir = File(appContext.cacheDir, "backup_exports").apply { mkdirs() }
+                    val tempFile = File(tempDir, fileName)
+                    try {
+                        val success = com.novacut.editor.engine.ProjectArchive.exportArchive(
+                            context = appContext,
+                            state = buildAutoSaveState(s),
+                            outputFile = tempFile
+                        )
+                        if (!success) return@withContext null
+                        writeBackupToDownloads(tempFile, fileName)
+                    } finally {
+                        tempFile.delete()
+                    }
+                }
+                if (savedName != null) {
                     _lastBackupTime.value = System.currentTimeMillis()
-                    showToast("Backup saved: ${file.name}")
+                    showToast("Backup saved: $savedName")
                 } else {
                     showToast("Backup export failed")
                 }
             } catch (e: Exception) {
-                _isExportingBackup.value = false
                 showToast("Backup failed: ${e.message}")
+            } finally {
+                _isExportingBackup.value = false
             }
         }
     }
@@ -1396,16 +1432,24 @@ class EditorViewModel @Inject constructor(
                 if (state != null) {
                     saveUndoState("Import backup")
                     _state.update { s ->
-                        s.copy(
-                            tracks = state.tracks,
-                            textOverlays = state.textOverlays,
-                            imageOverlays = state.imageOverlays,
-                            timelineMarkers = state.timelineMarkers,
-                            chapterMarkers = state.chapterMarkers,
-                            drawingPaths = state.drawingPaths
+                        dismissedPanelState(
+                            recalculateDuration(
+                                s.copy(
+                                    tracks = state.tracks,
+                                    textOverlays = state.textOverlays,
+                                    imageOverlays = state.imageOverlays,
+                                    timelineMarkers = state.timelineMarkers,
+                                    chapterMarkers = state.chapterMarkers,
+                                    drawingPaths = state.drawingPaths,
+                                    beatMarkers = state.beatMarkers,
+                                    playheadMs = state.playheadMs
+                                )
+                            )
                         )
                     }
+                    _playheadMs.value = _state.value.playheadMs
                     rebuildPlayerTimeline()
+                    saveProject()
                     showToast("Backup imported successfully")
                 } else {
                     showToast("Failed to import backup")
@@ -2350,6 +2394,16 @@ class EditorViewModel @Inject constructor(
             val allClips = s.tracks.flatMap { it.clips }
             val selectedClips = allClips.filter { it.id in selectedIds }.sortedBy { it.timelineStartMs }
             if (selectedClips.isEmpty()) return@update s
+            val selectedTrackIds = s.tracks
+                .filter { track -> track.clips.any { it.id in selectedIds } }
+                .map { it.id }
+            val compoundTrackId = when {
+                s.selectedTrackId != null && s.selectedTrackId in selectedTrackIds -> s.selectedTrackId
+                else -> s.tracks
+                    .filter { it.id in selectedTrackIds }
+                    .minByOrNull { it.index }
+                    ?.id
+            } ?: return@update s
 
             val compoundStart = selectedClips.minOf { it.timelineStartMs }
             val compoundEnd = selectedClips.maxOf { it.timelineEndMs }
@@ -2371,19 +2425,22 @@ class EditorViewModel @Inject constructor(
             // Remove original clips and insert compound
             val tracks = s.tracks.map { track ->
                 val remainingClips = track.clips.filter { it.id !in selectedIds }
-                val hadSelected = track.clips.any { it.id in selectedIds }
-                if (hadSelected) {
+                if (track.id == compoundTrackId) {
                     track.copy(clips = (remainingClips + compoundClip).sortedBy { it.timelineStartMs })
-                } else track
+                } else {
+                    track.copy(clips = remainingClips)
+                }
             }
 
             recalculateDuration(s.copy(
                 tracks = tracks,
-                selectedClipIds = emptySet(),
-                selectedClipId = compoundClip.id
+                selectedClipIds = setOf(compoundClip.id),
+                selectedClipId = compoundClip.id,
+                selectedTrackId = compoundTrackId
             ))
         }
         rebuildPlayerTimeline()
+        saveProject()
         showToast("Compound clip created")
     }
 
@@ -2414,13 +2471,10 @@ class EditorViewModel @Inject constructor(
                 val s = _state.value
                 val dir = java.io.File(appContext.getExternalFilesDir(null), "archives")
                 dir.mkdirs()
-                val file = java.io.File(dir, "${s.project.name}.novacut")
+                val file = java.io.File(dir, "${sanitizedProjectFileStem(s.project.name)}.novacut")
                 val success = com.novacut.editor.engine.ProjectArchive.exportArchive(
                     context = appContext,
-                    projectId = s.project.id,
-                    tracks = s.tracks,
-                    textOverlays = s.textOverlays,
-                    playheadMs = s.playheadMs,
+                    state = buildAutoSaveState(s),
                     outputFile = file
                 )
                 showToast(if (success) "Archive saved: ${file.name}" else "Archive export failed")
@@ -2437,7 +2491,7 @@ class EditorViewModel @Inject constructor(
                 val otioJson = timelineExchangeEngine.exportToOtio(s.tracks, s.textOverlays, s.project.name)
                 val dir = java.io.File(appContext.getExternalFilesDir(null), "exports")
                 dir.mkdirs()
-                val file = java.io.File(dir, "${s.project.name}.otio")
+                val file = java.io.File(dir, "${sanitizedProjectFileStem(s.project.name)}.otio")
                 file.writeText(otioJson)
                 withContext(Dispatchers.Main) { showToast("OTIO exported: ${file.name}") }
             } catch (e: Exception) {
@@ -2453,7 +2507,7 @@ class EditorViewModel @Inject constructor(
                 val xml = timelineExchangeEngine.exportToFcpxml(s.tracks, s.project.name, s.exportConfig.frameRate)
                 val dir = java.io.File(appContext.getExternalFilesDir(null), "exports")
                 dir.mkdirs()
-                val file = java.io.File(dir, "${s.project.name}.fcpxml")
+                val file = java.io.File(dir, "${sanitizedProjectFileStem(s.project.name)}.fcpxml")
                 file.writeText(xml)
                 withContext(Dispatchers.Main) { showToast("FCPXML exported: ${file.name}") }
             } catch (e: Exception) {
@@ -2670,7 +2724,10 @@ class EditorViewModel @Inject constructor(
         viewModelScope.launch {
             val dir = java.io.File(appContext.getExternalFilesDir(null), "subtitles")
             dir.mkdirs()
-            val file = java.io.File(dir, "${_state.value.project.name}.${format.extension}")
+            val file = java.io.File(
+                dir,
+                "${sanitizedProjectFileStem(_state.value.project.name)}.${format.extension}"
+            )
             val success = SubtitleExporter.export(captions, format, file)
             if (success) {
                 showToast("Exported to ${file.name}")
@@ -3029,6 +3086,27 @@ class EditorViewModel @Inject constructor(
     }
 
     // Project persistence
+    private fun buildAutoSaveState(
+        state: EditorState = _state.value,
+        projectId: String = state.project.id
+    ): AutoSaveState {
+        return AutoSaveState(
+            projectId = projectId,
+            tracks = state.tracks,
+            textOverlays = state.textOverlays,
+            imageOverlays = state.imageOverlays,
+            timelineMarkers = state.timelineMarkers,
+            playheadMs = state.playheadMs,
+            chapterMarkers = state.chapterMarkers,
+            drawingPaths = state.drawingPaths,
+            beatMarkers = state.beatMarkers
+        )
+    }
+
+    private fun sanitizedProjectFileStem(name: String): String {
+        return sanitizeFileName(name, fallback = "NovaCut")
+    }
+
     fun saveProject() {
         viewModelScope.launch {
             val s = _state.value
@@ -3046,25 +3124,13 @@ class EditorViewModel @Inject constructor(
             _state.update { it.copy(project = project) }
 
             // Persist track/clip data immediately (don't wait for auto-save timer)
-            autoSave.saveNow(
-                project.id,
-                AutoSaveState(
-                    projectId = project.id,
-                    tracks = s.tracks,
-                    textOverlays = s.textOverlays,
-                    imageOverlays = s.imageOverlays,
-                    timelineMarkers = s.timelineMarkers,
-                    playheadMs = s.playheadMs,
-                    chapterMarkers = s.chapterMarkers,
-                    drawingPaths = s.drawingPaths,
-                    beatMarkers = s.beatMarkers
-                )
-            )
+            autoSave.saveNow(project.id, buildAutoSaveState(s, project.id))
         }
     }
 
     fun renameProject(name: String) {
-        _state.update { it.copy(project = it.project.copy(name = name)) }
+        val normalizedName = name.trim().ifBlank { "Untitled" }
+        _state.update { it.copy(project = it.project.copy(name = normalizedName)) }
         saveProject()
     }
 
@@ -3097,15 +3163,20 @@ class EditorViewModel @Inject constructor(
     fun deleteWhisperModel() = aiToolsDelegate.deleteWhisperModel()
     fun saveAsTemplate(name: String) = aiToolsDelegate.saveAsTemplate(name)
 
-    fun exportTemplate(name: String) {
+    fun exportTemplate(templateId: String) {
         viewModelScope.launch {
             try {
-                val dir = File(appContext.getExternalFilesDir(null), "templates")
-                dir.mkdirs()
-                val sanitized = name.replace(Regex("[^a-zA-Z0-9._\\- ]"), "_")
-                val outputFile = File(dir, "$sanitized.novacut-template")
-                val success = templateManager.exportTemplateToFile(name, outputFile)
-                if (success) {
+                val exportResult = withContext(Dispatchers.IO) {
+                    val template = templateManager.getTemplate(templateId) ?: return@withContext null
+                    val dir = File(appContext.getExternalFilesDir(null), "templates").apply { mkdirs() }
+                    val sanitized = sanitizeFileName(template.name, fallback = "template")
+                    val outputFile = File(dir, "$sanitized.novacut-template")
+                    val success = templateManager.exportTemplateToFile(template.id, outputFile)
+                    if (!success) return@withContext null
+                    template to outputFile
+                }
+                if (exportResult != null) {
+                    val (_, outputFile) = exportResult
                     showToast("Template exported: ${outputFile.name}")
                     val uri = androidx.core.content.FileProvider.getUriForFile(
                         appContext, "${appContext.packageName}.fileprovider", outputFile
@@ -3116,7 +3187,10 @@ class EditorViewModel @Inject constructor(
                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     }
-                    appContext.startActivity(Intent.createChooser(shareIntent, "Share Template").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    appContext.startActivity(
+                        Intent.createChooser(shareIntent, "Share Template")
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    )
                 } else {
                     showToast("Template export failed")
                 }

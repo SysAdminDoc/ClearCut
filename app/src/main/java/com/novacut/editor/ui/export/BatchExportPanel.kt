@@ -2,16 +2,7 @@ package com.novacut.editor.ui.export
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -52,6 +43,7 @@ import com.novacut.editor.ui.editor.PremiumPanelIconButton
 import com.novacut.editor.ui.editor.PremiumPanelPill
 import com.novacut.editor.ui.theme.Mocha
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun BatchExportPanel(
     queue: List<BatchExportItem>,
@@ -68,11 +60,12 @@ fun BatchExportPanel(
     val inProgressCount = queue.count { it.status == BatchExportStatus.IN_PROGRESS }
     val completedCount = queue.count { it.status == BatchExportStatus.COMPLETED }
     val failedCount = queue.count { it.status == BatchExportStatus.FAILED }
+    val cancelledCount = queue.count { it.status == BatchExportStatus.CANCELLED }
     val activeLabel = when {
         inProgressCount > 0 -> "$inProgressCount active"
         failedCount > 0 -> "$failedCount needs attention"
         completedCount > 0 -> "$completedCount done"
-        else -> "Ready"
+        else -> stringResource(R.string.batch_export_status_ready)
     }
 
     PremiumEditorPanel(
@@ -104,13 +97,13 @@ fun BatchExportPanel(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Delivery queue",
+                        text = stringResource(R.string.batch_export_queue_title),
                         style = MaterialTheme.typography.titleMedium,
                         color = Mocha.Text
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "Build a stack of exports for different platforms and let NovaCut run them back-to-back.",
+                        text = stringResource(R.string.batch_export_queue_description),
                         style = MaterialTheme.typography.bodyMedium,
                         color = Mocha.Subtext0
                     )
@@ -133,16 +126,37 @@ fun BatchExportPanel(
                 }
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                PremiumPanelPill(text = "$queuedCount queued", accent = Mocha.Blue)
+                PremiumPanelPill(
+                    text = "$queuedCount queued",
+                    accent = Mocha.Blue
+                )
                 if (inProgressCount > 0) {
-                    PremiumPanelPill(text = "$inProgressCount exporting", accent = Mocha.Mauve)
+                    PremiumPanelPill(
+                        text = "$inProgressCount exporting",
+                        accent = Mocha.Mauve
+                    )
                 }
                 if (completedCount > 0) {
-                    PremiumPanelPill(text = "$completedCount done", accent = Mocha.Green)
+                    PremiumPanelPill(
+                        text = "$completedCount done",
+                        accent = Mocha.Green
+                    )
+                }
+                if (failedCount > 0) {
+                    PremiumPanelPill(
+                        text = "$failedCount failed",
+                        accent = Mocha.Red
+                    )
+                }
+                if (cancelledCount > 0) {
+                    PremiumPanelPill(
+                        text = "$cancelledCount cancelled",
+                        accent = Mocha.Yellow
+                    )
                 }
             }
         }
@@ -152,19 +166,19 @@ fun BatchExportPanel(
 
             PremiumPanelCard(accent = Mocha.Blue) {
                 Text(
-                    text = "Add export targets",
+                    text = stringResource(R.string.batch_export_add_platform_preset),
                     style = MaterialTheme.typography.titleMedium,
                     color = Mocha.Text
                 )
                 Text(
-                    text = "Tap any preset to drop it straight into the queue, then add utility exports for stems or an audio-only master.",
+                    text = stringResource(R.string.batch_export_add_targets_description),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Mocha.Subtext0
                 )
 
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     PlatformPreset.entries.forEach { preset ->
                         FilterChip(
@@ -178,7 +192,6 @@ fun BatchExportPanel(
                                     platformPreset = preset
                                 )
                                 onAddItem(config, preset.displayName)
-                                showPresetPicker = false
                             },
                             label = {
                                 Text(
@@ -196,9 +209,9 @@ fun BatchExportPanel(
                     }
                 }
 
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     UtilityExportChip(
                         label = audioOnlyLabel,
@@ -208,7 +221,6 @@ fun BatchExportPanel(
                                 ExportConfig(exportAudioOnly = true),
                                 audioOnlyLabel
                             )
-                            showPresetPicker = false
                         }
                     )
                     UtilityExportChip(
@@ -219,7 +231,6 @@ fun BatchExportPanel(
                                 ExportConfig(exportStemsOnly = true),
                                 audioStemsLabel
                             )
-                            showPresetPicker = false
                         }
                     )
                 }
@@ -230,7 +241,7 @@ fun BatchExportPanel(
 
         PremiumPanelCard(accent = Mocha.Green) {
             Text(
-                text = "Queued exports",
+                text = stringResource(R.string.batch_export_queued_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = Mocha.Text
             )
@@ -238,7 +249,7 @@ fun BatchExportPanel(
                 text = if (queue.isEmpty()) {
                     stringResource(R.string.batch_export_empty_queue)
                 } else {
-                    "Watch progress here, remove anything you do not need, and launch the full queue when you are ready."
+                    stringResource(R.string.batch_export_queued_description)
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = Mocha.Subtext0
@@ -256,12 +267,12 @@ fun BatchExportPanel(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            text = "Nothing queued yet",
+                            text = stringResource(R.string.batch_export_empty_title),
                             style = MaterialTheme.typography.titleSmall,
                             color = Mocha.Text
                         )
                         Text(
-                            text = "Open the add control to line up YouTube, TikTok, square, or audio-only exports in one place.",
+                            text = stringResource(R.string.batch_export_empty_description),
                             style = MaterialTheme.typography.bodySmall,
                             color = Mocha.Subtext0
                         )
@@ -284,12 +295,12 @@ fun BatchExportPanel(
 
             PremiumPanelCard(accent = Mocha.Green) {
                 Text(
-                    text = "Run the batch",
+                    text = stringResource(R.string.batch_export_run_title),
                     style = MaterialTheme.typography.titleMedium,
                     color = Mocha.Text
                 )
                 Text(
-                    text = "NovaCut will export each preset in order and keep status here for every item in the stack.",
+                    text = stringResource(R.string.batch_export_run_description),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Mocha.Subtext0
                 )
@@ -349,12 +360,13 @@ private fun BatchExportItemRow(
         BatchExportStatus.CANCELLED -> Mocha.Yellow
     }
     val statusLabel = when (item.status) {
-        BatchExportStatus.QUEUED -> "Queued"
+        BatchExportStatus.QUEUED -> stringResource(R.string.batch_export_status_queued)
         BatchExportStatus.IN_PROGRESS -> "${(item.progress * 100).toInt().coerceIn(0, 100)}%"
-        BatchExportStatus.COMPLETED -> "Done"
-        BatchExportStatus.FAILED -> "Failed"
-        BatchExportStatus.CANCELLED -> "Cancelled"
+        BatchExportStatus.COMPLETED -> stringResource(R.string.batch_export_done_cd)
+        BatchExportStatus.FAILED -> stringResource(R.string.batch_export_failed_cd)
+        BatchExportStatus.CANCELLED -> stringResource(R.string.batch_export_cancelled_cd)
     }
+    val removable = item.status != BatchExportStatus.IN_PROGRESS
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -402,50 +414,22 @@ private fun BatchExportItemRow(
                         accent = accent
                     )
 
-                    when (item.status) {
-                        BatchExportStatus.QUEUED -> {
-                            PremiumPanelIconButton(
-                                icon = Icons.Default.Close,
-                                contentDescription = stringResource(R.string.batch_export_remove_cd),
-                                onClick = onRemove,
-                                tint = Mocha.Subtext0
-                            )
-                        }
-
-                        BatchExportStatus.IN_PROGRESS -> {
-                            CircularProgressIndicator(
-                                progress = { item.progress.coerceIn(0f, 1f) },
-                                modifier = Modifier
-                                    .width(24.dp)
-                                    .height(24.dp),
-                                color = Mocha.Mauve,
-                                strokeWidth = 2.5.dp
-                            )
-                        }
-
-                        BatchExportStatus.COMPLETED -> {
-                            androidx.compose.material3.Icon(
-                                imageVector = Icons.Default.CheckCircle,
-                                contentDescription = stringResource(R.string.batch_export_done_cd),
-                                tint = Mocha.Green
-                            )
-                        }
-
-                        BatchExportStatus.FAILED -> {
-                            androidx.compose.material3.Icon(
-                                imageVector = Icons.Default.Error,
-                                contentDescription = stringResource(R.string.batch_export_failed_cd),
-                                tint = Mocha.Red
-                            )
-                        }
-
-                        BatchExportStatus.CANCELLED -> {
-                            androidx.compose.material3.Icon(
-                                imageVector = Icons.Default.Cancel,
-                                contentDescription = stringResource(R.string.batch_export_cancelled_cd),
-                                tint = Mocha.Yellow
-                            )
-                        }
+                    if (removable) {
+                        PremiumPanelIconButton(
+                            icon = Icons.Default.Close,
+                            contentDescription = stringResource(R.string.batch_export_remove_cd),
+                            onClick = onRemove,
+                            tint = Mocha.Subtext0
+                        )
+                    } else {
+                        CircularProgressIndicator(
+                            progress = { item.progress.coerceIn(0f, 1f) },
+                            modifier = Modifier
+                                .width(24.dp)
+                                .height(24.dp),
+                            color = Mocha.Mauve,
+                            strokeWidth = 2.5.dp
+                        )
                     }
                 }
             }
@@ -462,7 +446,7 @@ private fun BatchExportItemRow(
                         trackColor = Mocha.Surface1
                     )
                     Text(
-                        text = "Export in progress",
+                        text = stringResource(R.string.batch_export_status_in_progress),
                         style = MaterialTheme.typography.labelMedium,
                         color = Mocha.Subtext0
                     )
@@ -472,23 +456,26 @@ private fun BatchExportItemRow(
     }
 }
 
+@Composable
 private fun ExportConfig.describeForQueue(): String = buildString {
     append(platformPreset?.displayName ?: resolution.label)
-    append(" | ")
+    append(" • ")
     when {
         exportAudioOnly -> {
-            append("Audio Only | ")
+            append(stringResource(R.string.batch_export_suffix_audio_only))
+            append(" • ")
             append(audioCodec.label)
         }
 
         exportStemsOnly -> {
-            append("Stems | ")
+            append(stringResource(R.string.batch_export_suffix_stems))
+            append(" • ")
             append(audioCodec.label)
         }
 
         else -> {
             append(aspectRatio.label)
-            append(" | ")
+            append(" • ")
             append(codec.label)
         }
     }

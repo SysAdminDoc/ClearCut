@@ -1,5 +1,37 @@
 # Changelog
 
+## v3.27.0 — Export & Archive Overhaul, UI Density Pass, File Safety
+
+### Engine / Core
+- **Centralized file-name sanitization** — New `FileNaming.kt` utility replaces 6+ scattered inline regex calls with a single function that handles Windows reserved names, control chars, and extension preservation. All export/archive/template file paths now use it.
+- **ProjectArchive rewrite** — Archives now include a `media_manifest.json` for reliable round-tripping of media URIs. Compound clips and image overlays are archived. Import rolls back created directories on failure and rewrites media URIs via manifest + fallback matching.
+- **ProjectAutoSave.saveNow() is now suspend** — Removed `runBlocking` wrapper that could freeze the main thread during manual saves.
+- **TemplateManager refactor** — DRY JSON serialization/deserialization via `templateToJson`/`parseTemplateJson`. Export by template ID instead of name. Duplicate name detection on import. Template stateJson is validated on load (corrupt templates are skipped instead of crashing).
+- **Scoped-storage backup export** — Backup `.novacut` files are now written via MediaStore on API 29+ instead of direct filesystem access, fixing permission failures on Android 11+.
+- **Backup import restores full state** — Beat markers, playhead position, and duration are now restored; panels are dismissed and the player timeline rebuilt after import.
+
+### Export
+- **Named output files** — Exports now use the project name (or batch item name) instead of `NovaCut_<timestamp>`, with automatic `(2)`, `(3)` collision avoidance.
+- **MediaScanner on pre-Q save** — Legacy save-to-gallery path now calls `MediaScannerConnection` so files appear in the gallery immediately.
+- **Batch export summary** — Toast now reports passed/failed counts instead of a generic "complete" message.
+
+### UI / Layout
+- **Compact top bar** — EditorTopBar adapts sizing and spacing on screens narrower than 430dp. Home icon replaced with a standard ArrowBack.
+- **FlowRow everywhere** — Timeline info chips, export preset chips, batch export status pills, and export sheet sections now wrap instead of scrolling horizontally, preventing clipped or unreachable controls on narrow screens.
+- **ExportSheet restructured** — Sections wrapped in descriptive cards. Summary hero, pills, and primary button label adapt to the active export mode (video, audio, stems, GIF, frame capture).
+- **MediaPicker restructured** — Grouped into "Import from Library" and "Capture on Device" section cards with descriptions.
+- **ProjectTemplateSheet** — Built-in and saved template sections have description text and an empty-state placeholder.
+- **SettingsScreen** — Every section and picker now has a subtitle description for discoverability.
+- **ProjectListScreen** — Added inline rename dialog for projects.
+- **BatchExportPanel** — Failed/cancelled status pills; simplified item row (removable vs. in-progress only); `describeForQueue()` is now `@Composable` for string resources.
+
+### Strings
+- 50+ new string resources for section descriptions, batch export states, media picker labels, and settings subtitles.
+
+### Build & Test
+- JUnit 4 test dependency added; `FileNamingTest.kt` covers the new sanitization utility.
+- `versionCode 87 -> 88`, `versionName 3.26.0 -> 3.27.0`
+
 ## v3.26.0 — QA Audit: Crash, Leak & Persistence Fixes
 
 ### Crash Fixes
