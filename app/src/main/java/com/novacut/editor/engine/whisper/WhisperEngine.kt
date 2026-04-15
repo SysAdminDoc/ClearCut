@@ -290,81 +290,81 @@ class WhisperEngine @Inject constructor(
         for (step in 0 until MAX_DECODE_TOKENS) {
             val inputIds = LongBuffer.wrap(tokens.toLongArray())
             val inputShape = longArrayOf(1, tokens.size.toLong())
-            val idTensor = OnnxTensor.createTensor(env, inputIds, inputShape)
+            var idTensor: OnnxTensor? = OnnxTensor.createTensor(env, inputIds, inputShape)
+            var results: OrtSession.Result? = null
 
+            val bestToken: Int
             try {
-                val results = session.run(mapOf(
+                results = session.run(mapOf(
                     "input_ids" to idTensor,
                     "encoder_hidden_states" to encoderOutput
                 ))
 
                 val logits = results.firstOrNull()?.value as? OnnxTensor
-                if (logits == null) {
-                    results.close()
-                    idTensor.close()
-                    break
-                }
+                if (logits == null) break
+
                 val logitsData = logits.floatBuffer
                 val vocabSize = logits.info.shape[2].toInt()
                 val seqLen = logits.info.shape[1].toInt()
 
                 // Get logits for last token position
                 val lastOffset = (seqLen - 1) * vocabSize
-                var bestToken = 0
+                var best = 0
                 var bestLogit = -Float.MAX_VALUE
                 for (t in 0 until vocabSize) {
                     val l = logitsData.get(lastOffset + t)
                     if (l > bestLogit) {
                         bestLogit = l
-                        bestToken = t
+                        best = t
                     }
                 }
-
-                results.close()
-                idTensor.close()
-
-                // End of text
-                if (bestToken == EOT) break
-
-                // No speech detected
-                if (bestToken == NO_SPEECH && tokens.size <= 4) break
-
-                tokens.add(bestToken.toLong())
-
-                // Process timestamp tokens
-                if (bestToken >= TIMESTAMP_BEGIN) {
-                    val timestampMs = ((bestToken - TIMESTAMP_BEGIN) * 20).toLong()
-
-                    // Collect text between last two timestamps
-                    val textTokens = mutableListOf<Int>()
-                    var startTs = lastTimestampMs
-                    for (i in tokens.indices.reversed()) {
-                        val t = tokens[i].toInt()
-                        if (t >= TIMESTAMP_BEGIN && tokens[i] != bestToken.toLong()) {
-                            startTs = ((t - TIMESTAMP_BEGIN) * 20).toLong()
-                            break
-                        }
-                        if (t < TIMESTAMP_BEGIN && t != SOT && t != EN &&
-                            t != TRANSCRIBE && t != NO_TIMESTAMPS && t != NO_SPEECH) {
-                            textTokens.add(0, t)
-                        }
-                    }
-
-                    if (textTokens.isNotEmpty()) {
-                        val text = decodeTokens(textTokens, vocab).trim()
-                        if (text.isNotBlank()) {
-                            segments.add(WhisperSegment(
-                                startMs = chunkOffsetMs + startTs,
-                                endMs = chunkOffsetMs + timestampMs,
-                                text = text
-                            ))
-                        }
-                    }
-                    lastTimestampMs = timestampMs
-                }
+                bestToken = best
             } catch (e: Exception) {
-                idTensor.close()
                 break
+            } finally {
+                results?.close()
+                idTensor?.close()
+                idTensor = null
+            }
+
+            // End of text
+            if (bestToken == EOT) break
+
+            // No speech detected
+            if (bestToken == NO_SPEECH && tokens.size <= 4) break
+
+            tokens.add(bestToken.toLong())
+
+            // Process timestamp tokens
+            if (bestToken >= TIMESTAMP_BEGIN) {
+                val timestampMs = ((bestToken - TIMESTAMP_BEGIN) * 20).toLong()
+
+                // Collect text between last two timestamps
+                val textTokens = mutableListOf<Int>()
+                var startTs = lastTimestampMs
+                for (i in tokens.indices.reversed()) {
+                    val t = tokens[i].toInt()
+                    if (t >= TIMESTAMP_BEGIN && tokens[i] != bestToken.toLong()) {
+                        startTs = ((t - TIMESTAMP_BEGIN) * 20).toLong()
+                        break
+                    }
+                    if (t < TIMESTAMP_BEGIN && t != SOT && t != EN &&
+                        t != TRANSCRIBE && t != NO_TIMESTAMPS && t != NO_SPEECH) {
+                        textTokens.add(0, t)
+                    }
+                }
+
+                if (textTokens.isNotEmpty()) {
+                    val text = decodeTokens(textTokens, vocab).trim()
+                    if (text.isNotBlank()) {
+                        segments.add(WhisperSegment(
+                            startMs = chunkOffsetMs + startTs,
+                            endMs = chunkOffsetMs + timestampMs,
+                            text = text
+                        ))
+                    }
+                }
+                lastTimestampMs = timestampMs
             }
         }
 

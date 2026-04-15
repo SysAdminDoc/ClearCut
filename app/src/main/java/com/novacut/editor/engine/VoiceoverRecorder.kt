@@ -23,6 +23,7 @@ class VoiceoverRecorderEngine @Inject constructor(
     private val _isRecording = MutableStateFlow(false)
     val isRecording: StateFlow<Boolean> = _isRecording
 
+    @Synchronized
     fun startRecording(): File? {
         // Release any existing recorder to prevent resource leak on double-start
         if (recorder != null) {
@@ -66,6 +67,7 @@ class VoiceoverRecorderEngine @Inject constructor(
         }
     }
 
+    @Synchronized
     fun stopRecording(): Uri? {
         val file = outputFile
         return try {
@@ -92,6 +94,7 @@ class VoiceoverRecorderEngine @Inject constructor(
         } else 0L
     }
 
+    @Synchronized
     fun release() {
         try { recorder?.stop() } catch (e: Exception) { Log.w("VoiceoverRecorder", "Failed to stop recorder on release", e) }
         recorder?.release()

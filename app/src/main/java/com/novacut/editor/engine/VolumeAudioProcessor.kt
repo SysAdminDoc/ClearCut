@@ -54,17 +54,20 @@ internal class VolumeAudioProcessor(
             }
 
             if (fadeInMs > 0 && timeMs < fadeInMs) {
-                gain *= timeMs.toFloat() / fadeInMs
+                gain *= timeMs.toFloat() / fadeInMs.toFloat()
             }
 
-            if (fadeOutMs > 0 && timeMs > clipDurationMs - fadeOutMs) {
+            if (fadeOutMs > 0 && clipDurationMs > fadeOutMs && timeMs > clipDurationMs - fadeOutMs) {
                 val rem = (clipDurationMs - timeMs).coerceAtLeast(0L)
-                gain *= rem.toFloat() / fadeOutMs
+                gain *= rem.toFloat() / fadeOutMs.toFloat()
             }
 
             gain *= postGain
 
-            val scaled = (sample * gain).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
+            // Guard against NaN/Inf from degenerate fade parameters
+            if (gain.isNaN() || gain.isInfinite()) gain = volume
+
+            val scaled = (sample.toFloat() * gain).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
             outputBuffer.putShort(scaled.toShort())
             processedFrames++
         }

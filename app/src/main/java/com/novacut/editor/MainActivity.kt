@@ -90,7 +90,16 @@ class MainActivity : ComponentActivity() {
 
     private fun handleIncomingIntent(intent: Intent?) {
         if (intent?.action == Intent.ACTION_VIEW && intent.data != null) {
-            pendingVideoUri = intent.data
+            val uri = intent.data ?: return
+            // Only accept content:// URIs — file:// is a security risk from other apps
+            if (uri.scheme != "content") return
+            // Verify the URI is actually readable before accepting it
+            try {
+                contentResolver.getType(uri) ?: return
+                pendingVideoUri = uri
+            } catch (_: Exception) {
+                // Ignore unreadable or malicious URIs
+            }
         }
     }
 }

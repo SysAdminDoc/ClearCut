@@ -115,7 +115,9 @@ class SettingsRepository @Inject constructor(
     }
 
     suspend fun updateDefaultCodec(value: String) {
-        context.dataStore.edit { it[Keys.DEFAULT_CODEC] = value }
+        // Validate against known enum values to prevent storing garbage from corrupt settings
+        val validated = try { VideoCodec.valueOf(value).name } catch (_: IllegalArgumentException) { return }
+        context.dataStore.edit { it[Keys.DEFAULT_CODEC] = validated }
     }
 
     suspend fun updateProxyEnabled(enabled: Boolean) {
@@ -196,6 +198,7 @@ class SettingsRepository @Inject constructor(
     }
 
     suspend fun updateDefaultExportQuality(value: String) {
-        context.dataStore.edit { it[Keys.DEFAULT_EXPORT_QUALITY] = value }
+        val validated = try { ExportQuality.valueOf(value).name } catch (_: IllegalArgumentException) { return }
+        context.dataStore.edit { it[Keys.DEFAULT_EXPORT_QUALITY] = validated }
     }
 }

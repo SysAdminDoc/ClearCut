@@ -252,7 +252,9 @@ class ExportDelegate(
     }
 
     fun startBatchExport() {
-        val queue = stateFlow.value.batchExportQueue
+        // Snapshot the queue and per-item configs up front so UI-side config
+        // changes that happen while exports are running can't corrupt the batch.
+        val queue = stateFlow.value.batchExportQueue.toList()
         if (queue.isEmpty()) {
             showToast("Add export items first")
             return

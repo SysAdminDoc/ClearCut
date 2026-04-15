@@ -65,13 +65,21 @@ class ProjectAutoSave @Inject constructor(
     }
 
     suspend fun loadRecoveryData(projectId: String): AutoSaveState? = withContext(Dispatchers.IO) {
-        // Clean up stale temp file if present
+        // Clean up stale temp file from interrupted save
         val tempFile = File(autoSaveDir, "${projectId}.tmp")
         if (tempFile.exists()) {
             Log.w(TAG, "Cleaning up stale temp file for $projectId")
             tempFile.delete()
         }
         val file = getAutoSaveFile(projectId)
+        val backupFile = File(autoSaveDir, "${projectId}.bak")
+        // If main file is missing but backup exists, a save was interrupted — restore
+        if (!file.exists() && backupFile.exists()) {
+            Log.w(TAG, "Restoring auto-save from backup for $projectId")
+            backupFile.renameTo(file)
+        } else {
+            backupFile.delete()
+        }
         if (!file.exists()) return@withContext null
         try {
             AutoSaveState.deserialize(file.readText())
@@ -116,25 +124,37 @@ class ProjectAutoSave @Inject constructor(
 
     fun release() {
         autoSaveJob?.cancel()
-        runBlocking {
-            saveMutex.withLock { /* wait for any in-flight save to finish */ }
-        }
+        autoSaveJob = null
+        // Cancel the entire scope which also cancels any in-flight save.
+        // This is safe because saveState() is idempotent — an incomplete write
+        // leaves only a .tmp file which loadRecoveryData() cleans up on next launch.
         scope.cancel()
     }
 
     private suspend fun saveState(projectId: String, state: AutoSaveState) = saveMutex.withLock {
         val file = getAutoSaveFile(projectId)
         val tempFile = File(autoSaveDir, "${projectId}.tmp")
+        val backupFile = File(autoSaveDir, "${projectId}.bak")
         try {
             tempFile.writeText(state.serialize())
-            // renameTo can fail on some filesystems — fallback to copy+delete
+            // Keep a backup of the previous save so a failed rename/copy doesn't lose data
+            if (file.exists()) {
+                backupFile.delete()
+                file.renameTo(backupFile)
+            }
+            // renameTo can fail on some filesystems (e.g. VMware HGFS) — fallback to copy+delete
             if (!tempFile.renameTo(file)) {
                 tempFile.copyTo(file, overwrite = true)
                 tempFile.delete()
             }
+            // Successful write — remove backup
+            backupFile.delete()
         } catch (e: Exception) {
-            // Clean up temp file on failure to prevent stale data
+            // Restore from backup if the new write failed partway
             tempFile.delete()
+            if (!file.exists() && backupFile.exists()) {
+                backupFile.renameTo(file)
+            }
             throw e
         }
     }

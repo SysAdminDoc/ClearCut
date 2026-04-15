@@ -315,8 +315,14 @@ class VideoEngine @Inject constructor(
         onComplete: () -> Unit = {},
         onError: (Exception) -> Unit = {}
     ) {
-        if (_exportState.value == ExportState.EXPORTING) { Log.w(TAG, "Export already in progress"); return }
-        _exportState.value = ExportState.EXPORTING
+        // Atomic check-and-set to prevent two concurrent exports from racing
+        synchronized(this) {
+            if (_exportState.value == ExportState.EXPORTING) {
+                Log.w(TAG, "Export already in progress")
+                return
+            }
+            _exportState.value = ExportState.EXPORTING
+        }
         _exportProgress.value = 0f
 
         try {
