@@ -35,6 +35,7 @@ import com.novacut.editor.R
 import com.novacut.editor.model.Project
 import com.novacut.editor.model.SortMode
 import com.novacut.editor.ui.theme.Mocha
+import java.util.Locale
 
 @Composable
 fun ProjectListScreen(
@@ -832,7 +833,7 @@ private fun formatDuration(ms: Long): String {
     val totalSeconds = ms / 1000
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
-    return "$minutes:%02d".format(seconds)
+    return String.format(Locale.US, "%d:%02d", minutes, seconds)
 }
 
 @Composable

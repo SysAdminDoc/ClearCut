@@ -1,0 +1,966 @@
+--------- beginning of main
+04-11 16:19:11.722   808   808 W binder:808_D: type=1400 audit(0.0:52): avc:  denied  { getopt } for  scontext=u:r:system_server:s0 tcontext=u:r:shell:s0 tclass=unix_stream_socket permissive=0
+04-11 16:19:11.730   808  1680 E SystemServiceRegistry: No service published for: persistent_data_block
+04-11 16:19:11.730   808  1680 E SystemServiceRegistry: android.os.ServiceManager$ServiceNotFoundException: No service published for: persistent_data_block
+04-11 16:19:11.730   808  1680 E SystemServiceRegistry: 	at android.os.ServiceManager.getServiceOrThrow(ServiceManager.java:203)
+04-11 16:19:11.730   808  1680 E SystemServiceRegistry: 	at android.app.SystemServiceRegistry$86.createService(SystemServiceRegistry.java:1201)
+04-11 16:19:11.730   808  1680 E SystemServiceRegistry: 	at android.app.SystemServiceRegistry$86.createService(SystemServiceRegistry.java:1198)
+04-11 16:19:11.730   808  1680 E SystemServiceRegistry: 	at android.app.SystemServiceRegistry$StaticServiceFetcher.getService(SystemServiceRegistry.java:2610)
+04-11 16:19:11.730   808  1680 E SystemServiceRegistry: 	at android.app.SystemServiceRegistry.getSystemService(SystemServiceRegistry.java:2063)
+04-11 16:19:11.730   808  1680 E SystemServiceRegistry: 	at android.app.ContextImpl.getSystemService(ContextImpl.java:2434)
+04-11 16:19:11.730   808  1680 E SystemServiceRegistry: 	at android.content.Context.getSystemService(Context.java:4901)
+04-11 16:19:11.730   808  1680 E SystemServiceRegistry: 	at com.android.server.pm.PackageInstallerSession.markAsSealed(PackageInstallerSession.java:2573)
+04-11 16:19:11.730   808  1680 E SystemServiceRegistry: 	at com.android.server.pm.PackageInstallerSession.commit(PackageInstallerSession.java:2323)
+04-11 16:19:11.730   808  1680 E SystemServiceRegistry: 	at android.content.pm.PackageInstaller$Session.commit(PackageInstaller.java:2343)
+04-11 16:19:11.730   808  1680 E SystemServiceRegistry: 	at com.android.server.pm.PackageManagerShellCommand.doCommitSession(PackageManagerShellCommand.java:4390)
+04-11 16:19:11.730   808  1680 E SystemServiceRegistry: 	at com.android.server.pm.PackageManagerShellCommand.doRunInstall(PackageManagerShellCommand.java:1651)
+04-11 16:19:11.730   808  1680 E SystemServiceRegistry: 	at com.android.server.pm.PackageManagerShellCommand.runInstall(PackageManagerShellCommand.java:1572)
+04-11 16:19:11.730   808  1680 E SystemServiceRegistry: 	at com.android.server.pm.PackageManagerShellCommand.onCommand(PackageManagerShellCommand.java:246)
+04-11 16:19:11.730   808  1680 E SystemServiceRegistry: 	at com.android.modules.utils.BasicShellCommandHandler.exec(BasicShellCommandHandler.java:97)
+04-11 16:19:11.730   808  1680 E SystemServiceRegistry: 	at android.os.ShellCommand.exec(ShellCommand.java:38)
+04-11 16:19:11.730   808  1680 E SystemServiceRegistry: 	at com.android.server.pm.PackageManagerService$IPackageManagerImpl.onShellCommand(PackageManagerService.java:6721)
+04-11 16:19:11.730   808  1680 E SystemServiceRegistry: 	at android.os.Binder.shellCommand(Binder.java:1183)
+04-11 16:19:11.730   808  1680 E SystemServiceRegistry: 	at android.os.Binder.onTransact(Binder.java:961)
+04-11 16:19:11.730   808  1680 E SystemServiceRegistry: 	at android.content.pm.IPackageManager$Stub.onTransact(IPackageManager.java:4666)
+04-11 16:19:11.730   808  1680 E SystemServiceRegistry: 	at com.android.server.pm.PackageManagerService$IPackageManagerImpl.onTransact(PackageManagerService.java:6705)
+04-11 16:19:11.730   808  1680 E SystemServiceRegistry: 	at android.os.Binder.execTransactInternal(Binder.java:1478)
+04-11 16:19:11.730   808  1680 E SystemServiceRegistry: 	at android.os.Binder.execTransact(Binder.java:1418)
+--------- beginning of system
+04-11 16:19:11.731   808  1680 E SystemServiceRegistry: Manager wrapper not available: persistent_data_block
+04-11 16:19:11.764   808  7755 D FileSystemUtils: Total number of LOAD segments 2
+04-11 16:19:11.764   808  7755 D FileSystemUtils: Size before punching holes st_blocks: 130520, st_blksize: 4096, st_size: 66818788
+04-11 16:19:11.764   808  7755 D FileSystemUtils: Size after punching holes st_blocks: 130520, st_blksize: 4096, st_size: 66818788
+04-11 16:19:11.764   808  7755 D FileSystemUtils: Extra field length: 5553,  Size before punching holes st_blocks: 130520, st_blksize: 4096, st_size: 66818788
+04-11 16:19:11.764   808  7755 D FileSystemUtils: Extra field length: 5553 content near offset: 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+04-11 16:19:11.764   808  7755 D FileSystemUtils: Punching hole in file - start: 64598016 len:4096
+04-11 16:19:11.764   808  7755 D FileSystemUtils: punchHolesInApk:: Size after punching holes st_blocks: 130512, st_blksize: 4096, st_size: 66818788
+04-11 16:19:11.764   808  7755 D FileSystemUtils: Total number of LOAD segments 3
+04-11 16:19:11.764   808  7755 D FileSystemUtils: Size before punching holes st_blocks: 130512, st_blksize: 4096, st_size: 66818788
+04-11 16:19:11.764   808  7755 D FileSystemUtils: Size after punching holes st_blocks: 130512, st_blksize: 4096, st_size: 66818788
+04-11 16:19:11.764   808  7755 D FileSystemUtils: Extra field length: 11167,  Size before punching holes st_blocks: 130512, st_blksize: 4096, st_size: 66818788
+04-11 16:19:11.764   808  7755 D FileSystemUtils: Extra field length: 11167 content near offset: 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+04-11 16:19:11.764   808  7755 D FileSystemUtils: Punching hole in file - start: 64577536 len:8192
+04-11 16:19:11.764   808  7755 D FileSystemUtils: punchHolesInApk:: Size after punching holes st_blocks: 130496, st_blksize: 4096, st_size: 66818788
+04-11 16:19:11.770   808   905 V Configuration: Updating configuration, locales updated from [] to [en_US]
+04-11 16:19:11.775   808   905 I PackageManager: Update package com.sysadmindoc.callshield code path from /data/app/~~9mmXQU-twMCbDbaEjDXvPQ==/com.sysadmindoc.callshield-WbMswS89dO2WLtRnKTBDWQ== to /data/app/vmdl262419706.tmp; Retain data and using new
+04-11 16:19:11.818   808   905 I AppsFilter: interaction: PackageSetting{6dd31cd com.android.microdroid.empty_payload/10217} -> PackageSetting{7554ddc com.sysadmindoc.callshield/10228} BLOCKED
+04-11 16:19:11.818   808   905 I AppsFilter: interaction: PackageSetting{f1a2b1 com.novacut.editor/10227} -> PackageSetting{7554ddc com.sysadmindoc.callshield/10228} BLOCKED
+04-11 16:19:11.818   808   905 I AppsFilter: interaction: PackageSetting{6dd31cd com.android.microdroid.empty_payload/10217} -> PackageSetting{8b918a0 com.sysadmindoc.callshield/10228} BLOCKED
+04-11 16:19:11.818   808   905 I AppsFilter: interaction: PackageSetting{f1a2b1 com.novacut.editor/10227} -> PackageSetting{8b918a0 com.sysadmindoc.callshield/10228} BLOCKED
+04-11 16:19:11.842   808   878 I ActivityManager: Force stopping com.sysadmindoc.callshield appid=10228 user=-1: installPackageLI
+04-11 16:19:11.845   808   878 I ActivityManager: Killing 6385:com.sysadmindoc.callshield/u0a228 (adj 700): stop com.sysadmindoc.callshield due to installPackageLI
+04-11 16:19:11.845   808   905 I PackageManager: installation completed for package:com.sysadmindoc.callshield. Final code path: /data/app/~~AHCE5zqr0cbVR83VEnoMEg==/com.sysadmindoc.callshield-vRuJdOtkd_KMAdfbZ7QqZg==
+04-11 16:19:11.845   808   905 I AppsFilter: interaction: PackageSetting{742a4d1 com.android.microdroid.empty_payload/10217} -> PackageSetting{e355a6c com.sysadmindoc.callshield/10228} BLOCKED
+04-11 16:19:11.845   808   905 I AppsFilter: interaction: PackageSetting{e2a7745 com.novacut.editor/10227} -> PackageSetting{e355a6c com.sysadmindoc.callshield/10228} BLOCKED
+04-11 16:19:11.846   808   878 D CompatChangeReporter: Compat change id reported: 151861875; UID 10228; state: ENABLED
+04-11 16:19:11.847   808   878 W ActivityTaskManager: Force removing ActivityRecord{206649510 u0 com.sysadmindoc.callshield/.ui.MainActivity t48 f}}: app died, no saved state
+04-11 16:19:11.847   808   878 E TransitionChain: Can't collect into a chain with no transition
+04-11 16:19:11.847   808   878 E TransitionChain: Can't collect into a chain with no transition
+04-11 16:19:11.848   808   931 W UsageStatsService: Unexpected activity event reported! (com.sysadmindoc.callshield/com.sysadmindoc.callshield.ui.MainActivity event : 23 instanceId : 38547092)
+04-11 16:19:11.855  1244  1244 D RecentsView: onTaskRemoved: 48, not handling task stack changes
+04-11 16:19:11.856  1244  1244 D RecentsView: onTaskRemoved: 48, not handling task stack changes
+04-11 16:19:11.856  1095  1163 V ShellTaskOrganizer: Task vanished taskId=48
+04-11 16:19:11.859   808   905 I ActivityManager: Force stopping com.sysadmindoc.callshield appid=10228 user=0: pkg removed
+04-11 16:19:11.861  1095  1163 V ShellTaskOrganizer: Fullscreen Task Vanished: #48
+04-11 16:19:11.862   808   905 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:11.863   808   905 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:11.863   808   905 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:11.863   808   905 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:11.863   808   905 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:11.863   808   905 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:11.863   808   905 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:11.863   808   905 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:11.863   808   905 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:11.871  1095  1163 V ShellDesktopMode: Task Vanished: #48 closed=true
+04-11 16:19:11.872   808  1047 D ShortcutService: received package broadcast intent: Intent { act=android.intent.action.PACKAGE_REMOVED dat=package: flg=0x4000010 (has extras) }
+04-11 16:19:11.876  1095  1163 D ShellDesktopMode: AppToWebRepository: Task 48 is vanishing. Removing task data from repository
+04-11 16:19:11.878  1095  1163 V AppCompat: SingleSurfaceLetterboxController: []
+04-11 16:19:11.878  1095  1163 V AppCompat: MultiSurfaceLetterboxController: []
+04-11 16:19:11.878  1095  1163 V AppCompat: LetterboxInputController: []
+04-11 16:19:11.878  1095  1163 V AppCompat: RoundedCornersLetterboxController: {}
+04-11 16:19:11.878  1244  1244 D b/417220811: invalidateLoadedTasks - previous requestLoadId: -1
+04-11 16:19:11.892   808  1049 D BackgroundInstallControlService: Package event received: 0
+04-11 16:19:11.893   808   808 I Telecom : CarModeTracker: Package com.sysadmindoc.callshield is not tracked.: SSH.oR@APc
+04-11 16:19:11.893   808   808 I Telecom : InCallController: updateCarModeForConnections: car mode apps: : SSH.oR@APc
+04-11 16:19:11.893   808   808 I Telecom : InCallController: update carmode current:UserHandle{0} parent:null: SSH.oR@APc
+04-11 16:19:11.893   808  1005 E AppOps  : attributionTag VCN not declared in manifest of android
+04-11 16:19:11.894  1095  1095 D ControlsListingControllerImpl: ServiceConfig reloaded, count: 0
+04-11 16:19:11.899   808  1049 D BackgroundInstallControlService: Package event received: 0
+04-11 16:19:11.903   808   969 W PackageConfigPersister: App-specific configuration not found for packageName: com.sysadmindoc.callshield and userId: 0
+04-11 16:19:11.907   808   966 V AccessibilityUserState: updateShortcutTargets: type:accessibility_shortcut_target_service, current:{}, new:{}
+04-11 16:19:11.907   808   966 V AccessibilityUserState: updateShortcutTargets: type:accessibility_qs_targets, current:{}, new:{}
+04-11 16:19:11.907   808   966 V AccessibilityUserState: updateShortcutTargets: type:accessibility_button_targets, current:{}, new:{}
+04-11 16:19:11.907   808   966 V AccessibilityUserState: updateShortcutTargets: type:accessibility_gesture_targets, current:{}, new:{}
+04-11 16:19:11.907   808   966 V AccessibilityUserState: updateShortcutTargets: type:accessibility_key_gesture_targets, current:{}, new:{}
+04-11 16:19:11.907   808   966 V AccessibilityManagerService: onUserStateChangedLocked for userId: 0, forceUpdate: false
+04-11 16:19:11.910  7215  7215 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.910  5688  5688 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.910  7326  7326 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.910  5224  5224 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.911  1095  1095 D ControlsListingControllerImpl: ServiceConfig reloaded, count: 0
+04-11 16:19:11.911  1232  1353 I SatelliteAppTracker: onPackageUpdateFinished : com.sysadmindoc.callshield
+04-11 16:19:11.911  1232  1353 I SatelliteAppTracker: onPackageModified : com.sysadmindoc.callshield
+04-11 16:19:11.913   808  1029 D AppWidgetServiceImpl: Trying to notify widget providers changed
+04-11 16:19:11.913  1561  1561 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.913  1400  1400 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.913  4562  4562 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.913  1232  1232 E SmsApplication: com.google.android.apps.messaging lost android:read_cell_broadcasts:  (fixing)
+04-11 16:19:11.913  7389  7389 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.913  7421  7421 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.913  6593  6593 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.913  5368  5368 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.913  1722  1722 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.914  1625  1625 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.914  5260  5260 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.914  1702  1702 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.915  7476  7476 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.916   808   905 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:11.916   808   905 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:11.916   808   905 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:11.916   808   905 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:11.916   808   905 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:11.916   808   905 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:11.916   808   905 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:11.916   808   905 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:11.916   808   905 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:11.916   808  2091 W AppOpService: Ignored setUidMode call for runtime permission app op: uid = 10154, code = READ_CELL_BROADCASTS, mode = allow, callingUid = 1001, oldMode = allow
+04-11 16:19:11.917  1095  1095 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.918  5463  5463 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.918  5290  5290 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.918  1435  1435 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.919  1164  1164 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.919  1764  1764 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.921  1746  1746 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.921  1712  1712 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.922  1095  1095 D ControlsListingControllerImpl: ServiceConfig reloaded, count: 0
+04-11 16:19:11.923   808  1055 I SdkSandboxManager: No SDKs used. Skipping SDK data reconcilation for CallingInfo{mUid=10228, mPackageName='com.sysadmindoc.callshield, mAppProcessToken='null'}
+04-11 16:19:11.925   808  1047 D ShortcutService: received package broadcast intent: Intent { act=android.intent.action.PACKAGE_ADDED dat=package: flg=0x4000010 (has extras) }
+04-11 16:19:11.925   808  1047 D ShortcutService: replacing package: com.sysadmindoc.callshield userId=0
+04-11 16:19:11.926   808  1047 E system_server: No package ID 7f found for resource ID 0x7f050007.
+04-11 16:19:11.926   808  1047 E system_server: No package ID 7f found for resource ID 0x7f0b0272.
+04-11 16:19:11.926   808  1047 E system_server: No package ID 7f found for resource ID 0x7f0b0273.
+04-11 16:19:11.926   808  1047 E system_server: No package ID 7f found for resource ID 0x7f050007.
+04-11 16:19:11.926   808  1047 E system_server: No package ID 7f found for resource ID 0x7f0b0274.
+04-11 16:19:11.926   808  1047 E system_server: No package ID 7f found for resource ID 0x7f0b0275.
+04-11 16:19:11.926   808  1047 E system_server: No package ID 7f found for resource ID 0x7f050007.
+04-11 16:19:11.926   808  1047 E system_server: No package ID 7f found for resource ID 0x7f0b0276.
+04-11 16:19:11.926   808  1047 E system_server: No package ID 7f found for resource ID 0x7f0b0277.
+04-11 16:19:11.926  1216  1216 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.929   808   808 D AS.AudioService: received android.intent.action.PACKAGE_ADDED replacing: true archival: false for package com.sysadmindoc.callshield with uid 10228
+04-11 16:19:11.929  1795  1795 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.932  4445  4445 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.937  1435  1675 I PermissionControllerServiceImpl: Updating user sensitive for uid 10228
+04-11 16:19:11.933   808  2094 W AppOpService: Ignored setUidMode call for runtime permission app op: uid = 1001, code = READ_SMS, mode = allow, callingUid = 1001, oldMode = allow
+04-11 16:19:11.938   808   808 D AppSearchAppsIndexerManagerS: userid in package receiver: 10228
+04-11 16:19:11.938   808   878 D ActivityManager: sync unfroze 4445 com.android.vending for 3
+04-11 16:19:11.939   808   808 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.940  1244  1244 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.943   808   808 W AlarmManager: Package com.sysadmindoc.callshield, uid 10228 lost permission to set exact alarms!
+04-11 16:19:11.948   808   919 W ParceledListSlice: Element #26 is 18668 bytes.
+04-11 16:19:11.949   808   919 W ParceledListSlice: Element #27 is 18848 bytes.
+04-11 16:19:11.949   808   919 W ParceledListSlice: Element #28 is 19108 bytes.
+04-11 16:19:11.949   808   919 W ParceledListSlice: Element #29 is 18572 bytes.
+04-11 16:19:11.949   808  2094 W AppOpService: Ignored setUidMode call for runtime permission app op: uid = 1001, code = RECEIVE_SMS, mode = allow, callingUid = 1001, oldMode = allow
+04-11 16:19:11.949   808   878 D ActivityManager: sync unfroze 4215 com.android.vending:background for 3
+04-11 16:19:11.949   808  2094 W AppOpService: Ignored setUidMode call for runtime permission app op: uid = 1001, code = RECEIVE_WAP_PUSH, mode = allow, callingUid = 1001, oldMode = allow
+04-11 16:19:11.949   808  2094 W AppOpService: Ignored setUidMode call for runtime permission app op: uid = 1001, code = SEND_SMS, mode = allow, callingUid = 1001, oldMode = allow
+04-11 16:19:11.949   808  2094 W AppOpService: Ignored setUidMode call for runtime permission app op: uid = 1001, code = READ_CELL_BROADCASTS, mode = allow, callingUid = 1001, oldMode = allow
+04-11 16:19:11.951   808  1055 I SdkSandboxManager: No SDKs used. Skipping SDK data reconcilation for CallingInfo{mUid=10228, mPackageName='com.sysadmindoc.callshield, mAppProcessToken='null'}
+04-11 16:19:11.953  4445  4445 I Finsky  : [2] onSubscriptionsChanged
+04-11 16:19:11.953  1095  1332 I PluginActionManager[com.android.systemui.action.FALSING_PLUGIN]: Found 0 plugins
+04-11 16:19:11.954  1095  1332 I PluginActionManager[com.android.systemui.action.PLUGIN_SENSOR_MANAGER]: Found 0 plugins
+04-11 16:19:11.954  1095  1332 I PluginActionManager[com.android.systemui.action.PLUGIN_AUTH_CONTEXT]: Found 0 plugins
+04-11 16:19:11.956  5546  5546 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.958  7215  7215 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.958  4215  4215 I Finsky:background: [2] onSubscriptionsChanged
+04-11 16:19:11.959  1244  1244 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.959  1400  1400 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.findmydevice.spot.service.locationreport.START dat=chimera-action:/... xflg=0x4 cmp=com.google.android.gms/.chimera.PersistentApiService }
+04-11 16:19:11.960  1232  1232 D CarrierSvcBindHelper: onPackageUpdateFinished: com.sysadmindoc.callshield
+04-11 16:19:11.960  1702  1702 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.960  5688  5688 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.960  1746  7601 I AiAiEcho: AppIndexer Package:[com.sysadmindoc.callshield] UserProfile:[0] Enabled:[true].
+04-11 16:19:11.960  1746  7601 I AiAiEcho: AppFetcherImplV2 updateApps package:[com.sysadmindoc.callshield], userId:[0], reason:[package is updated.].
+04-11 16:19:11.960  1625  1625 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.960  7326  7326 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.961  1764  1764 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.961  5224  5224 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.961   808   944 I RoleService: Granting default roles...
+04-11 16:19:11.962  1712  1712 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.962  5260  5260 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.962  1561  1561 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.962  5368  5368 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.962  1251  1251 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.962  1095  1332 I PluginActionManager[com.android.systemui.action.PLUGIN_VOLUME]: Found 0 plugins
+04-11 16:19:11.962  5463  5463 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.962  1746  1746 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.962  7476  7476 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.962  6593  6593 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.962  1722  1722 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.962  5546  5546 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.962  4562  4562 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.963  7389  7389 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.963  5290  5290 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.963   808   966 V AccessibilityUserState: updateShortcutTargets: type:accessibility_shortcut_target_service, current:{}, new:{}
+04-11 16:19:11.963   808   966 V AccessibilityUserState: updateShortcutTargets: type:accessibility_button_targets, current:{}, new:{}
+04-11 16:19:11.963   808   966 V AccessibilityUserState: updateShortcutTargets: type:accessibility_gesture_targets, current:{}, new:{}
+04-11 16:19:11.963   808   966 V AccessibilityUserState: updateShortcutTargets: type:accessibility_qs_targets, current:{}, new:{}
+04-11 16:19:11.963  7421  7421 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.963   808   966 V AccessibilityUserState: updateShortcutTargets: type:accessibility_key_gesture_targets, current:{}, new:{}
+04-11 16:19:11.963  1251  1251 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.963  1095  1332 I PluginActionManager[com.android.systemui.action.PLUGIN_TOAST]: Found 0 plugins
+04-11 16:19:11.964   808   905 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:11.964   808   905 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:11.964   808   905 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:11.964   808   905 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:11.964   808   905 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:11.964   808   905 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:11.964   808   905 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:11.964  1795  1795 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.964  1095  1095 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.964  1216  1216 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.964  1164  1164 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.964  1095  1332 I PluginActionManager[com.android.systemui.action.PLUGIN_GLOBAL_ACTIONS]: Found 0 plugins
+04-11 16:19:11.965  1095  1332 I PluginActionManager[com.android.systemui.action.PLUGIN_QS]: Found 0 plugins
+04-11 16:19:11.965  1232  1232 D CarrierSvcBindHelper: No carrier app for: 0
+04-11 16:19:11.966   808   905 D PackageInstallerSession: Marking session 262419706 as applied
+04-11 16:19:11.966  1095  1332 I PluginActionManager[com.android.systemui.action.PLUGIN_NOTIFICATION_ASSISTANT]: Found 0 plugins
+04-11 16:19:11.967  1095  1332 I PluginActionManager[com.android.systemui.action.PLUGIN_OVERLAY]: Found 0 plugins
+04-11 16:19:11.967  1232  1232 D CarrierSvcBindHelper: onPackageModified: com.sysadmindoc.callshield
+04-11 16:19:11.968  1095  1332 I PluginActionManager[com.android.systemui.action.PLUGIN_NOTIFICATION_MENU_ROW]: Found 0 plugins
+04-11 16:19:11.968  1232  1232 D CarrierSvcBindHelper: No carrier app for: 0
+04-11 16:19:11.968  1095  1332 I PluginActionManager[com.android.systemui.action.PLUGIN_NOTIFICATION_MENU_ROW]: Found 0 plugins
+04-11 16:19:11.968  1095  1332 I PluginActionManager[com.android.systemui.action.PLUGIN_NOTIFICATION_MENU_ROW]: Found 0 plugins
+04-11 16:19:11.968  1095  1332 I PluginActionManager[com.android.systemui.action.PLUGIN_NOTIFICATION_MENU_ROW]: Found 0 plugins
+04-11 16:19:11.969   808   966 W MagnificationConnectionManager: requestConnection duplicated request: connect=false, mConnectionState=DISCONNECTED
+04-11 16:19:11.969   808   966 V AccessibilityUserState: updateShortcutTargets: type:accessibility_button_targets, current:{}, new:{}
+04-11 16:19:11.969   808   966 V AccessibilityUserState: updateShortcutTargets: type:accessibility_qs_targets, current:{}, new:{}
+04-11 16:19:11.974  1095  1332 I PluginActionManager[com.android.systemui.action.FALSING_PLUGIN]: Found 0 plugins
+04-11 16:19:11.974  1400  1400 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.975  1095  1332 I PluginActionManager[com.android.systemui.action.PLUGIN_SENSOR_MANAGER]: Found 0 plugins
+04-11 16:19:11.977   808   966 V AccessibilityUserState: updateShortcutTargets: type:accessibility_shortcut_target_service, current:{}, new:{}
+04-11 16:19:11.977   808   966 V AccessibilityUserState: updateShortcutTargets: type:accessibility_qs_targets, current:{}, new:{}
+04-11 16:19:11.977   808   966 V AccessibilityUserState: updateShortcutTargets: type:accessibility_button_targets, current:{}, new:{}
+04-11 16:19:11.977   808   966 V AccessibilityUserState: updateShortcutTargets: type:accessibility_gesture_targets, current:{}, new:{}
+04-11 16:19:11.977   808   966 V AccessibilityUserState: updateShortcutTargets: type:accessibility_key_gesture_targets, current:{}, new:{}
+04-11 16:19:11.978  1095  1332 I PluginActionManager[com.android.systemui.action.PLUGIN_AUTH_CONTEXT]: Found 0 plugins
+04-11 16:19:11.978   808   966 V AccessibilityManagerService: onUserStateChangedLocked for userId: 0, forceUpdate: false
+04-11 16:19:11.980  1435  1435 I SafetyLabelChangedBroadcastReceiver: received broadcast packageName: com.sysadmindoc.callshield, current user: UserHandle{0}, packageChangeEvent: UPDATE, intent user: UserHandle{0}
+04-11 16:19:11.983   808   966 V AccessibilityUserState: updateShortcutTargets: type:accessibility_shortcut_target_service, current:{}, new:{}
+04-11 16:19:11.983   808   966 V AccessibilityUserState: updateShortcutTargets: type:accessibility_button_targets, current:{}, new:{}
+04-11 16:19:11.983   808   966 V AccessibilityUserState: updateShortcutTargets: type:accessibility_gesture_targets, current:{}, new:{}
+04-11 16:19:11.983   808   966 V AccessibilityUserState: updateShortcutTargets: type:accessibility_qs_targets, current:{}, new:{}
+04-11 16:19:11.983   808   966 V AccessibilityUserState: updateShortcutTargets: type:accessibility_key_gesture_targets, current:{}, new:{}
+04-11 16:19:11.983   808   966 W MagnificationConnectionManager: requestConnection duplicated request: connect=false, mConnectionState=DISCONNECTED
+04-11 16:19:11.983  1435  1435 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:11.983  1095  1332 I PluginActionManager[com.android.systemui.action.PLUGIN_VOLUME]: Found 0 plugins
+04-11 16:19:11.987   808   808 D BackupManagerConstants: getFullBackupIntervalMilliseconds(...) returns 86400000
+04-11 16:19:11.987   808   808 D BackupManagerConstants: getFullBackupRequiredNetworkType(...) returns 2
+04-11 16:19:11.987   808   808 D BackupManagerConstants: getFullBackupRequireCharging(...) returns true
+04-11 16:19:11.988  1095  1332 I PluginActionManager[com.android.systemui.action.PLUGIN_TOAST]: Found 0 plugins
+04-11 16:19:11.992   808  2382 V ActivityManager: Got obituary of 6385:com.sysadmindoc.callshield
+04-11 16:19:11.992   808   871 W ActivityManager: setHasOverlayUi called on unknown pid: 6385
+04-11 16:19:11.992   808   915 E AtomicFile: Failed to rename /data/system/install_sessions.xml.new to /data/system/install_sessions.xml
+04-11 16:19:11.993   660   660 I adbd    : Remote process closed the socket (on MSG_PEEK)
+04-11 16:19:11.970   808   808 W binder:808_D: type=1400 audit(0.0:53): avc:  denied  { getopt } for  scontext=u:r:system_server:s0 tcontext=u:r:shell:s0 tclass=unix_stream_socket permissive=0
+04-11 16:19:11.994   808  3415 W SignedPackage: Package doesn't have required signing certificate: com.google.android.retaildemo
+04-11 16:19:11.996  1095  1332 I PluginActionManager[com.android.systemui.action.PLUGIN_GLOBAL_ACTIONS]: Found 0 plugins
+04-11 16:19:11.997  1095  1332 I PluginActionManager[com.android.systemui.action.PLUGIN_QS]: Found 0 plugins
+04-11 16:19:11.997  1095  1332 I PluginActionManager[com.android.systemui.action.PLUGIN_NOTIFICATION_ASSISTANT]: Found 0 plugins
+04-11 16:19:11.997  1095  1332 I PluginActionManager[com.android.systemui.action.PLUGIN_OVERLAY]: Found 0 plugins
+04-11 16:19:11.997  1095  1332 I PluginActionManager[com.android.systemui.action.PLUGIN_NOTIFICATION_MENU_ROW]: Found 0 plugins
+04-11 16:19:11.997  1095  1332 I PluginActionManager[com.android.systemui.action.PLUGIN_NOTIFICATION_MENU_ROW]: Found 0 plugins
+04-11 16:19:11.999  1095  1332 I PluginActionManager[com.android.systemui.action.PLUGIN_NOTIFICATION_MENU_ROW]: Found 0 plugins
+04-11 16:19:11.999  1232  1232 E SmsApplication: com.google.android.apps.messaging lost android:read_cell_broadcasts:  (fixing)
+04-11 16:19:11.999   808  1680 W AppOpService: Ignored setUidMode call for runtime permission app op: uid = 10154, code = READ_CELL_BROADCASTS, mode = allow, callingUid = 1001, oldMode = allow
+04-11 16:19:11.999  1095  1332 I PluginActionManager[com.android.systemui.action.PLUGIN_NOTIFICATION_MENU_ROW]: Found 0 plugins
+04-11 16:19:12.002  4445  4445 I Finsky  : [2] onSubscriptionsChanged
+04-11 16:19:12.002  4445  4445 I Finsky  : [2] onSubscriptionsChanged
+04-11 16:19:12.002  4445  4445 I Finsky  : [2] onSubscriptionsChanged
+04-11 16:19:12.004   808  1680 W AppOpService: Ignored setUidMode call for runtime permission app op: uid = 1001, code = READ_SMS, mode = allow, callingUid = 1001, oldMode = allow
+04-11 16:19:12.005   808  2024 W AppOpService: Ignored setUidMode call for runtime permission app op: uid = 1001, code = RECEIVE_SMS, mode = allow, callingUid = 1001, oldMode = allow
+04-11 16:19:12.005   808  2024 W AppOpService: Ignored setUidMode call for runtime permission app op: uid = 1001, code = RECEIVE_WAP_PUSH, mode = allow, callingUid = 1001, oldMode = allow
+04-11 16:19:12.005   808  2024 W AppOpService: Ignored setUidMode call for runtime permission app op: uid = 1001, code = SEND_SMS, mode = allow, callingUid = 1001, oldMode = allow
+04-11 16:19:12.006   808  2093 W AppOpService: Ignored setUidMode call for runtime permission app op: uid = 1001, code = READ_CELL_BROADCASTS, mode = allow, callingUid = 1001, oldMode = allow
+04-11 16:19:12.006  4215  4215 I Finsky:background: [2] onSubscriptionsChanged
+04-11 16:19:12.006  4215  4215 I Finsky:background: [2] onSubscriptionsChanged
+04-11 16:19:12.006  4215  4215 I Finsky:background: [2] onSubscriptionsChanged
+04-11 16:19:12.007  4215  4215 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:12.013   808  3415 E RoleControllerServiceImpl: Default/fallback role holder package doesn't qualify for the role, package: com.google.android.gms.supervision, role: android.app.role.SYSTEM_SUPERVISION, user: 0
+04-11 16:19:12.014   808  3415 W SignedPackage: Package doesn't have required signing certificate: com.google.android.apps.work.clouddpc
+04-11 16:19:12.017   582   582 I Zygote  : Process 6385 exited due to signal 9 (Killed)
+04-11 16:19:12.017   808   880 I libprocessgroup: Removed cgroup /sys/fs/cgroup/apps/uid_10228/pid_6385
+04-11 16:19:12.018  4445  4445 I Finsky  : [2] Memory trim requested to level 40
+04-11 16:19:12.021  4215  4215 I Finsky:background: [2] Memory trim requested to level 40
+04-11 16:19:12.029  4215  4215 I Finsky:background: [2] Memory trim requested to level 40
+04-11 16:19:12.032  4445  4445 I Finsky  : [2] Flushing in-memory image cache
+04-11 16:19:12.037  4445  4445 I Finsky  : [2] Memory trim requested to level 40
+04-11 16:19:12.037  4445  4445 I Finsky  : [2] Flushing in-memory image cache
+04-11 16:19:12.041  4215  4215 I Finsky:background: [2] aisq - Received: android.intent.action.PACKAGE_REMOVED, [_M8udIDRt1jCC3KNl4SofOPcKFBBeR70vDOApDvHylU]
+04-11 16:19:12.044   808   942 D ActivityManager: freezing 5368 com.google.android.cellbroadcastreceiver
+04-11 16:19:12.047  4445  4445 I Finsky  : [2] aita - Received: android.intent.action.PACKAGE_REMOVED, [_M8udIDRt1jCC3KNl4SofOPcKFBBeR70vDOApDvHylU]
+04-11 16:19:12.055  1435  1440 I ssioncontroller: Background concurrent mark compact GC freed 3036KB AllocSpace bytes, 12(496KB) LOS objects, 49% free, 5704KB/11MB, paused 1.938ms,1.012ms total 178.860ms
+04-11 16:19:12.058  1232  1232 E SmsApplication: com.google.android.apps.messaging lost android:read_cell_broadcasts:  (fixing)
+04-11 16:19:12.058   808  2094 W AppOpService: Ignored setUidMode call for runtime permission app op: uid = 10154, code = READ_CELL_BROADCASTS, mode = allow, callingUid = 1001, oldMode = allow
+04-11 16:19:12.063   808  2091 W AppOpService: Ignored setUidMode call for runtime permission app op: uid = 1001, code = READ_SMS, mode = allow, callingUid = 1001, oldMode = allow
+04-11 16:19:12.065   808   808 D AS.AudioService: received android.intent.action.PACKAGE_REPLACED replacing: true archival: false for package com.sysadmindoc.callshield with uid 10228
+04-11 16:19:12.066   808   808 D AppSearchAppsIndexerManagerS: userid in package receiver: 10228
+04-11 16:19:12.067   808   808 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:12.067   808   808 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:12.075   808   808 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:12.076   808  2038 W AppOpService: Ignored setUidMode call for runtime permission app op: uid = 1001, code = RECEIVE_SMS, mode = allow, callingUid = 1001, oldMode = allow
+04-11 16:19:12.077   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+04-11 16:19:12.078   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+04-11 16:19:12.078   808  5016 V Configuration: Updating configuration, locales updated from [] to [en_US]
+04-11 16:19:12.078   808  5016 V Configuration: Updating configuration, locales updated from [] to [en_US]
+04-11 16:19:12.078   808  5016 V Configuration: Updating configuration, locales updated from [] to [en_US]
+04-11 16:19:12.078   808  5016 V Configuration: Updating configuration, locales updated from [] to [en_US]
+04-11 16:19:12.078   808  5016 V Configuration: Updating configuration, locales updated from [] to [en_US]
+04-11 16:19:12.078   808  5016 V Configuration: Updating configuration, locales updated from [] to [en_US]
+04-11 16:19:12.078   808  5016 V Configuration: Updating configuration, locales updated from [] to [en_US]
+04-11 16:19:12.080   808  2038 W AppOpService: Ignored setUidMode call for runtime permission app op: uid = 1001, code = RECEIVE_WAP_PUSH, mode = allow, callingUid = 1001, oldMode = allow
+04-11 16:19:12.080   808  1000 D InetDiagMessage: Destroyed live tcp sockets for uids={10224} in 3ms
+04-11 16:19:12.082   808  2038 W AppOpService: Ignored setUidMode call for runtime permission app op: uid = 1001, code = SEND_SMS, mode = allow, callingUid = 1001, oldMode = allow
+04-11 16:19:12.085   808  2038 W AppOpService: Ignored setUidMode call for runtime permission app op: uid = 1001, code = READ_CELL_BROADCASTS, mode = allow, callingUid = 1001, oldMode = allow
+04-11 16:19:12.091   808  3415 I Role    : com.google.android.gms not qualified for android.app.role.SYSTEM_DEPENDENCY_INSTALLER due to missing RequiredComponent{mIntentFilterData=IntentFilterData{mAction='android.content.pm.action.INSTALL_DEPENDENCY', mCategories='[]', mDataScheme='null', mDataType='null'}, mMinTargetSdkVersion=1, mFlags='0', mPermission='android.permission.BIND_DEPENDENCY_INSTALLER', mQueryFlags=0, mMetaData=[]}
+04-11 16:19:12.091   808  3415 E RoleControllerServiceImpl: Default/fallback role holder package doesn't qualify for the role, package: com.google.android.gms, role: android.app.role.SYSTEM_DEPENDENCY_INSTALLER, user: 0
+04-11 16:19:12.094  1232  1432 D ImsResolver: maybeAddedImsService, packageName: com.sysadmindoc.callshield
+04-11 16:19:12.094  1232  1432 V ImsResolver: searchForImsServices: package=com.sysadmindoc.callshield, users=[UserHandle{0}]
+04-11 16:19:12.096  1232  1432 V ImsResolver: searchForImsServices: package=com.sysadmindoc.callshield, users=[UserHandle{0}]
+04-11 16:19:12.097  1232  1232 W VvmPkgInstalledRcvr: carrierVvmPkgAdded: carrier vvm packages doesn't contain com.sysadmindoc.callshield
+04-11 16:19:12.097  1232  1232 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:12.100  1232  1232 D SatelliteController: packageStateChanged: package:com.sysadmindoc.callshield defaultSmsPackageName: com.google.android.apps.messaging satelliteGatewayServicePackageName: 
+04-11 16:19:12.101  1232  1232 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:12.123  1244  1320 D AlphabeticIndexCompat: computeSectionName: cs: Settings sectionName: S
+04-11 16:19:12.124  1244  1320 D AlphabeticIndexCompat: computeSectionName: cs: Photos sectionName: P
+04-11 16:19:12.125  1244  1320 D AlphabeticIndexCompat: computeSectionName: cs: Battery sectionName: B
+04-11 16:19:12.126  1244  1320 D AlphabeticIndexCompat: computeSectionName: cs: Chrome sectionName: C
+04-11 16:19:12.126   808   826 I system_server: Background concurrent mark compact GC freed 14MB AllocSpace bytes, 25(1376KB) LOS objects, 39% free, 36MB/60MB, paused 6.351ms,3.449ms total 259.316ms
+04-11 16:19:12.126  1244  1320 D AlphabeticIndexCompat: computeSectionName: cs: Gmail sectionName: G
+04-11 16:19:12.126  1244  1320 D AlphabeticIndexCompat: computeSectionName: cs: Drive sectionName: D
+04-11 16:19:12.126  1244  1320 D AlphabeticIndexCompat: computeSectionName: cs: Clock sectionName: C
+04-11 16:19:12.127  1244  1320 D AlphabeticIndexCompat: computeSectionName: cs: Contacts sectionName: C
+04-11 16:19:12.127  1244  1320 D AlphabeticIndexCompat: computeSectionName: cs: Calendar sectionName: C
+04-11 16:19:12.128  1244  1320 D AlphabeticIndexCompat: computeSectionName: cs: Maps sectionName: M
+04-11 16:19:12.128  1244  1320 D AlphabeticIndexCompat: computeSectionName: cs: YouTube Music sectionName: Y
+04-11 16:19:12.128  1244  1320 D AlphabeticIndexCompat: computeSectionName: cs: YouTube sectionName: Y
+04-11 16:19:12.129  1244  1320 D AlphabeticIndexCompat: computeSectionName: cs: Google sectionName: G
+04-11 16:19:12.129   808  3415 E RoleControllerServiceImpl: Default/fallback role holder package doesn't qualify for the role, package: com.google.android.gms, role: android.app.role.WALLET, user: 0
+04-11 16:19:12.129  1244  1320 D AlphabeticIndexCompat: computeSectionName: cs: Android System Intelligence sectionName: A
+04-11 16:19:12.129  1244  1320 D AlphabeticIndexCompat: computeSectionName: cs: CallShield sectionName: C
+04-11 16:19:12.130  1244  1320 D AlphabeticIndexCompat: computeSectionName: cs: Digital Wellbeing sectionName: D
+04-11 16:19:12.130  1244  1320 D AlphabeticIndexCompat: computeSectionName: cs: Conversations sectionName: C
+04-11 16:19:12.137   808   831 W System  : A resource failed to call close. 
+04-11 16:19:12.140   808  3415 W SignedPackage: Cannot get ApplicationInfo for package: com.google.android.devicelockcontroller
+04-11 16:19:12.150  4215  7765 I Finsky:background: [123] Wrote row to frosting DB: 702
+04-11 16:19:12.166  4215  7765 I Finsky:background: [123] Wrote row to frosting DB: 703
+04-11 16:19:12.169  4215  4215 I Finsky:background: [2] aisq - Received: android.intent.action.PACKAGE_ADDED, [_M8udIDRt1jCC3KNl4SofOPcKFBBeR70vDOApDvHylU]
+04-11 16:19:12.192  1244  1320 D AlphabeticIndexCompat: computeSectionName: cs: CallShield sectionName: C
+04-11 16:19:12.192  1244  1244 D AllAppsStore: setApps: apps.length=21
+04-11 16:19:12.192  1244  1244 D AllAppsStore: notifyUpdate: notifying listeners
+04-11 16:19:12.192  1244  1244 D ActivityAllAppsContainerView: onAppsUpdated; number of apps: 21
+04-11 16:19:12.192  1244  1244 D ActivityAllAppsContainerView: rebindAdapters: force: false
+04-11 16:19:12.192  1244  1244 D ActivityAllAppsContainerView: rebindAdapters: Not needed.
+04-11 16:19:12.192  1244  1244 D StatsLog: LAUNCHER_ALLAPPS_COUNT
+04-11 16:19:12.192  1244  1244 D AlphabeticalAppsList: Clearing FastScrollerSections.
+04-11 16:19:12.192  1244  1244 D AlphabeticalAppsList: Adding apps with sections. HasPrivateApps: false
+04-11 16:19:12.192  1244  1244 D AlphabeticalAppsList: addAppsWithSections: adding sectionName: C with appInfoTitle: Calendar
+04-11 16:19:12.192  1244  1244 D AlphabeticalAppsList: addAppsWithSections: adding sectionName: D with appInfoTitle: Drive
+04-11 16:19:12.192  1244  1244 D AlphabeticalAppsList: addAppsWithSections: adding sectionName: F with appInfoTitle: Files
+04-11 16:19:12.192  1244  1244 D AlphabeticalAppsList: addAppsWithSections: adding sectionName: G with appInfoTitle: Gmail
+04-11 16:19:12.192  1244  1244 D AlphabeticalAppsList: addAppsWithSections: adding sectionName: M with appInfoTitle: Maps
+04-11 16:19:12.192  1244  1244 D AlphabeticalAppsList: addAppsWithSections: adding sectionName: N with appInfoTitle: NovaCut
+04-11 16:19:12.192  1244  1244 D AlphabeticalAppsList: addAppsWithSections: adding sectionName: P with appInfoTitle: Phone
+04-11 16:19:12.192  1244  1244 D AlphabeticalAppsList: addAppsWithSections: adding sectionName: S with appInfoTitle: Safety
+04-11 16:19:12.192  1244  1244 D AlphabeticalAppsList: addAppsWithSections: adding sectionName: T with appInfoTitle: TMoble
+04-11 16:19:12.192  1244  1244 D AlphabeticalAppsList: addAppsWithSections: adding sectionName: Y with appInfoTitle: YouTube
+04-11 16:19:12.192  1244  1244 D AlphabeticalAppsList: Adding FastScrollSection duplicate to scroll to the bottom.
+04-11 16:19:12.192  1244  1244 D AlphabeticalAppsList: Clearing FastScrollerSections.
+04-11 16:19:12.192  1244  1244 D AlphabeticalAppsList: Adding apps with sections. HasPrivateApps: false
+04-11 16:19:12.192  1244  1244 D AlphabeticalAppsList: addAppsWithSections: adding sectionName: C with appInfoTitle: Calendar
+04-11 16:19:12.192  1244  1244 D AlphabeticalAppsList: addAppsWithSections: adding sectionName: D with appInfoTitle: Drive
+04-11 16:19:12.192  1244  1244 D AlphabeticalAppsList: addAppsWithSections: adding sectionName: F with appInfoTitle: Files
+04-11 16:19:12.192  1244  1244 D AlphabeticalAppsList: addAppsWithSections: adding sectionName: G with appInfoTitle: Gmail
+04-11 16:19:12.192  1244  1244 D AlphabeticalAppsList: addAppsWithSections: adding sectionName: M with appInfoTitle: Maps
+04-11 16:19:12.192  1244  1244 D AlphabeticalAppsList: addAppsWithSections: adding sectionName: N with appInfoTitle: NovaCut
+04-11 16:19:12.192  1244  1244 D AlphabeticalAppsList: addAppsWithSections: adding sectionName: P with appInfoTitle: Phone
+04-11 16:19:12.192  1244  1244 D AlphabeticalAppsList: addAppsWithSections: adding sectionName: S with appInfoTitle: Safety
+04-11 16:19:12.192  1244  1244 D AlphabeticalAppsList: addAppsWithSections: adding sectionName: T with appInfoTitle: TMoble
+04-11 16:19:12.192  1244  1244 D AlphabeticalAppsList: addAppsWithSections: adding sectionName: Y with appInfoTitle: YouTube
+04-11 16:19:12.193  1244  1244 D AlphabeticalAppsList: Adding FastScrollSection duplicate to scroll to the bottom.
+04-11 16:19:12.197  4215  4284 I Finsky:background: [52] IQ:PSL: skipping onPackageRemoved(replacing=true) for untracked package=com.sysadmindoc.callshield
+04-11 16:19:12.198  4215  4215 I Finsky:background: [2] aisq - Received: android.intent.action.PACKAGE_ADDED, [_M8udIDRt1jCC3KNl4SofOPcKFBBeR70vDOApDvHylU]
+04-11 16:19:12.203  4215  4215 I Finsky:background: [2] aisq - Deduping intent android.intent.action.PACKAGE_ADDED
+04-11 16:19:12.210  4215  7765 I Finsky:background: [123] Wrote row to frosting DB: 704
+04-11 16:19:12.218  4215  4215 I Finsky:background: [2] aisq - Received: android.intent.action.PACKAGE_ADDED, [_M8udIDRt1jCC3KNl4SofOPcKFBBeR70vDOApDvHylU]
+04-11 16:19:12.221  4215  4215 I Finsky:background: [2] aisq - Deduping intent android.intent.action.PACKAGE_ADDED
+04-11 16:19:12.221  4215  4215 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:12.222  4215  7765 I Finsky:background: [123] Wrote row to frosting DB: 705
+04-11 16:19:12.225  4215  4311 I Finsky:background: [63] RECEIVER_PACKAGE_MONITOR_BACKGROUND#logWorkEndAndFinishGoAsync: SUCCESS
+04-11 16:19:12.240  4215  7765 I Finsky:background: [123] Wrote row to frosting DB: 706
+04-11 16:19:12.245  4215  7765 I Finsky:background: [123] Wrote row to frosting DB: 707
+04-11 16:19:12.274  4445  4489 I Finsky  : [58] AIM: AppInfoManager-Perf > OnDeviceAppInfo > cacheHitCount=0, cacheMissCount=1. Missed  in cache (limit 10) : [com.sysadmindoc.callshield]
+04-11 16:19:12.282  4445  4486 I Finsky  : [55] AIM: Got app ownership map. App counts: . Unique apps: 0
+04-11 16:19:12.282  4445  4486 E Finsky  : [55] [Counters] attempted to use a non-positive increment for: 4752
+04-11 16:19:12.285  4215  4215 I Finsky:background: [2] Memory trim requested to level 40
+04-11 16:19:12.293  4445  4486 E Finsky  : [55] [Counters] attempted to use a non-positive increment for: 4753
+04-11 16:19:12.300  4445  7770 I Finsky  : [212] SCH: Received scheduling request: Id: 12-1, Constraints: [{ L: 15000, D: 86400000, C: CHARGING_NONE, I: IDLE_NONE, N: NET_ANY, B: BATTERY_ANY }]
+04-11 16:19:12.300  4445  4445 I Finsky  : [2] aita - Received: android.intent.action.PACKAGE_ADDED, [_M8udIDRt1jCC3KNl4SofOPcKFBBeR70vDOApDvHylU]
+04-11 16:19:12.304  4445  4445 I Finsky  : [2] DTU: Received onPackageAdded, replacing: true
+04-11 16:19:12.312  4445  4489 I Finsky  : [58] AIM: AppInfoManager-Perf > OnDeviceAppInfo > cacheHitCount=0, cacheMissCount=1. Missed  in cache (limit 10) : [com.sysadmindoc.callshield]
+04-11 16:19:12.312  4445  4489 I Finsky  : [58] AIM: Got app ownership map. App counts: . Unique apps: 0
+04-11 16:19:12.312  4445  4489 E Finsky  : [58] [Counters] attempted to use a non-positive increment for: 4752
+04-11 16:19:12.312  4445  4489 E Finsky  : [58] [Counters] attempted to use a non-positive increment for: 4753
+04-11 16:19:12.316  4445  4485 I Finsky  : [54] AIM: AppInfoManager-Perf > ItemModel > CacheSize=0, cacheHitCount=0, cacheMissCount=1, total appsWithNoServerDataCount=0. Missed  in cache (limit 10) : [com.sysadmindoc.callshield]
+04-11 16:19:12.323  4445  4486 I Finsky  : [55] AIM: AppInfoManager-Perf > ItemModel > CacheSize=0, cacheHitCount=0, cacheMissCount=1, total appsWithNoServerDataCount=0. Missed  in cache (limit 10) : [com.sysadmindoc.callshield]
+04-11 16:19:12.333  4445  4486 I Finsky  : [55] AIM: AppInfoManager-Perf > ItemModel > ItemStore Called 1 apps cacheOptions = USE_CACHE
+04-11 16:19:12.333  4445  4485 I Finsky  : [54] AIM: AppInfoManager-Perf > ItemModel > ItemStore Called 1 apps cacheOptions = USE_CACHE
+04-11 16:19:12.340  4445  4488 I Finsky  : [57] ItemStore: Not cached: com.sysadmindoc.callshield
+04-11 16:19:12.341  4445  4488 I Finsky  : [57] ItemStore: Not cached: com.sysadmindoc.callshield
+04-11 16:19:12.346  4445  4486 I Finsky  : [55] AIM: ItemModel fetch - unauth(1), auth()
+04-11 16:19:12.346  4445  4485 I Finsky  : [54] AIM: ItemModel fetch - unauth(1), auth()
+04-11 16:19:12.355  4445  7770 I Finsky  : [212] SCH: Received scheduling request: Id: 12-1, Constraints: [{ L: 15000, D: 86400000, C: CHARGING_NONE, I: IDLE_NONE, N: NET_ANY, B: BATTERY_ANY }]
+04-11 16:19:12.356  4445  4445 I Finsky  : [2] aita - Received: android.intent.action.PACKAGE_ADDED, [_M8udIDRt1jCC3KNl4SofOPcKFBBeR70vDOApDvHylU]
+04-11 16:19:12.360  4445  4445 I Finsky  : [2] aita - Deduping intent android.intent.action.PACKAGE_ADDED
+04-11 16:19:12.365  1702  1702 W MediaProvider: WorkProfileOwnerApps cache is empty
+04-11 16:19:12.365  1702  1702 D PickerSyncLockManager: Trying to acquire lock com.android.providers.media.photopicker.sync.CloseableReentrantLock@98ccae9[Unlocked]. Lock Name = CLOUD_PROVIDER_LOCK. Threads that may be waiting to acquire this lock = []
+04-11 16:19:12.365  1702  1702 D CloseableReentrantLock: Successfully acquired lock com.android.providers.media.photopicker.sync.CloseableReentrantLock@98ccae9[Locked by thread main]. Lock Name = CLOUD_PROVIDER_LOCK. Threads that may be waiting to acquire this lock = []
+04-11 16:19:12.365  1702  1702 D CloseableReentrantLock: Successfully released lock com.android.providers.media.photopicker.sync.CloseableReentrantLock@98ccae9[Unlocked]. Lock Name = CLOUD_PROVIDER_LOCK. Threads that may be waiting to acquire this lock = []
+04-11 16:19:12.368  1244  2344 D WellbeingModel: Changes in apps: intent = [Intent { act=android.intent.action.PACKAGE_REMOVED dat=package: flg=0x4000010 (has extras) }]
+04-11 16:19:12.368  1244  2344 D WellbeingModel: Changes in apps: intent = [Intent { act=android.intent.action.PACKAGE_ADDED dat=package: flg=0x4000010 (has extras) }]
+04-11 16:19:12.368  1244  2344 I WellbeingModel: updateActionsWithRetry(); retryCount: 0, package: com.sysadmindoc.callshield
+04-11 16:19:12.368  1244  2344 D WellbeingModel: retrieveActions() called with: packageNames = [com.sysadmindoc.callshield]
+04-11 16:19:12.369  1244  1320 I PluginActionManager[com.android.systemui.action.ICON_WRAPPER_PLUGIN]: Found 0 plugins
+04-11 16:19:12.369  1244  1320 I PluginActionManager[com.android.systemui.action.PLUGIN_CUSTOM_WIDGET]: Found 0 plugins
+04-11 16:19:12.370  1244  1320 I PluginActionManager[com.android.systemui.action.PLUGIN_NETWORK_FETCHER_ACTIONS]: Found 0 plugins
+04-11 16:19:12.371  4445  4445 I Finsky  : [2] aita - Received: android.intent.action.PACKAGE_ADDED, [_M8udIDRt1jCC3KNl4SofOPcKFBBeR70vDOApDvHylU]
+04-11 16:19:12.371  1244  1320 I PluginActionManager[com.android.systemui.action.PLUGIN_LAUNCHER_OVERLAY]: Found 0 plugins
+04-11 16:19:12.373  1244  1320 I PluginActionManager[com.android.systemui.action.PLUGIN_BC_SMARTSPACE_DATA]: Found 0 plugins
+04-11 16:19:12.373  1244  1320 I PluginActionManager[com.android.systemui.action.PLUGIN_ALL_APPS_ACTIONS]: Found 0 plugins
+04-11 16:19:12.374  1244  1320 I PluginActionManager[com.android.launcher3.action.PLUGIN_DYNAMIC_RESOURCE]: Found 0 plugins
+04-11 16:19:12.375  1244  1320 I PluginActionManager[com.android.systemui.action.ICON_WRAPPER_PLUGIN]: Found 0 plugins
+04-11 16:19:12.375   808  1049 D BackgroundInstallControlService: Package event received: 0
+04-11 16:19:12.375  1244  1320 I PluginActionManager[com.android.systemui.action.PLUGIN_CUSTOM_WIDGET]: Found 0 plugins
+04-11 16:19:12.376  4445  4445 I Finsky  : [2] aita - Deduping intent android.intent.action.PACKAGE_ADDED
+04-11 16:19:12.376  4445  4445 D ActivityThread: Package [com.sysadmindoc.callshield] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-11 16:19:12.377  4445  4474 I Finsky  : [43] RECEIVER_PACKAGE_MONITOR#logWorkEndAndFinishGoAsync: SUCCESS
+04-11 16:19:12.377  1244  1320 I PluginActionManager[com.android.systemui.action.PLUGIN_NETWORK_FETCHER_ACTIONS]: Found 0 plugins
+04-11 16:19:12.379  1244  1320 I PluginActionManager[com.android.systemui.action.PLUGIN_LAUNCHER_OVERLAY]: Found 0 plugins
+04-11 16:19:12.379  1244  1320 I PluginActionManager[com.android.systemui.action.PLUGIN_BC_SMARTSPACE_DATA]: Found 0 plugins
+04-11 16:19:12.380  1244  1320 I PluginActionManager[com.android.systemui.action.PLUGIN_ALL_APPS_ACTIONS]: Found 0 plugins
+04-11 16:19:12.381  1244  1320 I PluginActionManager[com.android.launcher3.action.PLUGIN_DYNAMIC_RESOURCE]: Found 0 plugins
+04-11 16:19:12.439  4445  4445 I Finsky  : [2] Memory trim requested to level 40
+04-11 16:19:12.439  4445  4445 I Finsky  : [2] Flushing in-memory image cache
+04-11 16:19:12.462  1400  7777 I ProximityAuth: [RecentAppsMediator] Package added: (user=UserHandle{0}) com.sysadmindoc.callshield
+04-11 16:19:12.462   808  2057 V SafetySourceDataValidat: Package: com.android.vending has expected signature
+04-11 16:19:12.462   808  2057 V SafetySourceDataValidat: Package: com.android.vending has expected signature
+04-11 16:19:12.463  1625  7782 I AppBackupPkgRemovedIO: Backup state cleanup on uninstall is disabled. [CONTEXT service_id=229 ]
+04-11 16:19:12.467  1400  7789 I FontLog : (REDACTED) Package %s has no metadata
+04-11 16:19:12.467  1400  7778 I Fitness : (REDACTED) FitCleanupIntentOperation received Intent %s
+04-11 16:19:12.496   808   994 I HalDevMgr: bestIfaceCreationProposal is null, requestIface=STA, existingIface=[name=wlan0 type=STA]
+04-11 16:19:12.498  1625  1625 D BoundBrokerSvc: onBind: Intent { act=com.google.android.gms.common.BIND_SHARED_PREFS xflg=0x4 pkg=com.google.android.gms }
+04-11 16:19:12.498  1625  1625 D BoundBrokerSvc: Loading bound service for intent: Intent { act=com.google.android.gms.common.BIND_SHARED_PREFS xflg=0x4 pkg=com.google.android.gms }
+04-11 16:19:12.552  1625  7794 I Auth    : (REDACTED) [SupervisedAccountIntentOperation] onHandleIntent: %s
+04-11 16:19:12.562  1625  7794 I NearbyDiscovery: (REDACTED) processGrantSlicePermission: %s
+04-11 16:19:12.596  1625  7782 W SQLiteLog: (28) double-quoted string literal: "com.sysadmindoc.callshield"
+04-11 16:19:12.610  1625  2226 I Icing   : IndexChimeraService.getServiceInterface callingPackage=com.google.android.gms componentName=AppsCorpus serviceId=36
+04-11 16:19:12.622   808  1049 D BackgroundInstallControlService: Package event received: 0
+04-11 16:19:12.628  1625  5082 I Icing   : IndexChimeraService.getServiceInterface callingPackage=com.google.android.gms componentName=null serviceId=30
+04-11 16:19:12.635   808  1145 V Configuration: Updating configuration, locales updated from [] to [en_US]
+04-11 16:19:12.635   808  1145 V Configuration: Updating configuration, locales updated from [] to [en_US]
+04-11 16:19:12.635   808  1145 V Configuration: Updating configuration, locales updated from [] to [en_US]
+04-11 16:19:12.635   808  1145 V Configuration: Updating configuration, locales updated from [] to [en_US]
+04-11 16:19:12.635   808  1145 V Configuration: Updating configuration, locales updated from [] to [en_US]
+04-11 16:19:12.635   808  1145 V Configuration: Updating configuration, locales updated from [] to [en_US]
+04-11 16:19:12.635   808  1145 V Configuration: Updating configuration, locales updated from [] to [en_US]
+04-11 16:19:12.635   808  1145 V Configuration: Updating configuration, locales updated from [] to [en_US]
+04-11 16:19:12.644  4445  4480 I Finsky  : [49] WM::SCH: Logging work initialize for 12-1
+04-11 16:19:12.653  4445  4480 I Finsky  : [49] WM::SCH: Logging work initialize for 12-1
+04-11 16:19:12.654  1625  7799 I Icing   : Usage reports ok 8, Failed Usage reports 0, indexed 0, rejected 0
+04-11 16:19:12.657  4445  4489 I Finsky  : [58] SCH: Scheduling phonesky job Id: 12-1, CT: 1775938752300, Constraints: [{ L: 15000, D: 86400000, C: CHARGING_NONE, I: IDLE_NONE, N: NET_ANY, B: BATTERY_ANY }]
+04-11 16:19:12.661  4445  4488 I Finsky  : [57] SCH: Scheduling 1 system job(s)
+04-11 16:19:12.662  4445  4488 I Finsky  : [57] SCH: Scheduling system job Id: 9809, L: 14639, D: 69949980, C: false, I: false, N: 1
+04-11 16:19:12.670  4445  4489 I Finsky  : [58] SCH: Scheduling phonesky job Id: 12-1, CT: 1775938752355, Constraints: [{ L: 15000, D: 86400000, C: CHARGING_NONE, I: IDLE_NONE, N: NET_ANY, B: BATTERY_ANY }]
+04-11 16:19:12.671  4445  4482 I Finsky  : [51] [ContentSync] finished, scheduled=true
+04-11 16:19:12.675  4445  4486 I Finsky  : [55] SCH: Scheduling 0 system job(s)
+04-11 16:19:12.676  4445  4486 I Finsky  : [55] [ContentSync] finished, scheduled=true
+04-11 16:19:12.685  1625  7799 I Icing   : Usage reports ok 0, Failed Usage reports 0, indexed 0, rejected 0
+04-11 16:19:12.695  1625  7799 I Icing   : Indexing com.google.android.gms-apps from com.google.android.gms
+04-11 16:19:12.717  1625  7799 I Icing   : Indexing done com.google.android.gms-apps
+04-11 16:19:12.772  1244  2344 D WellbeingModel: ....actionId: pause, packages: com.sysadmindoc.callshield
+04-11 16:19:12.772  1244  2344 I WellbeingModel: retrieveActions(): finished
+04-11 16:19:12.837  4445  4485 E Finsky  : [54] ItemStore: getItems RPC failed for item com.sysadmindoc.callshield
+04-11 16:19:12.885   808  1700 E AppOps  : attributionTag VCN not declared in manifest of android
+04-11 16:19:12.925  4445  4489 E Finsky  : [58] ItemStore: getItems RPC failed for item com.sysadmindoc.callshield
+04-11 16:19:13.265  7807  7807 W libbinder.BackendUnifiedServiceManager: Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: SurfaceFlingerAIDL
+04-11 16:19:13.267  7807  7807 W libbinder.BpBinder: Linking to death on android.gui.ISurfaceComposer but there are no threads (yet?) listening to incoming transactions. See ProcessState::startThreadPool and ProcessState::setThreadPoolMaxThreadCount. Generally you should setup the binder threadpool before other initialization steps.
+04-11 16:19:13.269  7807  7807 W libbinder.ProcessState: Extra binder thread started, but 0 threads requested. Do not use *startThreadPool when zero threads are requested.
+04-11 16:19:14.062  1400  1400 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.common.telemetry.service.START dat=chimera-action:/... xflg=0x4 cmp=com.google.android.gms/.chimera.PersistentApiService }
+04-11 16:19:14.592   308  7543 I keystore2: system/security/keystore2/watchdog/src/lib.rs:371 - Watchdog thread idle -> terminating. Have a great day.
+04-11 16:19:14.867   808  1809 E TaskPersister: File error accessing recents directory (directory doesn't exist?).
+04-11 16:19:14.908  7326  7326 I BugleDataModel: ActionExecutorImpl: ACTION_EXECUTE_QUEUED_FixupMessageStatusOnStartupAction
+04-11 16:19:14.910  7326  7408 I BugleDataModel: ExecuteActionRunnable: running action FixupMessageStatusOnStartupAction
+04-11 16:19:14.910  7326  7326 I BugleDataModel: ActionExecutorImpl: ACTION_EXECUTE_QUEUED_ProcessPendingMessagesAction
+04-11 16:19:14.921  7326  7326 I BugleDataModel: ActionExecutorImpl: ACTION_EXECUTE_QUEUED_SelfParticipantsRefreshAction
+04-11 16:19:14.941  7326  7408 I BugleDataModel: FixupMessageStatusOnStartupAction: sendFailedCnt: 0, downloadFailedCnt: 0, partsProcessingFailedCnt: 0
+04-11 16:19:14.942  7326  7424 W BugleDataModel: 0 fallback attempts are cancelled or failed, with 8 and APP_RESTART
+04-11 16:19:14.965  7326  7408 I BugleDataModel: PendingMessagesProcessor process from FixupMessageStatusOnStartupAction due to process restarts throttled  with delay 0s with queues smsMessagesToSend:0 mmsMessagesToSend:0 rcsMessagesToSend:0 rcsFTMessagesToSend:0 messagesToDownload:0
+04-11 16:19:14.966  7326  7408 I BugleDataModel: Cleared next retry time for channel: sms_send 
+04-11 16:19:14.966  7326  7408 I BugleDataModel: Cleared next retry time for channel: mms_send 
+04-11 16:19:14.966  7326  7408 I BugleDataModel: Cleared next retry time for channel: mms_download 
+04-11 16:19:14.967  7326  7408 I BugleDataModel: Cleared next retry time for channel: rcs_send 
+04-11 16:19:14.967  7326  7408 I BugleDataModel: Cleared next retry time for channel: rcs_ft_upload 
+04-11 16:19:14.967  7326  7408 I BugleDataModel: Cleared next retry time for channel: rcs_ft_download 
+04-11 16:19:14.967  7326  7408 I BugleDataModel: Cleared next retry time for channel: cloud_sync_send 
+04-11 16:19:14.967  7326  7408 I BugleDataModel: Cleared next retry time for channel: cloud_sync_attachment_download 
+04-11 16:19:14.968  7326  7408 I BugleDataModel: ExecuteActionRunnable: running action ProcessPendingMessagesAction
+04-11 16:19:14.971  7326  7408 I BugleDataModel: PendingMessagesProcessor process from ProcessPendingMessagesAction due to scheduled processing  with delay 0s with queues smsMessagesToSend:0 mmsMessagesToSend:0 rcsMessagesToSend:0 rcsFTMessagesToSend:0 messagesToDownload:0
+04-11 16:19:14.972  7326  7408 I BugleDataModel: ExecuteActionRunnable: running action SelfParticipantsRefreshAction
+04-11 16:19:14.973  7326  7408 I BugleDataModel: ActionExecutorImpl: ACTION_BACKGROUND_QUEUED_SelfParticipantsRefreshAction
+04-11 16:19:14.977  7326  7442 I BugleDataModel: ParticipantRefresh: ContactContentObserver created
+04-11 16:19:14.978  7326  7442 I BugleDataModel: ParticipantFullRefresh: Start participant refresh. refreshMode: SELF_ONLY
+04-11 16:19:14.978  7326  7326 I BugleDataModel: ActionExecutorImpl: ACTION_EXECUTE_QUEUED_GenericWorkerQueueAction
+04-11 16:19:14.978  7326  7440 I BugleDataModel: ExecuteActionRunnable: running action GenericWorkerQueueAction
+04-11 16:19:14.979  7326  7440 I BugleDataModel: ActionExecutorImpl: ACTION_BACKGROUND_QUEUED_GenericWorkerQueueAction
+04-11 16:19:14.979  7326  7442 I BugleDataModel: SubscriptionsTracker#refreshSelfParticipantList([1])
+04-11 16:19:14.989  7326  7442 I Bugle   : getRawTelephonyPhoneNumber redacted-pii[12-chars] [CONTEXT sub_id=1 ]
+04-11 16:19:14.990  7326  7442 I Bugle   : SubscriptionUtils.getCanonicalForSelf: self=redacted-pii[12-chars], country=US [CONTEXT sub_id=1 ]
+04-11 16:19:14.991  7326  7442 I Bugle   : CountryCodeDetector: updateSmsNetworkCountry from default subscription network country. detected country: us
+04-11 16:19:15.000  7326  7442 I Bugle   : getRawTelephonyPhoneNumber redacted-pii[12-chars] [CONTEXT sub_id=1 ]
+04-11 16:19:15.007  7326  7442 I Bugle   : getRawTelephonyPhoneNumber redacted-pii[12-chars] [CONTEXT sub_id=1 ]
+04-11 16:19:15.007  7326  7442 I Bugle   : SubscriptionUtils.getCanonicalForSelf: self=redacted-pii[12-chars], country=US [CONTEXT sub_id=1 ]
+04-11 16:19:15.009  7326  7442 I BugleSelfIdentity: Phone number for MyIdentity 4f779c10-524f-4f47-96d4-60539f21a66f does not change [CONTEXT sub_id=1 icc_id="89860318640220133897" messaging_identity="redacted-pii[12-chars]" rcs_provisioning_id="redacted-pii[0-chars]" ]
+04-11 16:19:15.011  7326  7442 I Bugle   : getRawTelephonyPhoneNumber redacted-pii[12-chars] [CONTEXT sub_id=1 ]
+04-11 16:19:15.015  7326  7442 I BugleDataModel: SubscriptionsTracker bindToTrackingMap bound participants: [ParticipantId=1 subId=-1, ParticipantId=2 subId=1]
+04-11 16:19:15.015  7326  7442 I BugleDataModel: set orderedRowIdAndTokenPairs: [rowId=2 subId= 1 token=4f779c10-524f-4f47-96d4-60539f21a66f, rowId=1 subId= -1 token=aeda8001-e198-4e06-ada1-e923a2cbd6d1]
+04-11 16:19:15.016  7326  7430 I BugleDataModel: SubscriptionsTracker bindToTrackingMap bound participants: [ParticipantId=1 subId=-1, ParticipantId=2 subId=1]
+04-11 16:19:15.021  7326  7442 I Bugle   : getRawTelephonyPhoneNumber redacted-pii[12-chars] [CONTEXT sub_id=1 ]
+04-11 16:19:15.022  7326  7442 I Bugle   : SubscriptionUtils.getCanonicalForSelf: self=redacted-pii[12-chars], country=US [CONTEXT sub_id=1 ]
+04-11 16:19:15.070  7326  7442 I Bugle   : getRawTelephonyPhoneNumber redacted-pii[12-chars] [CONTEXT sub_id=1 ]
+04-11 16:19:15.070  7326  7442 I Bugle   : SubscriptionUtils.getCanonicalForSelf: self=redacted-pii[12-chars], country=US [CONTEXT sub_id=1 ]
+04-11 16:19:15.080  5224  5228 W d.process.acore: Cleared Reference was only reachable from finalizer (only reported once)
+04-11 16:19:15.084  7326  7442 I BugleDataModel: ParticipantFullRefresh: Number of participants refreshed: 0
+04-11 16:19:15.088  7326  7442 I BugleDataModel: ActionExecutorImpl: ACTION_RESPONSE_QUEUED_SelfParticipantsRefreshAction
+04-11 16:19:15.091  7326  7442 I BugleJobs: GenericWorkerQueueAction: Bailing early, no work found, no failed work found
+04-11 16:19:15.091  7326  7442 I BugleDataModel: ActionExecutorImpl: ACTION_RESPONSE_QUEUED_GenericWorkerQueueAction
+04-11 16:19:15.092  7326  7382 I Bugle   : getRawTelephonyPhoneNumber redacted-pii[12-chars] [CONTEXT sub_id=1 ]
+04-11 16:19:15.093  7326  7382 I Bugle   : SubscriptionUtils.getCanonicalForSelf: self=redacted-pii[12-chars], country=US [CONTEXT sub_id=1 ]
+04-11 16:19:15.094  7326  7382 I BugleSelfIdentity: Phone number for MyIdentity 4f779c10-524f-4f47-96d4-60539f21a66f does not change [CONTEXT sub_id=1 icc_id="89860318640220133897" messaging_identity="redacted-pii[12-chars]" rcs_provisioning_id="redacted-pii[0-chars]" ]
+04-11 16:19:15.099  7326  7382 I Bugle   : getRawTelephonyPhoneNumber redacted-pii[12-chars] [CONTEXT sub_id=1 ]
+04-11 16:19:15.099  7326  7382 I Bugle   : SubscriptionUtils.getCanonicalForSelf: self=redacted-pii[12-chars], country=US [CONTEXT sub_id=1 ]
+04-11 16:19:15.100  7326  7382 I BugleSelfIdentity: Phone number for MyIdentity 4f779c10-524f-4f47-96d4-60539f21a66f does not change [CONTEXT sub_id=1 icc_id="89860318640220133897" messaging_identity="redacted-pii[12-chars]" rcs_provisioning_id="redacted-pii[0-chars]" ]
+04-11 16:19:15.264  1625  1684 I SharingClientImpl: client com.google.android.gms disconnecting
+04-11 16:19:15.267  1400  1414 I NearbySharing: Package com.google.android.gms has requested to unsuspend Quick Share
+04-11 16:19:15.268  1625  1637 E SharingClientImpl: Unsuspend failed: null
+04-11 16:19:15.501   808   994 I HalDevMgr: bestIfaceCreationProposal is null, requestIface=STA, existingIface=[name=wlan0 type=STA]
+04-11 16:19:16.241   808  2057 W ActivityTaskManager: callingPackage for (uid=2000, pid=7811) has no WPC
+04-11 16:19:16.242   808  2057 V WindowManager: DesktopModeLaunchParamsModifier: phase= 0 task=null activity=null display-area-from-current-params=null display-area-from-default-fallback=DefaultTaskDisplayArea@187976659 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea@187976659 task null, skipping
+04-11 16:19:16.242   808  2057 V WindowManager: TaskLaunchParamsModifier:phase=0 task=null activity=null display-area-from-current-params=null display-area-from-default-fallback=DefaultTaskDisplayArea@187976659 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea@187976659
+04-11 16:19:16.245   808  2057 V GrammaticalInflectionUtils: AttributionSource: android.content.AttributionSource@635f6d2f does not have READ_SYSTEM_GRAMMATICAL_GENDER permission.
+04-11 16:19:16.247   808  2057 V WindowManager: DesktopModeLaunchParamsModifier: phase= 0 task=null activity=ActivityRecord{21898353 u0 com.sysadmindoc.callshield/.ui.MainActivity display-area-from-current-params=null display-area-from-default-fallback=DefaultTaskDisplayArea@187976659 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea@187976659 task null, skipping
+04-11 16:19:16.248   808  2057 V WindowManager: TaskLaunchParamsModifier:phase=0 task=null activity=ActivityRecord{21898353 u0 com.sysadmindoc.callshield/.ui.MainActivity t-1} display-area-from-current-params=null display-area-from-default-fallback=DefaultTaskDisplayArea@187976659 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea@187976659
+04-11 16:19:16.248   808  2057 V WindowManager: DesktopModeLaunchParamsModifier: phase= 3 task=null activity=ActivityRecord{21898353 u0 com.sysadmindoc.callshield/.ui.MainActivity t-1} display-area-from-current-params=null display-area-from-default-fallback=DefaultTaskDisplayArea@187976659 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea@187976659 task null, skipping
+04-11 16:19:16.248   808  2057 V WindowManager: TaskLaunchParamsModifier:phase=3 task=null activity=ActivityRecord{21898353 u0 com.sysadmindoc.callshield/.ui.MainActivity t-1} display-area-from-current-params=null display-area-from-default-fallback=DefaultTaskDisplayArea@187976659 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea@187976659 non-freeform-task-display-area display-area=DefaultTaskDisplayArea@187976659 skip-bounds-fullscreen
+04-11 16:19:16.253   808  2057 V WindowManager: DesktopModeLaunchParamsModifier: phase= 3 task=Task{dc62256 #52 type=standard A=10228:com.sysadmindoc.callshield} activity=ActivityRecord{21898353 u0 com.sysadmindoc.callshield/.ui.MainActivity t-1} display-from-task=0 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea@187976659 not entering desktop mode, skipping
+04-11 16:19:16.253   808  2057 V WindowManager: TaskLaunchParamsModifier:phase=3 task=Task{dc62256 #52 type=standard A=10228:com.sysadmindoc.callshield} activity=ActivityRecord{21898353 u0 com.sysadmindoc.callshield/.ui.MainActivity t-1} display-from-task=0 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea@187976659 inherit-from-task=fullscreen non-freeform-task-display-area display-area=DefaultTaskDisplayArea@187976659 skip-bounds-fullscreen
+04-11 16:19:16.264   652  1351 I libbinder.BpBinder: onLastStrongRef automatically unlinking death recipients for descriptor: '(not cached)'
+04-11 16:19:16.266   808  2057 I ActivityTaskManager: START u0 {flg=0x10000000 xflg=0x5 cmp=com.sysadmindoc.callshield/.ui.MainActivity} with LAUNCH_MULTIPLE from uid 2000 (com.android.shell) (BAL_ALLOW_PERMISSION) result code=0
+04-11 16:19:16.268  1095  1163 V WindowManagerShell: Transition requested (#27): android.os.BinderProxy@917352d TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=52 effectiveUid=10228 displayId=0 isRunning=true baseIntent=Intent { flg=0x10000000 cmp=com.sysadmindoc.callshield/.ui.MainActivity } baseActivity=ComponentInfo{com.sysadmindoc.callshield/com.sysadmindoc.callshield.ui.MainActivity} topActivity=ComponentInfo{com.sysadmindoc.callshield/com.sysadmindoc.callshield.ui.MainActivity} origActivity=null realActivity=ComponentInfo{com.sysadmindoc.callshield/com.sysadmindoc.callshield.ui.MainActivity} numActivities=1 lastActiveTime=1428861 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 defaultMinSize=220 token=WCT{android.os.BinderProxy@ee38a62} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=Rect(0, 0 - 0, 0) topActivityInfo=ActivityInfo{4d7f7f3 com.sysadmindoc.callshield.ui.MainActivity} launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=false isVisible=false isVisibleRequested=false isTopActivityNoDisplay=false isSleeping=false locusId=null displayAreaFeatureId=1 isTopActivityTransparent=false isActivityStackTransparent=false lastNonFullscreenBounds=null capturedLink=null capturedLinkTimestamp=0 requestedVisibleTypes=503 topActivityRequestOpenInBrowserEducationTimestamp=0 appCompatTaskInfo=AppCompatTaskInfo { topActivityInSizeCompat=false isLeafTask= true eligibleForLetterboxEducation= false isLetterboxEducationEnabled= true isLetterboxDoubleTapEnabled= false eligibleForUserAspectRatioButton= false topActivityBoundsLetterboxed= false isFromLetterboxDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 topActivityAppBounds=Rect(0, 0 - 1080, 2400) isUserFullscreenOverrideEnabled=false isSystemFullscreenOverrideEnabled=false hasMinAspectRatioOverride=false topActivityLetterboxBounds=null cameraCompatTaskInfo=CameraCompatTaskInfo { cameraCompatMode=undefinedundefined} topNonResizableActivityAspectRatio=-1.0} topActivityMainWindowFrame=null isAppBubble=false}, pipChange = null, remoteTransition = null, displayChange = null, requestedLocation = null, userChange = null, windowingLayerChange = null, flags = 0, debugId = 27 }
+04-11 16:19:16.270  1244  1244 D RecentsView: onTaskDisplayChanged: 52, new displayId = 0
+04-11 16:19:16.271   808   871 V GrammaticalInflectionUtils: AttributionSource: android.content.AttributionSource@635f6d2f does not have READ_SYSTEM_GRAMMATICAL_GENDER permission.
+04-11 16:19:16.281  1095  1163 D ShellSplitScreen: logExit: no-op, mLoggerSessionId is null
+04-11 16:19:16.281  1095  1163 V ShellDesktopMode: DesktopTasksController: handleRequest request=TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=52 effectiveUid=10228 displayId=0 isRunning=true baseIntent=Intent { flg=0x10000000 cmp=com.sysadmindoc.callshield/.ui.MainActivity } baseActivity=ComponentInfo{com.sysadmindoc.callshield/com.sysadmindoc.callshield.ui.MainActivity} topActivity=ComponentInfo{com.sysadmindoc.callshield/com.sysadmindoc.callshield.ui.MainActivity} origActivity=null realActivity=ComponentInfo{com.sysadmindoc.callshield/com.sysadmindoc.callshield.ui.MainActivity} numActivities=1 lastActiveTime=1428861 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 defaultMinSize=220 token=WCT{android.os.BinderProxy@ee38a62} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=Rect(0, 0 - 0, 0) topActivityInfo=ActivityInfo{4d7f7f3 com.sysadmindoc.callshield.ui.MainActivity} launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=false isVisible=false isVisibleRequested=false isTopActivityNoDisplay=false isSleeping=false locusId=null displayAreaFeatureId=1 isTopActivityTransparent=false isActivityStackTransparent=false lastNonFullscreenBounds=null capturedLink=null capturedLinkTimestamp=0 requestedVisibleTypes=503 topActivityRequestOpenInBrowserEducationTimestamp=0 appCompatTaskInfo=AppCompatTaskInfo { topActivityInSizeCompat=false isLeafTask= true eligibleForLetterboxEducation= false isLetterboxEducationEnabled= true isLetterboxDoubleTapEnabled= false eligibleForUserAspectRatioButton= false topActivityBoundsLetterboxed= false isFromLetterboxDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 topActivityAppBounds=Rect(0, 0 - 1080, 2400) isUserFullscreenOverrideEnabled=false isSystemFullscreenOverrideEnabled=false hasMinAspectRatioOverride=false topActivityLetterboxBounds=null cameraCompatTaskInfo=CameraCompatTaskInfo { cameraCompatMode=undefinedundefined} topNonResizableActivityAspectRatio=-1.0} topActivityMainWindowFrame=null isAppBubble=false}, pipChange = null, remoteTransition = null, displayChange = null, requestedLocation = null, userChange = null, windowingLayerChange = null, flags = 0, debugId = 27 }
+04-11 16:19:16.282  1095  1163 V ShellDesktopMode: DesktopTasksController: skipping handleRequest reason=triggerTask's display doesn't support desktop mode
+04-11 16:19:16.282   808  2057 D CompatChangeReporter: Compat change id reported: 309578419; UID 10228; state: ENABLED
+04-11 16:19:16.282   582   582 D Zygote  : Forked child process 7814
+04-11 16:19:16.283   808   879 I ActivityManager: Start proc 7814:com.sysadmindoc.callshield/u0a228 for next-top-activity {com.sysadmindoc.callshield/com.sysadmindoc.callshield.ui.MainActivity}
+04-11 16:19:16.300  1095  1163 D ShellDesktopMode: DesktopRepository: Removes freeform task: taskId=48
+04-11 16:19:16.300  1095  1163 W ShellDesktopMode: DesktopRepository: No display id found for task: taskId=48
+04-11 16:19:16.301  1244  1244 D b/417220811: invalidateLoadedTasks - previous requestLoadId: -1
+04-11 16:19:16.301  1244  1244 D b/417220811: invalidateLoadedTasks - previous requestLoadId: -1
+04-11 16:19:16.303  7815  7815 W libbinder.BackendUnifiedServiceManager: Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: package
+04-11 16:19:16.306   704   704 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:16.310   808  1049 D BackgroundInstallControlService: Package event received: 0
+04-11 16:19:16.324  7814  7814 I Zygote  : Process 7814 created for com.sysadmindoc.callshield
+04-11 16:19:16.324  7814  7814 I ndoc.callshield: Late-enabling -Xcheck:jni
+04-11 16:19:16.344  1400  1400 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.clearcut.bootcount.service.START dat=chimera-action:/... xflg=0x4 cmp=com.google.android.gms/.chimera.PersistentBoundBrokerService }
+04-11 16:19:16.390  3000  3007 I artd    : GetBestInfo: odex next to the dex file (/data/app/~~YiRBA2aqT-jrgoUEQOLnCA==/com.google.android.gms-v5AS6X_wu1iX6L_G0ZqBAA==/oat/x86_64/base.odex) is kOatUpToDate with filter 'speed-profile' executable 'false'
+04-11 16:19:16.401  3000  3007 I artd    : GetBestInfo: odex next to the dex file (/data/app/~~YiRBA2aqT-jrgoUEQOLnCA==/com.google.android.gms-v5AS6X_wu1iX6L_G0ZqBAA==/oat/x86_64/split_AdsDynamite_installtime.odex) is kOatUpToDate with filter 'speed' executable 'false'
+04-11 16:19:16.410  3000  3007 I artd    : GetBestInfo: odex next to the dex file (/data/app/~~YiRBA2aqT-jrgoUEQOLnCA==/com.google.android.gms-v5AS6X_wu1iX6L_G0ZqBAA==/oat/x86_64/split_CronetDynamite_installtime.odex) is kOatUpToDate with filter 'speed' executable 'false'
+04-11 16:19:16.411  1244  1244 D b/417220811: invalidateLoadedTasks - previous requestLoadId: -1
+04-11 16:19:16.413  7814  7814 I ndoc.callshield: Using CollectorTypeCMC GC.
+04-11 16:19:16.414  3000  3007 I artd    : GetBestInfo: odex next to the dex file (/data/app/~~YiRBA2aqT-jrgoUEQOLnCA==/com.google.android.gms-v5AS6X_wu1iX6L_G0ZqBAA==/oat/x86_64/split_DynamiteLoader_installtime.odex) is kOatUpToDate with filter 'speed' executable 'false'
+04-11 16:19:16.416  7814  7814 W ndoc.callshield: Unexpected CPU variant for x86: x86_64.
+04-11 16:19:16.416  7814  7814 W ndoc.callshield: Known variants: atom, sandybridge, silvermont, goldmont, goldmont-plus, goldmont-without-sha-xsaves, tremont, kabylake, alderlake, default
+04-11 16:19:16.426  3000  3007 I artd    : GetBestInfo: odex next to the dex file (/data/app/~~YiRBA2aqT-jrgoUEQOLnCA==/com.google.android.gms-v5AS6X_wu1iX6L_G0ZqBAA==/oat/x86_64/split_DynamiteModulesA_installtime.odex) is kOatUpToDate with filter 'speed' executable 'false'
+04-11 16:19:16.439  3000  3007 I artd    : GetBestInfo: odex next to the dex file (/data/app/~~YiRBA2aqT-jrgoUEQOLnCA==/com.google.android.gms-v5AS6X_wu1iX6L_G0ZqBAA==/oat/x86_64/split_DynamiteModulesC_installtime.odex) is kOatUpToDate with filter 'speed' executable 'false'
+04-11 16:19:16.448   660   692 I adbd    : jdwp connection from 7814
+04-11 16:19:16.449  3000  3007 I artd    : GetBestInfo: odex next to the dex file (/data/app/~~YiRBA2aqT-jrgoUEQOLnCA==/com.google.android.gms-v5AS6X_wu1iX6L_G0ZqBAA==/oat/x86_64/split_GoogleCertificates_installtime.odex) is kOatUpToDate with filter 'speed' executable 'false'
+04-11 16:19:16.458  7814  7814 D nativeloader: Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+04-11 16:19:16.463  1095  1321 V WindowManagerShell: onTransitionReady(transaction=3470333577607)
+04-11 16:19:16.463  1095  1163 V WindowManagerShell: onTransitionReady (#27) android.os.BinderProxy@917352d: {id=27 t=OPEN f=0x0 trk=0 r=[0@Point(0, 0)] c=[
+04-11 16:19:16.463  1095  1163 V WindowManagerShell:         {m=OPEN f=NONE leash=Surface(name=Task=52#321)/@0x7865b5e sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) epz=Point(1080, 2400) d=0 taskParent=-1 winMode=1 userId=0},
+04-11 16:19:16.463  1095  1163 V WindowManagerShell:         {m=TO_BACK f=NONE leash=Surface(name=Task=51#297)/@0xcbfbb3f sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) epz=Point(1080, 2400) d=0 taskParent=-1 winMode=1 userId=0}
+04-11 16:19:16.463  1095  1163 V WindowManagerShell:     ]}
+04-11 16:19:16.467  3000  3007 I artd    : GetBestInfo: odex next to the dex file (/data/app/~~YiRBA2aqT-jrgoUEQOLnCA==/com.google.android.gms-v5AS6X_wu1iX6L_G0ZqBAA==/oat/x86_64/split_MapsDynamite_installtime.odex) is kOatUpToDate with filter 'speed' executable 'false'
+04-11 16:19:16.469  1095  1163 V WindowManagerShell: Playing animation for (#27) android.os.BinderProxy@917352d@0
+04-11 16:19:16.469  1095  1163 V ShellRecents: RecentsTransitionHandler.startAnimation: no controller found
+04-11 16:19:16.470  1095  1163 V ShellDesktopMode: DesktopMixedTransitionHandler: No pending desktop transition
+04-11 16:19:16.470  1095  1163 V WindowManagerShell: Transition doesn't have explicit remote, search filters for match for {id=27 t=OPEN f=0x0 trk=0 r=[0@Point(0, 0)] c=[{m=OPEN f=NONE leash=Surface(name=Task=52#321)/@0x7865b5e sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) epz=Point(1080, 2400) d=0 taskParent=-1 winMode=1 userId=0},{m=TO_BACK f=NONE leash=Surface(name=Task=51#297)/@0xcbfbb3f sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) epz=Point(1080, 2400) d=0 taskParent=-1 winMode=1 userId=0}]}
+04-11 16:19:16.470  1095  1163 V WindowManagerShell:  Checking filter Pair{{types=[] flags=0x0] notFlags=0x0 checks=[{atype=undefined independent=true modes=[CLOSE,TO_BACK] flags=IN_TASK_WITH_EMBEDDED_ACTIVITY mustBeTask=false order=ANY topActivity=null launchCookie=null taskFragmentToken=android.os.BinderProxy@c1ec0ce windowingMode=undefined isCrossDisplayMove=false}]} RemoteTransition { remoteTransition = android.window.IRemoteTransition$Stub$Proxy@52b0bef, appThread = android.app.IApplicationThread$Stub$Proxy@ad116fc, debugName = overlayBackTransition }}
+04-11 16:19:16.470  1095  1163 V WindowManagerShell:  Checking filter Pair{{types=[] flags=0x0] notFlags=0x0 checks=[{atype=dream independent=true modes=[OPEN,TO_FRONT] flags=NONE mustBeTask=false order=ANY topActivity=null launchCookie=null windowingMode=undefined isCrossDisplayMove=false},{atype=home independent=true modes=[CLOSE,TO_BACK] flags=NONE mustBeTask=false order=ANY topActivity=null launchCookie=null windowingMode=undefined isCrossDisplayMove=false}]} RemoteTransition { remoteTransition = android.window.IRemoteTransition$Stub$Proxy@2efc185, appThread = android.app.IApplicationThread$Stub$Proxy@eea1bda, debugName = LauncherToDream }}
+04-11 16:19:16.470  1095  1163 V WindowManagerShell:  Checking filter Pair{{types=[] flags=0x0] notFlags=0x100 checks=[{atype=home independent=true modes=[OPEN,TO_FRONT] flags=NONE mustBeTask=false order=TOP topActivity=ComponentInfo{com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity} launchCookie=null windowingMode=undefined isCrossDisplayMove=false},{atype=standard independent=true modes=[CLOSE,TO_BACK] flags=NONE mustBeTask=false order=ANY topActivity=null launchCookie=null windowingMode=undefined isCrossDisplayMove=false},{NOT atype=undefined independent=true modes=[] flags=NONE mustBeTask=true order=ANY topActivity=null launchCookie=null customAnim=true windowingMode=undefined isCrossDisplayMove=false}]} RemoteTransition { remoteTransition = android.window.IRemoteTransition$Stub$Proxy@2c6780b, appThread = android.app.IApplicationThread$Stub$Proxy@a96a6e8, debugName = QuickstepLaunchHome }}
+04-11 16:19:16.470  1095  1163 V WindowManagerShell:  Checking filter Pair{{types=[OPEN,TO_FRONT] flags=0x0] notFlags=0x0 checks=[{atype=standard independent=true modes=[OPEN,TO_FRONT] flags=NONE mustBeTask=true order=ANY topActivity=null launchCookie=null windowingMode=freeform isCrossDisplayMove=false}]} RemoteTransition { remoteTransition = android.window.IRemoteTransition$Stub$Proxy@d1f27f6, appThread = null, debugName = DesktopWindowLimitUnminimize }}
+04-11 16:19:16.470  1095  1163 V WindowManagerShell:  Delegate animation for (#27) to null
+04-11 16:19:16.470  1095  1163 V WindowManagerShell: start default transition animation, info = {id=27 t=OPEN f=0x0 trk=0 r=[0@Point(0, 0)] c=[{m=OPEN f=NONE leash=Surface(name=Task=52#321)/@0x7865b5e sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) epz=Point(1080, 2400) d=0 taskParent=-1 winMode=1 userId=0},{m=TO_BACK f=NONE leash=Surface(name=Task=51#297)/@0xcbfbb3f sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) epz=Point(1080, 2400) d=0 taskParent=-1 winMode=1 userId=0}]}
+04-11 16:19:16.471  1095  1163 V WindowManagerShell: loadAnimation: anim=android.view.animation.AnimationSet@101c955 animAttr=0x9 type=OPEN isEntrance=false
+04-11 16:19:16.473  1095  1163 V WindowManagerShell: loadAnimation: anim=android.view.animation.AnimationSet@5d8cf6a animAttr=0x8 type=OPEN isEntrance=true
+04-11 16:19:16.475  1095  1163 V WindowManagerShell:  animated by com.android.wm.shell.transition.DefaultTransitionHandler@ac5fc37
+04-11 16:19:16.479  3000  3006 I artd    : GetBestInfo: odex next to the dex file (/data/app/~~YiRBA2aqT-jrgoUEQOLnCA==/com.google.android.gms-v5AS6X_wu1iX6L_G0ZqBAA==/oat/x86_64/split_MeasurementDynamite_installtime.odex) is kOatUpToDate with filter 'speed' executable 'false'
+04-11 16:19:16.483  1095  1163 V ShellTaskOrganizer: Task appeared taskId=52 listener=FullscreenTaskListener
+04-11 16:19:16.483  1095  1163 V ShellTaskOrganizer: Fullscreen Task Appeared: #52
+04-11 16:19:16.484   808   868 V WindowManager: Sent Transition (#27) createdAt=04-11 16:19:16.247 via request=TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=52 effectiveUid=10228 displayId=0 isRunning=true baseIntent=Intent { flg=0x10000000 cmp=com.sysadmindoc.callshield/.ui.MainActivity } baseActivity=ComponentInfo{com.sysadmindoc.callshield/com.sysadmindoc.callshield.ui.MainActivity} topActivity=ComponentInfo{com.sysadmindoc.callshield/com.sysadmindoc.callshield.ui.MainActivity} origActivity=null realActivity=ComponentInfo{com.sysadmindoc.callshield/com.sysadmindoc.callshield.ui.MainActivity} numActivities=1 lastActiveTime=1428861 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 defaultMinSize=220 token=WCT{RemoteToken{ad1f037 Task{dc62256 #52 type=standard A=10228:com.sysadmindoc.callshield}}} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=Rect(0, 0 - 0, 0) topActivityInfo=ActivityInfo{41e39a4 com.sysadmindoc.callshield.ui.MainActivity} launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=false isVisible=false isVisibleRequested=false isTopActivityNoDisplay=false isSleeping=false locusId=null displayAreaFeatureId=1 isTopActivityTransparent=false isActivityStackTransparent=false lastNonFullscreenBounds=null capturedLink=null capturedLinkTimestamp=0 requestedVisibleTypes=503 topActivityRequestOpenInBrowserEducationTimestamp=0 appCompatTaskInfo=AppCompatTaskInfo { topActivityInSizeCompat=false isLeafTask= true eligibleForLetterboxEducation= false isLetterboxEducationEnabled= true isLetterboxDoubleTapEnabled= false eligibleForUserAspectRatioButton= false topActivityBoundsLetterboxed= false isFromLetterboxDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 topActivityAppBounds=Rect(0, 0 - 1080, 2400) isUserFullscreenOverrideEnabled=false isSystemFullscreenOverrideEnabled=false hasMinAspectRatioOverride=false topActivityLetterboxBounds=null cameraCompatTaskInfo=CameraCompatTaskInfo { cameraCompatMode=undefinedundefined} topNonResizableActivityAspectRatio=-1.0} topActivityMainWindowFrame=null isAppBubble=false}, pipChange = null, remoteTransition = null, displayChange = null, requestedLocation = null, userChange = null, windowingLayerChange = null, flags = 0, debugId = 27 }
+04-11 16:19:16.484   808   868 V WindowManager:     startWCT=WindowContainerTransaction { changes= {} hops= [] errorCallbackToken=null taskFragmentOrganizer=null }
+04-11 16:19:16.484   808   868 V WindowManager:     info={id=27 t=OPEN f=0x0 trk=0 r=[0@Point(0, 0)] c=[
+04-11 16:19:16.484   808   868 V WindowManager:         {WCT{RemoteToken{ad1f037 Task{dc62256 #52 type=standard A=10228:com.sysadmindoc.callshield}}} m=OPEN f=NONE leash=Surface(name=Task=52#321)/@0x104550c sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) epz=Point(1080, 2400) d=0 taskParent=-1 winMode=1 userId=0},
+04-11 16:19:16.484   808   868 V WindowManager:         {WCT{RemoteToken{b6f424a Task{ebbab89 #51 type=standard A=10227:com.novacut.editor}}} m=TO_BACK f=NONE leash=Surface(name=Task=51#297)/@0xf9d0e9f sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) epz=Point(1080, 2400) d=0 taskParent=-1 winMode=1 userId=0}
+04-11 16:19:16.484   808   868 V WindowManager:     ]}
+04-11 16:19:16.485  1244  1244 D b/417220811: invalidateLoadedTasks - previous requestLoadId: -1
+04-11 16:19:16.489   808  1049 D BackgroundInstallControlService: Package event received: 0
+04-11 16:19:16.510  3000  3006 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000000b/dl-MlkitBarcodeUi.optional_253434100800.apk has no usable artifacts
+04-11 16:19:16.511  3000  3006 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000001/CronetDynamite.apk has no usable artifacts
+04-11 16:19:16.511  3000  3006 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000002/DynamiteLoader.apk has no usable artifacts
+04-11 16:19:16.513  3000  3006 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000000f/dl-MlkitOcrCommon.optional_261233100800.apk has no usable artifacts
+04-11 16:19:16.515  3000  3006 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000005/GoogleCertificates.apk has no usable artifacts
+04-11 16:19:16.516  3000  3006 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000000a/dl-VisionOcr.optional_253434100000.apk has no usable artifacts
+04-11 16:19:16.518  3000  3006 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000014/dl-Appsearch.optional_261233100800.apk has no usable artifacts
+04-11 16:19:16.521  3000  3006 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000011/dl-MlkitBarcodeUi.optional_261233100800.apk has no usable artifacts
+04-11 16:19:16.532  3000  3006 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000008/dl-TfliteDynamiteDynamite.integ_252130102100800.apk has no usable artifacts
+04-11 16:19:16.535  3000  3006 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000012/dl-PlayCloudSearch.optional_261233100000.apk has no usable artifacts
+04-11 16:19:16.540  3000  3006 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000009/dl-MlkitOcrCommon.optional_253434100800.apk has no usable artifacts
+04-11 16:19:16.541  3000  3006 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000013/dl-VisionOcr.optional_261233100000.apk has no usable artifacts
+04-11 16:19:16.544  3000  3006 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000000d/dl-Appsearch.optional_253434100800.apk has no usable artifacts
+04-11 16:19:16.546  3000  3006 I artd    : GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/BB2AE5A47BB198AF36C19CFD2B6407061A1BAF30/oat/x86_64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+04-11 16:19:16.548  3000  3006 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000007/MeasurementDynamite.apk has no usable artifacts
+04-11 16:19:16.550  3000  3006 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000000e/dl-PlayCloudSearch.optional_253434100000.apk has no usable artifacts
+04-11 16:19:16.783  7814  7814 D nativeloader: Configuring clns-9 for other apk /data/app/~~AHCE5zqr0cbVR83VEnoMEg==/com.sysadmindoc.callshield-vRuJdOtkd_KMAdfbZ7QqZg==/base.apk. target_sdk_version=35, uses_libraries=, library_path=/data/app/~~AHCE5zqr0cbVR83VEnoMEg==/com.sysadmindoc.callshield-vRuJdOtkd_KMAdfbZ7QqZg==/lib/x86_64:/data/app/~~AHCE5zqr0cbVR83VEnoMEg==/com.sysadmindoc.callshield-vRuJdOtkd_KMAdfbZ7QqZg==/base.apk!/lib/x86_64, permitted_path=/data:/mnt/expand:/data/user/0/com.sysadmindoc.callshield
+04-11 16:19:16.787  7814  7814 D CompatChangeReporter: Compat change id reported: 202956589; UID 10228; state: ENABLED
+04-11 16:19:16.797  7814  7814 V GraphicsEnvironment: Currently set values for:
+04-11 16:19:16.797  7814  7814 V GraphicsEnvironment:   angle_gl_driver_selection_pkgs=[]
+04-11 16:19:16.797  7814  7814 V GraphicsEnvironment:   angle_gl_driver_selection_values=[]
+04-11 16:19:16.797  7814  7814 V GraphicsEnvironment: com.sysadmindoc.callshield is not listed in per-application setting
+04-11 16:19:16.797  7814  7814 V GraphicsEnvironment: ANGLE allowlist from config: com.dreamgames.royalmatch com.dts.freefiremax com.dxx.firenow com.gramgames.mergedragons com.ludo.king com.mojang.minecraftpe com.my.defense com.nintendo.zaka com.os.airforce com.playrix.fishdomdd.gplay io.teslatech.callbreak jp.konami.prospia net.peakgames.toonblast
+04-11 16:19:16.797  7814  7814 V GraphicsEnvironment: No special selections for ANGLE, returning default driver choice
+04-11 16:19:16.797  7814  7814 V GraphicsEnvironment: Neither updatable production driver nor prerelease driver is supported.
+04-11 16:19:16.816  7814  7814 D WM-WrkMgrInitializer: Initializing WorkManager with default configuration.
+04-11 16:19:16.898  7814  7814 D WM-PackageManagerHelper: Skipping component enablement for androidx.work.impl.background.systemjob.SystemJobService
+04-11 16:19:16.898  7814  7814 D WM-Schedulers: Created SystemJobScheduler and enabled SystemJobService
+04-11 16:19:16.956  7814  7831 D WM-ForceStopRunnable: The default process name was not specified.
+04-11 16:19:16.958  7814  7831 D WM-ForceStopRunnable: Performing cleanup operations.
+04-11 16:19:16.970  7814  7831 E ashmem  : Pinning is deprecated since Android Q. Please use trim or other methods.
+04-11 16:19:17.003  1095  1163 V WindowManagerShell: Transition animation finished (aborted=false), notifying core (#27) android.os.BinderProxy@917352d@0
+04-11 16:19:17.007  1095  1163 V WindowManagerShell: Track 0 became idle
+04-11 16:19:17.007  1095  1163 V WindowManagerShell: All active transition animations finished
+04-11 16:19:17.008   808   868 V WindowManager: Finish Transition (#27): created at 04-11 16:19:16.247 collect-started=0.096ms request-sent=18.387ms started=50.36ms ready=210.156ms sent=212.056ms commit=26.681ms finished=758.199ms
+04-11 16:19:17.010  7215  7215 D VRI[MainActivity]: visibilityChanged oldVisibility=true newVisibility=false
+04-11 16:19:17.014   808  1072 W ImageReader_JNI: Unable to acquire a buffer item, very likely client tried to acquire more than maxImages buffers
+04-11 16:19:17.061  7814  7834 D WM-PackageManagerHelper: Skipping component enablement for androidx.work.impl.background.systemalarm.RescheduleReceiver
+04-11 16:19:17.084   808  1145 D CompatChangeReporter: Compat change id reported: 324203798; UID 10228; state: ENABLED
+04-11 16:19:17.089   808  1049 D BackgroundInstallControlService: Package event received: 0
+04-11 16:19:17.089   808  1049 D BackgroundInstallControlService: Package event received: 0
+04-11 16:19:17.096  7814  7838 I DisplayManager: Choreographer implicitly registered for the refresh rate.
+04-11 16:19:17.129  7814  7814 D DesktopExperienceFlags: Toggle override initialized to: false
+04-11 16:19:17.136  7814  7838 I GFXSTREAM: [eglDisplay.cpp(297)] Opening libGLESv1_CM_emulation.so
+04-11 16:19:17.137  7814  7838 I GFXSTREAM: [eglDisplay.cpp(297)] Opening libGLESv2_emulation.so
+04-11 16:19:17.155  7814  7838 W HWUI    : Failed to choose config with EGL_SWAP_BEHAVIOR_PRESERVED, retrying without...
+04-11 16:19:17.156  7814  7838 W HWUI    : Failed to initialize 101010-2 format, error = EGL_SUCCESS
+04-11 16:19:17.163  7814  7814 D CompatChangeReporter: Compat change id reported: 309578419; UID 10228; state: ENABLED
+04-11 16:19:17.163  7814  7814 D DesktopModeFlags: Toggle override initialized to: OVERRIDE_UNSET
+04-11 16:19:17.171  7389  7395 W id.apps.restore: userfaultfd: MOVE ioctl seems unsupported: Connection timed out
+04-11 16:19:17.223  7389  7400 V ClearcutMetricXmitter: Transmission is done.
+04-11 16:19:17.223  7389  7401 V ClearcutMetricXmitter: Transmission is done.
+04-11 16:19:17.246  7814  7814 D CompatChangeReporter: Compat change id reported: 349153669; UID 10228; state: ENABLED
+04-11 16:19:17.250  7814  7814 W HWUI    : Unknown dataspace 0
+04-11 16:19:17.270  7814  7814 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): android.app.Activity$$ExternalSyntheticLambda0@46a129f
+04-11 16:19:17.271   808  1145 D CoreBackPreview: Window{69975b1 u0 com.sysadmindoc.callshield/com.sysadmindoc.callshield.ui.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@b5f5a04, mPriority=-1, mIsAnimationCallback=false, mOverrideBehavior=0}
+04-11 16:19:17.608  7814  7822 I ndoc.callshield: Compiler allocated 5082KB to compile void android.view.ViewRootImpl.performTraversals()
+04-11 16:19:17.748  7814  7814 D VRI[MainActivity]: WindowInsets changed: 1080x2400 statusBars:[0,63,0,0] navigationBars:[0,0,0,63] mandatorySystemGestures:[0,63,0,84] 
+04-11 16:19:17.866  7852  7852 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+04-11 16:19:17.884  7852  7852 I AndroidRuntime: Using default boot image
+04-11 16:19:17.884  7852  7852 I AndroidRuntime: Leaving lock profiling enabled
+04-11 16:19:17.884  7814  7814 I HWUI    : Using FreeType backend (prop=Auto)
+04-11 16:19:17.886  7852  7852 I app_process: Using CollectorTypeCMC GC.
+04-11 16:19:17.993  7814  7814 W ndoc.callshield: Method boolean androidx.compose.runtime.snapshots.SnapshotStateList.conditionalUpdate(boolean, kotlin.jvm.functions.Function1) failed lock verification and will run slower.
+04-11 16:19:17.993  7814  7814 W ndoc.callshield: Common causes for lock verification issues are non-optimized dex code
+04-11 16:19:17.993  7814  7814 W ndoc.callshield: and incorrect proguard optimizations.
+04-11 16:19:17.993  7814  7814 W ndoc.callshield: Method boolean androidx.compose.runtime.snapshots.SnapshotStateList.conditionalUpdate$default(androidx.compose.runtime.snapshots.SnapshotStateList, boolean, kotlin.jvm.functions.Function1, int, java.lang.Object) failed lock verification and will run slower.
+04-11 16:19:17.994  7814  7814 W ndoc.callshield: Method java.lang.Object androidx.compose.runtime.snapshots.SnapshotStateList.mutate(kotlin.jvm.functions.Function1) failed lock verification and will run slower.
+04-11 16:19:17.994  7814  7814 W ndoc.callshield: Method void androidx.compose.runtime.snapshots.SnapshotStateList.update(boolean, kotlin.jvm.functions.Function1) failed lock verification and will run slower.
+04-11 16:19:17.994  7814  7814 W ndoc.callshield: Method void androidx.compose.runtime.snapshots.SnapshotStateList.update$default(androidx.compose.runtime.snapshots.SnapshotStateList, boolean, kotlin.jvm.functions.Function1, int, java.lang.Object) failed lock verification and will run slower.
+04-11 16:19:18.026  7814  7814 D CompatChangeReporter: Compat change id reported: 303742236; UID 10228; state: ENABLED
+04-11 16:19:18.064  7814  7814 D CompatChangeReporter: Compat change id reported: 270674727; UID 10228; state: ENABLED
+04-11 16:19:18.096  7852  7852 D nativeloader: InitDefaultPublicLibraries for_preload=1: libandroid.so:libaaudio.so:libamidi.so:libbinder_ndk.so:libc.so:libcamera2ndk.so:libdl.so:libEGL.so:libGLESv1_CM.so:libGLESv2.so:libGLESv3.so:libicu.so:libicui18n.so:libicuuc.so:libjnigraphics.so:liblog.so:libmediandk.so:libm.so:libnativehelper.so:libnativewindow.so:libOpenMAXAL.so:libOpenSLES.so:libRS.so:libstdc++.so:libsync.so:libvulkan.so:libwebviewchromium_plat_support.so:libz.so
+04-11 16:19:18.116  7852  7852 D nativeloader: Load libicu_jni.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+04-11 16:19:18.117  7852  7852 D app_process: u_setTimeZoneFilesDirectory("/apex/com.android.tzdata/etc/tz/versioned/9/icu") succeeded. 
+04-11 16:19:18.117  7852  7852 D app_process: I18n APEX ICU file found: /apex/com.android.i18n/etc/icu/icudt76l.dat
+04-11 16:19:18.120  7852  7852 D nativeloader: Load libjavacore.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+04-11 16:19:18.122  7852  7852 D nativeloader: Load libopenjdk.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+04-11 16:19:18.123  7852  7852 I app_process: Priority-to-niceness mapping: 19, 16, 13, 10, 0, -2, -4, -5, -6, -8
+04-11 16:19:18.123  7852  7852 W app_process: Unexpected CPU variant for x86: x86_64.
+04-11 16:19:18.123  7852  7852 W app_process: Known variants: atom, sandybridge, silvermont, goldmont, goldmont-plus, goldmont-without-sha-xsaves, tremont, kabylake, alderlake, default
+04-11 16:19:18.129  7852  7852 W app_process: ClassLoaderContext shared library size mismatch. Expected=2, found=0 (PCL[]{PCL[/system/framework/android.test.base.jar*1947731759]#PCL[/system/framework/android.test.mock.jar*3673435773]} | PCL[])
+04-11 16:19:18.131  7852  7852 W app_process: ClassLoaderContext classpath size mismatch. expected=0, found=1 (PCL[]{PCL[/system/framework/android.test.runner.jar*3527284906]{PCL[/system/framework/android.test.base.jar*1947731759]#PCL[/system/framework/android.test.mock.jar*3673435773]}#PCL[/system/framework/android.test.base.jar*1947731759]} | PCL[/system/framework/android.test.runner.jar*3527284906])
+04-11 16:19:18.150  7852  7852 D nativeloader: Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+04-11 16:19:18.151  7852  7852 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+04-11 16:19:18.161  7852  7852 I AconfigPackage: android.media.swcodec.flags is mapped to com.android.media.swcodec
+04-11 16:19:18.163  7852  7852 I AconfigPackage: com.android.permission.flags is mapped to com.android.permission
+04-11 16:19:18.163  7852  7852 I AconfigPackage: com.android.permissioncontroller.flags is mapped to com.android.permission
+04-11 16:19:18.164  7852  7852 I AconfigPackage: com.android.icu is mapped to com.android.i18n
+04-11 16:19:18.165  7852  7852 I AconfigPackage: com.android.appsearch.flags is mapped to com.android.appsearch
+04-11 16:19:18.166  7852  7852 I AconfigPackage: android.uprobestats.mainline.flags is mapped to com.android.uprobestats
+04-11 16:19:18.167  7852  7852 I AconfigPackage: com.android.crashrecovery.flags is mapped to com.android.crashrecovery
+04-11 16:19:18.168  7852  7852 I AconfigPackage: android.provider.flags is mapped to com.android.configinfrastructure
+04-11 16:19:18.168  7852  7852 I AconfigPackage: com.android.server.deviceconfig is mapped to com.android.configinfrastructure
+04-11 16:19:18.169  7852  7852 I AconfigPackage: com.android.compos.flags is mapped to com.android.compos
+04-11 16:19:18.170  7852  7852 I AconfigPackage: com.android.art.flags is mapped to com.android.art
+04-11 16:19:18.170  7852  7852 I AconfigPackage: com.android.art.rw.flags is mapped to com.android.art
+04-11 16:19:18.170  7852  7852 I AconfigPackage: com.android.libcore is mapped to com.android.art
+04-11 16:19:18.172  7852  7852 I AconfigPackage: com.android.telephony.flags is mapped to com.android.telephonycore
+04-11 16:19:18.173  7852  7852 I AconfigPackage: com.android.media.extractor.flags is mapped to com.android.media
+04-11 16:19:18.173  7852  7852 I AconfigPackage: com.android.media.mainline.flags is mapped to com.android.media
+04-11 16:19:18.174  7852  7852 I AconfigPackage: com.android.wifi.flags is mapped to com.android.wifi
+04-11 16:19:18.174  7852  7852 I AconfigPackage: com.android.org.conscrypt.flags is mapped to com.android.conscrypt
+04-11 16:19:18.174  7852  7852 I AconfigPackage: com.android.org.conscrypt.net.flags is mapped to com.android.conscrypt
+04-11 16:19:18.175  7852  7852 I AconfigPackage: com.android.healthfitness.flags is mapped to com.android.healthfitness
+04-11 16:19:18.176  7852  7852 I AconfigPackage: com.android.ipsec.flags is mapped to com.android.ipsec
+04-11 16:19:18.177  7852  7852 I AconfigPackage: com.android.nfc.module.flags is mapped to com.android.nfcservices
+04-11 16:19:18.178  7852  7852 I AconfigPackage: com.android.adservices.ondevicepersonalization.flags is mapped to com.android.ondevicepersonalization
+04-11 16:19:18.179  7852  7852 I AconfigPackage: com.android.adbd.flags is mapped to com.android.adbd
+04-11 16:19:18.180  7852  7852 I AconfigPackage: com.android.bluetooth.flags is mapped to com.android.bt
+04-11 16:19:18.181  7852  7852 I AconfigPackage: com.android.devicelock.flags is mapped to com.android.devicelock
+04-11 16:19:18.183  7852  7852 I AconfigPackage: android.os.profiling is mapped to com.android.profiling
+04-11 16:19:18.183  7852  7852 I AconfigPackage: android.os.profiling.anomaly.flags is mapped to com.android.profiling
+04-11 16:19:18.184  7852  7852 I AconfigPackage: com.android.os.statsd.flags is mapped to com.android.os.statsd
+04-11 16:19:18.185  7852  7852 I AconfigPackage: com.android.rkpd.flags is mapped to com.android.rkpd
+04-11 16:19:18.186  7852  7852 I AconfigPackage: com.android.cellbroadcastreceiver.flags is mapped to com.android.cellbroadcast
+04-11 16:19:18.187  7852  7852 I AconfigPackage: com.android.adservices.flags is mapped to com.android.adservices
+04-11 16:19:18.187  7852  7852 I AconfigPackage: com.android.sdksandbox.flags is mapped to com.android.adservices
+04-11 16:19:18.188  7852  7852 I AconfigPackage: com.android.uwb.flags is mapped to com.android.uwb
+04-11 16:19:18.188  7852  7852 I AconfigPackage: com.android.ranging.flags is mapped to com.android.uwb
+04-11 16:19:18.189  7852  7852 I AconfigPackage: android.graphics.pdf.flags is mapped to com.android.mediaprovider
+04-11 16:19:18.189  7852  7852 I AconfigPackage: com.android.providers.media.flags is mapped to com.android.mediaprovider
+04-11 16:19:18.189  7852  7852 I AconfigPackage: android.graphics.pdf.flags.readonly is mapped to com.android.mediaprovider
+04-11 16:19:18.190  7852  7852 I AconfigPackage: com.android.tethering.mainline.beta is mapped to com.android.tethering
+04-11 16:19:18.190  7852  7852 I AconfigPackage: android.net.http is mapped to com.android.tethering
+04-11 16:19:18.190  7852  7852 I AconfigPackage: com.android.tethering.readonly.flags is mapped to com.android.tethering
+04-11 16:19:18.190  7852  7852 I AconfigPackage: android.net.vcn is mapped to com.android.tethering
+04-11 16:19:18.190  7852  7852 I AconfigPackage: com.android.net.flags is mapped to com.android.tethering
+04-11 16:19:18.190  7852  7852 I AconfigPackage: com.android.tethering.beta.test is mapped to com.android.tethering
+04-11 16:19:18.190  7852  7852 I AconfigPackage: com.android.nearby.flags is mapped to com.android.tethering
+04-11 16:19:18.190  7852  7852 I AconfigPackage: com.android.net.ct.flags is mapped to com.android.tethering
+04-11 16:19:18.190  7852  7852 I AconfigPackage: com.android.net.thread.flags is mapped to com.android.tethering
+04-11 16:19:18.191  7852  7852 I AconfigPackage: com.android.system.virtualmachine.flags is mapped to com.android.virt
+04-11 16:19:18.192  7852  7852 E FeatureFlagsImplExport: android.os.flagging.AconfigStorageReadException: ERROR_PACKAGE_NOT_FOUND: package android.xr cannot be found on the device
+04-11 16:19:18.195  7852  7852 D UiAutomationConnection: Created on user UserHandle{0}
+04-11 16:19:18.195  7852  7852 I UiAutomation: Initialized for user 0 on display 0
+04-11 16:19:18.195  7852  7852 W UiAutomation: Created with deprecatead constructor, assumes DEFAULT_DISPLAY
+04-11 16:19:18.199   808  1145 D AccessibilityManagerService: changeCurrentUserForTestAutomationIfNeededLocked(0): ignoring because device doesn't support visible background users
+04-11 16:19:18.200   808  1145 I UiAutomationManager: Registering UiTestAutomationService (id=com.android.server.accessibility/UiAutomation, flags=0x0) when called by user 0
+04-11 16:19:18.200   808  1145 V AccessibilityManagerService: onUserStateChangedLocked for userId: 0, forceUpdate: false
+04-11 16:19:18.225   808  1145 V AccessibilityUserState: updateShortcutTargets: type:accessibility_shortcut_target_service, current:{}, new:{}
+04-11 16:19:18.225   808  1145 V AccessibilityUserState: updateShortcutTargets: type:accessibility_button_targets, current:{}, new:{}
+04-11 16:19:18.225   808  1145 V AccessibilityUserState: updateShortcutTargets: type:accessibility_gesture_targets, current:{}, new:{}
+04-11 16:19:18.225   808  1145 V AccessibilityUserState: updateShortcutTargets: type:accessibility_qs_targets, current:{}, new:{}
+04-11 16:19:18.225   808  1145 V AccessibilityUserState: updateShortcutTargets: type:accessibility_key_gesture_targets, current:{}, new:{}
+04-11 16:19:18.226   808  1145 W MagnificationConnectionManager: requestConnection duplicated request: connect=false, mConnectionState=DISCONNECTED
+04-11 16:19:18.230   808   808 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:18.231   808   808 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:18.234   808  2093 V AccessibilityManagerService: onUserStateChangedLocked for userId: 0, forceUpdate: false
+04-11 16:19:18.236   808  2093 V AccessibilityUserState: updateShortcutTargets: type:accessibility_shortcut_target_service, current:{}, new:{}
+04-11 16:19:18.236   808  2093 V AccessibilityUserState: updateShortcutTargets: type:accessibility_button_targets, current:{}, new:{}
+04-11 16:19:18.236   808  2093 V AccessibilityUserState: updateShortcutTargets: type:accessibility_gesture_targets, current:{}, new:{}
+04-11 16:19:18.236   808  2093 V AccessibilityUserState: updateShortcutTargets: type:accessibility_qs_targets, current:{}, new:{}
+04-11 16:19:18.236   808  2093 V AccessibilityUserState: updateShortcutTargets: type:accessibility_key_gesture_targets, current:{}, new:{}
+04-11 16:19:18.236   808  2093 W MagnificationConnectionManager: requestConnection duplicated request: connect=false, mConnectionState=DISCONNECTED
+04-11 16:19:18.236   808   808 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:18.238   808   808 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:18.241   808   808 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:18.244   808   808 D BatterySaverPolicy: accessibility changed to true, updating policy.
+04-11 16:19:18.256   808  1700 D AccessibilityManagerService: .getAccessibilityShortcutTargets {shortcutType=32, userId=0}
+04-11 16:19:18.263  1435  3003 D AccessibilitySourceService: enabled a11y services count 0
+04-11 16:19:18.263  1435  3003 D AccessibilitySourceService: a11y source sending 0 issue to sc
+04-11 16:19:18.263   808  2091 D SafetySourceDataValidat: No cert check requested for package com.google.android.permissioncontroller
+04-11 16:19:18.264  1746  1755 I AiAiEcho: Settings changed for uri: content://settings/secure/accessibility_enabled
+04-11 16:19:18.267  1746  1755 I AiAiEcho: Settings changed for uri: content://settings/secure/accessibility_enabled
+04-11 16:19:18.271  1746  1947 I AiAiEcho: Predicting[0]:  [CONTEXT sampling_count=5 ]
+04-11 16:19:18.271  1746  1947 I AiAiEcho: EchoTargets: 
+04-11 16:19:18.271  1746  1947 I AiAiEcho: Filtered by AiAi flag check: 
+04-11 16:19:18.271  1746  1947 I AiAiEcho: [CONTEXT ratelimit_period="10 SECONDS" ]
+04-11 16:19:18.272  1746  1947 I AiAiEcho: #remoteViewsTwiddler: feature disabled.
+04-11 16:19:18.272  1746  1947 I AiAiEcho: Predicting[0]:  [CONTEXT sampling_count=5 ]
+04-11 16:19:18.273  1746  1947 I AiAiEcho: EchoTargets: 
+04-11 16:19:18.273  1746  1947 I AiAiEcho: Filtered by AiAi flag check: 
+04-11 16:19:18.273  1746  1947 I AiAiEcho: [CONTEXT ratelimit_period="10 SECONDS" ]
+04-11 16:19:18.273  1746  1947 I AiAiEcho: #remoteViewsTwiddler: feature disabled.
+04-11 16:19:18.273  1746  1947 I AiAiEcho: Predicting[0]:  [CONTEXT sampling_count=5 ]
+04-11 16:19:18.273  1746  1947 I AiAiEcho: EchoTargets: 
+04-11 16:19:18.273  1746  1947 I AiAiEcho: Filtered by AiAi flag check: 
+04-11 16:19:18.273  1746  1947 I AiAiEcho: [CONTEXT ratelimit_period="10 SECONDS" ]
+04-11 16:19:18.273  1746  1947 I AiAiEcho: #remoteViewsTwiddler: feature disabled.
+04-11 16:19:18.273  1746  1947 I AiAiEcho: Predicting[0]:  [CONTEXT sampling_count=5 ]
+04-11 16:19:18.273  1746  1947 I AiAiEcho: EchoTargets: 
+04-11 16:19:18.273  1746  1947 I AiAiEcho: Filtered by AiAi flag check: 
+04-11 16:19:18.273  1746  1947 I AiAiEcho: [CONTEXT ratelimit_period="10 SECONDS" ]
+04-11 16:19:18.273  1746  1947 I AiAiEcho: #remoteViewsTwiddler: feature disabled.
+04-11 16:19:18.273  1746  1947 I AiAiEcho: Predicting[0]:  [CONTEXT sampling_count=5 ]
+04-11 16:19:18.273  1746  1947 I AiAiEcho: EchoTargets: 
+04-11 16:19:18.273  1746  1947 I AiAiEcho: Filtered by AiAi flag check: 
+04-11 16:19:18.273  1746  1947 I AiAiEcho: [CONTEXT ratelimit_period="10 SECONDS" ]
+04-11 16:19:18.274  1746  1947 I AiAiEcho: #remoteViewsTwiddler: feature disabled.
+04-11 16:19:18.274  1746  1947 I AiAiEcho: Predicting[0]:  [CONTEXT sampling_count=5 ]
+04-11 16:19:18.274  1746  1947 I AiAiEcho: EchoTargets: 
+04-11 16:19:18.274  1746  1947 I AiAiEcho: Filtered by AiAi flag check: 
+04-11 16:19:18.274  1746  1947 I AiAiEcho: [CONTEXT ratelimit_period="10 SECONDS" ]
+04-11 16:19:18.274  1746  1947 I AiAiEcho: #remoteViewsTwiddler: feature disabled.
+04-11 16:19:18.278  1746  1947 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface lockscreen with targets# 0 (types=[])
+04-11 16:19:18.279  1746  1947 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface ambientcue with targets# 0 (types=[])
+04-11 16:19:18.280  1095  1095 W SsPagerDots: Total number of pages invalid: 0. Assuming 1 page.
+04-11 16:19:18.280  1746  1947 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface home with targets# 0 (types=[])
+04-11 16:19:18.281  1095  1308 I AmbientCueRepository: Receiving SmartSpace targets # 0
+04-11 16:19:18.281  1746  1947 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface lockscreen with targets# 0 (types=[])
+04-11 16:19:18.281  1746  1947 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface ambientcue with targets# 0 (types=[])
+04-11 16:19:18.281  1095  1095 W SsPagerDots: Total number of pages invalid: 0. Assuming 1 page.
+04-11 16:19:18.282  1746  1947 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface home with targets# 0 (types=[])
+04-11 16:19:18.282  1095  1308 I AmbientCueRepository: Receiving SmartSpace targets # 0
+04-11 16:19:18.353   808   868 I ActivityTaskManager: Displayed com.sysadmindoc.callshield/.ui.MainActivity for user 0: +2s111ms
+04-11 16:19:18.353  7814  7829 I HWUI    : Davey! duration=1084ms; Flags=1, FrameTimelineVsyncId=57731, IntendedVsync=1429862941404, Vsync=1429862941404, InputEventId=0, HandleInputStart=1429865380600, AnimationStart=1429865393500, PerformTraversalsStart=1429865414300, DrawStart=1430866388500, FrameDeadline=1429879608070, FrameStartTime=1429865370100, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=1430909611900, SyncStart=1430909952800, IssueDrawCommandsStart=1430910126900, SwapBuffers=1430934325200, FrameCompleted=1430947371800, DequeueBufferDuration=16000, QueueBufferDuration=614000, GpuCompleted=1430947371800, SwapBuffersCompleted=1430944583100, DisplayPresentTime=0, CommandSubmissionCompleted=1430934325200, 
+04-11 16:19:18.380  7814  7814 I Choreographer: Skipped 63 frames!  The application may be doing too much work on its main thread.
+04-11 16:19:18.403  7814  7827 I HWUI    : Davey! duration=1083ms; Flags=0, FrameTimelineVsyncId=57746, IntendedVsync=1429912941402, Vsync=1430962941360, InputEventId=0, HandleInputStart=1430976314500, AnimationStart=1430976351200, PerformTraversalsStart=1430990100300, DrawStart=1430991087300, FrameDeadline=1430979608026, FrameStartTime=1430976064100, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=1430991761800, SyncStart=1430992092200, IssueDrawCommandsStart=1430992194800, SwapBuffers=1430992862400, FrameCompleted=1430996775100, DequeueBufferDuration=14500, QueueBufferDuration=165600, GpuCompleted=1430996775100, SwapBuffersCompleted=1430993530600, DisplayPresentTime=0, CommandSubmissionCompleted=1430992862400, 
+04-11 16:19:18.416  1400  4626 I FontLog : (REDACTED) Received query %s, URI %s
+04-11 16:19:18.419  1400  4626 I FontLog : (REDACTED) Query [%s] resolved to %s
+04-11 16:19:18.439  1400  4626 I FontLog : (REDACTED) Fetch %s end status %s
+04-11 16:19:18.445  1400  4626 I FontLog : (REDACTED) Pulling font file for id = %d, cache size = %d
+04-11 16:19:18.453   808   962 I ImeTracker: com.sysadmindoc.callshield:69361875: onRequestHide at ORIGIN_SERVER reason HIDE_UNSPECIFIED_WINDOW fromUser false
+04-11 16:19:18.455  7814  7814 D InsetsController: hide(ime())
+04-11 16:19:18.456  7814  7814 I ImeTracker: com.sysadmindoc.callshield:69361875: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+04-11 16:19:18.461  1400  4626 I FontLog : (REDACTED) Pulling font file for id = %d, cache size = %d
+04-11 16:19:18.461  7215  7215 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): android.app.Activity$$ExternalSyntheticLambda0@4351d1d
+04-11 16:19:18.462   808  2092 D CoreBackPreview: Window{ba051fb u0 com.novacut.editor/com.novacut.editor.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@57fa091, mPriority=-1, mIsAnimationCallback=false, mOverrideBehavior=0}
+04-11 16:19:18.469   808  2093 I ImeTracker: system_server:33cdba5e: onRequestHide at ORIGIN_SERVER reason IME_REQUESTED_CHANGED_LISTENER fromUser false
+04-11 16:19:18.469   808   871 I ImeTracker: system_server:33cdba5e: onCancelled at PHASE_SERVER_SHOULD_HIDE
+04-11 16:19:18.474  1561  1561 I GoogleInputMethodService: GoogleInputMethodService.onFinishInput():2057 
+04-11 16:19:18.486  1561  1561 I Module  : DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatus():100 repeatCheckTimes = 0, locked = false
+04-11 16:19:18.492  1561  1561 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1318 onStartInput(EditorInfo{EditorInfo{packageName=com.sysadmindoc.callshield, inputType=0, inputTypeString=NULL, enableLearning=false, autoCorrection=false, autoComplete=false, imeOptions=0, privateImeOptions=null, actionName=UNSPECIFIED, actionLabel=null, initialSelStart=-1, initialSelEnd=-1, initialCapsMode=0, label=null, fieldId=0, fieldName=null, extras=null, hintText=null, hintLocales=[]}}, false)
+04-11 16:19:18.501   808  1049 D BackgroundInstallControlService: Package event received: 0
+04-11 16:19:18.511   808   994 I HalDevMgr: bestIfaceCreationProposal is null, requestIface=STA, existingIface=[name=wlan0 type=STA]
+04-11 16:19:18.516  1561  1561 I Module  : DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatus():100 repeatCheckTimes = 1, locked = false
+04-11 16:19:18.517   808  2093 W PackageConfigPersister: App-specific configuration not found for packageName: com.sysadmindoc.callshield and userId: 0
+04-11 16:19:18.739   704  2354 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:18.952  1095  1102 W System  : A resource failed to call release. 
+04-11 16:19:18.953  1095  1102 W System  : A resource failed to call release. 
+04-11 16:19:19.701  7852  7852 W AccessibilityNodeInfoDumper: Fetch time: 242ms
+04-11 16:19:19.704   808  2093 V AccessibilityManagerService: onUserStateChangedLocked for userId: 0, forceUpdate: false
+04-11 16:19:19.704   808  2093 V AccessibilityUserState: updateShortcutTargets: type:accessibility_shortcut_target_service, current:{}, new:{}
+04-11 16:19:19.704   808  2093 V AccessibilityUserState: updateShortcutTargets: type:accessibility_button_targets, current:{}, new:{}
+04-11 16:19:19.705   808  2093 V AccessibilityUserState: updateShortcutTargets: type:accessibility_gesture_targets, current:{}, new:{}
+04-11 16:19:19.705   808  2093 V AccessibilityUserState: updateShortcutTargets: type:accessibility_qs_targets, current:{}, new:{}
+04-11 16:19:19.705  1746  1755 I AiAiEcho: Settings changed for uri: content://settings/secure/accessibility_enabled
+04-11 16:19:19.705   808  2093 V AccessibilityUserState: updateShortcutTargets: type:accessibility_key_gesture_targets, current:{}, new:{}
+04-11 16:19:19.705   808  2093 W MagnificationConnectionManager: requestConnection duplicated request: connect=false, mConnectionState=DISCONNECTED
+04-11 16:19:19.705   808  2093 D AccessibilityManagerService: restoreCurrentUserForTestAutomationIfNeededLocked(): ignoring because device doesn't support visible background users
+04-11 16:19:19.705   808   808 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:19.705  1746  1947 I AiAiEcho: Predicting[0]:  [CONTEXT sampling_count=5 ]
+04-11 16:19:19.706  1746  1947 I AiAiEcho: EchoTargets: 
+04-11 16:19:19.706  1746  1947 I AiAiEcho: Filtered by AiAi flag check: 
+04-11 16:19:19.706  1746  1947 I AiAiEcho: [CONTEXT ratelimit_period="10 SECONDS" ]
+04-11 16:19:19.706  1746  1947 I AiAiEcho: #remoteViewsTwiddler: feature disabled.
+04-11 16:19:19.706  1746  1947 I AiAiEcho: Predicting[0]:  [CONTEXT sampling_count=5 ]
+04-11 16:19:19.706  1746  1947 I AiAiEcho: EchoTargets: 
+04-11 16:19:19.706  1746  1947 I AiAiEcho: Filtered by AiAi flag check: 
+04-11 16:19:19.706  1746  1947 I AiAiEcho: [CONTEXT ratelimit_period="10 SECONDS" ]
+04-11 16:19:19.706  1746  1947 I AiAiEcho: #remoteViewsTwiddler: feature disabled.
+04-11 16:19:19.706   808   808 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:19.707  1746  1947 I AiAiEcho: Predicting[0]:  [CONTEXT sampling_count=5 ]
+04-11 16:19:19.707  1746  1947 I AiAiEcho: EchoTargets: 
+04-11 16:19:19.707  1746  1947 I AiAiEcho: Filtered by AiAi flag check: 
+04-11 16:19:19.707  1746  1947 I AiAiEcho: [CONTEXT ratelimit_period="10 SECONDS" ]
+04-11 16:19:19.707  7852  7852 D AndroidRuntime: Shutting down VM
+04-11 16:19:19.707  1746  1947 I AiAiEcho: #remoteViewsTwiddler: feature disabled.
+04-11 16:19:19.707  1746  1947 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface lockscreen with targets# 0 (types=[])
+04-11 16:19:19.707   808   808 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+04-11 16:19:19.707  7852  7862 W libbinder.IPCThreadState: call to talkWithDriver in joinThreadPool returned error: -9 (Bad file descriptor), FD: -1
+04-11 16:19:19.707  7852  7861 W libbinder.IPCThreadState: call to talkWithDriver in joinThreadPool returned error: -9 (Bad file descriptor), FD: -1
+04-11 16:19:19.708  7852  7874 W libbinder.IPCThreadState: call to talkWithDriver in joinThreadPool returned error: -9 (Bad file descriptor), FD: -1
+04-11 16:19:19.708  1746  1947 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface ambientcue with targets# 0 (types=[])
+04-11 16:19:19.709  1746  1947 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface home with targets# 0 (types=[])
+04-11 16:19:19.709  1095  1308 I AmbientCueRepository: Receiving SmartSpace targets # 0
+04-11 16:19:19.709   808   808 D BatterySaverPolicy: accessibility changed to false, updating policy.
+04-11 16:19:19.710  7476  7481 W .android.dialer: userfaultfd: MOVE ioctl seems unsupported: Connection timed out
+04-11 16:19:19.711  1095  1095 W SsPagerDots: Total number of pages invalid: 0. Assuming 1 page.
+04-11 16:19:19.779  1232  1353 D SatelliteController: iisInCarrierRoamingNbIotNtn: satellite is disabled
+04-11 16:19:19.782  1232  1353 D SatelliteController: getCarrierRoamingNtnConnectType: Falling back to global carrier config connect type: 0
+04-11 16:19:19.842  1400  1400 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.auth.aang.events.services.START dat=chimera-action:/... xflg=0x4 cmp=com.google.android.gms/.chimera.PersistentApiService }
+04-11 16:19:20.274   808  1809 E TaskPersister: File error accessing recents directory (directory doesn't exist?).
+04-11 16:19:21.120   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+04-11 16:19:21.121   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+04-11 16:19:21.121   808  1000 D InetDiagMessage: Destroyed live tcp sockets for uids={10170} in 1ms
+04-11 16:19:21.122   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+04-11 16:19:21.122   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+04-11 16:19:21.122   808  1000 D InetDiagMessage: Destroyed live tcp sockets for uids={20170} in 1ms
+04-11 16:19:21.122   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+04-11 16:19:21.122   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+04-11 16:19:21.122   808  1000 D InetDiagMessage: Destroyed live tcp sockets for uids={10148} in 0ms
+04-11 16:19:21.122   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+04-11 16:19:21.123   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+04-11 16:19:21.123   808  1000 D InetDiagMessage: Destroyed live tcp sockets for uids={20148} in 1ms
+04-11 16:19:21.161   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+04-11 16:19:21.161   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+04-11 16:19:21.161   808  1000 D InetDiagMessage: Destroyed live tcp sockets for uids={10172} in 1ms
+04-11 16:19:21.161   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+04-11 16:19:21.161   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+04-11 16:19:21.161   808  1000 D InetDiagMessage: Destroyed live tcp sockets for uids={20172} in 0ms
+04-11 16:19:21.171   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+04-11 16:19:21.172   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+04-11 16:19:21.172   808  1000 D InetDiagMessage: Destroyed live tcp sockets for uids={10146} in 0ms
+04-11 16:19:21.172   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+04-11 16:19:21.172   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+04-11 16:19:21.172   808  1000 D InetDiagMessage: Destroyed live tcp sockets for uids={20146} in 1ms
+04-11 16:19:21.177  7326  7427 I ForwardSyncCache: reclaimMemory: Clearing caches
+04-11 16:19:21.180  7326  7427 W Bugle   : TextClassifierLibManagerImpl: Reclaiming memory at level: 40
+04-11 16:19:21.254   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+04-11 16:19:21.255   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+04-11 16:19:21.255   808  1000 D InetDiagMessage: Destroyed live tcp sockets for uids={10157} in 1ms
+04-11 16:19:21.255   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+04-11 16:19:21.255   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+04-11 16:19:21.255   808  1000 D InetDiagMessage: Destroyed live tcp sockets for uids={20157} in 0ms
+04-11 16:19:21.266   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+04-11 16:19:21.267   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+04-11 16:19:21.267   808  1000 D InetDiagMessage: Destroyed live tcp sockets for uids={10165} in 1ms
+04-11 16:19:21.267   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+04-11 16:19:21.267   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+04-11 16:19:21.267   808  1000 D InetDiagMessage: Destroyed live tcp sockets for uids={20165} in 0ms
+04-11 16:19:21.518   808   994 I HalDevMgr: bestIfaceCreationProposal is null, requestIface=STA, existingIface=[name=wlan0 type=STA]
+04-11 16:19:21.685  1400  1400 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.libs.gmscorelogger.service.START dat=chimera-action:/... xflg=0x4 cmp=com.google.android.gms/.chimera.PersistentDirectBootAwareApiService }
+04-11 16:19:22.205  7814  7875 D ProfileInstaller: Installing profile for com.sysadmindoc.callshield
+04-11 16:19:22.332   808   942 D ActivityManager: freezing 4215 com.android.vending:background
+04-11 16:19:22.439   808   942 D ActivityManager: freezing 4445 com.android.vending
+04-11 16:19:22.441   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+04-11 16:19:22.442   808  1000 D InetDiagMessage: Destroyed 2 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+04-11 16:19:22.442   808  1000 D InetDiagMessage: Destroyed live tcp sockets for uids={10153} in 2ms
+04-11 16:19:23.470   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+04-11 16:19:23.470   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+04-11 16:19:23.470   808  1000 D InetDiagMessage: Destroyed live tcp sockets for uids={10227} in 1ms
+04-11 16:19:23.470   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+04-11 16:19:23.470   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+04-11 16:19:23.470   808  1000 D InetDiagMessage: Destroyed live tcp sockets for uids={20227} in 0ms
+04-11 16:19:23.783   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+04-11 16:19:23.783   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+04-11 16:19:23.783   808  1000 D InetDiagMessage: Destroyed live tcp sockets for uids={10159} in 0ms
+04-11 16:19:23.783   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+04-11 16:19:23.783   808  1000 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+04-11 16:19:23.783   808  1000 D InetDiagMessage: Destroyed live tcp sockets for uids={20159} in 0ms
+04-11 16:19:23.980  7663  7667 W droid.bluetooth: userfaultfd: MOVE ioctl seems unsupported: Connection timed out
+04-11 16:19:23.983  7663  7669 W System  : A resource failed to call close. 
+04-11 16:19:23.983  7663  7669 W System  : A resource failed to call close. 
+04-11 16:19:24.037  1625  1625 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.notifications.capping.api.NotificationsCappingApiService.START dat=chimera-action:/... xflg=0x4 cmp=com.google.android.gms/.chimera.GmsApiService }
+04-11 16:19:24.115  1625  1625 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.mobstore.service.START xflg=0x4 pkg=com.google.android.gms }
+04-11 16:19:24.522   808   994 I HalDevMgr: bestIfaceCreationProposal is null, requestIface=STA, existingIface=[name=wlan0 type=STA]

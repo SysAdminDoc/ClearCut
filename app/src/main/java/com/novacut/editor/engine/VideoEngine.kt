@@ -2,6 +2,7 @@ package com.novacut.editor.engine
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
@@ -46,12 +47,28 @@ class VideoEngine @Inject constructor(
         val hasAudio: Boolean
     )
 
+    private data class PreviewSeekTarget(
+        val mediaItemIndex: Int,
+        val mediaPositionMs: Long
+    )
+
+    private data class PreviewSegment(
+        val clip: Clip?,
+        val timelineStartMs: Long,
+        val durationMs: Long,
+        val mediaUri: Uri
+    ) {
+        val timelineEndMs: Long get() = timelineStartMs + durationMs
+    }
+
     private var player: ExoPlayer? = null
     private var playerListener: Player.Listener? = null
     private var transitionListener: Player.Listener? = null
 
     // Clips for per-clip effect switching during playback
     private var videoClips: List<Clip> = emptyList()
+    private var previewSegments: List<PreviewSegment> = emptyList()
+    @Volatile private var previewGapUri: Uri? = null
     // Memory-bounded bitmap cache — uses 1/8 of available heap
     // Don't recycle evicted bitmaps — they may still be referenced by Compose Image nodes
     private val thumbnailCache = object : android.util.LruCache<String, Bitmap>(
@@ -145,17 +162,18 @@ class VideoEngine @Inject constructor(
     @androidx.annotation.OptIn(UnstableApi::class)
     fun prepareTimeline(tracks: List<Track>) {
         val p = getPlayer()
-        videoClips = tracks.filter { it.type == TrackType.VIDEO && it.isVisible }.flatMap { it.clips }
-        if (videoClips.isEmpty()) {
+        videoClips = collectPreviewClips(tracks)
+        val timelineEndMs = tracks.maxOfOrNull { track ->
+            track.clips.maxOfOrNull { clip -> clip.timelineEndMs } ?: 0L
+        } ?: 0L
+        previewSegments = buildPreviewSegments(videoClips, timelineEndMs)
+        if (previewSegments.isEmpty()) {
             p.clearMediaItems()
             clipDurationsMs = emptyList()
             return
         }
-        clipDurationsMs = videoClips.map { it.durationMs }
-        val mediaItems = videoClips.map { clip ->
-            val mediaUri = clip.proxyUri ?: clip.sourceUri
-            buildMediaItemForClip(clip, mediaUri)
-        }
+        clipDurationsMs = previewSegments.map { it.durationMs }
+        val mediaItems = previewSegments.map(::buildMediaItemForPreviewSegment)
         p.setMediaItems(mediaItems)
         p.prepare()
 
@@ -172,27 +190,23 @@ class VideoEngine @Inject constructor(
         applyEffectsForCurrentClip()
     }
 
+    fun getPreviewClipAt(index: Int): Clip? = previewSegments.getOrNull(index)?.clip
+
     fun seekTo(positionMs: Long) {
         val p = player ?: return
-        if (clipDurationsMs.size <= 1) {
-            p.seekTo(positionMs)
-            return
-        }
-        var remaining = positionMs
-        for (i in clipDurationsMs.indices) {
-            if (remaining < clipDurationsMs[i] || i == clipDurationsMs.lastIndex) {
-                p.seekTo(i, remaining.coerceAtLeast(0L))
-                return
-            }
-            remaining -= clipDurationsMs[i]
+        val target = resolvePreviewSeekTarget(positionMs)
+        if (target != null) {
+            p.seekTo(target.mediaItemIndex, target.mediaPositionMs)
+        } else {
+            p.seekTo(positionMs.coerceAtLeast(0L))
         }
     }
 
     fun getAbsolutePositionMs(): Long {
         val p = player ?: return 0L
-        val index = p.currentMediaItemIndex
-        val offset = clipDurationsMs.take(index).sum()
-        return offset + p.currentPosition
+        val segment = previewSegments.getOrNull(p.currentMediaItemIndex) ?: return p.currentPosition
+        return (segment.timelineStartMs + p.currentPosition)
+            .coerceIn(segment.timelineStartMs, segment.timelineEndMs)
     }
 
     fun play() { player?.play() }
@@ -306,30 +320,49 @@ class VideoEngine @Inject constructor(
         _exportProgress.value = 0f
 
         try {
-            val visibleVideoTracks = tracks.filter {
+            val visibleVideoTracks = tracks
+                .sortedBy { it.index }
+                .filter {
                 (it.type == TrackType.VIDEO || it.type == TrackType.OVERLAY) && it.isVisible && it.clips.isNotEmpty()
             }
             if (visibleVideoTracks.isEmpty()) {
                 throw IllegalStateException("No video clips to export")
             }
             val videoTrack = visibleVideoTracks.first()
+            val soloTrackIds = tracks.filter { it.isSolo }.map { it.id }.toSet()
+            val videoTrackAudioGain = if (isTrackAudibleForMix(videoTrack, soloTrackIds)) {
+                videoTrack.volume.coerceIn(0f, 2f)
+            } else {
+                0f
+            }
             val (targetW, targetH) = config.resolution.forAspect(config.aspectRatio)
 
-            val clips = videoTrack.clips
+            val clips = videoTrack.clips.sortedBy { it.timelineStartMs }
             val editedItems = clips.mapIndexed { index, clip ->
                 val nextTransition = clips.getOrNull(index + 1)?.transition
-                buildEditedMediaItem(clip, videoTrack.isMuted, tracks, config, targetW, targetH, textOverlays, lottieOverlays, nextTransition)
+                buildEditedMediaItem(
+                    clip = clip,
+                    videoMuted = videoTrackAudioGain <= 0f,
+                    trackAudioGain = videoTrackAudioGain,
+                    tracks = tracks,
+                    config = config,
+                    targetW = targetW,
+                    targetH = targetH,
+                    textOverlays = textOverlays,
+                    lottieOverlays = lottieOverlays,
+                    nextClipTransition = nextTransition
+                )
             }
             @Suppress("DEPRECATION")
             val videoSequence = EditedMediaItemSequence.Builder().addItems(editedItems).build()
 
-            val audioSequences = buildAudioSequences(tracks)
+            val audioSequences = buildAudioSequences(tracks, soloTrackIds)
             val allSequences = buildList {
                 add(videoSequence)
                 addAll(audioSequences)
             }
 
-            val composition = buildComposition(allSequences, audioSequences.isNotEmpty(), videoTrack.isMuted)
+            val composition = buildComposition(allSequences, audioSequences.isNotEmpty(), videoTrackAudioGain <= 0f)
 
             val mimeType = if (config.transparentBackground) {
                 MimeTypes.VIDEO_VP9
@@ -356,6 +389,7 @@ class VideoEngine @Inject constructor(
     private fun buildEditedMediaItem(
         clip: Clip,
         videoMuted: Boolean,
+        trackAudioGain: Float,
         tracks: List<Track>,
         config: ExportConfig,
         targetW: Int,
@@ -462,11 +496,13 @@ class VideoEngine @Inject constructor(
                 val hasKfVolume = clip.keyframes.any { it.property == KeyframeProperty.VOLUME }
                 val needsVolume = clip.volume != 1.0f
                 val needsFade = clip.fadeInMs > 0L || clip.fadeOutMs > 0L
-                if (hasKfVolume || needsVolume || needsFade) {
+                val needsTrackGain = trackAudioGain != 1.0f
+                if (hasKfVolume || needsVolume || needsFade || needsTrackGain) {
                     add(VolumeAudioProcessor(
                         volume = clip.volume, fadeInMs = clip.fadeInMs, fadeOutMs = clip.fadeOutMs,
                         clipDurationMs = clip.durationMs,
-                        keyframes = if (hasKfVolume) clip.keyframes else emptyList()
+                        keyframes = if (hasKfVolume) clip.keyframes else emptyList(),
+                        postGain = trackAudioGain
                     ))
                 }
             }
@@ -513,6 +549,18 @@ class VideoEngine @Inject constructor(
                         .setEndPositionMs(clip.trimEndMs)
                         .build()
                 )
+                .build()
+        }
+    }
+
+    private fun buildMediaItemForPreviewSegment(segment: PreviewSegment): MediaItem {
+        val clip = segment.clip
+        return if (clip != null) {
+            buildMediaItemForClip(clip, segment.mediaUri)
+        } else {
+            MediaItem.Builder()
+                .setUri(segment.mediaUri)
+                .setImageDurationMs(segment.durationMs.coerceAtLeast(1L))
                 .build()
         }
     }
@@ -597,10 +645,17 @@ class VideoEngine @Inject constructor(
     }
 
     @androidx.annotation.OptIn(UnstableApi::class)
-    private fun buildAudioSequences(tracks: List<Track>): List<EditedMediaItemSequence> {
-        val audioTracks = tracks.filter { it.type == TrackType.AUDIO && it.isVisible && !it.isMuted && it.clips.isNotEmpty() }
+    private fun buildAudioSequences(
+        tracks: List<Track>,
+        soloTrackIds: Set<String>
+    ): List<EditedMediaItemSequence> {
+        val audioTracks = tracks
+            .sortedBy { it.index }
+            .filter { it.type == TrackType.AUDIO && it.clips.isNotEmpty() && isTrackAudibleForMix(it, soloTrackIds) }
         return audioTracks.map { at ->
-            val audioItems = at.clips.map { clip ->
+            val audioItems = at.clips
+                .sortedBy { it.timelineStartMs }
+                .map { clip ->
                 val mediaItem = MediaItem.Builder()
                     .setUri(clip.sourceUri)
                     .setClippingConfiguration(
@@ -614,11 +669,13 @@ class VideoEngine @Inject constructor(
                     val hasKfVol = clip.keyframes.any { it.property == KeyframeProperty.VOLUME }
                     val needsVolume = clip.volume != 1.0f
                     val needsFade = clip.fadeInMs > 0L || clip.fadeOutMs > 0L
-                    if (hasKfVol || needsVolume || needsFade) {
+                    val needsTrackGain = at.volume != 1.0f
+                    if (hasKfVol || needsVolume || needsFade || needsTrackGain) {
                         add(VolumeAudioProcessor(
                             volume = clip.volume, fadeInMs = clip.fadeInMs, fadeOutMs = clip.fadeOutMs,
                             clipDurationMs = clip.durationMs,
-                            keyframes = if (hasKfVol) clip.keyframes else emptyList()
+                            keyframes = if (hasKfVol) clip.keyframes else emptyList(),
+                            postGain = at.volume.coerceIn(0f, 2f)
                         ))
                     }
                 }
@@ -630,6 +687,103 @@ class VideoEngine @Inject constructor(
             @Suppress("DEPRECATION")
             EditedMediaItemSequence.Builder().addItems(audioItems).build()
         }
+    }
+
+    private fun collectPreviewClips(tracks: List<Track>): List<Clip> {
+        val primaryVisualTrack = tracks
+            .sortedBy { it.index }
+            .firstOrNull { (it.type == TrackType.VIDEO || it.type == TrackType.OVERLAY) && it.isVisible && it.clips.isNotEmpty() }
+            ?: return emptyList()
+        return primaryVisualTrack.clips.sortedBy { it.timelineStartMs }
+    }
+
+    private fun buildPreviewSegments(
+        clips: List<Clip>,
+        totalTimelineDurationMs: Long
+    ): List<PreviewSegment> {
+        if (clips.isEmpty()) return emptyList()
+
+        val segments = mutableListOf<PreviewSegment>()
+        val gapUri = getPreviewGapUri()
+        var cursorMs = 0L
+
+        clips.forEach { clip ->
+            if (clip.timelineStartMs > cursorMs) {
+                segments += PreviewSegment(
+                    clip = null,
+                    timelineStartMs = cursorMs,
+                    durationMs = clip.timelineStartMs - cursorMs,
+                    mediaUri = gapUri
+                )
+            }
+            segments += PreviewSegment(
+                clip = clip,
+                timelineStartMs = clip.timelineStartMs,
+                durationMs = clip.durationMs,
+                mediaUri = clip.proxyUri ?: clip.sourceUri
+            )
+            cursorMs = clip.timelineEndMs
+        }
+
+        val timelineEndMs = maxOf(totalTimelineDurationMs, cursorMs)
+        if (timelineEndMs > cursorMs) {
+            segments += PreviewSegment(
+                clip = null,
+                timelineStartMs = cursorMs,
+                durationMs = timelineEndMs - cursorMs,
+                mediaUri = gapUri
+            )
+        }
+
+        return segments.filter { it.durationMs > 0L }
+    }
+
+    private fun getPreviewGapUri(): Uri {
+        previewGapUri?.let { return it }
+        synchronized(this) {
+            previewGapUri?.let { return it }
+
+            val dir = File(context.filesDir, "preview")
+            if (!dir.exists()) {
+                dir.mkdirs()
+            }
+            val file = File(dir, "gap_frame.png")
+            if (!file.exists() || file.length() == 0L) {
+                val bitmap = Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888)
+                bitmap.eraseColor(Color.BLACK)
+                file.outputStream().use { output ->
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)
+                }
+                bitmap.recycle()
+            }
+            return Uri.fromFile(file).also { previewGapUri = it }
+        }
+    }
+
+    private fun resolvePreviewSeekTarget(positionMs: Long): PreviewSeekTarget? {
+        if (previewSegments.isEmpty()) return null
+
+        val targetMs = positionMs.coerceAtLeast(0L)
+
+        previewSegments.forEachIndexed { index, segment ->
+            if (targetMs < segment.timelineEndMs) {
+                return PreviewSeekTarget(
+                    mediaItemIndex = index,
+                    mediaPositionMs = (targetMs - segment.timelineStartMs)
+                        .coerceIn(0L, (segment.durationMs - 1L).coerceAtLeast(0L))
+                )
+            }
+        }
+
+        val lastClip = previewSegments.last()
+        return PreviewSeekTarget(
+            mediaItemIndex = previewSegments.lastIndex,
+            mediaPositionMs = (lastClip.durationMs - 1L).coerceAtLeast(0L)
+        )
+    }
+
+    private fun isTrackAudibleForMix(track: Track, soloTrackIds: Set<String>): Boolean {
+        return track.isVisible && !track.isMuted && (soloTrackIds.isEmpty() || track.id in soloTrackIds)
     }
 
     @androidx.annotation.OptIn(UnstableApi::class)
@@ -749,9 +903,7 @@ class VideoEngine @Inject constructor(
             p.setVideoEffects(emptyList())
             return
         }
-        // Find the next clip's transition for transition-out on this clip
-        val clipIndex = videoClips.indexOfFirst { it.id == clip.id }
-        val nextClipTransition = if (clipIndex >= 0) videoClips.getOrNull(clipIndex + 1)?.transition else null
+        val nextClipTransition = nextPreviewTransitionForClip(clip)
 
         val effects = buildPreviewEffectsForClip(clip, nextClipTransition)
         try {
@@ -769,9 +921,13 @@ class VideoEngine @Inject constructor(
     private fun applyEffectsForCurrentClip() {
         val p = player ?: return
         val index = p.currentMediaItemIndex
-        if (index < 0 || index >= videoClips.size) return
-        val clip = videoClips[index]
-        val nextClipTransition = videoClips.getOrNull(index + 1)?.transition
+        if (index < 0 || index >= previewSegments.size) return
+        val clip = previewSegments[index].clip
+        if (clip == null) {
+            p.setVideoEffects(emptyList())
+            return
+        }
+        val nextClipTransition = nextPreviewTransitionForClip(clip)
 
         val effects = buildPreviewEffectsForClip(clip, nextClipTransition)
         try {
@@ -839,6 +995,17 @@ class VideoEngine @Inject constructor(
         return player?.currentMediaItemIndex ?: 0
     }
 
+    private fun nextPreviewTransitionForClip(clip: Clip): Transition? {
+        val clipIndex = videoClips.indexOfFirst { it.id == clip.id }
+        if (clipIndex < 0) return null
+        val nextClip = videoClips.getOrNull(clipIndex + 1) ?: return null
+        return if (nextClip.timelineStartMs <= clip.timelineEndMs) {
+            nextClip.transition
+        } else {
+            null
+        }
+    }
+
     fun extractFrameToFile(uri: Uri, timeMs: Long): File? {
         val retriever = MediaMetadataRetriever()
         return try {
@@ -878,6 +1045,7 @@ class VideoEngine @Inject constructor(
         player?.release()
         player = null
         videoClips = emptyList()
+        previewSegments = emptyList()
         clearThumbnailCache()
     }
 

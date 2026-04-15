@@ -108,12 +108,12 @@ val projectTemplates = listOf(
 fun ProjectTemplateSheet(
     onTemplateSelected: (ProjectTemplateUI) -> Unit,
     onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
     onUserTemplateSelected: (UserTemplate) -> Unit = {},
     onDeleteUserTemplate: (String) -> Unit = {},
     onShareTemplate: (String) -> Unit = {},
     onImportTemplate: () -> Unit = {},
-    userTemplates: List<UserTemplate> = emptyList(),
-    modifier: Modifier = Modifier
+    userTemplates: List<UserTemplate> = emptyList()
 ) {
     Column(
         modifier = modifier

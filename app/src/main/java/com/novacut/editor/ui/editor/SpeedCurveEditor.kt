@@ -37,9 +37,9 @@ fun SpeedCurveEditor(
     isReversed: Boolean,
     onReversedChanged: (Boolean) -> Unit,
     onClose: () -> Unit,
+    modifier: Modifier = Modifier,
     onSpeedDragStarted: () -> Unit = {},
-    onSpeedDragEnded: () -> Unit = {},
-    modifier: Modifier = Modifier
+    onSpeedDragEnded: () -> Unit = {}
 ) {
     var curveMode by remember { mutableStateOf(speedCurve != null) }
 

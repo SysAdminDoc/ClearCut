@@ -141,11 +141,7 @@ class ExportDelegate(
             withContext(Dispatchers.IO) { outputDir.mkdirs() }
 
             val serviceIntent = Intent(appContext, ExportService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                appContext.startForegroundService(serviceIntent)
-            } else {
-                appContext.startService(serviceIntent)
-            }
+            appContext.startForegroundService(serviceIntent)
 
             try {
                 videoEngine.export(

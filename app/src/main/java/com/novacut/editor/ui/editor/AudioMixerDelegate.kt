@@ -25,6 +25,7 @@ class AudioMixerDelegate(
     private val showToast: (String) -> Unit,
     private val pauseIfPlaying: () -> Unit,
     private val dismissedPanelState: (EditorState) -> EditorState,
+    private val refreshPreview: () -> Unit,
     private val saveProject: () -> Unit
 ) {
     // --- Audio Mixer ---
@@ -44,6 +45,7 @@ class AudioMixerDelegate(
                 if (track.id == trackId) track.copy(volume = volume.coerceIn(0f, 2f)) else track
             })
         }
+        refreshPreview()
         saveProject()
     }
 
@@ -54,6 +56,7 @@ class AudioMixerDelegate(
                 if (track.id == trackId) track.copy(pan = pan.coerceIn(-1f, 1f)) else track
             })
         }
+        refreshPreview()
         saveProject()
     }
 
@@ -64,6 +67,7 @@ class AudioMixerDelegate(
                 if (track.id == trackId) track.copy(isSolo = !track.isSolo) else track
             })
         }
+        refreshPreview()
         saveProject()
     }
 

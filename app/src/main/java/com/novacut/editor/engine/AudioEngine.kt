@@ -51,6 +51,11 @@ class AudioEngine @Inject constructor(
     ): FloatArray = withContext(Dispatchers.IO) {
         val cacheKey = "${uri}|${sampleCount}"
         waveformCache.get(cacheKey)?.let { return@withContext it }
+        if (isNonAudioVisualAsset(uri)) {
+            val silent = FloatArray(sampleCount) { 0f }
+            waveformCache.put(cacheKey, silent)
+            return@withContext silent
+        }
         val extractor = MediaExtractor()
         try {
             extractor.setDataSource(context, uri, null)
@@ -159,6 +164,18 @@ class AudioEngine @Inject constructor(
         } finally {
             extractor.release()
         }
+    }
+
+    private fun isNonAudioVisualAsset(uri: Uri): Boolean {
+        val mimeType = context.contentResolver.getType(uri)
+        if (!mimeType.isNullOrBlank()) {
+            return mimeType.startsWith("image/")
+        }
+        val extension = uri.lastPathSegment
+            ?.substringAfterLast('.', missingDelimiterValue = "")
+            ?.lowercase()
+            ?: return false
+        return extension in setOf("jpg", "jpeg", "png", "webp", "bmp", "gif", "heic", "heif")
     }
 
     /**

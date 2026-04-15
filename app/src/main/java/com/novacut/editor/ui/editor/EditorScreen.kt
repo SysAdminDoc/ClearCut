@@ -53,8 +53,8 @@ import java.io.File
 
 @Composable
 fun EditorScreen(
-    onBack: () -> Unit = {},
     modifier: Modifier = Modifier,
+    onBack: () -> Unit = {},
     viewModel: EditorViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -101,25 +101,67 @@ fun EditorScreen(
     val focusRequester = remember { FocusRequester() }
 
     val hasOpenPanel = state.panels.hasOpenPanel || state.selectedEffectId != null || state.editingTextOverlayId != null
+    val hasClipSelection = state.selectedClipIds.isNotEmpty()
     val isClipMode = state.selectedClipId != null
 
-    val selectedClip = state.selectedClipId?.let { id ->
-        state.tracks.flatMap { it.clips }.find { it.id == id }
+    val allClips by remember(state.tracks) {
+        derivedStateOf { state.tracks.flatMap { it.clips } }
     }
-
-    val allCaptions = state.tracks.flatMap { it.clips }.flatMap { clip ->
-        clip.captions.map { caption ->
-            caption.copy(
-                startTimeMs = caption.startTimeMs + clip.timelineStartMs,
-                endTimeMs = caption.endTimeMs + clip.timelineStartMs
-            )
+    val selectedClip by remember(allClips, state.selectedClipId) {
+        derivedStateOf {
+            state.selectedClipId?.let { id -> allClips.find { it.id == id } }
+        }
+    }
+    val allCaptions by remember(allClips) {
+        derivedStateOf {
+            allClips.flatMap { clip ->
+                clip.captions.map { caption ->
+                    caption.copy(
+                        startTimeMs = caption.startTimeMs + clip.timelineStartMs,
+                        endTimeMs = caption.endTimeMs + clip.timelineStartMs
+                    )
+                }
+            }
+        }
+    }
+    val previewTrack by remember(state.tracks) {
+        derivedStateOf {
+            state.tracks
+                .sortedBy { it.index }
+                .firstOrNull {
+                    (it.type == TrackType.VIDEO || it.type == TrackType.OVERLAY) &&
+                        it.isVisible &&
+                        it.clips.isNotEmpty()
+                }
+        }
+    }
+    val previewTrackClips by remember(previewTrack) {
+        derivedStateOf { previewTrack?.clips?.sortedBy { it.timelineStartMs } ?: emptyList() }
+    }
+    val previewClipAtPlayhead by remember(previewTrackClips, playheadMs) {
+        derivedStateOf {
+            previewTrackClips.firstOrNull { playheadMs in it.timelineStartMs until it.timelineEndMs }
+        }
+    }
+    val nextPreviewClip by remember(previewTrackClips, playheadMs) {
+        derivedStateOf { previewTrackClips.firstOrNull { it.timelineStartMs > playheadMs } }
+    }
+    val previewRecoveryTargetMs by remember(previewClipAtPlayhead, nextPreviewClip, previewTrackClips) {
+        derivedStateOf {
+            when {
+                nextPreviewClip != null -> nextPreviewClip?.timelineStartMs
+                previewClipAtPlayhead != null -> previewClipAtPlayhead?.timelineStartMs
+                previewTrackClips.isNotEmpty() -> previewTrackClips.last().timelineStartMs
+                else -> null
+            }
         }
     }
 
-    BackHandler(enabled = hasOpenPanel || state.currentTool != EditorTool.NONE || isClipMode) {
+    BackHandler(enabled = hasOpenPanel || state.currentTool != EditorTool.NONE || hasClipSelection || isClipMode) {
         when {
             hasOpenPanel -> viewModel.dismissAllPanels()
             state.currentTool != EditorTool.NONE -> viewModel.setTool(EditorTool.NONE)
+            state.selectedClipIds.size > 1 -> viewModel.clearMultiSelect()
             state.selectedClipId != null -> viewModel.selectClip(null)
         }
     }
@@ -222,6 +264,8 @@ fun EditorScreen(
                 selectedClipId = state.selectedClipId,
                 onDelete = viewModel::deleteSelectedClip,
                 confirmBeforeDelete = viewModel.confirmBeforeDelete,
+                onDuplicateClip = viewModel::duplicateSelectedClip,
+                onSplitClip = viewModel::splitClipAtPlayhead,
                 onAddMedia = viewModel::showMediaPicker,
                 onAddTrack = viewModel::addTrack,
                 onExport = viewModel::showExportSheet,
@@ -335,6 +379,10 @@ fun EditorScreen(
                     onToggleLoop = viewModel::toggleLoop,
                     onSeek = viewModel::seekTo,
                     selectedClipId = state.selectedClipId,
+                    currentTimelineClip = previewClipAtPlayhead,
+                    nextTimelineClip = nextPreviewClip,
+                    jumpToContentMs = previewRecoveryTargetMs,
+                    onJumpToContent = viewModel::seekTo,
                     onPreviewTransformStarted = { viewModel.beginTransformChange() },
                     onPreviewTransformChanged = { dx, dy, scaleChange, rotationChange ->
                         val clip = selectedClip ?: return@PreviewPanel
@@ -378,7 +426,7 @@ fun EditorScreen(
             }
 
             // Multi-select action bar
-            if (state.selectedClipIds.isNotEmpty()) {
+            if (state.selectedClipIds.size > 1) {
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1625,7 +1673,7 @@ fun EditorScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        val labelClip = state.tracks.flatMap { it.clips }.find { it.id == state.selectedClipId }
+                        val labelClip = selectedClip
                         ClipLabel.entries.forEach { label ->
                             val isSelected = labelClip?.clipLabel == label
                             Box(
@@ -1685,14 +1733,16 @@ private fun EditorTopBar(
     canRedo: Boolean,
     selectedClipId: String?,
     onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
     confirmBeforeDelete: Boolean = true,
+    onDuplicateClip: () -> Unit,
+    onSplitClip: () -> Unit,
     onAddMedia: () -> Unit,
     onAddTrack: (TrackType) -> Unit,
     onExport: () -> Unit,
     onSaveTemplate: (String) -> Unit = {},
     editorMode: EditorMode = EditorMode.PRO,
-    onToggleEditorMode: () -> Unit = {},
-    modifier: Modifier = Modifier
+    onToggleEditorMode: () -> Unit = {}
 ) {
     var showOverflow by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
@@ -1945,46 +1995,69 @@ private fun EditorTopBar(
                         onDismissRequest = { showOverflow = false },
                         containerColor = Mocha.PanelHighest
                     ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.editor_add_media)) },
-                            onClick = {
-                                showOverflow = false
-                                onAddMedia()
-                            },
-                            leadingIcon = {
-                                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.editor_add_media_cd))
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.editor_add_track)) },
-                            onClick = {
-                                showOverflow = false
-                                showAddTrackMenu = true
-                            },
-                            leadingIcon = {
-                                Icon(Icons.Default.VideoLibrary, contentDescription = stringResource(R.string.editor_add_track_cd))
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.editor_rename_project)) },
-                            onClick = {
-                                showOverflow = false
-                                showRenameDialog = true
-                            },
-                            leadingIcon = {
-                                Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.editor_rename_project_cd))
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.editor_save_as_template)) },
-                            onClick = {
-                                showOverflow = false
-                                showSaveTemplateDialog = true
-                            },
-                            leadingIcon = {
-                                Icon(Icons.Default.SaveAs, contentDescription = stringResource(R.string.editor_save_as_template_cd))
-                            }
-                        )
+                        if (selectedClipId != null) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.tool_duplicate)) },
+                                onClick = {
+                                    showOverflow = false
+                                    onDuplicateClip()
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.tool_duplicate))
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.tool_split)) },
+                                onClick = {
+                                    showOverflow = false
+                                    onSplitClip()
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.ContentCut, contentDescription = stringResource(R.string.tool_split))
+                                }
+                            )
+                        } else {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.editor_add_media)) },
+                                onClick = {
+                                    showOverflow = false
+                                    onAddMedia()
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.editor_add_media_cd))
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.editor_add_track)) },
+                                onClick = {
+                                    showOverflow = false
+                                    showAddTrackMenu = true
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.VideoLibrary, contentDescription = stringResource(R.string.editor_add_track_cd))
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.editor_rename_project)) },
+                                onClick = {
+                                    showOverflow = false
+                                    showRenameDialog = true
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.editor_rename_project_cd))
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.editor_save_as_template)) },
+                                onClick = {
+                                    showOverflow = false
+                                    showSaveTemplateDialog = true
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.SaveAs, contentDescription = stringResource(R.string.editor_save_as_template_cd))
+                                }
+                            )
+                        }
                     }
                     DropdownMenu(
                         expanded = showAddTrackMenu,

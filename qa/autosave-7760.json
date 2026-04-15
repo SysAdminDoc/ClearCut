@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "projectId": "776075e2-602b-44d5-a19f-a108e98e5dfa",
+  "timestamp": 1775666363476,
+  "playheadMs": 0,
+  "tracks": [
+    {
+      "id": "0b49bcb6-fddb-4274-9f8a-8ff21060cee1",
+      "type": "VIDEO",
+      "index": 0,
+      "isLocked": false,
+      "isVisible": true,
+      "isMuted": false,
+      "isSolo": false,
+      "volume": 1,
+      "pan": 0,
+      "opacity": 1,
+      "blendMode": "NORMAL",
+      "isLinkedAV": true,
+      "showWaveform": true,
+      "trackHeight": 64,
+      "isCollapsed": false,
+      "clips": []
+    },
+    {
+      "id": "165717b7-8fa2-4949-999d-31df8b74d8ad",
+      "type": "AUDIO",
+      "index": 1,
+      "isLocked": false,
+      "isVisible": true,
+      "isMuted": false,
+      "isSolo": false,
+      "volume": 1,
+      "pan": 0,
+      "opacity": 1,
+      "blendMode": "NORMAL",
+      "isLinkedAV": true,
+      "showWaveform": true,
+      "trackHeight": 64,
+      "isCollapsed": false,
+      "clips": []
+    }
+  ],
+  "textOverlays": []
+}

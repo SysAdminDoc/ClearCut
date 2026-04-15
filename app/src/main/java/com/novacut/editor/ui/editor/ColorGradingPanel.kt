@@ -38,10 +38,10 @@ enum class ColorGradingTab(val label: String) {
 fun ColorGradingPanel(
     colorGrade: ColorGrade,
     onColorGradeChanged: (ColorGrade) -> Unit,
+    modifier: Modifier = Modifier,
     onDragStarted: () -> Unit = {},
     onLutImport: () -> Unit,
-    onClose: () -> Unit,
-    modifier: Modifier = Modifier
+    onClose: () -> Unit
 ) {
     var activeTab by remember { mutableStateOf(ColorGradingTab.WHEELS) }
 
@@ -197,8 +197,8 @@ private fun ColorWheel(
     label: String,
     r: Float, g: Float, b: Float,
     onChanged: (Float, Float, Float) -> Unit,
-    onDragStarted: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onDragStarted: () -> Unit = {}
 ) {
     Column(
         modifier = modifier.padding(4.dp),

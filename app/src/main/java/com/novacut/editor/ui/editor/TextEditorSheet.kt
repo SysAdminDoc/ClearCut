@@ -28,11 +28,11 @@ import com.novacut.editor.ui.theme.Mocha
 
 @Composable
 fun TextEditorSheet(
+    modifier: Modifier = Modifier,
     existingOverlay: TextOverlay? = null,
     playheadMs: Long,
     onSave: (TextOverlay) -> Unit,
-    onClose: () -> Unit,
-    modifier: Modifier = Modifier
+    onClose: () -> Unit
 ) {
     val defaultText = stringResource(R.string.text_editor_your_text)
     // Key all state to the overlay id (or "new" sentinel) so editing a different

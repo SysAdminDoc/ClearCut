@@ -28,13 +28,13 @@ fun AudioPanel(
     clip: Clip?,
     waveform: List<Float>?,
     onVolumeChanged: (Float) -> Unit,
+    modifier: Modifier = Modifier,
     onVolumeDragStarted: () -> Unit = {},
     onFadeInChanged: (Long) -> Unit,
     onFadeOutChanged: (Long) -> Unit,
     onFadeDragStarted: () -> Unit = {},
     onStartVoiceover: () -> Unit,
-    onClose: () -> Unit,
-    modifier: Modifier = Modifier
+    onClose: () -> Unit
 ) {
     PremiumEditorPanel(
         title = stringResource(R.string.audio_title),

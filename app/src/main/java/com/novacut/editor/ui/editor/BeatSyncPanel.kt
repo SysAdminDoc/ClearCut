@@ -41,13 +41,13 @@ fun BeatSyncPanel(
     beatMarkers: List<Long>,
     totalDurationMs: Long,
     isAnalyzing: Boolean,
+    modifier: Modifier = Modifier,
     isPlaying: Boolean = false,
     onAnalyze: () -> Unit,
     onTapBeat: () -> Unit = {},
     onClearBeats: () -> Unit = {},
     onApplyBeatSync: () -> Unit,
-    onClose: () -> Unit,
-    modifier: Modifier = Modifier
+    onClose: () -> Unit
 ) {
     val hasBeats = beatMarkers.isNotEmpty()
     val avgBpm = remember(beatMarkers) {

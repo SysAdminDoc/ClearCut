@@ -159,6 +159,7 @@ val aiTools = listOf(
 fun AiToolsPanel(
     hasSelectedClip: Boolean,
     onToolSelected: (String) -> Unit,
+    modifier: Modifier = Modifier,
     onDisabledToolTapped: (String) -> Unit = {},
     onCancelProcessing: () -> Unit = {},
     onClose: () -> Unit,
@@ -170,8 +171,7 @@ fun AiToolsPanel(
     segmentationModelState: SegmentationModelState = SegmentationModelState.NOT_DOWNLOADED,
     segmentationDownloadProgress: Float = 0f,
     onDownloadSegmentation: () -> Unit = {},
-    onDeleteSegmentation: () -> Unit = {},
-    modifier: Modifier = Modifier
+    onDeleteSegmentation: () -> Unit = {}
 ) {
     val readyTools = aiTools.count { !it.requiresClip || hasSelectedClip }
 
