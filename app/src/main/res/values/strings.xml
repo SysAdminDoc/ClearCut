@@ -59,7 +59,7 @@
     <!-- AiToolsPanel -->
     <string name="ai_tools_title">AI Tools</string>
     <string name="ai_whisper_active">Whisper speech-to-text active</string>
-    <string name="ai_on_device">On-device AI - no internet required</string>
+    <string name="ai_on_device">On-device AI – no internet required</string>
     <string name="ai_whisper_ready">Whisper (speech-to-text)</string>
     <string name="ai_downloading_model">Downloading model\u2026</string>
     <string name="ai_download_failed">Download failed</string>
@@ -137,7 +137,7 @@
     <string name="settings_segmentation_model">Segmentation (Background)</string>
     <string name="settings_segmentation_size">~7 MB</string>
     <string name="settings_piper_model">Piper TTS Voices</string>
-    <string name="settings_piper_size">15-65 MB each</string>
+    <string name="settings_piper_size">15–65 MB each</string>
     <string name="settings_download_size_format">Download size: %1$s</string>
     <string name="settings_tutorial">Tutorial</string>
     <string name="settings_reset_tutorial">Reset First-Run Tutorial</string>
@@ -159,6 +159,12 @@
     <string name="preview_forward_5s">Forward 5s</string>
     <string name="preview_disable_loop">Disable loop</string>
     <string name="preview_enable_loop">Enable loop</string>
+    <string name="preview_gap_title">No frame at this moment</string>
+    <string name="preview_gap_body">Move the playhead or jump back to visible content.</string>
+    <string name="preview_resume_at">Content resumes at %1$s</string>
+    <string name="preview_jump_to_content">Jump to Content</string>
+    <string name="preview_unavailable_title">Preview unavailable</string>
+    <string name="preview_unavailable_body">NovaCut couldn\'t load this source for live preview.</string>
 
     <!-- TextEditorSheet -->
     <string name="text_editor_title">Text Overlay</string>
@@ -991,22 +997,37 @@
     <string name="timeline_mode_trim">Trim</string>
     <string name="timeline_zoom_value">Zoom %1$d%%</string>
     <string name="timeline_visible_value">View %1$s</string>
-    <string name="timeline_marker_count">%1$d markers</string>
+    <plurals name="timeline_marker_count">
+        <item quantity="one">%1$d marker</item>
+        <item quantity="other">%1$d markers</item>
+    </plurals>
     <string name="timeline_tracks_label">Tracks</string>
-    <string name="timeline_clip_count">%1$d clips</string>
+    <plurals name="timeline_clip_count">
+        <item quantity="one">%1$d clip</item>
+        <item quantity="other">%1$d clips</item>
+    </plurals>
     <string name="timeline_locked_short">Locked</string>
     <string name="timeline_muted_short">Muted</string>
     <string name="timeline_hidden_short">Hidden</string>
     <string name="timeline_track_empty">No clips on this track yet</string>
+    <string name="timeline_track_empty_compact">No clips yet</string>
     <string name="timeline_toggle_visibility">Toggle track visibility</string>
     <string name="timeline_toggle_mute">Toggle track mute</string>
     <string name="timeline_toggle_lock">Toggle track lock</string>
     <string name="timeline_adjustment_track">Adjustment Track</string>
+    <string name="timeline_video_track_short">Video</string>
+    <string name="timeline_audio_track_short">Audio</string>
+    <string name="timeline_overlay_track_short">Overlay</string>
+    <string name="timeline_text_track_short">Text</string>
+    <string name="timeline_adjustment_track_short">Adjust</string>
     <string name="timeline_video_clip">Video Clip</string>
     <string name="timeline_audio_clip">Audio Clip</string>
     <string name="timeline_overlay_clip">Overlay</string>
     <string name="timeline_text_clip">Text Layer</string>
     <string name="timeline_adjustment_clip">Adjustment Layer</string>
+    <string name="timeline_track_more_options">Track options</string>
+    <string name="timeline_track_make_smaller">Make track shorter</string>
+    <string name="timeline_track_make_larger">Make track taller</string>
     <string name="timeline_trim_mode_hint">TRIM MODE — Drag clip edges to adjust</string>
 
     <!-- ColorGradingPanel -->

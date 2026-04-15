@@ -18,7 +18,8 @@ internal class VolumeAudioProcessor(
     private val fadeInMs: Long,
     private val fadeOutMs: Long,
     private val clipDurationMs: Long,
-    private val keyframes: List<Keyframe> = emptyList()
+    private val keyframes: List<Keyframe> = emptyList(),
+    private val postGain: Float = 1f
 ) : BaseAudioProcessor() {
 
     private var processedFrames: Long = 0L
@@ -60,6 +61,8 @@ internal class VolumeAudioProcessor(
                 val rem = (clipDurationMs - timeMs).coerceAtLeast(0L)
                 gain *= rem.toFloat() / fadeOutMs
             }
+
+            gain *= postGain
 
             val scaled = (sample * gain).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
             outputBuffer.putShort(scaled.toShort())

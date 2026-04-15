@@ -29,10 +29,10 @@ import com.novacut.editor.ui.theme.Mocha
 @Composable
 fun NoiseReductionPanel(
     isAnalyzing: Boolean,
+    modifier: Modifier = Modifier,
     analysisResult: String? = null,
     onAnalyze: () -> Unit,
-    onClose: () -> Unit,
-    modifier: Modifier = Modifier
+    onClose: () -> Unit
 ) {
     PremiumEditorPanel(
         title = stringResource(R.string.noise_reduction_title),

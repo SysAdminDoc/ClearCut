@@ -10,12 +10,12 @@ plugins {
 
 android {
     namespace = "com.novacut.editor"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.novacut.editor"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 87
         versionName = "3.26.0"
     }
@@ -82,7 +82,10 @@ ksp {
 tasks.configureEach {
     if (name.contains("ClassesWithAsm") || name.contains("dexBuilder")) {
         doFirst {
-            outputs.files.forEach { it.mkdirs() }
+            outputs.files.forEach { output ->
+                val targetDir = if (output.extension.isNotEmpty()) output.parentFile else output
+                targetDir?.mkdirs()
+            }
         }
     }
 }
@@ -98,7 +101,7 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
-    implementation("androidx.compose.foundation:foundation")
+    implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons)
     debugImplementation(libs.androidx.compose.ui.tooling)

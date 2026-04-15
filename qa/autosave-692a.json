@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "projectId": "692a545a-bf50-43b1-abb2-5afec8fdb9ba",
+  "timestamp": 1775938645334,
+  "playheadMs": 3073,
+  "tracks": [
+    {
+      "id": "f9fc448a-1548-483b-a808-763ed2bfa62b",
+      "type": "VIDEO",
+      "index": 0,
+      "isLocked": true,
+      "isVisible": true,
+      "isMuted": false,
+      "isSolo": false,
+      "volume": 1,
+      "pan": 0,
+      "opacity": 1,
+      "blendMode": "NORMAL",
+      "isLinkedAV": true,
+      "showWaveform": true,
+      "trackHeight": 64,
+      "isCollapsed": false,
+      "clips": [
+        {
+          "id": "6a3c0808-a6a9-46dc-96ba-14e1b114544c",
+          "sourceUri": "file:\/\/\/data\/user\/0\/com.novacut.editor\/files\/media\/1775627526763_1633.jpg",
+          "sourceDurationMs": 3000,
+          "timelineStartMs": 2019,
+          "trimStartMs": 0,
+          "trimEndMs": 3000,
+          "volume": 1,
+          "speed": 1,
+          "isReversed": false,
+          "opacity": 1,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1,
+          "positionX": 0,
+          "positionY": 0,
+          "anchorX": 0.5,
+          "anchorY": 0.5,
+          "fadeInMs": 0,
+          "fadeOutMs": 0,
+          "blendMode": "NORMAL",
+          "isCompound": false,
+          "clipLabel": "NONE",
+          "effects": [],
+          "keyframes": []
+        }
+      ]
+    },
+    {
+      "id": "1fbb5025-eda9-47ec-b614-c702bfb419ba",
+      "type": "AUDIO",
+      "index": 1,
+      "isLocked": true,
+      "isVisible": true,
+      "isMuted": false,
+      "isSolo": false,
+      "volume": 1,
+      "pan": 0,
+      "opacity": 1,
+      "blendMode": "NORMAL",
+      "isLinkedAV": true,
+      "showWaveform": true,
+      "trackHeight": 64,
+      "isCollapsed": false,
+      "clips": []
+    }
+  ],
+  "textOverlays": []
+}

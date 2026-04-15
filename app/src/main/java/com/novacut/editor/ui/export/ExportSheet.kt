@@ -26,6 +26,7 @@ fun ExportSheet(
     config: ExportConfig,
     exportState: ExportState,
     exportProgress: Float,
+    modifier: Modifier = Modifier,
     aspectRatio: AspectRatio = AspectRatio.RATIO_16_9,
     errorMessage: String? = null,
     exportStartTime: Long = 0L,
@@ -39,8 +40,7 @@ fun ExportSheet(
     onExportFcpxml: () -> Unit = {},
     onExportSubtitles: (SubtitleFormat) -> Unit = {},
     onCaptureFrame: () -> Unit = {},
-    onClose: () -> Unit,
-    modifier: Modifier = Modifier
+    onClose: () -> Unit
 ) {
     val availableCodecs = remember { ExportConfig.getAvailableCodecs() }
     val (w, h) = config.resolution.forAspect(aspectRatio)

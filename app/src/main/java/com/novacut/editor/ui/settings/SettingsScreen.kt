@@ -26,8 +26,8 @@ import com.novacut.editor.ui.theme.Mocha
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
-    onNavigateToAiModels: () -> Unit = {},
     modifier: Modifier = Modifier,
+    onNavigateToAiModels: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()

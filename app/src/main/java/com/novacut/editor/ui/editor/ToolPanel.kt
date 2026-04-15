@@ -5,6 +5,7 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -20,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
@@ -163,12 +165,12 @@ private val projectToolsSubMenu = listOf(
 fun BottomToolArea(
     selectedClipId: String?,
     hasCopiedEffects: Boolean,
+    modifier: Modifier = Modifier,
     textOverlays: List<TextOverlay> = emptyList(),
     onAction: (String) -> Unit,
     onEditTextOverlay: (String) -> Unit = {},
     onDeleteTextOverlay: (String) -> Unit = {},
-    editorMode: EditorMode = EditorMode.PRO,
-    modifier: Modifier = Modifier
+    editorMode: EditorMode = EditorMode.PRO
 ) {
     val isClipMode = selectedClipId != null
 
@@ -313,57 +315,87 @@ private fun BottomTabBar(
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         modifier = modifier.fillMaxWidth()
     ) {
-        LazyRow(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(0.dp),
-            contentPadding = PaddingValues(horizontal = 0.dp)
+                .padding(horizontal = 8.dp, vertical = 8.dp)
         ) {
-            items(tabs, key = { it.id }) { tab ->
-                val isActive = activeTabId == tab.id
-                val isBack = tab.id == "back"
+            val fitAllTabs = tabs.size <= 6
+            val compactItem = maxWidth < 390.dp
 
-                Column(
-                    modifier = Modifier
-                        .width(72.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .clickable { onTabTapped(tab.id) }
-                        .background(
-                            if (isActive && !isBack) Mocha.Mauve.copy(alpha = 0.18f)
-                            else Color.Transparent
-                        )
-                        .padding(vertical = 8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+            if (fitAllTabs) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    val tabLabel = if (tab.labelRes != 0) stringResource(tab.labelRes) else ""
-                    Box(
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (isActive && !isBack) Mocha.Mauve.copy(alpha = 0.14f)
-                                else Mocha.PanelHighest
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            tab.icon,
-                            contentDescription = tabLabel.ifEmpty { tab.id },
-                            tint = if (isActive && !isBack) Mocha.Rosewater else Mocha.Subtext0,
-                            modifier = Modifier.size(20.dp)
+                    tabs.forEach { tab ->
+                        BottomTabBarItem(
+                            tab = tab,
+                            isActive = activeTabId == tab.id,
+                            compact = compactItem,
+                            onClick = { onTabTapped(tab.id) },
+                            modifier = Modifier.weight(1f)
                         )
                     }
-                    if (tabLabel.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = tabLabel,
-                            fontSize = 10.sp,
-                            color = if (isActive) Mocha.Rosewater else Mocha.Subtext0,
-                            textAlign = TextAlign.Center,
-                            maxLines = 2,
-                            lineHeight = 12.sp,
-                            overflow = TextOverflow.Ellipsis
+                }
+            } else {
+                val listState = rememberLazyListState()
+                val tabWidth = if (compactItem) 60.dp else 68.dp
+                val canScrollBackward by remember {
+                    derivedStateOf {
+                        listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0
+                    }
+                }
+                val canScrollForward by remember {
+                    derivedStateOf {
+                        val layoutInfo = listState.layoutInfo
+                        val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                        lastVisibleItem < layoutInfo.totalItemsCount - 1
+                    }
+                }
+
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    LazyRow(
+                        state = listState,
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        contentPadding = PaddingValues(horizontal = 2.dp)
+                    ) {
+                        items(tabs, key = { it.id }) { tab ->
+                            BottomTabBarItem(
+                                tab = tab,
+                                isActive = activeTabId == tab.id,
+                                compact = compactItem,
+                                onClick = { onTabTapped(tab.id) },
+                                modifier = Modifier.width(tabWidth)
+                            )
+                        }
+                    }
+
+                    if (canScrollBackward) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .width(18.dp)
+                                .background(
+                                    Brush.horizontalGradient(
+                                        listOf(Mocha.Panel, Mocha.Panel.copy(alpha = 0f))
+                                    )
+                                )
+                        )
+                    }
+
+                    if (canScrollForward) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .fillMaxHeight()
+                                .width(18.dp)
+                                .background(
+                                    Brush.horizontalGradient(
+                                        listOf(Mocha.Panel.copy(alpha = 0f), Mocha.Panel)
+                                    )
+                                )
                         )
                     }
                 }
@@ -373,11 +405,66 @@ private fun BottomTabBar(
 }
 
 @Composable
+private fun BottomTabBarItem(
+    tab: TabItem,
+    isActive: Boolean,
+    compact: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isBack = tab.id == "back"
+    val tabLabel = if (tab.labelRes != 0) stringResource(tab.labelRes) else ""
+
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .background(
+                if (isActive && !isBack) Mocha.Mauve.copy(alpha = 0.18f)
+                else Color.Transparent
+            )
+            .padding(vertical = if (compact) 6.dp else 8.dp, horizontal = 2.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .size(if (compact) 32.dp else 34.dp)
+                .clip(CircleShape)
+                .background(
+                    if (isActive && !isBack) Mocha.Mauve.copy(alpha = 0.14f)
+                    else Mocha.PanelHighest
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                tab.icon,
+                contentDescription = tabLabel.ifEmpty { tab.id },
+                tint = if (isActive && !isBack) Mocha.Rosewater else Mocha.Subtext0,
+                modifier = Modifier.size(if (compact) 18.dp else 20.dp)
+            )
+        }
+
+        if (tabLabel.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = tabLabel,
+                fontSize = if (compact) 9.sp else 10.sp,
+                color = if (isActive) Mocha.Rosewater else Mocha.Subtext0,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                lineHeight = if (compact) 11.sp else 12.sp,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
 private fun SubMenuGrid(
     items: List<SubMenuItem>,
     onItemSelected: (String) -> Unit,
-    disabledIds: Set<String> = emptySet(),
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    disabledIds: Set<String> = emptySet()
 ) {
     val itemsPerRow = 5
     val rows = items.chunked(itemsPerRow)
@@ -600,11 +687,11 @@ fun EffectsPanel(
 fun EffectAdjustmentPanel(
     effect: Effect,
     onUpdateParams: (Map<String, Float>) -> Unit,
+    modifier: Modifier = Modifier,
     onEffectDragStarted: () -> Unit = {},
     onToggleEnabled: () -> Unit = {},
     onRemove: () -> Unit,
-    onClose: () -> Unit,
-    modifier: Modifier = Modifier
+    onClose: () -> Unit
 ) {
     val accent = effectAccent(effect.type.category)
 
@@ -718,12 +805,12 @@ fun EffectSlider(
 fun SpeedPanel(
     currentSpeed: Float,
     isReversed: Boolean,
+    modifier: Modifier = Modifier,
     onSpeedDragStarted: () -> Unit = {},
     onSpeedDragEnded: () -> Unit = {},
     onSpeedChanged: (Float) -> Unit,
     onReversedChanged: (Boolean) -> Unit,
-    onClose: () -> Unit,
-    modifier: Modifier = Modifier
+    onClose: () -> Unit
 ) {
     val presetSpeeds = listOf(0.25f, 0.5f, 0.75f, 1f, 1.5f, 2f, 4f, 8f)
 
@@ -1055,10 +1142,10 @@ fun TransitionPicker(
     onTransitionSelected: (TransitionType) -> Unit,
     onRemoveTransition: () -> Unit,
     onDurationChanged: (Long) -> Unit,
+    modifier: Modifier = Modifier,
     onDurationDragStarted: () -> Unit = {},
     onClose: () -> Unit,
-    currentTransition: Transition?,
-    modifier: Modifier = Modifier
+    currentTransition: Transition?
 ) {
     PremiumEditorPanel(
         title = stringResource(R.string.tool_transitions),

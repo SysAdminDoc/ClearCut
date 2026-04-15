@@ -1,0 +1,53 @@
+--------- beginning of main
+04-15 12:37:41.392  4559  4559 I Zygote  : Process 4559 created for com.novacut.editor
+04-15 12:37:41.392  4559  4559 I .novacut.editor: Late-enabling -Xcheck:jni
+04-15 12:37:41.437  4559  4559 I .novacut.editor: Using CollectorTypeCMC GC.
+04-15 12:37:41.438  4559  4559 W .novacut.editor: Unexpected CPU variant for x86: x86_64.
+04-15 12:37:41.438  4559  4559 W .novacut.editor: Known variants: atom, sandybridge, silvermont, goldmont, goldmont-plus, goldmont-without-sha-xsaves, tremont, kabylake, alderlake, default
+04-15 12:37:41.753  4559  4559 D nativeloader: Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+04-15 12:37:43.349  4559  4559 D nativeloader: Configuring clns-9 for other apk /data/app/~~36ZvAagQgVicOqaxZwiKxw==/com.novacut.editor-e6BcntZA0pg7d_M76OHICw==/base.apk. target_sdk_version=35, uses_libraries=, library_path=/data/app/~~36ZvAagQgVicOqaxZwiKxw==/com.novacut.editor-e6BcntZA0pg7d_M76OHICw==/lib/x86_64:/data/app/~~36ZvAagQgVicOqaxZwiKxw==/com.novacut.editor-e6BcntZA0pg7d_M76OHICw==/base.apk!/lib/x86_64, permitted_path=/data:/mnt/expand:/data/user/0/com.novacut.editor
+04-15 12:37:43.354  4559  4559 D CompatChangeReporter: Compat change id reported: 202956589; UID 10227; state: ENABLED
+04-15 12:37:43.378  4559  4559 V GraphicsEnvironment: Currently set values for:
+04-15 12:37:43.378  4559  4559 V GraphicsEnvironment:   angle_gl_driver_selection_pkgs=[]
+04-15 12:37:43.378  4559  4559 V GraphicsEnvironment:   angle_gl_driver_selection_values=[]
+04-15 12:37:43.378  4559  4559 V GraphicsEnvironment: com.novacut.editor is not listed in per-application setting
+04-15 12:37:43.378  4559  4559 V GraphicsEnvironment: ANGLE allowlist from config: com.dreamgames.royalmatch com.dts.freefiremax com.dxx.firenow com.gramgames.mergedragons com.ludo.king com.mojang.minecraftpe com.my.defense com.nintendo.zaka com.os.airforce com.playrix.fishdomdd.gplay io.teslatech.callbreak jp.konami.prospia net.peakgames.toonblast
+04-15 12:37:43.378  4559  4559 V GraphicsEnvironment: No special selections for ANGLE, returning default driver choice
+04-15 12:37:43.378  4559  4559 V GraphicsEnvironment: Neither updatable production driver nor prerelease driver is supported.
+--------- beginning of system
+04-15 12:37:43.526  4559  4659 I DisplayManager: Choreographer implicitly registered for the refresh rate.
+04-15 12:37:43.572  4559  4659 I GFXSTREAM: [eglDisplay.cpp(297)] Opening libGLESv1_CM_emulation.so
+04-15 12:37:43.573  4559  4659 I GFXSTREAM: [eglDisplay.cpp(297)] Opening libGLESv2_emulation.so
+04-15 12:37:43.588  4559  4559 D DesktopExperienceFlags: Toggle override initialized to: false
+04-15 12:37:43.597  4559  4659 W HWUI    : Failed to choose config with EGL_SWAP_BEHAVIOR_PRESERVED, retrying without...
+04-15 12:37:43.599  4559  4659 W HWUI    : Failed to initialize 101010-2 format, error = EGL_SUCCESS
+04-15 12:37:43.600  4559  4559 E ashmem  : Pinning is deprecated since Android Q. Please use trim or other methods.
+04-15 12:37:43.646  4559  4559 D CompatChangeReporter: Compat change id reported: 309578419; UID 10227; state: ENABLED
+04-15 12:37:43.646  4559  4559 D DesktopModeFlags: Toggle override initialized to: OVERRIDE_UNSET
+04-15 12:37:43.726  4559  4559 D CompatChangeReporter: Compat change id reported: 349153669; UID 10227; state: ENABLED
+04-15 12:37:43.729  4559  4559 W HWUI    : Unknown dataspace 0
+04-15 12:37:43.771  4559  4559 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): android.app.Activity$$ExternalSyntheticLambda0@d6226a2
+04-15 12:37:44.050  4559  4559 W .novacut.editor: Method boolean androidx.compose.runtime.snapshots.SnapshotStateList.conditionalUpdate(boolean, kotlin.jvm.functions.Function1) failed lock verification and will run slower.
+04-15 12:37:44.050  4559  4559 W .novacut.editor: Common causes for lock verification issues are non-optimized dex code
+04-15 12:37:44.050  4559  4559 W .novacut.editor: and incorrect proguard optimizations.
+04-15 12:37:44.050  4559  4559 W .novacut.editor: Method boolean androidx.compose.runtime.snapshots.SnapshotStateList.conditionalUpdate$default(androidx.compose.runtime.snapshots.SnapshotStateList, boolean, kotlin.jvm.functions.Function1, int, java.lang.Object) failed lock verification and will run slower.
+04-15 12:37:44.050  4559  4559 W .novacut.editor: Method java.lang.Object androidx.compose.runtime.snapshots.SnapshotStateList.mutate(kotlin.jvm.functions.Function1) failed lock verification and will run slower.
+04-15 12:37:44.051  4559  4559 W .novacut.editor: Method void androidx.compose.runtime.snapshots.SnapshotStateList.update(boolean, kotlin.jvm.functions.Function1) failed lock verification and will run slower.
+04-15 12:37:44.051  4559  4559 W .novacut.editor: Method void androidx.compose.runtime.snapshots.SnapshotStateList.update$default(androidx.compose.runtime.snapshots.SnapshotStateList, boolean, kotlin.jvm.functions.Function1, int, java.lang.Object) failed lock verification and will run slower.
+04-15 12:37:44.241  4559  4559 I HWUI    : Using FreeType backend (prop=Auto)
+04-15 12:37:44.407  4559  4559 D VRI[MainActivity]: WindowInsets changed: 1080x2400 statusBars:[0,63,0,0] navigationBars:[0,0,0,63] mandatorySystemGestures:[0,63,0,84] 
+04-15 12:37:44.434  4559  4565 I .novacut.editor: Compiler allocated 5082KB to compile void android.view.ViewRootImpl.performTraversals()
+04-15 12:37:44.434  4559  4559 D CompatChangeReporter: Compat change id reported: 270674727; UID 10227; state: ENABLED
+04-15 12:37:44.888  4559  4575 I HWUI    : Davey! duration=1133ms; Flags=1, FrameTimelineVsyncId=6698, IntendedVsync=71217571558, Vsync=71234238224, InputEventId=0, HandleInputStart=71237837438, AnimationStart=71237838973, PerformTraversalsStart=71237839559, DrawStart=72164799548, FrameDeadline=71234238224, FrameStartTime=71237665029, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=72210561625, SyncStart=72211386008, IssueDrawCommandsStart=72213440894, SwapBuffers=72340688505, FrameCompleted=72351606238, DequeueBufferDuration=5479, QueueBufferDuration=260988, GpuCompleted=72351606238, SwapBuffersCompleted=72343403540, DisplayPresentTime=0, CommandSubmissionCompleted=72340688505, 
+04-15 12:37:44.914  4559  4559 I Choreographer: Skipped 62 frames!  The application may be doing too much work on its main thread.
+04-15 12:37:44.972  4559  4575 I HWUI    : Davey! duration=1094ms; Flags=0, FrameTimelineVsyncId=6721, IntendedVsync=71334238220, Vsync=72367571512, InputEventId=0, HandleInputStart=72385055248, AnimationStart=72385056199, PerformTraversalsStart=72409068357, DrawStart=72409238007, FrameDeadline=72384238178, FrameStartTime=72383362419, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=72412742030, SyncStart=72412898110, IssueDrawCommandsStart=72412951331, SwapBuffers=72415020745, FrameCompleted=72429271419, DequeueBufferDuration=4174, QueueBufferDuration=12977323, GpuCompleted=72428812850, SwapBuffersCompleted=72429271419, DisplayPresentTime=0, CommandSubmissionCompleted=72415020745, 
+04-15 12:37:44.981  4559  4559 D InsetsController: hide(ime())
+04-15 12:37:44.982  4559  4559 I ImeTracker: com.novacut.editor:dfa9058d: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+04-15 12:37:45.277  4559  4691 W HWUI    : Failed to choose config with EGL_SWAP_BEHAVIOR_PRESERVED, retrying without...
+04-15 12:37:45.277  4559  4691 W HWUI    : Failed to initialize 101010-2 format, error = EGL_SUCCESS
+04-15 12:37:49.527  4559  4741 D ProfileInstaller: Installing profile for com.novacut.editor
+04-15 12:37:52.429  4559  4559 D ActivityThread: Package [com.android.vending] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-15 12:37:52.458  4559  4559 D ActivityThread: Package [com.android.vending] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-15 12:37:53.767  4559  4559 D ActivityThread: Package [com.google.android.partnersetup] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-15 12:37:53.771  4559  4559 D ActivityThread: Package [com.google.android.partnersetup] reported as REPLACED, but missing application info. Assuming REMOVED.
+04-15 12:38:10.294  4559  4570 W .novacut.editor: userfaultfd: MOVE ioctl seems unsupported: Try again

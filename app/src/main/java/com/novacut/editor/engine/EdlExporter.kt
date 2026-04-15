@@ -7,6 +7,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -43,12 +44,13 @@ class EdlExporter @Inject constructor(
                 .filter { it.type == TrackType.VIDEO && it.isVisible }
                 .flatMap { it.clips }
                 .sortedBy { it.timelineStartMs }
+            val exportLocale = Locale.US
 
             for ((index, clip) in videoClips.withIndex()) {
-                val editNum = String.format("%03d", index + 1)
+                val editNum = String.format(exportLocale, "%03d", index + 1)
                 val reelName = clip.sourceUri.lastPathSegment
                     ?.replace(Regex("[^A-Za-z0-9]"), "")
-                    ?.take(8)?.uppercase()?.ifEmpty { "AX" }
+                    ?.take(8)?.uppercase(Locale.ROOT)?.ifEmpty { "AX" }
                     ?.padEnd(8) ?: "AX      "
 
                 val srcIn = msToTimecode(clip.trimStartMs, frameRate)
@@ -59,7 +61,7 @@ class EdlExporter @Inject constructor(
                 // Transition
                 val transition = if (clip.transition != null) {
                     val frames = (clip.transition.durationMs * frameRate / 1000).toInt()
-                    "D ${String.format("%03d", frames)}"
+                    "D ${String.format(exportLocale, "%03d", frames)}"
                 } else {
                     "C"
                 }
@@ -72,7 +74,7 @@ class EdlExporter @Inject constructor(
                 if (clip.speed != 1.0f) {
                     val effectiveFps = frameRate * clip.speed
                     sb.appendLine(
-                        "M2   $reelName  ${String.format("%.1f", effectiveFps)}  $srcIn"
+                        "M2   $reelName  ${String.format(exportLocale, "%.1f", effectiveFps)}  $srcIn"
                     )
                 }
 
@@ -109,6 +111,6 @@ class EdlExporter @Inject constructor(
         val seconds = (totalSeconds % 60).toInt()
         val minutes = ((totalSeconds / 60) % 60).toInt()
         val hours = (totalSeconds / 3600).toInt()
-        return String.format("%02d:%02d:%02d:%02d", hours, minutes, seconds, frames)
+        return String.format(Locale.US, "%02d:%02d:%02d:%02d", hours, minutes, seconds, frames)
     }
 }

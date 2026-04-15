@@ -3,6 +3,7 @@ package com.novacut.editor.ui.editor
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.SystemClock
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -51,6 +52,11 @@ import com.novacut.editor.engine.ProxyGenerationWorker
 import java.io.File
 import java.util.UUID
 import javax.inject.Inject
+import kotlin.math.roundToLong
+
+private const val TIMELINE_BASE_SCALE = 0.15f
+private const val WAVEFORM_PRELOAD_PADDING_MS = 3_000L
+private const val WAVEFORM_FALLBACK_WINDOW_MS = 15_000L
 
 enum class PanelId {
     MEDIA_PICKER, EXPORT_SHEET, EFFECTS, TEXT_EDITOR, TRANSITION_PICKER,
@@ -260,6 +266,7 @@ class EditorViewModel @Inject constructor(
         loudnessEngine = loudnessEngine, scope = viewModelScope,
         saveUndoState = ::saveUndoState, showToast = ::showToast,
         pauseIfPlaying = ::pauseIfPlaying, dismissedPanelState = ::dismissedPanelState,
+        refreshPreview = ::updatePreview,
         saveProject = ::saveProject
     )
 
@@ -286,7 +293,7 @@ class EditorViewModel @Inject constructor(
     )
 
     val clipEditingDelegate = ClipEditingDelegate(
-        stateFlow = _state, videoEngine = videoEngine, audioEngine = audioEngine,
+        stateFlow = _state, videoEngine = videoEngine,
         scope = viewModelScope, saveUndoState = ::saveUndoState, showToast = ::showToast,
         rebuildPlayerTimeline = ::rebuildPlayerTimeline, saveProject = ::saveProject,
         updatePreview = ::updatePreview, recalculateDuration = ::recalculateDuration,
@@ -337,9 +344,41 @@ class EditorViewModel @Inject constructor(
     // Stored outside EditorState to avoid recomposition on every resize
     @Volatile
     private var timelineWidthPx: Float = 0f
+    private val waveformLoadJobs = mutableMapOf<String, Job>()
+    private var gapPlaybackJob: Job? = null
+
+    private fun visibleTimelineDurationMs(state: EditorState = _state.value): Long? {
+        if (timelineWidthPx <= 0f) return null
+        val pixelsPerMs = (state.zoomLevel * TIMELINE_BASE_SCALE).coerceAtLeast(0.001f)
+        return (timelineWidthPx / pixelsPerMs).roundToLong().coerceAtLeast(1L)
+    }
+
+    private fun maxTimelineScrollOffset(state: EditorState = _state.value): Long {
+        val totalDurationMs = state.totalDurationMs.coerceAtLeast(0L)
+        if (totalDurationMs == 0L) return 0L
+
+        val visibleDurationMs = visibleTimelineDurationMs(state) ?: return totalDurationMs
+        val leadOutPaddingMs = (visibleDurationMs / 4L).coerceIn(750L, 6_000L)
+        val minVisibleContentMs = (visibleDurationMs - leadOutPaddingMs)
+            .coerceAtLeast((visibleDurationMs / 2L).coerceAtLeast(1L))
+        return (totalDurationMs - minVisibleContentMs).coerceAtLeast(0L)
+    }
+
+    private fun clampTimelineScrollOffset(offsetMs: Long, state: EditorState = _state.value): Long {
+        return offsetMs.coerceIn(0L, maxTimelineScrollOffset(state))
+    }
 
     fun setTimelineWidth(widthPx: Float) {
         timelineWidthPx = widthPx
+        _state.update { state ->
+            val clampedScrollOffsetMs = clampTimelineScrollOffset(state.scrollOffsetMs, state)
+            if (clampedScrollOffsetMs == state.scrollOffsetMs) {
+                state
+            } else {
+                state.copy(scrollOffsetMs = clampedScrollOffsetMs)
+            }
+        }
+        preloadVisibleWaveforms()
     }
 
     init {
@@ -376,18 +415,11 @@ class EditorViewModel @Inject constructor(
                         } ?: 0L
                     )
                 }
+                _playheadMs.value = recovery.playheadMs
                 if (recovery.tracks.flatMap { it.clips }.isNotEmpty()) {
                     rebuildPlayerTimeline()
                 }
-                // Extract waveforms for all recovered clips
-                for (track in recovery.tracks) {
-                    for (clip in track.clips) {
-                        viewModelScope.launch {
-                            val waveform = audioEngine.extractWaveform(clip.sourceUri).toList()
-                            _state.update { it.copy(waveforms = it.waveforms + (clip.id to waveform)) }
-                        }
-                    }
-                }
+                preloadVisibleWaveforms(_state.value)
             }
         }
 
@@ -447,6 +479,7 @@ class EditorViewModel @Inject constructor(
                             newScroll = newScroll + ((targetScroll - newScroll) * 0.15f).toLong()
                         }
                     }
+                    newScroll = clampTimelineScrollOffset(newScroll, s)
 
                     // Sync full state every 5th frame (playhead + scroll)
                     if (frameCount % 5 == 0 || newScroll != s.scrollOffsetMs) {
@@ -458,14 +491,7 @@ class EditorViewModel @Inject constructor(
                     val currentIndex = videoEngine.getCurrentClipIndex()
                     if (currentIndex != lastClipIndex) {
                         lastClipIndex = currentIndex
-                        val videoClips = _state.value.tracks
-                            .filter { it.type == TrackType.VIDEO }
-                            .flatMap { it.clips }
-                        val currentClip = videoClips.getOrNull(currentIndex)
-                        if (currentClip != null) {
-                            videoEngine.setPreviewSpeed(currentClip.speed)
-                            videoEngine.applyPreviewEffects(currentClip)
-                        }
+                        updatePreview()
                     }
                 }
             }
@@ -544,23 +570,109 @@ class EditorViewModel @Inject constructor(
                 // Sync confirm-before-delete and waveform settings
                 _confirmBeforeDelete.value = settings.confirmBeforeDelete
                 _showWaveforms.value = settings.showWaveforms
+                if (settings.showWaveforms) {
+                    preloadVisibleWaveforms(_state.value)
+                } else {
+                    cancelWaveformLoads()
+                }
             }
         }
     }
 
     /** Rebuild ExoPlayer timeline from current tracks. Call after any clip mutation. */
     private fun rebuildPlayerTimeline() {
+        cancelGapPlayback()
+        _state.update(::normalizeTimelineState)
+        _playheadMs.value = _state.value.playheadMs
         videoEngine.prepareTimeline(_state.value.tracks)
+        videoEngine.seekTo(_state.value.playheadMs)
         updatePreview()
-        _state.update { recalculateDuration(it) }
+        preloadVisibleWaveforms(_state.value)
     }
 
-    /** Apply the selected clip's effects and speed to ExoPlayer for live preview. */
+    private fun preloadVisibleWaveforms(state: EditorState = _state.value) {
+        if (!_showWaveforms.value) return
+        val loadWindow = visibleWaveformWindow(state)
+        state.tracks
+            .asSequence()
+            .filter { it.type == TrackType.AUDIO && it.showWaveform }
+            .flatMap { it.clips.asSequence() }
+            .filter { clip ->
+                clip.timelineStartMs <= loadWindow.last && clip.timelineEndMs >= loadWindow.first
+            }
+            .forEach { clip ->
+                enqueueWaveformLoad(clip.id, clip.sourceUri)
+            }
+    }
+
+    private fun visibleWaveformWindow(state: EditorState): LongRange {
+        if (timelineWidthPx > 0f) {
+            val pixelsPerMs = (state.zoomLevel * TIMELINE_BASE_SCALE).coerceAtLeast(0.001f)
+            val visibleDurationMs = (timelineWidthPx / pixelsPerMs).roundToLong().coerceAtLeast(1L)
+            val startMs = (state.scrollOffsetMs - WAVEFORM_PRELOAD_PADDING_MS).coerceAtLeast(0L)
+            val endMs = state.scrollOffsetMs + visibleDurationMs + WAVEFORM_PRELOAD_PADDING_MS
+            return startMs..endMs
+        }
+
+        val fallbackCenterMs = maxOf(state.scrollOffsetMs, _playheadMs.value)
+        val startMs = (fallbackCenterMs - WAVEFORM_FALLBACK_WINDOW_MS).coerceAtLeast(0L)
+        val endMs = fallbackCenterMs + WAVEFORM_FALLBACK_WINDOW_MS
+        return startMs..endMs
+    }
+
+    private fun enqueueWaveformLoad(clipId: String, sourceUri: Uri) {
+        if (_state.value.waveforms.containsKey(clipId)) return
+        if (waveformLoadJobs[clipId]?.isActive == true) return
+
+        waveformLoadJobs[clipId] = viewModelScope.launch {
+            try {
+                val waveform = audioEngine.extractWaveform(sourceUri).toList()
+                var shouldRefreshSuggestion = false
+                _state.update { state ->
+                    val clipStillExists = state.tracks.any { track ->
+                        track.clips.any { clip -> clip.id == clipId }
+                    }
+                    if (!clipStillExists || state.waveforms.containsKey(clipId)) {
+                        state
+                    } else {
+                        shouldRefreshSuggestion = state.selectedClipId == clipId
+                        state.copy(waveforms = state.waveforms + (clipId to waveform))
+                    }
+                }
+                if (shouldRefreshSuggestion) {
+                    generateAiSuggestion(clipId)
+                }
+            } catch (e: Exception) {
+                Log.w("EditorViewModel", "Waveform extraction failed for $clipId", e)
+            } finally {
+                waveformLoadJobs.remove(clipId)
+            }
+        }
+    }
+
+    private fun cancelWaveformLoads(clipIds: Set<String>? = null) {
+        val iterator = waveformLoadJobs.iterator()
+        while (iterator.hasNext()) {
+            val (clipId, job) = iterator.next()
+            if (clipIds == null || clipId in clipIds) {
+                job.cancel()
+                iterator.remove()
+            }
+        }
+    }
+
+    /** Apply the current preview segment's effects and playback settings. */
     private fun updatePreview() {
-        val clip = getSelectedClip()
+        val clip = videoEngine.getPreviewClipAt(videoEngine.getCurrentClipIndex())
+        val track = clip?.let { previewTrackForClip(it.id) }
+        val trackVolume = if (track != null && !isTrackAudibleInPreview(track)) {
+            0f
+        } else {
+            track?.volume?.coerceIn(0f, 2f) ?: 1f
+        }
         videoEngine.applyPreviewEffects(clip)
         videoEngine.setPreviewSpeed(clip?.speed ?: 1f)
-        videoEngine.setPreviewVolume(clip?.volume ?: 1f)
+        videoEngine.setPreviewVolume(((clip?.volume ?: 1f) * trackVolume).coerceIn(0f, 1f))
     }
 
     /**
@@ -714,12 +826,21 @@ class EditorViewModel @Inject constructor(
     // Playback
     fun togglePlayPause() = togglePlayback()
     fun togglePlayback() {
-        if (videoEngine.isPlaying()) {
+        if (gapPlaybackJob?.isActive == true) {
+            cancelGapPlayback()
+            _state.update { it.copy(isPlaying = false) }
+        } else if (videoEngine.isPlaying()) {
             videoEngine.pause()
             _state.update { it.copy(isPlaying = false) }
         } else {
-            videoEngine.play()
-            _state.update { it.copy(isPlaying = true) }
+            val playhead = _playheadMs.value
+            val currentPreviewClip = previewClipAtPosition(playhead)
+            if (currentPreviewClip == null && _state.value.totalDurationMs > playhead) {
+                startGapPlayback(playhead)
+            } else {
+                videoEngine.play()
+                _state.update { it.copy(isPlaying = true) }
+            }
         }
     }
 
@@ -734,6 +855,7 @@ class EditorViewModel @Inject constructor(
     private var scrubSeekJob: kotlinx.coroutines.Job? = null
 
     fun seekTo(positionMs: Long) {
+        cancelGapPlayback()
         val clamped = positionMs.coerceIn(0L, _state.value.totalDurationMs.coerceAtLeast(0L))
         _playheadMs.value = clamped
         if (isScrubbing) {
@@ -752,6 +874,7 @@ class EditorViewModel @Inject constructor(
 
     /** Enable scrubbing mode during timeline drag for smoother seeking. */
     fun beginScrub() {
+        cancelGapPlayback()
         isScrubbing = true
         videoEngine.setScrubbingMode(true)
     }
@@ -774,11 +897,20 @@ class EditorViewModel @Inject constructor(
 
     // Zoom
     fun setZoomLevel(zoom: Float) {
-        _state.update { it.copy(zoomLevel = zoom.coerceIn(0.1f, 10f)) }
+        _state.update { state ->
+            val updatedState = state.copy(zoomLevel = zoom.coerceIn(0.1f, 10f))
+            updatedState.copy(
+                scrollOffsetMs = clampTimelineScrollOffset(updatedState.scrollOffsetMs, updatedState)
+            )
+        }
+        preloadVisibleWaveforms(_state.value)
     }
 
     fun setScrollOffset(offsetMs: Long) {
-        _state.update { it.copy(scrollOffsetMs = offsetMs.coerceAtLeast(0L)) }
+        _state.update { state ->
+            state.copy(scrollOffsetMs = clampTimelineScrollOffset(offsetMs, state))
+        }
+        preloadVisibleWaveforms(_state.value)
     }
 
     // Tool selection
@@ -798,13 +930,57 @@ class EditorViewModel @Inject constructor(
         }
     }
 
-    private fun dismissedPanelState(state: EditorState) = state.copy(
-        panels = state.panels.closeAll(),
-        noiseAnalysisResult = null,
-        selectedEffectId = null,
-        editingTextOverlayId = null,
-        selectedMaskId = null,
-        isDrawingMode = false
+    private fun normalizeSelectionState(state: EditorState, tracks: List<Track> = state.tracks): EditorState {
+        val clipToTrackId = mutableMapOf<String, String>()
+        tracks.forEach { track ->
+            track.clips.forEach { clip ->
+                clipToTrackId[clip.id] = track.id
+            }
+        }
+
+        val validSelectedIds = state.selectedClipIds.filter { clipToTrackId.containsKey(it) }.toSet()
+        val validSelectedClipId = state.selectedClipId?.takeIf { clipToTrackId.containsKey(it) }
+
+        val normalizedSelectedIds = when {
+            validSelectedClipId != null && validSelectedIds.isEmpty() -> setOf(validSelectedClipId)
+            validSelectedClipId != null && validSelectedIds.size == 1 && validSelectedClipId !in validSelectedIds -> {
+                setOf(validSelectedClipId)
+            }
+            else -> validSelectedIds
+        }
+        val normalizedSelectedClipId = when {
+            validSelectedClipId != null && (normalizedSelectedIds.isEmpty() || validSelectedClipId in normalizedSelectedIds) -> {
+                validSelectedClipId
+            }
+            normalizedSelectedIds.size == 1 -> normalizedSelectedIds.first()
+            else -> null
+        }
+        val normalizedSelectedTrackId = normalizedSelectedClipId?.let { clipToTrackId[it] }
+
+        return if (
+            normalizedSelectedIds == state.selectedClipIds &&
+            normalizedSelectedClipId == state.selectedClipId &&
+            normalizedSelectedTrackId == state.selectedTrackId
+        ) {
+            state
+        } else {
+            state.copy(
+                selectedClipIds = normalizedSelectedIds,
+                selectedClipId = normalizedSelectedClipId,
+                selectedTrackId = normalizedSelectedTrackId
+            )
+        }
+    }
+
+    private fun dismissedPanelState(state: EditorState) = normalizeSelectionState(
+        state.copy(
+            panels = state.panels.closeAll(),
+            noiseAnalysisResult = null,
+            selectedEffectId = null,
+            editingTextOverlayId = null,
+            selectedMaskId = null,
+            isDrawingMode = false
+        )
     )
 
     fun dismissAllPanels() { _state.update { dismissedPanelState(it) } }
@@ -1115,6 +1291,7 @@ class EditorViewModel @Inject constructor(
                 chapterMarkers = recovery.chapterMarkers
             )
         }
+        _playheadMs.value = recovery.playheadMs
         rebuildPlayerTimeline()
         saveProject()
         showToast("Restored: ${snapshot.label}")
@@ -1314,6 +1491,7 @@ class EditorViewModel @Inject constructor(
                 if (it.id == trackId) it.copy(showWaveform = !it.showWaveform) else it
             })
         }
+        preloadVisibleWaveforms(_state.value)
         saveProject()
     }
     fun setTrackHeight(trackId: String, height: Int) {
@@ -1453,6 +1631,9 @@ class EditorViewModel @Inject constructor(
         val clip = s.tracks.flatMap { it.clips }.firstOrNull { it.id == clipId } ?: return
         val clipHasVisual = clipHasVisual(clip)
         val clipHasAudio = clipHasAudio(clip)
+        if (clipHasAudio && !s.waveforms.containsKey(clip.id)) {
+            enqueueWaveformLoad(clip.id, clip.sourceUri)
+        }
         val suggestion: AiSuggestion? = when {
             clipHasVisual && clip.effects.isEmpty() && clip.durationMs > 5000L ->
                 AiSuggestion(
@@ -1782,7 +1963,7 @@ class EditorViewModel @Inject constructor(
         val primaryTrack = videoTracks.first()
         val sourceTrack = videoTracks.find { track -> track.clips.any { it.id == clipId } } ?: return
         if (sourceTrack.id == primaryTrack.id) {
-            _state.update { it.copy(selectedClipId = clipId) }
+            selectClip(clipId, primaryTrack.id)
             return
         }
         val clip = sourceTrack.clips.find { it.id == clipId } ?: return
@@ -1795,7 +1976,14 @@ class EditorViewModel @Inject constructor(
                     else -> track
                 }
             }
-            st.copy(tracks = updatedTracks, selectedClipId = clipId)
+            recalculateDuration(
+                st.copy(
+                    tracks = updatedTracks,
+                    selectedClipIds = setOf(clipId),
+                    selectedClipId = clipId,
+                    selectedTrackId = primaryTrack.id
+                )
+            )
         }
         rebuildPlayerTimeline()
         saveProject()
@@ -1879,15 +2067,6 @@ class EditorViewModel @Inject constructor(
                 if (t.id == track.id) t.copy(clips = t.clips + clip) else t
             })
         }
-        // Extract waveform for timeline visualization
-        viewModelScope.launch {
-            try {
-                val waveform = audioEngine.extractWaveform(uri).toList()
-                _state.update { it.copy(waveforms = it.waveforms + (clipId to waveform)) }
-            } catch (e: Exception) {
-                android.util.Log.w("EditorViewModel", "Waveform extraction failed for TTS clip", e)
-            }
-        }
     }
 
     // --- Editor Mode ---
@@ -1928,11 +2107,7 @@ class EditorViewModel @Inject constructor(
     }
 
     private fun rebuildTimeline() {
-        videoEngine.prepareTimeline(_state.value.tracks)
-        updatePreview()
-        _state.update { s ->
-            s.copy(totalDurationMs = s.tracks.maxOfOrNull { t -> t.clips.maxOfOrNull { c -> c.timelineEndMs } ?: 0L } ?: 0L)
-        }
+        rebuildPlayerTimeline()
     }
 
     // --- Multi-Cam Sync ---
@@ -2019,9 +2194,10 @@ class EditorViewModel @Inject constructor(
             s.copy(tracks = s.tracks.map { track ->
                 track.copy(clips = track.clips.map { clip ->
                     if (clip.id == clipId) {
-                        val newTrimStart = (clip.trimStartMs + slipAmountMs).coerceIn(0L, clip.sourceDurationMs - 100)
-                        val duration = clip.trimEndMs - clip.trimStartMs
-                        val newTrimEnd = (newTrimStart + duration).coerceAtMost(clip.sourceDurationMs)
+                        val sourceWindow = (clip.trimEndMs - clip.trimStartMs).coerceAtLeast(100L)
+                        val maxTrimStart = (clip.sourceDurationMs - sourceWindow).coerceAtLeast(0L)
+                        val newTrimStart = (clip.trimStartMs + slipAmountMs).coerceIn(0L, maxTrimStart)
+                        val newTrimEnd = newTrimStart + sourceWindow
                         clip.copy(trimStartMs = newTrimStart, trimEndMs = newTrimEnd)
                     } else clip
                 })
@@ -2037,41 +2213,56 @@ class EditorViewModel @Inject constructor(
         if (track.isLocked) return
         _state.update { s ->
             s.copy(tracks = s.tracks.map { track ->
-                val clipIndex = track.clips.indexOfFirst { it.id == clipId }
+                val sortedClips = track.clips.sortedBy { it.timelineStartMs }.toMutableList()
+                val clipIndex = sortedClips.indexOfFirst { it.id == clipId }
                 if (clipIndex < 0) return@map track
 
-                val clip = track.clips[clipIndex]
-                val newStart = (clip.timelineStartMs + slideAmountMs).coerceAtLeast(0L)
+                val clip = sortedClips[clipIndex]
+                val prevClip = sortedClips.getOrNull(clipIndex - 1)
+                val nextClip = sortedClips.getOrNull(clipIndex + 1)
 
-                // Adjust neighbors
-                val updatedClips = track.clips.toMutableList()
-                updatedClips[clipIndex] = clip.copy(timelineStartMs = newStart)
+                var minStart = 0L
+                var maxStart = Long.MAX_VALUE
 
-                // Ensure no overlap with adjacent clips
-                if (clipIndex > 0) {
-                    val prevClip = updatedClips[clipIndex - 1]
-                    if (newStart < prevClip.timelineEndMs) {
-                        val trimAmount = prevClip.timelineEndMs - newStart
-                        val newTrimEnd = (prevClip.trimEndMs - (trimAmount * prevClip.speed.coerceAtLeast(0.01f)).toLong())
-                            .coerceIn(prevClip.trimStartMs + 100, prevClip.sourceDurationMs)
-                        updatedClips[clipIndex - 1] = prevClip.copy(trimEndMs = newTrimEnd)
-                    }
+                prevClip?.let { previous ->
+                    minStart = maxOf(minStart, previous.timelineStartMs + minimumSlideDurationMs(previous))
+                    maxStart = minOf(maxStart, previous.timelineStartMs + maximumPreviousDurationMs(previous))
                 }
-                if (clipIndex < updatedClips.size - 1) {
-                    val nextClip = updatedClips[clipIndex + 1]
-                    val newEnd = newStart + clip.durationMs
-                    if (newEnd > nextClip.timelineStartMs) {
-                        val overlap = newEnd - nextClip.timelineStartMs
-                        val newTrimStart = (nextClip.trimStartMs + (overlap * nextClip.speed.coerceAtLeast(0.01f)).toLong())
-                            .coerceIn(0L, nextClip.trimEndMs - 100)
-                        updatedClips[clipIndex + 1] = nextClip.copy(
-                            timelineStartMs = newEnd,
-                            trimStartMs = newTrimStart
-                        )
-                    }
+                nextClip?.let { next ->
+                    minStart = maxOf(minStart, next.timelineEndMs - maximumNextDurationMs(next) - clip.durationMs)
+                    maxStart = minOf(maxStart, next.timelineEndMs - minimumSlideDurationMs(next) - clip.durationMs)
                 }
 
-                track.copy(clips = updatedClips)
+                if (maxStart < minStart) return@map track
+
+                val proposedStart = (clip.timelineStartMs + slideAmountMs).coerceAtLeast(0L)
+                val newStart = proposedStart.coerceIn(minStart, maxStart)
+                val newEnd = newStart + clip.durationMs
+
+                if (newStart == clip.timelineStartMs) return@map track
+
+                prevClip?.let { previous ->
+                    val desiredDurationMs = (newStart - previous.timelineStartMs).coerceAtLeast(minimumSlideDurationMs(previous))
+                    val newTrimEnd = (previous.trimStartMs + desiredDurationMs * previous.speed.coerceAtLeast(0.01f))
+                        .roundToLong()
+                        .coerceIn(previous.trimStartMs + 100L, previous.sourceDurationMs)
+                    sortedClips[clipIndex - 1] = previous.copy(trimEndMs = newTrimEnd)
+                }
+
+                sortedClips[clipIndex] = clip.copy(timelineStartMs = newStart)
+
+                nextClip?.let { next ->
+                    val desiredDurationMs = (next.timelineEndMs - newEnd).coerceAtLeast(minimumSlideDurationMs(next))
+                    val newTrimStart = (next.trimEndMs - desiredDurationMs * next.speed.coerceAtLeast(0.01f))
+                        .roundToLong()
+                        .coerceIn(0L, next.trimEndMs - 100L)
+                    sortedClips[clipIndex + 1] = next.copy(
+                        timelineStartMs = newEnd,
+                        trimStartMs = newTrimStart
+                    )
+                }
+
+                track.copy(clips = sortedClips)
             })
         }
         rebuildPlayerTimeline()
@@ -2348,14 +2539,55 @@ class EditorViewModel @Inject constructor(
     // --- Multi-select ---
     fun toggleClipMultiSelect(clipId: String) {
         _state.update { s ->
-            val current = s.selectedClipIds
-            val updated = if (clipId in current) current - clipId else current + clipId
-            s.copy(selectedClipIds = updated)
+            val current = if (s.selectedClipIds.isEmpty()) {
+                s.selectedClipId?.let(::setOf) ?: emptySet()
+            } else {
+                s.selectedClipIds
+            }
+            val updated = when {
+                current.size == 1 && clipId in current -> current
+                clipId in current -> current - clipId
+                else -> current + clipId
+            }
+            val soleSelectedClipId = updated.singleOrNull()
+            val soleSelectedTrackId = soleSelectedClipId?.let { selectedId ->
+                s.tracks.firstOrNull { track -> track.clips.any { clip -> clip.id == selectedId } }?.id
+            }
+            s.copy(
+                selectedClipIds = updated,
+                selectedClipId = if (updated.size == 1) soleSelectedClipId else null,
+                selectedTrackId = if (updated.size == 1) soleSelectedTrackId else null
+            )
         }
+        updatePreview()
     }
 
     fun clearMultiSelect() {
-        _state.update { it.copy(selectedClipIds = emptySet()) }
+        _state.update { s ->
+            val selectedClipEntries = s.tracks.flatMap { track ->
+                track.clips
+                    .filter { clip -> clip.id in s.selectedClipIds }
+                    .map { clip -> track.id to clip }
+            }
+            val activeSelection = s.selectedClipId
+                ?.let { selectedId ->
+                    selectedClipEntries.firstOrNull { (_, clip) -> clip.id == selectedId }
+                }
+                ?: selectedClipEntries.firstOrNull { (_, clip) ->
+                    _playheadMs.value in clip.timelineStartMs until clip.timelineEndMs
+                }
+                ?: selectedClipEntries.minByOrNull { (_, clip) ->
+                    kotlin.math.abs(clip.timelineStartMs - _playheadMs.value)
+                }
+            val activeClipId = activeSelection?.second?.id
+            val activeTrackId = activeSelection?.first
+            s.copy(
+                selectedClipIds = activeClipId?.let(::setOf) ?: emptySet(),
+                selectedClipId = activeClipId,
+                selectedTrackId = activeTrackId
+            )
+        }
+        updatePreview()
     }
 
     fun groupSelectedClips() {
@@ -2370,6 +2602,7 @@ class EditorViewModel @Inject constructor(
                 })
             })
         }
+        saveProject()
         showToast("Grouped ${ids.size} clips")
     }
 
@@ -2383,6 +2616,7 @@ class EditorViewModel @Inject constructor(
                 })
             })
         }
+        saveProject()
         showToast("Clips ungrouped")
     }
 
@@ -2417,6 +2651,7 @@ class EditorViewModel @Inject constructor(
             ))
         }
         rebuildPlayerTimeline()
+        saveProject()
         showToast("Deleted ${clipIds.size} clips")
     }
 
@@ -2984,10 +3219,139 @@ class EditorViewModel @Inject constructor(
     }
 
     private fun recalculateDuration(state: EditorState): EditorState {
-        val totalDuration = state.tracks.maxOfOrNull { t ->
+        return normalizeTimelineState(state)
+    }
+
+    private fun normalizeTimelineState(state: EditorState): EditorState {
+        val normalizedTracks = state.tracks.map { track ->
+            track.copy(clips = track.clips.sortedBy { it.timelineStartMs })
+        }
+        val totalDuration = normalizedTracks.maxOfOrNull { t ->
             t.clips.maxOfOrNull { it.timelineEndMs } ?: 0L
         } ?: 0L
-        return state.copy(totalDurationMs = totalDuration)
+        val normalizedState = normalizeSelectionState(
+            state.copy(
+                tracks = normalizedTracks,
+                totalDurationMs = totalDuration
+            ),
+            normalizedTracks
+        )
+        val clampedPlayheadMs = normalizedState.playheadMs.coerceIn(0L, totalDuration)
+        val clampedScrollOffsetMs = clampTimelineScrollOffset(
+            offsetMs = normalizedState.scrollOffsetMs,
+            state = normalizedState
+        )
+        return normalizedState.copy(
+            playheadMs = clampedPlayheadMs,
+            scrollOffsetMs = clampedScrollOffsetMs
+        )
+    }
+
+    private fun previewTrackForClip(clipId: String): Track? {
+        return _state.value.tracks.firstOrNull { track -> track.clips.any { it.id == clipId } }
+    }
+
+    private fun primaryPreviewTrack(): Track? {
+        return _state.value.tracks
+            .sortedBy { it.index }
+            .firstOrNull {
+                (it.type == TrackType.VIDEO || it.type == TrackType.OVERLAY) &&
+                    it.isVisible &&
+                    it.clips.isNotEmpty()
+            }
+    }
+
+    private fun previewClipAtPosition(positionMs: Long): Clip? {
+        return primaryPreviewTrack()
+            ?.clips
+            ?.sortedBy { it.timelineStartMs }
+            ?.firstOrNull { positionMs in it.timelineStartMs until it.timelineEndMs }
+    }
+
+    private fun nextPreviewClipAfter(positionMs: Long): Clip? {
+        return primaryPreviewTrack()
+            ?.clips
+            ?.sortedBy { it.timelineStartMs }
+            ?.firstOrNull { it.timelineStartMs > positionMs }
+    }
+
+    private fun startGapPlayback(startMs: Long) {
+        val targetClip = nextPreviewClipAfter(startMs)
+        val gapEndMs = targetClip?.timelineStartMs ?: _state.value.totalDurationMs
+        if (gapEndMs <= startMs) {
+            if (targetClip != null) {
+                seekTo(targetClip.timelineStartMs)
+                videoEngine.play()
+                _state.update { it.copy(isPlaying = true) }
+            }
+            return
+        }
+
+        cancelGapPlayback()
+        videoEngine.pause()
+        _playheadMs.value = startMs
+        _state.update { it.copy(isPlaying = true, playheadMs = startMs) }
+
+        gapPlaybackJob = viewModelScope.launch {
+            val gapPlaybackStartRealtime = SystemClock.elapsedRealtime()
+            while (isActive) {
+                val elapsedMs = SystemClock.elapsedRealtime() - gapPlaybackStartRealtime
+                val positionMs = (startMs + elapsedMs).coerceAtMost(gapEndMs)
+                _playheadMs.value = positionMs
+                _state.update { it.copy(playheadMs = positionMs, isPlaying = true) }
+                if (positionMs >= gapEndMs) {
+                    break
+                }
+                delay(33)
+            }
+
+            if (!isActive) {
+                return@launch
+            }
+            gapPlaybackJob = null
+            val resumeClip = nextPreviewClipAfter((gapEndMs - 1L).coerceAtLeast(0L))
+            if (resumeClip != null) {
+                val resumeAtMs = resumeClip.timelineStartMs
+                _playheadMs.value = resumeAtMs
+                _state.update { it.copy(playheadMs = resumeAtMs, isPlaying = true) }
+                videoEngine.seekTo(resumeAtMs)
+                videoEngine.play()
+            } else {
+                val timelineEndMs = _state.value.totalDurationMs
+                _playheadMs.value = timelineEndMs
+                _state.update { it.copy(playheadMs = timelineEndMs, isPlaying = false) }
+            }
+        }
+    }
+
+    private fun cancelGapPlayback() {
+        val wasPlayingGap = gapPlaybackJob?.isActive == true
+        gapPlaybackJob?.cancel()
+        gapPlaybackJob = null
+        if (wasPlayingGap) {
+            _state.update { it.copy(isPlaying = false) }
+        }
+    }
+
+    private fun isTrackAudibleInPreview(track: Track): Boolean {
+        val soloTrackIds = _state.value.tracks.filter { it.isSolo }.map { it.id }.toSet()
+        return track.isVisible && !track.isMuted && (soloTrackIds.isEmpty() || track.id in soloTrackIds)
+    }
+
+    private fun minimumSlideDurationMs(clip: Clip): Long {
+        return kotlin.math.ceil(100.0 / clip.speed.coerceAtLeast(0.01f).toDouble()).toLong().coerceAtLeast(1L)
+    }
+
+    private fun maximumPreviousDurationMs(clip: Clip): Long {
+        return kotlin.math.floor((clip.sourceDurationMs - clip.trimStartMs).toDouble() / clip.speed.coerceAtLeast(0.01f).toDouble())
+            .toLong()
+            .coerceAtLeast(minimumSlideDurationMs(clip))
+    }
+
+    private fun maximumNextDurationMs(clip: Clip): Long {
+        return kotlin.math.floor(clip.trimEndMs.toDouble() / clip.speed.coerceAtLeast(0.01f).toDouble())
+            .toLong()
+            .coerceAtLeast(minimumSlideDurationMs(clip))
     }
 
     override fun onCleared() {
@@ -3001,6 +3365,7 @@ class EditorViewModel @Inject constructor(
         ttsEngine.stopPreview()
         videoEngine.removePlayerListener()
         videoEngine.resetExportState()
+        cancelWaveformLoads()
         audioEngine.clearWaveformCache()
         // DON'T call videoEngine.release() or ttsEngine.release() — they're @Singletons
     }

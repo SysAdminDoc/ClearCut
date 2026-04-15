@@ -20,6 +20,7 @@ local.properties
 
 # Private docs — keep local only
 CLAUDE.md
+CODEX_CHANGELOG.md
 .claude/
 RESEARCH.md
 ROADMAP.md

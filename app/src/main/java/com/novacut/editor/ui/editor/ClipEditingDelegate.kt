@@ -1,7 +1,6 @@
 package com.novacut.editor.ui.editor
 
 import android.net.Uri
-import com.novacut.editor.engine.AudioEngine
 import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.Track
@@ -9,6 +8,7 @@ import com.novacut.editor.model.TrackType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
@@ -21,7 +21,6 @@ import java.util.UUID
 class ClipEditingDelegate(
     private val stateFlow: MutableStateFlow<EditorState>,
     private val videoEngine: VideoEngine,
-    private val audioEngine: AudioEngine,
     private val scope: CoroutineScope,
     private val saveUndoState: (String) -> Unit,
     private val showToast: (String) -> Unit,
@@ -49,7 +48,7 @@ class ClipEditingDelegate(
 
             saveUndoState("Add clip")
 
-            // Create clip ID outside state update so we can reference it for waveform
+            // Create clip ID outside state update so follow-up hooks can reference it.
             val clipId = UUID.randomUUID().toString()
 
             stateFlow.update { state ->
@@ -83,22 +82,12 @@ class ClipEditingDelegate(
                 ))
             }
 
-            // Rebuild player timeline with all clips
-            videoEngine.prepareTimeline(stateFlow.value.tracks)
+            // Rebuild through the shared path so preview and normalization stay in sync.
+            rebuildPlayerTimeline()
             saveProject()
 
             // Notify ViewModel for proxy registration
             onClipAdded?.invoke(clipId, uri)
-
-            // Extract waveform for audio visualization using the known clip ID
-            scope.launch {
-                try {
-                    val waveform = audioEngine.extractWaveform(uri).toList()
-                    stateFlow.update { it.copy(waveforms = it.waveforms + (clipId to waveform)) }
-                } catch (e: Exception) {
-                    android.util.Log.w("ClipEditingDelegate", "Waveform extraction failed", e)
-                }
-            }
         }
     }
 
