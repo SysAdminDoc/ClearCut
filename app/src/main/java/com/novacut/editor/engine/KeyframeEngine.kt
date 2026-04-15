@@ -175,7 +175,7 @@ object KeyframeEngine {
         for (i in 0 until 8) {
             val currentX = cubicBezier(x1, x2, guess)
             val currentSlope = cubicBezierDerivative(x1, x2, guess)
-            if (abs(currentSlope) < 1e-7f) break
+            if (abs(currentSlope) < 1e-5f) break
             guess -= (currentX - t) / currentSlope
             guess = guess.coerceIn(0f, 1f)
         }

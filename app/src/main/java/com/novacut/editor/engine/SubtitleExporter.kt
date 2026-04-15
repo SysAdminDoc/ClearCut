@@ -13,7 +13,11 @@ object SubtitleExporter {
     fun export(captions: List<Caption>, format: SubtitleFormat, outputFile: File): Boolean {
         if (captions.isEmpty()) return false
 
-        val sorted = captions.sortedBy { it.startTimeMs }
+        // Filter out invalid captions (negative times, zero/negative duration)
+        val sorted = captions
+            .filter { it.startTimeMs >= 0 && it.endTimeMs > it.startTimeMs }
+            .sortedBy { it.startTimeMs }
+        if (sorted.isEmpty()) return false
         val content = when (format) {
             SubtitleFormat.SRT -> generateSrt(sorted)
             SubtitleFormat.VTT -> generateVtt(sorted)

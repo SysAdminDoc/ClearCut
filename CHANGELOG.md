@@ -1,5 +1,33 @@
 # Changelog
 
+## v3.28.0 — Deep Engineering Audit: Correctness, Security & Resource Safety
+
+### Critical Fixes
+- **StateFlowExt CAS loop** — Removed 100-retry limit that caused `IllegalStateException` under high contention; loop now runs unbounded with periodic `Thread.yield()`.
+- **ProjectAutoSave `release()` deadlock** — Replaced `runBlocking` + mutex with scope cancellation to prevent ANR when Activity destroys.
+- **ProjectAutoSave atomic writes** — Save uses temp file + rename + backup rollback pattern; interrupted saves no longer corrupt project files.
+- **ProjectAutoSave `.bak` recovery** — `loadRecoveryData()` now restores from backup files left by interrupted saves.
+- **AppModule destructive migration removed** — `fallbackToDestructiveMigrationOnDowngrade()` silently deleted all user projects on app downgrade; replaced with safe empty migration.
+- **VideoEngine export race condition** — Added `synchronized` block around export state check-and-set to prevent concurrent export starts.
+- **AudioEngine MediaCodec resource leak** — Both `extractWaveform()` and `decodeToPCM()` now use `try-finally` with nullable decoder to guarantee `stop()`/`release()` on all paths.
+- **WhisperEngine ONNX tensor lifecycle** — Decoder loop restructured: `OrtSession.Result` and `OnnxTensor` are now closed exactly once via `finally` block, preventing native memory leaks when `session.run()` succeeds but post-processing throws.
+
+### Security Fixes
+- **Intent filter URI scheme hardening** — Removed `file://` scheme from AndroidManifest intent filter; only `content://` URIs are now accepted.
+- **MainActivity intent validation** — Incoming `ACTION_VIEW` intents are validated: scheme must be `content://`, MIME type must resolve, invalid URIs are silently dropped.
+- **SettingsRepository enum validation** — `updateDefaultCodec()` and `updateDefaultExportQuality()` now validate against known enum values, preventing garbage strings from being stored via corrupt settings or IPC.
+
+### Edge Case & Robustness Fixes
+- **VolumeAudioProcessor NaN guard** — Added `isNaN()`/`isInfinite()` check on computed gain; handles edge case where `clipDurationMs <= fadeOutMs`.
+- **SubtitleExporter invalid caption filter** — Captions with negative times or zero/negative duration are filtered before export instead of producing malformed subtitle files.
+- **KeyframeEngine Newton-Raphson stability** — Increased near-zero slope threshold from `1e-7f` to `1e-5f` to prevent floating-point instability in bezier easing.
+- **ExportDelegate batch queue snapshot** — Batch export queue is now copied with `.toList()` before iteration to prevent `ConcurrentModificationException` if queue is mutated during export.
+- **VoiceoverRecorder thread safety** — Added `@Synchronized` to `startRecording()`, `stopRecording()`, and `release()` to prevent concurrent access from UI and lifecycle callbacks.
+- **ProjectDatabase type converter logging** — Silent enum fallbacks in Room type converters now log warnings for diagnosability.
+
+### Housekeeping
+- `versionCode 88 -> 89`, `versionName 3.27.0 -> 3.28.0`
+
 ## v3.27.0 — Export & Archive Overhaul, UI Density Pass, File Safety
 
 ### Engine / Core
