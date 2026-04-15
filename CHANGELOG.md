@@ -1,5 +1,22 @@
 # Changelog
 
+## v3.29.0 — Audit Phase 2: Data Persistence, Thread Safety & Database Optimization
+
+### Data Persistence Fixes
+- **24 missing `saveProject()` calls** — Added `saveProject()` to all discrete state-mutating functions in EditorViewModel that had `saveUndoState()` but never persisted: pasteClipEffects, addAdjustmentLayer, addCaption, removeCaption, applyCaptionStyle, applyBeatSync, applySpeedPreset, applyFillerRemoval, runAutoEdit, importEffects, addEffectKeyframe, analyzeAndReduceNoise, syncMultiCamClips, colorMatchToReference, applyTextTemplate, autoDuckAudio, addKeyframe, deleteKeyframe, setClipSpeedCurve, addMask, deleteMask, setClipBlendMode, unlinkAudioVideo, applyPipPreset. Users could undo changes that were never saved — on app restart, the undo stack was gone but the state never hit disk.
+
+### Thread Safety Fixes
+- **SegmentationEngine race condition** — Added `@Synchronized` to `getOrCreateSegmenter()` to prevent concurrent threads from creating duplicate expensive `ImageSegmenter` instances.
+- **applyPipPreset missing timeline rebuild** — Added `rebuildPlayerTimeline()` so PiP preset changes reflect in the player immediately.
+
+### Database & Storage Fixes
+- **Room index on `updatedAt`** — Added `@Index("updatedAt")` to the Project entity and `MIGRATION_4_5` (database v4→v5) to create the index. Project list query (`ORDER BY updatedAt DESC`) was doing a full table scan.
+- **TemplateManager import size limit** — `importTemplateFromUri()` now enforces a 10MB cap via chunked reading. Previously read the entire file into memory without limit.
+- **Caption deserialization crash guard** — `ProjectAutoSave` now clamps `endTimeMs` when corrupt JSON has `endTimeMs < startTimeMs`, preventing `Caption.init` from throwing during project restore.
+
+### Housekeeping
+- `versionCode 89 → 90`, `versionName 3.28.0 → 3.29.0`
+
 ## v3.28.0 — Deep Engineering Audit: Correctness, Security & Resource Safety
 
 ### Critical Fixes

@@ -977,11 +977,14 @@ data class AutoSaveState(
 
         private fun deserializeCaption(json: JSONObject): Caption {
             val wordsArr = json.optJSONArray("words") ?: JSONArray()
+            val rawStart = json.optLong("startTimeMs", 0L).coerceAtLeast(0L)
+            val rawEnd = json.optLong("endTimeMs", 0L)
+            val endTimeMs = if (rawEnd < rawStart) rawStart + 1000L else rawEnd
             return Caption(
                 id = json.optString("id", java.util.UUID.randomUUID().toString()),
                 text = json.optString("text", ""),
-                startTimeMs = json.optLong("startTimeMs", 0L),
-                endTimeMs = json.optLong("endTimeMs", 0L),
+                startTimeMs = rawStart,
+                endTimeMs = endTimeMs,
                 style = CaptionStyle(
                     type = safeValueOf(json.optString("styleType", "SUBTITLE_BAR"), CaptionStyleType.SUBTITLE_BAR),
                     fontSize = json.optDouble("fontSize", 36.0).toFloat(),

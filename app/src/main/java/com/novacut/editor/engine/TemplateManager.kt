@@ -113,8 +113,22 @@ class TemplateManager @Inject constructor(
 
     suspend fun importTemplateFromUri(uri: Uri): UserTemplate? = withContext(Dispatchers.IO) {
         try {
-            val text = context.contentResolver.openInputStream(uri)?.use { it.bufferedReader().readText() }
-                ?: return@withContext null
+            val text = context.contentResolver.openInputStream(uri)?.use { stream ->
+                val reader = stream.bufferedReader()
+                val sb = StringBuilder()
+                val buf = CharArray(8192)
+                var totalRead = 0L
+                var n: Int
+                while (reader.read(buf).also { n = it } != -1) {
+                    totalRead += n
+                    if (totalRead > 10_000_000) {
+                        Log.w("TemplateManager", "Template file exceeds 10MB limit")
+                        return@withContext null
+                    }
+                    sb.append(buf, 0, n)
+                }
+                sb.toString()
+            } ?: return@withContext null
             val json = JSONObject(text)
             val importedTemplate = parseTemplateJson(
                 json = json,

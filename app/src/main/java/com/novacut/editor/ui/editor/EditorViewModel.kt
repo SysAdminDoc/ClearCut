@@ -724,6 +724,7 @@ class EditorViewModel @Inject constructor(
                 })
             })
         }
+        saveProject()
     }
 
     fun setClipLabel(clipId: String, label: ClipLabel) {
@@ -1089,6 +1090,7 @@ class EditorViewModel @Inject constructor(
         saveUndoState("Add keyframe")
         val kf = Keyframe(timeOffsetMs, property, value, interpolation = KeyframeInterpolation.BEZIER)
         updateSelectedClip { it.copy(keyframes = it.keyframes + kf) }
+        saveProject()
     }
 
     fun deleteKeyframe(keyframe: Keyframe) {
@@ -1099,6 +1101,7 @@ class EditorViewModel @Inject constructor(
                 !(it.timeOffsetMs == keyframe.timeOffsetMs && it.property == keyframe.property && it.value == keyframe.value)
             })
         }
+        saveProject()
     }
 
     // --- Speed Curve ---
@@ -1110,6 +1113,7 @@ class EditorViewModel @Inject constructor(
         saveUndoState("Speed curve")
         updateSelectedClip { it.copy(speedCurve = speedCurve) }
         rebuildPlayerTimeline()
+        saveProject()
     }
 
     // --- Mask Editor ---
@@ -1133,6 +1137,7 @@ class EditorViewModel @Inject constructor(
         val mask = Mask(type = type, points = defaultPoints)
         updateSelectedClip { it.copy(masks = it.masks + mask) }
         _state.update { it.copy(selectedMaskId = mask.id) }
+        saveProject()
     }
 
     fun updateMask(mask: Mask) {
@@ -1146,6 +1151,7 @@ class EditorViewModel @Inject constructor(
         saveUndoState("Delete mask")
         updateSelectedClip { it.copy(masks = it.masks.filter { m -> m.id != maskId }) }
         _state.update { it.copy(selectedMaskId = null) }
+        saveProject()
     }
 
     fun updateMaskPoint(maskId: String, pointIndex: Int, x: Float, y: Float) {
@@ -1177,6 +1183,7 @@ class EditorViewModel @Inject constructor(
         saveUndoState("Blend mode")
         updateSelectedClip { it.copy(blendMode = blendMode) }
         updatePreview()
+        saveProject()
     }
 
     fun setTrackBlendMode(trackId: String, blendMode: BlendMode) {
@@ -1219,6 +1226,7 @@ class EditorViewModel @Inject constructor(
                 } else effect
             })
         }
+        saveProject()
     }
 
     // --- Adjustment Layers ---
@@ -1231,6 +1239,7 @@ class EditorViewModel @Inject constructor(
             )
             s.copy(tracks = s.tracks + newTrack)
         }
+        saveProject()
     }
 
     // --- Captions ---
@@ -1238,6 +1247,7 @@ class EditorViewModel @Inject constructor(
         if (_state.value.selectedClipId == null) return
         saveUndoState("Add caption")
         updateSelectedClip { it.copy(captions = it.captions + caption) }
+        saveProject()
     }
 
     fun updateCaption(caption: Caption) {
@@ -1250,6 +1260,7 @@ class EditorViewModel @Inject constructor(
         if (_state.value.selectedClipId == null) return
         saveUndoState("Remove caption")
         updateSelectedClip { it.copy(captions = it.captions.filter { c -> c.id != captionId }) }
+        saveProject()
     }
 
     // --- Project Snapshots ---
@@ -1589,6 +1600,7 @@ class EditorViewModel @Inject constructor(
                 }
             )
         }
+        saveProject()
         showToast("Caption style applied: ${template.type.displayName}")
     }
 
@@ -1641,6 +1653,7 @@ class EditorViewModel @Inject constructor(
             }
         }
         rebuildTimeline()
+        saveProject()
         showToast("Split $splitCount clips at beat markers")
         hideBeatSync()
     }
@@ -1753,6 +1766,7 @@ class EditorViewModel @Inject constructor(
         saveUndoState("Speed preset")
         updateSelectedClip { it.copy(speedCurve = curve) }
         rebuildTimeline()
+        saveProject()
         showToast("Speed preset applied")
         hideSpeedPresets()
     }
@@ -1827,6 +1841,7 @@ class EditorViewModel @Inject constructor(
             recalculateDuration(s.copy(tracks = tracks))
         }
         rebuildTimeline()
+        saveProject()
         showToast("Removed ${regions.size} filler regions")
         hideFillerRemoval()
     }
@@ -1872,6 +1887,7 @@ class EditorViewModel @Inject constructor(
                         }, isAutoEditing = false)
                     }
                     rebuildTimeline()
+                    saveProject()
                     showToast("Auto-edit created ${result.segments.size} segments")
                 } else {
                     _state.update { it.copy(isAutoEditing = false) }
@@ -1948,6 +1964,7 @@ class EditorViewModel @Inject constructor(
                         colorGrade = imported.colorGrade ?: clip.colorGrade
                     )
                 }
+                saveProject()
                 showToast("Imported: ${imported.name}")
                 updatePreview()
             } else {
@@ -2075,6 +2092,7 @@ class EditorViewModel @Inject constructor(
                             }
                         )
                     }
+                    saveProject()
                     showToast("Applied ${mode.displayName} noise reduction")
                 } else {
                     _state.update { it.copy(isAnalyzingNoise = false) }
@@ -2191,6 +2209,7 @@ class EditorViewModel @Inject constructor(
                         })
                     }
                     rebuildTimeline()
+                    saveProject()
                     showToast("Synced ${offsets.size} clips by audio")
                 } else {
                     showToast("Could not find audio sync points")
@@ -2374,6 +2393,7 @@ class EditorViewModel @Inject constructor(
                 saveUndoState("Color match")
                 val grade = com.novacut.editor.engine.ColorMatchEngine.generateColorMatch(refStats, targetStats)
                 updateClipColorGrade(grade)
+                saveProject()
                 showToast("Color matched to reference clip")
             } else {
                 showToast("Could not analyze frames")
@@ -2459,6 +2479,7 @@ class EditorViewModel @Inject constructor(
             )
             _state.update { s -> s.copy(textOverlays = s.textOverlays + overlay) }
         }
+        saveProject()
         hideTextTemplates()
         showToast("Template applied: ${template.name}")
     }
@@ -2521,6 +2542,7 @@ class EditorViewModel @Inject constructor(
         if (_state.value.selectedClipId == null) return
         saveUndoState("Unlink A/V")
         updateSelectedClip { it.copy(linkedClipId = null) }
+        saveProject()
         showToast("Audio/video unlinked")
     }
 
@@ -2742,6 +2764,8 @@ class EditorViewModel @Inject constructor(
         if (_state.value.selectedClipId == null) return
         saveUndoState("PiP preset")
         updateSelectedClip { it.copy(positionX = preset.posX, positionY = preset.posY, scaleX = preset.scaleX, scaleY = preset.scaleY) }
+        rebuildPlayerTimeline()
+        saveProject()
     }
 
     fun showPipPresets() = showPanel(PanelId.PIP_PRESETS)
@@ -2840,6 +2864,7 @@ class EditorViewModel @Inject constructor(
                         } else track
                     })
                 }
+                saveProject()
                 showToast("Ducking applied: ${speechRegions.size} regions")
             } catch (e: Exception) {
                 showToast("Auto-duck failed: ${e.message ?: "Unknown error"}")

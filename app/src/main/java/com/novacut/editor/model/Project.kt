@@ -6,7 +6,7 @@ import androidx.room.*
 import java.util.UUID
 
 @Immutable
-@Entity(tableName = "projects")
+@Entity(tableName = "projects", indices = [Index("updatedAt")])
 data class Project(
     @PrimaryKey val id: String = UUID.randomUUID().toString(),
     val name: String = "Untitled",

@@ -9,7 +9,7 @@ import com.novacut.editor.model.AspectRatio
 import com.novacut.editor.model.Resolution
 import kotlinx.coroutines.flow.Flow
 
-@Database(entities = [Project::class], version = 4, exportSchema = true)
+@Database(entities = [Project::class], version = 5, exportSchema = true)
 @TypeConverters(Converters::class)
 abstract class ProjectDatabase : RoomDatabase() {
     abstract fun projectDao(): ProjectDao
@@ -37,7 +37,14 @@ abstract class ProjectDatabase : RoomDatabase() {
             }
         }
 
-        val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+        // v4→v5: Add index on updatedAt for project list sort performance
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_projects_updatedAt ON projects (updatedAt)")
+            }
+        }
+
+        val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
     }
 }
 

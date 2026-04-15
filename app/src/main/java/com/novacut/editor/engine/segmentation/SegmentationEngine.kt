@@ -220,6 +220,7 @@ class SegmentationEngine @Inject constructor(
         return SegmentationGlEffect(this, threshold)
     }
 
+    @Synchronized
     private fun getOrCreateSegmenter(): ImageSegmenter? {
         segmenter?.let { return it }
         if (!modelFile.exists()) return null
