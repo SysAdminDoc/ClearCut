@@ -1339,7 +1339,9 @@ fun Timeline(
                                     .let { if (snapToBeat) it + beatMarkers else it }
                                     .let { if (snapToMarker) it + markers.map { m -> m.timeMs } else it }
                                 val snapThresholdPx = with(density) { 8.dp.toPx() }
-                                val snapThresholdMs = (snapThresholdPx / pixelsPerMs).toLong()
+                                // Floor at 1ms so snapping still works at extreme zoom-in
+                                // (where 8dp / pixelsPerMs would round to 0L and disable snap).
+                                val snapThresholdMs = (snapThresholdPx / pixelsPerMs).toLong().coerceAtLeast(1L)
 
                                 val startSnap = findSnapTarget(selectedClipObj.timelineStartMs, snapTargets, snapThresholdMs)
                                 val endSnap = findSnapTarget(selectedClipObj.timelineEndMs, snapTargets, snapThresholdMs)

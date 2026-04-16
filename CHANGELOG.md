@@ -1,5 +1,25 @@
 # Changelog
 
+## v3.39.0 — Audit Phase 11: Speed Curve Duration Math, Snap Threshold Floor, Tool Grid Recomposition
+
+### Math correctness
+- **Variable-speed clip duration** ([Project.kt#L143-L162](app/src/main/java/com/novacut/editor/model/Project.kt#L143)) — `Clip.durationMs` was averaging the speed curve arithmetically and dividing trim range by the result. Wall-clock duration is the integral of `dt_source / speed(t)`, so the *harmonic* mean of speed is what scales trim range to real time. A clip with the first half at 0.5x and the second half at 2.0x (true duration = 1.25× source) was reporting 0.8× source — the timeline displayed it 56% shorter than it would actually play, and clip stacking math used the wrong endpoint. Now sums reciprocals: `samples / sum(1/speed)`.
+
+### Timeline UX
+- **Snap threshold floor at extreme zoom** ([Timeline.kt#L1342](app/src/main/java/com/novacut/editor/ui/editor/Timeline.kt#L1342)) — `snapThresholdMs = (8.dp.toPx() / pixelsPerMs).toLong()` rounded to `0L` once `pixelsPerMs > snapPx` (very high zoom-in), which silently disabled magnetic snapping for fine-grained edits — the worst time to lose snapping. Now floored at `1L` so the snap window is always at least one millisecond wide.
+
+### Compose performance
+- **Tool sub-menu grid skipping** ([ToolPanel.kt#L498-L508](app/src/main/java/com/novacut/editor/ui/editor/ToolPanel.kt#L498)) — `SubMenuGrid` items were composing `Modifier.then(if (!isDisabled) Modifier.clickable { ... } else Modifier)` per recomposition. The conditional `then(...)` produced a fresh modifier chain (and a fresh click lambda) on every parent recompose, defeating Compose's modifier reuse / clickable click-listener stability. Switched to the standard `Modifier.clickable(enabled = !isDisabled)` form and replaced the parallel `then(Modifier.alpha(...))` with a direct `alpha()` call. Tool grid no longer re-allocates click semantics every time the bottom-tool area re-renders.
+
+### Audit findings verified as already-correct (false positives this round)
+- **EffectBuilder anchor-Y sign flip** — pre-anchor `(-ax, +ay)` and post-anchor `(+ax, -ay)` look inconsistent at first glance but are actually internally consistent: the model exposes Y-up coordinates while `android.graphics.Matrix` is Y-down, so the `+ay`/`-ay` pair correctly translates the anchor to origin and back in matrix space, matching the `(+px, -py)` Y-flip on the position translation.
+- **LoudnessEngine short-term loop bounds** — `0..size - shortTermBlocks` (inclusive) with `subList(i, i + shortTermBlocks)` is in-range because `subList`'s `toIndex` is exclusive; the last iteration takes `subList(size - shortTermBlocks, size)`.
+- **EdlExporter timecode overflow** — `ms` is `Long`, so `ms * fps + 500` auto-promotes to Long; no Int overflow possible.
+- **NoiseReductionEngine soft-gate energy init** — `energy` is initialized at the top of the gate branch (`var energy = 0f`); the `/1f` divisor is cosmetic but mathematically harmless.
+- **VideoEngine listener cleanup** — `VideoEngine` is `@Singleton` so the captured `StateFlow` references in the Transformer listener live for app lifetime regardless; no leak.
+- **TemplateManager path traversal** — `normalizeImportedTemplate` already mints a fresh UUID when `sanitizedId != template.id`, so `../../etc/passwd` → `etcpasswd` → mismatch → UUID; the path-traversal vector is closed.
+- **MediaPicker `Uri.fromFile` exposure** — the file:// URI is consumed only by ExoPlayer/Coil internally and never crosses an app boundary via Intent; no `FileUriExposedException` risk in current code paths.
+
 ## v3.38.0 — Audit Phase 9: FCPXML Escaping, LUT Bounds, Settings Slider Debounce, Template Path Traversal & OTIO Rounding
 
 ### Format / parser correctness
