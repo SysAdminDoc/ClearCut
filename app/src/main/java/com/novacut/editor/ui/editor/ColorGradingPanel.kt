@@ -34,6 +34,7 @@ enum class ColorGradingTab(val label: String) {
     LUT("LUT")
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ColorGradingPanel(
     colorGrade: ColorGrade,
@@ -47,10 +48,11 @@ fun ColorGradingPanel(
 
     PremiumEditorPanel(
         title = stringResource(R.string.color_grading_title),
-        subtitle = "Shape primary tone, curves, qualifiers, and LUTs while preview stays in motion.",
+        subtitle = stringResource(R.string.panel_color_grading_subtitle),
         icon = Icons.Default.Palette,
         accent = Mocha.Peach,
         onClose = onClose,
+        closeContentDescription = stringResource(R.string.cd_close_color_grading),
         modifier = modifier,
         scrollable = true,
         headerActions = {
@@ -63,46 +65,83 @@ fun ColorGradingPanel(
         }
     ) {
         PremiumPanelCard(accent = Mocha.Peach) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Grade summary",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Mocha.Text
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = colorGradeSummary(colorGrade),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Mocha.Subtext0
-                    )
-                }
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val isCompactLayout = maxWidth < 420.dp
+                if (isCompactLayout) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Column {
+                            Text(
+                                text = stringResource(R.string.color_grading_summary_title),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Mocha.Text
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = colorGradeSummary(colorGrade),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Mocha.Subtext0
+                            )
+                        }
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            PremiumPanelPill(text = activeTab.label, accent = Mocha.Peach)
+                            PremiumPanelPill(
+                                text = if (colorGrade.hslQualifier != null) {
+                                    stringResource(R.string.color_grading_qualifier_on)
+                                } else {
+                                    stringResource(R.string.color_grading_qualifier_off)
+                                },
+                                accent = if (colorGrade.hslQualifier != null) Mocha.Mauve else Mocha.Overlay1
+                            )
+                        }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.color_grading_summary_title),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Mocha.Text
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = colorGradeSummary(colorGrade),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Mocha.Subtext0
+                            )
+                        }
 
-                Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
 
-                Column(
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    PremiumPanelPill(text = activeTab.label, accent = Mocha.Peach)
-                    PremiumPanelPill(
-                        text = if (colorGrade.hslQualifier != null) "Qualifier on" else "Qualifier off",
-                        accent = if (colorGrade.hslQualifier != null) Mocha.Mauve else Mocha.Overlay1
-                    )
+                        Column(
+                            horizontalAlignment = Alignment.End,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            PremiumPanelPill(text = activeTab.label, accent = Mocha.Peach)
+                            PremiumPanelPill(
+                                text = if (colorGrade.hslQualifier != null) {
+                                    stringResource(R.string.color_grading_qualifier_on)
+                                } else {
+                                    stringResource(R.string.color_grading_qualifier_off)
+                                },
+                                accent = if (colorGrade.hslQualifier != null) Mocha.Mauve else Mocha.Overlay1
+                            )
+                        }
+                    }
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             ColorGradingTab.entries.forEach { tab ->
@@ -125,6 +164,7 @@ fun ColorGradingPanel(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ColorWheelsContent(
     grade: ColorGrade,
@@ -137,40 +177,48 @@ private fun ColorWheelsContent(
     ) {
         PremiumPanelCard(accent = Mocha.Rosewater) {
             Text(
-                text = "Tone wheels",
+                text = stringResource(R.string.color_grading_tone_wheels_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = Mocha.Text
             )
             Text(
-                text = "Lift shapes the shadows, gamma handles the mids, and gain pushes the highlights.",
+                text = stringResource(R.string.color_grading_tone_wheels_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Mocha.Subtext0
             )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                ColorWheel(
-                    label = stringResource(R.string.color_wheel_lift),
-                    r = grade.liftR, g = grade.liftG, b = grade.liftB,
-                    onChanged = { r, g, b -> onChange(grade.copy(liftR = r, liftG = g, liftB = b)) },
-                    onDragStarted = onDragStarted,
-                    modifier = Modifier.weight(1f)
-                )
-                ColorWheel(
-                    label = stringResource(R.string.color_wheel_gamma),
-                    r = grade.gammaR - 1f, g = grade.gammaG - 1f, b = grade.gammaB - 1f,
-                    onChanged = { r, g, b -> onChange(grade.copy(gammaR = r + 1f, gammaG = g + 1f, gammaB = b + 1f)) },
-                    onDragStarted = onDragStarted,
-                    modifier = Modifier.weight(1f)
-                )
-                ColorWheel(
-                    label = stringResource(R.string.color_wheel_gain),
-                    r = grade.gainR - 1f, g = grade.gainG - 1f, b = grade.gainB - 1f,
-                    onChanged = { r, g, b -> onChange(grade.copy(gainR = r + 1f, gainG = g + 1f, gainB = b + 1f)) },
-                    onDragStarted = onDragStarted,
-                    modifier = Modifier.weight(1f)
-                )
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val itemWidth = if (maxWidth < 420.dp) {
+                    ((maxWidth - 12.dp) / 2).coerceAtLeast(0.dp)
+                } else {
+                    ((maxWidth - 24.dp) / 3).coerceAtLeast(0.dp)
+                }
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    ColorWheel(
+                        label = stringResource(R.string.color_wheel_lift),
+                        r = grade.liftR, g = grade.liftG, b = grade.liftB,
+                        onChanged = { r, g, b -> onChange(grade.copy(liftR = r, liftG = g, liftB = b)) },
+                        onDragStarted = onDragStarted,
+                        modifier = Modifier.width(itemWidth)
+                    )
+                    ColorWheel(
+                        label = stringResource(R.string.color_wheel_gamma),
+                        r = grade.gammaR - 1f, g = grade.gammaG - 1f, b = grade.gammaB - 1f,
+                        onChanged = { r, g, b -> onChange(grade.copy(gammaR = r + 1f, gammaG = g + 1f, gammaB = b + 1f)) },
+                        onDragStarted = onDragStarted,
+                        modifier = Modifier.width(itemWidth)
+                    )
+                    ColorWheel(
+                        label = stringResource(R.string.color_wheel_gain),
+                        r = grade.gainR - 1f, g = grade.gainG - 1f, b = grade.gainB - 1f,
+                        onChanged = { r, g, b -> onChange(grade.copy(gainR = r + 1f, gainG = g + 1f, gainB = b + 1f)) },
+                        onDragStarted = onDragStarted,
+                        modifier = Modifier.width(itemWidth)
+                    )
+                }
             }
         }
 
@@ -181,7 +229,7 @@ private fun ColorWheelsContent(
                 color = Mocha.Text
             )
             Text(
-                text = "Offset adds or subtracts overall channel energy before the rest of the grade.",
+                text = stringResource(R.string.color_grading_offset_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Mocha.Subtext0
             )
@@ -302,6 +350,7 @@ private fun GradingSlider(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CurvesContent(
     grade: ColorGrade,
@@ -330,16 +379,16 @@ private fun CurvesContent(
 
         PremiumPanelCard(accent = curveColor) {
             Text(
-                text = "Curve response",
+                text = stringResource(R.string.color_grading_curve_response_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = Mocha.Text
             )
             Text(
-                text = "Add points directly on the graph to remap tonal response for each channel.",
+                text = stringResource(R.string.color_grading_curve_response_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Mocha.Subtext0
             )
-            Row(
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -414,20 +463,20 @@ private fun CurveEditor(
                             val newPoints = points.toMutableList()
                             newPoints.add(CurvePoint(x.coerceIn(0f, 1f), y.coerceIn(0f, 1f)))
                             newPoints.sortBy { it.x }
-                            onPointsChanged(newPoints)
-                            dragIndex = newPoints.indexOfFirst { it.x == x.coerceIn(0f, 1f) }
-                        }
-                    },
-                    onDrag = { change, _ ->
-                        if (dragIndex in points.indices) {
-                            val x = (change.position.x / size.width).coerceIn(0f, 1f)
-                            val y = (1f - change.position.y / size.height).coerceIn(0f, 1f)
-                            val newPoints = points.toMutableList()
-                            newPoints[dragIndex] = newPoints[dragIndex].copy(x = x, y = y)
-                            newPoints.sortBy { it.x }
-                            onPointsChanged(newPoints)
-                        }
-                    },
+                        onPointsChanged(newPoints)
+                        dragIndex = newPoints.indexOfFirst { it.x == x.coerceIn(0f, 1f) }
+                    }
+                },
+                onDrag = { change, _ ->
+                    if (dragIndex in points.indices) {
+                        val requestedX = (change.position.x / size.width).coerceIn(0f, 1f)
+                        val x = clampCurvePointX(points, dragIndex, requestedX)
+                        val y = (1f - change.position.y / size.height).coerceIn(0f, 1f)
+                        val newPoints = points.toMutableList()
+                        newPoints[dragIndex] = newPoints[dragIndex].copy(x = x, y = y)
+                        onPointsChanged(newPoints)
+                    }
+                },
                     onDragEnd = { dragIndex = -1 }
                 )
             }
@@ -494,6 +543,16 @@ private fun evaluateCurveSmooth(points: List<CurvePoint>, x: Float): Float {
         }
     }
     return x
+}
+
+private fun clampCurvePointX(points: List<CurvePoint>, index: Int, requestedX: Float): Float {
+    if (points.isEmpty()) return requestedX
+    if (index == 0) return 0f
+    if (index == points.lastIndex) return 1f
+
+    val previous = points.getOrNull(index - 1)?.x ?: 0f
+    val next = points.getOrNull(index + 1)?.x ?: 1f
+    return requestedX.coerceIn(previous + 0.02f, next - 0.02f)
 }
 
 @Composable

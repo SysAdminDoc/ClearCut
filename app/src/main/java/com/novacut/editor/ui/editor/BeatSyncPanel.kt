@@ -2,15 +2,7 @@ package com.novacut.editor.ui.editor
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GraphicEq
@@ -30,12 +22,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.ui.theme.Mocha
 import kotlin.math.roundToInt
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun BeatSyncPanel(
     beatMarkers: List<Long>,
@@ -50,6 +44,7 @@ fun BeatSyncPanel(
     onClose: () -> Unit
 ) {
     val hasBeats = beatMarkers.isNotEmpty()
+    val isCompactActions = LocalConfiguration.current.screenWidthDp < 430
     val avgBpm = remember(beatMarkers) {
         if (beatMarkers.size < 2) {
             0.0
@@ -66,6 +61,7 @@ fun BeatSyncPanel(
         icon = Icons.Default.MusicNote,
         accent = Mocha.Peach,
         onClose = onClose,
+        closeContentDescription = stringResource(R.string.beat_sync_close_cd),
         modifier = modifier,
         scrollable = true
     ) {
@@ -100,7 +96,11 @@ fun BeatSyncPanel(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     PremiumPanelPill(
-                        text = if (hasBeats) "${beatMarkers.size} beats" else "No beat map",
+                        text = if (hasBeats) {
+                            stringResource(R.string.beat_sync_markers_count, beatMarkers.size)
+                        } else {
+                            "No beat map"
+                        },
                         accent = Mocha.Peach
                     )
                     PremiumPanelPill(
@@ -129,55 +129,124 @@ fun BeatSyncPanel(
                 color = Mocha.Subtext0
             )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Button(
-                    onClick = onAnalyze,
-                    enabled = !isAnalyzing,
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Mocha.Peach,
-                        contentColor = Mocha.Crust,
-                        disabledContainerColor = Mocha.Peach.copy(alpha = 0.45f),
-                        disabledContentColor = Mocha.Crust.copy(alpha = 0.8f)
-                    ),
+            if (!isPlaying && !isAnalyzing) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Mocha.Surface0,
                     shape = RoundedCornerShape(18.dp)
                 ) {
-                    if (isAnalyzing) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            color = Mocha.Crust,
-                            strokeWidth = 2.dp
+                    Text(
+                        text = "Start playback to tap beats live after the first analysis pass.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Mocha.Subtext0,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
+                    )
+                }
+            }
+
+            if (isCompactActions) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Button(
+                        onClick = onAnalyze,
+                        enabled = !isAnalyzing,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Mocha.Peach,
+                            contentColor = Mocha.Crust,
+                            disabledContainerColor = Mocha.Peach.copy(alpha = 0.45f),
+                            disabledContentColor = Mocha.Crust.copy(alpha = 0.8f)
+                        ),
+                        shape = RoundedCornerShape(18.dp)
+                    ) {
+                        if (isAnalyzing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                color = Mocha.Crust,
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = stringResource(R.string.beat_sync_detecting))
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.GraphicEq,
+                                contentDescription = stringResource(R.string.cd_detect_beats)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = stringResource(R.string.beat_sync_detect))
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = onTapBeat,
+                        enabled = isPlaying,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = if (isPlaying) Mocha.Text else Mocha.Subtext0
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = stringResource(R.string.beat_sync_detecting))
-                    } else {
+                    ) {
                         Icon(
-                            imageVector = Icons.Default.GraphicEq,
-                            contentDescription = stringResource(R.string.cd_detect_beats)
+                            imageVector = Icons.Default.TouchApp,
+                            contentDescription = stringResource(R.string.cd_tap_beats)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = stringResource(R.string.beat_sync_detect))
+                        Text(text = stringResource(R.string.panel_beat_sync_tap))
                     }
                 }
-
-                OutlinedButton(
-                    onClick = onTapBeat,
-                    enabled = isPlaying,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = if (isPlaying) Mocha.Text else Mocha.Subtext0
-                    )
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.TouchApp,
-                        contentDescription = stringResource(R.string.cd_tap_beats)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = stringResource(R.string.panel_beat_sync_tap))
+                    Button(
+                        onClick = onAnalyze,
+                        enabled = !isAnalyzing,
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Mocha.Peach,
+                            contentColor = Mocha.Crust,
+                            disabledContainerColor = Mocha.Peach.copy(alpha = 0.45f),
+                            disabledContentColor = Mocha.Crust.copy(alpha = 0.8f)
+                        ),
+                        shape = RoundedCornerShape(18.dp)
+                    ) {
+                        if (isAnalyzing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                color = Mocha.Crust,
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = stringResource(R.string.beat_sync_detecting))
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.GraphicEq,
+                                contentDescription = stringResource(R.string.cd_detect_beats)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = stringResource(R.string.beat_sync_detect))
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = onTapBeat,
+                        enabled = isPlaying,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = if (isPlaying) Mocha.Text else Mocha.Subtext0
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.TouchApp,
+                            contentDescription = stringResource(R.string.cd_tap_beats)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = stringResource(R.string.panel_beat_sync_tap))
+                    }
                 }
             }
         }
@@ -241,29 +310,35 @@ fun BeatSyncPanel(
             }
 
             if (hasBeats) {
-                Row(
+                FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        PremiumPanelPill(
-                            text = "${beatMarkers.size} markers",
-                            accent = Mocha.Peach
-                        )
-                        PremiumPanelPill(
-                            text = "${(totalDurationMs / 1000f).roundToInt()}s scan",
-                            accent = Mocha.Blue
-                        )
-                    }
+                    BeatSyncMetric(
+                        label = stringResource(R.string.beat_sync_label_beats),
+                        value = beatMarkers.size.toString(),
+                        accent = Mocha.Peach
+                    )
+                    BeatSyncMetric(
+                        label = stringResource(R.string.beat_sync_label_bpm),
+                        value = if (avgBpm > 0.0) avgBpm.roundToInt().toString() else "—",
+                        accent = Mocha.Blue
+                    )
+                    BeatSyncMetric(
+                        label = stringResource(R.string.beat_sync_label_scan),
+                        value = "${(totalDurationMs / 1000f).roundToInt()}s",
+                        accent = Mocha.Mauve
+                    )
+                }
 
-                    OutlinedButton(
-                        onClick = onClearBeats,
-                        shape = RoundedCornerShape(18.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Red)
-                    ) {
-                        Text(text = stringResource(R.string.panel_beat_sync_clear))
-                    }
+                OutlinedButton(
+                    onClick = onClearBeats,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Red)
+                ) {
+                    Text(text = stringResource(R.string.panel_beat_sync_clear))
                 }
             }
         }
@@ -296,6 +371,36 @@ fun BeatSyncPanel(
             ) {
                 Text(text = stringResource(R.string.beat_sync_apply))
             }
+        }
+    }
+}
+
+@Composable
+private fun BeatSyncMetric(
+    label: String,
+    value: String,
+    accent: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        color = accent.copy(alpha = 0.12f),
+        shape = RoundedCornerShape(18.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                color = accent
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                color = Mocha.Subtext0
+            )
         }
     }
 }

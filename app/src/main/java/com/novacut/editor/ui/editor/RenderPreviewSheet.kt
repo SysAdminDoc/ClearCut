@@ -2,15 +2,7 @@ package com.novacut.editor.ui.editor
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Preview
@@ -25,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -32,6 +25,7 @@ import com.novacut.editor.R
 import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.ui.theme.Mocha
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RenderPreviewSheet(
     segments: List<SmartRenderEngine.RenderSegment>,
@@ -46,6 +40,7 @@ fun RenderPreviewSheet(
     } else {
         0f
     }
+    val isCompactActions = LocalConfiguration.current.screenWidthDp < 430
     val speedupLabel = when {
         summary.reEncodeSegments == 0 -> "Instant"
         summary.estimatedSpeedup >= 100f -> "100x+"
@@ -58,6 +53,7 @@ fun RenderPreviewSheet(
         icon = Icons.Default.Preview,
         accent = Mocha.Peach,
         onClose = onClose,
+        closeContentDescription = stringResource(R.string.render_preview_close_cd),
         modifier = modifier,
         scrollable = true
     ) {
@@ -98,27 +94,27 @@ fun RenderPreviewSheet(
                 }
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 RenderMetric(
                     label = stringResource(R.string.panel_render_pass_through),
                     value = summary.passThroughSegments.toString(),
                     accent = Mocha.Green,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.widthIn(min = 110.dp)
                 )
                 RenderMetric(
                     label = stringResource(R.string.panel_render_re_encode),
                     value = summary.reEncodeSegments.toString(),
                     accent = if (summary.reEncodeSegments > 0) Mocha.Yellow else Mocha.Green,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.widthIn(min = 110.dp)
                 )
                 RenderMetric(
                     label = stringResource(R.string.panel_render_speedup),
                     value = speedupLabel,
                     accent = Mocha.Peach,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.widthIn(min = 110.dp)
                 )
             }
 
@@ -163,7 +159,7 @@ fun RenderPreviewSheet(
 
         PremiumPanelCard(accent = Mocha.Blue) {
             Text(
-                text = "Timeline segments",
+                text = stringResource(R.string.panel_render_segments),
                 style = MaterialTheme.typography.titleMedium,
                 color = Mocha.Text
             )
@@ -213,37 +209,73 @@ fun RenderPreviewSheet(
                 color = Mocha.Subtext0
             )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                OutlinedButton(
-                    onClick = onRenderPreview,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(18.dp),
-                    border = BorderStroke(1.dp, Mocha.Peach.copy(alpha = 0.4f)),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Peach)
+            if (isCompactActions) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    androidx.compose.material3.Icon(
-                        imageVector = Icons.Default.Preview,
-                        contentDescription = stringResource(R.string.panel_render_preview)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = stringResource(R.string.panel_render_preview))
-                }
+                    OutlinedButton(
+                        onClick = onRenderPreview,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                        border = BorderStroke(1.dp, Mocha.Peach.copy(alpha = 0.4f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Peach)
+                    ) {
+                        androidx.compose.material3.Icon(
+                            imageVector = Icons.Default.Preview,
+                            contentDescription = stringResource(R.string.render_preview_play_cd)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = stringResource(R.string.panel_render_preview))
+                    }
 
-                Button(
-                    onClick = onRenderFull,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve)
+                    Button(
+                        onClick = onRenderFull,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve)
+                    ) {
+                        androidx.compose.material3.Icon(
+                            imageVector = Icons.Default.RocketLaunch,
+                            contentDescription = stringResource(R.string.panel_render_export)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = stringResource(R.string.panel_render_export))
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    androidx.compose.material3.Icon(
-                        imageVector = Icons.Default.RocketLaunch,
-                        contentDescription = stringResource(R.string.panel_render_export)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = stringResource(R.string.panel_render_export))
+                    OutlinedButton(
+                        onClick = onRenderPreview,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(18.dp),
+                        border = BorderStroke(1.dp, Mocha.Peach.copy(alpha = 0.4f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Peach)
+                    ) {
+                        androidx.compose.material3.Icon(
+                            imageVector = Icons.Default.Preview,
+                            contentDescription = stringResource(R.string.render_preview_play_cd)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = stringResource(R.string.panel_render_preview))
+                    }
+
+                    Button(
+                        onClick = onRenderFull,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve)
+                    ) {
+                        androidx.compose.material3.Icon(
+                            imageVector = Icons.Default.RocketLaunch,
+                            contentDescription = stringResource(R.string.panel_render_export)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = stringResource(R.string.panel_render_export))
+                    }
                 }
             }
         }

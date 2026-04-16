@@ -2,8 +2,10 @@ package com.novacut.editor.ui.editor
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -33,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.ui.theme.Mocha
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun EffectLibraryPanel(
     hasClipSelected: Boolean,
@@ -46,105 +49,126 @@ fun EffectLibraryPanel(
 ) {
     PremiumEditorPanel(
         title = stringResource(R.string.effect_library_title),
-        subtitle = "Save, swap, and reuse effect chains so your look stays consistent across clips and projects.",
+        subtitle = stringResource(R.string.panel_effect_library_subtitle),
         icon = Icons.Default.ContentCopy,
         accent = Mocha.Mauve,
         onClose = onClose,
-        modifier = modifier.heightIn(max = 480.dp),
-        scrollable = true
+        modifier = modifier.heightIn(max = 560.dp),
+        scrollable = true,
+        closeContentDescription = stringResource(R.string.effect_library_close_cd)
     ) {
         PremiumPanelCard(accent = Mocha.Mauve) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                PremiumPanelPill(
-                    text = if (hasClipSelected) "Clip ready" else "No clip selected",
-                    accent = if (hasClipSelected) Mocha.Green else Mocha.Red
-                )
-                PremiumPanelPill(
-                    text = if (hasCopiedEffects) "Paste buffer ready" else "Paste buffer empty",
-                    accent = if (hasCopiedEffects) Mocha.Sapphire else Mocha.Subtext0
-                )
-            }
-
             Text(
-                text = "Chain workflow",
-                color = Mocha.Rosewater,
-                style = MaterialTheme.typography.labelLarge
+                text = stringResource(R.string.panel_effect_library_workflow_title),
+                color = Mocha.Text,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
             )
             Text(
                 text = stringResource(R.string.panel_effect_library_description),
                 color = Mocha.Subtext0,
                 style = MaterialTheme.typography.bodyMedium
             )
+            Spacer(modifier = Modifier.height(12.dp))
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                PremiumPanelPill(
+                    text = if (hasClipSelected) {
+                        stringResource(R.string.panel_effect_library_status_clip_ready)
+                    } else {
+                        stringResource(R.string.panel_effect_library_status_clip_needed)
+                    },
+                    accent = if (hasClipSelected) Mocha.Green else Mocha.Red
+                )
+                PremiumPanelPill(
+                    text = if (hasCopiedEffects) {
+                        stringResource(R.string.panel_effect_library_status_buffer_ready)
+                    } else {
+                        stringResource(R.string.panel_effect_library_status_buffer_empty)
+                    },
+                    accent = if (hasCopiedEffects) Mocha.Sapphire else Mocha.Subtext0
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            EffectLibraryActionCard(
-                title = stringResource(R.string.panel_effect_library_copy),
-                subtitle = "Capture the current clip’s effect stack as a reusable chain.",
-                icon = Icons.Default.ContentCopy,
-                accent = Mocha.Mauve,
-                enabled = hasClipSelected,
-                buttonLabel = stringResource(R.string.panel_effect_library_copy),
-                buttonStyle = ActionButtonStyle.Outlined,
-                onClick = onCopyEffects,
-                modifier = Modifier.weight(1f)
-            )
-            EffectLibraryActionCard(
-                title = stringResource(R.string.panel_effect_library_paste),
-                subtitle = "Apply the buffered chain to the selected clip in one move.",
-                icon = Icons.Default.ContentPaste,
-                accent = Mocha.Green,
-                enabled = hasClipSelected && hasCopiedEffects,
-                buttonLabel = stringResource(R.string.panel_effect_library_paste),
-                buttonStyle = ActionButtonStyle.Outlined,
-                onClick = onPasteEffects,
-                modifier = Modifier.weight(1f)
-            )
-        }
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val singleColumn = maxWidth < 520.dp
+            val cardWidth = if (singleColumn) maxWidth else (maxWidth - 10.dp) / 2
 
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            EffectLibraryActionCard(
-                title = stringResource(R.string.panel_effect_library_export),
-                subtitle = "Package the selected clip’s look into an `.ncfx` preset you can share.",
-                icon = Icons.Default.Upload,
-                accent = Mocha.Peach,
-                enabled = hasClipSelected,
-                buttonLabel = stringResource(R.string.panel_effect_library_export),
-                buttonStyle = ActionButtonStyle.Filled,
-                onClick = onExportEffects,
-                modifier = Modifier.weight(1f)
-            )
-            EffectLibraryActionCard(
-                title = stringResource(R.string.panel_effect_library_import),
-                subtitle = "Bring in a saved preset chain and keep the grade or treatment consistent.",
-                icon = Icons.Default.Download,
-                accent = Mocha.Blue,
-                enabled = true,
-                buttonLabel = stringResource(R.string.panel_effect_library_import),
-                buttonStyle = ActionButtonStyle.Filled,
-                onClick = onImportEffects,
-                modifier = Modifier.weight(1f)
-            )
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                EffectLibraryActionCard(
+                    title = stringResource(R.string.panel_effect_library_copy),
+                    subtitle = if (hasClipSelected) {
+                        stringResource(R.string.panel_effect_library_copy_description)
+                    } else {
+                        stringResource(R.string.panel_effect_library_copy_disabled)
+                    },
+                    icon = Icons.Default.ContentCopy,
+                    accent = Mocha.Mauve,
+                    enabled = hasClipSelected,
+                    buttonLabel = stringResource(R.string.panel_effect_library_copy),
+                    buttonStyle = ActionButtonStyle.Outlined,
+                    onClick = onCopyEffects,
+                    modifier = Modifier.width(cardWidth)
+                )
+                EffectLibraryActionCard(
+                    title = stringResource(R.string.panel_effect_library_paste),
+                    subtitle = when {
+                        !hasClipSelected -> stringResource(R.string.panel_effect_library_paste_needs_clip)
+                        !hasCopiedEffects -> stringResource(R.string.panel_effect_library_paste_needs_buffer)
+                        else -> stringResource(R.string.panel_effect_library_paste_description)
+                    },
+                    icon = Icons.Default.ContentPaste,
+                    accent = Mocha.Green,
+                    enabled = hasClipSelected && hasCopiedEffects,
+                    buttonLabel = stringResource(R.string.panel_effect_library_paste),
+                    buttonStyle = ActionButtonStyle.Outlined,
+                    onClick = onPasteEffects,
+                    modifier = Modifier.width(cardWidth)
+                )
+                EffectLibraryActionCard(
+                    title = stringResource(R.string.panel_effect_library_export),
+                    subtitle = if (hasClipSelected) {
+                        stringResource(R.string.panel_effect_library_export_description)
+                    } else {
+                        stringResource(R.string.panel_effect_library_export_disabled)
+                    },
+                    icon = Icons.Default.Upload,
+                    accent = Mocha.Peach,
+                    enabled = hasClipSelected,
+                    buttonLabel = stringResource(R.string.panel_effect_library_export),
+                    buttonStyle = ActionButtonStyle.Filled,
+                    onClick = onExportEffects,
+                    modifier = Modifier.width(cardWidth)
+                )
+                EffectLibraryActionCard(
+                    title = stringResource(R.string.panel_effect_library_import),
+                    subtitle = stringResource(R.string.panel_effect_library_import_description),
+                    icon = Icons.Default.Download,
+                    accent = Mocha.Blue,
+                    enabled = true,
+                    buttonLabel = stringResource(R.string.panel_effect_library_import),
+                    buttonStyle = ActionButtonStyle.Filled,
+                    onClick = onImportEffects,
+                    modifier = Modifier.width(cardWidth)
+                )
+            }
         }
 
         if (!hasClipSelected) {
             Spacer(modifier = Modifier.height(12.dp))
             PremiumPanelCard(accent = Mocha.Red) {
                 Text(
-                    text = "Select a clip first",
+                    text = stringResource(R.string.panel_effect_library_clip_required_title),
                     color = Mocha.Text,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
@@ -186,7 +210,10 @@ private fun EffectLibraryActionCard(
         )
     ) {
         Column(
-            modifier = Modifier.padding(14.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 208.dp)
+                .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Surface(
@@ -219,11 +246,14 @@ private fun EffectLibraryActionCard(
                 )
             }
 
+            Spacer(modifier = Modifier.height(4.dp))
+
             when (buttonStyle) {
                 ActionButtonStyle.Filled -> {
                     Button(
                         onClick = onClick,
                         enabled = enabled,
+                        modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = accent,
                             contentColor = Mocha.Base,
@@ -246,6 +276,7 @@ private fun EffectLibraryActionCard(
                     OutlinedButton(
                         onClick = onClick,
                         enabled = enabled,
+                        modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = accent,
                             disabledContentColor = Mocha.Overlay0

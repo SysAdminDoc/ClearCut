@@ -11,18 +11,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,7 +28,6 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -64,6 +52,7 @@ import com.novacut.editor.model.Track
 import com.novacut.editor.model.TrackType
 import com.novacut.editor.ui.theme.Mocha
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AudioMixerPanel(
     tracks: List<Track>,
@@ -89,6 +78,7 @@ fun AudioMixerPanel(
         icon = Icons.Default.Tune,
         accent = Mocha.Sapphire,
         onClose = onClose,
+        closeContentDescription = androidx.compose.ui.res.stringResource(R.string.cd_close_audio_panel),
         modifier = modifier,
         scrollable = true
     ) {
@@ -122,6 +112,12 @@ fun AudioMixerPanel(
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    selectedTrack?.let { track ->
+                        PremiumPanelPill(
+                            text = "${track.trackLabel()} selected",
+                            accent = track.type.mixerAccent()
+                        )
+                    }
                     PremiumPanelPill(
                         text = "${tracks.size} tracks live",
                         accent = Mocha.Sapphire
@@ -236,8 +232,11 @@ fun AudioMixerPanel(
                             )
                         }
                     } else {
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(track.audioEffects, key = { it.id }) { effect ->
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            track.audioEffects.forEach { effect ->
                                 AudioEffectChip(
                                     effect = effect,
                                     isSelected = selectedEffectId == effect.id,

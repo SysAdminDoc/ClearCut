@@ -3,18 +3,7 @@ package com.novacut.editor.ui.editor
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -38,12 +27,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.model.ChapterMarker
 import com.novacut.editor.ui.theme.Mocha
+
+private data class DisplayChapter(
+    val originalIndex: Int,
+    val marker: ChapterMarker
+)
 
 @Composable
 fun ChapterMarkerPanel(
@@ -58,7 +51,11 @@ fun ChapterMarkerPanel(
 ) {
     var editingIndex by remember { mutableIntStateOf(-1) }
     var editingTitle by remember { mutableStateOf("") }
-    val sortedChapters = chapters.sortedBy { it.timeMs }
+    val sortedChapters = remember(chapters) {
+        chapters.withIndex()
+            .sortedBy { it.value.timeMs }
+            .map { DisplayChapter(originalIndex = it.index, marker = it.value) }
+    }
     val nextChapterLabel = stringResource(R.string.chapter_default_name, chapters.size + 1)
 
     PremiumEditorPanel(
@@ -67,6 +64,7 @@ fun ChapterMarkerPanel(
         icon = Icons.Default.Bookmarks,
         accent = Mocha.Yellow,
         onClose = onClose,
+        closeContentDescription = stringResource(R.string.chapter_close_cd),
         modifier = modifier,
         scrollable = true,
         headerActions = {
@@ -150,32 +148,35 @@ fun ChapterMarkerPanel(
                     color = Mocha.Text
                 )
 
-                LazyColumn(
+                Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    itemsIndexed(sortedChapters, key = { _, chapter -> chapter.timeMs }) { index, chapter ->
-                        val isEditing = editingIndex == index
+                    sortedChapters.forEachIndexed { displayIndex, chapter ->
+                        val isEditing = editingIndex == chapter.originalIndex
                         ChapterRow(
-                            index = index,
-                            chapter = chapter,
+                            index = displayIndex,
+                            chapter = chapter.marker,
                             isEditing = isEditing,
                             editingTitle = editingTitle,
                             onEditingTitleChanged = { editingTitle = it },
-                            onJumpTo = { onJumpTo(chapter.timeMs) },
+                            onJumpTo = { onJumpTo(chapter.marker.timeMs) },
                             onStartEditing = {
-                                editingIndex = index
-                                editingTitle = chapter.title
+                                editingIndex = chapter.originalIndex
+                                editingTitle = chapter.marker.title
                             },
                             onSave = {
-                                onUpdateChapter(index, chapter.copy(title = editingTitle.ifBlank { chapter.title }))
+                                onUpdateChapter(
+                                    chapter.originalIndex,
+                                    chapter.marker.copy(title = editingTitle.ifBlank { chapter.marker.title })
+                                )
                                 editingIndex = -1
                             },
                             onDelete = {
-                                if (editingIndex == index) {
+                                if (editingIndex == chapter.originalIndex) {
                                     editingIndex = -1
                                 }
-                                onDeleteChapter(index)
+                                onDeleteChapter(chapter.originalIndex)
                             }
                         )
                     }
@@ -252,7 +253,7 @@ private fun ChapterRow(
                                 textStyle = MaterialTheme.typography.bodyMedium.copy(color = Mocha.Text),
                                 placeholder = {
                                     Text(
-                                        text = stringResource(R.string.panel_snapshot_untitled),
+                                        text = stringResource(R.string.chapter_label_hint),
                                         color = Mocha.Subtext0
                                     )
                                 },
@@ -289,8 +290,11 @@ private fun ChapterRow(
             ) {
                 ChapterAction(
                     icon = if (isEditing) Icons.Default.Check else Icons.Default.Edit,
-                    label = if (isEditing) "Save" else "Rename",
+                    label = if (isEditing) "Save" else "Edit",
                     accent = if (isEditing) Mocha.Green else Mocha.Subtext0,
+                    contentDescription = stringResource(
+                        if (isEditing) R.string.cd_chapter_save else R.string.cd_chapter_edit
+                    ),
                     onClick = if (isEditing) onSave else onStartEditing
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -298,6 +302,7 @@ private fun ChapterRow(
                     icon = Icons.Default.Delete,
                     label = "Delete",
                     accent = Mocha.Red,
+                    contentDescription = stringResource(R.string.cd_chapter_delete),
                     onClick = onDelete
                 )
             }
@@ -310,6 +315,7 @@ private fun ChapterAction(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     accent: Color,
+    contentDescription: String,
     onClick: () -> Unit
 ) {
     Surface(
@@ -326,7 +332,7 @@ private fun ChapterAction(
         ) {
             Icon(
                 imageVector = icon,
-                contentDescription = label,
+                contentDescription = contentDescription,
                 tint = accent,
                 modifier = Modifier.size(14.dp)
             )

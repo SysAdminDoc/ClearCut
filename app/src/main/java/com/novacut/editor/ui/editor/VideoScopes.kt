@@ -1,13 +1,38 @@
 package com.novacut.editor.ui.editor
 
 import android.graphics.Bitmap
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -15,14 +40,15 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import kotlin.math.*
-
+import com.novacut.editor.R
 import com.novacut.editor.ui.theme.Mocha
+import kotlin.math.min
 
-// Scope-specific display colors (not theme colors)
-private val ScopeBg = Color(0xCC111111)
+private val ScopeBg = Color(0xFF11111B)
+private val ScopeCanvasBackground = Color(0xFF0A0A0A)
 private val ScopeRed = Color(0xFFFF4444)
 private val ScopeGreen = Color(0xFF44FF44)
 private val ScopeBlue = Color(0xFF4488FF)
@@ -35,10 +61,7 @@ enum class ScopeType(val label: String) {
     VECTORSCOPE("Vectorscope")
 }
 
-/**
- * Floating video scopes overlay for color grading.
- * Analyzes the current frame and displays histogram, waveform, or vectorscope.
- */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun VideoScopesOverlay(
     frameBitmap: Bitmap?,
@@ -48,6 +71,9 @@ fun VideoScopesOverlay(
     modifier: Modifier = Modifier
 ) {
     var scopeData by remember(frameBitmap, activeScope) { mutableStateOf<ScopeData?>(null) }
+    val hasFrame = frameBitmap?.isRecycled == false
+    val isAnalyzing = hasFrame && scopeData == null
+    val scopeAccent = activeScope.accent()
 
     LaunchedEffect(frameBitmap, activeScope) {
         val bitmap = frameBitmap
@@ -60,62 +86,188 @@ fun VideoScopesOverlay(
         }
     }
 
-    Column(
-        modifier = modifier
-            .width(200.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(ScopeBg)
-            .padding(6.dp)
+    Surface(
+        modifier = modifier.widthIn(min = 264.dp, max = 320.dp),
+        color = ScopeBg.copy(alpha = 0.96f),
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, Mocha.CardStrokeStrong.copy(alpha = 0.9f))
     ) {
-        // Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Scope type tabs
-            ScopeType.entries.forEach { scope ->
-                val selected = scope == activeScope
-                Text(
-                    scope.label.take(4),
-                    color = if (selected) Mocha.Mauve else Mocha.Subtext0.copy(alpha = 0.5f),
-                    fontSize = 9.sp,
-                    modifier = Modifier
-                        .clickable { onScopeChanged(scope) }
-                        .padding(horizontal = 4.dp, vertical = 2.dp)
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .width(40.dp)
+                    .height(4.dp)
+                    .background(Mocha.Surface2.copy(alpha = 0.8f), RoundedCornerShape(999.dp))
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.video_scopes_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Mocha.Text,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(activeScope.descriptionRes()),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Mocha.Subtext0
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                PremiumPanelIconButton(
+                    icon = Icons.Default.Close,
+                    contentDescription = stringResource(R.string.video_scopes_close_cd),
+                    onClick = onClose,
+                    tint = Mocha.Subtext0,
+                    containerColor = Mocha.PanelRaised
                 )
             }
-            Icon(
-                Icons.Default.Close, "Close",
-                tint = Mocha.Subtext0.copy(alpha = 0.5f),
+
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                PremiumPanelPill(
+                    text = activeScope.label,
+                    accent = scopeAccent
+                )
+                PremiumPanelPill(
+                    text = stringResource(
+                        when {
+                            !hasFrame -> R.string.video_scopes_status_waiting
+                            isAnalyzing -> R.string.video_scopes_status_analyzing
+                            else -> R.string.video_scopes_status_ready
+                        }
+                    ),
+                    accent = when {
+                        !hasFrame -> Mocha.Overlay1
+                        isAnalyzing -> Mocha.Yellow
+                        else -> Mocha.Green
+                    }
+                )
+            }
+
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                ScopeType.entries.forEach { scope ->
+                    FilterChip(
+                        selected = scope == activeScope,
+                        onClick = { onScopeChanged(scope) },
+                        label = {
+                            Text(
+                                text = scope.label,
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = scope.accent().copy(alpha = 0.18f),
+                            selectedLabelColor = scope.accent(),
+                            labelColor = Mocha.Subtext0
+                        )
+                    )
+                }
+            }
+
+            Box(
                 modifier = Modifier
-                    .size(14.dp)
-                    .clickable(onClick = onClose)
-            )
-        }
+                    .fillMaxWidth()
+                    .height(168.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(ScopeCanvasBackground),
+                contentAlignment = Alignment.Center
+            ) {
+                when {
+                    !hasFrame -> ScopeStateMessage(
+                        title = stringResource(R.string.video_scopes_waiting_title),
+                        body = stringResource(R.string.video_scopes_waiting_body)
+                    )
 
-        Spacer(Modifier.height(4.dp))
+                    isAnalyzing -> ScopeLoadingState()
 
-        // Scope canvas
-        Canvas(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(120.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .background(Color(0xFF0A0A0A))
-        ) {
-            when (activeScope) {
-                ScopeType.HISTOGRAM -> drawHistogram(scopeData as? HistogramData)
-                ScopeType.WAVEFORM -> drawWaveformScope(scopeData as? WaveformData)
-                ScopeType.VECTORSCOPE -> drawVectorscope(scopeData as? VectorscopeData)
+                    else -> Canvas(modifier = Modifier.fillMaxSize()) {
+                        when (activeScope) {
+                            ScopeType.HISTOGRAM -> drawHistogram(scopeData as? HistogramData)
+                            ScopeType.WAVEFORM -> drawWaveformScope(scopeData as? WaveformData)
+                            ScopeType.VECTORSCOPE -> drawVectorscope(scopeData as? VectorscopeData)
+                        }
+                    }
+                }
             }
         }
     }
 }
 
-// --- Scope data types ---
+@Composable
+private fun ScopeStateMessage(
+    title: String,
+    body: String
+) {
+    Column(
+        modifier = Modifier.padding(horizontal = 18.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = title,
+            color = Mocha.Text,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold
+        )
+        Text(
+            text = body,
+            color = Mocha.Subtext0,
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+}
+
+@Composable
+private fun ScopeLoadingState() {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        CircularProgressIndicator(
+            modifier = Modifier.size(24.dp),
+            color = Mocha.Yellow,
+            strokeWidth = 2.dp
+        )
+        ScopeStateMessage(
+            title = stringResource(R.string.video_scopes_loading_title),
+            body = stringResource(R.string.video_scopes_loading_body)
+        )
+    }
+}
+
+private fun ScopeType.accent(): Color = when (this) {
+    ScopeType.HISTOGRAM -> Mocha.Peach
+    ScopeType.WAVEFORM -> Mocha.Blue
+    ScopeType.VECTORSCOPE -> Mocha.Mauve
+}
+
+private fun ScopeType.descriptionRes(): Int = when (this) {
+    ScopeType.HISTOGRAM -> R.string.video_scopes_histogram_description
+    ScopeType.WAVEFORM -> R.string.video_scopes_waveform_description
+    ScopeType.VECTORSCOPE -> R.string.video_scopes_vectorscope_description
+}
 
 sealed class ScopeData
+
 data class HistogramData(
     val red: IntArray,
     val green: IntArray,
@@ -128,9 +280,12 @@ data class WaveformData(
 ) : ScopeData()
 
 data class WaveformColumn(
-    val redMin: Int, val redMax: Int,
-    val greenMin: Int, val greenMax: Int,
-    val blueMin: Int, val blueMax: Int
+    val redMin: Int,
+    val redMax: Int,
+    val greenMin: Int,
+    val greenMax: Int,
+    val blueMin: Int,
+    val blueMax: Int
 )
 
 data class VectorscopeData(
@@ -139,224 +294,214 @@ data class VectorscopeData(
 
 data class VectorscopePoint(val cb: Float, val cr: Float, val intensity: Float)
 
-// --- Analysis ---
-
 private fun analyzeBitmap(bitmap: Bitmap, type: ScopeType): ScopeData {
-    // Downsample for performance
     val scale = minOf(1f, 100f / maxOf(bitmap.width, bitmap.height))
-    val w = (bitmap.width * scale).toInt().coerceAtLeast(1)
-    val h = (bitmap.height * scale).toInt().coerceAtLeast(1)
-    val scaled = Bitmap.createScaledBitmap(bitmap, w, h, true)
-    val pixels = IntArray(w * h)
-    scaled.getPixels(pixels, 0, w, 0, 0, w, h)
+    val width = (bitmap.width * scale).toInt().coerceAtLeast(1)
+    val height = (bitmap.height * scale).toInt().coerceAtLeast(1)
+    val scaled = Bitmap.createScaledBitmap(bitmap, width, height, true)
+    val pixels = IntArray(width * height)
+    scaled.getPixels(pixels, 0, width, 0, 0, width, height)
     if (scaled != bitmap) scaled.recycle()
 
     return when (type) {
         ScopeType.HISTOGRAM -> analyzeHistogram(pixels)
-        ScopeType.WAVEFORM -> analyzeWaveform(pixels, w, h)
+        ScopeType.WAVEFORM -> analyzeWaveform(pixels, width, height)
         ScopeType.VECTORSCOPE -> analyzeVectorscope(pixels)
     }
 }
 
 private fun analyzeHistogram(pixels: IntArray): HistogramData {
-    val r = IntArray(256)
-    val g = IntArray(256)
-    val b = IntArray(256)
-    val l = IntArray(256)
+    val red = IntArray(256)
+    val green = IntArray(256)
+    val blue = IntArray(256)
+    val luma = IntArray(256)
 
     for (pixel in pixels) {
-        val pr = (pixel shr 16) and 0xFF
-        val pg = (pixel shr 8) and 0xFF
-        val pb = pixel and 0xFF
-        r[pr]++
-        g[pg]++
-        b[pb]++
-        l[((pr * 299 + pg * 587 + pb * 114) / 1000).coerceIn(0, 255)]++
+        val pixelRed = (pixel shr 16) and 0xFF
+        val pixelGreen = (pixel shr 8) and 0xFF
+        val pixelBlue = pixel and 0xFF
+        red[pixelRed]++
+        green[pixelGreen]++
+        blue[pixelBlue]++
+        luma[((pixelRed * 299 + pixelGreen * 587 + pixelBlue * 114) / 1000).coerceIn(0, 255)]++
     }
-    return HistogramData(r, g, b, l)
+    return HistogramData(red, green, blue, luma)
 }
 
-private fun analyzeWaveform(pixels: IntArray, w: Int, h: Int): WaveformData {
+private fun analyzeWaveform(pixels: IntArray, width: Int, height: Int): WaveformData {
     val columns = mutableListOf<WaveformColumn>()
-    val step = maxOf(1, w / 100)
+    val step = maxOf(1, width / 100)
 
-    for (x in 0 until w step step) {
-        var rMin = 255; var rMax = 0
-        var gMin = 255; var gMax = 0
-        var bMin = 255; var bMax = 0
+    for (x in 0 until width step step) {
+        var redMin = 255
+        var redMax = 0
+        var greenMin = 255
+        var greenMax = 0
+        var blueMin = 255
+        var blueMax = 0
 
-        for (y in 0 until h) {
-            val pixel = pixels[y * w + x]
-            val pr = (pixel shr 16) and 0xFF
-            val pg = (pixel shr 8) and 0xFF
-            val pb = pixel and 0xFF
-            rMin = minOf(rMin, pr); rMax = maxOf(rMax, pr)
-            gMin = minOf(gMin, pg); gMax = maxOf(gMax, pg)
-            bMin = minOf(bMin, pb); bMax = maxOf(bMax, pb)
+        for (y in 0 until height) {
+            val pixel = pixels[y * width + x]
+            val pixelRed = (pixel shr 16) and 0xFF
+            val pixelGreen = (pixel shr 8) and 0xFF
+            val pixelBlue = pixel and 0xFF
+            redMin = minOf(redMin, pixelRed)
+            redMax = maxOf(redMax, pixelRed)
+            greenMin = minOf(greenMin, pixelGreen)
+            greenMax = maxOf(greenMax, pixelGreen)
+            blueMin = minOf(blueMin, pixelBlue)
+            blueMax = maxOf(blueMax, pixelBlue)
         }
-        columns.add(WaveformColumn(rMin, rMax, gMin, gMax, bMin, bMax))
+        columns.add(WaveformColumn(redMin, redMax, greenMin, greenMax, blueMin, blueMax))
     }
     return WaveformData(columns)
 }
 
 private fun analyzeVectorscope(pixels: IntArray): VectorscopeData {
     val points = mutableListOf<VectorscopePoint>()
-    val step = maxOf(1, pixels.size / 5000) // Limit to ~5000 points
+    val step = maxOf(1, pixels.size / 5000)
 
-    for (i in pixels.indices step step) {
-        val pixel = pixels[i]
-        val r = ((pixel shr 16) and 0xFF) / 255f
-        val g = ((pixel shr 8) and 0xFF) / 255f
-        val b = (pixel and 0xFF) / 255f
+    for (index in pixels.indices step step) {
+        val pixel = pixels[index]
+        val red = ((pixel shr 16) and 0xFF) / 255f
+        val green = ((pixel shr 8) and 0xFF) / 255f
+        val blue = (pixel and 0xFF) / 255f
 
-        // YCbCr conversion
-        val y = 0.299f * r + 0.587f * g + 0.114f * b
-        val cb = (b - y) * 0.565f
-        val cr = (r - y) * 0.713f
+        val luma = 0.299f * red + 0.587f * green + 0.114f * blue
+        val cb = (blue - luma) * 0.565f
+        val cr = (red - luma) * 0.713f
 
-        points.add(VectorscopePoint(cb, cr, y))
+        points.add(VectorscopePoint(cb, cr, luma))
     }
     return VectorscopeData(points)
 }
 
-/**
- * GPU-accelerated scope analysis (future improvement for ES 3.1+ devices).
- *
- * Waveform compute shader approach:
- *   layout(local_size_x = 16, local_size_y = 16) in;
- *   layout(binding = 0) readonly buffer InputImage { vec4 pixels[]; };
- *   layout(binding = 1) buffer WaveformBins { uint bins[]; };
- *   void main() {
- *     uvec2 pos = gl_GlobalInvocationID.xy;
- *     vec4 pixel = pixels[pos.y * width + pos.x];
- *     float luma = 0.2126 * pixel.r + 0.7152 * pixel.g + 0.0722 * pixel.b;
- *     uint bin = uint(luma * 255.0);
- *     uint col = pos.x * scopeWidth / width;
- *     atomicAdd(bins[col * 256 + bin], 1u);
- *   }
- *
- * Vectorscope compute shader:
- *   float Cb = -0.1687 * pixel.r - 0.3313 * pixel.g + 0.5 * pixel.b + 0.5;
- *   float Cr = 0.5 * pixel.r - 0.4187 * pixel.g - 0.0813 * pixel.b + 0.5;
- *   uint x = uint(Cb * scopeSize);
- *   uint y = uint(Cr * scopeSize);
- *   atomicAdd(bins[y * scopeSize + x], 1u);
- *
- * Benefits: Real-time scopes during playback (current CPU approach blocks composition).
- * Requires: OpenGL ES 3.1+ (SSBO + compute shaders), available on most devices since 2015.
- */
-
-// --- Drawing ---
-
 private fun DrawScope.drawHistogram(data: HistogramData?) {
     if (data == null) return
-    val w = size.width
-    val h = size.height
+    val width = size.width
+    val height = size.height
 
-    // Grid lines
-    for (i in 1..3) {
-        val y = h * i / 4f
-        drawLine(ScopeGrid, Offset(0f, y), Offset(w, y), 0.5f)
+    for (index in 1..3) {
+        val y = height * index / 4f
+        drawLine(ScopeGrid, Offset(0f, y), Offset(width, y), 0.5f)
     }
 
-    val maxR = data.red.max().coerceAtLeast(1).toFloat()
-    val maxG = data.green.max().coerceAtLeast(1).toFloat()
-    val maxB = data.blue.max().coerceAtLeast(1).toFloat()
-    val maxL = data.luma.max().coerceAtLeast(1).toFloat()
-    val barW = w / 256f
+    val maxRed = data.red.max().coerceAtLeast(1).toFloat()
+    val maxGreen = data.green.max().coerceAtLeast(1).toFloat()
+    val maxBlue = data.blue.max().coerceAtLeast(1).toFloat()
+    val maxLuma = data.luma.max().coerceAtLeast(1).toFloat()
+    val barWidth = width / 256f
 
-    // Draw luma first (background)
-    for (i in 0 until 256) {
-        val x = i * barW
-        val lumaH = (data.luma[i] / maxL) * h
-        drawRect(ScopeWhite.copy(alpha = 0.15f), Offset(x, h - lumaH), androidx.compose.ui.geometry.Size(barW, lumaH))
+    for (index in 0 until 256) {
+        val x = index * barWidth
+        val lumaHeight = (data.luma[index] / maxLuma) * height
+        drawRect(
+            ScopeWhite.copy(alpha = 0.15f),
+            Offset(x, height - lumaHeight),
+            androidx.compose.ui.geometry.Size(barWidth, lumaHeight)
+        )
     }
 
-    // RGB overlay
-    for (i in 0 until 256) {
-        val x = i * barW
-        val rh = (data.red[i] / maxR) * h * 0.8f
-        val gh = (data.green[i] / maxG) * h * 0.8f
-        val bh = (data.blue[i] / maxB) * h * 0.8f
+    for (index in 0 until 256) {
+        val x = index * barWidth
+        val redHeight = (data.red[index] / maxRed) * height * 0.8f
+        val greenHeight = (data.green[index] / maxGreen) * height * 0.8f
+        val blueHeight = (data.blue[index] / maxBlue) * height * 0.8f
 
-        drawRect(ScopeRed.copy(alpha = 0.4f), Offset(x, h - rh), androidx.compose.ui.geometry.Size(barW, rh))
-        drawRect(ScopeGreen.copy(alpha = 0.4f), Offset(x, h - gh), androidx.compose.ui.geometry.Size(barW, gh))
-        drawRect(ScopeBlue.copy(alpha = 0.4f), Offset(x, h - bh), androidx.compose.ui.geometry.Size(barW, bh))
+        drawRect(
+            ScopeRed.copy(alpha = 0.4f),
+            Offset(x, height - redHeight),
+            androidx.compose.ui.geometry.Size(barWidth, redHeight)
+        )
+        drawRect(
+            ScopeGreen.copy(alpha = 0.4f),
+            Offset(x, height - greenHeight),
+            androidx.compose.ui.geometry.Size(barWidth, greenHeight)
+        )
+        drawRect(
+            ScopeBlue.copy(alpha = 0.4f),
+            Offset(x, height - blueHeight),
+            androidx.compose.ui.geometry.Size(barWidth, blueHeight)
+        )
     }
 }
 
 private fun DrawScope.drawWaveformScope(data: WaveformData?) {
     if (data == null || data.columns.isEmpty()) return
-    val w = size.width
-    val h = size.height
+    val width = size.width
+    val height = size.height
 
-    // Grid
-    for (i in 0..4) {
-        val y = h * i / 4f
-        drawLine(ScopeGrid, Offset(0f, y), Offset(w, y), 0.5f)
+    for (index in 0..4) {
+        val y = height * index / 4f
+        drawLine(ScopeGrid, Offset(0f, y), Offset(width, y), 0.5f)
     }
 
-    val colW = w / data.columns.size
-    data.columns.forEachIndexed { i, col ->
-        val x = i * colW
+    val columnWidth = width / data.columns.size
+    data.columns.forEachIndexed { index, column ->
+        val x = index * columnWidth
 
-        // Red
-        val rTop = (1f - col.redMax / 255f) * h
-        val rBot = (1f - col.redMin / 255f) * h
-        drawRect(ScopeRed.copy(alpha = 0.5f), Offset(x, rTop), androidx.compose.ui.geometry.Size(colW, rBot - rTop))
+        val redTop = (1f - column.redMax / 255f) * height
+        val redBottom = (1f - column.redMin / 255f) * height
+        drawRect(
+            ScopeRed.copy(alpha = 0.5f),
+            Offset(x, redTop),
+            androidx.compose.ui.geometry.Size(columnWidth, redBottom - redTop)
+        )
 
-        // Green
-        val gTop = (1f - col.greenMax / 255f) * h
-        val gBot = (1f - col.greenMin / 255f) * h
-        drawRect(ScopeGreen.copy(alpha = 0.5f), Offset(x, gTop), androidx.compose.ui.geometry.Size(colW, gBot - gTop))
+        val greenTop = (1f - column.greenMax / 255f) * height
+        val greenBottom = (1f - column.greenMin / 255f) * height
+        drawRect(
+            ScopeGreen.copy(alpha = 0.5f),
+            Offset(x, greenTop),
+            androidx.compose.ui.geometry.Size(columnWidth, greenBottom - greenTop)
+        )
 
-        // Blue
-        val bTop = (1f - col.blueMax / 255f) * h
-        val bBot = (1f - col.blueMin / 255f) * h
-        drawRect(ScopeBlue.copy(alpha = 0.5f), Offset(x, bTop), androidx.compose.ui.geometry.Size(colW, bBot - bTop))
+        val blueTop = (1f - column.blueMax / 255f) * height
+        val blueBottom = (1f - column.blueMin / 255f) * height
+        drawRect(
+            ScopeBlue.copy(alpha = 0.5f),
+            Offset(x, blueTop),
+            androidx.compose.ui.geometry.Size(columnWidth, blueBottom - blueTop)
+        )
     }
 }
 
 private fun DrawScope.drawVectorscope(data: VectorscopeData?) {
     if (data == null) return
-    val w = size.width
-    val h = size.height
-    val cx = w / 2f
-    val cy = h / 2f
-    val radius = minOf(cx, cy) * 0.9f
+    val width = size.width
+    val height = size.height
+    val centerX = width / 2f
+    val centerY = height / 2f
+    val radius = min(centerX, centerY) * 0.9f
 
-    // Circle outline
-    drawCircle(ScopeGrid, radius, Offset(cx, cy), style = Stroke(1f))
-    drawCircle(ScopeGrid, radius * 0.5f, Offset(cx, cy), style = Stroke(0.5f))
+    drawCircle(ScopeGrid, radius, Offset(centerX, centerY), style = Stroke(1f))
+    drawCircle(ScopeGrid, radius * 0.5f, Offset(centerX, centerY), style = Stroke(0.5f))
 
-    // Crosshair
-    drawLine(ScopeGrid, Offset(cx - radius, cy), Offset(cx + radius, cy), 0.5f)
-    drawLine(ScopeGrid, Offset(cx, cy - radius), Offset(cx, cy + radius), 0.5f)
+    drawLine(ScopeGrid, Offset(centerX - radius, centerY), Offset(centerX + radius, centerY), 0.5f)
+    drawLine(ScopeGrid, Offset(centerX, centerY - radius), Offset(centerX, centerY + radius), 0.5f)
 
-    // Color target markers (R, G, B, C, M, Y at standard positions)
     val targets = listOf(
-        Triple(0.5f, 0.35f, ScopeRed),      // Red
-        Triple(-0.17f, -0.33f, ScopeGreen),  // Green
-        Triple(-0.33f, 0.5f, ScopeBlue),     // Blue
-        Triple(-0.5f, -0.35f, Color.Cyan),   // Cyan
-        Triple(0.17f, 0.33f, Color.Magenta), // Magenta
-        Triple(0.33f, -0.5f, Color.Yellow),  // Yellow
+        Triple(0.5f, 0.35f, ScopeRed),
+        Triple(-0.17f, -0.33f, ScopeGreen),
+        Triple(-0.33f, 0.5f, ScopeBlue),
+        Triple(-0.5f, -0.35f, Color.Cyan),
+        Triple(0.17f, 0.33f, Color.Magenta),
+        Triple(0.33f, -0.5f, Color.Yellow)
     )
-    targets.forEach { (tcr, tcb, color) ->
-        val tx = cx + tcb * radius * 2f
-        val ty = cy - tcr * radius * 2f
-        drawCircle(color.copy(alpha = 0.3f), 4f, Offset(tx, ty))
+    targets.forEach { (targetCr, targetCb, color) ->
+        val targetX = centerX + targetCb * radius * 2f
+        val targetY = centerY - targetCr * radius * 2f
+        drawCircle(color.copy(alpha = 0.3f), 4f, Offset(targetX, targetY))
     }
 
-    // Plot data points
     data.points.forEach { point ->
-        val px = cx + point.cb * radius * 2f
-        val py = cy - point.cr * radius * 2f
-        if (px in 0f..w && py in 0f..h) {
+        val pointX = centerX + point.cb * radius * 2f
+        val pointY = centerY - point.cr * radius * 2f
+        if (pointX in 0f..width && pointY in 0f..height) {
             drawCircle(
                 ScopeWhite.copy(alpha = (0.05f + point.intensity * 0.2f).coerceAtMost(0.3f)),
                 1.5f,
-                Offset(px, py)
+                Offset(pointX, pointY)
             )
         }
     }

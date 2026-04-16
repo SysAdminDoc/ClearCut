@@ -3,21 +3,9 @@ package com.novacut.editor.ui.editor
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -44,6 +32,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -61,8 +50,8 @@ import com.novacut.editor.ui.theme.Mocha
 
 data class AiToolConfig(
     val id: String,
-    val name: String,
-    val description: String,
+    @StringRes val nameResId: Int,
+    @StringRes val descriptionResId: Int,
     val icon: ImageVector,
     val color: Color,
     val requiresClip: Boolean = true
@@ -71,90 +60,91 @@ data class AiToolConfig(
 val aiTools = listOf(
     AiToolConfig(
         "auto_captions",
-        "Auto Captions",
-        "Generate subtitles from speech",
+        R.string.ai_tool_auto_captions,
+        R.string.ai_tool_auto_captions_desc,
         Icons.Default.ClosedCaption,
         Mocha.Blue
     ),
     AiToolConfig(
         "remove_bg",
-        "Remove BG",
-        "Remove video background",
+        R.string.ai_tool_remove_bg,
+        R.string.ai_tool_remove_bg_desc,
         Icons.Default.Wallpaper,
         Mocha.Green
     ),
     AiToolConfig(
         "scene_detect",
-        "Scene Detect",
-        "Auto-detect scene changes",
+        R.string.ai_tool_scene_detect,
+        R.string.ai_tool_scene_detect_desc,
         Icons.Default.ContentCut,
         Mocha.Peach
     ),
     AiToolConfig(
         "track_motion",
-        "Track Motion",
-        "Track objects across frames",
+        R.string.ai_tool_track_motion,
+        R.string.ai_tool_track_motion_desc,
         Icons.Default.GpsFixed,
         Mocha.Mauve
     ),
     AiToolConfig(
         "smart_crop",
-        "Smart Crop",
-        "AI-powered framing",
+        R.string.ai_tool_smart_crop,
+        R.string.ai_tool_smart_crop_desc,
         Icons.Default.Crop,
         Mocha.Teal
     ),
     AiToolConfig(
         "auto_color",
-        "Auto Color",
-        "AI color correction",
+        R.string.ai_tool_auto_color,
+        R.string.ai_tool_auto_color_desc,
         Icons.Default.Palette,
         Mocha.Yellow
     ),
     AiToolConfig(
         "stabilize",
-        "Stabilize",
-        "Reduce camera shake",
+        R.string.ai_tool_stabilize,
+        R.string.ai_tool_stabilize_desc,
         Icons.Default.Straighten,
         Mocha.Sapphire
     ),
     AiToolConfig(
         "denoise",
-        "Denoise Audio",
-        "Remove background noise",
+        R.string.ai_tool_denoise,
+        R.string.ai_tool_denoise_desc,
         Icons.AutoMirrored.Filled.VolumeOff,
         Mocha.Flamingo
     ),
     AiToolConfig(
         "video_upscale",
-        "AI Upscale",
-        "Upscale video with Real-ESRGAN",
+        R.string.ai_tool_ai_upscale,
+        R.string.ai_tool_ai_upscale_desc,
         Icons.Default.ZoomIn,
         Mocha.Rosewater
     ),
     AiToolConfig(
         "ai_background",
-        "AI Background",
-        "AI green screen with RVM matting",
+        R.string.ai_tool_ai_background,
+        R.string.ai_tool_ai_background_desc,
         Icons.Default.PhotoFilter,
         Mocha.Lavender
     ),
     AiToolConfig(
         "ai_stabilize",
-        "AI Stabilize",
-        "OpenCV optical flow stabilization",
+        R.string.ai_tool_ai_stabilize,
+        R.string.ai_tool_ai_stabilize_desc,
         Icons.Default.Straighten,
         Mocha.Sky
     ),
     AiToolConfig(
         "ai_style_transfer",
-        "Style Transfer",
-        "AnimeGAN / Neural Style Transfer",
+        R.string.ai_tool_style_transfer,
+        R.string.ai_tool_style_transfer_desc,
         Icons.Default.Style,
         Mocha.Maroon
     )
 )
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AiToolsPanel(
     hasSelectedClip: Boolean,
@@ -173,7 +163,8 @@ fun AiToolsPanel(
     onDownloadSegmentation: () -> Unit = {},
     onDeleteSegmentation: () -> Unit = {}
 ) {
-    val readyTools = aiTools.count { !it.requiresClip || hasSelectedClip }
+    val readyTools = aiTools.filter { !it.requiresClip || hasSelectedClip }
+    val lockedTools = aiTools.filter { it.requiresClip && !hasSelectedClip }
 
     PremiumEditorPanel(
         title = stringResource(R.string.ai_tools_title),
@@ -215,12 +206,20 @@ fun AiToolsPanel(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     PremiumPanelPill(
-                        text = "$readyTools tools ready",
+                        text = "${readyTools.size} ready",
                         accent = Mocha.Mauve
                     )
                     PremiumPanelPill(
-                        text = if (hasSelectedClip) "Clip selected" else "Awaiting clip",
+                        text = if (hasSelectedClip) {
+                            stringResource(R.string.ai_tools_clip_selected)
+                        } else {
+                            stringResource(R.string.ai_tools_awaiting_clip)
+                        },
                         accent = if (hasSelectedClip) Mocha.Green else Mocha.Peach
+                    )
+                    PremiumPanelPill(
+                        text = stringResource(R.string.ai_on_device),
+                        accent = Mocha.Blue
                     )
                 }
             }
@@ -310,7 +309,7 @@ fun AiToolsPanel(
                         Text(
                             text = stringResource(
                                 R.string.ai_processing_format,
-                                aiTools.find { it.id == processingTool }?.name ?: processingTool
+                                aiTools.find { it.id == processingTool }?.let { stringResource(it.nameResId) } ?: processingTool
                             ),
                             style = MaterialTheme.typography.bodyMedium,
                             color = Mocha.Subtext0
@@ -328,35 +327,71 @@ fun AiToolsPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
+        AiToolSection(
+            title = stringResource(R.string.ai_tools_ready_now),
+            description = stringResource(R.string.ai_tools_ready_now_description),
+            accent = Mocha.Blue,
+            tools = readyTools,
+            toolsEnabled = true,
+            processingTool = processingTool,
+            onToolSelected = onToolSelected,
+            onDisabledToolTapped = onDisabledToolTapped
+        )
+
+        if (lockedTools.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(12.dp))
+            AiToolSection(
+                title = stringResource(R.string.ai_tools_needs_clip),
+                description = stringResource(R.string.ai_tools_needs_clip_description),
+                accent = Mocha.Peach,
+                tools = lockedTools,
+                toolsEnabled = false,
+                processingTool = processingTool,
+                onToolSelected = onToolSelected,
+                onDisabledToolTapped = onDisabledToolTapped
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun AiToolSection(
+    title: String,
+    description: String,
+    accent: Color,
+    tools: List<AiToolConfig>,
+    toolsEnabled: Boolean,
+    processingTool: String?,
+    onToolSelected: (String) -> Unit,
+    onDisabledToolTapped: (String) -> Unit
+) {
+    PremiumPanelCard(accent = accent) {
         Text(
-            text = "Creative assists",
+            text = title,
             style = MaterialTheme.typography.titleMedium,
             color = Mocha.Text
         )
-        Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "Each tool calls out whether it is ready to run now or waiting on a selected clip.",
+            text = description,
             style = MaterialTheme.typography.bodyMedium,
             color = Mocha.Subtext0
         )
-        Spacer(modifier = Modifier.height(12.dp))
-
-        LazyRow(
+        FlowRow(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(end = 4.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(aiTools) { tool ->
-                val isEnabled = !tool.requiresClip || hasSelectedClip
+            tools.forEach { tool ->
                 val isProcessing = processingTool == tool.id
-
+                val toolLabel = stringResource(tool.nameResId)
                 AiToolCard(
                     tool = tool,
-                    isEnabled = isEnabled,
+                    isEnabled = toolsEnabled,
                     isProcessing = isProcessing,
                     onClick = {
                         when {
                             isProcessing -> Unit
-                            !isEnabled -> onDisabledToolTapped(tool.name)
+                            !toolsEnabled -> onDisabledToolTapped(toolLabel)
                             else -> onToolSelected(tool.id)
                         }
                     }
@@ -491,8 +526,9 @@ private fun AiToolCard(
     Surface(
         modifier = Modifier
             .width(168.dp)
-            .height(170.dp)
-            .clickable(onClick = onClick),
+            .height(184.dp)
+            .alpha(if (isEnabled) 1f else 0.92f)
+            .clickable(enabled = !isProcessing, onClick = onClick),
         color = if (isEnabled) Mocha.PanelHighest else Mocha.PanelRaised.copy(alpha = 0.85f),
         shape = RoundedCornerShape(24.dp),
         border = BorderStroke(
@@ -544,7 +580,7 @@ private fun AiToolCard(
                             } else {
                                 Icon(
                                     imageVector = tool.icon,
-                                    contentDescription = tool.name,
+                                    contentDescription = stringResource(tool.nameResId),
                                     tint = if (isEnabled) tool.color else Mocha.Surface2,
                                     modifier = Modifier.size(22.dp)
                                 )
@@ -554,9 +590,9 @@ private fun AiToolCard(
 
                     PremiumPanelPill(
                         text = when {
-                            isProcessing -> "Running"
-                            isEnabled -> "Ready"
-                            else -> "Clip required"
+                            isProcessing -> stringResource(R.string.ai_tool_status_running)
+                            isEnabled -> stringResource(R.string.ai_tool_status_ready)
+                            else -> stringResource(R.string.ai_tool_status_clip_required)
                         },
                         accent = when {
                             isProcessing -> tool.color
@@ -568,12 +604,12 @@ private fun AiToolCard(
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = tool.name,
+                        text = stringResource(tool.nameResId),
                         style = MaterialTheme.typography.titleSmall,
                         color = if (isEnabled) Mocha.Text else Mocha.Subtext0
                     )
                     Text(
-                        text = tool.description,
+                        text = stringResource(tool.descriptionResId),
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (isEnabled) Mocha.Subtext0 else Mocha.Overlay1,
                         maxLines = 3,
@@ -582,7 +618,11 @@ private fun AiToolCard(
                 }
 
                 Text(
-                    text = if (isEnabled) "Tap to stage or run this assist." else "Select a clip to unlock this workflow.",
+                    text = if (isEnabled) {
+                        stringResource(R.string.ai_tool_ready_hint)
+                    } else {
+                        stringResource(R.string.ai_tool_locked_hint)
+                    },
                     style = MaterialTheme.typography.labelMedium,
                     color = if (isEnabled) tool.color else Mocha.Overlay1,
                     textAlign = TextAlign.Start

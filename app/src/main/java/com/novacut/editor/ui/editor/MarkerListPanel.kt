@@ -5,7 +5,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,12 +16,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Check
@@ -46,7 +45,9 @@ import com.novacut.editor.R
 import com.novacut.editor.model.MarkerColor
 import com.novacut.editor.model.TimelineMarker
 import com.novacut.editor.ui.theme.Mocha
+import java.util.Locale
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MarkerListPanel(
     markers: List<TimelineMarker>,
@@ -68,51 +69,90 @@ fun MarkerListPanel(
         .sortedBy { it.timeMs }
 
     PremiumEditorPanel(
-        title = "Markers",
-        subtitle = "Search notes, filter by color, and jump straight to the moments that matter in the cut.",
+        title = stringResource(R.string.panel_markers_title),
+        subtitle = stringResource(R.string.panel_markers_subtitle),
         icon = Icons.Default.BookmarkBorder,
         accent = Mocha.Blue,
         onClose = onClose,
+        closeContentDescription = stringResource(R.string.cd_close_markers),
         modifier = modifier,
         scrollable = true
     ) {
         PremiumPanelCard(accent = Mocha.Blue) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.panel_marker_header, filtered.size),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Mocha.Text
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = if (markers.isEmpty()) {
-                            "No timeline markers yet. Add markers while reviewing timing, notes, or audio beats."
-                        } else {
-                            "Use search and color filters to tighten review passes without scrubbing the whole timeline."
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Mocha.Subtext0
-                    )
-                }
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val isCompactLayout = maxWidth < 420.dp
+                if (isCompactLayout) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Column {
+                            Text(
+                                text = stringResource(R.string.panel_marker_header, filtered.size),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Mocha.Text
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = if (markers.isEmpty()) {
+                                    stringResource(R.string.panel_marker_empty_description)
+                                } else {
+                                    stringResource(R.string.panel_marker_browse_description)
+                                },
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Mocha.Subtext0
+                            )
+                        }
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            PremiumPanelPill(
+                                text = stringResource(R.string.panel_marker_total, markers.size),
+                                accent = Mocha.Blue
+                            )
+                            PremiumPanelPill(
+                                text = filterColor?.name ?: stringResource(R.string.panel_marker_all),
+                                accent = if (filterColor == null) Mocha.Green else markerAccent(filterColor!!)
+                            )
+                        }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.panel_marker_header, filtered.size),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Mocha.Text
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = if (markers.isEmpty()) {
+                                    stringResource(R.string.panel_marker_empty_description)
+                                } else {
+                                    stringResource(R.string.panel_marker_browse_description)
+                                },
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Mocha.Subtext0
+                            )
+                        }
 
-                Spacer(modifier = Modifier.width(12.dp))
-                Column(
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    PremiumPanelPill(
-                        text = "${markers.size} total",
-                        accent = Mocha.Blue
-                    )
-                    PremiumPanelPill(
-                        text = filterColor?.name ?: stringResource(R.string.panel_marker_all),
-                        accent = if (filterColor == null) Mocha.Green else markerAccent(filterColor!!)
-                    )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(
+                            horizontalAlignment = Alignment.End,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            PremiumPanelPill(
+                                text = stringResource(R.string.panel_marker_total, markers.size),
+                                accent = Mocha.Blue
+                            )
+                            PremiumPanelPill(
+                                text = filterColor?.name ?: stringResource(R.string.panel_marker_all),
+                                accent = if (filterColor == null) Mocha.Green else markerAccent(filterColor!!)
+                            )
+                        }
+                    }
                 }
             }
 
@@ -143,8 +183,8 @@ fun MarkerListPanel(
                 )
             )
 
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 MarkerFilterChip(
@@ -174,28 +214,36 @@ fun MarkerListPanel(
                 ) {
                     Icon(
                         imageVector = Icons.Default.BookmarkBorder,
-                        contentDescription = stringResource(R.string.cd_close_markers),
+                        contentDescription = stringResource(R.string.cd_bookmarks),
                         tint = Mocha.Overlay1,
                         modifier = Modifier.size(30.dp)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = stringResource(R.string.panel_marker_no_markers),
+                        text = if (markers.isEmpty()) {
+                            stringResource(R.string.panel_marker_no_markers)
+                        } else {
+                            stringResource(R.string.panel_marker_no_matches)
+                        },
                         style = MaterialTheme.typography.titleSmall,
                         color = Mocha.Text
                     )
                     Text(
-                        text = "Try a broader search or clear the current color filter to bring markers back into view.",
+                        text = if (markers.isEmpty()) {
+                            stringResource(R.string.panel_marker_empty_description)
+                        } else {
+                            stringResource(R.string.panel_marker_filtered_description)
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = Mocha.Subtext0
                     )
                 }
             } else {
-                LazyColumn(
+                Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(filtered, key = { it.id }) { marker ->
+                    filtered.forEach { marker ->
                         MarkerRow(
                             marker = marker,
                             onJumpTo = { onJumpTo(marker.timeMs) },
@@ -209,6 +257,7 @@ fun MarkerListPanel(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun MarkerRow(
     marker: TimelineMarker,
@@ -272,7 +321,7 @@ private fun MarkerRow(
                             )
                         } else {
                             Text(
-                                text = marker.label.ifBlank { "Marker" },
+                                text = marker.label.ifBlank { stringResource(R.string.panel_marker_default_name) },
                                 style = MaterialTheme.typography.titleSmall,
                                 color = Mocha.Text,
                                 maxLines = 1,
@@ -298,26 +347,31 @@ private fun MarkerRow(
                 )
             }
 
-            Row(
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 MarkerAction(
                     icon = if (editingLabel) Icons.Default.Check else Icons.Default.Edit,
-                    label = if (editingLabel) "Save" else "Rename",
+                    label = if (editingLabel) {
+                        stringResource(R.string.panel_marker_save)
+                    } else {
+                        stringResource(R.string.panel_marker_rename)
+                    },
                     accent = if (editingLabel) Mocha.Green else Mocha.Subtext0,
                     onClick = {
                         if (editingLabel) {
-                            onUpdateLabel(labelText)
+                            val updatedLabel = labelText.trim()
+                            labelText = updatedLabel
+                            onUpdateLabel(updatedLabel)
                         }
                         editingLabel = !editingLabel
                     }
                 )
-                Spacer(modifier = Modifier.width(8.dp))
                 MarkerAction(
                     icon = Icons.Default.Delete,
-                    label = "Delete",
+                    label = stringResource(R.string.panel_marker_delete),
                     accent = Mocha.Red,
                     onClick = onDelete
                 )
@@ -388,7 +442,7 @@ private fun formatMarkerTime(ms: Long): String {
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
     val centis = (ms % 1000) / 10
-    return "%02d:%02d.%02d".format(minutes, seconds, centis)
+    return String.format(Locale.US, "%02d:%02d.%02d", minutes, seconds, centis)
 }
 
 private fun markerAccent(color: MarkerColor): Color = Color(color.argb)

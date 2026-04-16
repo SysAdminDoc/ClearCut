@@ -33,6 +33,7 @@ import androidx.annotation.StringRes
 import com.novacut.editor.R
 import com.novacut.editor.model.*
 import com.novacut.editor.ui.theme.Mocha
+import java.util.Locale
 
 // --- Tab & sub-menu data ---
 
@@ -921,6 +922,7 @@ fun SpeedPanel(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TransformPanel(
     clip: Clip,
@@ -938,56 +940,81 @@ fun TransformPanel(
         accent = Mocha.Sapphire,
         onClose = onClose,
         modifier = modifier,
+        scrollable = true,
+        closeContentDescription = stringResource(R.string.cd_close_transform_panel),
         headerActions = {
-            TextButton(onClick = onReset) {
-                Text(
-                    text = stringResource(R.string.tool_reset),
-                    color = Mocha.Peach,
-                    style = MaterialTheme.typography.labelLarge
-                )
-            }
+            PremiumPanelIconButton(
+                icon = Icons.Default.Refresh,
+                contentDescription = stringResource(R.string.cd_reset),
+                onClick = onReset,
+                tint = Mocha.Peach
+            )
         }
     ) {
         PremiumPanelCard(accent = Mocha.Sapphire) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                TransformMetricCard(
-                    label = stringResource(R.string.text_editor_position),
-                    value = "${formatSigned(clip.positionX)} / ${formatSigned(clip.positionY)}",
-                    accent = Mocha.Sapphire,
-                    modifier = Modifier.weight(1f)
-                )
-                TransformMetricCard(
-                    label = stringResource(R.string.panel_transform_scale),
-                    value = "${formatEffectValue(clip.scaleX, 0.1f, 5f)}x / ${formatEffectValue(clip.scaleY, 0.1f, 5f)}x",
-                    accent = Mocha.Peach,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                TransformMetricCard(
-                    label = stringResource(R.string.tool_rotation),
-                    value = "${formatSigned(clip.rotation)}deg",
-                    accent = Mocha.Mauve,
-                    modifier = Modifier.weight(1f)
-                )
-                TransformMetricCard(
-                    label = stringResource(R.string.tool_opacity),
-                    value = "${(clip.opacity * 100).toInt()}%",
-                    accent = Mocha.Green,
-                    modifier = Modifier.weight(1f)
-                )
+            Text(
+                text = stringResource(R.string.panel_transform_summary_title),
+                color = Mocha.Text,
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = stringResource(R.string.panel_transform_summary_description),
+                color = Mocha.Subtext0,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val compactLayout = maxWidth < 420.dp
+                val metricWidth = if (compactLayout) maxWidth else (maxWidth - 10.dp) / 2
+
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    TransformMetricCard(
+                        label = stringResource(R.string.text_editor_position),
+                        value = "${formatSigned(clip.positionX)} / ${formatSigned(clip.positionY)}",
+                        accent = Mocha.Sapphire,
+                        modifier = Modifier.width(metricWidth)
+                    )
+                    TransformMetricCard(
+                        label = stringResource(R.string.panel_transform_scale),
+                        value = "${formatEffectValue(clip.scaleX, 0.1f, 5f)}x / ${formatEffectValue(clip.scaleY, 0.1f, 5f)}x",
+                        accent = Mocha.Peach,
+                        modifier = Modifier.width(metricWidth)
+                    )
+                    TransformMetricCard(
+                        label = stringResource(R.string.tool_rotation),
+                        value = "${formatSigned(clip.rotation)} deg",
+                        accent = Mocha.Mauve,
+                        modifier = Modifier.width(metricWidth)
+                    )
+                    TransformMetricCard(
+                        label = stringResource(R.string.tool_opacity),
+                        value = "${(clip.opacity.coerceIn(0f, 1f) * 100).toInt()}%",
+                        accent = Mocha.Green,
+                        modifier = Modifier.width(metricWidth)
+                    )
+                }
             }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
         PremiumPanelCard(accent = Mocha.Mauve) {
+            Text(
+                text = stringResource(R.string.panel_transform_framing_title),
+                color = Mocha.Text,
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = stringResource(R.string.panel_transform_framing_description),
+                color = Mocha.Subtext0,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Spacer(modifier = Modifier.height(10.dp))
             EffectSlider(stringResource(R.string.tool_position_x), clip.positionX, -1f, 1f, onTransformDragStarted) {
                 onTransformChanged(it, null, null, null, null)
             }
@@ -1000,6 +1027,22 @@ fun TransformPanel(
             EffectSlider(stringResource(R.string.tool_scale_y), clip.scaleY, 0.1f, 5f, onTransformDragStarted) {
                 onTransformChanged(null, null, null, it, null)
             }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        PremiumPanelCard(accent = Mocha.Green) {
+            Text(
+                text = stringResource(R.string.panel_transform_presence_title),
+                color = Mocha.Text,
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = stringResource(R.string.panel_transform_presence_description),
+                color = Mocha.Subtext0,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Spacer(modifier = Modifier.height(10.dp))
             EffectSlider(stringResource(R.string.tool_rotation), clip.rotation, -360f, 360f, onTransformDragStarted) {
                 onTransformChanged(null, null, null, null, it)
             }
@@ -1012,19 +1055,20 @@ fun TransformPanel(
 
 private data class CropPreset(
     val ratio: AspectRatio,
-    val platform: String
+    @StringRes val platformLabelRes: Int
 )
 
 private val cropPresets = listOf(
-    CropPreset(AspectRatio.RATIO_16_9, "YouTube / TV"),
-    CropPreset(AspectRatio.RATIO_9_16, "TikTok / Reels"),
-    CropPreset(AspectRatio.RATIO_1_1, "Instagram Square"),
-    CropPreset(AspectRatio.RATIO_4_5, "Instagram Portrait"),
-    CropPreset(AspectRatio.RATIO_4_3, "Classic"),
-    CropPreset(AspectRatio.RATIO_3_4, "Portrait Classic"),
-    CropPreset(AspectRatio.RATIO_21_9, "Cinematic")
+    CropPreset(AspectRatio.RATIO_16_9, R.string.crop_preset_platform_youtube_tv),
+    CropPreset(AspectRatio.RATIO_9_16, R.string.crop_preset_platform_tiktok_reels),
+    CropPreset(AspectRatio.RATIO_1_1, R.string.crop_preset_platform_instagram_square),
+    CropPreset(AspectRatio.RATIO_4_5, R.string.crop_preset_platform_instagram_portrait),
+    CropPreset(AspectRatio.RATIO_4_3, R.string.crop_preset_platform_classic),
+    CropPreset(AspectRatio.RATIO_3_4, R.string.crop_preset_platform_portrait_classic),
+    CropPreset(AspectRatio.RATIO_21_9, R.string.crop_preset_platform_cinematic)
 )
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CropPanel(
     onCropSelected: (AspectRatio) -> Unit,
@@ -1038,7 +1082,9 @@ fun CropPanel(
         icon = Icons.Default.Crop,
         accent = Mocha.Sapphire,
         onClose = onClose,
-        modifier = modifier
+        modifier = modifier,
+        scrollable = true,
+        closeContentDescription = stringResource(R.string.cd_close_crop_panel)
     ) {
         PremiumPanelCard(accent = Mocha.Sapphire) {
             Text(
@@ -1046,9 +1092,13 @@ fun CropPanel(
                 color = Mocha.Text,
                 style = MaterialTheme.typography.headlineMedium
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Spacer(modifier = Modifier.height(8.dp))
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 PremiumPanelPill(
-                    text = aspectUseCase(currentAspect),
+                    text = stringResource(aspectUseCaseRes(currentAspect)),
                     accent = Mocha.Sapphire
                 )
                 PremiumPanelPill(
@@ -1060,76 +1110,35 @@ fun CropPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            contentPadding = PaddingValues(end = 4.dp)
-        ) {
-            items(cropPresets) { preset ->
-                val isActive = currentAspect == preset.ratio
-                Surface(
-                    modifier = Modifier.width(112.dp),
-                    onClick = { onCropSelected(preset.ratio) },
-                    color = Mocha.PanelHighest,
-                    shape = RoundedCornerShape(22.dp),
-                    border = BorderStroke(
-                        width = 1.dp,
-                        color = if (isActive) Mocha.Sapphire.copy(alpha = 0.32f) else Mocha.CardStroke
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .background(
-                                if (isActive) Mocha.Sapphire.copy(alpha = 0.08f) else Color.Transparent
-                            )
-                            .padding(horizontal = 14.dp, vertical = 16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        val previewW: Float
-                        val previewH: Float
-                        val maxDim = 40f
-                        if (preset.ratio.toFloat() >= 1f) {
-                            previewW = maxDim
-                            previewH = maxDim / preset.ratio.toFloat()
-                        } else {
-                            previewH = maxDim
-                            previewW = maxDim * preset.ratio.toFloat()
-                        }
-                        Box(
-                            modifier = Modifier
-                                .size(56.dp)
-                                .clip(RoundedCornerShape(18.dp))
-                                .background(Mocha.Panel),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(width = previewW.dp, height = previewH.dp)
-                                    .border(
-                                        width = 2.dp,
-                                        color = if (isActive) Mocha.Sapphire else Mocha.Subtext0,
-                                        shape = RoundedCornerShape(4.dp)
-                                    )
-                            )
-                        }
+        PremiumPanelCard(accent = Mocha.Rosewater) {
+            Text(
+                text = stringResource(R.string.panel_crop_presets_title),
+                color = Mocha.Text,
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = stringResource(R.string.panel_crop_presets_description),
+                color = Mocha.Subtext0,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Spacer(modifier = Modifier.height(12.dp))
 
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = preset.ratio.label,
-                                color = if (isActive) Mocha.Sapphire else Mocha.Text,
-                                style = MaterialTheme.typography.titleSmall,
-                                textAlign = TextAlign.Center
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = preset.platform,
-                                color = Mocha.Subtext0,
-                                style = MaterialTheme.typography.bodySmall,
-                                textAlign = TextAlign.Center,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val compactLayout = maxWidth < 360.dp
+                val cardWidth = if (compactLayout) maxWidth else (maxWidth - 10.dp) / 2
+
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    cropPresets.forEach { preset ->
+                        CropPresetCard(
+                            preset = preset,
+                            isActive = currentAspect == preset.ratio,
+                            onClick = { onCropSelected(preset.ratio) },
+                            modifier = Modifier.width(cardWidth)
+                        )
                     }
                 }
             }
@@ -1137,6 +1146,82 @@ fun CropPanel(
     }
 }
 
+@Composable
+private fun CropPresetCard(
+    preset: CropPreset,
+    isActive: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        onClick = onClick,
+        color = Mocha.PanelHighest,
+        shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (isActive) Mocha.Sapphire.copy(alpha = 0.32f) else Mocha.CardStroke
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .background(
+                    if (isActive) Mocha.Sapphire.copy(alpha = 0.08f) else Color.Transparent
+                )
+                .padding(horizontal = 14.dp, vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            val previewW: Float
+            val previewH: Float
+            val maxDim = 40f
+            if (preset.ratio.toFloat() >= 1f) {
+                previewW = maxDim
+                previewH = maxDim / preset.ratio.toFloat()
+            } else {
+                previewH = maxDim
+                previewW = maxDim * preset.ratio.toFloat()
+            }
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(Mocha.Panel),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(width = previewW.dp, height = previewH.dp)
+                        .border(
+                            width = 2.dp,
+                            color = if (isActive) Mocha.Sapphire else Mocha.Subtext0,
+                            shape = RoundedCornerShape(4.dp)
+                        )
+                )
+            }
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = preset.ratio.label,
+                    color = if (isActive) Mocha.Sapphire else Mocha.Text,
+                    style = MaterialTheme.typography.titleSmall,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = stringResource(preset.platformLabelRes),
+                    color = Mocha.Subtext0,
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TransitionPicker(
     onTransitionSelected: (TransitionType) -> Unit,
@@ -1154,19 +1239,31 @@ fun TransitionPicker(
         accent = Mocha.Mauve,
         onClose = onClose,
         modifier = modifier,
+        scrollable = true,
+        closeContentDescription = stringResource(R.string.transition_picker_close_cd),
         headerActions = {
             if (currentTransition != null) {
-                TextButton(onClick = onRemoveTransition) {
-                    Text(
-                        text = stringResource(R.string.tool_remove),
-                        color = Mocha.Red,
-                        style = MaterialTheme.typography.labelLarge
-                    )
-                }
+                PremiumPanelIconButton(
+                    icon = Icons.Default.Delete,
+                    contentDescription = stringResource(R.string.tool_remove),
+                    onClick = onRemoveTransition,
+                    tint = Mocha.Red
+                )
             }
         }
     ) {
         PremiumPanelCard(accent = Mocha.Mauve) {
+            Text(
+                text = stringResource(R.string.panel_transition_summary_title),
+                color = Mocha.Text,
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = stringResource(R.string.panel_transition_summary_description),
+                color = Mocha.Subtext0,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = if (currentTransition != null) {
                     currentTransition.type.displayName
@@ -1176,7 +1273,11 @@ fun TransitionPicker(
                 color = Mocha.Text,
                 style = MaterialTheme.typography.headlineMedium
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Spacer(modifier = Modifier.height(8.dp))
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 PremiumPanelPill(
                     text = if (currentTransition != null) {
                         stringResource(R.string.panel_transition_active)
@@ -1187,7 +1288,10 @@ fun TransitionPicker(
                 )
                 if (currentTransition != null) {
                     PremiumPanelPill(
-                        text = "${currentTransition.durationMs}ms",
+                        text = stringResource(
+                            R.string.panel_transition_duration_value,
+                            currentTransition.durationMs
+                        ),
                         accent = Mocha.Peach
                     )
                 }
@@ -1196,52 +1300,39 @@ fun TransitionPicker(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            contentPadding = PaddingValues(end = 4.dp)
-        ) {
-            items(TransitionType.entries.toList()) { type ->
-                val isActive = currentTransition?.type == type
-                val icon = transitionIcon(type)
-                Surface(
-                    modifier = Modifier.width(108.dp),
-                    onClick = { onTransitionSelected(type) },
-                    color = Mocha.PanelHighest,
-                    shape = RoundedCornerShape(22.dp),
-                    border = BorderStroke(
-                        width = 1.dp,
-                        color = if (isActive) Mocha.Mauve.copy(alpha = 0.32f) else Mocha.CardStroke
-                    )
+        PremiumPanelCard(accent = Mocha.Rosewater) {
+            Text(
+                text = stringResource(R.string.panel_transition_presets_title),
+                color = Mocha.Text,
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = stringResource(R.string.panel_transition_presets_description),
+                color = Mocha.Subtext0,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val columns = if (maxWidth < 420.dp) 2 else 3
+                val spacing = 10.dp
+                val cardWidth = if (columns == 2) {
+                    (maxWidth - spacing) / 2
+                } else {
+                    (maxWidth - (spacing * 2)) / 3
+                }
+
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(spacing),
+                    verticalArrangement = Arrangement.spacedBy(spacing)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .background(
-                                if (isActive) Mocha.Mauve.copy(alpha = 0.08f) else Color.Transparent
-                            )
-                            .padding(horizontal = 14.dp, vertical = 16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(42.dp)
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(if (isActive) Mocha.Mauve.copy(alpha = 0.16f) else Mocha.Panel),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                icon,
-                                contentDescription = type.displayName,
-                                tint = if (isActive) Mocha.Mauve else Mocha.Subtext0,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        Text(
-                            text = type.displayName,
-                            color = if (isActive) Mocha.Mauve else Mocha.Text,
-                            style = MaterialTheme.typography.titleSmall,
-                            textAlign = TextAlign.Center,
-                            maxLines = 2
+                    TransitionType.entries.forEach { type ->
+                        TransitionOptionCard(
+                            type = type,
+                            isActive = currentTransition?.type == type,
+                            onClick = { onTransitionSelected(type) },
+                            modifier = Modifier.width(cardWidth)
                         )
                     }
                 }
@@ -1251,6 +1342,17 @@ fun TransitionPicker(
         if (currentTransition != null) {
             Spacer(modifier = Modifier.height(12.dp))
             PremiumPanelCard(accent = Mocha.Peach) {
+                Text(
+                    text = stringResource(R.string.panel_transition_duration_title),
+                    color = Mocha.Text,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = stringResource(R.string.panel_transition_duration_description),
+                    color = Mocha.Subtext0,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(10.dp))
                 EffectSlider(
                     label = stringResource(R.string.tool_duration),
                     value = currentTransition.durationMs.toFloat(),
@@ -1260,6 +1362,60 @@ fun TransitionPicker(
                     onValueChange = { onDurationChanged(it.toLong()) }
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun TransitionOptionCard(
+    type: TransitionType,
+    isActive: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val icon = transitionIcon(type)
+
+    Surface(
+        modifier = modifier,
+        onClick = onClick,
+        color = Mocha.PanelHighest,
+        shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (isActive) Mocha.Mauve.copy(alpha = 0.32f) else Mocha.CardStroke
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    if (isActive) Mocha.Mauve.copy(alpha = 0.08f) else Color.Transparent
+                )
+                .padding(horizontal = 14.dp, vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(if (isActive) Mocha.Mauve.copy(alpha = 0.16f) else Mocha.Panel),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    icon,
+                    contentDescription = type.displayName,
+                    tint = if (isActive) Mocha.Mauve else Mocha.Subtext0,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Text(
+                text = type.displayName,
+                color = if (isActive) Mocha.Mauve else Mocha.Text,
+                style = MaterialTheme.typography.titleSmall,
+                textAlign = TextAlign.Center,
+                maxLines = 2
+            )
         }
     }
 }
@@ -1335,28 +1491,29 @@ private fun transitionIcon(type: TransitionType): ImageVector = when (type) {
     else -> Icons.Default.SwapHoriz
 }
 
-private fun aspectUseCase(ratio: AspectRatio): String = when (ratio) {
-    AspectRatio.RATIO_9_16 -> "Short form ready"
-    AspectRatio.RATIO_1_1 -> "Square social"
-    AspectRatio.RATIO_4_5 -> "Feed optimized"
-    AspectRatio.RATIO_21_9 -> "Cinematic widescreen"
-    else -> "Landscape master"
+@StringRes
+private fun aspectUseCaseRes(ratio: AspectRatio): Int = when (ratio) {
+    AspectRatio.RATIO_9_16 -> R.string.panel_crop_use_case_short_form
+    AspectRatio.RATIO_1_1 -> R.string.panel_crop_use_case_square
+    AspectRatio.RATIO_4_5 -> R.string.panel_crop_use_case_feed
+    AspectRatio.RATIO_21_9 -> R.string.panel_crop_use_case_cinematic
+    else -> R.string.panel_crop_use_case_landscape
 }
 
 private fun formatEffectValue(value: Float, min: Float, max: Float): String {
     val span = max - min
     return when {
-        span <= 2f -> "%.2f".format(value)
-        span <= 20f -> "%.1f".format(value)
+        span <= 2f -> String.format(Locale.US, "%.2f", value)
+        span <= 20f -> String.format(Locale.US, "%.1f", value)
         else -> value.toInt().toString()
     }
 }
 
 private fun formatSigned(value: Float): String {
     val formatted = if (kotlin.math.abs(value) < 10f) {
-        "%.2f".format(value)
+        String.format(Locale.US, "%.2f", value)
     } else {
-        "%.1f".format(value)
+        String.format(Locale.US, "%.1f", value)
     }
     return if (value > 0f) "+$formatted" else formatted
 }

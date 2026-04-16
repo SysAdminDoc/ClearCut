@@ -23,6 +23,7 @@ import com.novacut.editor.R
 import com.novacut.editor.model.Clip
 import com.novacut.editor.ui.theme.Mocha
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AudioPanel(
     clip: Clip?,
@@ -42,7 +43,9 @@ fun AudioPanel(
         icon = Icons.Default.GraphicEq,
         accent = Mocha.Green,
         onClose = onClose,
-        modifier = modifier
+        closeContentDescription = stringResource(R.string.cd_close_audio_panel),
+        modifier = modifier,
+        scrollable = true
     ) {
         if (clip == null) {
             PremiumPanelCard(accent = Mocha.Sapphire) {
@@ -69,6 +72,12 @@ fun AudioPanel(
                         color = Mocha.Text,
                         style = MaterialTheme.typography.titleMedium
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.audio_select_clip_description),
+                        color = Mocha.Subtext0,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 }
             }
             return@PremiumEditorPanel
@@ -81,7 +90,10 @@ fun AudioPanel(
         val fadeOutMax = (clipDuration - fadeInMs).coerceAtLeast(0f)
 
         PremiumPanelCard(accent = Mocha.Green) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 PremiumPanelPill(
                     text = stringResource(R.string.audio_clip_duration, formatTimestamp(clip.durationMs)),
                     accent = Mocha.Sapphire
@@ -89,6 +101,14 @@ fun AudioPanel(
                 PremiumPanelPill(
                     text = "${(clip.volume * 100).toInt()}%",
                     accent = Mocha.Rosewater
+                )
+                PremiumPanelPill(
+                    text = if (!waveform.isNullOrEmpty()) {
+                        stringResource(R.string.audio_waveform_ready)
+                    } else {
+                        stringResource(R.string.audio_waveform_pending)
+                    },
+                    accent = if (!waveform.isNullOrEmpty()) Mocha.Green else Mocha.Overlay1
                 )
             }
 
@@ -110,6 +130,20 @@ fun AudioPanel(
                     if (clip.fadeInMs > 0 || clip.fadeOutMs > 0) {
                         drawFadeEnvelope(clip.fadeInMs, clip.fadeOutMs, clip.durationMs.coerceAtLeast(1L), Mocha.Mauve)
                     }
+                }
+            } else {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Mocha.PanelRaised,
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, Mocha.CardStroke)
+                ) {
+                    Text(
+                        text = stringResource(R.string.audio_waveform_pending_description),
+                        color = Mocha.Subtext0,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)
+                    )
                 }
             }
         }
@@ -145,25 +179,38 @@ fun AudioPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        Button(
-            onClick = onStartVoiceover,
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Mocha.Rosewater,
-                contentColor = Mocha.Midnight
-            ),
-            shape = RoundedCornerShape(18.dp)
-        ) {
-            Icon(
-                Icons.Default.Mic,
-                contentDescription = stringResource(R.string.audio_record_voiceover),
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
+        PremiumPanelCard(accent = Mocha.Rosewater) {
             Text(
-                text = stringResource(R.string.audio_record_voiceover),
-                style = MaterialTheme.typography.titleSmall
+                text = stringResource(R.string.audio_voiceover),
+                style = MaterialTheme.typography.titleMedium,
+                color = Mocha.Text
             )
+            Text(
+                text = stringResource(R.string.audio_voiceover_description),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Mocha.Subtext0
+            )
+
+            Button(
+                onClick = onStartVoiceover,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Mocha.Rosewater,
+                    contentColor = Mocha.Midnight
+                ),
+                shape = RoundedCornerShape(18.dp)
+            ) {
+                Icon(
+                    Icons.Default.Mic,
+                    contentDescription = stringResource(R.string.audio_record_voiceover),
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.audio_record_voiceover),
+                    style = MaterialTheme.typography.titleSmall
+                )
+            }
         }
     }
 }
@@ -257,7 +304,9 @@ fun VoiceoverRecorder(
         icon = Icons.Default.Mic,
         accent = if (isRecording) Mocha.Red else Mocha.Sapphire,
         onClose = onClose,
-        modifier = modifier
+        closeContentDescription = stringResource(R.string.audio_voiceover_close_cd),
+        modifier = modifier,
+        scrollable = true
     ) {
         PremiumPanelCard(accent = if (isRecording) Mocha.Red else Mocha.Sapphire) {
             Column(
@@ -324,9 +373,12 @@ fun VoiceoverRecorder(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        TextButton(
+        OutlinedButton(
             onClick = onClose,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            border = BorderStroke(1.dp, Mocha.CardStroke),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Subtext0)
         ) {
             Text(
                 text = stringResource(R.string.audio_cancel),

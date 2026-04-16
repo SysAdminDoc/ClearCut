@@ -2,16 +2,7 @@ package com.novacut.editor.ui.editor
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -37,9 +28,12 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -52,6 +46,7 @@ import com.novacut.editor.model.CaptionStyleType
 import com.novacut.editor.ui.theme.Mocha
 import java.util.Locale
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CaptionEditorPanel(
     captions: List<Caption>,
@@ -67,6 +62,8 @@ fun CaptionEditorPanel(
     var editingCaption by remember { mutableStateOf<Caption?>(null) }
     var selectedStyleType by remember { mutableStateOf(CaptionStyleType.SUBTITLE_BAR) }
     val activeCaptionCount = captions.count { playheadMs in it.startTimeMs..it.endTimeMs }
+    val isCompactLayout = LocalConfiguration.current.screenWidthDp < 430
+    val captionStylesSectionDescription = stringResource(R.string.cd_caption_styles_section)
 
     fun createCaption() {
         val newCaption = Caption(
@@ -85,6 +82,7 @@ fun CaptionEditorPanel(
         icon = Icons.Default.ClosedCaption,
         accent = Mocha.Yellow,
         onClose = onClose,
+        closeContentDescription = stringResource(R.string.caption_close_cd),
         modifier = modifier,
         scrollable = true,
         headerActions = {
@@ -136,21 +134,22 @@ fun CaptionEditorPanel(
                 }
             }
 
-            Row(
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 CaptionMetric(
                     title = "Playhead",
                     value = formatSeconds(playheadMs),
                     accent = Mocha.Peach,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.widthIn(min = 132.dp)
                 )
                 CaptionMetric(
                     title = "Default Style",
                     value = selectedStyleType.displayName,
                     accent = Mocha.Mauve,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.widthIn(min = 132.dp)
                 )
             }
         }
@@ -169,9 +168,12 @@ fun CaptionEditorPanel(
                 color = Mocha.Subtext0
             )
 
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            FlowRow(
+                modifier = Modifier.semantics {
+                    contentDescription = captionStylesSectionDescription
+                },
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 CaptionStyleType.entries.forEach { styleType ->
                     FilterChip(
@@ -234,37 +236,73 @@ fun CaptionEditorPanel(
                             style = MaterialTheme.typography.bodySmall,
                             color = Mocha.Subtext0
                         )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            OutlinedButton(
-                                onClick = onGenerateAutoCaption,
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(18.dp),
-                                border = BorderStroke(1.dp, Mocha.Yellow.copy(alpha = 0.35f)),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Yellow)
+                        if (isCompactLayout) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                androidx.compose.material3.Icon(
-                                    imageVector = Icons.Default.AutoAwesome,
-                                    contentDescription = stringResource(R.string.cd_auto_awesome)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(text = stringResource(R.string.panel_caption_auto_generate))
-                            }
+                                OutlinedButton(
+                                    onClick = onGenerateAutoCaption,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(18.dp),
+                                    border = BorderStroke(1.dp, Mocha.Yellow.copy(alpha = 0.35f)),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Yellow)
+                                ) {
+                                    androidx.compose.material3.Icon(
+                                        imageVector = Icons.Default.AutoAwesome,
+                                        contentDescription = stringResource(R.string.cd_auto_awesome)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(text = stringResource(R.string.panel_caption_auto_generate))
+                                }
 
-                            Button(
-                                onClick = ::createCaption,
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(18.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve)
+                                Button(
+                                    onClick = ::createCaption,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(18.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve)
+                                ) {
+                                    androidx.compose.material3.Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = stringResource(R.string.caption_add_cd)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(text = stringResource(R.string.caption_add))
+                                }
+                            }
+                        } else {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                androidx.compose.material3.Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = stringResource(R.string.caption_add_cd)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(text = stringResource(R.string.caption_add))
+                                OutlinedButton(
+                                    onClick = onGenerateAutoCaption,
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(18.dp),
+                                    border = BorderStroke(1.dp, Mocha.Yellow.copy(alpha = 0.35f)),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Yellow)
+                                ) {
+                                    androidx.compose.material3.Icon(
+                                        imageVector = Icons.Default.AutoAwesome,
+                                        contentDescription = stringResource(R.string.cd_auto_awesome)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(text = stringResource(R.string.panel_caption_auto_generate))
+                                }
+
+                                Button(
+                                    onClick = ::createCaption,
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(18.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve)
+                                ) {
+                                    androidx.compose.material3.Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = stringResource(R.string.caption_add_cd)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(text = stringResource(R.string.caption_add))
+                                }
                             }
                         }
                     }
@@ -451,6 +489,7 @@ private fun CaptionListCard(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CaptionEditForm(
     caption: Caption,
@@ -458,6 +497,8 @@ private fun CaptionEditForm(
     onUpdate: (Caption) -> Unit,
     onDone: () -> Unit
 ) {
+    val isCompactLayout = LocalConfiguration.current.screenWidthDp < 430
+    val captionStylesSectionDescription = stringResource(R.string.cd_caption_styles_section)
     var text by remember(caption.id) { mutableStateOf(caption.text) }
     var startTime by remember(caption.id) { mutableFloatStateOf(caption.startTimeMs / 1000f) }
     var endTime by remember(caption.id) { mutableFloatStateOf(caption.endTimeMs / 1000f) }
@@ -484,21 +525,22 @@ private fun CaptionEditForm(
             textStyle = TextStyle(fontSize = 15.sp)
         )
 
-        Row(
+        FlowRow(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             CaptionMetric(
                 title = "Start",
                 value = formatSeconds((startTime * 1000f).toLong()),
                 accent = Mocha.Blue,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.widthIn(min = 132.dp)
             )
             CaptionMetric(
                 title = "End",
                 value = formatSeconds((endTime * 1000f).toLong()),
                 accent = Mocha.Green,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.widthIn(min = 132.dp)
             )
         }
 
@@ -523,9 +565,12 @@ private fun CaptionEditForm(
                 style = MaterialTheme.typography.labelLarge,
                 color = Mocha.Subtext0
             )
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            FlowRow(
+                modifier = Modifier.semantics {
+                    contentDescription = captionStylesSectionDescription
+                },
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 CaptionStyleType.entries.forEach { type ->
                     FilterChip(
@@ -560,41 +605,81 @@ private fun CaptionEditForm(
             valueFormatter = { "%.0f%%".format(it * 100f) }
         )
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            OutlinedButton(
-                onClick = onDone,
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(18.dp),
-                border = BorderStroke(1.dp, Mocha.CardStroke),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Subtext0)
+        if (isCompactLayout) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text(text = stringResource(R.string.done))
-            }
+                OutlinedButton(
+                    onClick = onDone,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    border = BorderStroke(1.dp, Mocha.CardStroke),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Subtext0)
+                ) {
+                    Text(text = stringResource(R.string.done))
+                }
 
-            Button(
-                onClick = {
-                    onUpdate(
-                        caption.copy(
-                            text = text,
-                            startTimeMs = (startTime * 1000f).toLong(),
-                            endTimeMs = (endTime * 1000f).toLong(),
-                            style = caption.style.copy(
-                                type = styleType,
-                                fontSize = fontSize,
-                                positionY = positionY
+                Button(
+                    onClick = {
+                        onUpdate(
+                            caption.copy(
+                                text = text,
+                                startTimeMs = (startTime * 1000f).toLong(),
+                                endTimeMs = (endTime * 1000f).toLong(),
+                                style = caption.style.copy(
+                                    type = styleType,
+                                    fontSize = fontSize,
+                                    positionY = positionY
+                                )
                             )
                         )
-                    )
-                    onDone()
-                },
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve),
-                shape = RoundedCornerShape(18.dp)
+                        onDone()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve),
+                    shape = RoundedCornerShape(18.dp)
+                ) {
+                    Text(text = stringResource(R.string.panel_caption_save))
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text(text = stringResource(R.string.panel_caption_save))
+                OutlinedButton(
+                    onClick = onDone,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(18.dp),
+                    border = BorderStroke(1.dp, Mocha.CardStroke),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Subtext0)
+                ) {
+                    Text(text = stringResource(R.string.done))
+                }
+
+                Button(
+                    onClick = {
+                        onUpdate(
+                            caption.copy(
+                                text = text,
+                                startTimeMs = (startTime * 1000f).toLong(),
+                                endTimeMs = (endTime * 1000f).toLong(),
+                                style = caption.style.copy(
+                                    type = styleType,
+                                    fontSize = fontSize,
+                                    positionY = positionY
+                                )
+                            )
+                        )
+                        onDone()
+                    },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve),
+                    shape = RoundedCornerShape(18.dp)
+                ) {
+                    Text(text = stringResource(R.string.panel_caption_save))
+                }
             }
         }
     }

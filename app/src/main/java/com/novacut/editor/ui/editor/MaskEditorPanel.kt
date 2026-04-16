@@ -7,7 +7,10 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -60,6 +63,7 @@ import com.novacut.editor.model.MaskPoint
 import com.novacut.editor.model.MaskType
 import com.novacut.editor.ui.theme.Mocha
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MaskEditorPanel(
     masks: List<Mask>,
@@ -77,10 +81,11 @@ fun MaskEditorPanel(
 
     PremiumEditorPanel(
         title = stringResource(R.string.mask_title),
-        subtitle = "Shape attention, blur, and reveal areas directly over the frame without leaving the cut.",
+        subtitle = stringResource(R.string.panel_mask_subtitle),
         icon = Icons.Default.Gesture,
         accent = if (selectedMask != null) Mocha.Mauve else Mocha.Blue,
         onClose = onClose,
+        closeContentDescription = stringResource(R.string.cd_close_mask_editor),
         modifier = modifier,
         scrollable = true,
         headerActions = {
@@ -109,54 +114,91 @@ fun MaskEditorPanel(
         }
     ) {
         PremiumPanelCard(accent = if (selectedMask != null) Mocha.Mauve else Mocha.Blue) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Mask stack",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Mocha.Text
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "Create geometric or freehand masks, then tune feather, opacity, inversion, and motion behavior from one place.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Mocha.Subtext0
-                    )
-                }
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val isCompactLayout = maxWidth < 420.dp
+                if (isCompactLayout) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Column {
+                            Text(
+                                text = stringResource(R.string.mask_stack_title),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Mocha.Text
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = stringResource(R.string.mask_stack_description),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Mocha.Subtext0
+                            )
+                        }
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            PremiumPanelPill(
+                                text = stringResource(R.string.mask_summary_total, masks.size),
+                                accent = Mocha.Blue
+                            )
+                            PremiumPanelPill(
+                                text = selectedMask?.type?.displayName ?: stringResource(R.string.mask_selection_none),
+                                accent = if (selectedMask != null) Mocha.Mauve else Mocha.Subtext0
+                            )
+                        }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.mask_stack_title),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Mocha.Text
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = stringResource(R.string.mask_stack_description),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Mocha.Subtext0
+                            )
+                        }
 
-                Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
 
-                Column(
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    PremiumPanelPill(text = "${masks.size} masks", accent = Mocha.Blue)
-                    PremiumPanelPill(
-                        text = if (selectedMask != null) selectedMask.type.displayName else "No selection",
-                        accent = if (selectedMask != null) Mocha.Mauve else Mocha.Subtext0
-                    )
+                        Column(
+                            horizontalAlignment = Alignment.End,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            PremiumPanelPill(
+                                text = stringResource(R.string.mask_summary_total, masks.size),
+                                accent = Mocha.Blue
+                            )
+                            PremiumPanelPill(
+                                text = selectedMask?.type?.displayName ?: stringResource(R.string.mask_selection_none),
+                                accent = if (selectedMask != null) Mocha.Mauve else Mocha.Subtext0
+                            )
+                        }
+                    }
                 }
             }
 
-            Row(
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 MaskMetric(
-                    title = "Tracked",
+                    title = stringResource(R.string.mask_metric_tracked),
                     value = trackedMasks.toString(),
                     accent = if (trackedMasks > 0) Mocha.Yellow else Mocha.Green,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.width(140.dp)
                 )
                 MaskMetric(
-                    title = "Selected",
+                    title = stringResource(R.string.mask_metric_points),
                     value = selectedMask?.points?.size?.toString() ?: "0",
                     accent = Mocha.Mauve,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.width(140.dp)
                 )
             }
         }
@@ -165,7 +207,7 @@ fun MaskEditorPanel(
 
         PremiumPanelCard(accent = Mocha.Blue) {
             Text(
-                text = "Mask shapes",
+                text = stringResource(R.string.mask_shapes_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = Mocha.Text
             )
@@ -173,14 +215,13 @@ fun MaskEditorPanel(
                 text = if (masks.isEmpty()) {
                     stringResource(R.string.mask_empty)
                 } else {
-                    "Select a mask to refine it, or add another shape for layered reveals and local adjustments."
+                    stringResource(R.string.mask_shapes_description)
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = Mocha.Subtext0
             )
 
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
+            FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 MaskType.entries.forEach { type ->
@@ -201,8 +242,7 @@ fun MaskEditorPanel(
             }
 
             if (masks.isNotEmpty()) {
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     masks.forEach { mask ->
@@ -220,37 +260,71 @@ fun MaskEditorPanel(
 
         if (selectedMask != null) {
             PremiumPanelCard(accent = Mocha.Mauve) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Selected mask",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Mocha.Text
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = selectedMask.type.displayName,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Mocha.Subtext0
-                        )
-                    }
+                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                    val isCompactLayout = maxWidth < 420.dp
+                    if (isCompactLayout) {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.mask_selected_title),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = Mocha.Text
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = selectedMask.type.displayName,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Mocha.Subtext0
+                                )
+                            }
+                            OutlinedButton(
+                                onClick = { onMaskDeleted(selectedMask.id) },
+                                shape = RoundedCornerShape(18.dp),
+                                border = BorderStroke(1.dp, Mocha.Red.copy(alpha = 0.25f)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Red)
+                            ) {
+                                androidx.compose.material3.Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = stringResource(R.string.cd_delete)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(text = stringResource(R.string.remove))
+                            }
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.mask_selected_title),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = Mocha.Text
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = selectedMask.type.displayName,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Mocha.Subtext0
+                                )
+                            }
 
-                    OutlinedButton(
-                        onClick = { onMaskDeleted(selectedMask.id) },
-                        shape = RoundedCornerShape(18.dp),
-                        border = BorderStroke(1.dp, Mocha.Red.copy(alpha = 0.25f)),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Red)
-                    ) {
-                        androidx.compose.material3.Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = stringResource(R.string.cd_delete)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = stringResource(R.string.remove))
+                            OutlinedButton(
+                                onClick = { onMaskDeleted(selectedMask.id) },
+                                shape = RoundedCornerShape(18.dp),
+                                border = BorderStroke(1.dp, Mocha.Red.copy(alpha = 0.25f)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Red)
+                            ) {
+                                androidx.compose.material3.Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = stringResource(R.string.cd_delete)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(text = stringResource(R.string.remove))
+                            }
+                        }
                     }
                 }
 
@@ -282,14 +356,14 @@ fun MaskEditorPanel(
 
                 MaskToggleRow(
                     label = stringResource(R.string.mask_invert),
-                    subtitle = "Flip the inside and outside of the mask.",
+                    subtitle = stringResource(R.string.mask_invert_description),
                     checked = selectedMask.inverted,
                     accent = Mocha.Mauve,
                     onCheckedChange = { onMaskUpdated(selectedMask.copy(inverted = it)) }
                 )
                 MaskToggleRow(
                     label = stringResource(R.string.mask_track_to_motion),
-                    subtitle = "Keep the mask attached to tracked movement when supported by the shot.",
+                    subtitle = stringResource(R.string.mask_track_description),
                     checked = selectedMask.trackToMotion,
                     accent = Mocha.Yellow,
                     onCheckedChange = { onMaskUpdated(selectedMask.copy(trackToMotion = it)) }
@@ -298,12 +372,12 @@ fun MaskEditorPanel(
         } else {
             PremiumPanelCard(accent = Mocha.Green) {
                 Text(
-                    text = "No mask selected",
+                    text = stringResource(R.string.mask_none_selected_title),
                     style = MaterialTheme.typography.titleMedium,
                     color = Mocha.Text
                 )
                 Text(
-                    text = "Add a shape above or tap an existing mask to adjust feather, opacity, inversion, and motion behavior.",
+                    text = stringResource(R.string.mask_none_selected_description),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Mocha.Subtext0
                 )
@@ -352,6 +426,8 @@ private fun MaskChip(
 ) {
     val accent = if (isSelected) Mocha.Mauve else Mocha.Blue
     val invLabel = stringResource(R.string.mask_inv_label)
+    val pointsLabel = stringResource(R.string.mask_chip_points_format, mask.points.size)
+    val trackedLabel = stringResource(R.string.mask_chip_tracked)
 
     Surface(
         color = if (isSelected) accent.copy(alpha = 0.12f) else Mocha.PanelRaised,
@@ -380,9 +456,9 @@ private fun MaskChip(
                 )
                 Text(
                     text = buildString {
-                        append("${mask.points.size} pts")
+                        append(pointsLabel)
                         if (mask.inverted) append(" • $invLabel")
-                        if (mask.trackToMotion) append(" • tracked")
+                        if (mask.trackToMotion) append(" • $trackedLabel")
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = Mocha.Subtext0

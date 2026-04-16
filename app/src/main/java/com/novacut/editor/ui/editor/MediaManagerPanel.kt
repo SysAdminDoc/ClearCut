@@ -4,20 +4,14 @@ import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.PermMedia
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.VideoFile
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -58,11 +52,12 @@ data class MediaAsset(
     val isAccessible: Boolean
 )
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MediaManagerPanel(
     tracks: List<Track>,
     onJumpToClip: (String) -> Unit,
-    onRelinkMedia: (Uri, Uri) -> Unit,
+    onRelinkMedia: (Uri) -> Unit,
     onRemoveUnused: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier
@@ -103,6 +98,7 @@ fun MediaManagerPanel(
         icon = Icons.Default.PermMedia,
         accent = if (missingCount > 0) Mocha.Red else Mocha.Blue,
         onClose = onClose,
+        closeContentDescription = stringResource(R.string.media_manager_close_cd),
         modifier = modifier,
         scrollable = true
     ) {
@@ -143,39 +139,33 @@ fun MediaManagerPanel(
                 }
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 MediaHealthMetric(
                     title = stringResource(R.string.media_stat_assets),
                     value = if (isAnalyzing) "..." else assets.size.toString(),
                     accent = Mocha.Blue,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.widthIn(min = 132.dp)
                 )
                 MediaHealthMetric(
                     title = stringResource(R.string.media_stat_size),
                     value = if (isAnalyzing) "..." else formatFileSize(totalSize),
                     accent = Mocha.Peach,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.widthIn(min = 132.dp)
                 )
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
                 MediaHealthMetric(
                     title = stringResource(R.string.media_stat_missing),
                     value = if (isAnalyzing) "..." else missingCount.toString(),
                     accent = if (missingCount > 0) Mocha.Red else Mocha.Green,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.widthIn(min = 132.dp)
                 )
                 MediaHealthMetric(
                     title = stringResource(R.string.media_stat_empty_tracks),
                     value = emptyTrackCount.toString(),
                     accent = if (emptyTrackCount > 0) Mocha.Yellow else Mocha.Green,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.widthIn(min = 132.dp)
                 )
             }
 
@@ -264,7 +254,8 @@ fun MediaManagerPanel(
                         assets.forEach { asset ->
                             MediaAssetCard(
                                 asset = asset,
-                                onJumpToClip = onJumpToClip
+                                onJumpToClip = onJumpToClip,
+                                onRelinkMedia = onRelinkMedia
                             )
                         }
                     }
@@ -350,13 +341,16 @@ private fun MediaHealthMetric(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun MediaAssetCard(
     asset: MediaAsset,
-    onJumpToClip: (String) -> Unit
+    onJumpToClip: (String) -> Unit,
+    onRelinkMedia: (Uri) -> Unit
 ) {
     val accent = if (asset.isAccessible) Mocha.Blue else Mocha.Red
     val statusLabel = if (asset.isAccessible) "Online" else "Missing"
+    val usageLabel = if (asset.usedInClipIds.size == 1) "Used in 1 clip" else "Used in ${asset.usedInClipIds.size} clips"
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -429,36 +423,55 @@ private fun MediaAssetCard(
 
             if (!asset.isAccessible) {
                 Text(
-                    text = "This source file is unavailable on this device. Relink support is not available yet, so NovaCut will need the original file path restored.",
+                    text = "This source file is unavailable on this device. Restore the original path before export. The relink action below shows the current support status for this build.",
                     style = MaterialTheme.typography.bodySmall,
                     color = Mocha.Subtext0
                 )
             }
 
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text(
-                    text = if (asset.usedInClipIds.size == 1) "Used in 1 clip" else "Used in ${asset.usedInClipIds.size} clips",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (asset.usedInClipIds.isEmpty()) Mocha.Yellow else Mocha.Green
+                PremiumPanelPill(
+                    text = usageLabel,
+                    accent = if (asset.usedInClipIds.isEmpty()) Mocha.Yellow else Mocha.Green
                 )
 
-                if (asset.usedInClipIds.isNotEmpty()) {
-                    OutlinedButton(
-                        onClick = { onJumpToClip(asset.usedInClipIds.first()) },
-                        shape = RoundedCornerShape(16.dp),
-                        border = BorderStroke(1.dp, accent.copy(alpha = 0.25f)),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = accent)
-                    ) {
-                        androidx.compose.material3.Icon(
-                            imageVector = Icons.Default.MyLocation,
-                            contentDescription = stringResource(R.string.cd_media_goto)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "Go to first use")
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (!asset.isAccessible) {
+                        OutlinedButton(
+                            onClick = { onRelinkMedia(asset.uri) },
+                            shape = RoundedCornerShape(16.dp),
+                            border = BorderStroke(1.dp, accent.copy(alpha = 0.25f)),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = accent)
+                        ) {
+                            androidx.compose.material3.Icon(
+                                imageVector = Icons.Default.Link,
+                                contentDescription = stringResource(R.string.media_manager_relink_cd)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = stringResource(R.string.media_manager_relink_cd))
+                        }
+                    }
+
+                    if (asset.usedInClipIds.isNotEmpty()) {
+                        OutlinedButton(
+                            onClick = { onJumpToClip(asset.usedInClipIds.first()) },
+                            shape = RoundedCornerShape(16.dp),
+                            border = BorderStroke(1.dp, accent.copy(alpha = 0.25f)),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = accent)
+                        ) {
+                            androidx.compose.material3.Icon(
+                                imageVector = Icons.Default.MyLocation,
+                                contentDescription = stringResource(R.string.cd_media_goto)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = "Go to first use")
+                        }
                     }
                 }
             }
@@ -530,7 +543,7 @@ private fun analyzeMediaAssets(context: Context, tracks: List<Track>): List<Medi
             usedInClipIds = clips.map { it.id },
             isAccessible = accessible
         )
-    }.sortedByDescending { it.usedInClipIds.size }
+    }.sortedWith(compareBy<MediaAsset> { it.isAccessible }.thenByDescending { it.usedInClipIds.size })
 }
 
 private fun formatFileSize(bytes: Long): String = when {

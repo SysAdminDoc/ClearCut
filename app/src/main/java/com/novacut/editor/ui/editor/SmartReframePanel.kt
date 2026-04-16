@@ -3,16 +3,7 @@ package com.novacut.editor.ui.editor
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Crop
@@ -23,9 +14,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.novacut.editor.R
 import com.novacut.editor.model.AspectRatio
 import com.novacut.editor.ui.theme.Mocha
 
@@ -42,6 +36,7 @@ private val reframeOptions = listOf(
     ReframeOption(AspectRatio.RATIO_4_3, "Classic")
 )
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SmartReframePanel(
     currentAspect: AspectRatio,
@@ -50,12 +45,14 @@ fun SmartReframePanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isCompactGrid = LocalConfiguration.current.screenWidthDp < 430
     PremiumEditorPanel(
-        title = "Smart Reframe",
+        title = stringResource(R.string.smart_reframe_title),
         subtitle = "Retarget the frame for different platforms while keeping the shot focused on the subject.",
         icon = Icons.Default.Crop,
         accent = Mocha.Mauve,
         onClose = onClose,
+        closeContentDescription = stringResource(R.string.smart_reframe_close_cd),
         modifier = modifier,
         scrollable = true,
         headerActions = {
@@ -99,7 +96,7 @@ fun SmartReframePanel(
                         accent = Mocha.Mauve
                     )
                     PremiumPanelPill(
-                        text = if (isProcessing) "Reframing" else "Focus assist",
+                        text = if (isProcessing) "Reframing" else "${reframeOptions.size} targets",
                         accent = if (isProcessing) Mocha.Peach else Mocha.Blue
                     )
                 }
@@ -120,25 +117,19 @@ fun SmartReframePanel(
                 color = Mocha.Subtext0
             )
 
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                reframeOptions.chunked(2).forEach { rowOptions ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        rowOptions.forEach { option ->
-                            SmartReframeCard(
-                                option = option,
-                                isSelected = option.ratio == currentAspect,
-                                isProcessing = isProcessing,
-                                onClick = { onReframe(option.ratio) },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                        if (rowOptions.size == 1) {
-                            Spacer(modifier = Modifier.weight(1f))
-                        }
-                    }
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                reframeOptions.forEach { option ->
+                    SmartReframeCard(
+                        option = option,
+                        isSelected = option.ratio == currentAspect,
+                        isProcessing = isProcessing,
+                        onClick = { onReframe(option.ratio) },
+                        previewMaxSize = if (isCompactGrid) 64.dp else 72.dp,
+                        modifier = Modifier.widthIn(min = if (isCompactGrid) 136.dp else 156.dp, max = 220.dp)
+                    )
                 }
             }
         }
@@ -151,11 +142,12 @@ private fun SmartReframeCard(
     isSelected: Boolean,
     isProcessing: Boolean,
     onClick: () -> Unit,
+    previewMaxSize: Dp,
     modifier: Modifier = Modifier
 ) {
     val accent = if (isSelected) Mocha.Mauve else Mocha.Blue
     val previewRatio = option.ratio.toFloat()
-    val (previewWidth, previewHeight) = computePreviewDimensions(previewRatio, 72.dp)
+    val (previewWidth, previewHeight) = computePreviewDimensions(previewRatio, previewMaxSize)
 
     Surface(
         modifier = modifier,

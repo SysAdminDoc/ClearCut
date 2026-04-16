@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.MaterialTheme
@@ -24,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -42,6 +41,9 @@ fun UndoHistoryPanel(
 ) {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val selectedUndoIndex = (currentIndex - 1).coerceAtLeast(-1)
+    val futureCount = remember(entries, selectedUndoIndex) {
+        entries.count { it.index > selectedUndoIndex && selectedUndoIndex >= 0 }
+    }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -56,6 +58,7 @@ fun UndoHistoryPanel(
         icon = Icons.Default.History,
         accent = Mocha.Mauve,
         onClose = onClose,
+        closeContentDescription = stringResource(R.string.undo_history_close),
         modifier = modifier,
         scrollable = true
     ) {
@@ -93,8 +96,18 @@ fun UndoHistoryPanel(
                         text = "${entries.size} actions",
                         accent = Mocha.Mauve
                     )
+                    if (futureCount > 0) {
+                        PremiumPanelPill(
+                            text = stringResource(R.string.undo_history_newer_count, futureCount),
+                            accent = Mocha.Overlay1
+                        )
+                    }
                     PremiumPanelPill(
-                        text = if (selectedUndoIndex >= 0) "Step ${selectedUndoIndex + 1}" else "Live state",
+                        text = if (selectedUndoIndex >= 0) {
+                            stringResource(R.string.undo_history_step_format, selectedUndoIndex + 1)
+                        } else {
+                            stringResource(R.string.undo_history_live_state)
+                        },
                         accent = Mocha.Green
                     )
                 }
@@ -111,20 +124,41 @@ fun UndoHistoryPanel(
                     color = Mocha.Subtext0
                 )
             } else {
-                LazyColumn(
+                Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(entries, key = { it.index }) { entry ->
-                        val isCurrent = entry.index == selectedUndoIndex
-                        val isFuture = entry.index > selectedUndoIndex && selectedUndoIndex >= 0
-                        UndoHistoryRow(
-                            entry = entry,
-                            isCurrent = isCurrent,
-                            isFuture = isFuture,
-                            relativeTime = formatRelativeTime(now, entry.timestamp),
-                            onClick = { onJumpTo(entry.index) }
-                        )
+                    if (futureCount > 0) {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = Mocha.Surface0,
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
+                            border = BorderStroke(1.dp, Mocha.CardStroke)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.undo_history_future_hint),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Mocha.Subtext0,
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
+                            )
+                        }
+                    }
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        entries.forEach { entry ->
+                            val isCurrent = entry.index == selectedUndoIndex
+                            val isFuture = entry.index > selectedUndoIndex && selectedUndoIndex >= 0
+                            UndoHistoryRow(
+                                entry = entry,
+                                isCurrent = isCurrent,
+                                isFuture = isFuture,
+                                relativeTime = formatRelativeTime(now, entry.timestamp),
+                                onClick = { onJumpTo(entry.index) }
+                            )
+                        }
                     }
                 }
             }
@@ -140,6 +174,7 @@ private fun UndoHistoryRow(
     relativeTime: String,
     onClick: () -> Unit
 ) {
+    val canRestore = !isCurrent && !isFuture
     val accent = when {
         isCurrent -> Mocha.Mauve
         isFuture -> Mocha.Overlay1
@@ -147,15 +182,28 @@ private fun UndoHistoryRow(
     }
 
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = if (isCurrent) accent.copy(alpha = 0.14f) else Mocha.PanelRaised,
+        modifier = Modifier
+            .fillMaxWidth()
+            .alpha(if (canRestore || isCurrent) 1f else 0.82f),
+        color = when {
+            isCurrent -> accent.copy(alpha = 0.14f)
+            isFuture -> Mocha.PanelHighest
+            else -> Mocha.PanelRaised
+        },
         shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, if (isCurrent) accent.copy(alpha = 0.24f) else Mocha.CardStroke)
+        border = BorderStroke(
+            1.dp,
+            when {
+                isCurrent -> accent.copy(alpha = 0.24f)
+                isFuture -> Mocha.CardStroke.copy(alpha = 0.72f)
+                else -> Mocha.CardStroke
+            }
+        )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onClick)
+                .clickable(enabled = canRestore, onClick = onClick)
                 .padding(14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
@@ -196,9 +244,9 @@ private fun UndoHistoryRow(
 
             PremiumPanelPill(
                 text = when {
-                    isCurrent -> "Current"
-                    isFuture -> "Ahead"
-                    else -> "Jump"
+                    isCurrent -> stringResource(R.string.undo_history_status_current)
+                    isFuture -> stringResource(R.string.undo_history_status_newer)
+                    else -> stringResource(R.string.undo_history_status_restore)
                 },
                 accent = accent
             )
