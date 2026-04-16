@@ -500,11 +500,11 @@ private fun SubMenuGrid(
                         Column(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(14.dp))
-                                .then(if (!isDisabled) Modifier.clickable { onItemSelected(item.id) } else Modifier)
+                                .clickable(enabled = !isDisabled) { onItemSelected(item.id) }
                                 .background(Mocha.PanelHighest.copy(alpha = 0.86f))
                                 .padding(horizontal = 6.dp, vertical = 10.dp)
                                 .width(60.dp)
-                                .then(if (isDisabled) Modifier.alpha(0.35f) else Modifier),
+                                .alpha(if (isDisabled) 0.35f else 1f),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             val itemLabel = stringResource(item.labelRes)

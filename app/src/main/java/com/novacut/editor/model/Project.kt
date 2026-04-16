@@ -144,14 +144,18 @@ data class Clip(
         val trimRange = trimEndMs - trimStartMs
         if (trimRange <= 0) return 0L
         val effectiveSpeed = if (speedCurve != null && speedCurve.points.size >= 2) {
-            // Average speed across curve sample points
+            // Real-time duration is integral(dt_source / speed(t)), so the *harmonic*
+            // mean of speed (= 1 / average(1/speed)) is what scales trim range to
+            // wall-clock duration. Arithmetic mean would underestimate duration on a
+            // curve that mixes fast + slow segments (e.g. 0.5x then 2x = harmonic 0.8x,
+            // arithmetic 1.25x — using arithmetic shrinks the timeline by 56%).
             val samples = 20
-            var sumSpeed = 0f
+            var sumReciprocal = 0f
             for (i in 0 until samples) {
                 val t = i.toLong() * trimRange / samples
-                sumSpeed += speedCurve.getSpeedAt(t, trimRange).coerceAtLeast(0.01f)
+                sumReciprocal += 1f / speedCurve.getSpeedAt(t, trimRange).coerceAtLeast(0.01f)
             }
-            (sumSpeed / samples).coerceAtLeast(0.01f)
+            (samples / sumReciprocal).coerceAtLeast(0.01f)
         } else {
             speed.coerceAtLeast(0.01f)
         }
