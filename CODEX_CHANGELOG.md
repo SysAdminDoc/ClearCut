@@ -824,3 +824,78 @@ Emulator verification completed:
 - AGP is still `8.7.3`, so the project builds cleanly with `compileSdk = 36` but continues to print the known compatibility warning because that AGP line was officially tested through API 35.
 - I reverified build, test, lint, install, and launch after this pass, but I did not do a full manual round-trip through long exports, archive restore UI, or interrupted model downloads on device after the final patchset.
 - The new model minimum-size guards are intentionally conservative; if upstream model packaging changes materially, those thresholds may need a small follow-up adjustment rather than a logic rewrite.
+
+---
+
+## Audit Pass 3 — 2026-04-16
+
+Continuation audit from commit `6034d3c`. Focused on correctness, cancellation, and state-lifecycle bugs across the export pipeline and FileProvider configuration.
+
+### Bugs found and fixed
+
+#### 1. Camera capture crash (CRITICAL)
+**File:** `app/src/main/res/xml/file_paths.xml`
+
+Prior audit moved camera capture storage from `cacheDir/camera/` to `filesDir/media/` (in `MediaPicker.kt`) but did not update the FileProvider XML. The stale `<cache-path name="video_capture" path="camera/" />` entry no longer matched the actual write path, causing `IllegalArgumentException: Failed to find configured root` at runtime when the user tries to record video via the system camera.
+
+**Fix:** Replaced with `<files-path name="camera_media" path="media/" />`.
+
+#### 2. GIF export uncancellable (HIGH)
+**File:** `app/src/main/java/com/novacut/editor/ui/editor/ExportDelegate.kt`
+
+GIF export ran entirely within ExportDelegate's coroutine scope, bypassing VideoEngine entirely. `cancelExport()` only called `videoEngine.cancelExport()`, which had no effect on the GIF path. Users pressing Cancel during a GIF export saw no response.
+
+**Fix:**
+- Track the GIF coroutine job via `@Volatile gifExportJob` field
+- `cancelExport()` now cancels the GIF job before calling `videoEngine.cancelExport()`
+- Added `ensureActive()` check between GIF frames for cooperative cancellation
+- Added `CancellationException` handler that cleans up the partial GIF file and sets CANCELLED state
+- `gifExportJob` cleared in `finally` block
+
+#### 3. Transformer listener race condition (MEDIUM-HIGH)
+**File:** `app/src/main/java/com/novacut/editor/engine/VideoEngine.kt`
+
+`Transformer.Listener.onCompleted()` and `onError()` only guarded against `CANCELLED` state, but the export progress poll loop can also set `ERROR` (on timeout). A late-arriving Transformer callback after timeout could overwrite the ERROR state with COMPLETE, causing the user to see a success toast for a timed-out export.
+
+**Fix:** Broadened guard from `if (_exportState.value == ExportState.CANCELLED) return` to `if (_exportState.value != ExportState.EXPORTING) return` in both listener callbacks.
+
+#### 4. onCleared() clobbers active export state (MEDIUM)
+**File:** `app/src/main/java/com/novacut/editor/ui/editor/EditorViewModel.kt`
+
+`onCleared()` unconditionally called `videoEngine.resetExportState()`, which resets export state to IDLE. If the user navigates away while an export is running, ExportService (which observes the same state flows) would see IDLE instead of the terminal COMPLETE/ERROR/CANCELLED and never stop itself.
+
+**Fix:** Made `resetExportState()` conditional: only called when `exportState.value != ExportState.EXPORTING`.
+
+### Verification
+
+All commands run successfully after fixes:
+
+- `.\gradlew.bat assembleDebug` — BUILD SUCCESSFUL
+- `.\gradlew.bat assembleRelease` — BUILD SUCCESSFUL
+- `.\gradlew.bat testDebugUnitTest` — BUILD SUCCESSFUL (4 test suites pass)
+- `.\gradlew.bat lintDebug` — BUILD SUCCESSFUL, 0 errors, 205 warnings (down from 208)
+
+### Codebase review (no changes needed)
+
+The following files were read and verified as correct:
+
+- `ExportService.kt` — Foreground service lifecycle and state observation are sound
+- `ProjectArchive.kt` — Traversal/size/count limits from prior audit are intact
+- `MainActivity.kt` — Intent validation (content:// + video/* MIME) is correct
+- `ProjectAutoSave.kt` — Mutex, atomic writes, backup recovery all robust
+- `TemplateManager.kt` — Atomic writes and import normalization correct
+- `SettingsRepository.kt` — IOException recovery intact
+- `EffectShareEngine.kt` — 1MB import size limit correct
+- `InpaintingEngine.kt` — Model download validation correct
+- `BoundedIo.kt`, `AtomicFiles.kt`, `FileNaming.kt` — Utility code sound
+- `ProjectDatabase.kt` — Room DB v5 migration chain correct
+- `MediaPicker.kt` — Camera capture writes to `filesDir/media/` (now matches FileProvider)
+- `ExportConfig.kt`, `FrameCapture.kt`, `ExportFileType.kt` — No issues
+
+### Remaining risks
+
+1. **GIF memory pressure** — GIF encoding holds all frames as Bitmaps in memory. Large/long GIF exports on low-memory devices could OOM. Mitigation would require streaming to disk or frame-at-a-time encoding.
+2. **Multi-track video compositing** — Export collects all visible video tracks but Media3 Transformer renders them sequentially (not composited). True overlay/PiP requires the Compositor API.
+3. **AGP 8.7.3 + compileSdk 36** — Builds clean but prints compatibility warning. Upgrade to AGP 8.8+ when stable.
+4. **Integration test coverage** — Unit tests cover utilities but no instrumented tests exist for export pipeline, auto-save recovery, or FileProvider URI resolution.
+5. **clip.isReversed not exported** — Known limitation (Media3 has no reverse playback in Transformer). Works in preview only.

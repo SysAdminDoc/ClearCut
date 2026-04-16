@@ -3464,7 +3464,11 @@ class EditorViewModel @Inject constructor(
         voiceoverEngine.release()
         ttsEngine.stopPreview()
         videoEngine.removePlayerListener()
-        videoEngine.resetExportState()
+        // Only reset export state if no export is actively running — the ExportService
+        // observes the same state flows and needs to see the terminal state to stop itself.
+        if (videoEngine.exportState.value != ExportState.EXPORTING) {
+            videoEngine.resetExportState()
+        }
         cancelWaveformLoads()
         audioEngine.clearWaveformCache()
         // DON'T call videoEngine.release() or ttsEngine.release() — they're @Singletons

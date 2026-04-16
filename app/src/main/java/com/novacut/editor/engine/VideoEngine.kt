@@ -839,7 +839,8 @@ class VideoEngine @Inject constructor(
 
             val listener = object : Transformer.Listener {
                 override fun onCompleted(composition: Composition, exportResult: ExportResult) {
-                    if (_exportState.value == ExportState.CANCELLED) return
+                    // Guard against callbacks arriving after cancellation or timeout
+                    if (_exportState.value != ExportState.EXPORTING) return
                     _exportState.value = ExportState.COMPLETE
                     _exportProgress.value = 1f
                     activeExportOutputFile = null
@@ -851,7 +852,8 @@ class VideoEngine @Inject constructor(
                     exportResult: ExportResult,
                     exportException: ExportException
                 ) {
-                    if (_exportState.value == ExportState.CANCELLED) return
+                    // Guard against callbacks arriving after cancellation or timeout
+                    if (_exportState.value != ExportState.EXPORTING) return
                     Log.e(TAG, "Export failed", exportException)
                     _exportErrorMessage.value = exportException.message ?: "Export encoding failed"
                     _exportState.value = ExportState.ERROR

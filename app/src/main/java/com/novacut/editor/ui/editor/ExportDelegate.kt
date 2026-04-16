@@ -21,6 +21,7 @@ import com.novacut.editor.model.ChapterMarker
 import com.novacut.editor.model.ExportConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -44,8 +45,22 @@ class ExportDelegate(
     private val showExportSheet: () -> Unit
 ) {
     // --- Export ---
+    @Volatile private var gifExportJob: kotlinx.coroutines.Job? = null
+
     fun cancelExport() {
+        // Cancel GIF export coroutine if one is running
+        gifExportJob?.cancel()
+        gifExportJob = null
         videoEngine.cancelExport()
+        // If VideoEngine wasn't in EXPORTING state (e.g., GIF export path),
+        // ensure the UI state reflects cancellation
+        val currentState = stateFlow.value.exportState
+        if (currentState == ExportState.EXPORTING) {
+            stateFlow.update { it.copy(
+                exportState = ExportState.CANCELLED,
+                exportProgress = 0f
+            ) }
+        }
     }
 
     fun startExport(outputDir: File, preferredOutputName: String? = null) {
@@ -73,7 +88,7 @@ class ExportDelegate(
                 exportState = ExportState.EXPORTING,
                 exportErrorMessage = null
             ) }
-            scope.launch {
+            gifExportJob = scope.launch {
                 val frames = mutableListOf<android.graphics.Bitmap>()
                 var gifFile: File? = null
                 try {
@@ -91,6 +106,8 @@ class ExportDelegate(
                     val maxWidth = configWithChapters.gifMaxWidth
 
                     for (i in 0 until frameCount) {
+                        // Check for cancellation between frames
+                        ensureActive()
                         val timeMs = i * frameIntervalMs
                         val clip = allClips.lastOrNull { it.timelineStartMs <= timeMs } ?: continue
                         val clipTimeUs = (((timeMs - clip.timelineStartMs) * clip.speed).toLong() + clip.trimStartMs) * 1000
@@ -125,6 +142,13 @@ class ExportDelegate(
                         lastExportedFilePath = targetGifFile.absolutePath
                     ) }
                     showToast("GIF exported: ${targetGifFile.name}")
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    android.util.Log.d("ExportDelegate", "GIF export cancelled")
+                    gifFile?.delete()
+                    stateFlow.update { it.copy(
+                        exportState = ExportState.CANCELLED,
+                        exportProgress = 0f
+                    ) }
                 } catch (e: Exception) {
                     android.util.Log.w("ExportDelegate", "GIF export failed", e)
                     gifFile?.delete()
@@ -133,6 +157,7 @@ class ExportDelegate(
                         exportErrorMessage = e.message ?: "GIF export failed"
                     ) }
                 } finally {
+                    gifExportJob = null
                     frames.forEach { bitmap ->
                         if (!bitmap.isRecycled) {
                             bitmap.recycle()
