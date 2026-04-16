@@ -45,6 +45,7 @@ fun PremiumEditorPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
     scrollable: Boolean = false,
+    closeContentDescription: String? = null,
     headerActions: @Composable RowScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -116,7 +117,7 @@ fun PremiumEditorPanel(
                 headerActions()
                 PremiumPanelIconButton(
                     icon = Icons.Default.Close,
-                    contentDescription = stringResource(R.string.tool_close),
+                    contentDescription = closeContentDescription ?: stringResource(R.string.tool_close),
                     onClick = onClose
                 )
             }

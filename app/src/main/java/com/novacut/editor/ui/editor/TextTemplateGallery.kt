@@ -1,12 +1,12 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package com.novacut.editor.ui.editor
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -14,7 +14,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -27,10 +26,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.novacut.editor.R
 import com.novacut.editor.model.*
 import com.novacut.editor.ui.theme.Mocha
+import java.util.Locale
 
 // Pre-built text templates
 val builtInTextTemplates = listOf(
@@ -222,67 +223,166 @@ fun TextTemplateGallery(
 
     PremiumEditorPanel(
         title = stringResource(R.string.panel_text_template_title),
-        subtitle = "Start from polished lower thirds, title cards, and CTAs instead of styling every text layer by hand.",
+        subtitle = stringResource(R.string.panel_text_template_subtitle),
         icon = Icons.Default.Dashboard,
         accent = accent,
         onClose = onClose,
+        closeContentDescription = stringResource(R.string.panel_text_template_close_cd),
         modifier = modifier.heightIn(max = 560.dp)
     ) {
         PremiumPanelCard(accent = accent) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                PremiumPanelPill(
-                    text = "${builtInTextTemplates.size + animatedTemplates.size} looks",
-                    accent = accent
-                )
-                PremiumPanelPill(
-                    text = "Insert at ${formatTemplateTime(playheadMs)}",
-                    accent = Mocha.Sky
-                )
-                PremiumPanelPill(
-                    text = if (showAnimated) stringResource(R.string.panel_text_template_animated) else stringResource(R.string.panel_text_template_static),
-                    accent = Mocha.Pink
-                )
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val isCompactLayout = maxWidth < 420.dp
+                if (isCompactLayout) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Column {
+                            Text(
+                                text = stringResource(R.string.panel_text_template_modes_title),
+                                color = Mocha.Text,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = stringResource(R.string.panel_text_template_modes_description),
+                                color = Mocha.Subtext0,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            PremiumPanelPill(
+                                text = pluralStringResource(
+                                    R.plurals.panel_text_template_looks,
+                                    builtInTextTemplates.size + animatedTemplates.size,
+                                    builtInTextTemplates.size + animatedTemplates.size
+                                ),
+                                accent = accent
+                            )
+                            PremiumPanelPill(
+                                text = stringResource(
+                                    R.string.panel_text_template_insert_at,
+                                    formatTemplateTime(playheadMs)
+                                ),
+                                accent = Mocha.Sky
+                            )
+                            PremiumPanelPill(
+                                text = if (showAnimated) {
+                                    stringResource(R.string.panel_text_template_animated)
+                                } else {
+                                    stringResource(R.string.panel_text_template_static)
+                                },
+                                accent = Mocha.Pink
+                            )
+                        }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.panel_text_template_modes_title),
+                                color = Mocha.Text,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = stringResource(R.string.panel_text_template_modes_description),
+                                color = Mocha.Subtext0,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column(
+                            horizontalAlignment = Alignment.End,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            PremiumPanelPill(
+                                text = pluralStringResource(
+                                    R.plurals.panel_text_template_looks,
+                                    builtInTextTemplates.size + animatedTemplates.size,
+                                    builtInTextTemplates.size + animatedTemplates.size
+                                ),
+                                accent = accent
+                            )
+                            PremiumPanelPill(
+                                text = stringResource(
+                                    R.string.panel_text_template_insert_at,
+                                    formatTemplateTime(playheadMs)
+                                ),
+                                accent = Mocha.Sky
+                            )
+                            PremiumPanelPill(
+                                text = if (showAnimated) {
+                                    stringResource(R.string.panel_text_template_animated)
+                                } else {
+                                    stringResource(R.string.panel_text_template_static)
+                                },
+                                accent = Mocha.Pink
+                            )
+                        }
+                    }
+                }
             }
 
-            Text(
-                text = "Template modes",
-                color = Mocha.Rosewater,
-                style = MaterialTheme.typography.labelLarge
-            )
-            Text(
-                text = "Static presets are great for fast lower thirds and branded text. Animated presets help build more theatrical intros, callouts, and end cards.",
-                color = Mocha.Subtext0,
-                style = MaterialTheme.typography.bodyMedium
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                TemplateModeCard(
-                    title = stringResource(R.string.panel_text_template_static),
-                    subtitle = "Fast styled overlays",
-                    selected = !showAnimated,
-                    accent = Mocha.Sapphire,
-                    onClick = { showAnimated = false },
-                    modifier = Modifier.weight(1f)
-                )
-                TemplateModeCard(
-                    title = stringResource(R.string.panel_text_template_animated),
-                    subtitle = "Motion-first heroes",
-                    selected = showAnimated,
-                    accent = Mocha.Yellow,
-                    onClick = { showAnimated = true },
-                    modifier = Modifier.weight(1f)
-                )
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val isCompactLayout = maxWidth < 420.dp
+                if (isCompactLayout) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        TemplateModeCard(
+                            title = stringResource(R.string.panel_text_template_static),
+                            subtitle = stringResource(R.string.panel_text_template_static_subtitle),
+                            selected = !showAnimated,
+                            accent = Mocha.Sapphire,
+                            onClick = { showAnimated = false },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        TemplateModeCard(
+                            title = stringResource(R.string.panel_text_template_animated),
+                            subtitle = stringResource(R.string.panel_text_template_animated_subtitle),
+                            selected = showAnimated,
+                            accent = Mocha.Yellow,
+                            onClick = { showAnimated = true },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        TemplateModeCard(
+                            title = stringResource(R.string.panel_text_template_static),
+                            subtitle = stringResource(R.string.panel_text_template_static_subtitle),
+                            selected = !showAnimated,
+                            accent = Mocha.Sapphire,
+                            onClick = { showAnimated = false },
+                            modifier = Modifier.weight(1f)
+                        )
+                        TemplateModeCard(
+                            title = stringResource(R.string.panel_text_template_animated),
+                            subtitle = stringResource(R.string.panel_text_template_animated_subtitle),
+                            selected = showAnimated,
+                            accent = Mocha.Yellow,
+                            onClick = { showAnimated = true },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
             }
 
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 TemplateCategoryChip(
                     label = stringResource(R.string.panel_text_template_all),
@@ -305,56 +405,108 @@ fun TextTemplateGallery(
 
         PremiumPanelCard(accent = if (showAnimated) Mocha.Peach else Mocha.Blue) {
             Text(
-                text = if (showAnimated) "Animated collection" else "Static collection",
+                text = if (showAnimated) {
+                    stringResource(R.string.panel_text_template_collection_animated_title)
+                } else {
+                    stringResource(R.string.panel_text_template_collection_static_title)
+                },
                 color = Mocha.Rosewater,
                 style = MaterialTheme.typography.labelLarge
             )
             Text(
                 text = if (showAnimated) {
-                    "These templates lean into reveals, countdowns, and punchy motion. They are ideal when the title card needs to feel like part of the edit."
+                    stringResource(R.string.panel_text_template_collection_animated_description)
                 } else {
-                    "These presets apply layered typography instantly, so you can keep moving and only fine-tune the moments that matter."
+                    stringResource(R.string.panel_text_template_collection_static_description)
                 },
                 color = Mocha.Subtext0,
                 style = MaterialTheme.typography.bodyMedium
             )
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                PremiumPanelPill(
+                    text = pluralStringResource(
+                        R.plurals.panel_text_template_results,
+                        if (showAnimated) visibleAnimatedTemplates.size else visibleStaticTemplates.size,
+                        if (showAnimated) visibleAnimatedTemplates.size else visibleStaticTemplates.size
+                    ),
+                    accent = if (showAnimated) Mocha.Yellow else Mocha.Sapphire
+                )
+                PremiumPanelPill(
+                    text = stringResource(
+                        R.string.panel_text_template_category_format,
+                        selectedCategory?.displayName ?: stringResource(R.string.panel_text_template_all)
+                    ),
+                    accent = selectedCategory?.let(::templateCategoryAccent) ?: Mocha.Sky
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
         if (showAnimated) {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 320.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                items(visibleAnimatedTemplates, key = { it.id }) { template ->
-                    AnimatedTemplateCard(
-                        template = template,
-                        onClick = { onTemplateSelected(template.toTemplate()) }
-                    )
+            if (visibleAnimatedTemplates.isEmpty()) {
+                TemplateEmptyState(accent = Mocha.Peach)
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 160.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 332.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(visibleAnimatedTemplates, key = { it.id }) { template ->
+                        AnimatedTemplateCard(
+                            template = template,
+                            onClick = { onTemplateSelected(template.toTemplate()) }
+                        )
+                    }
                 }
             }
         } else {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 360.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                items(visibleStaticTemplates, key = { it.id }) { template ->
-                    TemplateCard(
-                        template = template,
-                        onClick = { onTemplateSelected(template) }
-                    )
+            if (visibleStaticTemplates.isEmpty()) {
+                TemplateEmptyState(accent = Mocha.Blue)
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 160.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 372.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(visibleStaticTemplates, key = { it.id }) { template ->
+                        TemplateCard(
+                            template = template,
+                            onClick = { onTemplateSelected(template) }
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun TemplateEmptyState(
+    accent: Color,
+    modifier: Modifier = Modifier
+) {
+    PremiumPanelCard(accent = accent, modifier = modifier) {
+        Text(
+            text = stringResource(R.string.panel_text_template_empty_title),
+            color = Mocha.Text,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold
+        )
+        Text(
+            text = stringResource(R.string.panel_text_template_empty_body),
+            color = Mocha.Subtext0,
+            style = MaterialTheme.typography.bodyMedium
+        )
     }
 }
 
@@ -439,13 +591,19 @@ private fun TemplateCard(
                     style = MaterialTheme.typography.bodySmall,
                     minLines = 2
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     PremiumPanelPill(
                         text = template.category.displayName,
                         accent = accent
                     )
                     PremiumPanelPill(
-                        text = "${template.durationMs / 1000}s",
+                        text = stringResource(
+                            R.string.panel_text_template_duration_format,
+                            template.durationMs / 1000L
+                        ),
                         accent = Mocha.Sky
                     )
                 }
@@ -581,7 +739,10 @@ private fun AnimatedTemplateCard(
                     style = MaterialTheme.typography.bodySmall,
                     minLines = 2
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     PremiumPanelPill(
                         text = template.category.displayName,
                         accent = template.accent
@@ -742,18 +903,19 @@ private fun templateCategoryAccent(category: TextTemplateCategory): Color = when
     TextTemplateCategory.MINIMAL -> Mocha.Lavender
 }
 
+@Composable
 private fun templateCategorySummary(category: TextTemplateCategory): String = when (category) {
-    TextTemplateCategory.LOWER_THIRD -> "Speaker IDs, headlines, and lower-third overlays."
-    TextTemplateCategory.TITLE_CARD -> "Full-frame openers and cinematic title moments."
-    TextTemplateCategory.END_SCREEN -> "Outro cards, thank-you screens, and sign-offs."
-    TextTemplateCategory.CALL_TO_ACTION -> "Conversion-focused prompts for product and creator edits."
-    TextTemplateCategory.SOCIAL -> "Handles, social tags, and creator identity treatments."
-    TextTemplateCategory.MINIMAL -> "Clean typography for chapter markers and quotes."
+    TextTemplateCategory.LOWER_THIRD -> stringResource(R.string.panel_text_template_category_lower_third)
+    TextTemplateCategory.TITLE_CARD -> stringResource(R.string.panel_text_template_category_title_card)
+    TextTemplateCategory.END_SCREEN -> stringResource(R.string.panel_text_template_category_end_screen)
+    TextTemplateCategory.CALL_TO_ACTION -> stringResource(R.string.panel_text_template_category_call_to_action)
+    TextTemplateCategory.SOCIAL -> stringResource(R.string.panel_text_template_category_social)
+    TextTemplateCategory.MINIMAL -> stringResource(R.string.panel_text_template_category_minimal)
 }
 
 private fun formatTemplateTime(playheadMs: Long): String {
     val totalSeconds = (playheadMs / 1000L).coerceAtLeast(0L)
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
-    return "%02d:%02d".format(minutes, seconds)
+    return String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds)
 }

@@ -93,6 +93,17 @@
     <string name="ai_segmentation_size">Selfie segmenter (~256 KB)</string>
     <string name="ai_segmentation_description">Pixel-accurate background removal</string>
     <string name="ai_processing_format">Processing: %1$s\u2026</string>
+    <string name="ai_tools_ready_now">Ready Now</string>
+    <string name="ai_tools_ready_now_description">These assists can run immediately with the current timeline selection and downloaded models.</string>
+    <string name="ai_tools_needs_clip">Needs a Selected Clip</string>
+    <string name="ai_tools_needs_clip_description">Select a clip on the timeline to unlock the tools below.</string>
+    <string name="ai_tools_clip_selected">Clip selected</string>
+    <string name="ai_tools_awaiting_clip">Awaiting clip</string>
+    <string name="ai_tool_status_running">Running</string>
+    <string name="ai_tool_status_ready">Ready</string>
+    <string name="ai_tool_status_clip_required">Clip required</string>
+    <string name="ai_tool_ready_hint">Tap to stage or run this assist.</string>
+    <string name="ai_tool_locked_hint">Select a clip to unlock this workflow.</string>
     <string name="ai_tool_auto_captions">Auto Captions</string>
     <string name="ai_tool_auto_captions_desc">Generate subtitles from speech</string>
     <string name="ai_tool_remove_bg">Remove BG</string>
@@ -245,6 +256,12 @@
     <string name="audio_fade_out">Fade Out (ms)</string>
     <string name="audio_status_ready">Ready to record</string>
     <string name="audio_status_recording">Recording</string>
+    <string name="audio_select_clip_description">Select a timeline clip to reveal waveform, fades, level control, and voiceover options here.</string>
+    <string name="audio_waveform_ready">Waveform ready</string>
+    <string name="audio_waveform_pending">Waveform pending</string>
+    <string name="audio_waveform_pending_description">Waveform preview will appear once NovaCut has decoded this clip’s audio.</string>
+    <string name="audio_voiceover_description">Record narration directly over the cut without leaving the audio workspace.</string>
+    <string name="audio_voiceover_close_cd">Close voiceover recorder</string>
 
     <!-- ColorGradingPanel -->
     <string name="color_grading_title">Color Grading</string>
@@ -255,11 +272,36 @@
     <string name="color_grading_active_lut">Active LUT</string>
     <string name="color_grading_no_lut_loaded">No LUT loaded</string>
     <string name="color_grading_import_lut">Import LUT (.cube / .3dl)</string>
+    <string name="panel_color_grading_subtitle">Shape primary tone, curves, qualifiers, and LUTs while preview stays in motion.</string>
+    <string name="color_grading_summary_title">Grade summary</string>
+    <string name="color_grading_qualifier_on">Qualifier on</string>
+    <string name="color_grading_qualifier_off">Qualifier off</string>
+    <string name="color_grading_tone_wheels_title">Tone wheels</string>
+    <string name="color_grading_tone_wheels_description">Lift shapes the shadows, gamma handles the mids, and gain pushes the highlights.</string>
+    <string name="color_grading_offset_description">Offset adds or subtracts overall channel energy before the rest of the grade.</string>
+    <string name="color_grading_curve_response_title">Curve response</string>
+    <string name="color_grading_curve_response_description">Add points directly on the graph to remap tonal response for each channel.</string>
 
     <!-- SpeedCurveEditor -->
     <string name="speed_title">Speed</string>
     <string name="speed_presets">Presets</string>
     <string name="speed_reverse_playback">Reverse Playback</string>
+    <string name="speed_summary_title">Speed overview</string>
+    <string name="speed_mode_constant_description">Set a clean playback rate for the whole clip, then fine-tune with the logarithmic slider.</string>
+    <string name="speed_mode_curve_description">Stage ramps and peaks across the clip, then reshape them directly on the graph.</string>
+    <string name="speed_curve_hint">Double-tap the graph to add a point, then drag existing points to sculpt the timing.</string>
+    <string name="speed_constant_hint">Use the quick speeds for common retimes, then refine the result with the fine control slider.</string>
+    <string name="speed_curve_points_label">Points: %1$d</string>
+    <string name="speed_curve_average_label">Average: %1$.2fx</string>
+    <string name="speed_curve_peak_label">Peak: %1$.2fx</string>
+    <string name="speed_current_label">Current: %1$.2fx</string>
+    <string name="speed_clip_duration_label">Clip: %1$s</string>
+    <string name="speed_preset_ramp_up">Ramp Up</string>
+    <string name="speed_preset_ramp_down">Ramp Down</string>
+    <string name="speed_preset_pulse">Pulse</string>
+    <string name="speed_preset_slow_mo">Slow Mo</string>
+    <string name="speed_preset_double">2x</string>
+    <string name="speed_preset_quad">4x</string>
 
     <!-- MaskEditorPanel -->
     <string name="mask_title">Masks</string>
@@ -267,6 +309,22 @@
     <string name="mask_invert">Invert Mask</string>
     <string name="mask_track_to_motion">Track to Motion</string>
     <string name="mask_inv_label">INV</string>
+    <string name="panel_mask_subtitle">Shape attention, blur, and reveal areas directly over the frame without leaving the cut.</string>
+    <string name="mask_stack_title">Mask stack</string>
+    <string name="mask_stack_description">Create geometric or freehand masks, then tune feather, opacity, inversion, and motion behavior from one place.</string>
+    <string name="mask_summary_total">Masks: %1$d</string>
+    <string name="mask_selection_none">No selection</string>
+    <string name="mask_metric_tracked">Tracked</string>
+    <string name="mask_metric_points">Points</string>
+    <string name="mask_shapes_title">Mask shapes</string>
+    <string name="mask_shapes_description">Select a mask to refine it, or add another shape for layered reveals and local adjustments.</string>
+    <string name="mask_selected_title">Selected mask</string>
+    <string name="mask_invert_description">Flip the inside and outside of the mask.</string>
+    <string name="mask_track_description">Keep the mask attached to tracked movement when supported by the shot.</string>
+    <string name="mask_none_selected_title">No mask selected</string>
+    <string name="mask_none_selected_description">Add a shape above or tap an existing mask to adjust feather, opacity, inversion, and motion behavior.</string>
+    <string name="mask_chip_points_format">Points: %1$d</string>
+    <string name="mask_chip_tracked">Tracked</string>
 
     <!-- StickerPickerPanel -->
     <string name="sticker_title">Stickers</string>
@@ -589,18 +647,52 @@
     <string name="panel_speed_reverse_hint_on">The clip is currently playing backward.</string>
     <string name="panel_speed_reverse_hint_off">Play the clip in its natural direction.</string>
     <string name="panel_transform_subtitle">Refine framing, scale, rotation, and overall presence.</string>
+    <string name="panel_transform_summary_title">Current framing</string>
+    <string name="panel_transform_summary_description">Check position, scale, rotation, and opacity before you fine-tune the shot.</string>
+    <string name="panel_transform_framing_title">Framing</string>
+    <string name="panel_transform_framing_description">Adjust where the clip sits in frame and how much room it takes up.</string>
+    <string name="panel_transform_presence_title">Presence</string>
+    <string name="panel_transform_presence_description">Dial in rotation and opacity so layered shots feel intentional.</string>
     <string name="panel_transform_scale">Scale</string>
     <string name="panel_crop_subtitle">Pick the canvas that matches where this cut will live.</string>
     <string name="panel_crop_live_canvas">Live canvas</string>
+    <string name="panel_crop_presets_title">Destination presets</string>
+    <string name="panel_crop_presets_description">Choose a canvas built for where this edit will be published.</string>
+    <string name="panel_crop_use_case_landscape">Landscape master</string>
+    <string name="panel_crop_use_case_short_form">Short-form ready</string>
+    <string name="panel_crop_use_case_square">Square social</string>
+    <string name="panel_crop_use_case_feed">Feed optimized</string>
+    <string name="panel_crop_use_case_cinematic">Cinematic widescreen</string>
+    <string name="crop_preset_platform_youtube_tv">YouTube / TV</string>
+    <string name="crop_preset_platform_tiktok_reels">TikTok / Reels</string>
+    <string name="crop_preset_platform_instagram_square">Instagram Square</string>
+    <string name="crop_preset_platform_instagram_portrait">Instagram Portrait</string>
+    <string name="crop_preset_platform_classic">Classic</string>
+    <string name="crop_preset_platform_portrait_classic">Portrait Classic</string>
+    <string name="crop_preset_platform_cinematic">Cinematic</string>
     <string name="panel_transition_subtitle">Blend between shots with transitions that feel intentional.</string>
     <string name="panel_transition_none_selected">No transition selected</string>
     <string name="panel_transition_active">Transition live</string>
     <string name="panel_transition_pick_one">Pick a style</string>
+    <string name="panel_transition_summary_title">Current handoff</string>
+    <string name="panel_transition_summary_description">Choose a transition style and tune its timing to shape how shots hand off.</string>
+    <string name="panel_transition_presets_title">Transition styles</string>
+    <string name="panel_transition_presets_description">Start with a clean move, then slow it down only as much as the cut needs.</string>
+    <string name="panel_transition_duration_title">Timing</string>
+    <string name="panel_transition_duration_description">Short transitions keep the edit moving. Longer ones feel more stylized and deliberate.</string>
+    <string name="panel_transition_duration_value">%1$d ms</string>
 
     <!-- UndoHistoryPanel -->
     <string name="undo_history_title">History</string>
     <string name="undo_history_close">Close history</string>
     <string name="undo_history_empty">No history yet</string>
+    <string name="undo_history_live_state">Live state</string>
+    <string name="undo_history_step_format">Step %1$d</string>
+    <string name="undo_history_newer_count">%1$d newer</string>
+    <string name="undo_history_future_hint">Newer steps stay visible for context. Use Redo to move forward again.</string>
+    <string name="undo_history_status_current">Current</string>
+    <string name="undo_history_status_newer">Newer</string>
+    <string name="undo_history_status_restore">Restore</string>
 
     <!-- MarkerListPanel -->
     <string name="marker_list_title">Markers</string>
@@ -634,6 +726,14 @@
     <string name="tts_close_cd">Close TTS panel</string>
     <string name="tts_speed_format">%.1fx</string>
     <string name="tts_pitch_format">%.1f</string>
+    <string name="tts_style_narrator_desc">Balanced documentary pacing.</string>
+    <string name="tts_style_casual_desc">Natural creator-style delivery.</string>
+    <string name="tts_style_energetic_desc">Fast promo cadence for hooks.</string>
+    <string name="tts_style_deep_desc">Lower, steadier voiceover tone.</string>
+    <string name="tts_style_soft_desc">Gentle read for reflective moments.</string>
+    <string name="tts_style_fast_desc">Quick read for short-form cutdowns.</string>
+    <string name="tts_style_slow_desc">Clearer spacing for explainers and tutorials.</string>
+    <string name="tts_style_dramatic_desc">Slower cinematic read with more weight.</string>
 
     <!-- CaptionEditorPanel -->
     <string name="caption_title">Captions</string>
@@ -669,6 +769,7 @@
     <string name="snapshot_name_hint">Snapshot name\u2026</string>
     <string name="snapshot_tracks_clips">%1$d tracks, %2$d clips</string>
     <string name="snapshot_restore">Restore</string>
+    <string name="snapshot_delete">Delete</string>
     <string name="snapshot_restore_cd">Restore snapshot</string>
     <string name="snapshot_delete_cd">Delete snapshot</string>
 
@@ -719,6 +820,8 @@
     <!-- BlendModeSelector -->
     <string name="blend_mode_title">Blend Mode</string>
     <string name="blend_mode_close_cd">Close blend mode</string>
+    <string name="blend_mode_subtitle">Choose how the selected clip fuses with the layers under it, from subtle darkening to full stylized composites.</string>
+    <string name="blend_mode_current_title">Current blend</string>
 
     <!-- RenderPreviewSheet -->
     <string name="render_preview_title">Render Analysis</string>
@@ -794,11 +897,26 @@
     <string name="panel_drawing_size">Size</string>
 
     <!-- EffectLibraryPanel -->
+    <string name="panel_effect_library_subtitle">Save, swap, and reuse effect chains so your look stays consistent across clips and projects.</string>
     <string name="panel_effect_library_description">Save, share, and reuse effect chains across clips and projects.</string>
+    <string name="panel_effect_library_workflow_title">Chain workflow</string>
     <string name="panel_effect_library_copy">Copy</string>
     <string name="panel_effect_library_paste">Paste</string>
     <string name="panel_effect_library_export">Export .ncfx</string>
     <string name="panel_effect_library_import">Import .ncfx</string>
+    <string name="panel_effect_library_status_clip_ready">Clip ready</string>
+    <string name="panel_effect_library_status_clip_needed">No clip selected</string>
+    <string name="panel_effect_library_status_buffer_ready">Paste buffer ready</string>
+    <string name="panel_effect_library_status_buffer_empty">Paste buffer empty</string>
+    <string name="panel_effect_library_copy_description">Capture the selected clip effect stack as a reusable chain.</string>
+    <string name="panel_effect_library_copy_disabled">Select a clip to capture its current chain.</string>
+    <string name="panel_effect_library_paste_description">Apply the buffered chain to the selected clip in one move.</string>
+    <string name="panel_effect_library_paste_needs_clip">Select a clip before you paste the buffered chain.</string>
+    <string name="panel_effect_library_paste_needs_buffer">Copy a chain first so there is something ready to paste.</string>
+    <string name="panel_effect_library_export_description">Package the selected clip look into an .ncfx preset you can share.</string>
+    <string name="panel_effect_library_export_disabled">Select a clip before exporting its look as a preset.</string>
+    <string name="panel_effect_library_import_description">Bring in a saved preset chain and keep the grade or treatment consistent.</string>
+    <string name="panel_effect_library_clip_required_title">Select a clip first</string>
     <string name="panel_effect_library_select_clip_hint">Select a clip to copy, paste, or export its effects.</string>
 
     <!-- FillerRemovalPanel -->
@@ -811,6 +929,17 @@
     <string name="panel_marker_search">Search markers\u2026</string>
     <string name="panel_marker_all">All</string>
     <string name="panel_marker_no_markers">No markers</string>
+    <string name="panel_markers_title">Markers</string>
+    <string name="panel_markers_subtitle">Search notes, filter by color, and jump straight to the moments that matter in the cut.</string>
+    <string name="panel_marker_empty_description">No timeline markers yet. Add markers while reviewing timing, notes, or audio beats.</string>
+    <string name="panel_marker_browse_description">Use search and color filters to tighten review passes without scrubbing the whole timeline.</string>
+    <string name="panel_marker_filtered_description">Try a broader search or clear the current color filter to bring markers back into view.</string>
+    <string name="panel_marker_total">Total: %1$d</string>
+    <string name="panel_marker_no_matches">No markers match this view</string>
+    <string name="panel_marker_default_name">Marker</string>
+    <string name="panel_marker_rename">Rename</string>
+    <string name="panel_marker_save">Save</string>
+    <string name="panel_marker_delete">Delete</string>
 
     <!-- MultiCamPanel -->
     <string name="panel_multi_cam_title">Multi-Cam</string>
@@ -831,17 +960,76 @@
     <string name="panel_snapshot_cancel">Cancel</string>
     <string name="panel_snapshot_save_hint">Save your project state to roll back later</string>
     <string name="panel_snapshot_untitled">Untitled Snapshot</string>
+    <string name="panel_snapshot_subtitle">Create restore points before experimenting, then roll the timeline back without losing your place.</string>
+    <string name="panel_snapshot_dialog_body">Name this restore point so you can jump back before a risky edit or export pass.</string>
+    <string name="panel_snapshot_overview_title">Restore points</string>
+    <string name="panel_snapshot_overview_ready">The latest snapshot was saved %1$s. Keep a clean trail before major timing or grading changes.</string>
+    <string name="panel_snapshot_overview_empty">Snapshots are lightweight checkpoints for your edit state before you commit to bigger decisions.</string>
+    <string name="panel_snapshot_latest_badge">Latest</string>
+    <string name="panel_snapshot_history_title">Snapshot history</string>
+    <string name="panel_snapshot_history_description">Restore a checkpoint to revisit a previous direction, or delete older versions once the edit path feels settled.</string>
+    <plurals name="panel_snapshot_saved_count">
+        <item quantity="one">%1$d saved snapshot</item>
+        <item quantity="other">%1$d saved snapshots</item>
+    </plurals>
 
     <!-- TextEditorSheet -->
     <string name="panel_text_editor_close">Close</string>
     <string name="panel_text_editor_text_label">Text</string>
     <string name="panel_text_editor_font_size">Font Size</string>
 
+    <!-- VideoScopesOverlay -->
+    <string name="video_scopes_title">Video Scopes</string>
+    <string name="video_scopes_close_cd">Close video scopes</string>
+    <string name="video_scopes_histogram_description">Check overall channel balance and clipped highs or lows at a glance.</string>
+    <string name="video_scopes_waveform_description">Compare luma and channel distribution across the frame while you grade.</string>
+    <string name="video_scopes_vectorscope_description">See hue and saturation drift so skin tones and brand colors stay intentional.</string>
+    <string name="video_scopes_status_waiting">Waiting for frame</string>
+    <string name="video_scopes_status_analyzing">Analyzing</string>
+    <string name="video_scopes_status_ready">Live</string>
+    <string name="video_scopes_waiting_title">No frame available yet</string>
+    <string name="video_scopes_waiting_body">Pause on a visible frame or scrub the timeline so NovaCut can analyze the current image.</string>
+    <string name="video_scopes_loading_title">Analyzing frame</string>
+    <string name="video_scopes_loading_body">NovaCut is sampling the current image for the selected scope.</string>
+    <plurals name="blend_mode_modes_count">
+        <item quantity="one">%1$d mode</item>
+        <item quantity="other">%1$d modes</item>
+    </plurals>
+
     <!-- TextTemplateGallery -->
     <string name="panel_text_template_title">Text Templates</string>
+    <string name="panel_text_template_subtitle">Start from polished lower thirds, title cards, and CTAs instead of styling every text layer by hand.</string>
     <string name="panel_text_template_static">Static</string>
     <string name="panel_text_template_animated">Animated</string>
     <string name="panel_text_template_all">All</string>
+    <string name="panel_text_template_close_cd">Close text templates</string>
+    <string name="panel_text_template_insert_at">Insert at %1$s</string>
+    <string name="panel_text_template_modes_title">Template modes</string>
+    <string name="panel_text_template_modes_description">Static presets are great for fast lower thirds and branded text. Animated presets help build more theatrical intros, callouts, and end cards.</string>
+    <string name="panel_text_template_static_subtitle">Fast styled overlays</string>
+    <string name="panel_text_template_animated_subtitle">Motion-first heroes</string>
+    <string name="panel_text_template_collection_static_title">Static collection</string>
+    <string name="panel_text_template_collection_static_description">These presets apply layered typography instantly, so you can keep moving and only fine-tune the moments that matter.</string>
+    <string name="panel_text_template_collection_animated_title">Animated collection</string>
+    <string name="panel_text_template_collection_animated_description">These templates lean into reveals, countdowns, and punchy motion. They are ideal when the title card needs to feel like part of the edit.</string>
+    <string name="panel_text_template_category_format">Category %1$s</string>
+    <string name="panel_text_template_empty_title">No templates in this view yet</string>
+    <string name="panel_text_template_empty_body">Switch modes or choose a different category to keep browsing preset text looks.</string>
+    <string name="panel_text_template_duration_format">%1$ds</string>
+    <string name="panel_text_template_category_lower_third">Speaker IDs, headlines, and lower-third overlays.</string>
+    <string name="panel_text_template_category_title_card">Full-frame openers and cinematic title moments.</string>
+    <string name="panel_text_template_category_end_screen">Outro cards, thank-you screens, and sign-offs.</string>
+    <string name="panel_text_template_category_call_to_action">Conversion-focused prompts for product and creator edits.</string>
+    <string name="panel_text_template_category_social">Handles, social tags, and creator identity treatments.</string>
+    <string name="panel_text_template_category_minimal">Clean typography for chapter markers and quotes.</string>
+    <plurals name="panel_text_template_looks">
+        <item quantity="one">%1$d look</item>
+        <item quantity="other">%1$d looks</item>
+    </plurals>
+    <plurals name="panel_text_template_results">
+        <item quantity="one">%1$d option</item>
+        <item quantity="other">%1$d options</item>
+    </plurals>
 
     <!-- BeatSyncPanel -->
     <string name="panel_beat_sync_tap">Tap Beats</string>
@@ -852,6 +1040,35 @@
 
     <!-- KeyframeCurveEditor -->
     <string name="panel_keyframes_title">Keyframes</string>
+    <string name="panel_keyframes_subtitle">Stage animation points, compare active curves, and shape how a clip moves over time.</string>
+    <string name="panel_keyframes_close_cd">Close keyframes</string>
+    <string name="panel_keyframes_summary_title">Motion overview</string>
+    <string name="panel_keyframes_summary_ready">Double-tap the curve view to add a keyframe on the first active property, or pick an existing diamond to refine its motion.</string>
+    <string name="panel_keyframes_summary_selected">%1$s is selected. Drag it in the curve view or change how it blends into the next move below.</string>
+    <string name="panel_keyframes_summary_empty">Turn on at least one property to start plotting motion curves and keyframes.</string>
+    <string name="panel_keyframes_playhead_format">Playhead %1$s</string>
+    <string name="panel_keyframes_properties_title">Animated properties</string>
+    <string name="panel_keyframes_properties_description">Turn on the curves you want to compare, then double-tap the graph to add new points at the playhead area.</string>
+    <string name="panel_keyframes_properties_empty">Turn on a property first so the graph knows which curve to add new keyframes to.</string>
+    <string name="panel_keyframes_curve_title">Curve view</string>
+    <string name="panel_keyframes_curve_description">Tap a diamond to select it, drag to reposition it, or double-tap the graph to add a point on the first active property.</string>
+    <string name="panel_keyframes_curve_description_empty">Pick a property above to light up its motion curve and make the graph interactive.</string>
+    <string name="panel_keyframes_curve_unavailable">This clip does not have a usable duration yet, so the curve view cannot be drawn.</string>
+    <string name="panel_keyframes_selection_title">Selected keyframe</string>
+    <string name="panel_keyframes_selection_description">Fine-tune this point’s timing, value, and interpolation without losing the bigger curve context.</string>
+    <string name="panel_keyframes_selection_empty_title">No keyframe selected</string>
+    <string name="panel_keyframes_selection_empty_body">Tap a keyframe diamond to inspect it here, or double-tap the graph to add a new point on the active property.</string>
+    <string name="panel_keyframes_value_format">Value %1$s</string>
+    <string name="panel_keyframes_time_format">At %1$s</string>
+    <string name="panel_keyframes_interpolation_format">%1$s easing</string>
+    <plurals name="panel_keyframes_curves">
+        <item quantity="one">%1$d curve</item>
+        <item quantity="other">%1$d curves</item>
+    </plurals>
+    <plurals name="panel_keyframes_keys">
+        <item quantity="one">%1$d key</item>
+        <item quantity="other">%1$d keys</item>
+    </plurals>
 
     <!-- MediaManagerPanel -->
     <string name="panel_media_manager_remove_unused">Remove Empty Tracks</string>
@@ -861,8 +1078,20 @@
     <string name="panel_speed_ramp">Speed Ramp</string>
 
     <!-- TtsPanel -->
+    <string name="panel_tts_subtitle">Turn hooks, explainers, and voiceover notes into a timeline-ready read without leaving the edit.</string>
+    <string name="panel_tts_unavailable_title">Voiceover unavailable</string>
     <string name="panel_tts_not_available">TTS not available on this device</string>
-    <string name="panel_tts_piper_hint">Piper HD voices (coming soon \u2014 requires Sherpa-ONNX integration)</string>
+    <string name="panel_tts_status_ready">Ready on device</string>
+    <string name="panel_tts_status_generating">Generating</string>
+    <string name="panel_tts_chars_format">%1$d chars</string>
+    <string name="panel_tts_script_title">Script</string>
+    <string name="panel_tts_script_description">Draft narration, read a call to action aloud, or rough in guide VO before you record the final take.</string>
+    <string name="panel_tts_voice_direction_title">Voice direction</string>
+    <string name="panel_tts_voice_direction_description">Each style shifts cadence and pitch so you can audition different delivery moods quickly.</string>
+    <string name="panel_tts_delivery_title">Delivery</string>
+    <string name="panel_tts_delivery_description">Preview the pacing first, then generate a fresh voiceover clip for the timeline.</string>
+    <string name="panel_tts_empty_hint">Add a line or two before previewing or generating speech.</string>
+    <string name="panel_tts_piper_hint">Higher-fidelity offline voices are planned for a future update.</string>
     <string name="panel_tts_preview">Preview</string>
 
     <!-- EditorScreen (Clip Label) -->
@@ -941,6 +1170,7 @@
     <string name="beat_sync_markers_count">%1$d markers</string>
     <string name="beat_sync_label_beats">Beats</string>
     <string name="beat_sync_label_bpm">BPM</string>
+    <string name="beat_sync_label_scan">Scan</string>
 
     <!-- FirstRunTutorial — v3.14.0 -->
     <string name="tutorial_skip">Skip</string>
@@ -1058,7 +1288,8 @@
     <string name="cd_drawing_eraser">Eraser</string>
 
     <!-- MultiCamPanel -->
-    <string name="cd_multicam_close">Close</string>
+    <string name="cd_multicam_close">Close multi-cam</string>
+    <string name="panel_multi_cam_more_angles">+%1$d more</string>
 
     <!-- Timeline -->
     <string name="cd_toggle_waveform">Toggle waveform</string>
@@ -1111,23 +1342,39 @@
     <!-- CaptionStyleGallery -->
     <string name="caption_styles_title">Caption Styles</string>
     <string name="caption_karaoke_title">Karaoke &amp; Word Highlight</string>
+    <string name="caption_styles_subtitle">Pick a more expressive caption look, from understated subtitles to bold karaoke moments.</string>
+    <string name="caption_styles_library_title">Style library</string>
+    <string name="caption_styles_library_description">These templates update the selected clip’s captions in one shot, so it is easy to move from utility subtitles to a branded treatment.</string>
+    <string name="caption_styles_looks_format">Looks: %1$d</string>
+    <string name="caption_styles_motion_format">Motion: %1$d</string>
+    <string name="caption_styles_karaoke_subtitle">Word-by-word, bounce, and sing-along styles built to feel animated and rhythmic.</string>
+    <string name="caption_editorial_title">Editorial Styles</string>
+    <string name="caption_editorial_subtitle">Classic subtitle, lower-third, neon, and bold center treatments for more intentional framing.</string>
+    <string name="caption_style_word_by_word">Word-by-word</string>
+    <string name="caption_style_static_look">Static look</string>
+    <string name="caption_styles_close_cd">Close caption styles</string>
 
     <!-- AudioPanel -->
     <string name="cd_close_audio_panel">Close audio panel</string>
 
     <!-- ColorGradingPanel -->
     <string name="cd_reset">Reset</string>
-    <string name="cd_close_color_grading">Close</string>
+    <string name="cd_close_color_grading">Close color grading</string>
     <string name="cd_remove_lut">Remove LUT</string>
     <string name="cd_import_lut">Import</string>
 
     <!-- MaskEditorPanel -->
     <string name="cd_add_mask">Add Mask</string>
-    <string name="cd_close_mask_editor">Close</string>
+    <string name="cd_close_mask_editor">Close mask editor</string>
 
     <!-- SpeedCurveEditor -->
-    <string name="cd_close_speed_curve">Close</string>
+    <string name="cd_close_speed_curve">Close speed controls</string>
     <string name="cd_reverse_speed">Reverse</string>
+
+    <!-- TransformPanel / CropPanel -->
+    <string name="cd_close_transform_panel">Close transform controls</string>
+    <string name="cd_close_crop_panel">Close crop and aspect controls</string>
+    <string name="transition_picker_close_cd">Close transitions</string>
 
     <!-- SpeedPresets -->
     <string name="cd_close_speed_presets">Close</string>
@@ -1139,7 +1386,7 @@
     <string name="cd_zoom_in">Zoom In</string>
 
     <!-- MarkerListPanel -->
-    <string name="cd_close_markers">Close</string>
+    <string name="cd_close_markers">Close markers</string>
 
     <!-- MediaPicker -->
     <string name="cd_close_media_picker">Close</string>

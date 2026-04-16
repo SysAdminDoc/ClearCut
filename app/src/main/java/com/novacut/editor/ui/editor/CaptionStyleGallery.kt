@@ -5,7 +5,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -28,6 +31,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -41,6 +46,7 @@ import com.novacut.editor.model.CaptionTemplateType
 import com.novacut.editor.model.TextAnimation
 import com.novacut.editor.ui.theme.Mocha
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CaptionStyleGallery(
     onStyleSelected: (CaptionStyleTemplate) -> Unit,
@@ -57,60 +63,110 @@ fun CaptionStyleGallery(
 
     PremiumEditorPanel(
         title = stringResource(R.string.caption_styles_title),
-        subtitle = "Pick a more expressive caption look, from understated subtitles to bold karaoke moments.",
+        subtitle = stringResource(R.string.caption_styles_subtitle),
         icon = Icons.Default.Subtitles,
         accent = Mocha.Mauve,
         onClose = onClose,
+        closeContentDescription = stringResource(R.string.caption_styles_close_cd),
         modifier = modifier,
         scrollable = true
     ) {
         PremiumPanelCard(accent = Mocha.Mauve) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Style library",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Mocha.Text
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "These templates update the selected clip’s captions in one shot, so it is easy to move from utility subtitles to a branded treatment.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Mocha.Subtext0
-                    )
-                }
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val isCompactLayout = maxWidth < 420.dp
+                if (isCompactLayout) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Column {
+                            Text(
+                                text = stringResource(R.string.caption_styles_library_title),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Mocha.Text
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = stringResource(R.string.caption_styles_library_description),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Mocha.Subtext0
+                            )
+                        }
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            PremiumPanelPill(
+                                text = stringResource(R.string.caption_styles_looks_format, templates.size),
+                                accent = Mocha.Blue
+                            )
+                            PremiumPanelPill(
+                                text = stringResource(R.string.caption_styles_motion_format, karaokeTemplates.size),
+                                accent = Mocha.Yellow
+                            )
+                        }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.caption_styles_library_title),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Mocha.Text
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = stringResource(R.string.caption_styles_library_description),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Mocha.Subtext0
+                            )
+                        }
 
-                Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
 
-                Column(
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    PremiumPanelPill(text = "${templates.size} looks", accent = Mocha.Blue)
-                    PremiumPanelPill(text = "${karaokeTemplates.size} motion", accent = Mocha.Yellow)
+                        Column(
+                            horizontalAlignment = Alignment.End,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            PremiumPanelPill(
+                                text = stringResource(R.string.caption_styles_looks_format, templates.size),
+                                accent = Mocha.Blue
+                            )
+                            PremiumPanelPill(
+                                text = stringResource(R.string.caption_styles_motion_format, karaokeTemplates.size),
+                                accent = Mocha.Yellow
+                            )
+                        }
+                    }
                 }
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                StyleMetric(
-                    title = "Karaoke",
-                    value = karaokeTemplates.size.toString(),
-                    accent = Mocha.Yellow,
-                    modifier = Modifier.weight(1f)
-                )
-                StyleMetric(
-                    title = "Editorial",
-                    value = editorialTemplates.size.toString(),
-                    accent = Mocha.Mauve,
-                    modifier = Modifier.weight(1f)
-                )
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val isCompactLayout = maxWidth < 360.dp
+                val metricWidth = if (isCompactLayout) {
+                    maxWidth
+                } else {
+                    (maxWidth - 8.dp) / 2
+                }
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    StyleMetric(
+                        title = "Karaoke",
+                        value = karaokeTemplates.size.toString(),
+                        accent = Mocha.Yellow,
+                        modifier = Modifier.width(metricWidth.coerceAtLeast(0.dp))
+                    )
+                    StyleMetric(
+                        title = "Editorial",
+                        value = editorialTemplates.size.toString(),
+                        accent = Mocha.Mauve,
+                        modifier = Modifier.width(metricWidth.coerceAtLeast(0.dp))
+                    )
+                }
             }
         }
 
@@ -118,8 +174,9 @@ fun CaptionStyleGallery(
 
         CaptionStyleSection(
             title = stringResource(R.string.caption_karaoke_title),
-            subtitle = "Word-by-word, bounce, and sing-along styles built to feel animated and rhythmic.",
+            subtitle = stringResource(R.string.caption_styles_karaoke_subtitle),
             accent = Mocha.Yellow,
+            sectionContentDescription = stringResource(R.string.cd_karaoke_section),
             templates = karaokeTemplates,
             onStyleSelected = onStyleSelected
         )
@@ -127,9 +184,10 @@ fun CaptionStyleGallery(
         Spacer(modifier = Modifier.height(12.dp))
 
         CaptionStyleSection(
-            title = "Editorial Styles",
-            subtitle = "Classic subtitle, lower-third, neon, and bold center treatments for more intentional framing.",
+            title = stringResource(R.string.caption_editorial_title),
+            subtitle = stringResource(R.string.caption_editorial_subtitle),
             accent = Mocha.Blue,
+            sectionContentDescription = stringResource(R.string.cd_caption_styles_section),
             templates = editorialTemplates,
             onStyleSelected = onStyleSelected
         )
@@ -168,59 +226,71 @@ private fun StyleMetric(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CaptionStyleSection(
     title: String,
     subtitle: String,
     accent: Color,
+    sectionContentDescription: String,
     templates: List<CaptionStyleTemplate>,
     onStyleSelected: (CaptionStyleTemplate) -> Unit
 ) {
     PremiumPanelCard(accent = accent) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        Column(
+            modifier = Modifier.semantics { contentDescription = sectionContentDescription },
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            androidx.compose.material3.Icon(
-                imageVector = if (accent == Mocha.Yellow) Icons.Default.MusicNote else Icons.Default.Subtitles,
-                contentDescription = title,
-                tint = accent
-            )
-            Column {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Mocha.Text
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Mocha.Subtext0
-                )
-            }
-        }
-
-        templates.chunked(2).forEach { row ->
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                row.forEach { template ->
-                    CaptionStyleCard(
-                        template = template,
-                        accent = accent,
-                        modifier = Modifier.weight(1f),
-                        onClick = { onStyleSelected(template) }
+                androidx.compose.material3.Icon(
+                    imageVector = if (accent == Mocha.Yellow) Icons.Default.MusicNote else Icons.Default.Subtitles,
+                    contentDescription = title,
+                    tint = accent
+                )
+                Column {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Mocha.Text
+                    )
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Mocha.Subtext0
                     )
                 }
-                if (row.size == 1) {
-                    Spacer(modifier = Modifier.weight(1f))
+            }
+
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val isCompactLayout = maxWidth < 560.dp
+                val cardWidth = if (isCompactLayout) {
+                    maxWidth
+                } else {
+                    (maxWidth - 10.dp) / 2
+                }
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    templates.forEach { template ->
+                        CaptionStyleCard(
+                            template = template,
+                            accent = accent,
+                            modifier = Modifier.width(cardWidth.coerceAtLeast(0.dp)),
+                            onClick = { onStyleSelected(template) }
+                        )
+                    }
                 }
             }
         }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CaptionStyleCard(
     template: CaptionStyleTemplate,
@@ -269,17 +339,21 @@ private fun CaptionStyleCard(
                     overflow = TextOverflow.Ellipsis,
                     fontWeight = FontWeight.Medium
                 )
-                Row(
+                FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     PremiumPanelPill(
                         text = template.animation.displayName,
                         accent = accent
                     )
                     Text(
-                        text = if (template.wordByWord) "Word-by-word" else "Static look",
+                        text = if (template.wordByWord) {
+                            stringResource(R.string.caption_style_word_by_word)
+                        } else {
+                            stringResource(R.string.caption_style_static_look)
+                        },
                         style = MaterialTheme.typography.labelMedium,
                         color = Mocha.Subtext0
                     )

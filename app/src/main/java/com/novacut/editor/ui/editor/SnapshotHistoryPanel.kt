@@ -4,6 +4,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,15 +13,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.SaveAlt
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -46,6 +47,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SnapshotHistoryPanel(
     snapshots: List<ProjectSnapshot>,
@@ -58,8 +60,10 @@ fun SnapshotHistoryPanel(
     var showNameDialog by remember { mutableStateOf(false) }
     var snapshotName by remember { mutableStateOf("") }
     val dateFormat = remember { SimpleDateFormat("MMM d, h:mm a", Locale.getDefault()) }
+    val snapshotNameFormat = remember { SimpleDateFormat("MMM d HH:mm", Locale.getDefault()) }
     val snapshotPrefix = stringResource(R.string.snapshot_default_prefix)
-    val latestSnapshot = snapshots.maxByOrNull { it.timestamp }
+    val sortedSnapshots = remember(snapshots) { snapshots.sortedByDescending { it.timestamp } }
+    val latestSnapshot = sortedSnapshots.firstOrNull()
 
     if (showNameDialog) {
         AlertDialog(
@@ -75,7 +79,7 @@ fun SnapshotHistoryPanel(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
-                        text = "Name this restore point so you can jump back before a risky edit or export pass.",
+                        text = stringResource(R.string.panel_snapshot_dialog_body),
                         style = MaterialTheme.typography.bodyMedium,
                         color = Mocha.Subtext0
                     )
@@ -102,8 +106,8 @@ fun SnapshotHistoryPanel(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        val defaultName = "$snapshotPrefix ${SimpleDateFormat("MMM d HH:mm", Locale.getDefault()).format(Date())}"
-                        onCreateSnapshot(snapshotName.ifBlank { defaultName })
+                        val fallbackName = "$snapshotPrefix ${snapshotNameFormat.format(Date())}"
+                        onCreateSnapshot(snapshotName.trim().ifEmpty { fallbackName })
                         snapshotName = ""
                         showNameDialog = false
                     }
@@ -127,12 +131,13 @@ fun SnapshotHistoryPanel(
 
     PremiumEditorPanel(
         title = stringResource(R.string.snapshot_title),
-        subtitle = "Create restore points before experimenting, then roll the timeline back without losing your place.",
+        subtitle = stringResource(R.string.panel_snapshot_subtitle),
         icon = Icons.Default.History,
         accent = Mocha.Mauve,
         onClose = onClose,
         modifier = modifier,
         scrollable = true,
+        closeContentDescription = stringResource(R.string.snapshot_close_cd),
         headerActions = {
             PremiumPanelIconButton(
                 icon = Icons.Default.Add,
@@ -143,44 +148,45 @@ fun SnapshotHistoryPanel(
         }
     ) {
         PremiumPanelCard(accent = Mocha.Mauve) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+            Text(
+                text = stringResource(R.string.panel_snapshot_overview_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = Mocha.Text,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = if (latestSnapshot != null) {
+                    stringResource(
+                        R.string.panel_snapshot_overview_ready,
+                        dateFormat.format(Date(latestSnapshot.timestamp))
+                    )
+                } else {
+                    stringResource(R.string.panel_snapshot_overview_empty)
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = Mocha.Subtext0
+            )
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Restore points",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Mocha.Text
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = if (latestSnapshot != null) {
-                            "The latest snapshot was saved ${dateFormat.format(Date(latestSnapshot.timestamp))}. Keep a clean trail before major timing or grading changes."
-                        } else {
-                            "Snapshots are lightweight checkpoints for your edit state before you commit to bigger decisions."
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Mocha.Subtext0
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-                Column(
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
+                PremiumPanelPill(
+                    text = pluralStringResource(
+                        R.plurals.panel_snapshot_saved_count,
+                        sortedSnapshots.size,
+                        sortedSnapshots.size
+                    ),
+                    accent = Mocha.Mauve
+                )
+                latestSnapshot?.let {
                     PremiumPanelPill(
-                        text = "${snapshots.size} saved",
-                        accent = Mocha.Mauve
+                        text = stringResource(R.string.panel_snapshot_latest_badge),
+                        accent = Mocha.Blue
                     )
-                    latestSnapshot?.let {
-                        PremiumPanelPill(
-                            text = dateFormat.format(Date(it.timestamp)),
-                            accent = Mocha.Blue
-                        )
-                    }
+                    PremiumPanelPill(
+                        text = dateFormat.format(Date(it.timestamp)),
+                        accent = Mocha.Sky
+                    )
                 }
             }
         }
@@ -188,10 +194,11 @@ fun SnapshotHistoryPanel(
         Spacer(modifier = Modifier.height(12.dp))
 
         PremiumPanelCard(accent = Mocha.Blue) {
-            if (snapshots.isEmpty()) {
+            if (sortedSnapshots.isEmpty()) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.History,
@@ -199,7 +206,6 @@ fun SnapshotHistoryPanel(
                         tint = Mocha.Overlay1,
                         modifier = Modifier.size(30.dp)
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = stringResource(R.string.snapshot_empty),
                         style = MaterialTheme.typography.titleSmall,
@@ -213,22 +219,26 @@ fun SnapshotHistoryPanel(
                 }
             } else {
                 Text(
-                    text = "Snapshot history",
+                    text = stringResource(R.string.panel_snapshot_history_title),
                     style = MaterialTheme.typography.titleMedium,
-                    color = Mocha.Text
+                    color = Mocha.Text,
+                    fontWeight = FontWeight.SemiBold
                 )
-
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    items(snapshots.sortedByDescending { it.timestamp }, key = { it.id }) { snapshot ->
-                        SnapshotRow(
-                            snapshot = snapshot,
-                            dateFormat = dateFormat,
-                            onRestore = { onRestoreSnapshot(snapshot.id) },
-                            onDelete = { onDeleteSnapshot(snapshot.id) }
-                        )
+                Text(
+                    text = stringResource(R.string.panel_snapshot_history_description),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Mocha.Subtext0
+                )
+                sortedSnapshots.forEachIndexed { index, snapshot ->
+                    SnapshotRow(
+                        snapshot = snapshot,
+                        dateFormat = dateFormat,
+                        isLatest = snapshot.id == latestSnapshot?.id,
+                        onRestore = { onRestoreSnapshot(snapshot.id) },
+                        onDelete = { onDeleteSnapshot(snapshot.id) }
+                    )
+                    if (index < sortedSnapshots.lastIndex) {
+                        Spacer(modifier = Modifier.height(10.dp))
                     }
                 }
             }
@@ -236,10 +246,12 @@ fun SnapshotHistoryPanel(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SnapshotRow(
     snapshot: ProjectSnapshot,
     dateFormat: SimpleDateFormat,
+    isLatest: Boolean,
     onRestore: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -252,14 +264,13 @@ private fun SnapshotRow(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onRestore)
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
                 Row(
                     modifier = Modifier.weight(1f),
@@ -284,6 +295,7 @@ private fun SnapshotRow(
                             text = snapshot.label.ifEmpty { stringResource(R.string.panel_snapshot_untitled) },
                             style = MaterialTheme.typography.titleSmall,
                             color = Mocha.Text,
+                            fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -296,27 +308,28 @@ private fun SnapshotRow(
                     }
                 }
 
-                PremiumPanelPill(
-                    text = "Restore",
-                    accent = Mocha.Green
-                )
+                if (isLatest) {
+                    PremiumPanelPill(
+                        text = stringResource(R.string.panel_snapshot_latest_badge),
+                        accent = Mocha.Blue
+                    )
+                }
             }
 
-            Row(
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 SnapshotAction(
                     icon = Icons.Default.Restore,
-                    label = "Restore",
+                    label = stringResource(R.string.snapshot_restore),
                     accent = Mocha.Green,
                     onClick = onRestore
                 )
-                Spacer(modifier = Modifier.width(8.dp))
                 SnapshotAction(
                     icon = Icons.Default.Delete,
-                    label = "Delete",
+                    label = stringResource(R.string.snapshot_delete),
                     accent = Mocha.Red,
                     onClick = onDelete
                 )

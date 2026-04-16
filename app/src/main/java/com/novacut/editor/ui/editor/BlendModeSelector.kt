@@ -1,9 +1,11 @@
 package com.novacut.editor.ui.editor
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,6 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -27,6 +30,7 @@ import com.novacut.editor.R
 import com.novacut.editor.model.BlendMode
 import com.novacut.editor.ui.theme.Mocha
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun BlendModeSelector(
     currentMode: BlendMode,
@@ -35,42 +39,52 @@ fun BlendModeSelector(
     modifier: Modifier = Modifier
 ) {
     val sections = blendModeSections()
+    val currentSection = sections.firstOrNull { currentMode in it.modes }
 
     PremiumEditorPanel(
         title = stringResource(R.string.blend_mode_title),
-        subtitle = "Choose how the selected clip fuses with the layers under it, from subtle darkening to full stylized composites.",
+        subtitle = stringResource(R.string.blend_mode_subtitle),
         icon = Icons.Default.AutoFixHigh,
-        accent = Mocha.Peach,
+        accent = currentSection?.accent ?: Mocha.Peach,
         onClose = onClose,
         modifier = modifier,
-        scrollable = true
+        scrollable = true,
+        closeContentDescription = stringResource(R.string.blend_mode_close_cd)
     ) {
-        PremiumPanelCard(accent = Mocha.Peach) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+        PremiumPanelCard(accent = currentSection?.accent ?: Mocha.Peach) {
+            Text(
+                text = stringResource(R.string.blend_mode_current_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = Mocha.Text,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = blendModeDescription(currentMode),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Mocha.Subtext0
+            )
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Current blend",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Mocha.Text
-                    )
-                    Spacer(modifier = Modifier.padding(3.dp))
-                    Text(
-                        text = blendModeDescription(currentMode),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Mocha.Subtext0
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
                 PremiumPanelPill(
                     text = currentMode.displayName,
-                    accent = Mocha.Peach
+                    accent = currentSection?.accent ?: Mocha.Peach
                 )
+                PremiumPanelPill(
+                    text = pluralStringResource(
+                        R.plurals.blend_mode_modes_count,
+                        sections.sumOf { it.modes.size },
+                        sections.sumOf { it.modes.size }
+                    ),
+                    accent = Mocha.Sky
+                )
+                currentSection?.let { section ->
+                    PremiumPanelPill(
+                        text = section.title,
+                        accent = section.accent
+                    )
+                }
             }
         }
 
@@ -81,30 +95,43 @@ fun BlendModeSelector(
                 Text(
                     text = section.title,
                     style = MaterialTheme.typography.titleMedium,
-                    color = Mocha.Text
+                    color = Mocha.Text,
+                    fontWeight = FontWeight.SemiBold
                 )
                 Text(
                     text = section.subtitle,
                     style = MaterialTheme.typography.bodyMedium,
                     color = Mocha.Subtext0
                 )
+                PremiumPanelPill(
+                    text = pluralStringResource(
+                        R.plurals.blend_mode_modes_count,
+                        section.modes.size,
+                        section.modes.size
+                    ),
+                    accent = section.accent
+                )
 
-                section.modes.chunked(2).forEach { row ->
-                    Row(
+                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                    val isCompactLayout = maxWidth < 420.dp
+                    val cardWidth = if (isCompactLayout) {
+                        maxWidth
+                    } else {
+                        ((maxWidth - 10.dp) / 2).coerceAtLeast(0.dp)
+                    }
+                    FlowRow(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        row.forEach { mode ->
+                        section.modes.forEach { mode ->
                             BlendModeOptionCard(
                                 mode = mode,
                                 selected = mode == currentMode,
                                 accent = section.accent,
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.width(cardWidth),
                                 onClick = { onModeSelected(mode) }
                             )
-                        }
-                        if (row.size == 1) {
-                            Spacer(modifier = Modifier.weight(1f))
                         }
                     }
                 }
@@ -122,7 +149,8 @@ private fun BlendModeOptionCard(
     onClick: () -> Unit
 ) {
     Surface(
-        modifier = modifier.clickable(onClick = onClick),
+        onClick = onClick,
+        modifier = modifier,
         color = if (selected) accent.copy(alpha = 0.14f) else Mocha.PanelRaised,
         shape = RoundedCornerShape(20.dp),
         border = BorderStroke(
@@ -133,18 +161,22 @@ private fun BlendModeOptionCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 14.dp),
+                .height(92.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 14.dp, top = 14.dp, bottom = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
                 Text(
                     text = mode.displayName,
                     style = MaterialTheme.typography.titleSmall,
                     color = if (selected) accent else Mocha.Text,
                     fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium
                 )
-                Spacer(modifier = Modifier.padding(2.dp))
                 Text(
                     text = blendModeShortHint(mode),
                     style = MaterialTheme.typography.bodySmall,
@@ -156,8 +188,11 @@ private fun BlendModeOptionCard(
                 androidx.compose.material3.Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = stringResource(R.string.cd_check_mark),
-                    tint = accent
+                    tint = accent,
+                    modifier = Modifier.padding(end = 14.dp)
                 )
+            } else {
+                Spacer(modifier = Modifier.width(14.dp))
             }
         }
     }

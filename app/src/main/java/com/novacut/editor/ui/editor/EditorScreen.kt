@@ -1275,7 +1275,9 @@ fun EditorScreen(
             MediaManagerPanel(
                 tracks = state.tracks,
                 onJumpToClip = viewModel::jumpToClip,
-                onRelinkMedia = { _, _ -> viewModel.showToast(context.getString(R.string.editor_media_relink_unavailable)) },
+                onRelinkMedia = { _ ->
+                    viewModel.showToast(context.getString(R.string.editor_media_relink_unavailable))
+                },
                 onRemoveUnused = { viewModel.removeUnusedMedia() },
                 onClose = viewModel::hideMediaManager
             )

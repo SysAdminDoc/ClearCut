@@ -219,6 +219,19 @@ data class SpeedCurve(
         return 1f
     }
 
+    fun averageSpeed(clipDurationMs: Long, sampleCount: Int = 48): Float {
+        val effectiveSamples = sampleCount.coerceAtLeast(1)
+        if (clipDurationMs <= 0L) return points.firstOrNull()?.speed ?: 1f
+
+        var sum = 0f
+        repeat(effectiveSamples + 1) { index ->
+            val t = index.toFloat() / effectiveSamples.toFloat()
+            val timeOffsetMs = (t * clipDurationMs).toLong().coerceIn(0L, clipDurationMs)
+            sum += getSpeedAt(timeOffsetMs, clipDurationMs).coerceAtLeast(0.01f)
+        }
+        return sum / (effectiveSamples + 1)
+    }
+
     companion object {
         fun cubicBezierInterpolate(
             p0: Float, c0: Float, c1: Float, p1: Float, t: Float
