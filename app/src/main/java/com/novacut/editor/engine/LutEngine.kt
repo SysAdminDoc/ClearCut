@@ -39,16 +39,28 @@ object LutEngine {
                 if (trimmed.isEmpty() || trimmed.startsWith("#") || trimmed.startsWith("TITLE")) continue
 
                 if (trimmed.startsWith("LUT_3D_SIZE")) {
-                    size = trimmed.substringAfter("LUT_3D_SIZE").trim().toInt()
+                    val parsedSize = trimmed.substringAfter("LUT_3D_SIZE").trim().toInt()
+                    // Bound LUT size to a sane range. A malicious .cube file declaring
+                    // "LUT_3D_SIZE 1000" would otherwise need a 1000^3 * 3 = 3 billion
+                    // float allocation (12 GB) which OOMs before the size mismatch check
+                    // could reject it. Common LUT sizes are 17, 32, 33, 64.
+                    if (parsedSize !in 2..256) {
+                        Log.w("LutEngine", "LUT size $parsedSize outside supported range [2..256]")
+                        throw IllegalArgumentException("LUT size out of range")
+                    }
+                    size = parsedSize
                     continue
                 }
                 if (trimmed.startsWith("DOMAIN_MIN") || trimmed.startsWith("DOMAIN_MAX")) continue
 
                 val parts = trimmed.split("\\s+".toRegex())
                 if (parts.size >= 3) {
-                    data.add(parts[0].toFloat())
-                    data.add(parts[1].toFloat())
-                    data.add(parts[2].toFloat())
+                    // Clamp to [0, 1] — out-of-range LUT entries produce wild GPU colors
+                    // (negative -> wrap, >1 -> blow out highlights). Standard .cube spec
+                    // is 0..1 normalized; defensive clamping protects the shader.
+                    data.add(parts[0].toFloat().coerceIn(0f, 1f))
+                    data.add(parts[1].toFloat().coerceIn(0f, 1f))
+                    data.add(parts[2].toFloat().coerceIn(0f, 1f))
                 }
             }
 
@@ -87,14 +99,17 @@ object LutEngine {
             val scale = if (globalMax > 1f) (if (globalMax > 1023f) 4095f else 1023f) else 1f
             val data = mutableListOf<Float>()
             for (vals in rawLines) {
-                data.add(vals[0] / scale)
-                data.add(vals[1] / scale)
-                data.add(vals[2] / scale)
+                data.add((vals[0] / scale).coerceIn(0f, 1f))
+                data.add((vals[1] / scale).coerceIn(0f, 1f))
+                data.add((vals[2] / scale).coerceIn(0f, 1f))
             }
 
             val entryCount = data.size / 3
             val size = Math.round(Math.cbrt(entryCount.toDouble())).toInt()
-            if (size * size * size == entryCount) {
+            if (size !in 2..256) {
+                Log.w("LutEngine", "3DL inferred size $size outside supported range [2..256]")
+                null
+            } else if (size * size * size == entryCount) {
                 Lut3D(size, data.toFloatArray())
             } else null
         } catch (e: Exception) {
