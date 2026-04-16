@@ -223,7 +223,17 @@ class TemplateManager @Inject constructor(
     ): UserTemplate {
         val existingIds = existingTemplates.asSequence().map { it.id }.toHashSet()
         val existingNames = existingTemplates.asSequence().map { it.name.lowercase() }.toHashSet()
-        val resolvedId = if (template.id in existingIds) UUID.randomUUID().toString() else template.id
+        // Sanitize the imported template id BEFORE the collision check, otherwise an id like
+        // "../../etc/passwd" from a hostile .novacut-template would land in the file system as
+        // `templateDir/../../etc/passwd.json` (path traversal). Allow only [A-Za-z0-9_-]; if
+        // sanitization changes anything, mint a fresh UUID rather than collide silently.
+        val sanitizedId = sanitizeFilenameSafe(template.id)
+        val safeId = if (sanitizedId.isEmpty() || sanitizedId != template.id) {
+            UUID.randomUUID().toString()
+        } else {
+            template.id
+        }
+        val resolvedId = if (safeId in existingIds) UUID.randomUUID().toString() else safeId
         val resolvedName = ensureUniqueImportedName(template.name, existingNames)
 
         return if (resolvedId == template.id && resolvedName == template.name) {
@@ -231,6 +241,13 @@ class TemplateManager @Inject constructor(
         } else {
             template.copy(id = resolvedId, name = resolvedName)
         }
+    }
+
+    private fun sanitizeFilenameSafe(value: String): String {
+        // Keep only filename-safe characters; everything else (slashes, dots, control chars,
+        // unicode separators, reserved Windows characters) is dropped. The caller decides
+        // what to do if the result differs from the input.
+        return value.filter { c -> c.isLetterOrDigit() || c == '_' || c == '-' }
     }
 
     private fun ensureUniqueImportedName(name: String, existingNames: Set<String>): String {

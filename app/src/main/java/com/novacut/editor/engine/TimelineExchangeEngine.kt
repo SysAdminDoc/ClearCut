@@ -241,16 +241,44 @@ class TimelineExchangeEngine @Inject constructor(
     }
 
     private fun msToFrames(ms: Long, frameRate: Int): Long {
-        return (ms * frameRate) / 1000
+        // Round-to-nearest instead of truncating, otherwise small ms values (e.g. 1ms at
+        // 30fps = 0.03 frames) silently round down to 0 frames and cumulative drift on a
+        // long timeline misaligns OTIO/FCPXML round-trips.
+        if (frameRate <= 0) return 0L
+        return (ms * frameRate + 500L) / 1000L
     }
 
     private fun framesToMs(frames: Long, frameRate: Int): Long {
-        return (frames * 1000) / frameRate
+        if (frameRate <= 0) return 0L
+        return (frames * 1000L + frameRate / 2) / frameRate
     }
 
     private fun clipDisplayName(clip: Clip): String {
         val path = clip.sourceUri.lastPathSegment ?: clip.sourceUri.toString()
         return path.substringAfterLast("/").substringBeforeLast(".")
+    }
+
+    /**
+     * Escape a string for safe inclusion as XML element text or attribute value.
+     * Without this, a clip name like `"M&M's <draft>"` produces malformed FCPXML
+     * that downstream tools (Final Cut Pro, DaVinci Resolve via FCPXML import) reject.
+     */
+    private fun xmlEscape(value: String): String {
+        if (value.isEmpty()) return value
+        val needsEscape = value.any { it == '&' || it == '<' || it == '>' || it == '"' || it == '\'' }
+        if (!needsEscape) return value
+        val sb = StringBuilder(value.length + 16)
+        for (c in value) {
+            when (c) {
+                '&' -> sb.append("&amp;")
+                '<' -> sb.append("&lt;")
+                '>' -> sb.append("&gt;")
+                '"' -> sb.append("&quot;")
+                '\'' -> sb.append("&apos;")
+                else -> sb.append(c)
+            }
+        }
+        return sb.toString()
     }
 
     // ──────────────────────────────────────────────
@@ -483,15 +511,15 @@ class TimelineExchangeEngine @Inject constructor(
             val assetId = "r${index + 1}"
             val hasVideo = if (videoEngine.hasVisualTrack(clip.sourceUri)) "1" else "0"
             val hasAudio = if (videoEngine.hasAudioTrack(clip.sourceUri)) "1" else "0"
-            sb.appendLine("""    <asset id="$assetId" name="${clipDisplayName(clip)}" src="$uri" start="0s" duration="${msToFcpxmlTime(clip.sourceDurationMs, frameRate)}" hasVideo="$hasVideo" hasAudio="$hasAudio">""")
-            sb.appendLine("""      <media-rep kind="original-media" src="$uri"/>""")
+            sb.appendLine("""    <asset id="$assetId" name="${xmlEscape(clipDisplayName(clip))}" src="${xmlEscape(uri)}" start="0s" duration="${msToFcpxmlTime(clip.sourceDurationMs, frameRate)}" hasVideo="$hasVideo" hasAudio="$hasAudio">""")
+            sb.appendLine("""      <media-rep kind="original-media" src="${xmlEscape(uri)}"/>""")
             sb.appendLine("""    </asset>""")
         }
 
         sb.appendLine("""  </resources>""")
         sb.appendLine("""  <library>""")
-        sb.appendLine("""    <event name="$projectName">""")
-        sb.appendLine("""      <project name="$projectName">""")
+        sb.appendLine("""    <event name="${xmlEscape(projectName)}">""")
+        sb.appendLine("""      <project name="${xmlEscape(projectName)}">""")
         sb.appendLine("""        <sequence format="r0" duration="$totalDurationFcpxml" tcStart="0s" tcFormat="NDF">""")
         sb.appendLine("""          <spine>""")
 
@@ -504,7 +532,7 @@ class TimelineExchangeEngine @Inject constructor(
             val start = msToFcpxmlTime(clip.trimStartMs, frameRate)
             val duration = msToFcpxmlTime(clip.trimEndMs - clip.trimStartMs, frameRate)
 
-            sb.appendLine("""            <asset-clip ref="$assetId" name="${clipDisplayName(clip)}" offset="$offset" start="$start" duration="$duration"/>""")
+            sb.appendLine("""            <asset-clip ref="$assetId" name="${xmlEscape(clipDisplayName(clip))}" offset="$offset" start="$start" duration="$duration"/>""")
         }
 
         sb.appendLine("""          </spine>""")

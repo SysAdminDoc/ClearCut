@@ -1,5 +1,33 @@
 # Changelog
 
+## v3.38.0 — Audit Phase 9: FCPXML Escaping, LUT Bounds, Settings Slider Debounce, Template Path Traversal & OTIO Rounding
+
+### Format / parser correctness
+- **FCPXML XML escaping** ([TimelineExchangeEngine.kt](app/src/main/java/com/novacut/editor/engine/TimelineExchangeEngine.kt)) — Project name and clip names were interpolated directly into FCPXML attributes via Kotlin string templates with no escaping. A clip named `M&M's <draft>` produced malformed FCPXML that DaVinci Resolve / Final Cut imports refused. Added `xmlEscape` helper covering `&`, `<`, `>`, `"`, `'` and applied to every name/uri interpolation.
+- **OTIO/FCPXML timestamp rounding** — `msToFrames` and `framesToMs` were truncating instead of rounding-to-nearest. 1 ms at 30 fps became 0 frames, accumulating drift on long timelines and breaking round-trip precision. Now uses `(ms * frameRate + 500L) / 1000L` rounding (and the symmetric form for the reverse).
+- **LUT size bounds** ([LutEngine.kt](app/src/main/java/com/novacut/editor/engine/LutEngine.kt)) — `parseCube` and `parse3dl` accepted any integer for `LUT_3D_SIZE`. A malicious `.cube` declaring `LUT_3D_SIZE 1000` would attempt a `1000³ × 3 = 3 billion` float allocation (~12 GB) and OOM the app before the row-count validation could reject it. Now bounded to `[2, 256]` (covers all real-world LUTs: 17, 32, 33, 64).
+- **LUT value clamping** — Both `.cube` and `.3dl` parsers now `coerceIn(0f, 1f)` each color channel. Out-of-range entries previously produced wild GPU colors (negative wraps, >1 blows out highlights) on shaders that assume normalized inputs.
+
+### Security / template safety
+- **TemplateManager template-id sanitization** — Imported template ids were used directly as filename via `File(templateDir, "$id.json")`. A hostile `.novacut-template` with id `../../etc/passwd` would land outside the template directory (path traversal). `normalizeImportedTemplate` now sanitizes ids to `[A-Za-z0-9_-]` and mints a fresh UUID when sanitization changes the value.
+
+### Settings UX
+- **Settings slider disk thrash fix** ([SettingsScreen.kt](app/src/main/java/com/novacut/editor/ui/settings/SettingsScreen.kt)) — `SettingsSlider` was calling `viewModel.set...(it)` (which writes to DataStore) on every drag tick (~60 events/sec). Auto-save-interval drag could fire 100+ DataStore writes in 2 seconds. Refactored to drive a local `mutableStateOf` during drag and only commit via `onValueChangeFinished`. The settings value still flows from DataStore Flow on first composition (and any external change).
+
+### Audit findings verified as already-correct (false positives this round)
+- **`ProjectArchive` zip-bomb compression ratio** — `copyWithLimit` already enforces the 4 GB total cap incrementally as bytes are read; an entry that would decompress past the cap throws mid-read, not after. The cap is reasonable.
+- **`SpeedCurveEditor` Y-clamp on drag** — outer `coerceIn(minSpeed, maxSpeed)` already bounds the final speed value even when intermediate Y math is negative; `size.height = 0` (the only NaN path) doesn't fire pointer events anyway.
+- **`KeyframeCurveEditor` selection by data-class equality** — Kotlin data class `equals` compares all fields, so `keyframe == selectedKeyframe` works as intended for the editor's purposes; only matters if two keyframes have identical fields, which the deserialize-time `distinctBy { (timeOffsetMs, property) }` prevents.
+- **Tier 3+ engine resource leaks (Stabilization, FrameInterp, Style, Upscale, etc.)** — confirmed all stubs return `null` cleanly with `Log.w` messages, never fake objects; ONNX-using engines (Inpainting) properly use try/finally for sessions and tensors.
+- **Build / dependency / ProGuard audit** — clean; all critical security versions current (Hilt 2.53.1, Coil 2.7.0, Media3 1.9.2, Kotlin 2.1.0, AGP 8.7.3); minification on release only; signing externalized; permissions audit passes.
+- **MultiCamEngine cross-correlation IOOB** — already guarded by `if (length <= 0) return 0f` inside the loop.
+
+### Verification
+- `./gradlew compileDebugKotlin` passes.
+
+### Housekeeping
+- `versionCode 98 → 99`, `versionName 3.37.0 → 3.38.0` (build.gradle.kts, NovaCutApp.VERSION, README badge, app_version string, CLAUDE.md, MEMORY.md).
+
 ## v3.37.0 — Audit Phase 8: TTS/Voiceover Persistence, Camera Cleanup Directory, Empty-Output Guard & Reverse-Clip Diagnostic
 
 ### Persistence

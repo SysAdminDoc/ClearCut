@@ -641,6 +641,11 @@ private fun SettingsSlider(
     valueLabel: String,
     onChanged: (Float) -> Unit
 ) {
+    // Hold a local in-flight slider value so the thumb tracks the drag smoothly without
+    // calling the ViewModel (and writing to DataStore) on every tick of the gesture.
+    // Only commit the final value on drag end. `value` (the canonical settings value)
+    // is the key on remember so external changes still propagate.
+    var localValue by remember(value) { mutableStateOf(value) }
     Surface(
         color = Mocha.PanelHighest,
         shape = RoundedCornerShape(18.dp),
@@ -669,8 +674,9 @@ private fun SettingsSlider(
             }
             Spacer(modifier = Modifier.height(6.dp))
             Slider(
-                value = value,
-                onValueChange = onChanged,
+                value = localValue,
+                onValueChange = { localValue = it },
+                onValueChangeFinished = { onChanged(localValue) },
                 valueRange = range,
                 colors = SliderDefaults.colors(
                     thumbColor = accent,
