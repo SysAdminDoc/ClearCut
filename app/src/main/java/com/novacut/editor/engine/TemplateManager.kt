@@ -35,6 +35,7 @@ class TemplateManager @Inject constructor(
     private val templateDir = File(context.filesDir, "templates")
     private val defaultTemplateTrackTypes = listOf(TrackType.VIDEO, TrackType.AUDIO)
     private val templateSchemaVersion = 1
+    private val maxTemplateBytes = 10_000_000L
 
     fun listTemplates(): List<UserTemplate> {
         if (!templateDir.exists()) return emptyList()
@@ -81,7 +82,7 @@ class TemplateManager @Inject constructor(
             stateJson = stateJson
         )
 
-        File(templateDir, "${template.id}.json").writeText(templateToJson(template).toString(2))
+        writeUtf8TextAtomically(File(templateDir, "${template.id}.json"), templateToJson(template).toString(2))
         template
     }
 
@@ -103,7 +104,7 @@ class TemplateManager @Inject constructor(
         try {
             val template = getTemplate(templateId) ?: return@withContext false
             outputFile.parentFile?.mkdirs()
-            outputFile.writeText(templateToJson(template).toString(2))
+            writeUtf8TextAtomically(outputFile, templateToJson(template).toString(2))
             true
         } catch (e: Exception) {
             Log.e("TemplateManager", "Failed to export template '$templateId'", e)
@@ -114,20 +115,7 @@ class TemplateManager @Inject constructor(
     suspend fun importTemplateFromUri(uri: Uri): UserTemplate? = withContext(Dispatchers.IO) {
         try {
             val text = context.contentResolver.openInputStream(uri)?.use { stream ->
-                val reader = stream.bufferedReader()
-                val sb = StringBuilder()
-                val buf = CharArray(8192)
-                var totalRead = 0L
-                var n: Int
-                while (reader.read(buf).also { n = it } != -1) {
-                    totalRead += n
-                    if (totalRead > 10_000_000) {
-                        Log.w("TemplateManager", "Template file exceeds 10MB limit")
-                        return@withContext null
-                    }
-                    sb.append(buf, 0, n)
-                }
-                sb.toString()
+                readUtf8WithByteLimit(stream, maxTemplateBytes)
             } ?: return@withContext null
             val json = JSONObject(text)
             val importedTemplate = parseTemplateJson(
@@ -138,7 +126,7 @@ class TemplateManager @Inject constructor(
             val template = normalizeImportedTemplate(importedTemplate, listTemplates())
             // Save locally
             templateDir.mkdirs()
-            File(templateDir, "${template.id}.json").writeText(templateToJson(template).toString(2))
+            writeUtf8TextAtomically(File(templateDir, "${template.id}.json"), templateToJson(template).toString(2))
             template
         } catch (e: Exception) {
             Log.e("TemplateManager", "Failed to import template from URI", e)
@@ -148,7 +136,13 @@ class TemplateManager @Inject constructor(
 
     private fun loadTemplate(file: File): UserTemplate? {
         return try {
-            val json = JSONObject(file.readText())
+            if (file.length() > maxTemplateBytes) {
+                Log.w("TemplateManager", "Skipping oversized template ${file.name}")
+                return null
+            }
+            val json = JSONObject(file.inputStream().use { input ->
+                readUtf8WithByteLimit(input, maxTemplateBytes)
+            })
             parseTemplateJson(
                 json = json,
                 fallbackId = file.nameWithoutExtension,
@@ -283,4 +277,5 @@ class TemplateManager @Inject constructor(
     private fun normalizeTemplateName(raw: String): String {
         return raw.trim().ifBlank { "Untitled Template" }
     }
+
 }

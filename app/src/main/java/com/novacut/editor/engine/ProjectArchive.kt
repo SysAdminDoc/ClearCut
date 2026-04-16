@@ -22,6 +22,9 @@ object ProjectArchive {
 
     private const val PROJECT_JSON_ENTRY = "project.json"
     private const val MEDIA_MANIFEST_ENTRY = "media_manifest.json"
+    private const val MAX_ARCHIVE_ENTRY_COUNT = 4_096
+    private const val MAX_ARCHIVE_TEXT_ENTRY_BYTES = 5_000_000L
+    private const val MAX_ARCHIVE_TOTAL_BYTES = 4L * 1024L * 1024L * 1024L
 
     private data class ArchivedMediaSource(
         val originalUri: String,
@@ -86,6 +89,7 @@ object ProjectArchive {
     ): AutoSaveState? = withContext(Dispatchers.IO) {
         val canonicalTargetDir = targetDir.canonicalFile
         val targetDirAlreadyExisted = canonicalTargetDir.exists()
+        val extractedPaths = mutableListOf<File>()
         try {
             val inputStream = context.contentResolver.openInputStream(archiveUri) ?: return@withContext null
             if (!canonicalTargetDir.exists() && !canonicalTargetDir.mkdirs()) {
@@ -96,20 +100,30 @@ object ProjectArchive {
             var projectJson: String? = null
             var mediaManifestJson: String? = null
             val extractedFiles = mutableMapOf<String, Uri>()
+            val seenEntries = hashSetOf<String>()
+            var entryCount = 0
+            var extractedBytes = 0L
 
             inputStream.use {
                 ZipInputStream(it).use { zipInput ->
                     var entry = zipInput.nextEntry
                     while (entry != null) {
+                        entryCount++
+                        if (entryCount > MAX_ARCHIVE_ENTRY_COUNT) {
+                            throw IOException("Archive contains too many entries")
+                        }
+                        if (!seenEntries.add(entry.name)) {
+                            throw IOException("Archive contains duplicate entry: ${entry.name}")
+                        }
                         when {
                             entry.isDirectory -> {
                                 // No-op. Files create parents as needed.
                             }
                             entry.name == PROJECT_JSON_ENTRY -> {
-                                projectJson = readCurrentEntryText(zipInput)
+                                projectJson = readCurrentEntryText(zipInput, MAX_ARCHIVE_TEXT_ENTRY_BYTES)
                             }
                             entry.name == MEDIA_MANIFEST_ENTRY -> {
-                                mediaManifestJson = readCurrentEntryText(zipInput)
+                                mediaManifestJson = readCurrentEntryText(zipInput, MAX_ARCHIVE_TEXT_ENTRY_BYTES)
                             }
                             else -> {
                                 val outFile = File(canonicalTargetDir, entry.name).canonicalFile
@@ -121,8 +135,13 @@ object ProjectArchive {
                                 }
                                 outFile.parentFile?.mkdirs()
                                 outFile.outputStream().use { out ->
-                                    zipInput.copyTo(out, bufferSize = 65536)
+                                    val remainingBytes = MAX_ARCHIVE_TOTAL_BYTES - extractedBytes
+                                    if (remainingBytes <= 0L) {
+                                        throw IOException("Archive exceeds size limit")
+                                    }
+                                    extractedBytes += copyWithLimit(zipInput, out, remainingBytes)
                                 }
+                                extractedPaths += outFile
                                 extractedFiles[entry.name] = Uri.fromFile(outFile)
                             }
                         }
@@ -135,9 +154,7 @@ object ProjectArchive {
             val stateJson = projectJson
             if (stateJson == null) {
                 Log.e("ProjectArchive", "No $PROJECT_JSON_ENTRY in archive")
-                if (!targetDirAlreadyExisted) {
-                    canonicalTargetDir.deleteRecursively()
-                }
+                cleanupPartialImport(canonicalTargetDir, extractedPaths, targetDirAlreadyExisted)
                 return@withContext null
             }
 
@@ -146,9 +163,7 @@ object ProjectArchive {
                 .rewriteArchivedMediaUris(manifestMap, extractedFiles)
         } catch (e: Exception) {
             Log.e("ProjectArchive", "Archive import failed", e)
-            if (!targetDirAlreadyExisted) {
-                canonicalTargetDir.deleteRecursively()
-            }
+            cleanupPartialImport(canonicalTargetDir, extractedPaths, targetDirAlreadyExisted)
             null
         }
     }
@@ -166,7 +181,9 @@ object ProjectArchive {
         for (uri in mediaUris) {
             try {
                 context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { fd ->
-                    totalSize += fd.length
+                    if (fd.length > 0L) {
+                        totalSize += fd.length
+                    }
                 }
             } catch (e: Exception) {
                 // Skip unreadable files
@@ -242,14 +259,12 @@ object ProjectArchive {
 
     private fun writeTextEntry(zip: ZipOutputStream, entryName: String, text: String) {
         zip.putNextEntry(ZipEntry(entryName))
-        zip.write(text.toByteArray())
+        zip.write(text.toByteArray(Charsets.UTF_8))
         zip.closeEntry()
     }
 
-    private fun readCurrentEntryText(zipInput: ZipInputStream): String {
-        val buffer = ByteArrayOutputStream()
-        zipInput.copyTo(buffer, bufferSize = 8192)
-        return buffer.toString(Charsets.UTF_8.name())
+    private fun readCurrentEntryText(zipInput: ZipInputStream, maxBytes: Long): String {
+        return readUtf8WithByteLimit(zipInput, maxBytes)
     }
 
     private fun AutoSaveState.rewriteArchivedMediaUris(
@@ -301,5 +316,32 @@ object ProjectArchive {
                 else -> null
             }
         }
+    }
+
+    private fun cleanupPartialImport(
+        canonicalTargetDir: File,
+        extractedPaths: List<File>,
+        targetDirAlreadyExisted: Boolean
+    ) {
+        extractedPaths
+            .sortedByDescending { it.absolutePath.length }
+            .forEach { extracted ->
+                runCatching { extracted.delete() }
+            }
+
+        if (!targetDirAlreadyExisted) {
+            canonicalTargetDir.deleteRecursively()
+            return
+        }
+
+        extractedPaths
+            .mapNotNull { it.parentFile }
+            .distinct()
+            .sortedByDescending { it.absolutePath.length }
+            .forEach { directory ->
+                if (directory != canonicalTargetDir && directory.exists() && directory.list().isNullOrEmpty()) {
+                    runCatching { directory.delete() }
+                }
+            }
     }
 }

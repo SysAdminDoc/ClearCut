@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
     <cache-path name="video_capture" path="camera/" />
+    <cache-path name="frame_capture" path="frames/" />
     <external-files-path name="exports" path="Movies/NovaCut/" />
     <external-files-path name="archives" path="archives/" />
     <external-files-path name="timeline_exports" path="exports/" />

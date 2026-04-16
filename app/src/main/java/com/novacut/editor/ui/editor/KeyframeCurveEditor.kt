@@ -97,13 +97,14 @@ fun KeyframeCurveEditor(
         }
     }
 
+    val currentSelection = selectedKeyframe
     val selectionAccent = selectedKeyframe?.let { PROPERTY_COLORS[it.property] } ?: Mocha.Mauve
     val activeKeyframeCount = keyframes.count { it.property in activeProperties }
     val summaryBody = when {
         activeProperties.isEmpty() -> stringResource(R.string.panel_keyframes_summary_empty)
-        selectedKeyframe != null -> stringResource(
+        currentSelection != null -> stringResource(
             R.string.panel_keyframes_summary_selected,
-            selectedKeyframe!!.property.displayLabel()
+            currentSelection.property.displayLabel()
         )
         else -> stringResource(R.string.panel_keyframes_summary_ready)
     }
@@ -316,7 +317,7 @@ fun KeyframeCurveEditor(
         Spacer(modifier = Modifier.height(12.dp))
 
         PremiumPanelCard(accent = selectionAccent) {
-            if (selectedKeyframe == null) {
+            if (currentSelection == null) {
                 Text(
                     text = stringResource(R.string.panel_keyframes_selection_empty_title),
                     color = Mocha.Text,
@@ -329,7 +330,7 @@ fun KeyframeCurveEditor(
                     style = MaterialTheme.typography.bodyMedium
                 )
             } else {
-                val keyframe = selectedKeyframe!!
+                val keyframe = currentSelection
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,

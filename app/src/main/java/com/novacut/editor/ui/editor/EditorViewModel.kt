@@ -2513,7 +2513,7 @@ class EditorViewModel @Inject constructor(
                 val dir = java.io.File(appContext.getExternalFilesDir(null), "exports")
                 dir.mkdirs()
                 val file = java.io.File(dir, "${sanitizedProjectFileStem(s.project.name)}.otio")
-                file.writeText(otioJson)
+                file.writeText(otioJson, Charsets.UTF_8)
                 withContext(Dispatchers.Main) { showToast("OTIO exported: ${file.name}") }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) { showToast("OTIO export failed: ${e.message}") }
@@ -2529,7 +2529,7 @@ class EditorViewModel @Inject constructor(
                 val dir = java.io.File(appContext.getExternalFilesDir(null), "exports")
                 dir.mkdirs()
                 val file = java.io.File(dir, "${sanitizedProjectFileStem(s.project.name)}.fcpxml")
-                file.writeText(xml)
+                file.writeText(xml, Charsets.UTF_8)
                 withContext(Dispatchers.Main) { showToast("FCPXML exported: ${file.name}") }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) { showToast("FCPXML export failed: ${e.message}") }
@@ -3098,7 +3098,8 @@ class EditorViewModel @Inject constructor(
                     clip.sourceUri, _playheadMs.value * 1000
                 ) ?: return@launch
                 val ext = config.captureFormat.extension
-                val file = java.io.File(appContext.cacheDir, "frame_${System.currentTimeMillis()}.$ext")
+                val captureDir = java.io.File(appContext.cacheDir, "frames").apply { mkdirs() }
+                val file = java.io.File(captureDir, "frame_${System.currentTimeMillis()}.$ext")
                 file.outputStream().use { bitmap.compress(format, quality, it) }
                 bitmap.recycle()
                 _state.update { it.copy(lastExportedFilePath = file.absolutePath, exportState = ExportState.COMPLETE) }

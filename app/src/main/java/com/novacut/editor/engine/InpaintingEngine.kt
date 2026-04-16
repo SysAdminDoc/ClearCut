@@ -14,6 +14,7 @@ import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.FloatBuffer
@@ -117,13 +118,18 @@ class InpaintingEngine @Inject constructor(
     ): Boolean = withContext(Dispatchers.IO) {
         val modelDir = File(context.filesDir, "models/inpainting").also { it.mkdirs() }
         val outputFile = File(modelDir, MODEL_FILENAME)
+        val tempFile = File(modelDir, "$MODEL_FILENAME.tmp")
         try {
             Log.d(TAG, "Downloading LaMa-Dilated model from $MODEL_URL")
             val connection = URL(MODEL_URL).openConnection() as HttpURLConnection
             connection.connectTimeout = 30_000
             connection.readTimeout = 30_000
-            val tempFile = File(modelDir, "$MODEL_FILENAME.tmp")
             try {
+                connection.setRequestProperty("User-Agent", "NovaCut/${com.novacut.editor.NovaCutApp.VERSION.removePrefix("v")}")
+                connection.connect()
+                if (connection.responseCode !in 200..299) {
+                    throw IOException("HTTP ${connection.responseCode}")
+                }
                 val contentLength = connection.contentLengthLong.let {
                     if (it > 0) it else MODEL_SIZE_BYTES
                 }
@@ -140,21 +146,26 @@ class InpaintingEngine @Inject constructor(
                         }
                     }
                 }
+                if (tempFile.length() <= 0L) {
+                    throw IOException("Downloaded model is empty")
+                }
+                if (connection.contentLengthLong > 0L && tempFile.length() != connection.contentLengthLong) {
+                    throw IOException("Downloaded model is incomplete")
+                }
+                if (tempFile.length() < MODEL_SIZE_BYTES / 2) {
+                    throw IOException("Downloaded model is smaller than expected")
+                }
             } finally {
                 connection.disconnect()
             }
 
-            if (!tempFile.renameTo(outputFile)) {
-                tempFile.copyTo(outputFile, overwrite = true)
-                tempFile.delete()
-            }
+            moveFileReplacing(tempFile, outputFile)
             Log.d(TAG, "LaMa model downloaded: ${outputFile.length()} bytes")
             onProgress(1f)
             true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to download LaMa model", e)
-            outputFile.delete()
-            File(modelDir, "$MODEL_FILENAME.tmp").delete()
+            tempFile.delete()
             false
         }
     }

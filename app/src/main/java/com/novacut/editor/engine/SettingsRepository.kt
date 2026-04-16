@@ -6,6 +6,8 @@ import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import com.novacut.editor.model.*
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.IOException
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -61,33 +63,49 @@ class SettingsRepository @Inject constructor(
         val DEFAULT_EXPORT_QUALITY = stringPreferencesKey("default_export_quality")
     }
 
-    val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
-        AppSettings(
-            defaultResolution = prefs[Keys.RESOLUTION]?.let {
-                try { Resolution.valueOf(it) } catch (_: Exception) { null }
-            } ?: Resolution.FHD_1080P,
-            defaultFrameRate = prefs[Keys.FRAME_RATE] ?: 30,
-            defaultAspectRatio = prefs[Keys.ASPECT_RATIO]?.let {
-                try { AspectRatio.valueOf(it) } catch (_: Exception) { null }
-            } ?: AspectRatio.RATIO_16_9,
-            defaultCodec = prefs[Keys.DEFAULT_CODEC] ?: "H264",
-            proxyEnabled = prefs[Keys.PROXY_ENABLED] ?: true,
-            autoSaveEnabled = prefs[Keys.AUTO_SAVE] ?: true,
-            autoSaveIntervalSec = prefs[Keys.AUTO_SAVE_INTERVAL] ?: 60,
-            proxyResolution = prefs[Keys.PROXY_RES]?.let {
-                try { ProxyResolution.valueOf(it) } catch (_: Exception) { null }
-            } ?: ProxyResolution.QUARTER,
-            editorMode = prefs[Keys.EDITOR_MODE] ?: "Pro",
-            hapticEnabled = prefs[Keys.HAPTIC_ENABLED] ?: true,
-            showWaveforms = prefs[Keys.SHOW_WAVEFORMS] ?: true,
-            defaultTrackHeight = prefs[Keys.DEFAULT_TRACK_HEIGHT] ?: 64,
-            snapToBeat = prefs[Keys.SNAP_TO_BEAT] ?: false,
-            snapToMarker = prefs[Keys.SNAP_TO_MARKER] ?: true,
-            thumbnailCacheSizeMb = prefs[Keys.THUMBNAIL_CACHE_SIZE_MB] ?: 128,
-            confirmBeforeDelete = prefs[Keys.CONFIRM_BEFORE_DELETE] ?: true,
-            defaultExportQuality = prefs[Keys.DEFAULT_EXPORT_QUALITY] ?: "HIGH"
-        )
-    }
+    private val data: Flow<Preferences> = context.dataStore.data
+        .catch { error ->
+            if (error is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw error
+            }
+        }
+
+    val settings: Flow<AppSettings> = data
+        .map { prefs ->
+            AppSettings(
+                defaultResolution = prefs[Keys.RESOLUTION]?.let {
+                    try { Resolution.valueOf(it) } catch (_: Exception) { null }
+                } ?: Resolution.FHD_1080P,
+                defaultFrameRate = (prefs[Keys.FRAME_RATE] ?: 30).coerceIn(1, 120),
+                defaultAspectRatio = prefs[Keys.ASPECT_RATIO]?.let {
+                    try { AspectRatio.valueOf(it) } catch (_: Exception) { null }
+                } ?: AspectRatio.RATIO_16_9,
+                defaultCodec = prefs[Keys.DEFAULT_CODEC]
+                    ?.takeIf { codec -> runCatching { VideoCodec.valueOf(codec) }.isSuccess }
+                    ?: VideoCodec.H264.name,
+                proxyEnabled = prefs[Keys.PROXY_ENABLED] ?: true,
+                autoSaveEnabled = prefs[Keys.AUTO_SAVE] ?: true,
+                autoSaveIntervalSec = (prefs[Keys.AUTO_SAVE_INTERVAL] ?: 60).coerceIn(15, 300),
+                proxyResolution = prefs[Keys.PROXY_RES]?.let {
+                    try { ProxyResolution.valueOf(it) } catch (_: Exception) { null }
+                } ?: ProxyResolution.QUARTER,
+                editorMode = prefs[Keys.EDITOR_MODE]
+                    ?.takeIf { it == "Easy" || it == "Pro" }
+                    ?: "Pro",
+                hapticEnabled = prefs[Keys.HAPTIC_ENABLED] ?: true,
+                showWaveforms = prefs[Keys.SHOW_WAVEFORMS] ?: true,
+                defaultTrackHeight = (prefs[Keys.DEFAULT_TRACK_HEIGHT] ?: 64).coerceIn(48, 120),
+                snapToBeat = prefs[Keys.SNAP_TO_BEAT] ?: false,
+                snapToMarker = prefs[Keys.SNAP_TO_MARKER] ?: true,
+                thumbnailCacheSizeMb = (prefs[Keys.THUMBNAIL_CACHE_SIZE_MB] ?: 128).coerceIn(32, 512),
+                confirmBeforeDelete = prefs[Keys.CONFIRM_BEFORE_DELETE] ?: true,
+                defaultExportQuality = prefs[Keys.DEFAULT_EXPORT_QUALITY]
+                    ?.takeIf { quality -> runCatching { ExportQuality.valueOf(quality) }.isSuccess }
+                    ?: ExportQuality.HIGH.name
+            )
+        }
 
     suspend fun updateResolution(value: Resolution) {
         context.dataStore.edit { it[Keys.RESOLUTION] = value.name }
@@ -107,7 +125,7 @@ class SettingsRepository @Inject constructor(
     }
 
     suspend fun updateAutoSaveInterval(sec: Int) {
-        context.dataStore.edit { it[Keys.AUTO_SAVE_INTERVAL] = sec }
+        context.dataStore.edit { it[Keys.AUTO_SAVE_INTERVAL] = sec.coerceIn(15, 300) }
     }
 
     suspend fun updateProxyResolution(value: ProxyResolution) {
@@ -125,7 +143,7 @@ class SettingsRepository @Inject constructor(
     }
 
     suspend fun isTutorialShown(): Boolean {
-        return context.dataStore.data.map { it[Keys.TUTORIAL_SHOWN] ?: false }.first()
+        return data.map { it[Keys.TUTORIAL_SHOWN] ?: false }.first()
     }
 
     suspend fun setTutorialShown(shown: Boolean = true) {
@@ -133,7 +151,7 @@ class SettingsRepository @Inject constructor(
     }
 
     suspend fun getFavoriteEffects(): Set<String> {
-        return context.dataStore.data.map { it[Keys.FAVORITE_EFFECTS] ?: emptySet() }.first()
+        return data.map { it[Keys.FAVORITE_EFFECTS] ?: emptySet() }.first()
     }
 
     suspend fun toggleFavoriteEffect(effectType: String) {
@@ -158,7 +176,11 @@ class SettingsRepository @Inject constructor(
     }
 
     suspend fun updateEditorMode(mode: String) {
-        context.dataStore.edit { it[Keys.EDITOR_MODE] = mode }
+        val normalized = when (mode) {
+            "Easy", "Pro" -> mode
+            else -> return
+        }
+        context.dataStore.edit { it[Keys.EDITOR_MODE] = normalized }
     }
 
     suspend fun updateHapticEnabled(enabled: Boolean) {
@@ -166,7 +188,7 @@ class SettingsRepository @Inject constructor(
     }
 
     suspend fun getRecentEffects(): List<String> {
-        return context.dataStore.data.map { prefs ->
+        return data.map { prefs ->
             (prefs[Keys.RECENT_EFFECTS] ?: "")
                 .split(",")
                 .filter { it.isNotBlank() }

@@ -95,7 +95,7 @@ class EdlExporter @Inject constructor(
             outputDir.mkdirs()
             val sanitized = sanitizeFileName(projectName, fallback = "NovaCut", maxLength = 50)
             val file = File(outputDir, "${sanitized}.edl")
-            file.writeText(sb.toString())
+            file.writeText(sb.toString(), Charsets.UTF_8)
             Log.d(TAG, "EDL exported: ${file.absolutePath}")
             file
         } catch (e: Exception) {
