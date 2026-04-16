@@ -2,6 +2,7 @@ package com.novacut.editor.ui.editor
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import com.novacut.editor.R
 import com.novacut.editor.ai.AiFeatures
 import com.novacut.editor.engine.*
@@ -110,15 +111,20 @@ class AiToolsDelegate(
 
     fun saveAsTemplate(name: String) {
         scope.launch {
-            val s = stateFlow.value
-            templateManager.saveTemplate(
-                name = name,
-                description = "${s.tracks.size} tracks, ${s.textOverlays.size} text overlays",
-                project = s.project,
-                tracks = s.tracks,
-                textOverlays = s.textOverlays
-            )
-            showToast("Saved template: $name")
+            try {
+                val s = stateFlow.value
+                val template = templateManager.saveTemplate(
+                    name = name,
+                    description = "${s.tracks.size} tracks, ${s.textOverlays.size} text overlays",
+                    project = s.project,
+                    tracks = s.tracks,
+                    textOverlays = s.textOverlays
+                )
+                showToast("Saved template: ${template.name}")
+            } catch (e: Exception) {
+                Log.e("AiToolsDelegate", "Failed to save template", e)
+                showToast("Template save failed: ${e.message ?: "Unknown error"}")
+            }
         }
     }
 

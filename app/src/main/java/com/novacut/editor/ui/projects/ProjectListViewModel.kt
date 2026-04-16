@@ -265,6 +265,16 @@ class ProjectListViewModel @Inject constructor(
             val importedUri = withContext(Dispatchers.IO) {
                 copyToLocalMedia(videoUri, "video")
             }
+            val importCheck = withContext(Dispatchers.IO) {
+                val readable = runCatching {
+                    appContext.contentResolver.openAssetFileDescriptor(importedUri, "r")?.use { true } ?: false
+                }.getOrDefault(importedUri.scheme == "file")
+                readable to videoEngine.hasVisualTrack(importedUri)
+            }
+            if (!importCheck.first || !importCheck.second) {
+                showToast("Couldn't import that video")
+                return@launch
+            }
             val durationMs = withContext(Dispatchers.IO) {
                 videoEngine.getVideoDuration(importedUri).takeIf { it > 0 } ?: 3_000L
             }

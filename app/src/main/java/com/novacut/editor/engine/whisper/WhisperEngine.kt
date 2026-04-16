@@ -9,6 +9,7 @@ import android.net.Uri
 import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
+import com.novacut.editor.engine.moveFileReplacing
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,7 +49,7 @@ class WhisperEngine @Inject constructor(
     private val vocabFile = File(modelDir, "vocab.json")
 
     private val _modelState = MutableStateFlow(
-        if (encoderFile.exists() && decoderFile.exists() && vocabFile.exists())
+        if (hasDownloadedModelFiles())
             WhisperModelState.READY else WhisperModelState.NOT_DOWNLOADED
     )
     val modelState: StateFlow<WhisperModelState> = _modelState.asStateFlow()
@@ -64,6 +65,9 @@ class WhisperEngine @Inject constructor(
         private const val ENCODER_URL = "$BASE_URL/encoder_model.onnx"
         private const val DECODER_URL = "$BASE_URL/decoder_model.onnx"
         private const val VOCAB_URL = "https://huggingface.co/onnx-community/whisper-tiny.en/resolve/main/vocab.json"
+        private const val MIN_ENCODER_BYTES = 5L * 1024L * 1024L
+        private const val MIN_DECODER_BYTES = 5L * 1024L * 1024L
+        private const val MIN_VOCAB_BYTES = 4L * 1024L
 
         // Special tokens
         const val SOT = 50257          // <|startoftranscript|>
@@ -81,7 +85,13 @@ class WhisperEngine @Inject constructor(
         fun estimateModelSizeMB(): Int = 75 // ~40MB encoder + ~35MB decoder
     }
 
-    fun isReady(): Boolean = _modelState.value == WhisperModelState.READY
+    private fun hasDownloadedModelFiles(): Boolean {
+        return encoderFile.exists() && encoderFile.length() >= MIN_ENCODER_BYTES &&
+            decoderFile.exists() && decoderFile.length() >= MIN_DECODER_BYTES &&
+            vocabFile.exists() && vocabFile.length() >= MIN_VOCAB_BYTES
+    }
+
+    fun isReady(): Boolean = _modelState.value == WhisperModelState.READY && hasDownloadedModelFiles()
 
     /**
      * Download Whisper tiny.en ONNX model files from HuggingFace.
@@ -104,7 +114,9 @@ class WhisperEngine @Inject constructor(
             val totalEstimate = estimateModelSizeMB() * 1024L * 1024L
 
             for ((url, file) in files) {
-                if (file.exists() && file.length() > 1000) continue
+                if (file == encoderFile && file.exists() && file.length() >= MIN_ENCODER_BYTES) continue
+                if (file == decoderFile && file.exists() && file.length() >= MIN_DECODER_BYTES) continue
+                if (file == vocabFile && file.exists() && file.length() >= MIN_VOCAB_BYTES) continue
                 val tempFile = File(file.parentFile, "${file.name}.tmp")
                 val conn = URL(url).openConnection() as HttpURLConnection
                 conn.connectTimeout = 30000
@@ -135,10 +147,21 @@ class WhisperEngine @Inject constructor(
                             }
                         }
                     }
-                    if (!tempFile.renameTo(file)) {
-                        tempFile.copyTo(file, overwrite = true)
-                        tempFile.delete()
+                    if (tempFile.length() <= 0L) {
+                        throw IllegalStateException("Downloaded model file is empty: ${file.name}")
                     }
+                    if (fileSize > 0L && tempFile.length() != fileSize) {
+                        throw IllegalStateException("Downloaded model file is incomplete: ${file.name}")
+                    }
+                    val minimumBytes = when (file) {
+                        encoderFile -> MIN_ENCODER_BYTES
+                        decoderFile -> MIN_DECODER_BYTES
+                        else -> MIN_VOCAB_BYTES
+                    }
+                    if (tempFile.length() < minimumBytes) {
+                        throw IllegalStateException("Downloaded model file is smaller than expected: ${file.name}")
+                    }
+                    moveFileReplacing(tempFile, file)
                 } catch (e: Exception) {
                     tempFile.delete()
                     throw e
@@ -152,7 +175,11 @@ class WhisperEngine @Inject constructor(
             _modelState.value = WhisperModelState.READY
             true
         } catch (e: Exception) {
-            _modelState.value = WhisperModelState.ERROR
+            _modelState.value = if (hasDownloadedModelFiles()) {
+                WhisperModelState.READY
+            } else {
+                WhisperModelState.ERROR
+            }
             _downloadProgress.value = 0f
             false
         }
@@ -404,7 +431,7 @@ class WhisperEngine @Inject constructor(
     private fun loadVocab() {
         if (!vocabFile.exists()) return
         try {
-            val json = JSONObject(vocabFile.readText())
+            val json = JSONObject(vocabFile.readText(Charsets.UTF_8))
             val map = mutableMapOf<Int, String>()
             json.keys().forEach { key ->
                 val tokenId = json.getInt(key)

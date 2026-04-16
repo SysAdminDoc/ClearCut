@@ -12,6 +12,8 @@ import com.novacut.editor.engine.ExportService
 import com.novacut.editor.engine.ExportState
 import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.engine.VideoEngine
+import com.novacut.editor.engine.exportMimeTypeFor
+import com.novacut.editor.engine.exportUsesImageCollection
 import com.novacut.editor.engine.sanitizeFileName
 import com.novacut.editor.model.BatchExportItem
 import com.novacut.editor.model.BatchExportStatus
@@ -20,7 +22,9 @@ import com.novacut.editor.model.ExportConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -71,13 +75,15 @@ class ExportDelegate(
             ) }
             scope.launch {
                 val frames = mutableListOf<android.graphics.Bitmap>()
+                var gifFile: File? = null
                 try {
                     withContext(Dispatchers.IO) { outputDir.mkdirs() }
-                    val gifFile = createOutputFile(
+                    gifFile = createOutputFile(
                         outputDir = outputDir,
                         extension = "gif",
                         preferredOutputName = preferredOutputName ?: currentState.project.name
                     )
+                    val targetGifFile = gifFile ?: return@launch
                     val allClips = tracks.flatMap { it.clips }.sortedBy { it.timelineStartMs }
                     val totalDurationMs = allClips.maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L
                     val frameIntervalMs = (1000 / configWithChapters.gifFrameRate.coerceAtLeast(1)).toLong()
@@ -107,28 +113,32 @@ class ExportDelegate(
                         return@launch
                     }
 
-                    try {
-                        withContext(Dispatchers.IO) {
-                            gifFile.outputStream().buffered().use { out ->
-                                encodeGif(frames, frameIntervalMs.toInt(), out)
-                            }
+                    withContext(Dispatchers.IO) {
+                        targetGifFile.outputStream().buffered().use { out ->
+                            encodeGif(frames, frameIntervalMs.toInt(), out)
                         }
-                    } finally {
-                        frames.forEach { it.recycle() }
                     }
 
                     stateFlow.update { it.copy(
                         exportState = ExportState.COMPLETE,
                         exportProgress = 1f,
-                        lastExportedFilePath = gifFile.absolutePath
+                        lastExportedFilePath = targetGifFile.absolutePath
                     ) }
-                    showToast("GIF exported: ${gifFile.name}")
+                    showToast("GIF exported: ${targetGifFile.name}")
                 } catch (e: Exception) {
                     android.util.Log.w("ExportDelegate", "GIF export failed", e)
+                    gifFile?.delete()
                     stateFlow.update { it.copy(
                         exportState = ExportState.ERROR,
                         exportErrorMessage = e.message ?: "GIF export failed"
                     ) }
+                } finally {
+                    frames.forEach { bitmap ->
+                        if (!bitmap.isRecycled) {
+                            bitmap.recycle()
+                        }
+                    }
+                    frames.clear()
                 }
             }
             return
@@ -150,7 +160,9 @@ class ExportDelegate(
                 preferredOutputName = preferredOutputName ?: currentState.project.name
             )
 
-            val serviceIntent = Intent(appContext, ExportService::class.java)
+            val serviceIntent = Intent(appContext, ExportService::class.java).apply {
+                putExtra(ExportService.EXTRA_OUTPUT_PATH, outputFile.absolutePath)
+            }
             appContext.startForegroundService(serviceIntent)
 
             try {
@@ -163,7 +175,6 @@ class ExportDelegate(
                         stateFlow.update { it.copy(exportProgress = progress) }
                     },
                     onComplete = {
-                        appContext.stopService(serviceIntent)
                         stateFlow.update { it.copy(
                             exportState = ExportState.COMPLETE,
                             exportProgress = 1f,
@@ -172,7 +183,6 @@ class ExportDelegate(
                         showToast("Export complete: ${outputFile.name}")
                     },
                     onError = { e ->
-                        appContext.stopService(serviceIntent)
                         stateFlow.update { it.copy(
                             exportState = ExportState.ERROR,
                             exportErrorMessage = e.message ?: "Unknown error"
@@ -180,7 +190,6 @@ class ExportDelegate(
                     }
                 )
             } catch (e: Exception) {
-                appContext.stopService(serviceIntent)
                 stateFlow.update { it.copy(
                     exportState = ExportState.ERROR,
                     exportErrorMessage = e.message ?: "Unknown error"
@@ -191,7 +200,7 @@ class ExportDelegate(
 
     fun getShareIntent(): Intent? {
         val filePath = stateFlow.value.lastExportedFilePath ?: run {
-            showToast("No exported video to share")
+            showToast("No exported media to share")
             return null
         }
         val file = File(filePath)
@@ -201,9 +210,7 @@ class ExportDelegate(
         }
         val uri = FileProvider.getUriForFile(appContext, "${appContext.packageName}.fileprovider", file)
         return Intent(Intent.ACTION_SEND).apply {
-            type = if (filePath.endsWith(".gif", ignoreCase = true)) "image/gif"
-                   else if (filePath.endsWith(".webm", ignoreCase = true)) "video/webm"
-                   else "video/*"
+            type = exportMimeTypeFor(file.name)
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
@@ -211,7 +218,7 @@ class ExportDelegate(
 
     fun saveToGallery() {
         val filePath = stateFlow.value.lastExportedFilePath ?: run {
-            showToast("No exported video")
+            showToast("No exported media")
             return
         }
         val file = File(filePath)
@@ -261,8 +268,10 @@ class ExportDelegate(
         }
         hideBatchExport()
         scope.launch {
-            val outputDir = appContext.getExternalFilesDir(Environment.DIRECTORY_MOVIES)
-                ?: appContext.filesDir
+            val outputDir = File(
+                appContext.getExternalFilesDir(Environment.DIRECTORY_MOVIES) ?: appContext.filesDir,
+                "NovaCut"
+            ).apply { mkdirs() }
             val originalConfig = stateFlow.value.exportConfig
             try {
                 for ((index, item) in queue.withIndex()) {
@@ -276,7 +285,9 @@ class ExportDelegate(
                     stateFlow.update { it.copy(exportConfig = item.config) }
                     startExport(outputDir, item.outputName)
                     val progressJob = scope.launch {
-                        videoEngine.exportProgress.collect { progress ->
+                        stateFlow.map { it.exportProgress }
+                            .distinctUntilChanged()
+                            .collect { progress ->
                             stateFlow.update { s ->
                                 s.copy(batchExportQueue = s.batchExportQueue.map {
                                     if (it.id == item.id) it.copy(progress = progress) else it
@@ -285,7 +296,9 @@ class ExportDelegate(
                         }
                     }
                     val result = try {
-                        videoEngine.exportState.first { it != ExportState.IDLE && it != ExportState.EXPORTING }
+                        stateFlow.map { it.exportState }
+                            .distinctUntilChanged()
+                            .first { it != ExportState.IDLE && it != ExportState.EXPORTING }
                     } finally {
                         progressJob.cancel()
                     }
@@ -337,13 +350,9 @@ class ExportDelegate(
     }
 
     private fun saveExportedFile(file: File): String {
-        val isGif = file.name.endsWith(".gif", ignoreCase = true)
-        val relativeDirectory = if (isGif) Environment.DIRECTORY_PICTURES else Environment.DIRECTORY_MOVIES
-        val mimeType = when {
-            isGif -> "image/gif"
-            file.name.endsWith(".webm", ignoreCase = true) -> "video/webm"
-            else -> "video/mp4"
-        }
+        val usesImageCollection = exportUsesImageCollection(file.name)
+        val relativeDirectory = if (usesImageCollection) Environment.DIRECTORY_PICTURES else Environment.DIRECTORY_MOVIES
+        val mimeType = exportMimeTypeFor(file.name)
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val resolver = appContext.contentResolver
@@ -353,7 +362,11 @@ class ExportDelegate(
                 put(MediaStore.MediaColumns.RELATIVE_PATH, "$relativeDirectory/NovaCut")
                 put(MediaStore.MediaColumns.IS_PENDING, 1)
             }
-            val collection = if (isGif) MediaStore.Images.Media.EXTERNAL_CONTENT_URI else MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+            val collection = if (usesImageCollection) {
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+            } else {
+                MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+            }
             val contentUri = resolver.insert(collection, values)
                 ?: throw IllegalStateException("Failed to create media destination")
 
@@ -374,7 +387,11 @@ class ExportDelegate(
             val externalRoot = appContext.getExternalFilesDir(relativeDirectory)
                 ?: File(appContext.filesDir, relativeDirectory.lowercase())
             val destinationDir = File(externalRoot, "NovaCut").apply { mkdirs() }
-            val destinationFile = createOutputFile(destinationDir, file.extension.ifBlank { if (isGif) "gif" else "mp4" }, file.name)
+            val destinationFile = createOutputFile(
+                destinationDir,
+                file.extension.ifBlank { if (usesImageCollection) "png" else "mp4" },
+                file.name
+            )
             file.copyTo(destinationFile, overwrite = true)
             MediaScannerConnection.scanFile(
                 appContext,

@@ -88,6 +88,7 @@ class VideoEngine @Inject constructor(
 
     // Active Transformer for export cancellation
     @Volatile private var activeTransformer: Transformer? = null
+    @Volatile private var activeExportOutputFile: File? = null
 
     private val mediaCharacteristicsCache = ConcurrentHashMap<String, MediaCharacteristics>()
 
@@ -123,7 +124,7 @@ class VideoEngine @Inject constructor(
                 .setRenderersFactory(renderersFactory)
                 .build()
         }
-        return player!!
+        return requireNotNull(player) { "ExoPlayer failed to initialize" }
     }
 
     /**
@@ -184,7 +185,7 @@ class VideoEngine @Inject constructor(
                 applyEffectsForCurrentClip()
             }
         }
-        p.addListener(transitionListener!!)
+        transitionListener?.let(p::addListener)
 
         // Apply effects for the initial clip
         applyEffectsForCurrentClip()
@@ -322,8 +323,10 @@ class VideoEngine @Inject constructor(
                 return
             }
             _exportState.value = ExportState.EXPORTING
+            activeExportOutputFile = outputFile
         }
         _exportProgress.value = 0f
+        _exportErrorMessage.value = null
 
         try {
             val visibleVideoTracks = tracks
@@ -386,6 +389,7 @@ class VideoEngine @Inject constructor(
             _exportState.value = ExportState.ERROR
             _exportProgress.value = 0f
             activeTransformer = null
+            activeExportOutputFile = null
             outputFile.delete()
             onError(e)
         }
@@ -838,6 +842,7 @@ class VideoEngine @Inject constructor(
                     if (_exportState.value == ExportState.CANCELLED) return
                     _exportState.value = ExportState.COMPLETE
                     _exportProgress.value = 1f
+                    activeExportOutputFile = null
                     onComplete()
                 }
 
@@ -851,6 +856,7 @@ class VideoEngine @Inject constructor(
                     _exportErrorMessage.value = exportException.message ?: "Export encoding failed"
                     _exportState.value = ExportState.ERROR
                     _exportProgress.value = 0f
+                    activeExportOutputFile = null
                     outputFile.delete()
                     onError(exportException)
                 }
@@ -877,6 +883,7 @@ class VideoEngine @Inject constructor(
                 _exportErrorMessage.value = "Export timed out after 10 minutes"
                 _exportState.value = ExportState.ERROR
                 _exportProgress.value = 0f
+                activeExportOutputFile = null
                 outputFile.delete()
                 onError(Exception("Export timed out"))
             }
@@ -892,6 +899,8 @@ class VideoEngine @Inject constructor(
         _exportProgress.value = 0f
         activeTransformer?.cancel()
         activeTransformer = null
+        activeExportOutputFile?.delete()
+        activeExportOutputFile = null
     }
 
     // --- Preview effects & speed ---

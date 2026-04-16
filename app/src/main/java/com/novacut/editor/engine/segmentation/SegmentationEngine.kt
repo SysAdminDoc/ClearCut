@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import com.novacut.editor.engine.moveFileReplacing
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.framework.image.ByteBufferExtractor
 import com.google.mediapipe.tasks.core.BaseOptions
@@ -45,7 +46,7 @@ class SegmentationEngine @Inject constructor(
     private val modelFile = File(modelDir, "selfie_segmenter.tflite")
 
     private val _modelState = MutableStateFlow(
-        if (modelFile.exists() && modelFile.length() > 1000)
+        if (hasDownloadedModelFile())
             SegmentationModelState.READY else SegmentationModelState.NOT_DOWNLOADED
     )
     val modelState: StateFlow<SegmentationModelState> = _modelState.asStateFlow()
@@ -58,11 +59,16 @@ class SegmentationEngine @Inject constructor(
     companion object {
         private const val MODEL_URL =
             "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float32/latest/selfie_segmenter.tflite"
+        private const val MIN_MODEL_BYTES = 32L * 1024L
 
         fun estimateModelSizeMB(): Int = 1 // ~256KB
     }
 
-    fun isReady(): Boolean = _modelState.value == SegmentationModelState.READY
+    private fun hasDownloadedModelFile(): Boolean {
+        return modelFile.exists() && modelFile.length() >= MIN_MODEL_BYTES
+    }
+
+    fun isReady(): Boolean = _modelState.value == SegmentationModelState.READY && hasDownloadedModelFile()
 
     /**
      * Download the selfie segmenter model (~256KB) from Google's model storage.
@@ -75,7 +81,7 @@ class SegmentationEngine @Inject constructor(
             _downloadProgress.value = 0f
             modelDir.mkdirs()
 
-            if (modelFile.exists() && modelFile.length() > 1000) {
+            if (hasDownloadedModelFile()) {
                 _modelState.value = SegmentationModelState.READY
                 _downloadProgress.value = 1f
                 onProgress(1f)
@@ -112,20 +118,31 @@ class SegmentationEngine @Inject constructor(
                         }
                     }
                 }
+                if (tempFile.length() <= 0L) {
+                    throw IllegalStateException("Downloaded segmentation model is empty")
+                }
+                if (totalBytes > 0L && tempFile.length() != totalBytes) {
+                    throw IllegalStateException("Downloaded segmentation model is incomplete")
+                }
+                if (tempFile.length() < MIN_MODEL_BYTES) {
+                    throw IllegalStateException("Downloaded segmentation model is smaller than expected")
+                }
             } finally {
                 conn.disconnect()
             }
 
-            if (!tempFile.renameTo(modelFile)) {
-                tempFile.copyTo(modelFile, overwrite = true)
-                tempFile.delete()
-            }
+            moveFileReplacing(tempFile, modelFile)
             _downloadProgress.value = 1f
             onProgress(1f)
             _modelState.value = SegmentationModelState.READY
             true
         } catch (e: Exception) {
-            _modelState.value = SegmentationModelState.ERROR
+            File(modelDir, "selfie_segmenter.tflite.tmp").delete()
+            _modelState.value = if (hasDownloadedModelFile()) {
+                SegmentationModelState.READY
+            } else {
+                SegmentationModelState.ERROR
+            }
             _downloadProgress.value = 0f
             false
         }

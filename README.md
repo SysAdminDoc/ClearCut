@@ -312,7 +312,7 @@ com.novacut.editor/
 ### Requirements
 - Android Studio Ladybug+ (2024.2+)
 - AGP 8.7.3, Gradle 8.9, JDK 17
-- Android SDK 35
+- Android SDK 36
 
 ### Release Signing
 Configure via `keystore.properties`:
@@ -323,7 +323,9 @@ keyAlias=youralias
 keyPassword=yourpass
 ```
 
-Or via environment variables: `NOVACUT_KS_PASS`, `NOVACUT_KEY_ALIAS`, `NOVACUT_KEY_PASS`
+Or via environment variables: `NOVACUT_STORE_FILE`, `NOVACUT_STORE_PASSWORD`, `NOVACUT_KEY_ALIAS`, `NOVACUT_KEY_PASSWORD`
+
+If release credentials are not configured, `assembleRelease` falls back to debug signing so CI and local verification can still produce a testable release artifact without relying on an embedded keystore.
 
 ### Dependencies
 Key external dependencies currently in `build.gradle.kts`:
@@ -338,7 +340,7 @@ Key external dependencies currently in `build.gradle.kts`:
 ## Supported Devices
 
 - **Min SDK:** 26 (Android 8.0 Oreo)
-- **Target SDK:** 35 (Android 15)
+- **Target SDK:** 36 (Android 16)
 - **Required:** OpenGL ES 3.0
 - **Recommended:** 4GB+ RAM, Snapdragon 7-series or better for AI features
 - **AV1 hardware encoding:** Pixel 8+, Snapdragon 8 Gen 3+, Dimensity 9200+

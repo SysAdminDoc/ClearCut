@@ -3,7 +3,6 @@ package com.novacut.editor.engine
 import android.app.*
 import android.content.Intent
 import android.content.pm.ServiceInfo
-import android.net.Uri
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
@@ -26,6 +25,7 @@ class ExportService : Service() {
     companion object {
         const val NOTIFICATION_ID = 1001
         const val ACTION_CANCEL = "com.novacut.editor.CANCEL_EXPORT"
+        const val EXTRA_OUTPUT_PATH = "com.novacut.editor.extra.OUTPUT_PATH"
     }
 
     @Inject lateinit var videoEngine: VideoEngine
@@ -33,6 +33,7 @@ class ExportService : Service() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var lastNotifiedProgress = -1
     private var observeJob: Job? = null
+    private var latestOutputPath: String? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -42,6 +43,8 @@ class ExportService : Service() {
             videoEngine.cancelExport()
             return START_NOT_STICKY
         }
+
+        latestOutputPath = intent?.getStringExtra(EXTRA_OUTPUT_PATH) ?: latestOutputPath
 
         val notification = buildNotification(0)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
@@ -102,10 +105,7 @@ class ExportService : Service() {
         val nm = getSystemService(NotificationManager::class.java)
         nm?.cancel(NOTIFICATION_ID) // Cancel the progress notification first
 
-        // Build tap-to-open intent for the exported file
-        val openIntent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
+        val openIntent = buildOpenIntent()
         val openPi = PendingIntent.getActivity(
             this, 0, openIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -122,6 +122,26 @@ class ExportService : Service() {
         nm?.notify(NOTIFICATION_ID + 1, notification)
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
+    }
+
+    private fun buildOpenIntent(): Intent {
+        val file = latestOutputPath?.let(::File)?.takeIf { it.exists() }
+        if (file != null) {
+            val uri = FileProvider.getUriForFile(
+                this,
+                "${packageName}.fileprovider",
+                file
+            )
+            return Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, exportMimeTypeFor(file.name))
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        }
+
+        return Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
     }
 
     private fun notifyError(message: String) {

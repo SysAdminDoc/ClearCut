@@ -8,6 +8,12 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+fun resolveSigningSecret(vararg keys: String): String? {
+    return keys.firstNotNullOfOrNull { key ->
+        System.getenv(key)?.trim()?.takeIf { it.isNotEmpty() }
+    }
+}
+
 android {
     namespace = "com.novacut.editor"
     compileSdk = 36
@@ -24,19 +30,29 @@ android {
         create("release") {
             val props = Properties()
             val propsFile = rootProject.file("keystore.properties")
-            val bundledKs = rootProject.file("novacut-release.jks")
             if (propsFile.exists()) {
                 props.load(propsFile.inputStream())
-                storeFile = file(props["storeFile"] as String)
-                storePassword = props["storePassword"] as String
-                keyAlias = props["keyAlias"] as String
-                keyPassword = props["keyPassword"] as String
-            } else if (bundledKs.exists()) {
-                // Fallback: use bundled keystore for local/debug builds
-                storeFile = bundledKs
-                storePassword = System.getenv("NOVACUT_KS_PASS") ?: "debug123"
-                keyAlias = System.getenv("NOVACUT_KEY_ALIAS") ?: "novacut"
-                keyPassword = System.getenv("NOVACUT_KEY_PASS") ?: "debug123"
+                val storePath = (props["storeFile"] as? String)?.trim()
+                val storePass = (props["storePassword"] as? String)?.trim()
+                val alias = (props["keyAlias"] as? String)?.trim()
+                val keyPass = (props["keyPassword"] as? String)?.trim()
+                if (!storePath.isNullOrBlank() && !storePass.isNullOrBlank() && !alias.isNullOrBlank() && !keyPass.isNullOrBlank()) {
+                    storeFile = file(storePath)
+                    storePassword = storePass
+                    keyAlias = alias
+                    keyPassword = keyPass
+                }
+            } else {
+                val storePath = resolveSigningSecret("NOVACUT_STORE_FILE")
+                val storePass = resolveSigningSecret("NOVACUT_STORE_PASSWORD", "NOVACUT_KS_PASS")
+                val alias = resolveSigningSecret("NOVACUT_KEY_ALIAS")
+                val keyPass = resolveSigningSecret("NOVACUT_KEY_PASSWORD", "NOVACUT_KEY_PASS")
+                if (!storePath.isNullOrBlank() && !storePass.isNullOrBlank() && !alias.isNullOrBlank() && !keyPass.isNullOrBlank()) {
+                    storeFile = file(storePath)
+                    storePassword = storePass
+                    keyAlias = alias
+                    keyPassword = keyPass
+                }
             }
         }
     }

@@ -25,7 +25,7 @@ object SubtitleExporter {
         }
 
         return try {
-            outputFile.writeText(content)
+            outputFile.writeText(content, Charsets.UTF_8)
             true
         } catch (e: Exception) {
             Log.e("SubtitleExporter", "Export failed", e)

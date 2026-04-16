@@ -21,6 +21,10 @@ import javax.inject.Singleton
 class EffectShareEngine @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
+    private companion object {
+        private const val MAX_EFFECT_SHARE_BYTES = 1_000_000L
+    }
+
     private val shareDir = File(context.filesDir, "shared_effects").also { it.mkdirs() }
 
     /**
@@ -89,7 +93,7 @@ class EffectShareEngine @Inject constructor(
 
             val sanitized = sanitizeFileName(name, fallback = "effects", maxLength = 50)
             val file = File(shareDir, "${sanitized}_${System.currentTimeMillis()}.ncfx")
-            file.writeText(json.toString(2))
+            file.writeText(json.toString(2), Charsets.UTF_8)
             file
         } catch (e: Exception) {
             Log.e("EffectShareEngine", "Export effects failed", e)
@@ -103,7 +107,7 @@ class EffectShareEngine @Inject constructor(
     suspend fun importEffects(uri: Uri): ImportedEffects? = withContext(Dispatchers.IO) {
         try {
             val json = context.contentResolver.openInputStream(uri)?.use { stream ->
-                stream.bufferedReader().readText()
+                readUtf8WithByteLimit(stream, MAX_EFFECT_SHARE_BYTES)
             } ?: return@withContext null
             parseEffectsJson(json)
         } catch (e: Exception) {
@@ -117,7 +121,13 @@ class EffectShareEngine @Inject constructor(
      */
     suspend fun importEffects(file: File): ImportedEffects? = withContext(Dispatchers.IO) {
         try {
-            parseEffectsJson(file.readText())
+            if (file.length() > MAX_EFFECT_SHARE_BYTES) {
+                Log.w("EffectShareEngine", "Effect share file exceeds 1MB limit")
+                return@withContext null
+            }
+            parseEffectsJson(file.inputStream().use { input ->
+                readUtf8WithByteLimit(input, MAX_EFFECT_SHARE_BYTES)
+            })
         } catch (e: Exception) {
             Log.e("EffectShareEngine", "Import effects failed", e)
             null
@@ -165,9 +175,11 @@ class EffectShareEngine @Inject constructor(
                     offsetR = cg.optDouble("offsetR", 0.0).toFloat(),
                     offsetG = cg.optDouble("offsetG", 0.0).toFloat(),
                     offsetB = cg.optDouble("offsetB", 0.0).toFloat(),
-                    lutPath = cg.optString("lutFileName", "").ifEmpty { cg.optString("lutPath", "") }.ifEmpty { null }?.let {
-                        File(File(context.filesDir, "luts"), it).absolutePath
-                    },
+                    lutPath = cg.optString("lutFileName", "")
+                        .ifEmpty { cg.optString("lutPath", "") }
+                        .ifEmpty { null }
+                        ?.let(::normalizeImportedLutPath)
+                        ?.absolutePath,
                     lutIntensity = cg.optDouble("lutIntensity", 1.0).toFloat()
                 )
             }
@@ -206,6 +218,15 @@ class EffectShareEngine @Inject constructor(
      * Delete a saved effects file.
      */
     fun deleteSavedEffects(file: File): Boolean = file.delete()
+
+    private fun normalizeImportedLutPath(rawPath: String): File? {
+        val safeName = sanitizeFileNamePreservingExtension(
+            raw = File(rawPath).name,
+            fallbackStem = "lut",
+            maxLength = 80
+        )
+        return safeName.takeIf { it.contains('.') }?.let { File(File(context.filesDir, "luts"), it) }
+    }
 }
 
 data class ImportedEffects(

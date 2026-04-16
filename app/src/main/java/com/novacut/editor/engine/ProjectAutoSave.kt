@@ -66,51 +66,55 @@ class ProjectAutoSave @Inject constructor(
 
     suspend fun loadRecoveryData(projectId: String): AutoSaveState? = withContext(Dispatchers.IO) {
         // Clean up stale temp file from interrupted save
-        val tempFile = File(autoSaveDir, "${projectId}.tmp")
+        val tempFile = getTempFile(projectId)
         if (tempFile.exists()) {
             Log.w(TAG, "Cleaning up stale temp file for $projectId")
             tempFile.delete()
         }
         val file = getAutoSaveFile(projectId)
-        val backupFile = File(autoSaveDir, "${projectId}.bak")
+        val backupFile = getBackupFile(projectId)
         // If main file is missing but backup exists, a save was interrupted — restore
         if (!file.exists() && backupFile.exists()) {
             Log.w(TAG, "Restoring auto-save from backup for $projectId")
-            backupFile.renameTo(file)
-        } else {
-            backupFile.delete()
+            moveFileReplacing(backupFile, file)
         }
         if (!file.exists()) return@withContext null
         try {
-            AutoSaveState.deserialize(file.readText())
+            AutoSaveState.deserialize(file.readText(Charsets.UTF_8)).also {
+                backupFile.delete()
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to load recovery data for $projectId", e)
-            null
+            if (!backupFile.exists()) {
+                return@withContext null
+            }
+            try {
+                Log.w(TAG, "Primary auto-save is corrupt; attempting backup restore for $projectId")
+                AutoSaveState.deserialize(backupFile.readText(Charsets.UTF_8)).also {
+                    moveFileReplacing(backupFile, file)
+                }
+            } catch (backupError: Exception) {
+                Log.e(TAG, "Backup auto-save restore failed for $projectId", backupError)
+                null
+            }
         }
     }
 
     fun clearRecoveryData(projectId: String) {
         getAutoSaveFile(projectId).delete()
+        getTempFile(projectId).delete()
+        getBackupFile(projectId).delete()
     }
 
     suspend fun copyAutoSave(fromProjectId: String, toProjectId: String) {
         val fromFile = getAutoSaveFile(fromProjectId)
         if (!fromFile.exists()) return
         try {
-            val json = saveMutex.withLock { JSONObject(fromFile.readText()) }
+            val json = saveMutex.withLock { JSONObject(fromFile.readText(Charsets.UTF_8)) }
             json.put("projectId", toProjectId)
             json.put("timestamp", System.currentTimeMillis())
-            val toFile = getAutoSaveFile(toProjectId)
-            val tempFile = File(autoSaveDir, "${toProjectId}.tmp")
-            try {
-                tempFile.writeText(json.toString(2))
-                if (!tempFile.renameTo(toFile)) {
-                    tempFile.copyTo(toFile, overwrite = true)
-                    tempFile.delete()
-                }
-            } catch (e: Exception) {
-                tempFile.delete()
-                throw e
+            saveMutex.withLock {
+                writeAutoSaveFileLocked(toProjectId, json.toString(2))
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to copy auto-save from $fromProjectId to $toProjectId", e)
@@ -132,28 +136,28 @@ class ProjectAutoSave @Inject constructor(
     }
 
     private suspend fun saveState(projectId: String, state: AutoSaveState) = saveMutex.withLock {
+        writeAutoSaveFileLocked(projectId, state.serialize())
+    }
+
+    private fun writeAutoSaveFileLocked(projectId: String, contents: String) {
         val file = getAutoSaveFile(projectId)
-        val tempFile = File(autoSaveDir, "${projectId}.tmp")
-        val backupFile = File(autoSaveDir, "${projectId}.bak")
+        val tempFile = getTempFile(projectId)
+        val backupFile = getBackupFile(projectId)
         try {
-            tempFile.writeText(state.serialize())
+            tempFile.writeText(contents, Charsets.UTF_8)
             // Keep a backup of the previous save so a failed rename/copy doesn't lose data
             if (file.exists()) {
                 backupFile.delete()
-                file.renameTo(backupFile)
+                moveFileReplacing(file, backupFile)
             }
-            // renameTo can fail on some filesystems (e.g. VMware HGFS) — fallback to copy+delete
-            if (!tempFile.renameTo(file)) {
-                tempFile.copyTo(file, overwrite = true)
-                tempFile.delete()
-            }
+            moveFileReplacing(tempFile, file)
             // Successful write — remove backup
             backupFile.delete()
         } catch (e: Exception) {
             // Restore from backup if the new write failed partway
             tempFile.delete()
-            if (!file.exists() && backupFile.exists()) {
-                backupFile.renameTo(file)
+            if (backupFile.exists()) {
+                moveFileReplacing(backupFile, file)
             }
             throw e
         }
@@ -161,6 +165,14 @@ class ProjectAutoSave @Inject constructor(
 
     private fun getAutoSaveFile(projectId: String): File {
         return File(autoSaveDir, "${projectId}.json")
+    }
+
+    private fun getTempFile(projectId: String): File {
+        return File(autoSaveDir, "${projectId}.tmp")
+    }
+
+    private fun getBackupFile(projectId: String): File {
+        return File(autoSaveDir, "${projectId}.bak")
     }
 }
 

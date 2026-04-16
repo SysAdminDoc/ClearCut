@@ -110,7 +110,7 @@ fun MarkerListPanel(
                             )
                             PremiumPanelPill(
                                 text = filterColor?.name ?: stringResource(R.string.panel_marker_all),
-                                accent = if (filterColor == null) Mocha.Green else markerAccent(filterColor!!)
+                                accent = filterColor?.let(::markerAccent) ?: Mocha.Green
                             )
                         }
                     }
@@ -149,7 +149,7 @@ fun MarkerListPanel(
                             )
                             PremiumPanelPill(
                                 text = filterColor?.name ?: stringResource(R.string.panel_marker_all),
-                                accent = if (filterColor == null) Mocha.Green else markerAccent(filterColor!!)
+                                accent = filterColor?.let(::markerAccent) ?: Mocha.Green
                             )
                         }
                     }

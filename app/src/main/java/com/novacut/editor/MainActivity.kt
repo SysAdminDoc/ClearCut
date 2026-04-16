@@ -95,7 +95,11 @@ class MainActivity : ComponentActivity() {
             if (uri.scheme != "content") return
             // Verify the URI is actually readable before accepting it
             try {
-                contentResolver.getType(uri) ?: return
+                val mimeType = contentResolver.getType(uri)?.lowercase() ?: return
+                if (!mimeType.startsWith("video/")) return
+                contentResolver.openAssetFileDescriptor(uri, "r")?.use { descriptor ->
+                    if (descriptor.length == 0L) return
+                } ?: return
                 pendingVideoUri = uri
             } catch (_: Exception) {
                 // Ignore unreadable or malicious URIs
