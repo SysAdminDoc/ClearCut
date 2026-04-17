@@ -169,11 +169,21 @@ fun DrawingCanvas(
                 if (isDrawingMode) Modifier.pointerInput(drawingColor, drawingStrokeWidth) {
                     detectDragGestures(
                         onDragStart = { offset ->
-                            currentPoints = listOf(offset.x to offset.y)
+                            // Filter non-finite touch coordinates — a single NaN makes the
+                            // Compose Path silently abort rendering for the entire drawing
+                            // layer, so every subsequent stroke is invisible until the user
+                            // reloads the editor.
+                            currentPoints = if (offset.x.isFinite() && offset.y.isFinite()) {
+                                listOf(offset.x to offset.y)
+                            } else emptyList()
                         },
                         onDrag = { change, _ ->
                             change.consume()
-                            currentPoints = currentPoints + (change.position.x to change.position.y)
+                            val x = change.position.x
+                            val y = change.position.y
+                            if (x.isFinite() && y.isFinite()) {
+                                currentPoints = currentPoints + (x to y)
+                            }
                         },
                         onDragEnd = {
                             if (currentPoints.size >= 2) {

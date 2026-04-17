@@ -653,14 +653,21 @@ fun Timeline(
                         }
                         .pointerInput(Unit) {
                             detectTransformGestures { centroid, pan, zoom, _ ->
-                                val oldPpm = currentZoomLevel * BASE_SCALE
-                                val newZoom = (currentZoomLevel * zoom).coerceIn(0.1f, 10f)
-                                val newPpm = newZoom * BASE_SCALE
+                                // NaN guard: `coerceIn` does not clamp NaN (all NaN
+                                // comparisons return false), so a single bad gesture frame
+                                // would propagate NaN through scroll offset and permanently
+                                // break the timeline until the activity is rebuilt.
+                                val safeZoomFactor = if (zoom.isFinite() && zoom > 0f) zoom else 1f
+                                val safePan = if (pan.x.isFinite()) pan.x else 0f
+                                val safeCentroidX = if (centroid.x.isFinite()) centroid.x else 0f
+                                val oldPpm = (currentZoomLevel * BASE_SCALE).coerceAtLeast(0.0001f)
+                                val newZoom = (currentZoomLevel * safeZoomFactor).coerceIn(0.1f, 10f)
+                                val newPpm = (newZoom * BASE_SCALE).coerceAtLeast(0.0001f)
                                 // Adjust scroll to keep the pinch center point stable
-                                val centerMs = currentScrollOffsetMs + (centroid.x / oldPpm).toLong()
-                                val newScroll = centerMs - (centroid.x / newPpm).toLong()
+                                val centerMs = currentScrollOffsetMs + (safeCentroidX / oldPpm).toLong()
+                                val newScroll = centerMs - (safeCentroidX / newPpm).toLong()
                                 onZoomChanged(newZoom)
-                                val panMs = (pan.x / newPpm).toLong()
+                                val panMs = (safePan / newPpm).toLong()
                                 onScrollChanged((newScroll - panMs).coerceAtLeast(0L))
                             }
                         }

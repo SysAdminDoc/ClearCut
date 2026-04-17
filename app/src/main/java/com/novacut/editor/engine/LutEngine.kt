@@ -218,12 +218,20 @@ private class LutShaderProgram(
         GLES30.glBindVertexArray(vao)
         GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, vbo)
         GLES30.glBufferData(GLES30.GL_ARRAY_BUFFER, quad.size * 4, buf, GLES30.GL_STATIC_DRAW)
+        // glGetAttribLocation returns -1 when the driver optimized an attribute away or the
+        // name was renamed during link. Calling glEnableVertexAttribArray(-1) and
+        // glVertexAttribPointer(-1, ...) is undefined — some drivers silently no-op, others
+        // corrupt GL state and render the LUT pass black. Guard both sites.
         val p = GLES30.glGetAttribLocation(glProgram, "aPosition")
-        GLES30.glEnableVertexAttribArray(p)
-        GLES30.glVertexAttribPointer(p, 2, GLES30.GL_FLOAT, false, 16, 0)
+        if (p >= 0) {
+            GLES30.glEnableVertexAttribArray(p)
+            GLES30.glVertexAttribPointer(p, 2, GLES30.GL_FLOAT, false, 16, 0)
+        }
         val t = GLES30.glGetAttribLocation(glProgram, "aTexCoord")
-        GLES30.glEnableVertexAttribArray(t)
-        GLES30.glVertexAttribPointer(t, 2, GLES30.GL_FLOAT, false, 16, 8)
+        if (t >= 0) {
+            GLES30.glEnableVertexAttribArray(t)
+            GLES30.glVertexAttribPointer(t, 2, GLES30.GL_FLOAT, false, 16, 8)
+        }
         GLES30.glBindVertexArray(0)
 
         // GLES 3.0 only guarantees GL_MAX_3D_TEXTURE_SIZE >= 256, but some low-tier GPUs

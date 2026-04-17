@@ -289,6 +289,12 @@ object AudioEffectsEngine {
 
         val output = FloatArray(buffer.size)
 
+        // feedback > 0.5 with a DC-biased or sustained-tone input lets the 4-tap comb filter
+        // accumulate indefinitely. Over long clips, the delay buffers either saturate into
+        // NaN (via Inf * anything) or underflow into denormal floats that tank CPU by 10-100x
+        // on ARM. Hard-clamp the written sample and flush denormals to zero so a pathological
+        // input can't poison the reverb state for the rest of the render.
+        val dampingCoeff = 1f - damping * 0.5f
         for (i in 0 until buffer.size - channels + 1 step channels) {
             var mono = 0f
             for (ch in 0 until channels) mono += buffer[i + ch] / channels
@@ -297,7 +303,11 @@ object AudioEffectsEngine {
             for (tap in 0 until 4) {
                 val delayed = buffers[tap][indices[tap]]
                 wet += delayed
-                buffers[tap][indices[tap]] = mono + delayed * feedback * (1f - damping * 0.5f)
+                var next = mono + delayed * feedback * dampingCoeff
+                if (!next.isFinite()) next = 0f
+                else if (kotlin.math.abs(next) < 1e-20f) next = 0f
+                else next = next.coerceIn(-4f, 4f)
+                buffers[tap][indices[tap]] = next
                 indices[tap] = (indices[tap] + 1) % buffers[tap].size
             }
             wet /= 4f

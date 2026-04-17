@@ -184,8 +184,13 @@ object WhisperMel {
                 }
             }
 
-            // Slaney normalization (matching librosa norm='slaney')
-            val enorm = 2.0 / (hzPoints[m + 2] - hzPoints[m])
+            // Slaney normalization (matching librosa norm='slaney').
+            // Clamp denominator: at tiny sample rates / very-short-audio edge cases the mel
+            // points can collapse so `hzPoints[m+2] == hzPoints[m]`, producing Infinity here
+            // and poisoning the whole mel bank with NaN on the next multiply — Whisper then
+            // produces zero-confidence garbage text with no visible error.
+            val melSpan = (hzPoints[m + 2] - hzPoints[m]).coerceAtLeast(1e-8)
+            val enorm = 2.0 / melSpan
             for (k in 0 until numFreqBins) {
                 filters[m][k] = (filters[m][k] * enorm).toFloat()
             }

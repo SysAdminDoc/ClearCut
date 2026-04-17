@@ -1,5 +1,27 @@
 # Changelog
 
+## v3.45.0 — Audit Phase 17: GL Attrib Guards, DSP NaN Flush, Gesture Robustness
+
+### GL pipeline safety
+- **LutEngine attribute location unchecked** ([LutEngine.kt#L221](app/src/main/java/com/novacut/editor/engine/LutEngine.kt#L221)) — `glGetAttribLocation` returns `-1` when the driver's shader compiler optimizes an attribute away or the linker renames it. Calling `glEnableVertexAttribArray(-1)` and `glVertexAttribPointer(-1, ...)` is undefined behavior: some drivers silently no-op, others corrupt GL state so the LUT render pass outputs black. Now guards both sites with `if (p >= 0)` matching the pattern already used in `ShaderEffect.kt`.
+- **SegmentationGlEffect attribute location unchecked** ([SegmentationGlEffect.kt#L262](app/src/main/java/com/novacut/editor/engine/segmentation/SegmentationGlEffect.kt#L262)) — Same pattern. User-reported symptom would be segmented frames rendering fully black during export on certain device GPUs while preview looks correct.
+
+### DSP / audio integrity
+- **Reverb feedback NaN / denormal runaway** ([AudioEffectsEngine.kt#L292](app/src/main/java/com/novacut/editor/engine/AudioEffectsEngine.kt#L292)) — The 4-tap comb filter writes `mono + delayed * feedback * damping` back into the delay buffer with no bound. With `feedback = decay * 0.3f` (~0.6 at default) and a DC-biased or sustained-tone input, the delay lines either saturate into `NaN` (via `Inf * anything`) or sink into denormal floats that tank CPU by 10-100× on ARM. Now each stored sample is clamped to `[-4, 4]`, non-finite values replaced with 0, and sub-1e-20 magnitudes flushed to zero. One pathological clip can no longer poison the reverb state for the rest of the render.
+- **WhisperMel Slaney-normalization divide-by-zero** ([WhisperMel.kt#L188](app/src/main/java/com/novacut/editor/engine/whisper/WhisperMel.kt#L188)) — `enorm = 2.0 / (hzPoints[m+2] - hzPoints[m])`. On very-short-audio edge cases or low-sample-rate inputs, adjacent mel points can collapse, denominator → 0, `enorm` → `Infinity`, then the multiply on line 191 poisons the filter bank with `NaN`. Whisper transcription silently produced zero-confidence garbage with no user-visible error. Clamped denominator to `>= 1e-8`.
+
+### Gesture / UI robustness
+- **Timeline pinch-zoom NaN propagation** ([Timeline.kt#L654](app/src/main/java/com/novacut/editor/ui/editor/Timeline.kt#L654)) — `detectTransformGestures` can emit NaN `zoom`/`pan`/`centroid` values on malformed multi-touch events. `coerceIn` does NOT clamp NaN (all NaN comparisons return false), so `newZoom` became NaN, division produced `Infinity`, and scroll offset was permanently corrupted — timeline unusable until the activity was rebuilt. Now `isFinite()`-guards each gesture input and clamps `oldPpm`/`newPpm` denominators to `>= 0.0001f`.
+- **DrawingOverlayPanel touch-path NaN abort** ([DrawingOverlayPanel.kt#L171](app/src/main/java/com/novacut/editor/ui/editor/DrawingOverlayPanel.kt#L171)) — A single non-finite touch coordinate (sensor error, gesture-library edge case) in the draw gesture silently aborted the Compose `Path` rendering for the entire drawing layer — every subsequent stroke invisible until editor reload. Matches the v3.44 deserialization-side fix; now also filtered at input time. `onDragStart` / `onDrag` both check `isFinite()`.
+
+### Audit findings verified as already-correct (false positives this round)
+- **Timeline ruler dual `pointerInput` conflict** — Compose's gesture-winner resolution already handles tap-then-drag cooperation correctly; both `detectTapGestures` and `detectDragGestures` on separate `pointerInput` blocks is an idiomatic pattern and field-tested.
+- **PreviewPanel `DisposableEffect(engine)` listener leak** — `engine` is a Hilt `@Singleton` so never swaps; the captured-player-reuse pattern in the current code is already correct.
+- **AiToolsDelegate concurrent tool race** — `aiJob?.cancel()` runs before the new job launches, and the `finally` block's `if (aiJob === thisJob)` identity check already protects state from stale cancelled jobs.
+- **`autoColorCorrect` MediaMetadataRetriever leak on early return** — `retriever.release()` lives in the outer `finally`; early returns inside the `try` still trigger it.
+- **`generateEnergyCaptions` divide-by-zero on silence** — Guarded at line 208 with `if (maxEnergy < 0.001f) return@withContext emptyList()` before any of the `/ maxEnergy` sites execute.
+- **`LoudnessEngine` K-weighting alpha overflow** — `safeSampleRate` is coerced to `>= 1`, so `hpAlpha` lands in `[0, 1]` for every realistic input.
+
 ## v3.44.0 — Audit Phase 16: Persistence NaN Guards, GIF Overflow, Export Races
 
 ### Persistence hardening

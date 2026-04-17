@@ -259,12 +259,19 @@ private class SegmentationShaderProgram(
         GLES30.glBindVertexArray(vao)
         GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, vbo)
         GLES30.glBufferData(GLES30.GL_ARRAY_BUFFER, quad.size * 4, buf, GLES30.GL_STATIC_DRAW)
+        // Guard against -1 locations — see LutEngine.kt for full rationale. This is the
+        // same pattern: some drivers corrupt GL state when attrib -1 is enabled, which
+        // visually manifests as the segmented frame rendering black during export.
         val p = GLES30.glGetAttribLocation(glProgram, "aPosition")
-        GLES30.glEnableVertexAttribArray(p)
-        GLES30.glVertexAttribPointer(p, 2, GLES30.GL_FLOAT, false, 16, 0)
+        if (p >= 0) {
+            GLES30.glEnableVertexAttribArray(p)
+            GLES30.glVertexAttribPointer(p, 2, GLES30.GL_FLOAT, false, 16, 0)
+        }
         val t = GLES30.glGetAttribLocation(glProgram, "aTexCoord")
-        GLES30.glEnableVertexAttribArray(t)
-        GLES30.glVertexAttribPointer(t, 2, GLES30.GL_FLOAT, false, 16, 8)
+        if (t >= 0) {
+            GLES30.glEnableVertexAttribArray(t)
+            GLES30.glVertexAttribPointer(t, 2, GLES30.GL_FLOAT, false, 16, 8)
+        }
         GLES30.glBindVertexArray(0)
         GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, 0)
 
