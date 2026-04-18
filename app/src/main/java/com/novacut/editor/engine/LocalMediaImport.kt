@@ -110,6 +110,52 @@ private fun sweepAbandonedPartials(dir: File) {
     }
 }
 
+/**
+ * Mark-and-sweep the managed-media dir against a set of URIs that are still
+ * referenced by surviving projects. Files not in the keep-set AND older than
+ * `minAgeMs` (default 24h, so we never race an import that just finished
+ * writing but hasn't been registered into a project's auto-save yet) are
+ * deleted. Returns the number of files removed and the bytes reclaimed so
+ * callers can surface a toast or telemetry if they want.
+ *
+ * Called when a project is deleted — the caller hands in every file URI
+ * referenced by the remaining projects' auto-save states. Without this the
+ * managed-media dir only grows (the old `deleteProject` path removed the DB
+ * row and auto-save JSON but left all the imported source clips on disk).
+ */
+internal data class ManagedMediaSweepResult(val filesDeleted: Int, val bytesFreed: Long)
+
+internal fun sweepUnreferencedManagedMedia(
+    context: Context,
+    referencedUris: Set<Uri>,
+    minAgeMs: Long = 24L * 60L * 60L * 1000L
+): ManagedMediaSweepResult {
+    val dir = managedMediaDir(context)
+    if (!dir.exists()) return ManagedMediaSweepResult(0, 0L)
+    val referencedPaths = referencedUris
+        .mapNotNull { u ->
+            if (u.scheme == "file") u.path else null
+        }
+        .mapNotNull { runCatching { File(it).canonicalPath }.getOrNull() }
+        .toSet()
+    val ageCutoff = System.currentTimeMillis() - minAgeMs
+    var deleted = 0
+    var bytes = 0L
+    dir.listFiles()?.forEach { f ->
+        if (!f.isFile) return@forEach
+        if (f.name.endsWith(".partial")) return@forEach
+        if (f.lastModified() > ageCutoff) return@forEach
+        val canonical = runCatching { f.canonicalPath }.getOrNull() ?: return@forEach
+        if (canonical in referencedPaths) return@forEach
+        val size = f.length()
+        if (f.delete()) {
+            deleted++
+            bytes += size
+        }
+    }
+    return ManagedMediaSweepResult(deleted, bytes)
+}
+
 internal fun finalizePendingCameraCapture(
     context: Context,
     pendingFile: File,

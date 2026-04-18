@@ -142,6 +142,29 @@ class ProjectListViewModel @Inject constructor(
             withContext(Dispatchers.IO) {
                 projectDao.deleteProject(project)
                 autoSave.clearRecoveryData(project.id)
+                // Sweep the managed-media dir against the union of sourceUris
+                // in every *remaining* project's auto-save JSON. Without this
+                // the imported source clips accumulate forever — deleting a
+                // project used to remove the row + recovery file but leak the
+                // imports in `filesDir/media/imports/`. 24h min-age buffer
+                // ensures an import from a freshly-created project (not yet
+                // auto-saved) doesn't get swept out from under it.
+                try {
+                    val referenced = autoSave.collectReferencedSourceUris()
+                        .map { android.net.Uri.parse(it) }
+                        .toSet()
+                    val result = com.novacut.editor.engine.sweepUnreferencedManagedMedia(
+                        appContext, referenced
+                    )
+                    if (result.filesDeleted > 0) {
+                        Log.d(
+                            "ProjectListVM",
+                            "Swept ${result.filesDeleted} orphan imports (${result.bytesFreed / 1024} KB)"
+                        )
+                    }
+                } catch (e: Exception) {
+                    Log.w("ProjectListVM", "Managed-media sweep failed", e)
+                }
             }
         }
     }

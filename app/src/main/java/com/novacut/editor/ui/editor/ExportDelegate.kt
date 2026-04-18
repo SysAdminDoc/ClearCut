@@ -357,6 +357,41 @@ class ExportDelegate(
                                 }
                             }
                         }
+                        // Subtitle sidecar. Written next to the video with a matching
+                        // basename so the pair travels together through `saveToGallery`
+                        // (image-collection fallback path) and share intents. Sequential
+                        // with the state → COMPLETE transition: we block on the write
+                        // before the UI gets Share/Save-to-Gallery buttons, so a user
+                        // tapping Share can't race a half-written .srt. Runs on IO with
+                        // runBlocking only because the Transformer callback lands on the
+                        // Main thread where `launch`/`await` would defer past the
+                        // state update.
+                        val subtitleFormat = configWithChapters.subtitleFormat
+                        if (subtitleFormat != null) {
+                            try {
+                                val captions = tracks
+                                    .flatMap { t -> t.clips }
+                                    .flatMap { clip ->
+                                        clip.captions.map { c ->
+                                            c.copy(
+                                                startTimeMs = c.startTimeMs + clip.timelineStartMs,
+                                                endTimeMs = c.endTimeMs + clip.timelineStartMs
+                                            )
+                                        }
+                                    }
+                                if (captions.isNotEmpty()) {
+                                    val sidecar = File(
+                                        outputFile.parentFile,
+                                        "${outputFile.nameWithoutExtension}.${subtitleFormat.extension}"
+                                    )
+                                    com.novacut.editor.engine.SubtitleExporter.export(
+                                        captions, subtitleFormat, sidecar
+                                    )
+                                }
+                            } catch (e: Exception) {
+                                android.util.Log.w("ExportDelegate", "Subtitle sidecar write failed", e)
+                            }
+                        }
                         stateFlow.update { it.copy(
                             exportState = ExportState.COMPLETE,
                             exportProgress = 1f,

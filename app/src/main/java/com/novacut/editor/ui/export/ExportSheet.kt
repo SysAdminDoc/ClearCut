@@ -905,8 +905,15 @@ fun ExportSheet(
                     if (config.captureFrameOnly) {
                         onCaptureFrame()
                     } else {
+                        // Video export path. When a subtitle format is selected the
+                        // sidecar is now written inside ExportDelegate.startExport's
+                        // `onComplete`, so it lands next to the rendered file with
+                        // guaranteed ordering before Share/Save-to-Gallery are offered.
+                        // Firing `onExportSubtitles` here used to write the same file
+                        // in parallel to a separate `externalFilesDir/subtitles/` dir
+                        // and could race the share intent — removed to stop duplicating
+                        // work and to keep the sidecar co-located with the video.
                         onStartExport()
-                        config.subtitleFormat?.let { onExportSubtitles(it) }
                     }
                 },
                 modifier = Modifier

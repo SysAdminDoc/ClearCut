@@ -396,6 +396,7 @@
     <string name="media_picker_source_kept_local">Imports stay available offline</string>
     <string name="media_picker_camera_permission_required">Camera permission is needed to record video.</string>
     <string name="media_picker_local_copy_failed">NovaCut couldn\'t keep that media available locally. Try choosing it again.</string>
+    <string name="media_picker_audio_only">That file isn\'t audio. Pick a .mp3, .m4a, .wav, .ogg, or .flac.</string>
 
     <!-- ProjectListScreen -->
     <string name="projects_app_title">NovaCut</string>

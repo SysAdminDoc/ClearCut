@@ -1,5 +1,25 @@
 # Changelog
 
+## v3.51.0 — Post-Audit Follow-ups
+
+Lands the three follow-up items flagged during the v3.50.0 hardening pass.
+
+### Subtitle sidecar sequencing
+- `.srt` / `.vtt` / `.ass` subtitle files now written **inside** `ExportDelegate.startExport`'s Transformer `onComplete` block (same pattern as the v3.48 scratchpad sidecar) so they land next to the rendered video with a matching basename and guaranteed ordering before Share / Save-to-Gallery become available. Previously the UI fired `onExportSubtitles` in parallel to `onStartExport`, writing to a separate `externalFilesDir/subtitles/` dir, which meant: (a) the pair didn't travel together through share intents, and (b) a fast Share tap could race the sidecar write. The standalone "Export SRT/VTT" overflow-menu path is unchanged for users who want subtitles without a video export.
+- `ExportSheet` Export button no longer fires `onExportSubtitles` — the sidecar is an effect of the video export.
+
+### Audio picker MIME validation
+- Legacy `ACTION_OPEN_DOCUMENT` picker's MIME filter is advisory on several devices. When the audio picker returns a URI, `MediaPicker` now verifies `ContentResolver.getType(uri)` starts with `audio/` (or is `application/ogg`) before routing to the AUDIO track. A mis-routed video or image URI used to be added silently to the audio track and fail playback later. Surfaces a user-facing message ("That file isn't audio. Pick a .mp3, .m4a, .wav, .ogg, or .flac.") via the existing permission-message banner.
+
+### Managed-media dir GC on project delete
+- New `ProjectAutoSave.collectReferencedSourceUris()` — cheap regex scan over every project's auto-save JSON to extract the `sourceUri` of every Clip and ImageOverlay still referenced by a surviving project. Runs under `saveMutex` so a concurrent save can't corrupt the read. Uses regex rather than full deserializer round-trip so it survives forward-compatible model changes and runs in milliseconds across hundreds of projects.
+- New `LocalMediaImport.sweepUnreferencedManagedMedia(context, referencedUris, minAgeMs = 24h)` — mark-and-sweep GC over `filesDir/media/imports/`. Files not in the keep-set and older than 24 h are deleted. The 24 h buffer prevents a racing in-flight import (just written, not yet registered in an auto-save JSON) from being swept. Returns `ManagedMediaSweepResult(filesDeleted, bytesFreed)` for telemetry.
+- `ProjectListViewModel.deleteProject` now runs the sweep after DB deletion + recovery clear. Previously the managed-media dir grew monotonically — deleting a project removed the row + recovery file but leaked every imported source clip on disk.
+
+### Notes
+- No DB schema changes. No new dependencies. One new string resource.
+- `sweepUnreferencedManagedMedia` + `collectReferencedSourceUris` are both new additive APIs; existing call sites untouched.
+
 ## v3.50.0 — Hardening Pass (Audit Phase 18)
 
 Staff-level audit + refactor pass across the Codex-refactored tree. Four parallel Explore-agent audits produced ~30 findings; this release lands every Critical and all high-value Highs. False-positive findings (speed-curve-aware effect ID remap on duplicateClip, Timeline NaN guard, FileProvider URI revocation risk for PhotoPicker) were evaluated and explicitly left unchanged with rationale.

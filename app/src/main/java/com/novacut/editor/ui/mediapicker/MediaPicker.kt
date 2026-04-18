@@ -81,6 +81,18 @@ fun MediaPickerSheet(
             } catch (e: SecurityException) {
                 android.util.Log.w("MediaPicker", "Failed to persist URI permission", e)
             }
+            // The ACTION_OPEN_DOCUMENT MIME filter is advisory — on some devices
+            // the system picker still allows selecting items from other categories.
+            // Verify the resolver's reported MIME before routing an audio pick to
+            // the audio track; a mis-routed video or image here would silently add
+            // a broken clip to the AUDIO track and fail playback later.
+            if (pendingMediaType == "audio") {
+                val mimeType = context.contentResolver.getType(uri).orEmpty()
+                if (!mimeType.startsWith("audio/") && mimeType != "application/ogg") {
+                    permissionMessage = context.getString(R.string.media_picker_audio_only)
+                    return@rememberLauncherForActivityResult
+                }
+            }
             onMediaSelected(uri, pendingMediaType)
         }
     }
