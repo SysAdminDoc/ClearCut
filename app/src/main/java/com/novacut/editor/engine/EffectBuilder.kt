@@ -374,7 +374,13 @@ internal object EffectBuilder {
      * Build transition-in effect for a clip.
      */
     fun buildTransitionEffect(transition: Transition): androidx.media3.common.Effect {
-        val durationUs = transition.durationMs * 1000f
+        // Clamp durationMs before multiplying to avoid Float overflow at
+        // pathological values (anything above ~25 days multiplied by 1000f
+        // lands on Float.POSITIVE_INFINITY, which poisons every division
+        // in the transition shader). 2_147_000 ms = ~24.8 days — well past
+        // any plausible transition length while staying comfortably inside
+        // Float's representable range after * 1000.
+        val durationUs = transition.durationMs.coerceIn(1L, 2_147_000L) * 1000f
         return when (transition.type) {
             TransitionType.DISSOLVE, TransitionType.FADE_BLACK ->
                 EffectShaders.transitionFadeIn(durationUs)
@@ -423,7 +429,13 @@ internal object EffectBuilder {
      * for the next clip's incoming transition.
      */
     fun buildTransitionOutEffect(transition: Transition, clipDurationMs: Long): androidx.media3.common.Effect {
-        val durationUs = transition.durationMs * 1000f
+        // Clamp durationMs before multiplying to avoid Float overflow at
+        // pathological values (anything above ~25 days multiplied by 1000f
+        // lands on Float.POSITIVE_INFINITY, which poisons every division
+        // in the transition shader). 2_147_000 ms = ~24.8 days — well past
+        // any plausible transition length while staying comfortably inside
+        // Float's representable range after * 1000.
+        val durationUs = transition.durationMs.coerceIn(1L, 2_147_000L) * 1000f
         val clipDurationUs = clipDurationMs * 1000f
         return when (transition.type) {
             TransitionType.DISSOLVE, TransitionType.FADE_BLACK ->

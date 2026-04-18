@@ -80,16 +80,17 @@ private class LottieOverlayProgram(
     override fun drawFrame(inputTexId: Int, presentationTimeUs: Long) {
         GLES30.glUseProgram(glProgram)
 
-        // Bind input video as texture 0
+        // Bind input video as texture 0. Writing to glUniform with location -1
+        // (optimized-out uniform) crashes some Mali/Tegra drivers, so every
+        // glGetUniformLocation result is guarded below — matches the pattern
+        // LutEngine and SegmentationGlEffect use post-v3.45.
         GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, inputTexId)
         val videoLoc = GLES30.glGetUniformLocation(glProgram, "uVideoTex")
-        GLES30.glUniform1i(videoLoc, 0)
+        if (videoLoc >= 0) GLES30.glUniform1i(videoLoc, 0)
 
-        // Determine if overlay is visible at this presentation time
         val relativeUs = presentationTimeUs - overlayStartUs
         val isVisible = relativeUs in 0..overlayDurationUs
-
         val alphaLoc = GLES30.glGetUniformLocation(glProgram, "uOverlayAlpha")
 
         if (isVisible) {
@@ -99,16 +100,16 @@ private class LottieOverlayProgram(
             GLES30.glActiveTexture(GLES30.GL_TEXTURE1)
             GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, overlayTexId)
             val overlayLoc = GLES30.glGetUniformLocation(glProgram, "uOverlayTex")
-            GLES30.glUniform1i(overlayLoc, 1)
-            GLES30.glUniform1f(alphaLoc, 1.0f)
+            if (overlayLoc >= 0) GLES30.glUniform1i(overlayLoc, 1)
+            if (alphaLoc >= 0) GLES30.glUniform1f(alphaLoc, 1.0f)
         } else {
             // Bind texture unit 1 to the input video texture as a safe fallback
-            // (alpha is 0 so it won't affect output, but avoids undefined texture reads)
+            // (alpha is 0 so it won't affect output, but avoids undefined texture reads).
             GLES30.glActiveTexture(GLES30.GL_TEXTURE1)
             GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, inputTexId)
             val overlayLoc = GLES30.glGetUniformLocation(glProgram, "uOverlayTex")
-            GLES30.glUniform1i(overlayLoc, 1)
-            GLES30.glUniform1f(alphaLoc, 0.0f)
+            if (overlayLoc >= 0) GLES30.glUniform1i(overlayLoc, 1)
+            if (alphaLoc >= 0) GLES30.glUniform1f(alphaLoc, 0.0f)
         }
 
         GLES30.glBindVertexArray(vao)
@@ -154,6 +155,19 @@ private class LottieOverlayProgram(
         GLES30.glAttachShader(glProgram, vs)
         GLES30.glAttachShader(glProgram, fs)
         GLES30.glLinkProgram(glProgram)
+        // Check link status — some Intel / PowerVR drivers silently produce a
+        // corrupt program on link failure. Writing to an unlinked program
+        // would render black or, worse, corrupt vertex state for the next
+        // effect. Match the guard LutEngine + ShaderEffect already enforce.
+        val linkStatus = IntArray(1)
+        GLES30.glGetProgramiv(glProgram, GLES30.GL_LINK_STATUS, linkStatus, 0)
+        if (linkStatus[0] == GLES30.GL_FALSE) {
+            val log = GLES30.glGetProgramInfoLog(glProgram)
+            GLES30.glDeleteProgram(glProgram)
+            glProgram = 0
+            android.util.Log.e("LottieOverlay", "Program link failed: $log")
+            throw RuntimeException("Lottie overlay program link failed: $log")
+        }
         GLES30.glDeleteShader(vs)
         GLES30.glDeleteShader(fs)
 

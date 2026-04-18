@@ -51,8 +51,14 @@ object ColorMatchEngine {
      */
     fun analyzeBitmap(bitmap: Bitmap): ColorStats {
         val scale = minOf(1f, 100f / maxOf(bitmap.width, bitmap.height))
-        val w = (bitmap.width * scale).toInt().coerceAtLeast(1)
-        val h = (bitmap.height * scale).toInt().coerceAtLeast(1)
+        // Hard-cap the analyzed pixel budget to 512×512. The `scale` line
+        // above already downsamples most inputs, but a tiny `maxDim` source
+        // (e.g. a 50×50 composited overlay frame) leaves `scale = 1f` and
+        // a pathological 100-megapixel input would allocate 400 MB here.
+        // 512×512 = 1 MB in IntArray — plenty for a histogram, safely
+        // below any OOM threshold on largeHeap devices.
+        val w = (bitmap.width * scale).toInt().coerceIn(1, 512)
+        val h = (bitmap.height * scale).toInt().coerceIn(1, 512)
         val scaled = Bitmap.createScaledBitmap(bitmap, w, h, true)
         val pixels = IntArray(w * h)
         scaled.getPixels(pixels, 0, w, 0, 0, w, h)

@@ -235,6 +235,12 @@ class BeatDetectionEngine @Inject constructor(
         }
 
         val bestInterval = histogram.maxByOrNull { it.value }?.key ?: return 0f
+        // Defence-in-depth: histogram keys are quantised intervals that should
+        // always be > 0, but a pathological input (e.g. every beat landing at
+        // t=0) could collapse `bestInterval` to 0 and turn the division into
+        // Infinity. `coerceIn` doesn't clamp Infinity — it stays Infinity —
+        // so guard explicitly before the divide.
+        if (bestInterval <= 0) return 0f
         return (60000f / bestInterval).coerceIn(30f, 300f)
     }
 }

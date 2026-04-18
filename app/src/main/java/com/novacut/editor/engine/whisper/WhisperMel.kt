@@ -86,9 +86,19 @@ object WhisperMel {
         // Normalize: max - 8.0 floor, then (x - max) / 4.0 + 1.0
         var maxVal = -Float.MAX_VALUE
         for (v in melSpec) maxVal = max(maxVal, v)
+        // Guard against edge cases where the whole spectrum is silence (maxVal
+        // stays at -Float.MAX_VALUE) or where maxVal has gone non-finite via
+        // a log10 of an infinitesimal sum — both would poison every sample
+        // after normalisation with NaN, silently producing garbage Whisper
+        // transcriptions instead of a clean empty result.
+        if (!maxVal.isFinite()) {
+            java.util.Arrays.fill(melSpec, 0f)
+            return melSpec
+        }
         val floor = maxVal - 8.0f
         for (i in melSpec.indices) {
-            melSpec[i] = (max(melSpec[i], floor) - maxVal) / 4.0f + 1.0f
+            val v = (max(melSpec[i], floor) - maxVal) / 4.0f + 1.0f
+            melSpec[i] = if (v.isFinite()) v else 0f
         }
 
         return melSpec

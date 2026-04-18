@@ -33,6 +33,16 @@ class ProxyEngine @Inject constructor(
     private val proxyDir = File(context.cacheDir, "proxies").also { it.mkdirs() }
     private val proxyMap = ConcurrentHashMap<String, Uri>()
 
+    // Per-source-key mutexes serialise concurrent `generateProxy(sameUri)`
+    // calls. Without this, two near-simultaneous invocations both pass the
+    // `outFile.exists()` check (line 61), both start a Transformer writing
+    // to the same `proxy_<hash>.mp4`, and the second write corrupts or
+    // truncates the first. computeIfAbsent guarantees only one Mutex
+    // instance per key without a coarse-grained lock on the whole map.
+    private val perKeyMutex = ConcurrentHashMap<String, kotlinx.coroutines.sync.Mutex>()
+    private fun mutexFor(key: String): kotlinx.coroutines.sync.Mutex =
+        perKeyMutex.computeIfAbsent(key) { kotlinx.coroutines.sync.Mutex() }
+
     private fun keyFor(sourceUri: Uri): String {
         val bytes = sourceUri.toString().toByteArray()
         val digest = java.security.MessageDigest.getInstance("SHA-256").digest(bytes)
@@ -58,9 +68,19 @@ class ProxyEngine @Inject constructor(
         val key = keyFor(sourceUri)
         val outFile = File(proxyDir, "proxy_$key.mp4")
 
-        if (outFile.exists()) {
-            proxyMap[key] = Uri.fromFile(outFile)
-            return@withContext Uri.fromFile(outFile)
+        // Hold the per-key mutex across the existence check + transformer
+        // start so concurrent callers for the same source serialise: the
+        // second caller sees the completed file on re-entry instead of
+        // kicking off a duplicate render.
+        mutexFor(key).lock()
+        try {
+            if (outFile.exists()) {
+                proxyMap[key] = Uri.fromFile(outFile)
+                return@withContext Uri.fromFile(outFile)
+            }
+        } catch (t: Throwable) {
+            mutexFor(key).unlock()
+            throw t
         }
 
         try {
@@ -105,6 +125,12 @@ class ProxyEngine @Inject constructor(
         } catch (e: Exception) {
             Log.e("ProxyEngine", "Proxy generation error", e)
             null
+        } finally {
+            // Always release the per-key mutex so the next caller (or a
+            // retry after a failure) can try again. Using runCatching so a
+            // stray mutex-state mismatch can't mask the real exception
+            // being propagated out of this suspend fn.
+            runCatching { mutexFor(key).unlock() }
         }
     }
 

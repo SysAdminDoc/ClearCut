@@ -329,9 +329,23 @@ class WhisperEngine @Inject constructor(
                 val logits = results.firstOrNull()?.value as? OnnxTensor
                 if (logits == null) break
 
+                // Validate shape before indexing — a malformed model output
+                // with fewer than 3 dims (rank < 3) would throw
+                // IndexOutOfBoundsException reading shape[2], leaking every
+                // tensor accumulated in this decode loop and aborting
+                // transcription silently. Bail cleanly instead.
+                val shape = logits.info.shape
+                if (shape.size < 3) {
+                    android.util.Log.e("WhisperEngine", "Decoder logits have unexpected rank ${shape.size}; aborting")
+                    break
+                }
                 val logitsData = logits.floatBuffer
-                val vocabSize = logits.info.shape[2].toInt()
-                val seqLen = logits.info.shape[1].toInt()
+                val vocabSize = shape[2].toInt()
+                val seqLen = shape[1].toInt()
+                if (vocabSize <= 0 || seqLen <= 0) {
+                    android.util.Log.e("WhisperEngine", "Decoder logits have non-positive dims: shape=${shape.toList()}")
+                    break
+                }
 
                 // Get logits for last token position
                 val lastOffset = (seqLen - 1) * vocabSize

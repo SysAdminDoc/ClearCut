@@ -187,6 +187,18 @@ object KeyframeEngine {
         cp2x: Float, cp2y: Float,
         t: Float
     ): Float {
+        // Guard against NaN / Infinity handles coming in from a corrupt project
+        // JSON — `coerceIn` does not clamp NaN (every comparison against NaN is
+        // false), so a single poisoned handle would silently propagate NaN
+        // through every animated property in the clip. Fall back to linear
+        // easing on any non-finite input; the visible effect is "no curve"
+        // rather than "timeline freezes".
+        if (!cp1x.isFinite() || !cp1y.isFinite() ||
+            !cp2x.isFinite() || !cp2y.isFinite() ||
+            !t.isFinite()
+        ) {
+            return t.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 0f
+        }
         // If no handle offsets, fall back to linear
         if (cp1x == 0f && cp1y == 0f && cp2x == 0f && cp2y == 0f) return t
 

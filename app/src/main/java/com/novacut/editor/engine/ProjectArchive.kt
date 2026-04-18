@@ -127,7 +127,15 @@ object ProjectArchive {
                             }
                             else -> {
                                 val outFile = File(canonicalTargetDir, entry.name).canonicalFile
-                                if (!outFile.path.startsWith(canonicalTargetDir.path + File.separator)) {
+                                // ZIP-slip guard — compare using NIO `Path.startsWith` rather
+                                // than string prefix on `.path`. The string check mishandles
+                                // separators on Windows (canonicalTargetDir.path may or may
+                                // not end with `\`, letting `..\..\evil.mp4` slip through
+                                // when the prefix string matches) and is case-sensitive on
+                                // case-insensitive filesystems. `Path.startsWith` operates
+                                // on normalised path elements so neither bypass works.
+                                val targetPath = canonicalTargetDir.toPath()
+                                if (!outFile.toPath().startsWith(targetPath)) {
                                     Log.w("ProjectArchive", "Skipping zip entry with path traversal: ${entry.name}")
                                     zipInput.closeEntry()
                                     entry = zipInput.nextEntry

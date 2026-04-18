@@ -185,24 +185,33 @@ private class SegmentationShaderProgram(
             pixels[i] = (0xFF shl 24) or (v shl 16) or (v shl 8) or v
         }
         val maskBitmap = Bitmap.createBitmap(pixels, maskW, maskH, Bitmap.Config.ARGB_8888)
-
-        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, maskTexture)
-        android.opengl.GLUtils.texImage2D(GLES30.GL_TEXTURE_2D, 0, maskBitmap, 0)
-        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_LINEAR)
-        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_LINEAR)
-        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_S, GLES30.GL_CLAMP_TO_EDGE)
-        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE)
-        maskBitmap.recycle()
+        // Wrap GLUtils.texImage2D in try/finally so a GL exception on upload
+        // (driver OOM, bad format, invalid texture binding) can't leak the
+        // bitmap. At mask dimensions this is ~260 KB per export frame
+        // otherwise, which adds up fast on long renders.
+        try {
+            GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, maskTexture)
+            android.opengl.GLUtils.texImage2D(GLES30.GL_TEXTURE_2D, 0, maskBitmap, 0)
+            GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_LINEAR)
+            GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_LINEAR)
+            GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_S, GLES30.GL_CLAMP_TO_EDGE)
+            GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE)
+        } finally {
+            maskBitmap.recycle()
+        }
     }
 
     private fun uploadFallbackMask() {
         val white = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
         white.setPixel(0, 0, 0xFFFFFFFF.toInt())
-        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, maskTexture)
-        android.opengl.GLUtils.texImage2D(GLES30.GL_TEXTURE_2D, 0, white, 0)
-        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_LINEAR)
-        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_LINEAR)
-        white.recycle()
+        try {
+            GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, maskTexture)
+            android.opengl.GLUtils.texImage2D(GLES30.GL_TEXTURE_2D, 0, white, 0)
+            GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_LINEAR)
+            GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_LINEAR)
+        } finally {
+            white.recycle()
+        }
     }
 
     override fun release() {
