@@ -124,6 +124,33 @@ class ProjectAutoSave @Inject constructor(
         }
     }
 
+    /**
+     * Collect every source URI referenced by every project's auto-save JSON
+     * on disk. Used by the managed-media GC to know which imports are still
+     * live. Uses a cheap regex over the raw JSON rather than full deserializer
+     * round-trip so this runs in milliseconds even across hundreds of projects
+     * and stays forward-compatible with new Clip fields (the serialization
+     * contract only needs `"sourceUri": "..."` to survive).
+     */
+    suspend fun collectReferencedSourceUris(): Set<String> = withContext(Dispatchers.IO) {
+        saveMutex.withLock {
+            val uris = mutableSetOf<String>()
+            val sourceUriRegex = Regex("\"sourceUri\"\\s*:\\s*\"([^\"]+)\"")
+            autoSaveDir.listFiles { f -> f.isFile && f.name.endsWith(".json") }
+                ?.forEach { file ->
+                    try {
+                        val text = file.readText(Charsets.UTF_8)
+                        sourceUriRegex.findAll(text).forEach { match ->
+                            uris += match.groupValues[1]
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to scan ${file.name} for source URIs", e)
+                    }
+                }
+            uris
+        }
+    }
+
     suspend fun copyAutoSave(fromProjectId: String, toProjectId: String): Boolean {
         val fromFile = getAutoSaveFile(fromProjectId)
         if (!fromFile.exists()) {
