@@ -52,6 +52,20 @@ enum class SortMode(val label: String) {
     DURATION_DESC("Longest")
 }
 
+/**
+ * Subset filter applied over the project gallery. Orthogonal to SortMode —
+ * the user can e.g. look at `RECENT_7D` projects sorted by `NAME_ASC`. The
+ * filter logic treats each branch independently; composing with search is
+ * left to the combining flow in the view model.
+ */
+enum class ProjectFilterMode(val label: String) {
+    ALL("All"),
+    RECENT_7D("This week"),
+    LONG("Longer than 1 min"),
+    SHORT("Under 10 s"),
+    EMPTY("No clips")
+}
+
 enum class SpeedPresetType(val displayName: String, val description: String) {
     BULLET_TIME("Bullet Time", "Dramatic slow-mo with speed ramp"),
     HERO_TIME("Hero Time", "Slow entrance, normal exit"),

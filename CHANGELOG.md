@@ -1,5 +1,25 @@
 # Changelog
 
+## v3.53.0 — Project Filter Chips + Bulk-Delete Guard
+
+Two Tier-1 UX wins from the backlog.
+
+### Project gallery filter chips (§8.2)
+- New `ProjectFilterMode` enum (ALL / RECENT_7D / LONG / SHORT / EMPTY). Orthogonal to the existing `SortMode`, so users can e.g. look at "This week" projects sorted by "A–Z".
+- `ProjectListViewModel` gains `_filterMode` StateFlow; the `projects` flow now combines four sources (projects + search + sort + filter) so every emission funnels through one consistent filter+sort pipeline.
+- `ProjectListScreen` renders a `ProjectFilterChipsRow` directly under the home hero, wrapping via `FlowRow` so the chip set stays reachable on narrow screens without horizontal scroll gestures (which would fight the outer `LazyVerticalGrid`).
+- Thresholds: LONG = `durationMs >= 60_000`, SHORT = `1..9_999`, RECENT_7D = `updatedAt >= now - 7d`, EMPTY = `durationMs <= 0`. RECENT_7D is computed inside the combine lambda so `now` is fresh on each recompute.
+
+### Bulk-delete guard (§1.5)
+- `ClipEditingDelegate` now tracks a rolling 10-second window of delete timestamps. On the 3rd delete within the window, raises a one-shot `BulkUndoPrompt` on `EditorState` and clears the window (so a fresh burst has to rebuild the count — no re-fire storm).
+- `EditorScreen` renders a Material 3 `Snackbar` keyed on `BulkUndoPrompt.id` with an **Undo** action (calls `viewModel.undo()`) and an 8-second auto-dismiss. The nonce-based key ensures a second burst after the first banner clears actually re-shows.
+- New `EditorViewModel.dismissBulkUndoPrompt()` — idempotent, guarded by `id` equality so a stale dismissal from a previous prompt can't clear a newly-raised one.
+- No new Snackbar framework — direct Material 3 component with the existing Mocha colour tokens. Future action-snackbars can reuse the same pattern.
+
+### Notes
+- No DB / dependency changes. Three new string resources (`bulk_undo_message/action/dismiss_cd`).
+- Filter/sort composition is pure; free-text search applies before the filter chip so "search within subset" works (e.g. "Under 10 s" + search "intro").
+
 ## v3.52.0 — Export + Import Polish
 
 Three features from the backlog: extended filename tokens, export pre-flight warnings, and chronological-order import for multi-volume camera footage.

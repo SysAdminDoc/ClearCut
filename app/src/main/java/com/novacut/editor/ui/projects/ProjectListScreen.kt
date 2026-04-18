@@ -36,6 +36,7 @@ import coil.decode.VideoFrameDecoder
 import coil.request.ImageRequest
 import com.novacut.editor.R
 import com.novacut.editor.model.Project
+import com.novacut.editor.model.ProjectFilterMode
 import com.novacut.editor.model.SortMode
 import com.novacut.editor.ui.editor.PremiumSnackbarHost
 import com.novacut.editor.ui.editor.ToastSeverity
@@ -59,6 +60,7 @@ fun ProjectListScreen(
     val projects by viewModel.projects.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val sortMode by viewModel.sortMode.collectAsStateWithLifecycle()
+    val filterMode by viewModel.filterMode.collectAsStateWithLifecycle()
     val userTemplates by viewModel.userTemplates.collectAsStateWithLifecycle()
     val toastMessage by viewModel.toastMessage.collectAsStateWithLifecycle()
     var showTemplateSheet by remember { mutableStateOf(false) }
@@ -97,6 +99,14 @@ fun ProjectListScreen(
                 onCreateProject = { showTemplateSheet = true },
                 onImportTemplate = importTemplate,
                 onSettings = onSettings
+            )
+
+            ProjectFilterChipsRow(
+                filterMode = filterMode,
+                onFilterModeChanged = viewModel::setFilterMode,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
             if (projects.isEmpty()) {
@@ -408,6 +418,37 @@ private fun HeroMetricPill(
     icon: androidx.compose.ui.graphics.vector.ImageVector? = null
 ) {
     NovaCutMetricPill(text = label, accent = accent, icon = icon)
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ProjectFilterChipsRow(
+    filterMode: ProjectFilterMode,
+    onFilterModeChanged: (ProjectFilterMode) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // Horizontal FlowRow wraps gracefully on narrow screens so the full chip
+    // set is always reachable without horizontal scroll gestures (which would
+    // fight the outer LazyVerticalGrid's own gesture handling).
+    FlowRow(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        ProjectFilterMode.entries.forEach { mode ->
+            FilterChip(
+                onClick = { onFilterModeChanged(mode) },
+                label = { Text(mode.label, style = MaterialTheme.typography.labelMedium) },
+                selected = filterMode == mode,
+                colors = FilterChipDefaults.filterChipColors(
+                    containerColor = Mocha.Surface0,
+                    labelColor = Mocha.Subtext0,
+                    selectedContainerColor = Mocha.Mauve.copy(alpha = 0.16f),
+                    selectedLabelColor = Mocha.Mauve
+                )
+            )
+        }
+    }
 }
 
 @Composable

@@ -1778,6 +1778,46 @@ fun EditorScreen(
                 .padding(bottom = 120.dp, start = 16.dp, end = 16.dp)
                 .zIndex(10f)
         )
+
+        // Bulk-undo prompt. Raised by ClipEditingDelegate when ≥3 deletes
+        // happen in 10s — offers a one-shot Undo path without making the
+        // user hunt for the overflow menu. Keyed on `id` so re-raising after
+        // a fresh burst actually re-triggers the LaunchedEffect timer.
+        val bulkPrompt = state.bulkUndoPrompt
+        if (bulkPrompt != null) {
+            LaunchedEffect(bulkPrompt.id) {
+                kotlinx.coroutines.delay(8000)
+                viewModel.dismissBulkUndoPrompt()
+            }
+            androidx.compose.material3.Snackbar(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 120.dp, start = 16.dp, end = 16.dp)
+                    .zIndex(11f),
+                containerColor = Mocha.Surface0,
+                contentColor = Mocha.Text,
+                actionContentColor = Mocha.Peach,
+                action = {
+                    androidx.compose.material3.TextButton(onClick = {
+                        viewModel.undo()
+                        viewModel.dismissBulkUndoPrompt()
+                    }) {
+                        Text(text = stringResource(R.string.bulk_undo_action))
+                    }
+                },
+                dismissAction = {
+                    androidx.compose.material3.IconButton(onClick = { viewModel.dismissBulkUndoPrompt() }) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = stringResource(R.string.bulk_undo_dismiss_cd),
+                            tint = Mocha.Subtext0
+                        )
+                    }
+                }
+            ) {
+                Text(text = stringResource(R.string.bulk_undo_message, bulkPrompt.count))
+            }
+        }
     }
 }
 

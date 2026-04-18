@@ -109,6 +109,11 @@ data class EditorState(
     val redoStack: List<UndoAction> = emptyList(),
     val toastMessage: String? = null,
     val toastSeverity: ToastSeverity = ToastSeverity.Info,
+    // Set when a recent burst of destructive operations (≥3 deletes in 10s)
+    // trips the bulk-change guard. The UI layer uses the nonce to render a
+    // one-shot action snackbar ("N clips deleted — Undo"). Null when no
+    // banner is pending or after the user interacts with it.
+    val bulkUndoPrompt: BulkUndoPrompt? = null,
     val aiProcessingTool: String? = null,
     val lastExportedFilePath: String? = null,
     val copiedEffects: List<Effect> = emptyList(),
@@ -215,6 +220,19 @@ data class UndoAction(
     // Default 0 so callers that don't capture it (e.g. older serialization
     // paths, if any) still construct a valid record.
     val playheadMs: Long = 0L
+)
+
+/**
+ * One-shot banner data raised when the ClipEditingDelegate bulk-change
+ * tracker spots an unusual burst of destructive operations. The UI uses
+ * `id` (a nonce) to key an ephemeral Snackbar; re-emitting with a new id
+ * re-shows the banner even when `count` and `undoLabel` happen to match a
+ * previous event. Null-ing the field on the state clears the banner.
+ */
+data class BulkUndoPrompt(
+    val id: Long,
+    val count: Int,
+    val windowMs: Long
 )
 
 @HiltViewModel
@@ -3237,6 +3255,16 @@ class EditorViewModel @Inject constructor(
     fun updateProjectNotes(notes: String) {
         _state.update { it.copy(project = it.project.copy(notes = notes)) }
         saveProject()
+    }
+
+    /**
+     * Clears the bulk-undo prompt after the user interacts with it (taps
+     * Undo or dismisses) or after the UI auto-dismiss timer elapses. Safe
+     * to call when the prompt is already null.
+     */
+    fun dismissBulkUndoPrompt() {
+        val current = _state.value.bulkUndoPrompt ?: return
+        _state.update { if (it.bulkUndoPrompt?.id == current.id) it.copy(bulkUndoPrompt = null) else it }
     }
 
     fun dismissRecoveryDialog(recover: Boolean) {

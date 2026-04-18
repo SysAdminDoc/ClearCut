@@ -21,6 +21,7 @@ import com.novacut.editor.model.AspectRatio
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.Project
 import com.novacut.editor.model.Resolution
+import com.novacut.editor.model.ProjectFilterMode
 import com.novacut.editor.model.SortMode
 import com.novacut.editor.model.Track
 import com.novacut.editor.model.TrackType
@@ -57,6 +58,9 @@ class ProjectListViewModel @Inject constructor(
     private val _sortMode = MutableStateFlow(SortMode.DATE_DESC)
     val sortMode: StateFlow<SortMode> = _sortMode.asStateFlow()
 
+    private val _filterMode = MutableStateFlow(ProjectFilterMode.ALL)
+    val filterMode: StateFlow<ProjectFilterMode> = _filterMode.asStateFlow()
+
     private val _userTemplates = MutableStateFlow<List<UserTemplate>>(emptyList())
     val userTemplates: StateFlow<List<UserTemplate>> = _userTemplates.asStateFlow()
 
@@ -73,10 +77,26 @@ class ProjectListViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val projects: StateFlow<List<Project>> = combine(
-        allProjects, _searchQuery, _sortMode
-    ) { projects, query, sort ->
-        val filtered = if (query.isBlank()) projects
+        allProjects, _searchQuery, _sortMode, _filterMode
+    ) { projects, query, sort, filter ->
+        val searched = if (query.isBlank()) projects
         else projects.filter { it.name.contains(query, ignoreCase = true) }
+
+        // Apply the chip filter after the free-text search so users can
+        // search within a subset (e.g. "Under 10 s" + search "intro").
+        val now = System.currentTimeMillis()
+        val filtered = when (filter) {
+            ProjectFilterMode.ALL -> searched
+            ProjectFilterMode.RECENT_7D -> {
+                val weekAgo = now - 7L * 24L * 60L * 60L * 1000L
+                searched.filter { it.updatedAt >= weekAgo }
+            }
+            ProjectFilterMode.LONG -> searched.filter { it.durationMs >= 60_000L }
+            ProjectFilterMode.SHORT -> searched.filter {
+                it.durationMs in 1L..9_999L
+            }
+            ProjectFilterMode.EMPTY -> searched.filter { it.durationMs <= 0L }
+        }
 
         when (sort) {
             SortMode.DATE_DESC -> filtered.sortedByDescending { it.updatedAt }
@@ -97,6 +117,10 @@ class ProjectListViewModel @Inject constructor(
 
     fun setSortMode(mode: SortMode) {
         _sortMode.value = mode
+    }
+
+    fun setFilterMode(mode: ProjectFilterMode) {
+        _filterMode.value = mode
     }
 
     fun createProject(

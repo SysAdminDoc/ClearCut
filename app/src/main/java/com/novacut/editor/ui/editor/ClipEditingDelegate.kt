@@ -30,6 +30,13 @@ class ClipEditingDelegate(
     private val recalculateDuration: (EditorState) -> EditorState,
     private val onClipAdded: ((clipId: String, uri: Uri) -> Unit)? = null
 ) {
+    // Rolling timestamps of recent delete operations for the bulk-change
+    // detector. Bounded to the window length so the structure can't grow.
+    // Accessed only from the delegate's own methods, which in turn are only
+    // called from the Main thread by EditorViewModel — no locking required.
+    private val recentDeletesMs = ArrayDeque<Long>()
+    private val bulkDeleteWindowMs = 10_000L
+    private val bulkDeleteThreshold = 3
     // --- Add Clip ---
     fun addClipToTrack(uri: Uri, trackType: TrackType = TrackType.VIDEO) {
         scope.launch {
@@ -205,6 +212,40 @@ class ClipEditingDelegate(
         }
         rebuildPlayerTimeline()
         saveProject()
+        registerDeleteForBulkWatcher()
+    }
+
+    /**
+     * Stamp a delete into the rolling window; if the threshold is crossed
+     * inside the window, raise a one-shot banner on state so the UI can
+     * offer "Undo" without forcing the user to hunt for the overflow menu.
+     * Each emission gets a fresh nonce so a second burst (e.g. user keeps
+     * deleting past the banner) re-shows instead of being deduped by
+     * Compose's structural equality check.
+     */
+    private fun registerDeleteForBulkWatcher() {
+        val now = System.currentTimeMillis()
+        val cutoff = now - bulkDeleteWindowMs
+        while (recentDeletesMs.isNotEmpty() && recentDeletesMs.first() < cutoff) {
+            recentDeletesMs.removeFirst()
+        }
+        recentDeletesMs.addLast(now)
+        if (recentDeletesMs.size >= bulkDeleteThreshold) {
+            val count = recentDeletesMs.size
+            stateFlow.update { state ->
+                state.copy(
+                    bulkUndoPrompt = BulkUndoPrompt(
+                        id = now,
+                        count = count,
+                        windowMs = bulkDeleteWindowMs
+                    )
+                )
+            }
+            // Clear the window after emitting so we don't re-fire on every
+            // subsequent delete; a fresh burst has to rebuild the count from
+            // zero, which matches the human intent of "warned, paying attention".
+            recentDeletesMs.clear()
+        }
     }
 
     // --- Duplicate Clip ---
