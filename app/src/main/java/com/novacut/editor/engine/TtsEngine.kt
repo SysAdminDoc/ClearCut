@@ -125,6 +125,14 @@ class TtsEngine @Inject constructor(
                 }
 
                 cont.invokeOnCancellation {
+                    // Clear the progress listener before stop() so a stale
+                    // `onDone` / `onError` callback from a cancelled job
+                    // can't fire into the next synthesis coroutine's
+                    // continuation. Without this, the old listener remains
+                    // registered on the shared `engine` (the TextToSpeech
+                    // instance is a singleton) and would attempt to resume
+                    // a continuation that already threw CancellationException.
+                    try { engine.setOnUtteranceProgressListener(null) } catch (_: Exception) {}
                     engine.stop()
                     outputFile.delete()
                 }

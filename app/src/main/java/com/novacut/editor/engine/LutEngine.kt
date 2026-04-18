@@ -55,12 +55,23 @@ object LutEngine {
 
                 val parts = trimmed.split("\\s+".toRegex())
                 if (parts.size >= 3) {
-                    // Clamp to [0, 1] — out-of-range LUT entries produce wild GPU colors
-                    // (negative -> wrap, >1 -> blow out highlights). Standard .cube spec
-                    // is 0..1 normalized; defensive clamping protects the shader.
-                    data.add(parts[0].toFloat().coerceIn(0f, 1f))
-                    data.add(parts[1].toFloat().coerceIn(0f, 1f))
-                    data.add(parts[2].toFloat().coerceIn(0f, 1f))
+                    // Tolerate malformed lines (commented artefacts from some
+                    // LUT authoring tools, stray diagnostic text) by skipping
+                    // rather than rejecting the whole LUT. `toFloatOrNull` is
+                    // cheaper than try/catch per line and signals the same
+                    // intent. Clamp to [0, 1] — out-of-range LUT entries
+                    // produce wild GPU colours (negative → wrap, >1 → blow out
+                    // highlights); the standard .cube spec is 0..1 normalised.
+                    val r = parts[0].toFloatOrNull()
+                    val g = parts[1].toFloatOrNull()
+                    val b = parts[2].toFloatOrNull()
+                    if (r != null && g != null && b != null) {
+                        data.add(r.coerceIn(0f, 1f))
+                        data.add(g.coerceIn(0f, 1f))
+                        data.add(b.coerceIn(0f, 1f))
+                    } else {
+                        Log.w("LutEngine", "Skipping unparseable .cube line: '$trimmed'")
+                    }
                 }
             }
 
@@ -91,7 +102,14 @@ object LutEngine {
             for (i in startIdx until lines.size) {
                 val parts = lines[i].trim().split("\\s+".toRegex())
                 if (parts.size >= 3) {
-                    val vals = listOf(parts[0].toFloat(), parts[1].toFloat(), parts[2].toFloat())
+                    val r = parts[0].toFloatOrNull()
+                    val g = parts[1].toFloatOrNull()
+                    val b = parts[2].toFloatOrNull()
+                    if (r == null || g == null || b == null) {
+                        Log.w("LutEngine", "Skipping unparseable .3dl line: '${lines[i]}'")
+                        continue
+                    }
+                    val vals = listOf(r, g, b)
                     globalMax = maxOf(globalMax, vals.max())
                     rawLines.add(vals)
                 }

@@ -178,7 +178,14 @@ class LoudnessEngine @Inject constructor(
      */
     private fun applyKWeighting(samples: FloatArray, sampleRate: Int): FloatArray {
         val output = FloatArray(samples.size)
-        val safeSampleRate = sampleRate.coerceAtLeast(1)
+        // Clamp to the practical range for audio export — 8 kHz (telephony low
+        // bound) to 192 kHz (studio high bound). `coerceAtLeast(1)` kept
+        // `fc = 1500 / safeSampleRate` from dividing by zero but let extreme
+        // values (e.g. a bogus 2 Hz from a malformed MediaFormat) produce a
+        // near-1.0 `alpha` that effectively disables the K-weighting filter.
+        // Clamping to a reasonable band keeps the coefficients sensible under
+        // all realistic inputs.
+        val safeSampleRate = sampleRate.coerceIn(8_000, 192_000)
 
         // Simple high-shelf approximation using first-order IIR
         // Boosts high frequencies by ~4dB

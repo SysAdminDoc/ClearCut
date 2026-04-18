@@ -191,7 +191,17 @@ class AudioEngine @Inject constructor(
         if (tracks.isEmpty()) return@withContext ShortArray(0)
 
         val maxDuration = tracks.maxOf { it.durationMs }
-        val totalSamples = (maxDuration / 1000.0 * outputSampleRate * outputChannels).toInt()
+        // Guard against Int overflow for ultra-long timelines. At 44.1 kHz
+        // stereo, Int.MAX_VALUE samples caps at ~6h 45m; higher sample rates
+        // or longer timelines silently wrap negative, producing a
+        // NegativeArraySizeException on the FloatArray allocation. Clamp so
+        // we fail gracefully with an empty mix rather than a hard crash.
+        val rawSamples = (maxDuration / 1000.0 * outputSampleRate * outputChannels).toLong()
+        if (rawSamples <= 0L || rawSamples > Int.MAX_VALUE.toLong()) {
+            Log.w(TAG, "Timeline too long to mix in one pass: ${maxDuration / 1000}s — aborting mix")
+            return@withContext ShortArray(0)
+        }
+        val totalSamples = rawSamples.toInt()
         val mixBuffer = FloatArray(totalSamples)
 
         for (track in tracks) {

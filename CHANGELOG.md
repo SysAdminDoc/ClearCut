@@ -1,5 +1,44 @@
 # Changelog
 
+## v3.56.0 — Wide-Net Hardening Pass (Audit Phase 19)
+
+Four parallel Explore-agent audits covered subsystems that hadn't been looked at in the v3.50 pass: **AI/ML engines**, **audio DSP**, **effects + shaders**, and **exchange/proxy/render**. This release lands every real Critical + all high-value Highs; several agent findings turned out to be false positives (AudioEngine's extractor.release already in outer finally, SegmentationEngine retriever already properly nested) and are noted for the record.
+
+### GL / shader safety
+- **`LottieOverlayEffect`** — every `glGetUniformLocation` now guarded with `if (loc >= 0)` before `glUniform*`, matching the pattern LutEngine + SegmentationGlEffect adopted post-v3.45. Writing to uniform location −1 crashes Mali / Tegra drivers. `glLinkProgram` now checks `GL_LINK_STATUS`; a failed link logs + throws instead of silently producing a corrupt program (Intel / PowerVR render black).
+- **`KeyframeEngine.evaluateCubicBezierTime`** — fast-paths to linear interpolation on any non-finite handle (`cp1x/y`, `cp2x/y`) or non-finite input `t`. `coerceIn` does not clamp NaN — every comparison against NaN is false — so a single poisoned handle from a corrupt project JSON would silently NaN-poison every animated property in the clip.
+- **`EffectBuilder.buildTransitionEffect` / `buildTransitionOutEffect`** — `transition.durationMs` clamped to `[1, 2_147_000L]` before `* 1000f` to avoid `Float.POSITIVE_INFINITY` at >25-day durations, which poisons the transition shader's progress calculations.
+
+### Resource safety
+- **`SegmentationGlEffect.uploadMaskTexture` / `uploadFallbackMask`** — `GLUtils.texImage2D` wrapped in try/finally so a driver OOM / invalid-format exception can't leak the 260 KB / 4 B bitmap we created immediately before the upload. On long renders this would otherwise accumulate across every failed frame.
+
+### DSP / math correctness
+- **`AudioEngine.mixAudioTracks`** — total-sample arithmetic moved to `Long` before narrowing to `Int`; on timelines >6h 45m at 44.1 kHz stereo the previous `(maxDuration * rate * channels).toInt()` would wrap negative and throw `NegativeArraySizeException` on the FloatArray allocation. Now fails gracefully with an empty mix + warn-log.
+- **`LoudnessEngine.applyKWeighting`** — `safeSampleRate` clamped to the practical range `[8_000, 192_000]` instead of `coerceAtLeast(1)`. A bogus 2 Hz from a malformed MediaFormat would have produced a near-1.0 K-weighting `alpha` that effectively disabled the filter.
+- **`BeatDetectionEngine.estimateBpm`** — explicit `bestInterval > 0` guard before `60000f / bestInterval`. `coerceIn(30f, 300f)` does not clamp Infinity (Infinity stays Infinity), so pathological input could have leaked an Infinity BPM into downstream UI.
+- **`WhisperEngine.runDecoder`** — validates `logits.info.shape.size >= 3` + non-positive dims before indexing. A malformed model output with rank < 3 would otherwise throw `IndexOutOfBoundsException`, leaking every tensor accumulated in the decode loop and aborting transcription silently.
+- **`WhisperMel`** — `maxVal` finite-check (empty-spectrum edge case) plus per-sample non-finite guard after normalisation. Previously a corrupt log10 path could NaN-poison the entire spectrogram and make Whisper produce garbage transcriptions instead of a clean empty result.
+- **`ColorMatchEngine.analyzeBitmap`** — `w`/`h` hard-capped at 512 each. Tiny-maxDim source (50-pixel composited overlay frame) left `scale = 1f`; a pathological 100-megapixel input would have allocated 400 MB for the histogram.
+
+### Concurrency
+- **`ProxyEngine.generateProxy`** — new per-source-key `Mutex` map serialises concurrent calls for the same `sourceUri`. Previously two near-simultaneous calls both passed the `outFile.exists()` check, both started a Transformer writing to the same `proxy_<hash>.mp4`, and the second write corrupted the first. `computeIfAbsent` guarantees one Mutex per key without a coarse-grained map lock.
+- **`TtsEngine.synthesize` — `invokeOnCancellation`** — clears the `UtteranceProgressListener` before `engine.stop()`. The `TextToSpeech` engine is effectively a singleton; a stale cancelled-job listener would otherwise fire `onDone`/`onError` into a continuation that already threw `CancellationException`.
+
+### Security
+- **`ProjectArchive.importArchive` ZIP-slip guard** — switched from `outFile.path.startsWith(canonicalTargetDir.path + File.separator)` to `outFile.toPath().startsWith(canonicalTargetDir.toPath())`. The string-prefix check mishandled Windows separators (canonicalTargetDir.path may or may not end with `\`) and was case-sensitive on case-insensitive filesystems. NIO `Path.startsWith` normalises path elements so neither bypass works.
+- **`LutEngine.parseCube` / `parse3dl`** — per-line `toFloatOrNull` tolerance. Malformed lines (diagnostic text, commented artefacts from some LUT authoring tools) now skip with a warn-log instead of rejecting the whole LUT via the outer catch.
+
+### False-positive notes
+Four findings were investigated and left unchanged:
+- AudioEngine.extractWaveform / decodeToPCM already release the extractor in the outer finally (the "MediaCodec leak on exception" claim conflated decoder lifecycle with extractor lifecycle).
+- SegmentationEngine already releases the retriever via properly-nested try/finally — every `return@withContext null` path still runs the finally.
+- AiToolsDelegate's `aiJob` race was already mitigated by the identity check documented in the v3.26 audit (`if (aiJob === thisJob)`).
+- `OverlaySettings.Builder` on OTIO — `JSONObject.put` already escapes string values.
+
+### Notes
+- No DB schema / dependency changes. No new strings. Net +118 / −22 lines across 11 files.
+- Every fix is additive or strictly tightens an existing guard — no behavioural change on valid inputs, defence-in-depth on malformed ones.
+
 ## v3.55.0 — Device-Aware Encoder Capability Probe
 
 Extends v3.52's pre-flight warning pattern with a real hardware-capability check so users see the warning *before* they burn 40 minutes of render time and hit a Transformer error mid-export.
