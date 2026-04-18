@@ -468,14 +468,27 @@ class VideoEngine @Inject constructor(
             val overlapping = textOverlays.filter { overlay ->
                 overlay.startTimeMs < clipEnd && overlay.endTimeMs > clipStart
             }
-            if (overlapping.isNotEmpty()) {
-                val overlayList = overlapping.map { overlay ->
+            // Build a combined overlay list: text overlays first, then the
+            // optional brand watermark. Keeping them in one OverlayEffect
+            // (vs. two consecutive effects) lets Media3 composite them in a
+            // single GL pass, so a project-wide watermark has no extra cost
+            // when no text overlays overlap this clip.
+            val overlayList = buildList<TextureOverlay> {
+                overlapping.forEach { overlay ->
                     val relStart = (overlay.startTimeMs - clipStart).coerceAtLeast(0L)
                     val relEnd = (overlay.endTimeMs - clipStart).coerceAtMost(clip.durationMs)
-                    ExportTextOverlay(overlay, relStart, relEnd)
+                    add(ExportTextOverlay(overlay, relStart, relEnd))
                 }
-                @Suppress("UNCHECKED_CAST")
-                add(OverlayEffect(com.google.common.collect.ImmutableList.copyOf(overlayList) as List<TextureOverlay>))
+                config.watermark?.let { watermark ->
+                    ExportWatermarkOverlay.create(
+                        context = context,
+                        watermark = watermark,
+                        outputFrameWidth = targetW
+                    )?.let { add(it) }
+                }
+            }
+            if (overlayList.isNotEmpty()) {
+                add(OverlayEffect(com.google.common.collect.ImmutableList.copyOf(overlayList)))
             }
 
             val overlappingLottie = lottieOverlays.filter { lo ->

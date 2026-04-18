@@ -50,6 +50,12 @@
     <string name="bulk_undo_message">%1$d clips deleted in quick succession</string>
     <string name="bulk_undo_action">Undo</string>
     <string name="bulk_undo_dismiss_cd">Dismiss</string>
+    <string name="export_watermark">Watermark</string>
+    <string name="export_watermark_description">Burn a brand image into every frame of the exported video.</string>
+    <string name="export_watermark_position">Position</string>
+    <string name="export_watermark_opacity">Opacity · %1$d%%</string>
+    <string name="export_watermark_scale">Scale · %1$d%% of width</string>
+    <string name="export_watermark_replace">Choose a different image</string>
     <string name="export_current_filename_template">Current template: %1$s</string>
     <string name="export_contact_sheet">Contact Sheet</string>
     <string name="export_contact_sheet_description">Grid of clip thumbnails as a single PNG — great for review decks and teasers.</string>

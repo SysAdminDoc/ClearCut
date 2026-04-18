@@ -29,7 +29,8 @@ data class ExportConfig(
     val bitrateOverride: Int? = null,
     val filenameTemplate: String = "{name}",
     val exportAsContactSheet: Boolean = false,
-    val contactSheetColumns: Int = 4
+    val contactSheetColumns: Int = 4,
+    val watermark: Watermark? = null
 ) {
     init {
         require(videoBitrate > 0) { "Bitrate must be positive" }
@@ -245,3 +246,36 @@ data class BatchExportItem(
 )
 
 enum class BatchExportStatus { QUEUED, IN_PROGRESS, COMPLETED, FAILED, CANCELLED }
+
+/**
+ * Burn-in watermark applied across every video frame during export. `null`
+ * on `ExportConfig.watermark` means no watermark — no cost paid in the
+ * encoder pipeline. When non-null the export pipeline decodes the URI once,
+ * wraps it as a Media3 `BitmapOverlay`, and passes it alongside text
+ * overlays so the watermark is composited on-GPU.
+ *
+ * `sourceUri` must resolve to a decodable image (PNG with transparency is
+ * the typical brand-asset format, but JPEG and WebP are also accepted).
+ * `opacity` is multiplied against the bitmap's own alpha channel; 1.0 keeps
+ * the bitmap's authored transparency, values below dim the whole overlay.
+ */
+@Immutable
+data class Watermark(
+    val sourceUri: android.net.Uri,
+    val position: WatermarkPosition = WatermarkPosition.BOTTOM_RIGHT,
+    val opacity: Float = 0.9f,
+    val scalePercent: Int = 15
+) {
+    init {
+        require(opacity in 0f..1f) { "opacity must be in [0, 1]" }
+        require(scalePercent in 5..50) { "scalePercent must be in [5, 50]" }
+    }
+}
+
+enum class WatermarkPosition(val displayName: String) {
+    TOP_LEFT("Top Left"),
+    TOP_RIGHT("Top Right"),
+    BOTTOM_LEFT("Bottom Left"),
+    BOTTOM_RIGHT("Bottom Right"),
+    CENTER("Center")
+}

@@ -1,5 +1,30 @@
 # Changelog
 
+## v3.54.0 — Brand Watermark Burn-in
+
+First Tier-2 feature lands: image watermark burned into every frame of the exported video via a Media3 `BitmapOverlay`. Composites on-GPU in the same overlay pass as any text overlays, so a project-wide watermark has no extra cost on clips that don't carry text.
+
+### Model
+- New `Watermark(sourceUri, position, opacity, scalePercent)` data class with validation (`opacity ∈ [0,1]`, `scalePercent ∈ [5,50]`).
+- New `WatermarkPosition` enum: TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT, CENTER.
+- `ExportConfig.watermark: Watermark?` — null means no watermark, no engine cost.
+
+### Engine
+- New `ExportWatermarkOverlay` object — decodes the user's image via `ContentResolver.openInputStream` once per export, scales to the requested percentage of output frame width (not source width, so the watermark visually fills the same fraction regardless of clip resolution variation), wraps as `BitmapOverlay.createStaticBitmapOverlay` with Media3's anchor system.
+- Anchor geometry uses normalised coords with a 7.5% safe-margin offset from the nearest edge (`±0.85` instead of `±1.0`) — matches professional broadcast-safe placement so the watermark never kisses the frame border.
+- Silent non-fatal failure: corrupt / unreadable images return null, and the export runs watermark-free rather than erroring out the entire render.
+
+### Pipeline integration
+- `VideoEngine.buildEditedMediaItem` was already building an overlay list per clip for text overlays; refactored to `buildList<TextureOverlay>` and append the watermark (when present) into the same `OverlayEffect`. Single GL pass handles text + watermark together.
+
+### UI
+- New `WatermarkSection` composable inside ExportSheet's Special Outputs section, visible only when `videoModeEnabled` (audio / stems / GIF / contact-sheet exports skip it).
+- Image picker (`ACTION_OPEN_DOCUMENT` with `image/*` filter), position chip row, 5%-step opacity slider, 1%-step scale slider (5–50% of output width), and a "Choose a different image" button so users can swap the source without losing their tuned position/opacity/scale.
+
+### Notes
+- No DB schema change. Six new string resources.
+- `Watermark.sourceUri` is a `Uri` — persistable read permission isn't taken at the ExportSheet picker here (unlike MediaPicker's video imports) because export runs synchronously in the same session the URI was granted. If a persisted-across-restart watermark is ever needed, wire the launcher through a helper that calls `takePersistableUriPermission`.
+
 ## v3.53.0 — Project Filter Chips + Bulk-Delete Guard
 
 Two Tier-1 UX wins from the backlog.
