@@ -220,13 +220,23 @@ private fun trimStartForTimelineStart(
     val targetDurationMs = (clip.timelineEndMs - targetTimelineStartMs)
         .coerceAtLeast(MIN_TIMELINE_CLIP_DURATION_MS)
     var low = 0L
-    var high = clip.trimEndMs - MIN_TIMELINE_CLIP_DURATION_MS
+    var high = (clip.trimEndMs - MIN_TIMELINE_CLIP_DURATION_MS).coerceAtLeast(0L)
+    if (high < low) return fallbackTrimStartMs.coerceIn(0L, clip.trimEndMs)
     var best = fallbackTrimStartMs.coerceIn(low, high)
     var bestDistance = Long.MAX_VALUE
-
-    while (low <= high) {
+    // Hard-cap the binary-search iterations so a pathological speedCurve that
+    // makes `durationMs` non-monotonic (corrupt save, stale NaN handles coerced
+    // into range) cannot spin here indefinitely. For any sane input, log2 of
+    // a multi-hour trim range is ≤ 32, so 64 iterations is 2x headroom.
+    var iter = 0
+    while (low <= high && iter < 64) {
+        iter++
         val mid = low + (high - low) / 2L
         val duration = clip.copy(trimStartMs = mid).durationMs
+        // Guard: if `durationMs` returns 0 for a non-zero trim range, the curve
+        // integration failed. Fall back to the caller's supplied trim rather
+        // than letting the loop pick an arbitrary mid.
+        if (duration <= 0L && clip.trimEndMs - mid > 0L) return best
         val distance = abs(duration - targetDurationMs)
         if (distance < bestDistance) {
             bestDistance = distance
@@ -251,12 +261,15 @@ private fun trimEndForTimelineEnd(
         .coerceAtLeast(MIN_TIMELINE_CLIP_DURATION_MS)
     var low = clip.trimStartMs + MIN_TIMELINE_CLIP_DURATION_MS
     var high = clip.sourceDurationMs
+    if (high < low) return fallbackTrimEndMs.coerceIn(clip.trimStartMs, clip.sourceDurationMs)
     var best = fallbackTrimEndMs.coerceIn(low, high)
     var bestDistance = Long.MAX_VALUE
-
-    while (low <= high) {
+    var iter = 0
+    while (low <= high && iter < 64) {
+        iter++
         val mid = low + (high - low) / 2L
         val duration = clip.copy(trimEndMs = mid).durationMs
+        if (duration <= 0L && mid - clip.trimStartMs > 0L) return best
         val distance = abs(duration - targetDurationMs)
         if (distance < bestDistance) {
             bestDistance = distance

@@ -67,45 +67,61 @@ class ProjectAutoSave @Inject constructor(
     }
 
     suspend fun loadRecoveryData(projectId: String): AutoSaveState? = withContext(Dispatchers.IO) {
-        // Clean up stale temp file from interrupted save
-        val tempFile = getTempFile(projectId)
-        if (tempFile.exists()) {
-            Log.w(TAG, "Cleaning up stale temp file for $projectId")
-            tempFile.delete()
-        }
-        val file = getAutoSaveFile(projectId)
-        val backupFile = getBackupFile(projectId)
-        // If main file is missing but backup exists, a save was interrupted — restore
-        if (!file.exists() && backupFile.exists()) {
-            Log.w(TAG, "Restoring auto-save from backup for $projectId")
-            moveFileReplacing(backupFile, file)
-        }
-        if (!file.exists()) return@withContext null
-        try {
-            AutoSaveState.deserialize(file.readText(Charsets.UTF_8)).also {
-                backupFile.delete()
+        // Serialize load against in-flight writes. Without the mutex a load that
+        // races a `saveState()` (temp-write → rename) could see the rename
+        // midway and read either no file (null) or a half-renamed file whose
+        // JSON parse throws — the second branch would fall into the backup
+        // recovery path unnecessarily and clear the backup even though the
+        // primary was fine.
+        saveMutex.withLock {
+            val tempFile = getTempFile(projectId)
+            if (tempFile.exists()) {
+                Log.w(TAG, "Cleaning up stale temp file for $projectId")
+                tempFile.delete()
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to load recovery data for $projectId", e)
-            if (!backupFile.exists()) {
-                return@withContext null
+            val file = getAutoSaveFile(projectId)
+            val backupFile = getBackupFile(projectId)
+            // If main file is missing but backup exists, a save was interrupted — restore
+            if (!file.exists() && backupFile.exists()) {
+                Log.w(TAG, "Restoring auto-save from backup for $projectId")
+                moveFileReplacing(backupFile, file)
             }
+            if (!file.exists()) return@withLock null
             try {
-                Log.w(TAG, "Primary auto-save is corrupt; attempting backup restore for $projectId")
-                AutoSaveState.deserialize(backupFile.readText(Charsets.UTF_8)).also {
-                    moveFileReplacing(backupFile, file)
+                AutoSaveState.deserialize(file.readText(Charsets.UTF_8)).also {
+                    backupFile.delete()
                 }
-            } catch (backupError: Exception) {
-                Log.e(TAG, "Backup auto-save restore failed for $projectId", backupError)
-                null
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load recovery data for $projectId", e)
+                if (!backupFile.exists()) {
+                    return@withLock null
+                }
+                try {
+                    Log.w(TAG, "Primary auto-save is corrupt; attempting backup restore for $projectId")
+                    AutoSaveState.deserialize(backupFile.readText(Charsets.UTF_8)).also {
+                        moveFileReplacing(backupFile, file)
+                    }
+                } catch (backupError: Exception) {
+                    Log.e(TAG, "Backup auto-save restore failed for $projectId", backupError)
+                    null
+                }
             }
         }
     }
 
-    fun clearRecoveryData(projectId: String) {
-        getAutoSaveFile(projectId).delete()
-        getTempFile(projectId).delete()
-        getBackupFile(projectId).delete()
+    /**
+     * Delete the on-disk recovery artifacts for a project. Now a suspend
+     * function so it can hold `saveMutex` for the full delete sequence —
+     * previously a concurrent auto-save could mid-delete create a new
+     * `.json` file between our `main.delete()` and `backup.delete()` calls,
+     * leaving a stale recovery behind that would re-appear on next open.
+     */
+    suspend fun clearRecoveryData(projectId: String) = withContext(Dispatchers.IO) {
+        saveMutex.withLock {
+            getAutoSaveFile(projectId).delete()
+            getTempFile(projectId).delete()
+            getBackupFile(projectId).delete()
+        }
     }
 
     suspend fun copyAutoSave(fromProjectId: String, toProjectId: String): Boolean {

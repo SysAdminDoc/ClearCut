@@ -177,6 +177,58 @@ data class Clip(
     fun getEffectiveSpeed(timeOffsetMs: Long): Float {
         return speedCurve?.getSpeedAt(timeOffsetMs, trimEndMs - trimStartMs) ?: speed
     }
+
+    /**
+     * Map a timeline-relative offset (0..durationMs) back to a source offset
+     * (trimStartMs..trimEndMs). Inverse of the forward time mapping used by
+     * `durationMs`. For a clip with no speedCurve this is just
+     * `trimStartMs + timelineOffsetMs * speed`. With a speedCurve it walks
+     * the trim range in small source-time steps and accumulates timeline
+     * time (dt_timeline = dt_source / speed(t)), stopping when the running
+     * timeline time passes the target.
+     *
+     * Used by thumbnail/frame extraction (contact sheet, GIF export, preview
+     * scrubbing) so the frame grabbed for timeline position T comes from the
+     * correct source moment. Clamped to the trim range so callers never read
+     * outside the clip's backing media.
+     */
+    fun timelineOffsetToSourceMs(timelineOffsetMs: Long): Long {
+        val trimRange = (trimEndMs - trimStartMs).coerceAtLeast(0L)
+        if (trimRange == 0L) return trimStartMs
+        val clamped = timelineOffsetMs.coerceIn(0L, durationMs.coerceAtLeast(0L))
+
+        val curve = speedCurve
+        if (curve == null || curve.points.size < 2) {
+            val safeSpeed = speed.coerceAtLeast(0.01f)
+            val sourceDelta = (clamped.toDouble() * safeSpeed).toLong()
+            return (trimStartMs + sourceDelta).coerceIn(trimStartMs, trimEndMs)
+        }
+
+        // Numerical reverse-lookup on the speed curve. 256 linear samples
+        // across the trim range; sufficient for frame-accurate thumbs at
+        // 30–60 fps up to minutes-long clips, cheap enough to call per-clip.
+        val steps = 256
+        val stepSourceMs = trimRange.toDouble() / steps
+        var accumulatedTimeline = 0.0
+        var sourceCursor = 0.0
+        val target = clamped.toDouble()
+        for (i in 0 until steps) {
+            val sMid = (i + 0.5) * stepSourceMs
+            val rawSpeed = curve.getSpeedAt(sMid.toLong(), trimRange)
+            val safeSpeed = if (rawSpeed.isFinite()) rawSpeed.coerceAtLeast(0.01f) else 1f
+            val dtTimeline = stepSourceMs / safeSpeed
+            if (accumulatedTimeline + dtTimeline >= target) {
+                // Linear-interpolate inside this step for sub-sample accuracy.
+                val remaining = target - accumulatedTimeline
+                val fraction = (remaining / dtTimeline).coerceIn(0.0, 1.0)
+                sourceCursor = i * stepSourceMs + fraction * stepSourceMs
+                return (trimStartMs + sourceCursor.toLong()).coerceIn(trimStartMs, trimEndMs)
+            }
+            accumulatedTimeline += dtTimeline
+            sourceCursor = (i + 1) * stepSourceMs
+        }
+        return (trimStartMs + sourceCursor.toLong()).coerceIn(trimStartMs, trimEndMs)
+    }
 }
 
 // --- Blend Modes ---
@@ -232,6 +284,42 @@ data class SpeedCurve(
             }
         }
         return 1f
+    }
+
+    /**
+     * Return a new SpeedCurve describing the sub-range
+     * `startFraction..endFraction` of this curve's trim range, renormalized
+     * so the new curve covers `0..1`. Used when a clip is split — each half
+     * inherits a remapped subset of the parent's curve instead of reusing the
+     * parent points as-is (which would misrepresent speeds on the halves).
+     *
+     * Handle positions are preserved since SpeedPoint bezier handles are Y-only.
+     * Points inside the range are kept and their `position` linearly mapped to
+     * the new domain; the range endpoints are explicitly added (interpolating
+     * speed if they don't coincide with a source point) so the result is
+     * guaranteed to have points at 0f and 1f.
+     */
+    fun restrictTo(startFraction: Float, endFraction: Float, clipDurationMs: Long = 1_000L): SpeedCurve {
+        val start = startFraction.coerceIn(0f, 1f)
+        val end = endFraction.coerceIn(start, 1f)
+        val span = end - start
+        if (span <= 1e-4f) {
+            val s = getSpeedAt((start * clipDurationMs).toLong(), clipDurationMs)
+            return SpeedCurve(listOf(SpeedPoint(0f, s), SpeedPoint(1f, s)))
+        }
+        val sorted = points.sortedBy { it.position }
+        val startSpeed = getSpeedAt((start * clipDurationMs).toLong(), clipDurationMs)
+        val endSpeed = getSpeedAt((end * clipDurationMs).toLong(), clipDurationMs)
+        val remapped = mutableListOf<SpeedPoint>()
+        remapped += SpeedPoint(0f, startSpeed, handleInY = startSpeed, handleOutY = startSpeed)
+        for (p in sorted) {
+            if (p.position > start && p.position < end) {
+                val newPos = ((p.position - start) / span).coerceIn(0f, 1f)
+                remapped += p.copy(position = newPos)
+            }
+        }
+        remapped += SpeedPoint(1f, endSpeed, handleInY = endSpeed, handleOutY = endSpeed)
+        return SpeedCurve(remapped.sortedBy { it.position })
     }
 
     fun averageSpeed(clipDurationMs: Long, sampleCount: Int = 48): Float {

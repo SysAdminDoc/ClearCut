@@ -39,31 +39,74 @@ internal fun importUriToManagedMedia(
         return null
     }
 
+    // Opportunistically sweep abandoned `.partial` artifacts left behind by
+    // prior imports that crashed mid-copy. Bounded to once-per-import so it
+    // doesn't add meaningful latency on the happy path.
+    sweepAbandonedPartials(destinationDir)
+
     val destinationFile = createUniqueManagedMediaFile(
         directory = destinationDir,
         displayName = resolveMediaDisplayName(context, uri),
         extension = resolveManagedMediaExtension(context, uri, mediaType)
     )
+    // Write to a sibling `.partial` file and rename on success so an interrupted
+    // or crashing copy can never surface to the caller as a truncated-but-valid
+    // media file. Without this a clip imported during a crash would be added to
+    // the timeline with a 0-byte or partial video that breaks playback later.
+    val partialFile = File(destinationFile.parentFile, destinationFile.name + ".partial")
 
     return try {
         context.contentResolver.openInputStream(uri)?.use { input ->
-            destinationFile.outputStream().use { output -> input.copyTo(output) }
+            partialFile.outputStream().use { output -> input.copyTo(output) }
         } ?: run {
+            partialFile.delete()
             Log.w(LOCAL_MEDIA_IMPORT_TAG, "Cannot open input stream for $uri")
             return null
         }
 
-        if (destinationFile.length() <= 0L) {
-            destinationFile.delete()
+        if (partialFile.length() <= 0L) {
+            partialFile.delete()
             Log.w(LOCAL_MEDIA_IMPORT_TAG, "Imported file was empty for $uri")
-            null
-        } else {
-            Uri.fromFile(destinationFile)
+            return null
         }
+
+        if (!partialFile.renameTo(destinationFile)) {
+            // Rename can fail across filesystems or if the dest appeared.
+            // Fall back to a stream copy + delete sequence so the user still
+            // gets a usable import when the cheap rename path fails.
+            try {
+                partialFile.inputStream().use { input ->
+                    destinationFile.outputStream().use { output -> input.copyTo(output) }
+                }
+                partialFile.delete()
+            } catch (copyErr: Exception) {
+                partialFile.delete()
+                destinationFile.delete()
+                Log.w(LOCAL_MEDIA_IMPORT_TAG, "Rename + fallback copy both failed for $uri", copyErr)
+                return null
+            }
+        }
+        Uri.fromFile(destinationFile)
     } catch (e: Exception) {
+        partialFile.delete()
         destinationFile.delete()
         Log.w(LOCAL_MEDIA_IMPORT_TAG, "Failed to import media URI $uri", e)
         null
+    }
+}
+
+/**
+ * Delete `.partial` files older than 10 minutes in the managed-media dir.
+ * These are only created by `importUriToManagedMedia` and are always expected
+ * to be renamed away on success, so anything older than a sane per-clip copy
+ * time is an abandoned artifact from a crashed or killed process.
+ */
+private fun sweepAbandonedPartials(dir: File) {
+    val cutoffMs = System.currentTimeMillis() - 10L * 60L * 1000L
+    dir.listFiles()?.forEach { f ->
+        if (f.isFile && f.name.endsWith(".partial") && f.lastModified() < cutoffMs) {
+            runCatching { f.delete() }
+        }
     }
 }
 

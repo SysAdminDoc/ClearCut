@@ -98,9 +98,18 @@ object ContactSheetExporter {
                 val cellX = OUTER_PAD + col * (cellW + GAP)
                 val cellY = OUTER_PAD + row * (cellH + GAP)
 
-                // Thumbnail from the clip's midpoint (relative to trim).
-                val trimRange = (clip.trimEndMs - clip.trimStartMs).coerceAtLeast(1L)
-                val midSourceMs = clip.trimStartMs + trimRange / 2
+                // Thumbnail from the clip's timeline midpoint mapped back to source
+                // time. Using `clip.timelineOffsetToSourceMs(durationMs/2)` respects
+                // speedCurve — e.g. a ramp from 0.5x→2x puts the visual midpoint
+                // nowhere near the arithmetic trim midpoint, so naive
+                // `trimStart + trimRange/2` would grab a misleading frame.
+                //
+                // Note: VideoEngine.extractThumbnail caches the returned bitmap in a
+                // bounded LRU and returns the cached instance. We DO NOT recycle it
+                // here — doing so would invalidate the cache for subsequent calls.
+                // The cache owns the bitmap's lifecycle.
+                val timelineDurationMs = clip.durationMs.coerceAtLeast(1L)
+                val midSourceMs = clip.timelineOffsetToSourceMs(timelineDurationMs / 2)
                 val thumb = try {
                     extractThumb(clip.sourceUri, midSourceMs * 1000, THUMB_W, THUMB_H)
                 } catch (e: Exception) {

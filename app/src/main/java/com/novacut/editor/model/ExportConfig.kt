@@ -44,7 +44,13 @@ data class ExportConfig(
      */
     fun resolveTargetSize(totalDurationMs: Long): ExportConfig {
         val target = targetSizeBytes ?: return this
-        if (totalDurationMs <= 0L) return this
+        // A zero or negative duration means there's no renderable timeline
+        // yet. Falling back to the default quality-based bitrate would blow
+        // past the user's declared target the moment a clip is added. Pin to
+        // the 500 kbps floor so the resolved bitrate always respects the
+        // target-size promise; the export is expected to re-resolve once a
+        // real duration is known.
+        if (totalDurationMs <= 0L) return copy(bitrateOverride = 500_000)
         // Reserve 2% for container overhead (mp4 atoms, moov box) then subtract audio.
         val usableBytes = (target * 0.98).toLong()
         val videoBytes = usableBytes - (audioBitrate.toLong() * totalDurationMs / 8000L)

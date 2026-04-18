@@ -46,7 +46,13 @@ class ExportDelegate(
     private val showExportSheet: () -> Unit
 ) {
     // --- Export ---
-    @Volatile private var gifExportJob: kotlinx.coroutines.Job? = null
+    // Holder for the GIF-style / contact-sheet / any other non-Transformer
+    // export coroutine. The Transformer-based video export is cancelled via
+    // `videoEngine.cancelExport()` directly; this job covers the paths that
+    // run outside VideoEngine. Named broadly because the two current callers
+    // (GIF encode, contact-sheet render) + any future CPU-only export paths
+    // all need the same cancel/teardown plumbing.
+    @Volatile private var nonVideoExportJob: kotlinx.coroutines.Job? = null
 
     /**
      * Expand filename template tokens. Supported tokens:
@@ -88,8 +94,8 @@ class ExportDelegate(
 
     fun cancelExport() {
         // Cancel GIF export coroutine if one is running
-        gifExportJob?.cancel()
-        gifExportJob = null
+        nonVideoExportJob?.cancel()
+        nonVideoExportJob = null
         videoEngine.cancelExport()
         // If VideoEngine wasn't in EXPORTING state (e.g., GIF export path),
         // ensure the UI state reflects cancellation
@@ -134,7 +140,7 @@ class ExportDelegate(
                 exportErrorMessage = null,
                 lastExportedFilePath = null
             ) }
-            gifExportJob = scope.launch {
+            nonVideoExportJob = scope.launch {
                 var sheetFile: File? = null
                 try {
                     withContext(Dispatchers.IO) { outputDir.mkdirs() }
@@ -185,7 +191,7 @@ class ExportDelegate(
                         lastExportedFilePath = null
                     ) }
                 } finally {
-                    gifExportJob = null
+                    nonVideoExportJob = null
                 }
             }
             return
@@ -200,7 +206,7 @@ class ExportDelegate(
                 exportErrorMessage = null,
                 lastExportedFilePath = null
             ) }
-            gifExportJob = scope.launch {
+            nonVideoExportJob = scope.launch {
                 val frames = mutableListOf<android.graphics.Bitmap>()
                 var gifFile: File? = null
                 try {
@@ -231,7 +237,12 @@ class ExportDelegate(
                         ensureActive()
                         val timeMs = i * frameIntervalMs
                         val clip = allClips.lastOrNull { it.timelineStartMs <= timeMs } ?: continue
-                        val clipTimeUs = (((timeMs - clip.timelineStartMs) * clip.speed).toLong() + clip.trimStartMs) * 1000
+                        // Respect speedCurve — `timelineOffsetToSourceMs` integrates the
+                        // curve when present and falls back to `* speed` for constant
+                        // speed, so static clips still produce the same frame mapping
+                        // as before this change.
+                        val timelineOffsetInClip = timeMs - clip.timelineStartMs
+                        val clipTimeUs = clip.timelineOffsetToSourceMs(timelineOffsetInClip) * 1000
                         val bitmap = videoEngine.extractThumbnail(clip.sourceUri, clipTimeUs)
                         if (bitmap != null && bitmap.width > 0 && bitmap.height > 0) {
                             val scaled = if (bitmap.width > maxWidth) {
@@ -285,7 +296,7 @@ class ExportDelegate(
                         lastExportedFilePath = null
                     ) }
                 } finally {
-                    gifExportJob = null
+                    nonVideoExportJob = null
                     frames.forEach { bitmap ->
                         if (!bitmap.isRecycled) {
                             bitmap.recycle()
@@ -525,7 +536,13 @@ class ExportDelegate(
             ?: "NovaCut"
         val template = stateFlow.value.exportConfig.filenameTemplate.ifBlank { "{name}" }
         val templated = applyFilenameTemplate(template, baseName, stateFlow.value.exportConfig)
-        val sanitizedBase = sanitizeFileName(templated, fallback = "NovaCut", maxLength = 64)
+        // Reserve space for an auto-increment suffix like ` (999)` so repeated
+        // collisions don't force the base to shrink with every retry (which
+        // would produce a different filename on each iteration and could even
+        // miss a previously-created number by hopping across lengths).
+        val suffixReserve = 6
+        val baseBudget = 64 - suffixReserve
+        val sanitizedBase = sanitizeFileName(templated, fallback = "NovaCut", maxLength = baseBudget)
         var candidate = File(outputDir, "$sanitizedBase.$extension")
         if (!candidate.exists()) {
             return candidate
@@ -570,8 +587,21 @@ class ExportDelegate(
                 values.put(MediaStore.MediaColumns.IS_PENDING, 0)
                 // If MediaStore reports zero rows updated, the file remains marked pending
                 // and stays invisible in Gallery / Photos apps. Treat as a failure rather
-                // than silently lying to the user that the save succeeded.
-                val updated = resolver.update(contentUri, values, null, null)
+                // than silently lying to the user that the save succeeded. Some devices
+                // transiently return 0 while an indexer run is in flight; retry a couple
+                // of times with short backoff before surfacing the error.
+                var updated = 0
+                val backoffsMs = longArrayOf(0L, 100L, 400L)
+                for (delayMs in backoffsMs) {
+                    if (delayMs > 0L) {
+                        try { Thread.sleep(delayMs) } catch (_: InterruptedException) {
+                            Thread.currentThread().interrupt()
+                            break
+                        }
+                    }
+                    updated = resolver.update(contentUri, values, null, null)
+                    if (updated >= 1) break
+                }
                 if (updated < 1) {
                     throw IllegalStateException("MediaStore failed to clear IS_PENDING (rows=$updated)")
                 }

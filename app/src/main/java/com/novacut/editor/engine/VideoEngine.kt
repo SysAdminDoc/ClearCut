@@ -916,6 +916,14 @@ class VideoEngine @Inject constructor(
                 onError(Exception("Export timed out"))
             }
             activeTransformer = null
+            // Ensure the file-handle mirror is always nulled when the transformer
+            // reference is cleared, regardless of which branch above set the
+            // terminal state. Previously the only nulls lived inside the listener
+            // callbacks, so an early-return path (e.g. timeout where the listener
+            // fires late or not at all) would leave `activeExportOutputFile`
+            // pointing at a deleted file — a subsequent `cancelExport()` would
+            // then try to delete that stale path and log an IO error.
+            activeExportOutputFile = null
         }
     }
 

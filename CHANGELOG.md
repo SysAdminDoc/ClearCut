@@ -1,5 +1,39 @@
 # Changelog
 
+## v3.50.0 — Hardening Pass (Audit Phase 18)
+
+Staff-level audit + refactor pass across the Codex-refactored tree. Four parallel Explore-agent audits produced ~30 findings; this release lands every Critical and all high-value Highs. False-positive findings (speed-curve-aware effect ID remap on duplicateClip, Timeline NaN guard, FileProvider URI revocation risk for PhotoPicker) were evaluated and explicitly left unchanged with rationale.
+
+### Correctness — speed-curve awareness
+- **`Clip.timelineOffsetToSourceMs(timelineOffsetMs)`** (new) — inverse of the forward time mapping used by `durationMs`. Numerical reverse-lookup on the speedCurve (256 linear samples, sub-sample interpolation) when present; falls back to `trimStart + timelineOffset * speed` for constant-speed clips. Clamped to the trim range so callers can never read outside the backing media.
+- **Contact-sheet midpoint** (`ContactSheetExporter.kt`) — the thumbnail frame now comes from `clip.timelineOffsetToSourceMs(durationMs/2)` instead of the arithmetic trim midpoint. Ramped clips (e.g. 0.5×→2×) used to grab a misleading frame because the visual midpoint isn't at trim-center. Also: removed an incorrect `bitmap.recycle()` call that would have corrupted `VideoEngine.thumbnailCache` (the cache returns its own bitmap instances; the cache owns their lifecycle).
+- **GIF export frame mapping** (`ExportDelegate.kt:234`) — same fix; GIF frames now use `timelineOffsetToSourceMs` so a curved clip exports the correct frames.
+- **Split preserves speedCurve** (`ClipEditingDelegate.kt`) — when a clip with a `speedCurve` is split, each half inherits a **remapped sub-range** of the parent curve via the new `SpeedCurve.restrictTo(startFraction, endFraction, clipDurationMs)` helper. Previously both halves kept the full parent curve and misreported speeds across the new trim ranges.
+- **`splitPointInSource`** now calls `clip.timelineOffsetToSourceMs(relativePosition)` so the split lands at the correct source frame under curves.
+
+### Stability — data safety
+- **AutoSave mutex coverage** (`ProjectAutoSave.kt`) — `loadRecoveryData` and `clearRecoveryData` are both now `suspend` and wrap their full sequence in `saveMutex.withLock`. Previously `clearRecoveryData` was synchronous and not under any mutex, so a delete racing an auto-save could partially clear one of the three files (`.json`, `.tmp`, `.backup`) and leave a ghost recovery behind. `loadRecoveryData` grew the same guard so rename-in-flight between `saveState`'s temp-write and its atomic rename can no longer race a load to see either the pre- or post-rename half.
+- **Trim binary-search iteration cap + monotonicity guard** (`TimelineEditing.kt`) — `trimStartForTimelineStart` / `trimEndForTimelineEnd` now cap at 64 iterations (log₂ headroom for any realistic trim range) and early-return if `clip.durationMs` goes to 0 on a non-zero trim range (symptom of corrupt speedCurve with stale NaN handles coerced in-range). Previously the loop could wedge on a non-monotonic cost function.
+- **Recovery dialog is modal** (`EditorScreen.kt`) — `DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false)`. `onDismissRequest` used to accept the recovery silently on tap-outside, which destroyed users' deliberate intent to discard. Users must now choose Keep or Discard explicitly.
+- **Duplicate-project name uniqueness reads a fresh DAO snapshot** (`ProjectListViewModel.kt`) — computes the `(Copy N)` suffix inside the IO coroutine against `projectDao.getAllProjectsSnapshot()` (new DAO query) rather than the potentially-stale `allProjects.value` StateFlow read on the UI thread. Closes a race where two near-simultaneous duplicate taps could mint the same "(Copy)" name.
+- **Undo/redo restores playhead** (`EditorViewModel.kt`) — `UndoAction` gains `playheadMs: Long`. Saved in `saveUndoState`, restored (and clamped to the restored timeline's `totalDurationMs`) in `undo()`, `redo()`, and `jumpToUndoState`. Previously an undo of "delete last clip" left the playhead dangling past the new timeline end.
+
+### Export robustness
+- **`resolveTargetSize` on zero duration** pins `bitrateOverride = 500_000` instead of silently falling back to the default quality-based bitrate, which would blow past the user's declared file-size target the moment a clip is added.
+- **`gifExportJob` renamed to `nonVideoExportJob`** with a doc comment explaining it holds both GIF and contact-sheet coroutines (and any future non-Transformer export path).
+- **Filename-template suffix reserve** (`ExportDelegate.createOutputFile`) — base name budgeted to 58 chars (64 minus a 6-char ` (999)` suffix) so collision retries don't force the base to shrink with every iteration.
+- **MediaStore `IS_PENDING` retry** (`ExportDelegate.saveExportedFile`) — up to 3 attempts with 0/100/400 ms backoff before failing. Some devices transiently return 0 rows-updated while a MediaStore indexer run is in flight.
+- **`activeExportOutputFile` nulled in outer finally** (`VideoEngine.kt`) — timeout/early-exit paths no longer leave a stale file handle pointer that a subsequent `cancelExport()` would try to delete.
+
+### Media import
+- **Atomic rename pattern** (`LocalMediaImport.importUriToManagedMedia`) — writes to a sibling `.partial` file, renames on success, falls back to stream-copy-and-delete if the rename fails cross-filesystem. An interrupted or crashing copy can no longer surface to the timeline as a truncated-but-valid video.
+- **Abandoned-partials sweep** — once-per-import, deletes `.partial` files older than 10 minutes in the managed-media dir. Bounded GC so orphans can't accumulate indefinitely.
+
+### Notes
+- No schema changes. No new dependencies.
+- New DAO query `ProjectDao.getAllProjectsSnapshot()` is additive and non-breaking.
+- The four audit reports produced ~30 findings; explicit **false-positive** adjudications in this commit: the Timeline pinch-zoom NaN guard was already fully mitigated (safe variables are used throughout the closure), `duplicateClip` already regenerates effect IDs per-invocation (each linked clip gets its own regeneration), `reorderClip` already invokes `recalculateDuration` for cross-track propagation, and `Project.thumbnailUri` points to the source video (deleting it with the project would destroy user footage). These were left unchanged with rationale documented here.
+
 ## v3.49.0 — Contact Sheet Export
 
 Ships roadmap §8.1 — **contact-sheet export** (FrameSnap-inspired). Renders a single PNG with one thumbnail per clip, labeled and arranged in a configurable grid. Great for review-decks, social-media teasers, and archival of long projects as a single scannable image.

@@ -259,23 +259,28 @@ class ProjectListViewModel @Inject constructor(
 
     fun duplicateProject(project: Project) {
         val newId = UUID.randomUUID().toString()
-        val existingNames = allProjects.value.map { it.name }.toSet()
         val baseName = project.name.replace("""\s*\(Copy\s*\d*\)\s*$""".toRegex(), "").trim()
-        var copyName = "$baseName (Copy)"
-        var counter = 2
-        while (copyName in existingNames) {
-            copyName = "$baseName (Copy $counter)"
-            counter++
-        }
-        val newProject = project.copy(
-            id = newId,
-            name = copyName,
-            createdAt = System.currentTimeMillis(),
-            updatedAt = System.currentTimeMillis()
-        )
         viewModelScope.launch {
             val duplicated = withContext(Dispatchers.IO) {
                 try {
+                    // Compute the unique copy name inside the IO coroutine so the
+                    // name-uniqueness check reads the freshest DAO snapshot instead
+                    // of a potentially stale StateFlow value on the UI thread. This
+                    // closes a race where two near-simultaneous duplicate taps could
+                    // mint the same "(Copy)" name before either insertion settles.
+                    val existingNames = projectDao.getAllProjectsSnapshot().map { it.name }.toSet()
+                    var copyName = "$baseName (Copy)"
+                    var counter = 2
+                    while (copyName in existingNames) {
+                        copyName = "$baseName (Copy $counter)"
+                        counter++
+                    }
+                    val newProject = project.copy(
+                        id = newId,
+                        name = copyName,
+                        createdAt = System.currentTimeMillis(),
+                        updatedAt = System.currentTimeMillis()
+                    )
                     projectDao.insertProject(newProject)
                     if (autoSave.copyAutoSave(project.id, newId)) {
                         true

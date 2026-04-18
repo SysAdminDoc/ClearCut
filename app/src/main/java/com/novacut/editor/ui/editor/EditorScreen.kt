@@ -1276,9 +1276,16 @@ fun EditorScreen(
         }
 
         // Recovery dialog — shown on editor open when auto-save data was restored.
+        // Modal (no back-press, no outside-tap dismissal) so the user must make
+        // an explicit choice. Previously `onDismissRequest` treated "tap outside"
+        // as "Keep recovered", which silently overrode users who meant to discard.
         if (state.panels.isOpen(PanelId.RECOVERY_DIALOG)) {
             androidx.compose.material3.AlertDialog(
-                onDismissRequest = { viewModel.dismissRecoveryDialog(recover = true) },
+                onDismissRequest = { /* forced choice — handled by the two buttons */ },
+                properties = androidx.compose.ui.window.DialogProperties(
+                    dismissOnBackPress = false,
+                    dismissOnClickOutside = false
+                ),
                 title = {
                     androidx.compose.material3.Text(
                         text = androidx.compose.ui.res.stringResource(com.novacut.editor.R.string.recovery_title)

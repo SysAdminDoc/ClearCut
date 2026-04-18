@@ -379,11 +379,27 @@ class ClipEditingDelegate(
                             add(clip)
                         } else {
                             val splitPointInSource = splitPointInSource(clip, playhead)
+                            // Remap the speedCurve (if any) so each half gets the
+                            // correct sub-range of the parent curve. Without this
+                            // both halves would inherit the full parent curve and
+                            // misreport speeds across the new trim ranges.
+                            val parentTrimRange = (clip.trimEndMs - clip.trimStartMs)
+                                .coerceAtLeast(1L)
+                            val splitFraction = ((splitPointInSource - clip.trimStartMs)
+                                .toFloat() / parentTrimRange.toFloat())
+                                .coerceIn(0f, 1f)
+                            val firstHalfCurve = clip.speedCurve?.restrictTo(
+                                0f, splitFraction, parentTrimRange
+                            )
+                            val secondHalfCurve = clip.speedCurve?.restrictTo(
+                                splitFraction, 1f, parentTrimRange
+                            )
                             add(
                                 clip.copy(
                                     trimEndMs = splitPointInSource,
                                     transition = null,
-                                    linkedClipId = clip.linkedClipId
+                                    linkedClipId = clip.linkedClipId,
+                                    speedCurve = firstHalfCurve
                                 )
                             )
                             add(
@@ -394,7 +410,8 @@ class ClipEditingDelegate(
                                     transition = null,
                                     linkedClipId = clip.linkedClipId?.let { linkedId ->
                                         newIdsByOldId[linkedId]
-                                    }
+                                    },
+                                    speedCurve = secondHalfCurve
                                 )
                             )
                         }
@@ -556,8 +573,12 @@ class ClipEditingDelegate(
     }
 
     private fun splitPointInSource(clip: Clip, playheadMs: Long): Long {
-        val relativePosition = playheadMs - clip.timelineStartMs
-        return clip.trimStartMs + (relativePosition * clip.speed).toLong()
+        // Use the speed-curve-aware reverse mapping so a clip with a ramp
+        // (e.g. 0.5x → 2x) splits at the correct source frame instead of at
+        // `trimStart + relative * constant_speed`, which would cut at the
+        // wrong frame on any non-constant curve.
+        val relativePosition = (playheadMs - clip.timelineStartMs).coerceAtLeast(0L)
+        return clip.timelineOffsetToSourceMs(relativePosition)
     }
 
     private fun canMergeAdjacentClips(first: Clip, second: Clip): Boolean {

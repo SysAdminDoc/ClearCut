@@ -209,7 +209,12 @@ data class UndoAction(
     val imageOverlays: List<ImageOverlay> = emptyList(),
     val timelineMarkers: List<TimelineMarker> = emptyList(),
     val chapterMarkers: List<ChapterMarker> = emptyList(),
-    val drawingPaths: List<com.novacut.editor.model.DrawingPath> = emptyList()
+    val drawingPaths: List<com.novacut.editor.model.DrawingPath> = emptyList(),
+    // Restoring the playhead with the rest of the state prevents a scrub to
+    // an orphan timeline position after undoing a clip deletion or merge.
+    // Default 0 so callers that don't capture it (e.g. older serialization
+    // paths, if any) still construct a valid record.
+    val playheadMs: Long = 0L
 )
 
 @HiltViewModel
@@ -1533,9 +1538,12 @@ class EditorViewModel @Inject constructor(
                 imageOverlays = it.imageOverlays.toList(),
                 timelineMarkers = it.timelineMarkers.toList(),
                 chapterMarkers = it.chapterMarkers.toList(),
-                drawingPaths = it.drawingPaths.toList()
-            )) + stack.drop(index + 1)
+                drawingPaths = it.drawingPaths.toList(),
+                playheadMs = _playheadMs.value
+            )) + stack.drop(index + 1),
+            playheadMs = target.playheadMs.coerceIn(0L, it.totalDurationMs.coerceAtLeast(0L))
         ) }
+        _playheadMs.value = _state.value.playheadMs
         rebuildTimeline()
         showToast("Restored: ${target.description}")
     }
@@ -3020,7 +3028,8 @@ class EditorViewModel @Inject constructor(
             imageOverlays = _state.value.imageOverlays.toList(),
             timelineMarkers = _state.value.timelineMarkers.toList(),
             chapterMarkers = _state.value.chapterMarkers.toList(),
-            drawingPaths = _state.value.drawingPaths.toList()
+            drawingPaths = _state.value.drawingPaths.toList(),
+            playheadMs = _playheadMs.value
         )
 
         _state.update {
@@ -3036,11 +3045,18 @@ class EditorViewModel @Inject constructor(
             ))
             val clipExists = it.selectedClipId != null &&
                 restored.tracks.any { t -> t.clips.any { c -> c.id == it.selectedClipId } }
+            // Clamp the restored playhead to the restored timeline duration so
+            // undoing a "delete last clip" doesn't leave the playhead dangling
+            // past the new timeline end.
+            val clampedPlayhead = action.playheadMs
+                .coerceIn(0L, restored.totalDurationMs.coerceAtLeast(0L))
             dismissedPanelState(restored).copy(
                 selectedClipId = if (clipExists) it.selectedClipId else null,
-                currentTool = EditorTool.NONE
+                currentTool = EditorTool.NONE,
+                playheadMs = clampedPlayhead
             )
         }
+        _playheadMs.value = _state.value.playheadMs
         rebuildPlayerTimeline()
     }
 
@@ -3056,7 +3072,8 @@ class EditorViewModel @Inject constructor(
             imageOverlays = _state.value.imageOverlays.toList(),
             timelineMarkers = _state.value.timelineMarkers.toList(),
             chapterMarkers = _state.value.chapterMarkers.toList(),
-            drawingPaths = _state.value.drawingPaths.toList()
+            drawingPaths = _state.value.drawingPaths.toList(),
+            playheadMs = _playheadMs.value
         )
 
         _state.update {
@@ -3072,11 +3089,15 @@ class EditorViewModel @Inject constructor(
             ))
             val clipExists = it.selectedClipId != null &&
                 restored.tracks.any { t -> t.clips.any { c -> c.id == it.selectedClipId } }
+            val clampedPlayhead = action.playheadMs
+                .coerceIn(0L, restored.totalDurationMs.coerceAtLeast(0L))
             dismissedPanelState(restored).copy(
                 selectedClipId = if (clipExists) it.selectedClipId else null,
-                currentTool = EditorTool.NONE
+                currentTool = EditorTool.NONE,
+                playheadMs = clampedPlayhead
             )
         }
+        _playheadMs.value = _state.value.playheadMs
         rebuildPlayerTimeline()
     }
 
@@ -3249,7 +3270,8 @@ class EditorViewModel @Inject constructor(
                 imageOverlays = state.imageOverlays.toList(),
                 timelineMarkers = state.timelineMarkers.toList(),
                 chapterMarkers = state.chapterMarkers.toList(),
-                drawingPaths = state.drawingPaths.toList()
+                drawingPaths = state.drawingPaths.toList(),
+                playheadMs = state.playheadMs
             )
             state.copy(
                 undoStack = (state.undoStack + action).takeLast(50),

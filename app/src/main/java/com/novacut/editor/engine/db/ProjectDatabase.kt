@@ -60,6 +60,14 @@ interface ProjectDao {
     @Query("SELECT * FROM projects ORDER BY updatedAt DESC")
     fun getAllProjects(): Flow<List<Project>>
 
+    /**
+     * One-shot snapshot used when callers need a freshly-read list (e.g.
+     * uniqueness checks during duplicate-project naming) rather than the
+     * debounced StateFlow snapshot the UI observes.
+     */
+    @Query("SELECT * FROM projects ORDER BY updatedAt DESC")
+    suspend fun getAllProjectsSnapshot(): List<Project>
+
     @Query("SELECT * FROM projects WHERE id = :id")
     suspend fun getProject(id: String): Project?
 
