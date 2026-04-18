@@ -1,5 +1,28 @@
 # Changelog
 
+## v3.55.0 — Device-Aware Encoder Capability Probe
+
+Extends v3.52's pre-flight warning pattern with a real hardware-capability check so users see the warning *before* they burn 40 minutes of render time and hit a Transformer error mid-export.
+
+### New `EncoderCapabilityProbe` engine helper
+- Queries `MediaCodecList.REGULAR_CODECS` for every encoder advertising the selected `codec.mimeType`, then walks each one's `VideoCapabilities` to check whether the user's (width, height, framerate, bitrate) tuple is actually accepted.
+- Walks **all** matching encoders so a device with e.g. both Qualcomm hardware HEVC and Google software HEVC is correctly reported as supporting the higher of the two's capabilities.
+- Returns a `Capability(supported, reason)` where `reason` is a human-readable string pre-composed for toast / warning display:
+  - "No HEVC encoder present — falling back to H.264 is safer."
+  - "HEVC on this device tops out at 1920×1080"
+  - "HEVC at 3840×2160 is capped to 30 fps on this device"
+  - "HEVC bitrate is capped at 80 Mbps on this device"
+- Silent-safe: if `MediaCodecList` throws (some OEM ROMs do), returns `Capability(supported = true, reason = null)` rather than falsely warning.
+
+### ExportSheet wiring
+- Probe result is `remember`-cached on `(codec, width, height, framerate, videoBitrate)` so repeated recompositions during slider drags don't re-query `MediaCodecList` on every frame. Probe only re-runs when one of those inputs changes.
+- When `!probe.supported`, the reason string is appended to the existing pre-flight warnings column alongside the long-render / large-file / AV1-slow warnings from v3.52.
+
+### Notes
+- This is a pre-flight **advisory**, not a guarantee — real-world encoders occasionally refuse configurations they claim to support, and that remains Media3 Transformer's own retry domain. The probe's job is to surface obvious footguns ("4K HEVC on a budget phone") before the render starts.
+- No state, no persistence, no new strings (reasons are composed at probe time).
+- Complements the existing `ExportConfig.getAvailableCodecs` check (which filters by codec *presence*) with a finer-grained check that the full render spec is acceptable.
+
 ## v3.54.0 — Brand Watermark Burn-in
 
 First Tier-2 feature lands: image watermark burned into every frame of the exported video via a Media3 `BitmapOverlay`. Composites on-GPU in the same overlay pass as any text overlays, so a project-wide watermark has no extra cost on clips that don't carry text.

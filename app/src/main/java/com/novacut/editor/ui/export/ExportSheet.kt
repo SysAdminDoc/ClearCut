@@ -858,6 +858,30 @@ fun ExportSheet(
                     if (effectiveConfig.codec == VideoCodec.AV1) {
                         add(stringResource(R.string.export_warning_av1_slow))
                     }
+                    // Device-aware encoder capability probe. Surfaces a
+                    // reason-bearing message when the codec+resolution+fps+
+                    // bitrate combo exceeds what any advertised encoder on
+                    // this device accepts. The probe is cached across
+                    // recompositions via remember — MediaCodecList queries
+                    // are cheap but not free, and the result only changes
+                    // when the user tweaks the config.
+                    val probe = remember(
+                        effectiveConfig.codec,
+                        width, height,
+                        effectiveConfig.frameRate,
+                        effectiveConfig.videoBitrate
+                    ) {
+                        com.novacut.editor.engine.EncoderCapabilityProbe.check(
+                            codec = effectiveConfig.codec,
+                            width = width,
+                            height = height,
+                            framerate = effectiveConfig.frameRate,
+                            bitrate = effectiveConfig.videoBitrate
+                        )
+                    }
+                    if (!probe.supported) {
+                        probe.reason?.let { add(it) }
+                    }
                 }
                 preflightWarnings.forEach { warning ->
                     Text(
