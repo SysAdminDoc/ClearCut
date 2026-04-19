@@ -46,7 +46,7 @@ class TemplateManager @Inject constructor(
     }
 
     fun getTemplate(templateId: String): UserTemplate? {
-        val templateFile = File(templateDir, "$templateId.json")
+        val templateFile = templateFileForId(templateId) ?: return null
         return if (templateFile.exists()) loadTemplate(templateFile) else null
     }
 
@@ -82,12 +82,14 @@ class TemplateManager @Inject constructor(
             stateJson = stateJson
         )
 
-        writeUtf8TextAtomically(File(templateDir, "${template.id}.json"), templateToJson(template).toString(2))
+        val templateFile = templateFileForId(template.id)
+            ?: throw IllegalStateException("Generated template id was not file-safe")
+        writeUtf8TextAtomically(templateFile, templateToJson(template).toString(2))
         template
     }
 
     fun deleteTemplate(id: String) {
-        File(templateDir, "$id.json").delete()
+        templateFileForId(id)?.delete()
     }
 
     fun loadTemplateState(template: UserTemplate): Pair<List<Track>, List<TextOverlay>>? {
@@ -126,7 +128,8 @@ class TemplateManager @Inject constructor(
             val template = normalizeImportedTemplate(importedTemplate, listTemplates())
             // Save locally
             templateDir.mkdirs()
-            writeUtf8TextAtomically(File(templateDir, "${template.id}.json"), templateToJson(template).toString(2))
+            val templateFile = templateFileForId(template.id) ?: return@withContext null
+            writeUtf8TextAtomically(templateFile, templateToJson(template).toString(2))
             template
         } catch (e: Exception) {
             Log.e("TemplateManager", "Failed to import template from URI", e)
@@ -248,6 +251,15 @@ class TemplateManager @Inject constructor(
         // unicode separators, reserved Windows characters) is dropped. The caller decides
         // what to do if the result differs from the input.
         return value.filter { c -> c.isLetterOrDigit() || c == '_' || c == '-' }
+    }
+
+    private fun templateFileForId(id: String): File? {
+        val sanitizedId = sanitizeFilenameSafe(id)
+        if (sanitizedId.isEmpty() || sanitizedId != id) {
+            Log.w("TemplateManager", "Rejected unsafe template id: $id")
+            return null
+        }
+        return File(templateDir, "$sanitizedId.json")
     }
 
     private fun ensureUniqueImportedName(name: String, existingNames: Set<String>): String {

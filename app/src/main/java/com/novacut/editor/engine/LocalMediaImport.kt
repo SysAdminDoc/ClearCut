@@ -10,6 +10,7 @@ import java.io.IOException
 
 private const val LOCAL_MEDIA_IMPORT_TAG = "LocalMediaImport"
 private const val LOCAL_MEDIA_FALLBACK_STEM = "media"
+private const val MAX_MANAGED_MEDIA_EXTENSION_LENGTH = 10
 
 internal fun managedMediaDir(context: Context): File = File(context.filesDir, "media/imports")
 
@@ -23,10 +24,11 @@ internal fun importUriToManagedMedia(
     if (uri.scheme == "file") {
         val sourceFile = uri.path?.let(::File)
         if (sourceFile != null && sourceFile.exists()) {
-            val appFilesRoot = context.filesDir.absoluteFile
             val sourceCanonical = runCatching { sourceFile.canonicalFile }.getOrNull()
             if (sourceCanonical != null &&
-                sourceCanonical.path.startsWith(appFilesRoot.path + File.separator)
+                sourceCanonical.isFile &&
+                sourceCanonical.length() > 0L &&
+                isInsideDirectory(sourceCanonical, managedMediaDir(context))
             ) {
                 return Uri.fromFile(sourceCanonical)
             }
@@ -156,14 +158,28 @@ internal fun sweepUnreferencedManagedMedia(
     return ManagedMediaSweepResult(deleted, bytes)
 }
 
+internal fun deleteManagedMediaUri(context: Context, uri: Uri): Boolean {
+    if (uri.scheme != "file") return false
+    val file = uri.path?.let(::File) ?: return false
+    val canonical = runCatching { file.canonicalFile }.getOrNull() ?: return false
+    if (!isInsideDirectory(canonical, managedMediaDir(context))) return false
+    return canonical.isFile && canonical.delete()
+}
+
 internal fun finalizePendingCameraCapture(
     context: Context,
     pendingFile: File,
     mediaType: String
 ): Uri? {
-    if (!pendingFile.exists() || pendingFile.length() <= 0L) {
-        runCatching { pendingFile.delete() }
-        Log.w(LOCAL_MEDIA_IMPORT_TAG, "Pending camera capture missing or empty: ${pendingFile.path}")
+    val pendingCanonical = runCatching { pendingFile.canonicalFile }.getOrNull()
+    if (pendingCanonical == null || !isInsideDirectory(pendingCanonical, pendingCameraCaptureDir(context))) {
+        Log.w(LOCAL_MEDIA_IMPORT_TAG, "Rejected pending camera capture outside capture directory: ${pendingFile.path}")
+        return null
+    }
+
+    if (!pendingCanonical.isFile || pendingCanonical.length() <= 0L) {
+        runCatching { pendingCanonical.delete() }
+        Log.w(LOCAL_MEDIA_IMPORT_TAG, "Pending camera capture missing or empty: ${pendingCanonical.path}")
         return null
     }
 
@@ -181,21 +197,21 @@ internal fun finalizePendingCameraCapture(
     )
 
     return try {
-        moveFileReplacing(pendingFile, destinationFile)
+        moveFileReplacing(pendingCanonical, destinationFile)
         Uri.fromFile(destinationFile)
     } catch (_: Exception) {
         try {
-            pendingFile.inputStream().use { input ->
+            pendingCanonical.inputStream().use { input ->
                 destinationFile.outputStream().use { output -> input.copyTo(output) }
             }
             if (destinationFile.length() <= 0L) {
                 throw IOException("Finalized camera capture is empty")
             }
-            pendingFile.delete()
+            pendingCanonical.delete()
             Uri.fromFile(destinationFile)
         } catch (copyError: Exception) {
             destinationFile.delete()
-            Log.w(LOCAL_MEDIA_IMPORT_TAG, "Failed to finalize camera capture ${pendingFile.path}", copyError)
+            Log.w(LOCAL_MEDIA_IMPORT_TAG, "Failed to finalize camera capture ${pendingCanonical.path}", copyError)
             null
         }
     }
@@ -229,15 +245,17 @@ internal fun resolveManagedMediaExtension(
     mediaType: String
 ): String {
     val mimeType = context.contentResolver.getType(uri)
-    val mimeExtension = mimeType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) }
-    if (!mimeExtension.isNullOrBlank()) {
-        return ".${mimeExtension.lowercase()}"
+    val mimeExtension = normalizeManagedMediaExtension(
+        mimeType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) }
+    )
+    if (mimeExtension != null) {
+        return mimeExtension
     }
 
     val displayName = resolveMediaDisplayName(context, uri)
-    val displayExtension = displayName?.substringAfterLast('.', "")
-    if (!displayExtension.isNullOrBlank()) {
-        return ".${displayExtension.lowercase()}"
+    val displayExtension = normalizeManagedMediaExtension(displayName?.substringAfterLast('.', ""))
+    if (displayExtension != null) {
+        return displayExtension
     }
 
     return defaultManagedMediaExtension(mediaType)
@@ -249,6 +267,16 @@ private fun defaultManagedMediaExtension(mediaType: String): String {
         "audio" -> ".m4a"
         else -> ".mp4"
     }
+}
+
+private fun normalizeManagedMediaExtension(rawExtension: String?): String? {
+    val normalized = rawExtension
+        ?.lowercase()
+        ?.filter { it.isLetterOrDigit() }
+        ?.take(MAX_MANAGED_MEDIA_EXTENSION_LENGTH)
+        ?.takeIf { it.isNotBlank() }
+        ?: return null
+    return ".$normalized"
 }
 
 private fun createUniqueManagedMediaFile(
@@ -277,9 +305,15 @@ private fun createUniqueManagedMediaFile(
 
     var candidate = File(directory, "${System.currentTimeMillis()}_$normalizedName")
     var index = 2
-    while (candidate.exists()) {
+    while (candidate.exists() || File(candidate.parentFile, candidate.name + ".partial").exists()) {
         candidate = File(directory, "${System.currentTimeMillis()}_${index}_$normalizedName")
         index++
     }
     return candidate
+}
+
+private fun isInsideDirectory(file: File, directory: File): Boolean {
+    val canonicalFile = runCatching { file.canonicalFile }.getOrNull() ?: return false
+    val canonicalDirectory = runCatching { directory.canonicalFile }.getOrNull() ?: return false
+    return canonicalFile.toPath().startsWith(canonicalDirectory.toPath())
 }

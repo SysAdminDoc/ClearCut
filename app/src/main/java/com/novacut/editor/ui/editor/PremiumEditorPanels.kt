@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -32,9 +31,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.ui.theme.Mocha
+import com.novacut.editor.ui.theme.Radius
+import com.novacut.editor.ui.theme.Spacing
+import com.novacut.editor.ui.theme.TouchTarget
 
 @Composable
 fun PremiumEditorPanel(
@@ -60,10 +63,10 @@ fun PremiumEditorPanel(
             .fillMaxWidth()
             .background(
                 Mocha.Panel,
-                RoundedCornerShape(topStart = com.novacut.editor.ui.theme.Radius.xxl, topEnd = com.novacut.editor.ui.theme.Radius.xxl)
+                RoundedCornerShape(topStart = Radius.xxl, topEnd = Radius.xxl)
             )
             .then(scrollModifier)
-            .padding(horizontal = com.novacut.editor.ui.theme.Spacing.lg, vertical = 14.dp)
+            .padding(horizontal = Spacing.lg, vertical = 14.dp)
     ) {
         // Drag handle — slightly slimmer + dimmer than before. Premium sheets use a quiet,
         // single-pixel-feeling pill that suggests gesture without competing for attention.
@@ -72,7 +75,7 @@ fun PremiumEditorPanel(
                 .align(Alignment.CenterHorizontally)
                 .width(36.dp)
                 .height(3.dp)
-                .background(Mocha.Surface2.copy(alpha = 0.55f), RoundedCornerShape(com.novacut.editor.ui.theme.Radius.pill))
+                .background(Mocha.Surface2.copy(alpha = 0.55f), RoundedCornerShape(Radius.pill))
         )
 
         Spacer(modifier = Modifier.height(14.dp))
@@ -92,26 +95,30 @@ fun PremiumEditorPanel(
                 ) {
                     Icon(
                         icon,
-                        contentDescription = title,
+                        contentDescription = null,
                         tint = accent,
                         modifier = Modifier.size(18.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(Spacing.md))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
                     color = Mocha.Text,
-                    style = MaterialTheme.typography.headlineMedium
+                    style = MaterialTheme.typography.headlineMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = subtitle,
                     color = Mocha.Subtext0,
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
@@ -144,7 +151,7 @@ fun PremiumPanelCard(
         color = Mocha.PanelHighest,
         // Slightly tighter radius (was 24) — feels more disciplined and matches the
         // shared Radius.xl token used elsewhere in the system.
-        shape = RoundedCornerShape(com.novacut.editor.ui.theme.Radius.xl),
+        shape = RoundedCornerShape(Radius.xl),
         border = BorderStroke(1.dp, Mocha.CardStrokeStrong.copy(alpha = 0.9f))
     ) {
         Box(
@@ -162,8 +169,8 @@ fun PremiumPanelCard(
             )
         ) {
             Column(
-                modifier = Modifier.padding(com.novacut.editor.ui.theme.Spacing.lg),
-                verticalArrangement = Arrangement.spacedBy(com.novacut.editor.ui.theme.Spacing.md),
+                modifier = Modifier.padding(Spacing.lg),
+                verticalArrangement = Arrangement.spacedBy(Spacing.md),
                 content = content
             )
         }
@@ -220,10 +227,10 @@ fun PremiumPanelIconButton(
     Surface(
         modifier = modifier,
         color = containerColor,
-        shape = CircleShape,
+        shape = RoundedCornerShape(Radius.lg),
         border = BorderStroke(1.dp, Mocha.CardStroke)
     ) {
-        IconButton(onClick = onClick, modifier = Modifier.size(40.dp)) {
+        IconButton(onClick = onClick, modifier = Modifier.size(TouchTarget.minimum)) {
             Icon(
                 imageVector = icon,
                 contentDescription = contentDescription,

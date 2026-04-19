@@ -5,6 +5,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.roundToLong
 
 /**
  * Timeline interchange engine supporting OTIO, FCPXML, EDL, and AAF formats.
@@ -82,6 +83,7 @@ class TimelineExchangeEngine @Inject constructor(
         projectName: String = "NovaCut Project",
         frameRate: Int = 30
     ): String {
+        val safeFrameRate = normalizedFrameRate(frameRate)
         val timeline = JSONObject().apply {
             put("OTIO_SCHEMA", "Timeline.1")
             put("name", projectName)
@@ -89,7 +91,7 @@ class TimelineExchangeEngine @Inject constructor(
                 put("novacut_version", "3.0.0")
                 put("export_format", "otio")
             })
-            put("tracks", buildOtioStack(tracks, textOverlays, frameRate))
+            put("tracks", buildOtioStack(tracks, textOverlays, safeFrameRate))
         }
         return timeline.toString(2)
     }
@@ -160,11 +162,12 @@ class TimelineExchangeEngine @Inject constructor(
 
     private fun buildOtioClip(clip: Clip, frameRate: Int): JSONObject {
         val effects = JSONArray()
-        if (clip.speed != 1.0f) {
+        val exportSpeed = safeJsonFloat(clip.speed, default = 1f)
+        if (exportSpeed != 1.0f) {
             effects.put(JSONObject().apply {
                 put("OTIO_SCHEMA", "LinearTimeWarp.1")
-                put("name", "Speed ${clip.speed}x")
-                put("time_scalar", clip.speed.toDouble())
+                put("name", "Speed ${exportSpeed}x")
+                put("time_scalar", exportSpeed.toDouble())
             })
         }
 
@@ -182,22 +185,32 @@ class TimelineExchangeEngine @Inject constructor(
             }
             put("metadata", JSONObject().apply {
                 put("novacut_clip_id", clip.id)
-                put("opacity", clip.opacity.toDouble())
-                put("volume", clip.volume.toDouble())
+                putSafeFloat("opacity", clip.opacity, default = 1f)
+                putSafeFloat("volume", clip.volume, default = 1f)
             })
         }
     }
 
     private fun buildTextOverlayTrack(overlays: List<TextOverlay>, frameRate: Int): JSONObject {
         val children = JSONArray()
-        val sorted = overlays.sortedBy { it.startTimeMs }
+        val sorted = overlays
+            .filter { it.text.isNotBlank() && it.endTimeMs > it.startTimeMs }
+            .sortedBy { it.startTimeMs }
 
+        var currentTimeMs = 0L
         for (overlay in sorted) {
+            if (overlay.startTimeMs > currentTimeMs) {
+                children.put(JSONObject().apply {
+                    put("OTIO_SCHEMA", "Gap.1")
+                    put("source_range", buildTimeRange(0, overlay.startTimeMs - currentTimeMs, frameRate))
+                })
+            }
+
             children.put(JSONObject().apply {
                 put("OTIO_SCHEMA", "Clip.1")
                 put("name", overlay.text.take(30))
                 put("source_range", buildTimeRange(
-                    overlay.startTimeMs,
+                    0,
                     overlay.endTimeMs - overlay.startTimeMs,
                     frameRate
                 ))
@@ -207,13 +220,14 @@ class TimelineExchangeEngine @Inject constructor(
                     put("parameters", JSONObject().apply {
                         put("text", overlay.text)
                         put("font_family", overlay.fontFamily)
-                        put("font_size", overlay.fontSize.toDouble())
+                        putSafeFloat("font_size", overlay.fontSize, default = 48f)
                         put("color", overlay.color)
-                        put("position_x", overlay.positionX.toDouble())
-                        put("position_y", overlay.positionY.toDouble())
+                        putSafeFloat("position_x", overlay.positionX, default = 0.5f)
+                        putSafeFloat("position_y", overlay.positionY, default = 0.5f)
                     })
                 })
             })
+            currentTimeMs = maxOf(currentTimeMs, overlay.endTimeMs)
         }
 
         return JSONObject().apply {
@@ -244,18 +258,33 @@ class TimelineExchangeEngine @Inject constructor(
         // Round-to-nearest instead of truncating, otherwise small ms values (e.g. 1ms at
         // 30fps = 0.03 frames) silently round down to 0 frames and cumulative drift on a
         // long timeline misaligns OTIO/FCPXML round-trips.
-        if (frameRate <= 0) return 0L
-        return (ms * frameRate + 500L) / 1000L
+        val safeFrameRate = normalizedFrameRate(frameRate)
+        val frames = ms.coerceAtLeast(0L).toDouble() * safeFrameRate.toDouble() / 1000.0
+        if (!frames.isFinite()) return Long.MAX_VALUE
+        if (frames >= Long.MAX_VALUE.toDouble()) return Long.MAX_VALUE
+        return frames.roundToLong().coerceAtLeast(0L)
     }
 
     private fun framesToMs(frames: Long, frameRate: Int): Long {
-        if (frameRate <= 0) return 0L
-        return (frames * 1000L + frameRate / 2) / frameRate
+        val safeFrameRate = normalizedFrameRate(frameRate)
+        val ms = frames.coerceAtLeast(0L).toDouble() * 1000.0 / safeFrameRate.toDouble()
+        if (!ms.isFinite()) return Long.MAX_VALUE
+        if (ms >= Long.MAX_VALUE.toDouble()) return Long.MAX_VALUE
+        return ms.roundToLong().coerceAtLeast(0L)
     }
 
     private fun clipDisplayName(clip: Clip): String {
         val path = clip.sourceUri.lastPathSegment ?: clip.sourceUri.toString()
         return path.substringAfterLast("/").substringBeforeLast(".")
+    }
+
+    private fun JSONObject.putSafeFloat(name: String, value: Float, default: Float = 0f): JSONObject {
+        return put(name, safeJsonFloat(value, default).toDouble())
+    }
+
+    private fun safeJsonFloat(value: Float, default: Float = 0f): Float {
+        val fallback = if (default.isFinite()) default else 0f
+        return if (value.isFinite()) value else fallback
     }
 
     /**
@@ -387,10 +416,15 @@ class TimelineExchangeEngine @Inject constructor(
         val sourceRange = clipJson.optJSONObject("source_range") ?: return null
         val startTime = sourceRange.optJSONObject("start_time") ?: return null
         val duration = sourceRange.optJSONObject("duration") ?: return null
-        val rate = startTime.optInt("rate", 30)
+        val rate = normalizedFrameRate(startTime.optInt("rate", 30))
+        val durationRate = normalizedFrameRate(duration.optInt("rate", rate))
 
         val trimStartMs = framesToMs(startTime.optLong("value", 0), rate)
-        val durationMs = framesToMs(duration.optLong("value", 0), rate)
+        val durationMs = framesToMs(duration.optLong("value", 0), durationRate)
+        if (durationMs <= 0L) {
+            warnings.add("Clip '${clipJson.optString("name")}' has non-positive duration — skipped")
+            return null
+        }
 
         val mediaRef = clipJson.optJSONObject("media_reference")
         val targetUrl = mediaRef?.optString("target_url", "") ?: ""
@@ -402,13 +436,15 @@ class TimelineExchangeEngine @Inject constructor(
 
         // Parse available range for source duration
         val availableRange = mediaRef?.optJSONObject("available_range")
-        val sourceDurationMs = if (availableRange != null) {
+        val importedSourceDurationMs = if (availableRange != null) {
             val avDuration = availableRange.optJSONObject("duration")
             val avRate = avDuration?.optInt("rate", rate) ?: rate
             framesToMs(avDuration?.optLong("value", 0) ?: 0, avRate)
         } else {
             trimStartMs + durationMs // Best guess
         }
+        val trimEndMs = trimStartMs + durationMs
+        val sourceDurationMs = importedSourceDurationMs.coerceAtLeast(trimEndMs)
 
         // Parse speed from effects
         var speed = 1.0f
@@ -417,7 +453,8 @@ class TimelineExchangeEngine @Inject constructor(
             for (j in 0 until effects.length()) {
                 val effect = effects.optJSONObject(j) ?: continue
                 if (effect.optString("OTIO_SCHEMA").startsWith("LinearTimeWarp")) {
-                    speed = effect.optDouble("time_scalar", 1.0).toFloat()
+                    speed = safeFloat(effect.optDouble("time_scalar", 1.0), default = 1f)
+                        .coerceIn(0.01f, 100f)
                 } else {
                     warnings.add("Unsupported effect: ${effect.optString("OTIO_SCHEMA")}")
                 }
@@ -429,7 +466,7 @@ class TimelineExchangeEngine @Inject constructor(
             sourceDurationMs = sourceDurationMs,
             timelineStartMs = timelinePositionMs,
             trimStartMs = trimStartMs,
-            trimEndMs = trimStartMs + durationMs,
+            trimEndMs = trimEndMs,
             speed = speed
         )
     }
@@ -440,30 +477,53 @@ class TimelineExchangeEngine @Inject constructor(
         warnings: MutableList<String>
     ) {
         val children = trackJson.optJSONArray("children") ?: return
+        var timelinePositionMs = 0L
 
         for (i in 0 until children.length()) {
             val child = children.optJSONObject(i) ?: continue
-            val mediaRef = child.optJSONObject("media_reference") ?: continue
-            val params = mediaRef.optJSONObject("parameters") ?: continue
+            val childSchema = child.optString("OTIO_SCHEMA", "")
 
             val sourceRange = child.optJSONObject("source_range") ?: continue
             val startTime = sourceRange.optJSONObject("start_time") ?: continue
             val duration = sourceRange.optJSONObject("duration") ?: continue
-            val rate = startTime.optInt("rate", 30)
+            val rate = normalizedFrameRate(startTime.optInt("rate", 30))
+            val durationRate = normalizedFrameRate(duration.optInt("rate", rate))
 
-            val startMs = framesToMs(startTime.optLong("value", 0), rate)
-            val durationMs = framesToMs(duration.optLong("value", 0), rate)
+            when {
+                childSchema.startsWith("Gap") -> {
+                    timelinePositionMs += framesToMs(duration.optLong("value", 0), durationRate)
+                }
+                childSchema.startsWith("Clip") -> {
+                    val mediaRef = child.optJSONObject("media_reference") ?: continue
+                    val params = mediaRef.optJSONObject("parameters") ?: continue
+                    val sourceStartMs = framesToMs(startTime.optLong("value", 0), rate)
+                    val durationMs = framesToMs(duration.optLong("value", 0), durationRate)
+                    val startMs = if (sourceStartMs > timelinePositionMs) sourceStartMs else timelinePositionMs
+                    val text = params.optString("text", "")
+                    if (text.isBlank()) {
+                        warnings.add("Skipped blank text overlay")
+                        timelinePositionMs = startMs + durationMs
+                        continue
+                    }
+                    if (durationMs <= 0L) {
+                        warnings.add("Skipped text overlay '$text' with non-positive duration")
+                        continue
+                    }
 
-            overlays.add(TextOverlay(
-                text = params.optString("text", ""),
-                fontFamily = params.optString("font_family", "sans-serif"),
-                fontSize = params.optDouble("font_size", 48.0).toFloat(),
-                color = params.optLong("color", 0xFFFFFFFF),
-                positionX = params.optDouble("position_x", 0.5).toFloat(),
-                positionY = params.optDouble("position_y", 0.5).toFloat(),
-                startTimeMs = startMs,
-                endTimeMs = startMs + durationMs
-            ))
+                    overlays.add(TextOverlay(
+                        text = text,
+                        fontFamily = params.optString("font_family", "sans-serif"),
+                        fontSize = safeFloat(params.optDouble("font_size", 48.0), default = 48f).coerceIn(1f, 512f),
+                        color = params.optLong("color", 0xFFFFFFFF),
+                        positionX = safeFloat(params.optDouble("position_x", 0.5), default = 0.5f).coerceIn(-5f, 5f),
+                        positionY = safeFloat(params.optDouble("position_y", 0.5), default = 0.5f).coerceIn(-5f, 5f),
+                        startTimeMs = startMs,
+                        endTimeMs = startMs + durationMs
+                    ))
+                    timelinePositionMs = startMs + durationMs
+                }
+                else -> warnings.add("Unsupported OTIO schema in text overlay track: $childSchema")
+            }
         }
     }
 
@@ -488,17 +548,19 @@ class TimelineExchangeEngine @Inject constructor(
         projectName: String = "NovaCut Project",
         frameRate: Int = 30
     ): String {
-        val frameDuration = "1/${frameRate}s"
+        val safeFrameRate = normalizedFrameRate(frameRate)
+        val frameDuration = "1/${safeFrameRate}s"
         val totalDurationMs = tracks.flatMap { it.clips }.maxOfOrNull {
             it.timelineStartMs + it.durationMs
         } ?: 0L
-        val totalDurationFcpxml = msToFcpxmlTime(totalDurationMs, frameRate)
+        val totalDurationFcpxml = msToFcpxmlTime(totalDurationMs, safeFrameRate)
 
         val sb = StringBuilder()
         sb.appendLine("""<?xml version="1.0" encoding="UTF-8"?>""")
         sb.appendLine("""<!DOCTYPE fcpxml>""")
         sb.appendLine("""<fcpxml version="1.11">""")
         sb.appendLine("""  <resources>""")
+        sb.appendLine("""    <format id="r0" name="NovaCut ${safeFrameRate}p" frameDuration="$frameDuration" width="1920" height="1080"/>""")
 
         // Collect media references
         val mediaRefs = mutableMapOf<String, Clip>()
@@ -511,7 +573,7 @@ class TimelineExchangeEngine @Inject constructor(
             val assetId = "r${index + 1}"
             val hasVideo = if (videoEngine.hasVisualTrack(clip.sourceUri)) "1" else "0"
             val hasAudio = if (videoEngine.hasAudioTrack(clip.sourceUri)) "1" else "0"
-            sb.appendLine("""    <asset id="$assetId" name="${xmlEscape(clipDisplayName(clip))}" src="${xmlEscape(uri)}" start="0s" duration="${msToFcpxmlTime(clip.sourceDurationMs, frameRate)}" hasVideo="$hasVideo" hasAudio="$hasAudio">""")
+            sb.appendLine("""    <asset id="$assetId" name="${xmlEscape(clipDisplayName(clip))}" src="${xmlEscape(uri)}" start="0s" duration="${msToFcpxmlTime(clip.sourceDurationMs, safeFrameRate)}" hasVideo="$hasVideo" hasAudio="$hasAudio">""")
             sb.appendLine("""      <media-rep kind="original-media" src="${xmlEscape(uri)}"/>""")
             sb.appendLine("""    </asset>""")
         }
@@ -528,9 +590,9 @@ class TimelineExchangeEngine @Inject constructor(
         primaryTrack?.clips?.sortedBy { it.timelineStartMs }?.forEach { clip ->
             val assetIndex = mediaRefs.keys.indexOf(clip.sourceUri.toString())
             val assetId = "r${assetIndex + 1}"
-            val offset = msToFcpxmlTime(clip.timelineStartMs, frameRate)
-            val start = msToFcpxmlTime(clip.trimStartMs, frameRate)
-            val duration = msToFcpxmlTime(clip.trimEndMs - clip.trimStartMs, frameRate)
+            val offset = msToFcpxmlTime(clip.timelineStartMs, safeFrameRate)
+            val start = msToFcpxmlTime(clip.trimStartMs, safeFrameRate)
+            val duration = msToFcpxmlTime(clip.trimEndMs - clip.trimStartMs, safeFrameRate)
 
             sb.appendLine("""            <asset-clip ref="$assetId" name="${xmlEscape(clipDisplayName(clip))}" offset="$offset" start="$start" duration="$duration"/>""")
         }
@@ -549,8 +611,16 @@ class TimelineExchangeEngine @Inject constructor(
         // Round-to-nearest so a 33 ms offset at 30 fps lands on frame 1, not frame 0.
         // Truncation accumulates into visible drift on long exports round-tripped through
         // Final Cut Pro / DaVinci Resolve — symmetric with msToFrames above.
-        if (frameRate <= 0) return "0/30s"
-        val frames = (ms * frameRate + 500L) / 1000L
-        return "${frames}/${frameRate}s"
+        val safeFrameRate = normalizedFrameRate(frameRate)
+        return "${msToFrames(ms, safeFrameRate)}/${safeFrameRate}s"
+    }
+
+    private fun normalizedFrameRate(frameRate: Int): Int {
+        return frameRate.coerceIn(1, 240)
+    }
+
+    private fun safeFloat(value: Double, default: Float): Float {
+        val asFloat = value.toFloat()
+        return if (asFloat.isFinite()) asFloat else default
     }
 }

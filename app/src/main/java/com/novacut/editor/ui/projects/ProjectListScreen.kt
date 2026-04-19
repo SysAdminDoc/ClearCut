@@ -28,7 +28,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
@@ -47,6 +46,9 @@ import com.novacut.editor.ui.theme.NovaCutHeroCard
 import com.novacut.editor.ui.theme.NovaCutMetricPill
 import com.novacut.editor.ui.theme.NovaCutScreenBackground
 import com.novacut.editor.ui.theme.NovaCutSectionHeader
+import com.novacut.editor.ui.theme.Radius
+import com.novacut.editor.ui.theme.Spacing
+import com.novacut.editor.ui.theme.TouchTarget
 import java.util.Locale
 
 @Composable
@@ -106,7 +108,7 @@ fun ProjectListScreen(
                 onFilterModeChanged = viewModel::setFilterMode,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
             )
 
             if (projects.isEmpty()) {
@@ -114,7 +116,7 @@ fun ProjectListScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .weight(1f)
-                        .padding(horizontal = 16.dp, vertical = 20.dp),
+                        .padding(horizontal = Spacing.lg, vertical = Spacing.xl),
                     contentAlignment = Alignment.Center
                 ) {
                     ProjectEmptyState(
@@ -139,7 +141,7 @@ fun ProjectListScreen(
                     } else {
                         "Pick up where you left off, duplicate a cut, or jump into a template."
                     },
-                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 10.dp),
+                    modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, top = 14.dp, bottom = Spacing.sm),
                     trailing = {
                         NovaCutMetricPill(
                             text = sortMode.label,
@@ -223,7 +225,7 @@ private fun ProjectHomeHero(
 ) {
     NovaCutHeroCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(bottomStart = 30.dp, bottomEnd = 30.dp),
+        shape = RoundedCornerShape(bottomStart = Radius.xxl, bottomEnd = Radius.xxl),
         accent = Mocha.Mauve
     ) {
         Row(
@@ -291,16 +293,18 @@ private fun ProjectHomeHero(
         ) {
             Button(
                 onClick = onCreateProject,
-                shape = RoundedCornerShape(18.dp),
+                shape = RoundedCornerShape(Radius.lg),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Mocha.Rosewater,
                     contentColor = Mocha.Midnight
                 ),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = TouchTarget.minimum)
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = stringResource(R.string.projects_new_project),
+                    contentDescription = null,
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -313,14 +317,16 @@ private fun ProjectHomeHero(
 
             OutlinedButton(
                 onClick = onImportTemplate,
-                shape = RoundedCornerShape(18.dp),
+                shape = RoundedCornerShape(Radius.lg),
                 border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStrokeStrong),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Text),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = TouchTarget.minimum)
             ) {
                 Icon(
                     imageVector = Icons.Default.FileOpen,
-                    contentDescription = stringResource(R.string.template_import),
+                    contentDescription = null,
                     tint = Mocha.Subtext1,
                     modifier = Modifier.size(18.dp)
                 )
@@ -363,7 +369,7 @@ private fun ProjectHomeHero(
             },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(Radius.lg),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = Mocha.PanelRaised.copy(alpha = 0.92f),
                 unfocusedContainerColor = Mocha.PanelRaised.copy(alpha = 0.82f),
@@ -460,7 +466,7 @@ private fun ProjectEmptyState(
 ) {
     Surface(
         color = Mocha.Panel,
-        shape = RoundedCornerShape(28.dp),
+        shape = RoundedCornerShape(Radius.xxl),
         border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -478,7 +484,7 @@ private fun ProjectEmptyState(
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(Spacing.md)
             ) {
                 Surface(
                     color = Mocha.Mauve.copy(alpha = 0.14f),
@@ -487,7 +493,7 @@ private fun ProjectEmptyState(
                 ) {
                     Icon(
                         imageVector = Icons.Default.VideoLibrary,
-                        contentDescription = stringResource(R.string.cd_video_library),
+                        contentDescription = null,
                         tint = Mocha.Rosewater,
                         modifier = Modifier
                             .padding(18.dp)
@@ -519,7 +525,7 @@ private fun ProjectEmptyState(
                 if (hasActiveSearch) {
                     OutlinedButton(
                         onClick = onClearSearch,
-                        shape = RoundedCornerShape(18.dp),
+                        shape = RoundedCornerShape(Radius.lg),
                         border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStrokeStrong)
                     ) {
                         Text(
@@ -529,42 +535,65 @@ private fun ProjectEmptyState(
                         )
                     }
                 } else {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Button(
-                            onClick = onCreateProject,
-                            shape = RoundedCornerShape(18.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Mocha.Rosewater,
-                                contentColor = Mocha.Midnight
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = stringResource(R.string.projects_create_first),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                        OutlinedButton(
-                            onClick = onImportTemplate,
-                            shape = RoundedCornerShape(18.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStrokeStrong),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = stringResource(R.string.template_import),
-                                color = Mocha.Text,
-                                style = MaterialTheme.typography.labelLarge
-                            )
-                        }
-                    }
+                    ProjectEmptyStateActions(
+                        onCreateProject = onCreateProject,
+                        onImportTemplate = onImportTemplate
+                    )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ProjectEmptyStateActions(
+    onCreateProject: () -> Unit,
+    onImportTemplate: () -> Unit
+) {
+    val createButton: @Composable (Modifier) -> Unit = { modifier ->
+        Button(
+            onClick = onCreateProject,
+            shape = RoundedCornerShape(Radius.lg),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Mocha.Rosewater,
+                contentColor = Mocha.Midnight
+            ),
+            contentPadding = PaddingValues(horizontal = Spacing.sm),
+            modifier = modifier.height(TouchTarget.minimum)
+        ) {
+            Text(
+                text = stringResource(R.string.projects_create_first),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+    val importButton: @Composable (Modifier) -> Unit = { modifier ->
+        OutlinedButton(
+            onClick = onImportTemplate,
+            shape = RoundedCornerShape(Radius.lg),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStrokeStrong),
+            contentPadding = PaddingValues(horizontal = Spacing.sm),
+            modifier = modifier.height(TouchTarget.minimum)
+        ) {
+            Text(
+                text = stringResource(R.string.template_import),
+                color = Mocha.Text,
+                style = MaterialTheme.typography.labelLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        createButton(Modifier.weight(1f))
+        importButton(Modifier.weight(1f))
     }
 }
 
@@ -603,7 +632,7 @@ private fun ProjectCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(120.dp)
-                    .clip(RoundedCornerShape(24.dp))
+                    .clip(RoundedCornerShape(Radius.xl))
                     .background(color)
                     .padding(horizontal = 24.dp),
                 contentAlignment = Alignment.CenterEnd
@@ -623,7 +652,7 @@ private fun ProjectCard(
                 .clickable(onClick = onClick),
             colors = CardDefaults.cardColors(containerColor = Mocha.Panel),
             border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
-            shape = RoundedCornerShape(24.dp)
+            shape = RoundedCornerShape(Radius.xl)
         ) {
             Box(
                 modifier = Modifier
@@ -689,12 +718,12 @@ private fun ProjectCard(
                     Box {
                         Surface(
                             color = Mocha.PanelHighest,
-                            shape = RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(Radius.lg),
                             border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke)
                         ) {
                             IconButton(
                                 onClick = { showOverflowMenu = true },
-                                modifier = Modifier.size(36.dp)
+                                modifier = Modifier.size(TouchTarget.minimum)
                             ) {
                                 Icon(
                                     Icons.Default.MoreVert,
@@ -780,12 +809,14 @@ private fun ProjectCard(
                 }
             },
             containerColor = Mocha.PanelHighest,
-            shape = RoundedCornerShape(24.dp)
+            shape = RoundedCornerShape(Radius.xxl)
         )
     }
 
     if (showRenameDialog) {
         var projectName by remember(project.name) { mutableStateOf(project.name) }
+        val trimmedProjectName = projectName.trim()
+        val canSubmitRename = trimmedProjectName.isNotBlank() && trimmedProjectName != project.name
         AlertDialog(
             onDismissRequest = { showRenameDialog = false },
             title = { Text(stringResource(R.string.projects_rename_title), color = Mocha.Text) },
@@ -814,11 +845,15 @@ private fun ProjectCard(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        onRename(projectName)
+                        onRename(trimmedProjectName)
                         showRenameDialog = false
-                    }
+                    },
+                    enabled = canSubmitRename
                 ) {
-                    Text(stringResource(R.string.done), color = Mocha.Rosewater)
+                    Text(
+                        stringResource(R.string.done),
+                        color = if (canSubmitRename) Mocha.Rosewater else Mocha.Surface2
+                    )
                 }
             },
             dismissButton = {
@@ -827,7 +862,7 @@ private fun ProjectCard(
                 }
             },
             containerColor = Mocha.PanelHighest,
-            shape = RoundedCornerShape(24.dp)
+            shape = RoundedCornerShape(Radius.xxl)
         )
     }
 }
@@ -839,7 +874,7 @@ private fun ProjectThumbnail(project: Project) {
     Box(
         modifier = Modifier
             .size(92.dp)
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(Radius.xl))
             .background(
                 Brush.verticalGradient(
                     listOf(
@@ -873,7 +908,7 @@ private fun ProjectThumbnail(project: Project) {
 
         Surface(
             color = Mocha.Midnight.copy(alpha = 0.78f),
-            shape = RoundedCornerShape(10.dp),
+            shape = RoundedCornerShape(Radius.sm),
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .padding(8.dp)
@@ -895,7 +930,7 @@ private fun ProjectMetadataChip(
 ) {
     Surface(
         color = accent.copy(alpha = 0.12f),
-        shape = RoundedCornerShape(999.dp),
+        shape = RoundedCornerShape(Radius.pill),
         border = androidx.compose.foundation.BorderStroke(1.dp, accent.copy(alpha = 0.2f))
     ) {
         Text(

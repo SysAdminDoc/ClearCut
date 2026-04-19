@@ -48,17 +48,17 @@ object Radius {
     /** 10dp — tight buttons, slim chips. */
     val sm = 10.dp
 
-    /** 14dp — text fields, default control surfaces. */
-    val md = 14.dp
+    /** 12dp — text fields, default control surfaces. */
+    val md = 12.dp
 
-    /** 18dp — primary buttons, prominent chips. */
-    val lg = 18.dp
+    /** 16dp — primary buttons, prominent chips. */
+    val lg = 16.dp
 
-    /** 22dp — cards inside panels. */
-    val xl = 22.dp
+    /** 20dp — cards inside panels. */
+    val xl = 20.dp
 
-    /** 28dp — top-level panel/sheet corners. */
-    val xxl = 28.dp
+    /** 24dp — top-level panel/sheet corners. */
+    val xxl = 24.dp
 
     /** 999dp — fully rounded (capsule, dot). */
     val pill = 999.dp

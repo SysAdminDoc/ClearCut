@@ -49,10 +49,12 @@ class AudioEngine @Inject constructor(
         uri: Uri,
         sampleCount: Int = 200
     ): FloatArray = withContext(Dispatchers.IO) {
-        val cacheKey = "${uri}|${sampleCount}"
+        if (sampleCount <= 0) return@withContext FloatArray(0)
+        val boundedSampleCount = sampleCount.coerceAtMost(10_000)
+        val cacheKey = "${uri}|${boundedSampleCount}"
         waveformCache.get(cacheKey)?.let { return@withContext it }
         if (isNonAudioVisualAsset(uri)) {
-            val silent = FloatArray(sampleCount) { 0f }
+            val silent = FloatArray(boundedSampleCount) { 0f }
             waveformCache.put(cacheKey, silent)
             return@withContext silent
         }
@@ -78,10 +80,7 @@ class AudioEngine @Inject constructor(
             }
 
             extractor.selectTrack(audioTrackIndex)
-            val sampleRate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
-            val channels = format.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
-            val duration = format.getLong(MediaFormat.KEY_DURATION) // microseconds
-            val mime = format.getString(MediaFormat.KEY_MIME) ?: return@withContext FloatArray(sampleCount)
+            val mime = format.getString(MediaFormat.KEY_MIME) ?: return@withContext FloatArray(boundedSampleCount)
 
             // Decode audio to PCM
             var decoder: MediaCodec? = null
@@ -116,19 +115,18 @@ class AudioEngine @Inject constructor(
                     while (outIndex >= 0) {
                         val outputBuffer = decoder.getOutputBuffer(outIndex)
                         if (outputBuffer != null && bufferInfo.size > 0) {
-                            val shortBuffer = outputBuffer.order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
-                            val samples = ShortArray(shortBuffer.remaining())
-                            shortBuffer.get(samples)
+                            val samples = readPcmSamples(outputBuffer, bufferInfo)
 
                             // Calculate RMS for this buffer
-                            if (samples.isEmpty()) continue
-                            var sum = 0.0
-                            for (sample in samples) {
-                                sum += sample.toDouble() * sample.toDouble()
+                            if (samples.isNotEmpty()) {
+                                var sum = 0.0
+                                for (sample in samples) {
+                                    sum += sample.toDouble() * sample.toDouble()
+                                }
+                                val rms = Math.sqrt(sum / samples.size).toFloat()
+                                amplitudes.add(rms)
+                                maxAmplitude = max(maxAmplitude, rms)
                             }
-                            val rms = Math.sqrt(sum / samples.size).toFloat()
-                            amplitudes.add(rms)
-                            maxAmplitude = max(maxAmplitude, rms)
                         }
                         decoder.releaseOutputBuffer(outIndex, false)
                         if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
@@ -144,13 +142,13 @@ class AudioEngine @Inject constructor(
             }
 
             // Resample to desired count and normalize
-            if (amplitudes.isEmpty()) return@withContext FloatArray(sampleCount) { 0f }
+            if (amplitudes.isEmpty()) return@withContext FloatArray(boundedSampleCount) { 0f }
 
-            val result = FloatArray(sampleCount)
-            val ratio = amplitudes.size.toFloat() / sampleCount
-            for (i in 0 until sampleCount) {
+            val result = FloatArray(boundedSampleCount)
+            val ratio = amplitudes.size.toFloat() / boundedSampleCount
+            for (i in 0 until boundedSampleCount) {
                 val start = (i * ratio).toInt()
-                val end = min(((i + 1) * ratio).toInt(), amplitudes.size)
+                val end = min(max(((i + 1) * ratio).toInt(), start + 1), amplitudes.size)
                 var peak = 0f
                 for (j in start until end) {
                     peak = max(peak, amplitudes[j])
@@ -323,11 +321,16 @@ class AudioEngine @Inject constructor(
                     while (outIdx >= 0) {
                         val outBuf = decoder.getOutputBuffer(outIdx)
                         if (outBuf != null && bufferInfo.size > 0) {
-                            val shorts = outBuf.order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
-                            val arr = ShortArray(shorts.remaining())
-                            shorts.get(arr)
-                            chunks.add(arr)
-                            totalSamples += arr.size
+                            val arr = readPcmSamples(outBuf, bufferInfo)
+                            if (arr.isNotEmpty()) {
+                                if (totalSamples > Int.MAX_VALUE - arr.size) {
+                                    Log.w(TAG, "Decoded PCM is too large to keep in memory")
+                                    decoder.releaseOutputBuffer(outIdx, false)
+                                    return@withContext ShortArray(0)
+                                }
+                                chunks.add(arr)
+                                totalSamples += arr.size
+                            }
                         }
                         decoder.releaseOutputBuffer(outIdx, false)
                         if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
@@ -353,6 +356,22 @@ class AudioEngine @Inject constructor(
         } finally {
             extractor.release()
         }
+    }
+
+    private fun readPcmSamples(outputBuffer: ByteBuffer, bufferInfo: MediaCodec.BufferInfo): ShortArray {
+        if (bufferInfo.size < 2) return ShortArray(0)
+        val buffer = outputBuffer.duplicate()
+        val start = bufferInfo.offset.coerceIn(0, buffer.capacity())
+        val unalignedEnd = (bufferInfo.offset + bufferInfo.size).coerceIn(start, buffer.capacity())
+        val end = unalignedEnd - ((unalignedEnd - start) % 2)
+        if (end <= start) return ShortArray(0)
+
+        buffer.position(start)
+        buffer.limit(end)
+        val shortBuffer: ShortBuffer = buffer.slice().order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
+        val samples = ShortArray(shortBuffer.remaining())
+        shortBuffer.get(samples)
+        return samples
     }
 }
 

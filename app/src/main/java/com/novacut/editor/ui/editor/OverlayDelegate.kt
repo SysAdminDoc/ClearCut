@@ -71,11 +71,11 @@ class OverlayDelegate(
         stateFlow.update { s ->
             s.copy(imageOverlays = s.imageOverlays.map { o ->
                 if (o.id == id) o.copy(
-                    positionX = positionX ?: o.positionX,
-                    positionY = positionY ?: o.positionY,
-                    scale = scale ?: o.scale,
-                    rotation = rotation ?: o.rotation,
-                    opacity = opacity ?: o.opacity
+                    positionX = positionX.safeOverlayFloat(o.positionX).coerceIn(-5f, 5f),
+                    positionY = positionY.safeOverlayFloat(o.positionY).coerceIn(-5f, 5f),
+                    scale = scale.safeOverlayFloat(o.scale).coerceIn(0.01f, 100f),
+                    rotation = rotation.safeOverlayFloat(o.rotation),
+                    opacity = opacity.safeOverlayFloat(o.opacity).coerceIn(0f, 1f)
                 ) else o
             })
         }
@@ -104,4 +104,8 @@ class OverlayDelegate(
         saveProject()
     }
 
+}
+
+private fun Float?.safeOverlayFloat(default: Float): Float {
+    return if (this != null && isFinite()) this else default
 }

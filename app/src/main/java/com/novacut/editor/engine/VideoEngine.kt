@@ -347,6 +347,13 @@ class VideoEngine @Inject constructor(
             val (targetW, targetH) = config.resolution.forAspect(config.aspectRatio)
 
             val clips = videoTrack.clips.sortedBy { it.timelineStartMs }
+            val totalTimelineDurationMs = maxOf(
+                tracks.maxOfOrNull { track ->
+                    track.clips.maxOfOrNull { clip -> clip.timelineEndMs } ?: 0L
+                } ?: 0L,
+                textOverlays.maxOfOrNull { it.endTimeMs } ?: 0L,
+                lottieOverlays.maxOfOrNull { it.endTimeMs } ?: 0L
+            )
             // Diagnostic: Media3 Transformer doesn't natively support reverse playback. Any
             // clip flagged isReversed exports forward — log so users / logs can surface this
             // limitation when the visible result doesn't match expectations.
@@ -354,23 +361,18 @@ class VideoEngine @Inject constructor(
             if (reversedCount > 0) {
                 Log.w(TAG, "Export: $reversedCount reversed clip(s) will render forward (Transformer limitation)")
             }
-            val editedItems = clips.mapIndexed { index, clip ->
-                val nextTransition = clips.getOrNull(index + 1)?.transition
-                buildEditedMediaItem(
-                    clip = clip,
-                    videoMuted = videoTrackAudioGain <= 0f,
-                    trackAudioGain = videoTrackAudioGain,
-                    tracks = tracks,
-                    config = config,
-                    targetW = targetW,
-                    targetH = targetH,
-                    textOverlays = textOverlays,
-                    lottieOverlays = lottieOverlays,
-                    nextClipTransition = nextTransition
-                )
-            }
-            @Suppress("DEPRECATION")
-            val videoSequence = EditedMediaItemSequence.Builder().addItems(editedItems).build()
+            val videoSequence = buildVideoSequence(
+                clips = clips,
+                totalTimelineDurationMs = totalTimelineDurationMs,
+                videoMuted = videoTrackAudioGain <= 0f,
+                trackAudioGain = videoTrackAudioGain,
+                tracks = tracks,
+                config = config,
+                targetW = targetW,
+                targetH = targetH,
+                textOverlays = textOverlays,
+                lottieOverlays = lottieOverlays
+            )
 
             val audioSequences = buildAudioSequences(tracks, soloTrackIds)
             val allSequences = buildList {
@@ -400,6 +402,57 @@ class VideoEngine @Inject constructor(
             outputFile.delete()
             onError(e)
         }
+    }
+
+    @Suppress("DEPRECATION")
+    @androidx.annotation.OptIn(UnstableApi::class)
+    private fun buildVideoSequence(
+        clips: List<Clip>,
+        totalTimelineDurationMs: Long,
+        videoMuted: Boolean,
+        trackAudioGain: Float,
+        tracks: List<Track>,
+        config: ExportConfig,
+        targetW: Int,
+        targetH: Int,
+        textOverlays: List<com.novacut.editor.model.TextOverlay>,
+        lottieOverlays: List<LottieOverlaySpec>
+    ): EditedMediaItemSequence {
+        val sortedClips = clips.filter { it.durationMs > 0L }.sortedBy { it.timelineStartMs }
+        val builder = EditedMediaItemSequence.Builder(emptyList<EditedMediaItem>())
+        var clipIndex = 0
+
+        for (step in buildTimelineSequenceSteps(sortedClips, totalTimelineDurationMs)) {
+            when (step) {
+                is TimelineSequenceStep.GapStep -> {
+                    builder.addGap(durationMsToUs(step.durationMs))
+                }
+                is TimelineSequenceStep.ClipStep -> {
+                    val clip = step.clip
+                    val nextClip = sortedClips.getOrNull(clipIndex + 1)
+                    val nextTransition = nextClip
+                        ?.takeIf { it.timelineStartMs <= clip.timelineEndMs }
+                        ?.transition
+                    builder.addItem(
+                        buildEditedMediaItem(
+                            clip = clip,
+                            videoMuted = videoMuted,
+                            trackAudioGain = trackAudioGain,
+                            tracks = tracks,
+                            config = config,
+                            targetW = targetW,
+                            targetH = targetH,
+                            textOverlays = textOverlays,
+                            lottieOverlays = lottieOverlays,
+                            nextClipTransition = nextTransition
+                        )
+                    )
+                    clipIndex++
+                }
+            }
+        }
+
+        return builder.build()
     }
 
     @androidx.annotation.OptIn(UnstableApi::class)
@@ -679,6 +732,7 @@ class VideoEngine @Inject constructor(
         }
     }
 
+    @Suppress("DEPRECATION")
     @androidx.annotation.OptIn(UnstableApi::class)
     private fun buildAudioSequences(
         tracks: List<Track>,
@@ -688,39 +742,50 @@ class VideoEngine @Inject constructor(
             .sortedBy { it.index }
             .filter { it.type == TrackType.AUDIO && it.clips.isNotEmpty() && isTrackAudibleForMix(it, soloTrackIds) }
         return audioTracks.map { at ->
-            val audioItems = at.clips
-                .sortedBy { it.timelineStartMs }
-                .map { clip ->
-                val mediaItem = MediaItem.Builder()
-                    .setUri(clip.sourceUri)
-                    .setClippingConfiguration(
-                        MediaItem.ClippingConfiguration.Builder()
-                            .setStartPositionMs(clip.trimStartMs)
-                            .setEndPositionMs(clip.trimEndMs)
+            val builder = EditedMediaItemSequence.Builder(emptyList<EditedMediaItem>())
+            for (step in buildTimelineSequenceSteps(at.clips)) {
+                when (step) {
+                    is TimelineSequenceStep.GapStep -> {
+                        builder.addGap(durationMsToUs(step.durationMs))
+                    }
+                    is TimelineSequenceStep.ClipStep -> {
+                        val clip = step.clip
+                        val mediaItem = MediaItem.Builder()
+                            .setUri(clip.sourceUri)
+                            .setClippingConfiguration(
+                                MediaItem.ClippingConfiguration.Builder()
+                                    .setStartPositionMs(clip.trimStartMs)
+                                    .setEndPositionMs(clip.trimEndMs)
+                                    .build()
+                            )
                             .build()
-                    )
-                    .build()
-                val processors = buildList<AudioProcessor> {
-                    val hasKfVol = clip.keyframes.any { it.property == KeyframeProperty.VOLUME }
-                    val needsVolume = clip.volume != 1.0f
-                    val needsFade = clip.fadeInMs > 0L || clip.fadeOutMs > 0L
-                    val needsTrackGain = at.volume != 1.0f
-                    if (hasKfVol || needsVolume || needsFade || needsTrackGain) {
-                        add(VolumeAudioProcessor(
-                            volume = clip.volume, fadeInMs = clip.fadeInMs, fadeOutMs = clip.fadeOutMs,
-                            clipDurationMs = clip.durationMs,
-                            keyframes = if (hasKfVol) clip.keyframes else emptyList(),
-                            postGain = at.volume.coerceIn(0f, 2f)
-                        ))
+                        val processors = buildList<AudioProcessor> {
+                            val hasKfVol = clip.keyframes.any { it.property == KeyframeProperty.VOLUME }
+                            val needsVolume = clip.volume != 1.0f
+                            val needsFade = clip.fadeInMs > 0L || clip.fadeOutMs > 0L
+                            val needsTrackGain = at.volume != 1.0f
+                            if (hasKfVol || needsVolume || needsFade || needsTrackGain) {
+                                add(VolumeAudioProcessor(
+                                    volume = clip.volume,
+                                    fadeInMs = clip.fadeInMs,
+                                    fadeOutMs = clip.fadeOutMs,
+                                    clipDurationMs = clip.durationMs,
+                                    keyframes = if (hasKfVol) clip.keyframes else emptyList(),
+                                    postGain = at.volume.coerceIn(0f, 2f)
+                                ))
+                            }
+                        }
+                        builder.addItem(
+                            EditedMediaItem.Builder(mediaItem)
+                                .setEffects(Effects(processors, emptyList()))
+                                .setRemoveVideo(true)
+                                .build()
+                        )
                     }
                 }
-                EditedMediaItem.Builder(mediaItem)
-                    .setEffects(Effects(processors, emptyList()))
-                    .setRemoveVideo(true)
-                    .build()
             }
             @Suppress("DEPRECATION")
-            EditedMediaItemSequence.Builder().addItems(audioItems).build()
+            builder.build()
         }
     }
 
@@ -1038,7 +1103,7 @@ class VideoEngine @Inject constructor(
      */
     fun setPreviewVolume(volume: Float) {
         try {
-            player?.volume = volume.coerceIn(0f, 1f)
+            player?.volume = if (volume.isFinite()) volume.coerceIn(0f, 1f) else 1f
         } catch (e: Exception) {
             Log.w(TAG, "Failed to set preview volume", e)
         }
@@ -1046,7 +1111,8 @@ class VideoEngine @Inject constructor(
 
     fun setPreviewSpeed(speed: Float) {
         try {
-            player?.playbackParameters = androidx.media3.common.PlaybackParameters(speed.coerceIn(0.1f, 100f))
+            val safeSpeed = if (speed.isFinite() && speed > 0f) speed.coerceIn(0.1f, 100f) else 1f
+            player?.playbackParameters = androidx.media3.common.PlaybackParameters(safeSpeed)
         } catch (e: Exception) {
             Log.w(TAG, "Failed to set preview speed", e)
         }

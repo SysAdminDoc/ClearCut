@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -18,16 +19,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.sp
 import com.novacut.editor.R
 import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.Motion
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
+import com.novacut.editor.ui.theme.TouchTarget
 
 private data class TutorialStepDef(
     val titleRes: Int,
@@ -73,15 +76,20 @@ fun FirstRunTutorial(
     Box(
         modifier = modifier
             .fillMaxSize()
-            // Layered backdrop: solid Crust with a soft mauve vignette glow at the top.
-            // Reads as cinematic / intentional rather than a flat dimmer.
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        awaitPointerEvent().changes.forEach { it.consume() }
+                    }
+                }
+            }
             .background(
-                Brush.radialGradient(
-                    colors = listOf(
-                        Mocha.Mauve.copy(alpha = 0.10f),
-                        Mocha.Crust.copy(alpha = 0.92f)
-                    ),
-                    radius = 1400f
+                Brush.verticalGradient(
+                    colorStops = arrayOf(
+                        0f to Mocha.Crust.copy(alpha = 0.96f),
+                        0.48f to Mocha.Midnight.copy(alpha = 0.96f),
+                        1f to Mocha.Crust.copy(alpha = 0.94f)
+                    )
                 )
             )
     ) {
@@ -95,7 +103,8 @@ fun FirstRunTutorial(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(Spacing.lg)
-                .clickable(onClick = onComplete)
+                .defaultMinSize(minHeight = TouchTarget.minimum)
+                .clickable(role = Role.Button, onClick = onComplete)
         ) {
             Text(
                 text = stringResource(R.string.tutorial_skip),
@@ -150,7 +159,7 @@ fun FirstRunTutorial(
                     // Direction arrow — kept but smaller and quieter so it's a hint, not a focal point.
                     Icon(
                         imageVector = tutorialStep.arrowIcon,
-                        contentDescription = stringResource(R.string.cd_tutorial_direction),
+                        contentDescription = null,
                         tint = Mocha.Mauve.copy(alpha = 0.85f),
                         modifier = Modifier.size(24.dp)
                     )
@@ -163,18 +172,15 @@ fun FirstRunTutorial(
                         modifier = Modifier
                             .size(64.dp)
                             .clip(CircleShape)
-                            .background(
-                                Brush.radialGradient(
-                                    listOf(
-                                        Mocha.Mauve.copy(alpha = 0.22f),
-                                        Mocha.Mauve.copy(alpha = 0.08f)
-                                    )
-                                )
+                            .background(Mocha.Mauve.copy(alpha = 0.14f))
+                            .border(
+                                BorderStroke(1.dp, Mocha.Mauve.copy(alpha = 0.24f)),
+                                CircleShape
                             )
                     ) {
                         Icon(
                             imageVector = tutorialStep.icon,
-                            contentDescription = stringResource(tutorialStep.titleRes),
+                            contentDescription = null,
                             tint = Mocha.Mauve,
                             modifier = Modifier.size(30.dp)
                         )
@@ -293,7 +299,7 @@ fun FirstRunTutorial(
                                 Spacer(modifier = Modifier.width(Spacing.sm))
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                    contentDescription = stringResource(R.string.cd_tutorial_next),
+                                    contentDescription = null,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }

@@ -222,29 +222,46 @@ class AiToolsDelegate(
 
     private suspend fun runSceneDetect(clip: Clip) {
         val scenes = withContext(Dispatchers.Default) { aiFeatures.detectScenes(clip.sourceUri) }
-        if (scenes.isEmpty()) {
+        val splitOffsets = scenes
+            .asSequence()
+            .filter { safeConfidence(it.confidence) >= 0.1f }
+            .mapNotNull { clip.sourceTimeToTimelineOffsetMs(it.timestampMs, includeBoundaries = false) }
+            .filter { it in 1 until clip.durationMs }
+            .distinct()
+            .sortedDescending()
+            .toList()
+        if (splitOffsets.isEmpty()) {
             showToast("No scene changes detected")
             return
         }
         saveUndoState("AI scene detect")
         stateFlow.update { state ->
             var tracks = state.tracks
-            for (scene in scenes.sortedByDescending { it.timestampMs }) {
-                val splitMs = clip.timelineStartMs +
-                    ((scene.timestampMs - clip.trimStartMs) / clip.speed).toLong()
-                if (splitMs <= clip.timelineStartMs || splitMs >= clip.timelineEndMs) continue
+            for (splitOffset in splitOffsets) {
+                val splitMs = clip.timelineStartMs + splitOffset
                 tracks = tracks.map { track ->
                     val idx = track.clips.indexOfFirst { it.id == clip.id }
                     if (idx < 0) return@map track
                     val c = track.clips[idx]
                     if (splitMs <= c.timelineStartMs || splitMs >= c.timelineEndMs) return@map track
                     val relPos = splitMs - c.timelineStartMs
-                    val srcSplit = c.trimStartMs + (relPos * c.speed).toLong()
-                    val first = c.copy(trimEndMs = srcSplit)
+                    val srcSplit = c.timelineOffsetToSourceMs(relPos)
+                    if (srcSplit <= c.trimStartMs || srcSplit >= c.trimEndMs) return@map track
+                    val trimRange = (c.trimEndMs - c.trimStartMs).coerceAtLeast(0L)
+                    val splitFraction = if (trimRange > 0L) {
+                        ((srcSplit - c.trimStartMs).toFloat() / trimRange.toFloat()).coerceIn(0f, 1f)
+                    } else {
+                        0f
+                    }
+                    val first = c.copy(
+                        trimEndMs = srcSplit,
+                        speedCurve = c.speedCurve?.restrictTo(0f, splitFraction, trimRange)
+                    )
                     val second = c.copy(
                         id = java.util.UUID.randomUUID().toString(),
                         timelineStartMs = splitMs,
-                        trimStartMs = srcSplit
+                        trimStartMs = srcSplit,
+                        speedCurve = c.speedCurve?.restrictTo(splitFraction, 1f, trimRange)
                     )
                     val newClips = buildList {
                         addAll(track.clips.subList(0, idx))
@@ -259,7 +276,7 @@ class AiToolsDelegate(
         }
         rebuildPlayerTimeline()
         saveProject()
-        showToast("Split into ${scenes.size + 1} clips at scene boundaries")
+        showToast("Split into ${splitOffsets.size + 1} clips at scene boundaries")
     }
 
     private suspend fun runAutoCaptions(clip: Clip) {
@@ -282,31 +299,38 @@ class AiToolsDelegate(
         val suggestion = withContext(Dispatchers.Default) { aiFeatures.suggestCrop(
             clip.sourceUri, stateFlow.value.project.aspectRatio.toFloat()
         ) }
-        if (suggestion.confidence < 0.1f) {
+        val confidence = safeConfidence(suggestion.confidence)
+        if (confidence < 0.1f) {
             showToast("Could not analyze frame for crop")
             return
         }
+        val centerX = safeAiFloat(suggestion.centerX, 0.5f, 0f, 1f)
+        val centerY = safeAiFloat(suggestion.centerY, 0.5f, 0f, 1f)
         saveUndoState("AI smart crop")
-        setClipTransform(clip.id, suggestion.centerX - 0.5f, suggestion.centerY - 0.5f, null, null, null)
-        showToast("Smart crop applied (${"%.0f".format(suggestion.confidence * 100)}% confidence)")
+        setClipTransform(clip.id, centerX - 0.5f, centerY - 0.5f, null, null, null)
+        showToast("Smart crop applied (${"%.0f".format(confidence * 100)}% confidence)")
     }
 
     private suspend fun runAutoColor(clip: Clip) {
         val correction = withContext(Dispatchers.Default) { aiFeatures.autoColorCorrect(clip.sourceUri) }
-        if (correction.confidence < 0.1f) {
+        if (safeConfidence(correction.confidence) < 0.1f) {
             showToast("Could not analyze color")
             return
         }
         saveUndoState("AI auto color")
+        val brightness = safeAiFloat(correction.brightness, 0f, -1f, 1f)
+        val contrast = safeAiFloat(correction.contrast, 1f, 0f, 4f)
+        val saturation = safeAiFloat(correction.saturation, 1f, 0f, 4f)
+        val temperature = safeAiFloat(correction.temperature, 0f, -1f, 1f)
         val newEffects = buildList {
-            if (kotlin.math.abs(correction.brightness) > 0.02f)
-                add(Effect(type = EffectType.BRIGHTNESS, params = mapOf("value" to correction.brightness)))
-            if (kotlin.math.abs(correction.contrast - 1f) > 0.05f)
-                add(Effect(type = EffectType.CONTRAST, params = mapOf("value" to correction.contrast)))
-            if (kotlin.math.abs(correction.saturation - 1f) > 0.05f)
-                add(Effect(type = EffectType.SATURATION, params = mapOf("value" to correction.saturation)))
-            if (kotlin.math.abs(correction.temperature) > 0.05f)
-                add(Effect(type = EffectType.TEMPERATURE, params = mapOf("value" to correction.temperature)))
+            if (kotlin.math.abs(brightness) > 0.02f)
+                add(Effect(type = EffectType.BRIGHTNESS, params = mapOf("value" to brightness)))
+            if (kotlin.math.abs(contrast - 1f) > 0.05f)
+                add(Effect(type = EffectType.CONTRAST, params = mapOf("value" to contrast)))
+            if (kotlin.math.abs(saturation - 1f) > 0.05f)
+                add(Effect(type = EffectType.SATURATION, params = mapOf("value" to saturation)))
+            if (kotlin.math.abs(temperature) > 0.05f)
+                add(Effect(type = EffectType.TEMPERATURE, params = mapOf("value" to temperature)))
         }
         if (newEffects.isEmpty()) {
             showToast("Colors already look good!")
@@ -331,7 +355,10 @@ class AiToolsDelegate(
 
     private suspend fun runStabilize(clip: Clip) {
         val result = withContext(Dispatchers.Default) { aiFeatures.stabilizeVideo(clip.sourceUri) }
-        if (result.confidence < 0.1f || result.shakeMagnitude < 0.001f) {
+        val confidence = safeConfidence(result.confidence)
+        val shakeMagnitude = safeAiFloat(result.shakeMagnitude, 0f, 0f, 1f)
+        val zoom = safeAiFloat(result.recommendedZoom, 1f, 1f, 5f)
+        if (confidence < 0.1f || shakeMagnitude < 0.001f) {
             showToast("Video is already stable")
             return
         }
@@ -341,37 +368,44 @@ class AiToolsDelegate(
                 val idx = track.clips.indexOfFirst { it.id == clip.id }
                 if (idx < 0) return@map track
                 val c = track.clips[idx]
-                val zoom = result.recommendedZoom
-                val keyframes = result.motionKeyframes.flatMap { kf ->
+                val keyframes = result.motionKeyframes.mapNotNull { kf ->
+                    val timeOffset = c.sourceTimeToTimelineOffsetMs(kf.timestampMs) ?: return@mapNotNull null
                     listOf(
-                        Keyframe(timeOffsetMs = kf.timestampMs, property = KeyframeProperty.POSITION_X,
-                            value = kf.offsetX, easing = Easing.EASE_IN_OUT),
-                        Keyframe(timeOffsetMs = kf.timestampMs, property = KeyframeProperty.POSITION_Y,
-                            value = kf.offsetY, easing = Easing.EASE_IN_OUT)
+                        Keyframe(timeOffsetMs = timeOffset, property = KeyframeProperty.POSITION_X,
+                            value = safeAiFloat(kf.offsetX, 0f, -2f, 2f), easing = Easing.EASE_IN_OUT),
+                        Keyframe(timeOffsetMs = timeOffset, property = KeyframeProperty.POSITION_Y,
+                            value = safeAiFloat(kf.offsetY, 0f, -2f, 2f), easing = Easing.EASE_IN_OUT)
                     )
-                }
-                val stabilized = c.copy(scaleX = c.scaleX * zoom, scaleY = c.scaleY * zoom, keyframes = c.keyframes + keyframes)
+                }.flatten()
+                val stabilized = c.copy(
+                    scaleX = safeAiFloat(c.scaleX * zoom, c.scaleX, 0.1f, 5f),
+                    scaleY = safeAiFloat(c.scaleY * zoom, c.scaleY, 0.1f, 5f),
+                    keyframes = c.keyframes + keyframes
+                )
                 track.copy(clips = track.clips.toMutableList().apply { set(idx, stabilized) })
             }
             recalculateDuration(state.copy(tracks = tracks))
         }
         rebuildPlayerTimeline()
         saveProject()
-        showToast("Stabilized: ${"%.0f".format(result.shakeMagnitude * 100)}% shake corrected, ${"%.0f".format((result.recommendedZoom - 1f) * 100)}% zoom applied")
+        showToast("Stabilized: ${"%.0f".format(shakeMagnitude * 100)}% shake corrected, ${"%.0f".format((zoom - 1f) * 100)}% zoom applied")
     }
 
     private suspend fun runDenoise(clip: Clip) {
         val profile = withContext(Dispatchers.Default) { aiFeatures.analyzeAudioNoise(clip.sourceUri) }
-        if (profile.confidence < 0.1f) {
+        val confidence = safeConfidence(profile.confidence)
+        val signalToNoiseDb = safeAiFloat(profile.signalToNoiseDb, 60f, -120f, 120f)
+        val recommendedReduction = safeAiFloat(profile.recommendedReduction, 0f, 0f, 1f)
+        if (confidence < 0.1f) {
             showToast("Could not analyze audio noise")
             return
         }
-        if (profile.signalToNoiseDb > 40f) {
-            showToast("Audio is already clean (SNR: ${"%.0f".format(profile.signalToNoiseDb)}dB)")
+        if (signalToNoiseDb > 40f) {
+            showToast("Audio is already clean (SNR: ${"%.0f".format(signalToNoiseDb)}dB)")
             return
         }
         saveUndoState("AI denoise")
-        val volumeBoost = (1f + profile.recommendedReduction * 0.3f).coerceAtMost(1.5f)
+        val volumeBoost = (1f + recommendedReduction * 0.3f).coerceIn(1f, 1.5f)
         stateFlow.update { state ->
             val tracks = state.tracks.map { track ->
                 val idx = track.clips.indexOfFirst { it.id == clip.id }
@@ -388,21 +422,21 @@ class AiToolsDelegate(
         }
         rebuildPlayerTimeline()
         saveProject()
-        showToast("Denoised: SNR ${"%.0f".format(profile.signalToNoiseDb)}dB, reduction ${"%.0f".format(profile.recommendedReduction * 100)}%")
+        showToast("Denoised: SNR ${"%.0f".format(signalToNoiseDb)}dB, reduction ${"%.0f".format(recommendedReduction * 100)}%")
     }
 
     private suspend fun runRemoveBg(clip: Clip) {
         val segEngine = aiFeatures.segmentationEngine
         if (segEngine.isReady()) {
             val result = withContext(Dispatchers.Default) { segEngine.segmentVideoFrame(clip.sourceUri) }
-            if (result == null || result.confidence < 0.05f) {
+            if (result == null || safeConfidence(result.confidence) < 0.05f) {
                 showToast("Could not detect subject in frame")
                 return
             }
             saveUndoState("AI remove background")
             val bgEffect = Effect(type = EffectType.BG_REMOVAL, params = mapOf("threshold" to 0.5f))
             updateClipEffect(clip, bgEffect, setOf(EffectType.BG_REMOVAL, EffectType.CHROMA_KEY))
-            showToast("AI background removal applied (${"%.0f".format(result.confidence * 100)}% coverage)")
+            showToast("AI background removal applied (${"%.0f".format(safeConfidence(result.confidence) * 100)}% coverage)")
         } else {
             applyChromaKeyFallback(clip, "removal")
         }
@@ -412,7 +446,7 @@ class AiToolsDelegate(
         val segEngine = aiFeatures.segmentationEngine
         if (segEngine.isReady()) {
             val result = withContext(Dispatchers.Default) { segEngine.segmentVideoFrame(clip.sourceUri) }
-            if (result != null && result.confidence >= 0.05f) {
+            if (result != null && safeConfidence(result.confidence) >= 0.05f) {
                 saveUndoState("AI background replace")
                 val bgEffect = Effect(type = EffectType.BG_REMOVAL, params = mapOf("threshold" to 0.5f))
                 updateClipEffect(clip, bgEffect, setOf(EffectType.BG_REMOVAL, EffectType.CHROMA_KEY))
@@ -427,7 +461,8 @@ class AiToolsDelegate(
 
     private suspend fun applyChromaKeyFallback(clip: Clip, action: String) {
         val analysis = withContext(Dispatchers.Default) { aiFeatures.analyzeBackground(clip.sourceUri) }
-        if (analysis.confidence < 0.1f) {
+        val confidence = safeConfidence(analysis.confidence)
+        if (confidence < 0.1f) {
             showToast("Could not detect background")
             return
         }
@@ -435,9 +470,9 @@ class AiToolsDelegate(
         val chromaKeyEffect = Effect(
             type = EffectType.CHROMA_KEY,
             params = mapOf(
-                "similarity" to analysis.recommendedSimilarity,
-                "smoothness" to analysis.recommendedSmoothness,
-                "spill" to analysis.recommendedSpill
+                "similarity" to safeAiFloat(analysis.recommendedSimilarity, 0.4f, 0f, 1f),
+                "smoothness" to safeAiFloat(analysis.recommendedSmoothness, 0.1f, 0f, 1f),
+                "spill" to safeAiFloat(analysis.recommendedSpill, 0.1f, 0f, 1f)
             )
         )
         updateClipEffect(clip, chromaKeyEffect, setOf(EffectType.CHROMA_KEY))
@@ -446,7 +481,7 @@ class AiToolsDelegate(
             analysis.isBlueScreen -> "blue screen"
             else -> "background"
         }
-        showToast("Applied $bgType $action (${"%.0f".format(analysis.confidence * 100)}% confidence)")
+        showToast("Applied $bgType $action (${"%.0f".format(confidence * 100)}% confidence)")
     }
 
     private fun updateClipEffect(clip: Clip, newEffect: Effect, replaceTypes: Set<EffectType>) {
@@ -486,24 +521,31 @@ class AiToolsDelegate(
         try {
             showToast("Analyzing frame style...")
             val style = withContext(Dispatchers.Default) { aiFeatures.analyzeAndApplyStyle(clip.sourceUri) }
-            if (style.confidence < 0.1f) {
+            if (safeConfidence(style.confidence) < 0.1f) {
                 showToast("Could not analyze frame style")
                 return
             }
             saveUndoState("AI style transfer")
+            val contrast = safeAiFloat(style.contrast, 1f, 0f, 4f)
+            val temperature = safeAiFloat(style.temperature, 0f, -1f, 1f)
+            val saturation = safeAiFloat(style.saturation, 1f, 0f, 4f)
+            val exposure = safeAiFloat(style.exposure, 0f, -1f, 1f)
+            val vignetteIntensity = safeAiFloat(style.vignetteIntensity, 0f, 0f, 1f)
+            val vignetteRadius = safeAiFloat(style.vignetteRadius, 0.8f, 0f, 1f)
+            val filmGrain = safeAiFloat(style.filmGrain, 0f, 0f, 1f)
             val newEffects = buildList {
-                if (kotlin.math.abs(style.contrast - 1f) > 0.02f)
-                    add(Effect(type = EffectType.CONTRAST, params = mapOf("value" to style.contrast)))
-                if (kotlin.math.abs(style.temperature) > 0.01f)
-                    add(Effect(type = EffectType.TEMPERATURE, params = mapOf("value" to style.temperature)))
-                if (kotlin.math.abs(style.saturation - 1f) > 0.02f)
-                    add(Effect(type = EffectType.SATURATION, params = mapOf("value" to style.saturation)))
-                if (kotlin.math.abs(style.exposure) > 0.01f)
-                    add(Effect(type = EffectType.EXPOSURE, params = mapOf("value" to style.exposure)))
-                if (style.vignetteIntensity > 0.01f)
-                    add(Effect(type = EffectType.VIGNETTE, params = mapOf("intensity" to style.vignetteIntensity, "radius" to style.vignetteRadius)))
-                if (style.filmGrain > 0.01f)
-                    add(Effect(type = EffectType.FILM_GRAIN, params = mapOf("intensity" to style.filmGrain)))
+                if (kotlin.math.abs(contrast - 1f) > 0.02f)
+                    add(Effect(type = EffectType.CONTRAST, params = mapOf("value" to contrast)))
+                if (kotlin.math.abs(temperature) > 0.01f)
+                    add(Effect(type = EffectType.TEMPERATURE, params = mapOf("value" to temperature)))
+                if (kotlin.math.abs(saturation - 1f) > 0.02f)
+                    add(Effect(type = EffectType.SATURATION, params = mapOf("value" to saturation)))
+                if (kotlin.math.abs(exposure) > 0.01f)
+                    add(Effect(type = EffectType.EXPOSURE, params = mapOf("value" to exposure)))
+                if (vignetteIntensity > 0.01f)
+                    add(Effect(type = EffectType.VIGNETTE, params = mapOf("intensity" to vignetteIntensity, "radius" to vignetteRadius)))
+                if (filmGrain > 0.01f)
+                    add(Effect(type = EffectType.FILM_GRAIN, params = mapOf("intensity" to filmGrain)))
             }
             if (newEffects.isEmpty()) {
                 showToast("No style adjustments needed for '${style.styleName}'")
@@ -557,34 +599,42 @@ class AiToolsDelegate(
         yBaseline: Float
     ): List<Keyframe> {
         val sign = if (invertSign) -1f else 1f
+        val baseline = safeAiFloat(yBaseline, 0.5f, 0f, 1f)
         return results.mapNotNull { tr ->
-            val timeOffset = ((tr.timestampMs - clip.trimStartMs) / clip.speed).toLong()
-            if (timeOffset < 0 || timeOffset > clip.durationMs) return@mapNotNull null
+            if (safeConfidence(tr.confidence) <= 0f) return@mapNotNull null
+            val timeOffset = clip.sourceTimeToTimelineOffsetMs(tr.timestampMs) ?: return@mapNotNull null
+            val centerX = safeAiFloat(tr.region.centerX, 0.5f, 0f, 1f)
+            val centerY = safeAiFloat(tr.region.centerY, baseline, 0f, 1f)
             listOf(
                 Keyframe(timeOffsetMs = timeOffset, property = KeyframeProperty.POSITION_X,
-                    value = sign * (tr.region.centerX - 0.5f) * 2f, easing = Easing.EASE_IN_OUT),
+                    value = safeAiFloat(sign * (centerX - 0.5f) * 2f, 0f, -2f, 2f), easing = Easing.EASE_IN_OUT),
                 Keyframe(timeOffsetMs = timeOffset, property = KeyframeProperty.POSITION_Y,
-                    value = sign * (tr.region.centerY - yBaseline) * 2f, easing = Easing.EASE_IN_OUT)
+                    value = safeAiFloat(sign * (centerY - baseline) * 2f, 0f, -2f, 2f), easing = Easing.EASE_IN_OUT)
             )
         }.flatten()
     }
 
     private suspend fun runSmartReframe(clip: Clip) {
         try {
-        val suggestion = withContext(Dispatchers.Default) { aiFeatures.suggestCrop(clip.sourceUri, 9f / 16f) }
-        if (suggestion.confidence > 0.1f) {
-            saveUndoState("AI smart reframe")
-            setClipTransform(clip.id,
-                (suggestion.centerX - 0.5f) * 2f,
-                (suggestion.centerY - 0.5f) * 2f,
-                1f / suggestion.width,
-                1f / suggestion.height,
-                null
-            )
-            showToast("Smart reframed for vertical (${"%.0f".format(suggestion.confidence * 100)}%)")
-        } else {
-            showToast("Could not determine reframe region")
-        }
+            val suggestion = withContext(Dispatchers.Default) { aiFeatures.suggestCrop(clip.sourceUri, 9f / 16f) }
+            val confidence = safeConfidence(suggestion.confidence)
+            if (confidence > 0.1f) {
+                val centerX = safeAiFloat(suggestion.centerX, 0.5f, 0f, 1f)
+                val centerY = safeAiFloat(suggestion.centerY, 0.5f, 0f, 1f)
+                val width = safeAiFloat(suggestion.width, 1f, 0.05f, 1f)
+                val height = safeAiFloat(suggestion.height, 1f, 0.05f, 1f)
+                saveUndoState("AI smart reframe")
+                setClipTransform(clip.id,
+                    safeAiFloat((centerX - 0.5f) * 2f, 0f, -1f, 1f),
+                    safeAiFloat((centerY - 0.5f) * 2f, 0f, -1f, 1f),
+                    safeAiFloat(1f / width, 1f, 0.1f, 5f),
+                    safeAiFloat(1f / height, 1f, 0.1f, 5f),
+                    null
+                )
+                showToast("Smart reframed for vertical (${"%.0f".format(confidence * 100)}%)")
+            } else {
+                showToast("Could not determine reframe region")
+            }
         } catch (e: Exception) {
             showToast("Smart reframe error: ${e.message ?: "Unknown"}")
         }
@@ -600,7 +650,10 @@ class AiToolsDelegate(
             }
             saveUndoState("AI upscale")
             stateFlow.update { it.copy(project = it.project.copy(resolution = result.targetResolution)) }
-            val sharpenEffect = Effect(type = EffectType.SHARPEN, params = mapOf("strength" to result.sharpenStrength))
+            val sharpenEffect = Effect(
+                type = EffectType.SHARPEN,
+                params = mapOf("strength" to safeAiFloat(result.sharpenStrength, 0.5f, 0f, 1f))
+            )
             updateClipEffect(clip, sharpenEffect, setOf(EffectType.SHARPEN))
             showToast("Upscaled to ${result.targetResolution.label} + sharpening applied")
         } catch (e: Exception) {
@@ -654,20 +707,29 @@ class AiToolsDelegate(
         if (!stabilizationEngine.isOpenCvAvailable()) {
             showToast("Advanced stabilization requires OpenCV \u2014 using basic stabilization")
             val result = withContext(Dispatchers.Default) { aiFeatures.stabilizeVideo(clip.sourceUri) }
-            if (result.confidence < 0.1f || result.shakeMagnitude < 0.001f) {
+            val confidence = safeConfidence(result.confidence)
+            val shakeMagnitude = safeAiFloat(result.shakeMagnitude, 0f, 0f, 1f)
+            if (confidence < 0.1f || shakeMagnitude < 0.001f) {
                 showToast("Video is already stable")
             } else {
                 saveUndoState("AI stabilize (basic)")
                 // Apply 2% crop-based stabilization via scale
-                val stabilizeScale = 1f + (result.shakeMagnitude * 0.5f).coerceAtMost(0.1f)
+                val stabilizeScale = 1f + (shakeMagnitude * 0.5f).coerceAtMost(0.1f)
                 stateFlow.update { s ->
                     s.copy(tracks = s.tracks.map { track ->
                         track.copy(clips = track.clips.map { c ->
-                            if (c.id == clip.id) c.copy(scaleX = c.scaleX * stabilizeScale, scaleY = c.scaleY * stabilizeScale) else c
+                            if (c.id == clip.id) {
+                                c.copy(
+                                    scaleX = safeAiFloat(c.scaleX * stabilizeScale, c.scaleX, 0.1f, 5f),
+                                    scaleY = safeAiFloat(c.scaleY * stabilizeScale, c.scaleY, 0.1f, 5f)
+                                )
+                            } else {
+                                c
+                            }
                         })
                     })
                 }
-                showToast("Basic stabilization applied (${"%.0f".format(result.shakeMagnitude * 100)}% shake)")
+                showToast("Basic stabilization applied (${"%.0f".format(shakeMagnitude * 100)}% shake)")
                 rebuildPlayerTimeline()
                 saveProject()
             }
@@ -711,3 +773,10 @@ class AiToolsDelegate(
     }
 
 }
+
+private fun safeAiFloat(value: Float, fallback: Float, min: Float, max: Float): Float {
+    val safeFallback = if (fallback.isFinite()) fallback.coerceIn(min, max) else min
+    return if (value.isFinite()) value.coerceIn(min, max) else safeFallback
+}
+
+private fun safeConfidence(value: Float): Float = safeAiFloat(value, 0f, 0f, 1f)

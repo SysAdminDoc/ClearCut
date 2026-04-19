@@ -12,6 +12,22 @@ import com.novacut.editor.model.*
 @UnstableApi
 internal object EffectBuilder {
 
+    private fun Map<String, Float>.safeParam(
+        key: String,
+        default: Float,
+        min: Float,
+        max: Float
+    ): Float {
+        val value = this[key] ?: default
+        val fallback = if (default.isFinite()) default.coerceIn(min, max) else min
+        return if (value.isFinite()) value.coerceIn(min, max) else fallback
+    }
+
+    private fun safeEffectFloat(value: Float, default: Float, min: Float, max: Float): Float {
+        val fallback = if (default.isFinite()) default.coerceIn(min, max) else min
+        return if (value.isFinite()) value.coerceIn(min, max) else fallback
+    }
+
     /**
      * Convert a NovaCut Effect to a Media3 Effect.
      * Returns null for effect types handled outside the visual pipeline (speed, reverse).
@@ -22,7 +38,7 @@ internal object EffectBuilder {
     ): androidx.media3.common.Effect? {
         return when (effect.type) {
             EffectType.BRIGHTNESS -> {
-                val value = (effect.params["value"] ?: 0f).coerceIn(-1f, 1f)
+                val value = effect.params.safeParam("value", 0f, -1f, 1f)
                 RgbMatrix { _, _ ->
                     val b = value
                     floatArrayOf(
@@ -34,11 +50,11 @@ internal object EffectBuilder {
                 }
             }
             EffectType.CONTRAST -> {
-                val value = (effect.params["value"] ?: 1f).coerceIn(0f, 2f)
+                val value = effect.params.safeParam("value", 1f, 0f, 2f)
                 Contrast(value - 1f)
             }
             EffectType.SATURATION -> {
-                val value = (effect.params["value"] ?: 1f).coerceIn(0f, 3f)
+                val value = effect.params.safeParam("value", 1f, 0f, 3f)
                 RgbMatrix { _, _ ->
                     val s = value
                     val sr = (1 - s) * 0.2126f
@@ -83,7 +99,7 @@ internal object EffectBuilder {
                 }
             }
             EffectType.TEMPERATURE -> {
-                val value = (effect.params["value"] ?: 0f).coerceIn(-5f, 5f)
+                val value = effect.params.safeParam("value", 0f, -5f, 5f)
                 RgbMatrix { _, _ ->
                     floatArrayOf(
                         1f + value * 0.1f, 0f, 0f, 0f,
@@ -94,7 +110,7 @@ internal object EffectBuilder {
                 }
             }
             EffectType.TINT -> {
-                val value = (effect.params["value"] ?: 0f).coerceIn(-1f, 1f)
+                val value = effect.params.safeParam("value", 0f, -1f, 1f)
                 RgbMatrix { _, _ ->
                     floatArrayOf(
                         1f, 0f, 0f, 0f,
@@ -105,7 +121,7 @@ internal object EffectBuilder {
                 }
             }
             EffectType.EXPOSURE -> {
-                val value = (effect.params["value"] ?: 0f).coerceIn(-2f, 2f)
+                val value = effect.params.safeParam("value", 0f, -2f, 2f)
                 val mul = Math.pow(2.0, value.toDouble()).toFloat()
                 RgbMatrix { _, _ ->
                     floatArrayOf(
@@ -117,7 +133,7 @@ internal object EffectBuilder {
                 }
             }
             EffectType.GAMMA -> {
-                val value = (effect.params["value"] ?: 1f).coerceIn(0.2f, 5f)
+                val value = effect.params.safeParam("value", 1f, 0.2f, 5f)
                 val inv = 1f / value
                 RgbMatrix { _, _ ->
                     floatArrayOf(
@@ -129,7 +145,7 @@ internal object EffectBuilder {
                 }
             }
             EffectType.HIGHLIGHTS -> {
-                val value = (effect.params["value"] ?: 0f).coerceIn(-1f, 1f)
+                val value = effect.params.safeParam("value", 0f, -1f, 1f)
                 val scale = 1f + value * 0.3f
                 RgbMatrix { _, _ ->
                     floatArrayOf(
@@ -141,7 +157,7 @@ internal object EffectBuilder {
                 }
             }
             EffectType.SHADOWS -> {
-                val value = (effect.params["value"] ?: 0f).coerceIn(-1f, 1f)
+                val value = effect.params.safeParam("value", 0f, -1f, 1f)
                 val offset = value * 0.15f
                 RgbMatrix { _, _ ->
                     floatArrayOf(
@@ -153,7 +169,7 @@ internal object EffectBuilder {
                 }
             }
             EffectType.VIBRANCE -> {
-                val value = (effect.params["value"] ?: 0f).coerceIn(-1f, 1f)
+                val value = effect.params.safeParam("value", 0f, -1f, 1f)
                 val s = 1f + value * 0.5f
                 val sr = (1 - s) * 0.2126f
                 val sg = (1 - s) * 0.7152f
@@ -168,7 +184,7 @@ internal object EffectBuilder {
                 }
             }
             EffectType.POSTERIZE -> {
-                val levels = (effect.params["levels"] ?: 6f).coerceIn(2f, 16f)
+                val levels = effect.params.safeParam("levels", 6f, 2f, 16f)
                 val scale = levels / 8f
                 RgbMatrix { _, _ ->
                     floatArrayOf(
@@ -180,7 +196,7 @@ internal object EffectBuilder {
                 }
             }
             EffectType.COOL_TONE -> {
-                val intensity = (effect.params["intensity"] ?: 0.5f).coerceIn(0f, 1f)
+                val intensity = effect.params.safeParam("intensity", 0.5f, 0f, 1f)
                 RgbMatrix { _, _ ->
                     floatArrayOf(
                         1f - intensity * 0.1f, 0f, 0f, 0f,
@@ -191,7 +207,7 @@ internal object EffectBuilder {
                 }
             }
             EffectType.WARM_TONE -> {
-                val intensity = (effect.params["intensity"] ?: 0.5f).coerceIn(0f, 1f)
+                val intensity = effect.params.safeParam("intensity", 0.5f, 0f, 1f)
                 RgbMatrix { _, _ ->
                     floatArrayOf(
                         1f + intensity * 0.15f, 0f, 0f, intensity * 0.02f,
@@ -202,7 +218,7 @@ internal object EffectBuilder {
                 }
             }
             EffectType.CYBERPUNK -> {
-                val intensity = (effect.params["intensity"] ?: 0.7f).coerceIn(0f, 1f)
+                val intensity = effect.params.safeParam("intensity", 0.7f, 0f, 1f)
                 val s = 1f + intensity * 0.3f
                 RgbMatrix { _, _ ->
                     floatArrayOf(
@@ -214,7 +230,7 @@ internal object EffectBuilder {
                 }
             }
             EffectType.NOIR -> {
-                val intensity = (effect.params["intensity"] ?: 0.7f).coerceIn(0f, 1f)
+                val intensity = effect.params.safeParam("intensity", 0.7f, 0f, 1f)
                 val gray = intensity
                 val tint = intensity * 0.03f
                 val lr = 0.2126f * gray + (1f - gray)
@@ -230,7 +246,7 @@ internal object EffectBuilder {
                 }
             }
             EffectType.VINTAGE -> {
-                val intensity = (effect.params["intensity"] ?: 0.7f).coerceIn(0f, 1f)
+                val intensity = effect.params.safeParam("intensity", 0.7f, 0f, 1f)
                 val i = intensity
                 RgbMatrix { _, _ ->
                     floatArrayOf(
@@ -247,82 +263,82 @@ internal object EffectBuilder {
                     .build()
             }
             EffectType.VIGNETTE -> {
-                val intensity = (effect.params["intensity"] ?: 0.5f).coerceIn(0f, 1f)
-                val radius = (effect.params["radius"] ?: 0.7f).coerceIn(0f, 1f)
+                val intensity = effect.params.safeParam("intensity", 0.5f, 0f, 1f)
+                val radius = effect.params.safeParam("radius", 0.7f, 0f, 1f)
                 EffectShaders.vignette(intensity, radius)
             }
             EffectType.SHARPEN -> {
-                val strength = (effect.params["strength"] ?: 0.5f).coerceIn(0f, 3f)
+                val strength = effect.params.safeParam("strength", 0.5f, 0f, 3f)
                 EffectShaders.sharpen(strength)
             }
             EffectType.FILM_GRAIN -> {
-                val intensity = (effect.params["intensity"] ?: 0.1f).coerceIn(0f, 1f)
+                val intensity = effect.params.safeParam("intensity", 0.1f, 0f, 1f)
                 EffectShaders.filmGrain(intensity)
             }
             EffectType.GAUSSIAN_BLUR -> {
-                val radius = (effect.params["radius"] ?: 5f).coerceIn(1f, 25f)
+                val radius = effect.params.safeParam("radius", 5f, 1f, 25f)
                 EffectShaders.gaussianBlur(radius)
             }
             EffectType.RADIAL_BLUR -> {
-                val intensity = (effect.params["intensity"] ?: 0.5f).coerceIn(0f, 1f)
+                val intensity = effect.params.safeParam("intensity", 0.5f, 0f, 1f)
                 EffectShaders.radialBlur(intensity)
             }
             EffectType.MOTION_BLUR -> {
-                val intensity = (effect.params["intensity"] ?: 0.5f).coerceIn(0f, 1f)
-                val angle = (effect.params["angle"] ?: 0f).coerceIn(0f, 360f)
+                val intensity = effect.params.safeParam("intensity", 0.5f, 0f, 1f)
+                val angle = effect.params.safeParam("angle", 0f, 0f, 360f)
                 EffectShaders.motionBlur(intensity, angle)
             }
             EffectType.TILT_SHIFT -> {
-                val focusY = (effect.params["focusY"] ?: 0.5f).coerceIn(0f, 1f)
-                val width = (effect.params["width"] ?: 0.1f).coerceIn(0.01f, 0.5f)
-                val blur = (effect.params["blur"] ?: 0.01f).coerceIn(0f, 1f)
+                val focusY = effect.params.safeParam("focusY", 0.5f, 0f, 1f)
+                val width = effect.params.safeParam("width", 0.1f, 0.01f, 0.5f)
+                val blur = effect.params.safeParam("blur", 0.01f, 0f, 1f)
                 EffectShaders.tiltShift(focusY, width, blur)
             }
             EffectType.MOSAIC -> {
-                val size = (effect.params["size"] ?: 15f).coerceIn(2f, 50f)
+                val size = effect.params.safeParam("size", 15f, 2f, 50f)
                 EffectShaders.mosaic(size)
             }
             EffectType.FISHEYE -> {
-                val intensity = (effect.params["intensity"] ?: 0.5f).coerceIn(0f, 1f)
+                val intensity = effect.params.safeParam("intensity", 0.5f, 0f, 1f)
                 EffectShaders.fisheye(intensity)
             }
             EffectType.GLITCH -> {
-                val intensity = (effect.params["intensity"] ?: 0.5f).coerceIn(0f, 1f)
+                val intensity = effect.params.safeParam("intensity", 0.5f, 0f, 1f)
                 EffectShaders.glitch(intensity)
             }
             EffectType.PIXELATE -> {
-                val size = (effect.params["size"] ?: 10f).coerceIn(2f, 50f)
+                val size = effect.params.safeParam("size", 10f, 2f, 50f)
                 EffectShaders.pixelate(size)
             }
             EffectType.WAVE -> {
-                val amplitude = (effect.params["amplitude"] ?: 0.02f).coerceIn(0f, 0.1f)
-                val frequency = (effect.params["frequency"] ?: 10f).coerceIn(1f, 50f)
+                val amplitude = effect.params.safeParam("amplitude", 0.02f, 0f, 0.1f)
+                val frequency = effect.params.safeParam("frequency", 10f, 1f, 50f)
                 EffectShaders.wave(amplitude, frequency)
             }
             EffectType.CHROMATIC_ABERRATION -> {
-                val intensity = (effect.params["intensity"] ?: 0.5f).coerceIn(0f, 2f)
+                val intensity = effect.params.safeParam("intensity", 0.5f, 0f, 2f)
                 EffectShaders.chromaticAberration(intensity)
             }
             EffectType.CHROMA_KEY -> {
-                val similarity = (effect.params["similarity"] ?: 0.4f).coerceIn(0f, 1f)
-                val smoothness = (effect.params["smoothness"] ?: 0.1f).coerceIn(0f, 0.5f)
-                val keyR = (effect.params["keyR"] ?: 0f).coerceIn(0f, 1f)
-                val keyG = (effect.params["keyG"] ?: 1f).coerceIn(0f, 1f)
-                val keyB = (effect.params["keyB"] ?: 0f).coerceIn(0f, 1f)
+                val similarity = effect.params.safeParam("similarity", 0.4f, 0f, 1f)
+                val smoothness = effect.params.safeParam("smoothness", 0.1f, 0f, 0.5f)
+                val keyR = effect.params.safeParam("keyR", 0f, 0f, 1f)
+                val keyG = effect.params.safeParam("keyG", 1f, 0f, 1f)
+                val keyB = effect.params.safeParam("keyB", 0f, 0f, 1f)
                 EffectShaders.chromaKey(keyR, keyG, keyB, similarity, smoothness)
             }
             EffectType.BG_REMOVAL -> {
-                val threshold = (effect.params["threshold"] ?: 0.5f).coerceIn(0.1f, 0.9f)
+                val threshold = effect.params.safeParam("threshold", 0.5f, 0.1f, 0.9f)
                 if (segmentationEngine.isReady()) {
                     segmentationEngine.createExportEffect(threshold)
                 } else null
             }
             EffectType.VHS_RETRO -> {
-                val intensity = (effect.params["intensity"] ?: 0.5f).coerceIn(0f, 1f)
+                val intensity = effect.params.safeParam("intensity", 0.5f, 0f, 1f)
                 EffectShaders.vhsRetro(intensity)
             }
             EffectType.LIGHT_LEAK -> {
-                val intensity = (effect.params["intensity"] ?: 0.5f).coerceIn(0f, 1f)
+                val intensity = effect.params.safeParam("intensity", 0.5f, 0f, 1f)
                 EffectShaders.lightLeak(intensity)
             }
             EffectType.SPEED, EffectType.REVERSE -> null
@@ -341,19 +357,32 @@ internal object EffectBuilder {
                 grade.offsetR != 0f || grade.offsetG != 0f || grade.offsetB != 0f
             if (hasLGG) {
                 add(EffectShaders.colorGrade(
-                    grade.liftR, grade.liftG, grade.liftB,
-                    grade.gammaR, grade.gammaG, grade.gammaB,
-                    grade.gainR, grade.gainG, grade.gainB,
-                    grade.offsetR, grade.offsetG, grade.offsetB
+                    safeEffectFloat(grade.liftR, 0f, -1f, 1f),
+                    safeEffectFloat(grade.liftG, 0f, -1f, 1f),
+                    safeEffectFloat(grade.liftB, 0f, -1f, 1f),
+                    safeEffectFloat(grade.gammaR, 1f, 0.01f, 5f),
+                    safeEffectFloat(grade.gammaG, 1f, 0.01f, 5f),
+                    safeEffectFloat(grade.gammaB, 1f, 0.01f, 5f),
+                    safeEffectFloat(grade.gainR, 1f, 0f, 5f),
+                    safeEffectFloat(grade.gainG, 1f, 0f, 5f),
+                    safeEffectFloat(grade.gainB, 1f, 0f, 5f),
+                    safeEffectFloat(grade.offsetR, 0f, -1f, 1f),
+                    safeEffectFloat(grade.offsetG, 0f, -1f, 1f),
+                    safeEffectFloat(grade.offsetB, 0f, -1f, 1f)
                 ))
             }
             grade.hslQualifier?.let { hsl ->
                 add(EffectShaders.hslQualify(
-                    hsl.hueCenter, hsl.hueWidth,
-                    hsl.satMin, hsl.satMax,
-                    hsl.lumMin, hsl.lumMax,
-                    hsl.softness,
-                    hsl.adjustHue, hsl.adjustSat, hsl.adjustLum
+                    safeEffectFloat(hsl.hueCenter, 0f, 0f, 360f),
+                    safeEffectFloat(hsl.hueWidth, 30f, 0f, 180f),
+                    safeEffectFloat(hsl.satMin, 0f, 0f, 1f),
+                    safeEffectFloat(hsl.satMax, 1f, 0f, 1f),
+                    safeEffectFloat(hsl.lumMin, 0f, 0f, 1f),
+                    safeEffectFloat(hsl.lumMax, 1f, 0f, 1f),
+                    safeEffectFloat(hsl.softness, 0.1f, 0f, 1f),
+                    safeEffectFloat(hsl.adjustHue, 0f, -180f, 180f),
+                    safeEffectFloat(hsl.adjustSat, 0f, -1f, 1f),
+                    safeEffectFloat(hsl.adjustLum, 0f, -1f, 1f)
                 ))
             }
             grade.lutPath?.let { path ->
@@ -364,7 +393,7 @@ internal object EffectBuilder {
                         path.endsWith(".3dl", true) -> LutEngine.parse3dl(lutFile)
                         else -> null
                     }
-                    lut?.let { add(LutEngine.createLutEffect(it, grade.lutIntensity)) }
+                    lut?.let { add(LutEngine.createLutEffect(it, safeEffectFloat(grade.lutIntensity, 1f, 0f, 1f))) }
                 }
             }
         }
@@ -436,7 +465,7 @@ internal object EffectBuilder {
         // any plausible transition length while staying comfortably inside
         // Float's representable range after * 1000.
         val durationUs = transition.durationMs.coerceIn(1L, 2_147_000L) * 1000f
-        val clipDurationUs = clipDurationMs * 1000f
+        val clipDurationUs = clipDurationMs.coerceIn(1L, 2_147_000L) * 1000f
         return when (transition.type) {
             TransitionType.DISSOLVE, TransitionType.FADE_BLACK ->
                 EffectShaders.transitionFadeOut(durationUs, clipDurationUs)
@@ -469,7 +498,7 @@ internal object EffectBuilder {
                 val timeMs = presentationTimeUs / 1000L
                 val opacity = KeyframeEngine.getValueAt(
                     clip.keyframes, KeyframeProperty.OPACITY, timeMs
-                ) ?: 1f
+                )?.let { safeEffectFloat(it, 1f, 0f, 1f) } ?: 1f
                 floatArrayOf(
                     opacity, 0f, 0f, 0f,
                     0f, opacity, 0f, 0f,
@@ -478,7 +507,7 @@ internal object EffectBuilder {
                 )
             })
         } else if (clip.opacity != 1f) {
-            val o = clip.opacity.coerceIn(0f, 1f)
+            val o = safeEffectFloat(clip.opacity, 1f, 0f, 1f)
             add(RgbMatrix { _, _ ->
                 floatArrayOf(
                     o, 0f, 0f, 0f,
@@ -495,22 +524,26 @@ internal object EffectBuilder {
         val hasKfPosition = clip.keyframes.any {
             it.property == KeyframeProperty.POSITION_X || it.property == KeyframeProperty.POSITION_Y
         }
-        val hasAnchor = clip.anchorX != 0f || clip.anchorY != 0f
+        val staticSx = safeEffectFloat(clip.scaleX, 1f, 0.1f, 5f)
+        val staticSy = safeEffectFloat(clip.scaleY, 1f, 0.1f, 5f)
+        val staticRot = safeEffectFloat(clip.rotation, 0f, -3600f, 3600f)
+        val staticPx = safeEffectFloat(clip.positionX, 0f, -10f, 10f)
+        val staticPy = safeEffectFloat(clip.positionY, 0f, -10f, 10f)
+        val staticAx = safeEffectFloat(clip.anchorX, 0f, -10f, 10f)
+        val staticAy = safeEffectFloat(clip.anchorY, 0f, -10f, 10f)
+        val hasAnchor = staticAx != 0f || staticAy != 0f
         val needsStaticTransform = clip.rotation != 0f || clip.scaleX != 1f || clip.scaleY != 1f ||
             clip.positionX != 0f || clip.positionY != 0f || hasAnchor
         if (hasKfScale || hasKfRotation || hasKfPosition) {
             val kfs = clip.keyframes
-            val staticSx = clip.scaleX; val staticSy = clip.scaleY
-            val staticRot = clip.rotation
-            val staticPx = clip.positionX; val staticPy = clip.positionY
-            val ax = clip.anchorX; val ay = clip.anchorY
+            val ax = staticAx; val ay = staticAy
             add(MatrixTransformation { presentationTimeUs ->
                 val timeMs = presentationTimeUs / 1000L
-                val sx = KeyframeEngine.getValueAt(kfs, KeyframeProperty.SCALE_X, timeMs) ?: staticSx
-                val sy = KeyframeEngine.getValueAt(kfs, KeyframeProperty.SCALE_Y, timeMs) ?: staticSy
-                val rot = KeyframeEngine.getValueAt(kfs, KeyframeProperty.ROTATION, timeMs) ?: staticRot
-                val px = KeyframeEngine.getValueAt(kfs, KeyframeProperty.POSITION_X, timeMs) ?: staticPx
-                val py = KeyframeEngine.getValueAt(kfs, KeyframeProperty.POSITION_Y, timeMs) ?: staticPy
+                val sx = safeEffectFloat(KeyframeEngine.getValueAt(kfs, KeyframeProperty.SCALE_X, timeMs) ?: staticSx, staticSx, 0.1f, 5f)
+                val sy = safeEffectFloat(KeyframeEngine.getValueAt(kfs, KeyframeProperty.SCALE_Y, timeMs) ?: staticSy, staticSy, 0.1f, 5f)
+                val rot = safeEffectFloat(KeyframeEngine.getValueAt(kfs, KeyframeProperty.ROTATION, timeMs) ?: staticRot, staticRot, -3600f, 3600f)
+                val px = safeEffectFloat(KeyframeEngine.getValueAt(kfs, KeyframeProperty.POSITION_X, timeMs) ?: staticPx, staticPx, -10f, 10f)
+                val py = safeEffectFloat(KeyframeEngine.getValueAt(kfs, KeyframeProperty.POSITION_Y, timeMs) ?: staticPy, staticPy, -10f, 10f)
                 android.graphics.Matrix().apply {
                     if (ax != 0f || ay != 0f) postTranslate(-ax, ay)
                     postScale(sx, sy)
@@ -521,11 +554,11 @@ internal object EffectBuilder {
             })
         } else if (needsStaticTransform) {
             val m = android.graphics.Matrix().apply {
-                if (hasAnchor) postTranslate(-clip.anchorX, clip.anchorY)
-                postScale(clip.scaleX, clip.scaleY)
-                postRotate(clip.rotation)
-                if (hasAnchor) postTranslate(clip.anchorX, -clip.anchorY)
-                postTranslate(clip.positionX, -clip.positionY)
+                if (hasAnchor) postTranslate(-staticAx, staticAy)
+                postScale(staticSx, staticSy)
+                postRotate(staticRot)
+                if (hasAnchor) postTranslate(staticAx, -staticAy)
+                postTranslate(staticPx, -staticPy)
             }
             add(MatrixTransformation { m })
         }

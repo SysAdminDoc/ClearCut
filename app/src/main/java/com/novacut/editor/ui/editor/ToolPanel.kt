@@ -171,6 +171,7 @@ fun BottomToolArea(
     hasCopiedEffects: Boolean,
     modifier: Modifier = Modifier,
     textOverlays: List<TextOverlay> = emptyList(),
+    onExpandedChange: (Boolean) -> Unit = {},
     onAction: (String) -> Unit,
     onEditTextOverlay: (String) -> Unit = {},
     onDeleteTextOverlay: (String) -> Unit = {},
@@ -204,6 +205,10 @@ fun BottomToolArea(
         isClipMode && activeTabId == "color" -> clipColorSubMenu
         isClipMode && activeTabId == "ai" -> clipAiSubMenu
         else -> null
+    }
+
+    LaunchedEffect(subMenuItems != null) {
+        onExpandedChange(subMenuItems != null)
     }
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -363,7 +368,7 @@ private fun BottomTabBar(
                         state = listState,
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(2.dp),
-                        contentPadding = PaddingValues(horizontal = 2.dp)
+                        contentPadding = PaddingValues(start = 2.dp, end = 18.dp)
                     ) {
                         items(tabs, key = { it.id }) { tab ->
                             BottomTabBarItem(
@@ -418,22 +423,35 @@ private fun BottomTabBarItem(
 ) {
     val isBack = tab.id == "back"
     val tabLabel = if (tab.labelRes != 0) stringResource(tab.labelRes) else ""
-    val shape = RoundedCornerShape(18.dp)
-    val containerColor by animateColorAsState(
-        targetValue = when {
-            isActive && !isBack -> Mocha.Mauve.copy(alpha = 0.12f)
-            isBack -> Mocha.PanelRaised.copy(alpha = 0.68f)
-            else -> Color.Transparent
-        },
-        label = "toolTabContainer"
-    )
-    val borderColor by animateColorAsState(
+    val itemShape = RoundedCornerShape(18.dp)
+    val iconShape = CircleShape
+    val iconBoxSize = if (compact) 36.dp else 38.dp
+    val iconSize = if (compact) 18.dp else 20.dp
+    val labelSlotHeight = if (compact) 24.dp else 26.dp
+    val itemHeight = if (compact) 66.dp else 70.dp
+    val itemBorderColor by animateColorAsState(
         targetValue = when {
             isActive && !isBack -> Mocha.Mauve.copy(alpha = 0.22f)
-            isBack -> Mocha.CardStroke.copy(alpha = 0.8f)
-            else -> Color.Transparent
+            isBack -> Mocha.CardStroke.copy(alpha = 0.46f)
+            else -> Mocha.CardStroke.copy(alpha = 0.34f)
         },
-        label = "toolTabBorder"
+        label = "toolTabItemBorder"
+    )
+    val itemContainerColor by animateColorAsState(
+        targetValue = when {
+            isActive && !isBack -> Mocha.Mauve.copy(alpha = 0.10f)
+            isBack -> Mocha.PanelRaised.copy(alpha = 0.42f)
+            else -> Mocha.PanelRaised.copy(alpha = 0.28f)
+        },
+        label = "toolTabItemContainer"
+    )
+    val iconBorderColor by animateColorAsState(
+        targetValue = when {
+            isActive && !isBack -> Mocha.Mauve.copy(alpha = 0.22f)
+            isBack -> Mocha.CardStroke.copy(alpha = 0.72f)
+            else -> Mocha.CardStroke.copy(alpha = 0.38f)
+        },
+        label = "toolTabIconBorder"
     )
     val iconContainerColor by animateColorAsState(
         targetValue = when {
@@ -458,44 +476,50 @@ private fun BottomTabBarItem(
 
     Column(
         modifier = modifier
-            .clip(shape)
+            .clip(itemShape)
             .selectable(
                 selected = isActive,
                 onClick = onClick,
                 role = Role.Tab
             )
-            .background(containerColor)
-            .border(BorderStroke(1.dp, borderColor), shape)
-            .heightIn(min = TouchTarget.comfortable)
-            .padding(vertical = if (compact) 6.dp else 8.dp, horizontal = 4.dp),
+            .height(itemHeight)
+            .background(itemContainerColor)
+            .border(BorderStroke(1.dp, itemBorderColor), itemShape)
+            .padding(vertical = 4.dp, horizontal = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
             modifier = Modifier
-                .size(if (compact) 34.dp else 36.dp)
-                .clip(CircleShape)
-                .background(iconContainerColor),
+                .size(iconBoxSize)
+                .clip(iconShape)
+                .background(iconContainerColor)
+                .border(BorderStroke(1.dp, iconBorderColor), iconShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 tab.icon,
                 contentDescription = tabLabel.ifEmpty { tab.id },
                 tint = iconTint,
-                modifier = Modifier.size(if (compact) 18.dp else 20.dp)
+                modifier = Modifier.size(iconSize)
             )
         }
 
-        if (tabLabel.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = tabLabel,
-                fontSize = if (compact) 9.sp else 10.sp,
-                color = labelColor,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                lineHeight = if (compact) 11.sp else 12.sp,
-                overflow = TextOverflow.Ellipsis
-            )
+        Spacer(modifier = Modifier.height(4.dp))
+        Box(
+            modifier = Modifier.height(labelSlotHeight),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            if (tabLabel.isNotEmpty()) {
+                Text(
+                    text = tabLabel,
+                    fontSize = if (compact) 9.sp else 10.sp,
+                    color = labelColor,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    lineHeight = if (compact) 11.sp else 12.sp,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }
@@ -508,6 +532,12 @@ private fun SubMenuGrid(
     disabledIds: Set<String> = emptySet()
 ) {
     val itemsPerRow = 5
+    val preferredTileWidth = 76.dp
+    val tileHeight = 84.dp
+    val tileShape = RoundedCornerShape(18.dp)
+    val iconBoxSize = 36.dp
+    val iconSize = 20.dp
+    val labelSlotHeight = 30.dp
     val rows = items.chunked(itemsPerRow)
 
     Surface(
@@ -530,68 +560,80 @@ private fun SubMenuGrid(
                     .background(Mocha.Surface2.copy(alpha = 0.8f))
             )
             Spacer(modifier = Modifier.height(14.dp))
-            rows.forEach { rowItems ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    rowItems.forEach { item ->
-                        val isDisabled = item.id in disabledIds
-                        val itemAccent = if (isDisabled) Mocha.Overlay0 else Mocha.Mauve
-                        val itemShape = RoundedCornerShape(18.dp)
-                        Column(
-                            modifier = Modifier
-                                .clip(itemShape)
-                                .clickable(enabled = !isDisabled) { onItemSelected(item.id) }
-                                .background(
-                                    Brush.verticalGradient(
-                                        listOf(
-                                            itemAccent.copy(alpha = if (isDisabled) 0.05f else 0.12f),
-                                            Mocha.PanelHighest
-                                        )
-                                    )
-                                )
-                                .border(
-                                    BorderStroke(
-                                        1.dp,
-                                        if (isDisabled) Mocha.CardStroke.copy(alpha = 0.6f) else itemAccent.copy(alpha = 0.18f)
-                                    ),
-                                    itemShape
-                                )
-                                .padding(horizontal = 8.dp, vertical = 10.dp)
-                                .width(60.dp)
-                                .alpha(if (isDisabled) 0.45f else 1f),
-                            horizontalAlignment = Alignment.CenterHorizontally
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val tileWidth = minOf(preferredTileWidth, maxWidth / itemsPerRow)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    rows.forEach { rowItems ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            val itemLabel = stringResource(item.labelRes)
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(itemAccent.copy(alpha = if (isDisabled) 0.10f else 0.16f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    item.icon,
-                                    contentDescription = itemLabel,
-                                    tint = if (isDisabled) Mocha.Subtext0 else itemAccent,
-                                    modifier = Modifier.size(20.dp)
-                                )
+                            rowItems.forEach { item ->
+                                val isDisabled = item.id in disabledIds
+                                val itemAccent = if (isDisabled) Mocha.Overlay0 else Mocha.Mauve
+                                Column(
+                                    modifier = Modifier
+                                        .size(width = tileWidth, height = tileHeight)
+                                        .clip(tileShape)
+                                        .clickable(enabled = !isDisabled) { onItemSelected(item.id) }
+                                        .background(
+                                            Brush.verticalGradient(
+                                                listOf(
+                                                    itemAccent.copy(alpha = if (isDisabled) 0.05f else 0.12f),
+                                                    Mocha.PanelHighest
+                                                )
+                                            )
+                                        )
+                                        .border(
+                                            BorderStroke(
+                                                1.dp,
+                                                if (isDisabled) Mocha.CardStroke.copy(alpha = 0.6f) else itemAccent.copy(alpha = 0.18f)
+                                            ),
+                                            tileShape
+                                        )
+                                        .padding(horizontal = 8.dp, vertical = 8.dp)
+                                        .alpha(if (isDisabled) 0.45f else 1f),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    val itemLabel = stringResource(item.labelRes)
+                                    Box(
+                                        modifier = Modifier
+                                            .size(iconBoxSize)
+                                            .clip(CircleShape)
+                                            .background(itemAccent.copy(alpha = if (isDisabled) 0.10f else 0.16f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            item.icon,
+                                            contentDescription = itemLabel,
+                                            tint = if (isDisabled) Mocha.Subtext0 else itemAccent,
+                                            modifier = Modifier.size(iconSize)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(labelSlotHeight),
+                                        contentAlignment = Alignment.TopCenter
+                                    ) {
+                                        Text(
+                                            text = itemLabel,
+                                            fontSize = 10.sp,
+                                            color = Mocha.Subtext0,
+                                            textAlign = TextAlign.Center,
+                                            maxLines = 2,
+                                            lineHeight = 12.sp,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
                             }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = itemLabel,
-                                fontSize = 10.sp,
-                                color = Mocha.Subtext0,
-                                textAlign = TextAlign.Center,
-                                maxLines = 2,
-                                lineHeight = 12.sp
-                            )
+                            // Fill empty slots so items do not stretch.
+                            repeat(itemsPerRow - rowItems.size) {
+                                Spacer(modifier = Modifier.width(tileWidth))
+                            }
                         }
-                    }
-                    // Fill empty slots so items don't stretch
-                    repeat(itemsPerRow - rowItems.size) {
-                        Spacer(modifier = Modifier.width(72.dp))
                     }
                 }
             }
@@ -814,6 +856,11 @@ fun EffectSlider(
     onValueChange: (Float) -> Unit
 ) {
     var isDragging by remember { mutableStateOf(false) }
+    val rawMin = if (min.isFinite()) min else 0f
+    val rawMax = if (max.isFinite()) max else rawMin + 1f
+    val rangeStart = minOf(rawMin, rawMax)
+    val rangeEnd = maxOf(rawMin, rawMax).let { if (it > rangeStart) it else rangeStart + 1f }
+    val safeValue = if (value.isFinite()) value.coerceIn(rangeStart, rangeEnd) else rangeStart
     Surface(
         color = Mocha.PanelHighest.copy(alpha = 0.92f),
         shape = RoundedCornerShape(18.dp),
@@ -831,23 +878,23 @@ fun EffectSlider(
                     style = MaterialTheme.typography.labelLarge
                 )
                 Text(
-                    text = formatEffectValue(value, min, max),
+                    text = formatEffectValue(safeValue, rangeStart, rangeEnd),
                     color = Mocha.Rosewater,
                     style = MaterialTheme.typography.labelLarge
                 )
             }
             Spacer(modifier = Modifier.height(6.dp))
             Slider(
-                value = value,
+                value = safeValue,
                 onValueChange = {
                     if (!isDragging) {
                         isDragging = true
                         onDragStarted()
                     }
-                    onValueChange(it)
+                    onValueChange(if (it.isFinite()) it.coerceIn(rangeStart, rangeEnd) else safeValue)
                 },
                 onValueChangeFinished = { isDragging = false; onDragEnded() },
-                valueRange = min..max,
+                valueRange = rangeStart..rangeEnd,
                 colors = SliderDefaults.colors(
                     thumbColor = Mocha.Rosewater,
                     activeTrackColor = Mocha.Mauve,
@@ -1557,11 +1604,12 @@ private fun aspectUseCaseRes(ratio: AspectRatio): Int = when (ratio) {
 }
 
 private fun formatEffectValue(value: Float, min: Float, max: Float): String {
-    val span = max - min
+    val safeValue = if (value.isFinite()) value else min
+    val span = (max - min).takeIf { it.isFinite() } ?: 0f
     return when {
-        span <= 2f -> String.format(Locale.US, "%.2f", value)
-        span <= 20f -> String.format(Locale.US, "%.1f", value)
-        else -> value.toInt().toString()
+        span <= 2f -> String.format(Locale.US, "%.2f", safeValue)
+        span <= 20f -> String.format(Locale.US, "%.1f", safeValue)
+        else -> safeValue.toInt().toString()
     }
 }
 

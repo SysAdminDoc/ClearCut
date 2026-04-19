@@ -13,9 +13,9 @@ object SubtitleExporter {
     fun export(captions: List<Caption>, format: SubtitleFormat, outputFile: File): Boolean {
         if (captions.isEmpty()) return false
 
-        // Filter out invalid captions (negative times, zero/negative duration)
+        // Filter out invalid captions (negative times, zero/negative duration, blank text)
         val sorted = captions
-            .filter { it.startTimeMs >= 0 && it.endTimeMs > it.startTimeMs }
+            .filter { it.startTimeMs >= 0 && it.endTimeMs > it.startTimeMs && it.text.isNotBlank() }
             .sortedBy { it.startTimeMs }
         if (sorted.isEmpty()) return false
         val content = when (format) {
@@ -25,7 +25,7 @@ object SubtitleExporter {
         }
 
         return try {
-            outputFile.writeText(content, Charsets.UTF_8)
+            writeUtf8TextAtomically(outputFile, content)
             true
         } catch (e: Exception) {
             Log.e("SubtitleExporter", "Export failed", e)
@@ -38,7 +38,7 @@ object SubtitleExporter {
             captions.forEachIndexed { index, caption ->
                 appendLine("${index + 1}")
                 appendLine("${formatSrtTime(caption.startTimeMs)} --> ${formatSrtTime(caption.endTimeMs)}")
-                appendLine(caption.text)
+                appendLine(sanitizeSrtText(caption.text))
                 appendLine()
             }
         }
@@ -55,11 +55,11 @@ object SubtitleExporter {
                 // Word-level cues if available
                 if (caption.words.isNotEmpty()) {
                     val wordText = caption.words.joinToString(" ") { word ->
-                        "<${formatVttTime(word.startTimeMs)}><c>${word.text}</c>"
+                        "<${formatVttTime(word.startTimeMs)}><c>${escapeVttText(word.text)}</c>"
                     }
                     appendLine(wordText)
                 } else {
-                    appendLine(caption.text)
+                    appendLine(escapeVttText(caption.text))
                 }
                 appendLine()
             }
@@ -86,10 +86,38 @@ object SubtitleExporter {
             captions.forEach { caption ->
                 val start = formatAssTime(caption.startTimeMs)
                 val end = formatAssTime(caption.endTimeMs)
-                val text = caption.text.replace("\n", "\\N")
+                val text = escapeAssText(caption.text)
                 appendLine("Dialogue: 0,$start,$end,Default,,0,0,0,,$text")
             }
         }
+    }
+
+    private fun sanitizeSrtText(raw: String): String {
+        return raw
+            .replace("\r\n", "\n")
+            .replace('\r', '\n')
+            .lines()
+            .joinToString("\n") { line -> line.replace("-->", "->") }
+    }
+
+    private fun escapeVttText(raw: String): String {
+        return raw
+            .replace("\r\n", "\n")
+            .replace('\r', '\n')
+            .replace("-->", "->")
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+    }
+
+    private fun escapeAssText(raw: String): String {
+        return raw
+            .replace("\\", "\\\\")
+            .replace("{", "\\{")
+            .replace("}", "\\}")
+            .replace("\r\n", "\n")
+            .replace('\r', '\n')
+            .replace("\n", "\\N")
     }
 
     private fun formatSrtTime(ms: Long): String {

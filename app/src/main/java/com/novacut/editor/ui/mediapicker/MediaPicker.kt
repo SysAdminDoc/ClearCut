@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
@@ -35,6 +36,8 @@ import com.novacut.editor.ui.editor.PremiumPanelPill
 import com.novacut.editor.ui.editor.PremiumSnackbarHost
 import com.novacut.editor.ui.editor.ToastSeverity
 import com.novacut.editor.ui.theme.Mocha
+import com.novacut.editor.ui.theme.Radius
+import com.novacut.editor.ui.theme.TouchTarget
 import java.io.File
 import kotlinx.coroutines.delay
 
@@ -302,14 +305,16 @@ fun MediaPickerSheet(
                         videoPickerLauncher.launch(arrayOf("video/*", "image/*"))
                     }
                 },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = TouchTarget.minimum),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Mauve),
                 border = BorderStroke(1.dp, Mocha.CardStrokeStrong),
-                shape = RoundedCornerShape(18.dp)
+                shape = RoundedCornerShape(Radius.lg)
             ) {
                 Icon(
                     Icons.Default.LibraryAdd,
-                    contentDescription = stringResource(R.string.cd_library_add),
+                    contentDescription = null,
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -343,12 +348,14 @@ fun MediaPickerSheet(
                         cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                     }
                 },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = TouchTarget.minimum),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Red),
                 border = BorderStroke(1.dp, Mocha.CardStrokeStrong),
-                shape = RoundedCornerShape(18.dp)
+                shape = RoundedCornerShape(Radius.lg)
             ) {
-                Icon(Icons.Default.CameraAlt, contentDescription = stringResource(R.string.cd_camera), modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(stringResource(R.string.media_picker_record_video), style = MaterialTheme.typography.labelLarge)
             }
@@ -446,7 +453,7 @@ private fun MediaSourceActionCard(
             containerColor = Mocha.PanelHighest
         ),
         border = BorderStroke(1.dp, color.copy(alpha = 0.18f)),
-        shape = RoundedCornerShape(20.dp)
+        shape = RoundedCornerShape(Radius.xl)
     ) {
         Box(
             modifier = Modifier
@@ -466,13 +473,13 @@ private fun MediaSourceActionCard(
                 Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .clip(RoundedCornerShape(14.dp))
+                        .clip(RoundedCornerShape(Radius.md))
                         .background(color.copy(alpha = 0.16f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         icon,
-                        contentDescription = label,
+                        contentDescription = null,
                         tint = color,
                         modifier = Modifier.size(22.dp)
                     )
@@ -482,17 +489,25 @@ private fun MediaSourceActionCard(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    Text(label, color = Mocha.Text, style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        label,
+                        color = Mocha.Text,
+                        style = MaterialTheme.typography.titleSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                     Text(
                         text = description,
                         color = Mocha.Subtext0,
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
                 Icon(
                     imageVector = Icons.Default.ChevronRight,
-                    contentDescription = label,
+                    contentDescription = null,
                     tint = Mocha.Subtext0,
                     modifier = Modifier.size(18.dp)
                 )

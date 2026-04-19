@@ -35,8 +35,9 @@ class EdlExporter @Inject constructor(
         frameRate: Int = 30
     ): File? = withContext(Dispatchers.IO) {
         try {
+            val safeFrameRate = frameRate.coerceIn(1, 240)
             val sb = StringBuilder()
-            sb.appendLine("TITLE: $projectName")
+            sb.appendLine("TITLE: ${edlSafeText(projectName, fallback = "NovaCut Project")}")
             sb.appendLine("FCM: NON-DROP FRAME")
             sb.appendLine()
 
@@ -53,14 +54,16 @@ class EdlExporter @Inject constructor(
                     ?.take(8)?.uppercase(Locale.ROOT)?.ifEmpty { "AX" }
                     ?.padEnd(8) ?: "AX      "
 
-                val srcIn = msToTimecode(clip.trimStartMs, frameRate)
-                val srcOut = msToTimecode(clip.trimEndMs, frameRate)
-                val recIn = msToTimecode(clip.timelineStartMs, frameRate)
-                val recOut = msToTimecode(clip.timelineEndMs, frameRate)
+                val srcIn = msToTimecode(clip.trimStartMs, safeFrameRate)
+                val srcOut = msToTimecode(clip.trimEndMs, safeFrameRate)
+                val recIn = msToTimecode(clip.timelineStartMs, safeFrameRate)
+                val recOut = msToTimecode(clip.timelineEndMs, safeFrameRate)
 
                 // Transition
                 val transition = if (clip.transition != null) {
-                    val frames = (clip.transition.durationMs * frameRate / 1000).toInt()
+                    val frames = (clip.transition.durationMs.toDouble() * safeFrameRate / 1000.0)
+                        .toInt()
+                        .coerceAtLeast(0)
                     "D ${String.format(exportLocale, "%03d", frames)}"
                 } else {
                     "C"
@@ -71,8 +74,12 @@ class EdlExporter @Inject constructor(
                 )
 
                 // Speed effect
-                if (clip.speed != 1.0f) {
-                    val effectiveFps = frameRate * clip.speed
+                val clipSpeed = safeEdlSpeed(
+                    clip.speedCurve?.averageSpeed((clip.trimEndMs - clip.trimStartMs).coerceAtLeast(1L))
+                        ?: clip.speed
+                )
+                if (kotlin.math.abs(clipSpeed - 1.0f) > 0.001f) {
+                    val effectiveFps = safeFrameRate * clipSpeed
                     sb.appendLine(
                         "M2   $reelName  ${String.format(exportLocale, "%.1f", effectiveFps)}  $srcIn"
                     )
@@ -80,22 +87,22 @@ class EdlExporter @Inject constructor(
 
                 // Source file comment
                 sb.appendLine(
-                    "* FROM CLIP NAME: ${clip.sourceUri.lastPathSegment ?: "unknown"}"
+                    "* FROM CLIP NAME: ${edlSafeText(clip.sourceUri.lastPathSegment ?: "unknown", fallback = "unknown")}"
                 )
 
                 // Effects as comments
                 for (effect in clip.effects.filter { it.enabled }) {
-                    sb.appendLine("* EFFECT NAME: ${effect.type.displayName}")
+                    sb.appendLine("* EFFECT NAME: ${edlSafeText(effect.type.displayName, fallback = "Effect")}")
                 }
 
                 sb.appendLine()
             }
 
-            val outputDir = File(context.getExternalFilesDir(null), "exports")
+            val outputDir = File(context.getExternalFilesDir(null) ?: context.filesDir, "exports")
             outputDir.mkdirs()
             val sanitized = sanitizeFileName(projectName, fallback = "NovaCut", maxLength = 50)
             val file = File(outputDir, "${sanitized}.edl")
-            file.writeText(sb.toString(), Charsets.UTF_8)
+            writeUtf8TextAtomically(file, sb.toString())
             Log.d(TAG, "EDL exported: ${file.absolutePath}")
             file
         } catch (e: Exception) {
@@ -112,5 +119,17 @@ class EdlExporter @Inject constructor(
         val minutes = ((totalSeconds / 60) % 60).toInt()
         val hours = (totalSeconds / 3600).toInt()
         return String.format(Locale.US, "%02d:%02d:%02d:%02d", hours, minutes, seconds, frames)
+    }
+
+    private fun safeEdlSpeed(speed: Float): Float {
+        return if (speed.isFinite() && speed > 0f) speed.coerceIn(0.01f, 100f) else 1f
+    }
+
+    private fun edlSafeText(value: String, fallback: String): String {
+        return value
+            .replace(Regex("[\\r\\n\\t]+"), " ")
+            .trim()
+            .ifBlank { fallback }
+            .take(120)
     }
 }

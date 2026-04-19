@@ -49,7 +49,7 @@ class EffectShareEngine @Inject constructor(
                         put("type", effect.type.name)
                         put("enabled", effect.enabled)
                         val params = JSONObject()
-                        effect.params.forEach { (k, v) -> params.put(k, v.toDouble()) }
+                        effect.params.forEach { (k, v) -> params.putSafeFloat(k, v) }
                         put("params", params)
                     })
                 }
@@ -58,20 +58,20 @@ class EffectShareEngine @Inject constructor(
                 // Color grade
                 if (colorGrade != null && colorGrade.enabled) {
                     put("colorGrade", JSONObject().apply {
-                        put("liftR", colorGrade.liftR.toDouble())
-                        put("liftG", colorGrade.liftG.toDouble())
-                        put("liftB", colorGrade.liftB.toDouble())
-                        put("gammaR", colorGrade.gammaR.toDouble())
-                        put("gammaG", colorGrade.gammaG.toDouble())
-                        put("gammaB", colorGrade.gammaB.toDouble())
-                        put("gainR", colorGrade.gainR.toDouble())
-                        put("gainG", colorGrade.gainG.toDouble())
-                        put("gainB", colorGrade.gainB.toDouble())
-                        put("offsetR", colorGrade.offsetR.toDouble())
-                        put("offsetG", colorGrade.offsetG.toDouble())
-                        put("offsetB", colorGrade.offsetB.toDouble())
+                        putSafeFloat("liftR", colorGrade.liftR)
+                        putSafeFloat("liftG", colorGrade.liftG)
+                        putSafeFloat("liftB", colorGrade.liftB)
+                        putSafeFloat("gammaR", colorGrade.gammaR, default = 1f)
+                        putSafeFloat("gammaG", colorGrade.gammaG, default = 1f)
+                        putSafeFloat("gammaB", colorGrade.gammaB, default = 1f)
+                        putSafeFloat("gainR", colorGrade.gainR, default = 1f)
+                        putSafeFloat("gainG", colorGrade.gainG, default = 1f)
+                        putSafeFloat("gainB", colorGrade.gainB, default = 1f)
+                        putSafeFloat("offsetR", colorGrade.offsetR)
+                        putSafeFloat("offsetG", colorGrade.offsetG)
+                        putSafeFloat("offsetB", colorGrade.offsetB)
                         colorGrade.lutPath?.let { put("lutFileName", java.io.File(it).name) }
-                        put("lutIntensity", colorGrade.lutIntensity.toDouble())
+                        putSafeFloat("lutIntensity", colorGrade.lutIntensity, default = 1f)
                     })
                 }
 
@@ -83,7 +83,7 @@ class EffectShareEngine @Inject constructor(
                             put("type", ae.type.name)
                             put("enabled", ae.enabled)
                             val params = JSONObject()
-                            ae.params.forEach { (k, v) -> params.put(k, v.toDouble()) }
+                            ae.params.forEach { (k, v) -> params.putSafeFloat(k, v) }
                             put("params", params)
                         })
                     }
@@ -93,7 +93,7 @@ class EffectShareEngine @Inject constructor(
 
             val sanitized = sanitizeFileName(name, fallback = "effects", maxLength = 50)
             val file = File(shareDir, "${sanitized}_${System.currentTimeMillis()}.ncfx")
-            file.writeText(json.toString(2), Charsets.UTF_8)
+            writeUtf8TextAtomically(file, json.toString(2))
             file
         } catch (e: Exception) {
             Log.e("EffectShareEngine", "Export effects failed", e)
@@ -146,12 +146,14 @@ class EffectShareEngine @Inject constructor(
             val effectsArr = json.optJSONArray("effects")
             if (effectsArr != null) {
                 for (i in 0 until effectsArr.length()) {
-                    val eo = effectsArr.getJSONObject(i)
+                    val eo = effectsArr.optJSONObject(i) ?: continue
                     val type = try { EffectType.valueOf(eo.getString("type")) } catch (e: Exception) { Log.w("EffectShareEngine", "Unknown effect type in JSON", e); continue }
                     val params = mutableMapOf<String, Float>()
                     val po = eo.optJSONObject("params")
                     if (po != null) {
-                        po.keys().forEach { k -> params[k] = po.getDouble(k).toFloat() }
+                        po.keys().forEach { k ->
+                            params[k] = safeFloat(po.optDouble(k, 0.0), default = 0f)
+                        }
                     }
                     effects.add(Effect(type = type, enabled = eo.optBoolean("enabled", true), params = params))
                 }
@@ -163,24 +165,24 @@ class EffectShareEngine @Inject constructor(
             if (cg != null) {
                 colorGrade = ColorGrade(
                     enabled = true,
-                    liftR = cg.optDouble("liftR", 0.0).toFloat(),
-                    liftG = cg.optDouble("liftG", 0.0).toFloat(),
-                    liftB = cg.optDouble("liftB", 0.0).toFloat(),
-                    gammaR = cg.optDouble("gammaR", 1.0).toFloat(),
-                    gammaG = cg.optDouble("gammaG", 1.0).toFloat(),
-                    gammaB = cg.optDouble("gammaB", 1.0).toFloat(),
-                    gainR = cg.optDouble("gainR", 1.0).toFloat(),
-                    gainG = cg.optDouble("gainG", 1.0).toFloat(),
-                    gainB = cg.optDouble("gainB", 1.0).toFloat(),
-                    offsetR = cg.optDouble("offsetR", 0.0).toFloat(),
-                    offsetG = cg.optDouble("offsetG", 0.0).toFloat(),
-                    offsetB = cg.optDouble("offsetB", 0.0).toFloat(),
+                    liftR = safeFloat(cg.optDouble("liftR", 0.0), default = 0f),
+                    liftG = safeFloat(cg.optDouble("liftG", 0.0), default = 0f),
+                    liftB = safeFloat(cg.optDouble("liftB", 0.0), default = 0f),
+                    gammaR = safeFloat(cg.optDouble("gammaR", 1.0), default = 1f),
+                    gammaG = safeFloat(cg.optDouble("gammaG", 1.0), default = 1f),
+                    gammaB = safeFloat(cg.optDouble("gammaB", 1.0), default = 1f),
+                    gainR = safeFloat(cg.optDouble("gainR", 1.0), default = 1f),
+                    gainG = safeFloat(cg.optDouble("gainG", 1.0), default = 1f),
+                    gainB = safeFloat(cg.optDouble("gainB", 1.0), default = 1f),
+                    offsetR = safeFloat(cg.optDouble("offsetR", 0.0), default = 0f),
+                    offsetG = safeFloat(cg.optDouble("offsetG", 0.0), default = 0f),
+                    offsetB = safeFloat(cg.optDouble("offsetB", 0.0), default = 0f),
                     lutPath = cg.optString("lutFileName", "")
                         .ifEmpty { cg.optString("lutPath", "") }
                         .ifEmpty { null }
                         ?.let(::normalizeImportedLutPath)
                         ?.absolutePath,
-                    lutIntensity = cg.optDouble("lutIntensity", 1.0).toFloat()
+                    lutIntensity = safeFloat(cg.optDouble("lutIntensity", 1.0), default = 1f).coerceIn(0f, 1f)
                 )
             }
 
@@ -189,12 +191,14 @@ class EffectShareEngine @Inject constructor(
             val audioArr = json.optJSONArray("audioEffects")
             if (audioArr != null) {
                 for (i in 0 until audioArr.length()) {
-                    val ao = audioArr.getJSONObject(i)
+                    val ao = audioArr.optJSONObject(i) ?: continue
                     val type = try { AudioEffectType.valueOf(ao.getString("type")) } catch (e: Exception) { Log.w("EffectShareEngine", "Unknown audio effect type in JSON", e); continue }
                     val params = mutableMapOf<String, Float>()
                     val po = ao.optJSONObject("params")
                     if (po != null) {
-                        po.keys().forEach { k -> params[k] = po.getDouble(k).toFloat() }
+                        po.keys().forEach { k ->
+                            params[k] = safeFloat(po.optDouble(k, 0.0), default = 0f)
+                        }
                     }
                     audioEffects.add(AudioEffect(type = type, enabled = ao.optBoolean("enabled", true), params = params))
                 }
@@ -217,7 +221,13 @@ class EffectShareEngine @Inject constructor(
     /**
      * Delete a saved effects file.
      */
-    fun deleteSavedEffects(file: File): Boolean = file.delete()
+    fun deleteSavedEffects(file: File): Boolean {
+        val canonicalShareDir = runCatching { shareDir.canonicalFile }.getOrNull() ?: return false
+        val canonicalFile = runCatching { file.canonicalFile }.getOrNull() ?: return false
+        if (!canonicalFile.toPath().startsWith(canonicalShareDir.toPath())) return false
+        if (canonicalFile.extension != "ncfx") return false
+        return canonicalFile.delete()
+    }
 
     private fun normalizeImportedLutPath(rawPath: String): File? {
         val safeName = sanitizeFileNamePreservingExtension(
@@ -226,6 +236,16 @@ class EffectShareEngine @Inject constructor(
             maxLength = 80
         )
         return safeName.takeIf { it.contains('.') }?.let { File(File(context.filesDir, "luts"), it) }
+    }
+
+    private fun safeFloat(value: Double, default: Float): Float {
+        val asFloat = value.toFloat()
+        return if (asFloat.isFinite()) asFloat else default
+    }
+
+    private fun JSONObject.putSafeFloat(name: String, value: Float, default: Float = 0f): JSONObject {
+        val fallback = if (default.isFinite()) default else 0f
+        return put(name, (if (value.isFinite()) value else fallback).toDouble())
     }
 }
 

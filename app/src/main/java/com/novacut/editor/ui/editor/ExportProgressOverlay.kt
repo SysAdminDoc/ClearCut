@@ -25,6 +25,7 @@ import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.Motion
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
+import com.novacut.editor.ui.theme.TouchTarget
 import kotlinx.coroutines.delay
 
 /**
@@ -145,18 +146,18 @@ fun ExportProgressOverlay(
 
                 Surface(
                     color = Mocha.Red.copy(alpha = 0.12f),
-                    shape = CircleShape,
+                    shape = RoundedCornerShape(Radius.lg),
                     border = BorderStroke(1.dp, Mocha.Red.copy(alpha = 0.24f))
                 ) {
                     IconButton(
                         onClick = onCancel,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(TouchTarget.minimum)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = stringResource(R.string.cd_export_cancel),
                             tint = Mocha.Red,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }

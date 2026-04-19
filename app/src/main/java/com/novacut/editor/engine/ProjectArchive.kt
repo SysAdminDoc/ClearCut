@@ -60,10 +60,15 @@ object ProjectArchive {
                 processedFiles++
                 onProgress(processedFiles.toFloat() / totalFiles)
 
+                var writtenMediaBytes = 0L
                 archivedMedia.forEach { media ->
                     zip.putNextEntry(ZipEntry(media.entryName))
                     context.contentResolver.openInputStream(media.uri)?.use { input ->
-                        input.copyTo(zip, bufferSize = 8192)
+                        val remainingBytes = MAX_ARCHIVE_TOTAL_BYTES - writtenMediaBytes
+                        if (remainingBytes <= 0L) {
+                            throw IOException("Archive exceeds size limit")
+                        }
+                        writtenMediaBytes += copyWithLimit(input, zip, remainingBytes)
                     } ?: throw IOException("Cannot read media: ${media.uri}")
                     zip.closeEntry()
                     processedFiles++
@@ -101,6 +106,7 @@ object ProjectArchive {
             var mediaManifestJson: String? = null
             val extractedFiles = mutableMapOf<String, Uri>()
             val seenEntries = hashSetOf<String>()
+            val seenOutputPaths = hashSetOf<String>()
             var entryCount = 0
             var extractedBytes = 0L
 
@@ -126,6 +132,12 @@ object ProjectArchive {
                                 mediaManifestJson = readCurrentEntryText(zipInput, MAX_ARCHIVE_TEXT_ENTRY_BYTES)
                             }
                             else -> {
+                                if (!isSupportedMediaEntry(entry.name)) {
+                                    Log.w("ProjectArchive", "Skipping unsupported archive entry: ${entry.name}")
+                                    zipInput.closeEntry()
+                                    entry = zipInput.nextEntry
+                                    continue
+                                }
                                 val outFile = File(canonicalTargetDir, entry.name).canonicalFile
                                 // ZIP-slip guard — compare using NIO `Path.startsWith` rather
                                 // than string prefix on `.path`. The string check mishandles
@@ -140,6 +152,9 @@ object ProjectArchive {
                                     zipInput.closeEntry()
                                     entry = zipInput.nextEntry
                                     continue
+                                }
+                                if (!seenOutputPaths.add(outFile.path)) {
+                                    throw IOException("Archive maps multiple entries to the same file: ${entry.name}")
                                 }
                                 outFile.parentFile?.mkdirs()
                                 outFile.outputStream().use { out ->
@@ -269,6 +284,13 @@ object ProjectArchive {
         zip.putNextEntry(ZipEntry(entryName))
         zip.write(text.toByteArray(Charsets.UTF_8))
         zip.closeEntry()
+    }
+
+    private fun isSupportedMediaEntry(entryName: String): Boolean {
+        if (!entryName.startsWith("media/")) return false
+        if ('\\' in entryName) return false
+        if (entryName.endsWith('/')) return false
+        return entryName.substringAfter("media/").isNotBlank()
     }
 
     private fun readCurrentEntryText(zipInput: ZipInputStream, maxBytes: Long): String {

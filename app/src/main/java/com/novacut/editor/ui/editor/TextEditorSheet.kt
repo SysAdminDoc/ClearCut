@@ -40,7 +40,7 @@ fun TextEditorSheet(
     // rather than retaining stale state from the prior edit.
     val overlayKey = existingOverlay?.id ?: "__new__"
     var text by remember(overlayKey) { mutableStateOf(existingOverlay?.text ?: defaultText) }
-    var fontSize by remember(overlayKey) { mutableFloatStateOf(existingOverlay?.fontSize ?: 48f) }
+    var fontSize by remember(overlayKey) { mutableFloatStateOf(safeTextEditorFloat(existingOverlay?.fontSize ?: 48f, 48f, 12f, 120f)) }
     var bold by remember(overlayKey) { mutableStateOf(existingOverlay?.bold ?: false) }
     var italic by remember(overlayKey) { mutableStateOf(existingOverlay?.italic ?: false) }
     var alignment by remember(overlayKey) { mutableStateOf(existingOverlay?.alignment ?: TextAlignment.CENTER) }
@@ -48,18 +48,18 @@ fun TextEditorSheet(
     var animIn by remember(overlayKey) { mutableStateOf(existingOverlay?.animationIn ?: TextAnimation.FADE) }
     var animOut by remember(overlayKey) { mutableStateOf(existingOverlay?.animationOut ?: TextAnimation.FADE) }
     var fontFamily by remember(overlayKey) { mutableStateOf(existingOverlay?.fontFamily ?: "sans-serif") }
-    var duration by remember(overlayKey) { mutableFloatStateOf((existingOverlay?.let { it.endTimeMs - it.startTimeMs } ?: 3000L).toFloat()) }
-    var positionX by remember(overlayKey) { mutableFloatStateOf(existingOverlay?.positionX ?: 0.5f) }
-    var positionY by remember(overlayKey) { mutableFloatStateOf(existingOverlay?.positionY ?: 0.5f) }
-    var shadowOffsetX by remember(overlayKey) { mutableFloatStateOf(existingOverlay?.shadowOffsetX ?: 0f) }
-    var shadowOffsetY by remember(overlayKey) { mutableFloatStateOf(existingOverlay?.shadowOffsetY ?: 0f) }
-    var shadowBlur by remember(overlayKey) { mutableFloatStateOf(existingOverlay?.shadowBlur ?: 0f) }
+    var duration by remember(overlayKey) { mutableFloatStateOf(safeTextEditorFloat((existingOverlay?.let { it.endTimeMs - it.startTimeMs } ?: 3000L).toFloat(), 3000f, 500f, 10_000f)) }
+    var positionX by remember(overlayKey) { mutableFloatStateOf(safeTextEditorFloat(existingOverlay?.positionX ?: 0.5f, 0.5f, 0f, 1f)) }
+    var positionY by remember(overlayKey) { mutableFloatStateOf(safeTextEditorFloat(existingOverlay?.positionY ?: 0.5f, 0.5f, 0f, 1f)) }
+    var shadowOffsetX by remember(overlayKey) { mutableFloatStateOf(safeTextEditorFloat(existingOverlay?.shadowOffsetX ?: 0f, 0f, -10f, 10f)) }
+    var shadowOffsetY by remember(overlayKey) { mutableFloatStateOf(safeTextEditorFloat(existingOverlay?.shadowOffsetY ?: 0f, 0f, -10f, 10f)) }
+    var shadowBlur by remember(overlayKey) { mutableFloatStateOf(safeTextEditorFloat(existingOverlay?.shadowBlur ?: 0f, 0f, 0f, 20f)) }
     var shadowColor by remember(overlayKey) { mutableLongStateOf(existingOverlay?.shadowColor ?: 0x80000000) }
     var glowColor by remember(overlayKey) { mutableLongStateOf(existingOverlay?.glowColor ?: 0x00000000) }
-    var glowRadius by remember(overlayKey) { mutableFloatStateOf(existingOverlay?.glowRadius ?: 0f) }
-    var letterSpacing by remember(overlayKey) { mutableFloatStateOf(existingOverlay?.letterSpacing ?: 0f) }
-    var lineHeight by remember(overlayKey) { mutableFloatStateOf(existingOverlay?.lineHeight ?: 1.2f) }
-    var textRotation by remember(overlayKey) { mutableFloatStateOf(existingOverlay?.rotation ?: 0f) }
+    var glowRadius by remember(overlayKey) { mutableFloatStateOf(safeTextEditorFloat(existingOverlay?.glowRadius ?: 0f, 0f, 0f, 30f)) }
+    var letterSpacing by remember(overlayKey) { mutableFloatStateOf(safeTextEditorFloat(existingOverlay?.letterSpacing ?: 0f, 0f, -5f, 20f)) }
+    var lineHeight by remember(overlayKey) { mutableFloatStateOf(safeTextEditorFloat(existingOverlay?.lineHeight ?: 1.2f, 1.2f, 0.8f, 3f)) }
+    var textRotation by remember(overlayKey) { mutableFloatStateOf(safeTextEditorFloat(existingOverlay?.rotation ?: 0f, 0f, -180f, 180f)) }
 
     val fontFamilies = listOf(
         "sans-serif" to "Sans Serif",
@@ -98,10 +98,12 @@ fun TextEditorSheet(
         headerActions = {
             Button(
                 onClick = {
+                    val safeStartMs = (existingOverlay?.startTimeMs ?: playheadMs).coerceAtLeast(0L)
+                    val safeDurationMs = safeTextEditorFloat(duration, 3000f, 500f, 10_000f).toLong()
                     val overlay = TextOverlay(
                         id = existingOverlay?.id ?: java.util.UUID.randomUUID().toString(),
-                        text = text,
-                        fontSize = fontSize,
+                        text = text.trim(),
+                        fontSize = safeTextEditorFloat(fontSize, 48f, 12f, 120f),
                         fontFamily = fontFamily,
                         color = selectedColor,
                         bold = bold,
@@ -109,21 +111,21 @@ fun TextEditorSheet(
                         alignment = alignment,
                         strokeWidth = 0f,
                         strokeColor = 0xFF000000,
-                        startTimeMs = existingOverlay?.startTimeMs ?: playheadMs,
-                        endTimeMs = (existingOverlay?.startTimeMs ?: playheadMs) + duration.toLong(),
+                        startTimeMs = safeStartMs,
+                        endTimeMs = safeStartMs + safeDurationMs,
                         animationIn = animIn,
                         animationOut = animOut,
-                        positionX = positionX,
-                        positionY = positionY,
-                        rotation = textRotation,
+                        positionX = safeTextEditorFloat(positionX, 0.5f, 0f, 1f),
+                        positionY = safeTextEditorFloat(positionY, 0.5f, 0f, 1f),
+                        rotation = safeTextEditorFloat(textRotation, 0f, -180f, 180f),
                         shadowColor = shadowColor,
-                        shadowOffsetX = shadowOffsetX,
-                        shadowOffsetY = shadowOffsetY,
-                        shadowBlur = shadowBlur,
+                        shadowOffsetX = safeTextEditorFloat(shadowOffsetX, 0f, -10f, 10f),
+                        shadowOffsetY = safeTextEditorFloat(shadowOffsetY, 0f, -10f, 10f),
+                        shadowBlur = safeTextEditorFloat(shadowBlur, 0f, 0f, 20f),
                         glowColor = glowColor,
-                        glowRadius = glowRadius,
-                        letterSpacing = letterSpacing,
-                        lineHeight = lineHeight
+                        glowRadius = safeTextEditorFloat(glowRadius, 0f, 0f, 30f),
+                        letterSpacing = safeTextEditorFloat(letterSpacing, 0f, -5f, 20f),
+                        lineHeight = safeTextEditorFloat(lineHeight, 1.2f, 0.8f, 3f)
                     )
                     onSave(overlay)
                 },
@@ -410,4 +412,11 @@ private fun previewFontFamily(family: String): androidx.compose.ui.text.font.Fon
     "monospace" -> androidx.compose.ui.text.font.FontFamily.Monospace
     "cursive" -> androidx.compose.ui.text.font.FontFamily.Cursive
     else -> androidx.compose.ui.text.font.FontFamily.SansSerif
+}
+
+private fun safeTextEditorFloat(value: Float, fallback: Float, min: Float, max: Float): Float {
+    val rangeStart = minOf(min, max)
+    val rangeEnd = maxOf(min, max)
+    val safeFallback = if (fallback.isFinite()) fallback.coerceIn(rangeStart, rangeEnd) else rangeStart
+    return if (value.isFinite()) value.coerceIn(rangeStart, rangeEnd) else safeFallback
 }

@@ -94,6 +94,21 @@ enum class ClipLabel(val argb: Long, val displayName: String) {
     YELLOW(0xFFF9E2AF, "Yellow")
 }
 
+private const val MIN_PLAYBACK_SPEED = 0.01f
+
+private fun finitePositiveSpeed(value: Float, fallback: Float = 1f): Float {
+    val safeFallback = if (fallback.isFinite() && fallback > 0f) fallback else 1f
+    return if (value.isFinite() && value > 0f) {
+        value.coerceAtLeast(MIN_PLAYBACK_SPEED)
+    } else {
+        safeFallback.coerceAtLeast(MIN_PLAYBACK_SPEED)
+    }
+}
+
+private fun finiteFraction(value: Float, fallback: Float): Float {
+    return if (value.isFinite()) value.coerceIn(0f, 1f) else fallback.coerceIn(0f, 1f)
+}
+
 @Immutable
 data class Clip(
     val id: String = UUID.randomUUID().toString(),
@@ -159,23 +174,26 @@ data class Clip(
                 // so guard explicitly before the reciprocal — otherwise the entire duration
                 // goes to 0 silently and the clip disappears from the timeline.
                 val s = speedCurve.getSpeedAt(t, trimRange)
-                val safeS = if (s.isFinite()) s.coerceAtLeast(0.01f) else 1f
+                val safeS = finitePositiveSpeed(s)
                 sumReciprocal += 1f / safeS
             }
             if (sumReciprocal.isFinite() && sumReciprocal > 0f) {
-                (samples / sumReciprocal).coerceAtLeast(0.01f)
+                finitePositiveSpeed(samples / sumReciprocal)
             } else {
-                speed.coerceAtLeast(0.01f)
+                finitePositiveSpeed(speed)
             }
         } else {
-            speed.coerceAtLeast(0.01f)
+            finitePositiveSpeed(speed)
         }
         return (trimRange / effectiveSpeed).toLong()
     }
     val timelineEndMs: Long get() = timelineStartMs + durationMs
 
     fun getEffectiveSpeed(timeOffsetMs: Long): Float {
-        return speedCurve?.getSpeedAt(timeOffsetMs, trimEndMs - trimStartMs) ?: speed
+        return finitePositiveSpeed(
+            speedCurve?.getSpeedAt(timeOffsetMs, trimEndMs - trimStartMs) ?: speed,
+            fallback = speed
+        )
     }
 
     /**
@@ -199,7 +217,7 @@ data class Clip(
 
         val curve = speedCurve
         if (curve == null || curve.points.size < 2) {
-            val safeSpeed = speed.coerceAtLeast(0.01f)
+            val safeSpeed = finitePositiveSpeed(speed)
             val sourceDelta = (clamped.toDouble() * safeSpeed).toLong()
             return (trimStartMs + sourceDelta).coerceIn(trimStartMs, trimEndMs)
         }
@@ -215,7 +233,7 @@ data class Clip(
         for (i in 0 until steps) {
             val sMid = (i + 0.5) * stepSourceMs
             val rawSpeed = curve.getSpeedAt(sMid.toLong(), trimRange)
-            val safeSpeed = if (rawSpeed.isFinite()) rawSpeed.coerceAtLeast(0.01f) else 1f
+            val safeSpeed = finitePositiveSpeed(rawSpeed)
             val dtTimeline = stepSourceMs / safeSpeed
             if (accumulatedTimeline + dtTimeline >= target) {
                 // Linear-interpolate inside this step for sub-sample accuracy.
@@ -228,6 +246,40 @@ data class Clip(
             sourceCursor = (i + 1) * stepSourceMs
         }
         return (trimStartMs + sourceCursor.toLong()).coerceIn(trimStartMs, trimEndMs)
+    }
+
+    fun sourceTimeToTimelineOffsetMs(sourceTimeMs: Long, includeBoundaries: Boolean = true): Long? {
+        val duration = durationMs
+        if (duration <= 0L) return null
+        if (sourceTimeMs < trimStartMs || sourceTimeMs > trimEndMs) return null
+        if (!includeBoundaries && (sourceTimeMs <= trimStartMs || sourceTimeMs >= trimEndMs)) return null
+        if (sourceTimeMs == trimStartMs) return 0L.takeIf { includeBoundaries }
+        if (sourceTimeMs == trimEndMs) return duration.takeIf { includeBoundaries }
+
+        val lowerBound = if (includeBoundaries) 0L else 1L
+        val upperBound = if (includeBoundaries) duration else duration - 1L
+        if (upperBound < lowerBound) return null
+
+        val curve = speedCurve
+        if (curve == null || curve.points.size < 2) {
+            val offset = ((sourceTimeMs - trimStartMs).toDouble() / finitePositiveSpeed(speed)).toLong()
+            return offset.coerceIn(lowerBound, upperBound)
+        }
+
+        var low = lowerBound
+        var high = upperBound
+        var best: Long? = null
+        while (low <= high) {
+            val mid = low + (high - low) / 2L
+            val mappedSourceMs = timelineOffsetToSourceMs(mid)
+            if (mappedSourceMs < sourceTimeMs) {
+                low = mid + 1L
+            } else {
+                best = mid
+                high = mid - 1L
+            }
+        }
+        return (best ?: upperBound).coerceIn(lowerBound, upperBound)
     }
 }
 
@@ -263,10 +315,10 @@ data class SpeedCurve(
     )
 ) {
     fun getSpeedAt(timeOffsetMs: Long, clipDurationMs: Long): Float {
-        if (points.size < 2) return points.firstOrNull()?.speed ?: 1f
-        if (clipDurationMs <= 0L) return points.firstOrNull()?.speed ?: 1f
+        val sorted = normalizedPoints()
+        if (sorted.size < 2) return sorted.firstOrNull()?.speed ?: 1f
+        if (clipDurationMs <= 0L) return sorted.first().speed
         val t = (timeOffsetMs.toFloat() / clipDurationMs.toFloat()).coerceIn(0f, 1f)
-        val sorted = points.sortedBy { it.position }
 
         if (t <= sorted.first().position) return sorted.first().speed
         if (t >= sorted.last().position) return sorted.last().speed
@@ -278,12 +330,26 @@ data class SpeedCurve(
                 val denom = p1.position - p0.position
                 if (denom <= 0f) return p0.speed
                 val localT = (t - p0.position) / denom
-                return cubicBezierInterpolate(
-                    p0.speed, p0.handleOutY, p1.handleInY, p1.speed, localT
+                return finitePositiveSpeed(
+                    cubicBezierInterpolate(p0.speed, p0.handleOutY, p1.handleInY, p1.speed, localT),
+                    fallback = p0.speed
                 )
             }
         }
         return 1f
+    }
+
+    private fun normalizedPoints(): List<SpeedPoint> {
+        return points.mapNotNull { point ->
+            if (!point.position.isFinite()) return@mapNotNull null
+            val speed = finitePositiveSpeed(point.speed)
+            SpeedPoint(
+                position = point.position.coerceIn(0f, 1f),
+                speed = speed,
+                handleInY = finitePositiveSpeed(point.handleInY, speed),
+                handleOutY = finitePositiveSpeed(point.handleOutY, speed)
+            )
+        }.sortedBy { it.position }
     }
 
     /**
@@ -300,16 +366,17 @@ data class SpeedCurve(
      * guaranteed to have points at 0f and 1f.
      */
     fun restrictTo(startFraction: Float, endFraction: Float, clipDurationMs: Long = 1_000L): SpeedCurve {
-        val start = startFraction.coerceIn(0f, 1f)
-        val end = endFraction.coerceIn(start, 1f)
+        val safeDuration = clipDurationMs.coerceAtLeast(1L)
+        val start = finiteFraction(startFraction, 0f)
+        val end = finiteFraction(endFraction, 1f).coerceIn(start, 1f)
         val span = end - start
         if (span <= 1e-4f) {
-            val s = getSpeedAt((start * clipDurationMs).toLong(), clipDurationMs)
+            val s = getSpeedAt((start * safeDuration).toLong(), safeDuration)
             return SpeedCurve(listOf(SpeedPoint(0f, s), SpeedPoint(1f, s)))
         }
-        val sorted = points.sortedBy { it.position }
-        val startSpeed = getSpeedAt((start * clipDurationMs).toLong(), clipDurationMs)
-        val endSpeed = getSpeedAt((end * clipDurationMs).toLong(), clipDurationMs)
+        val sorted = normalizedPoints()
+        val startSpeed = getSpeedAt((start * safeDuration).toLong(), safeDuration)
+        val endSpeed = getSpeedAt((end * safeDuration).toLong(), safeDuration)
         val remapped = mutableListOf<SpeedPoint>()
         remapped += SpeedPoint(0f, startSpeed, handleInY = startSpeed, handleOutY = startSpeed)
         for (p in sorted) {
@@ -330,7 +397,7 @@ data class SpeedCurve(
         repeat(effectiveSamples + 1) { index ->
             val t = index.toFloat() / effectiveSamples.toFloat()
             val timeOffsetMs = (t * clipDurationMs).toLong().coerceIn(0L, clipDurationMs)
-            sum += getSpeedAt(timeOffsetMs, clipDurationMs).coerceAtLeast(0.01f)
+            sum += finitePositiveSpeed(getSpeedAt(timeOffsetMs, clipDurationMs))
         }
         return sum / (effectiveSamples + 1)
     }
@@ -339,21 +406,37 @@ data class SpeedCurve(
         fun cubicBezierInterpolate(
             p0: Float, c0: Float, c1: Float, p1: Float, t: Float
         ): Float {
-            val mt = 1f - t
-            return mt * mt * mt * p0 +
-                    3f * mt * mt * t * c0 +
-                    3f * mt * t * t * c1 +
-                    t * t * t * p1
+            val safeT = if (t.isFinite()) t.coerceIn(0f, 1f) else 0f
+            val safeP0 = finitePositiveSpeed(p0)
+            val safeC0 = finitePositiveSpeed(c0, safeP0)
+            val safeC1 = finitePositiveSpeed(c1, safeP0)
+            val safeP1 = finitePositiveSpeed(p1, safeP0)
+            val mt = 1f - safeT
+            return mt * mt * mt * safeP0 +
+                    3f * mt * mt * safeT * safeC0 +
+                    3f * mt * safeT * safeT * safeC1 +
+                    safeT * safeT * safeT * safeP1
         }
 
         fun constant(speed: Float) = SpeedCurve(
-            listOf(SpeedPoint(0f, speed), SpeedPoint(1f, speed))
+            listOf(
+                SpeedPoint(0f, finitePositiveSpeed(speed)),
+                SpeedPoint(1f, finitePositiveSpeed(speed))
+            )
         )
 
         fun rampUp(from: Float = 0.5f, to: Float = 2f) = SpeedCurve(
             listOf(
-                SpeedPoint(0f, from, handleOutY = from + (to - from) * 0.3f),
-                SpeedPoint(1f, to, handleInY = to - (to - from) * 0.3f)
+                SpeedPoint(
+                    0f,
+                    finitePositiveSpeed(from),
+                    handleOutY = finitePositiveSpeed(from + (to - from) * 0.3f, from)
+                ),
+                SpeedPoint(
+                    1f,
+                    finitePositiveSpeed(to),
+                    handleInY = finitePositiveSpeed(to - (to - from) * 0.3f, to)
+                )
             )
         )
 
@@ -361,11 +444,24 @@ data class SpeedCurve(
 
         fun pulse(normalSpeed: Float = 1f, peakSpeed: Float = 4f) = SpeedCurve(
             listOf(
-                SpeedPoint(0f, normalSpeed),
-                SpeedPoint(0.3f, normalSpeed, handleOutY = peakSpeed * 0.5f),
-                SpeedPoint(0.5f, peakSpeed, handleInY = peakSpeed * 0.7f, handleOutY = peakSpeed * 0.7f),
-                SpeedPoint(0.7f, normalSpeed, handleInY = peakSpeed * 0.5f),
-                SpeedPoint(1f, normalSpeed)
+                SpeedPoint(0f, finitePositiveSpeed(normalSpeed)),
+                SpeedPoint(
+                    0.3f,
+                    finitePositiveSpeed(normalSpeed),
+                    handleOutY = finitePositiveSpeed(peakSpeed * 0.5f, normalSpeed)
+                ),
+                SpeedPoint(
+                    0.5f,
+                    finitePositiveSpeed(peakSpeed),
+                    handleInY = finitePositiveSpeed(peakSpeed * 0.7f, peakSpeed),
+                    handleOutY = finitePositiveSpeed(peakSpeed * 0.7f, peakSpeed)
+                ),
+                SpeedPoint(
+                    0.7f,
+                    finitePositiveSpeed(normalSpeed),
+                    handleInY = finitePositiveSpeed(peakSpeed * 0.5f, normalSpeed)
+                ),
+                SpeedPoint(1f, finitePositiveSpeed(normalSpeed))
             )
         )
     }

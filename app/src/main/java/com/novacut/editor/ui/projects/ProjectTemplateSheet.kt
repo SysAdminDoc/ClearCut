@@ -28,6 +28,9 @@ import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.NovaCutChromeIconButton
 import com.novacut.editor.ui.theme.NovaCutMetricPill
 import com.novacut.editor.ui.theme.NovaCutSectionHeader
+import com.novacut.editor.ui.theme.Radius
+import com.novacut.editor.ui.theme.Spacing
+import com.novacut.editor.ui.theme.TouchTarget
 
 data class ProjectTemplateUI(
     val id: String,
@@ -121,16 +124,19 @@ fun ProjectTemplateSheet(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(Mocha.Panel, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-            .padding(horizontal = 16.dp, vertical = 14.dp)
+            .fillMaxHeight(0.92f)
+            .navigationBarsPadding()
+            .verticalScroll(rememberScrollState())
+            .background(Mocha.Panel, RoundedCornerShape(topStart = Radius.xxl, topEnd = Radius.xxl))
+            .padding(horizontal = Spacing.lg, vertical = 14.dp)
     ) {
         Box(
             modifier = Modifier
                 .align(Alignment.CenterHorizontally)
-                .width(44.dp)
-                .height(4.dp)
-                .clip(RoundedCornerShape(999.dp))
-                .background(Mocha.Surface2.copy(alpha = 0.8f))
+                .width(36.dp)
+                .height(3.dp)
+                .clip(RoundedCornerShape(Radius.pill))
+                .background(Mocha.Surface2.copy(alpha = 0.55f))
         )
 
         Spacer(Modifier.height(14.dp))
@@ -144,13 +150,17 @@ fun ProjectTemplateSheet(
                 Text(
                     stringResource(R.string.template_new_project),
                     color = Mocha.Text,
-                    style = MaterialTheme.typography.titleLarge
+                    style = MaterialTheme.typography.titleLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     stringResource(R.string.template_headline),
                     color = Mocha.Rosewater,
-                    style = MaterialTheme.typography.headlineMedium
+                    style = MaterialTheme.typography.headlineMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
             NovaCutChromeIconButton(
@@ -164,7 +174,9 @@ fun ProjectTemplateSheet(
         Text(
             stringResource(R.string.template_subtitle),
             color = Mocha.Subtext0,
-            style = MaterialTheme.typography.bodyMedium
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis
         )
 
         Spacer(Modifier.height(12.dp))
@@ -193,23 +205,25 @@ fun ProjectTemplateSheet(
             onClick = onImportTemplate,
             modifier = Modifier.fillMaxWidth(),
             color = Mocha.PanelHighest,
-            shape = RoundedCornerShape(22.dp),
+            shape = RoundedCornerShape(Radius.xl),
             border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStrokeStrong)
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+                modifier = Modifier
+                    .defaultMinSize(minHeight = 76.dp)
+                    .padding(horizontal = Spacing.lg, vertical = Spacing.lg),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
                     modifier = Modifier
                         .size(42.dp)
-                        .clip(RoundedCornerShape(14.dp))
+                        .clip(RoundedCornerShape(Radius.md))
                         .background(Mocha.Sapphire.copy(alpha = 0.14f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         Icons.Default.FileOpen,
-                        contentDescription = stringResource(R.string.cd_file_open),
+                        contentDescription = null,
                         tint = Mocha.Sapphire,
                         modifier = Modifier.size(20.dp)
                     )
@@ -221,13 +235,17 @@ fun ProjectTemplateSheet(
                     Text(
                         stringResource(R.string.template_import),
                         color = Mocha.Text,
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Spacer(Modifier.height(2.dp))
                     Text(
                         stringResource(R.string.template_import_description),
                         color = Mocha.Subtext0,
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -301,10 +319,10 @@ private fun UserTemplateCard(
 ) {
     Column(
         modifier = Modifier
-            .height(164.dp)
-            .clip(RoundedCornerShape(22.dp))
+            .height(176.dp)
+            .clip(RoundedCornerShape(Radius.xl))
             .background(Mocha.PanelHighest)
-            .border(1.dp, Mocha.CardStrokeStrong, RoundedCornerShape(22.dp))
+            .border(1.dp, Mocha.CardStrokeStrong, RoundedCornerShape(Radius.xl))
             .clickable(onClick = onClick)
     ) {
         Box(
@@ -320,7 +338,7 @@ private fun UserTemplateCard(
         ) {
             Icon(
                 Icons.Default.Bookmark,
-                template.name,
+                null,
                 tint = Mocha.Mauve,
                 modifier = Modifier.size(24.dp)
             )
@@ -390,9 +408,9 @@ private fun ProjectTemplateCard(
     Column(
         modifier = Modifier
             .height(184.dp)
-            .clip(RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(Radius.xl))
             .background(Mocha.PanelHighest)
-            .border(1.dp, Mocha.CardStrokeStrong, RoundedCornerShape(22.dp))
+            .border(1.dp, Mocha.CardStrokeStrong, RoundedCornerShape(Radius.xl))
             .clickable(onClick = onClick)
     ) {
         Box(
@@ -416,13 +434,13 @@ private fun ProjectTemplateCard(
                 Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .clip(RoundedCornerShape(14.dp))
+                        .clip(RoundedCornerShape(Radius.md))
                         .background(Color.Black.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         template.icon,
-                        stringResource(template.nameResId),
+                        null,
                         tint = template.accentColor,
                         modifier = Modifier.size(22.dp)
                     )
@@ -509,7 +527,7 @@ private fun EmptyTemplateStateCard() {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = Mocha.PanelHighest,
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(Radius.xl),
         border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStrokeStrong)
     ) {
         Column(
@@ -542,7 +560,7 @@ private fun TemplateActionButton(
         color = tint.copy(alpha = 0.12f),
         border = androidx.compose.foundation.BorderStroke(1.dp, tint.copy(alpha = 0.18f))
     ) {
-        IconButton(onClick = onClick, modifier = Modifier.size(34.dp)) {
+        IconButton(onClick = onClick, modifier = Modifier.size(TouchTarget.minimum)) {
             Icon(
                 imageVector = icon,
                 contentDescription = contentDescription,

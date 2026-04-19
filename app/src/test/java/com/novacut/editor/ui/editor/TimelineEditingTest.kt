@@ -2,10 +2,13 @@ package com.novacut.editor.ui.editor
 
 import android.net.FakeUri
 import com.novacut.editor.model.Clip
+import com.novacut.editor.model.SpeedCurve
 import com.novacut.editor.model.Track
 import com.novacut.editor.model.TrackType
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TimelineEditingTest {
@@ -101,6 +104,35 @@ class TimelineEditingTest {
     }
 
     @Test
+    fun `slide edit honors speed curve timing when extending previous clip`() {
+        val first = clip(
+            id = "a",
+            timelineStartMs = 0L,
+            trimStartMs = 0L,
+            trimEndMs = 1_000L,
+            sourceDurationMs = 2_000L,
+            speedCurve = SpeedCurve.constant(2f)
+        )
+        val second = clip(
+            id = "b",
+            timelineStartMs = first.timelineEndMs,
+            trimStartMs = 0L,
+            trimEndMs = 500L,
+            sourceDurationMs = 500L
+        )
+        val track = Track(type = TrackType.VIDEO, index = 0, clips = listOf(first, second))
+
+        val shiftedTrack = slideClipOnTrack(
+            track = track,
+            clipId = second.id,
+            newStartMs = 600L
+        )
+
+        assertWithin(1_200L, shiftedTrack.clips[0].trimEndMs, toleranceMs = 4L)
+        assertEquals(600L, shiftedTrack.clips[1].timelineStartMs)
+    }
+
+    @Test
     fun `preferred audio track skips overlapping lanes`() {
         val overlappingAudio = Track(
             type = TrackType.AUDIO,
@@ -151,12 +183,53 @@ class TimelineEditingTest {
         assertNull(audioTrackIndex)
     }
 
+    @Test
+    fun `merge predicate accepts clips that touch in source and timeline`() {
+        val first = clip(
+            id = "first",
+            timelineStartMs = 0L,
+            trimStartMs = 0L,
+            trimEndMs = 500L,
+            sourceDurationMs = 1_000L
+        )
+        val second = clip(
+            id = "second",
+            timelineStartMs = 500L,
+            trimStartMs = 500L,
+            trimEndMs = 1_000L,
+            sourceDurationMs = 1_000L
+        )
+
+        assertTrue(canMergeAdjacentClips(first, second))
+    }
+
+    @Test
+    fun `merge predicate rejects clips separated by a timeline gap`() {
+        val first = clip(
+            id = "first",
+            timelineStartMs = 0L,
+            trimStartMs = 0L,
+            trimEndMs = 500L,
+            sourceDurationMs = 1_000L
+        )
+        val second = clip(
+            id = "second",
+            timelineStartMs = 700L,
+            trimStartMs = 500L,
+            trimEndMs = 1_000L,
+            sourceDurationMs = 1_000L
+        )
+
+        assertFalse(canMergeAdjacentClips(first, second))
+    }
+
     private fun clip(
         id: String,
         timelineStartMs: Long,
         trimStartMs: Long,
         trimEndMs: Long,
-        sourceDurationMs: Long
+        sourceDurationMs: Long,
+        speedCurve: SpeedCurve? = null
     ): Clip {
         return Clip(
             id = id,
@@ -164,7 +237,15 @@ class TimelineEditingTest {
             sourceDurationMs = sourceDurationMs,
             timelineStartMs = timelineStartMs,
             trimStartMs = trimStartMs,
-            trimEndMs = trimEndMs
+            trimEndMs = trimEndMs,
+            speedCurve = speedCurve
+        )
+    }
+
+    private fun assertWithin(expected: Long, actual: Long, toleranceMs: Long) {
+        assertTrue(
+            "expected $actual to be within ${toleranceMs}ms of $expected",
+            kotlin.math.abs(actual - expected) <= toleranceMs
         )
     }
 }

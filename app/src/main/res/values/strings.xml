@@ -214,6 +214,7 @@
     <string name="settings_engine">Engine</string>
     <string name="settings_engine_value">Media3 Transformer 1.9.2</string>
     <string name="settings_ai_models_value">Whisper ONNX + MediaPipe</string>
+    <string name="settings_on">On</string>
     <string name="settings_off">Off</string>
 
     <!-- PreviewPanel -->
@@ -1519,7 +1520,9 @@
     <string name="timeline_track_more_options">Track options</string>
     <string name="timeline_track_make_smaller">Make track shorter</string>
     <string name="timeline_track_make_larger">Make track taller</string>
-    <string name="timeline_trim_mode_hint">TRIM MODE — Drag clip edges to adjust</string>
+    <string name="timeline_trim_mode_hint">Trim mode: drag edges to resize; drag the clip body to slip media.</string>
+    <string name="timeline_clip_content_description">%1$s, %2$s, starts at %3$s</string>
+    <string name="timeline_select_clip_action">Select clip</string>
 
     <!-- ColorGradingPanel -->
     <string name="color_wheel_lift">Lift</string>

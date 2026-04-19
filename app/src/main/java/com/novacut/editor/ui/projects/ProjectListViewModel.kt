@@ -13,6 +13,7 @@ import com.novacut.editor.engine.ProjectAutoSave
 import com.novacut.editor.engine.TemplateManager
 import com.novacut.editor.engine.UserTemplate
 import com.novacut.editor.engine.VideoEngine
+import com.novacut.editor.engine.deleteManagedMediaUri
 import com.novacut.editor.engine.importUriToManagedMedia
 import com.novacut.editor.engine.resolveMediaDisplayName
 import com.novacut.editor.engine.sanitizeFileName
@@ -365,7 +366,7 @@ class ProjectListViewModel @Inject constructor(
             }
             if (!importCheck.first || !importCheck.second) {
                 if (copiedForImport) {
-                    runCatching { importedUri.path?.let(::File)?.delete() }
+                    deleteManagedMediaUri(appContext, importedUri)
                 }
                 showToast("Couldn't import that video")
                 return@launch
@@ -413,7 +414,7 @@ class ProjectListViewModel @Inject constructor(
                 onCreated(project.id)
             } else {
                 if (copiedForImport) {
-                    runCatching { importedUri.path?.let(::File)?.delete() }
+                    deleteManagedMediaUri(appContext, importedUri)
                 }
                 showToast(appContext.getString(R.string.project_create_failed))
             }

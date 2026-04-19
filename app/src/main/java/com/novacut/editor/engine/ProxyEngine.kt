@@ -49,14 +49,41 @@ class ProxyEngine @Inject constructor(
         return digest.joinToString("") { "%02x".format(it) }.take(32)
     }
 
+    private fun proxyFileForKey(key: String): File = File(proxyDir, "proxy_$key.mp4")
+
+    private fun canonicalManagedProxyFile(file: File): File? {
+        val proxyRoot = runCatching { proxyDir.canonicalFile }.getOrNull() ?: return null
+        val canonicalFile = runCatching { file.canonicalFile }.getOrNull() ?: return null
+        return canonicalFile.takeIf {
+            it.parentFile == proxyRoot &&
+                it.name.startsWith("proxy_") &&
+                it.name.endsWith(".mp4")
+        }
+    }
+
+    fun deleteProxyUri(uri: Uri): Boolean {
+        if (uri.scheme != "file") return false
+        val file = uri.path?.let(::File) ?: return false
+        val managedFile = canonicalManagedProxyFile(file) ?: return false
+        proxyMap.entries.removeIf { it.value == uri }
+        return managedFile.isFile && managedFile.delete()
+    }
+
+    fun proxyFileLength(uri: Uri): Long {
+        if (uri.scheme != "file") return 0L
+        val file = uri.path?.let(::File) ?: return 0L
+        val managedFile = canonicalManagedProxyFile(file) ?: return 0L
+        return managedFile.takeIf { it.isFile }?.length() ?: 0L
+    }
+
     fun getProxyUri(sourceUri: Uri): Uri? {
         return proxyMap[keyFor(sourceUri)]
     }
 
     fun hasProxy(sourceUri: Uri): Boolean {
         val key = keyFor(sourceUri)
-        val file = File(proxyDir, "proxy_$key.mp4")
-        return file.exists().also { if (it) proxyMap[key] = Uri.fromFile(file) }
+        val file = proxyFileForKey(key)
+        return file.isFile.also { if (it) proxyMap[key] = Uri.fromFile(file) }
     }
 
     @androidx.annotation.OptIn(UnstableApi::class)
@@ -66,7 +93,7 @@ class ProxyEngine @Inject constructor(
         onProgress: (Float) -> Unit = {}
     ): Uri? = withContext(Dispatchers.Main) {
         val key = keyFor(sourceUri)
-        val outFile = File(proxyDir, "proxy_$key.mp4")
+        val outFile = proxyFileForKey(key)
 
         // Hold the per-key mutex across the existence check + transformer
         // start so concurrent callers for the same source serialise: the
@@ -99,13 +126,25 @@ class ProxyEngine @Inject constructor(
                 val transformer = Transformer.Builder(context)
                     .addListener(object : Transformer.Listener {
                         override fun onCompleted(composition: Composition, exportResult: androidx.media3.transformer.ExportResult) {
-                            proxyMap[key] = Uri.fromFile(outFile)
-                            cont.resume(Uri.fromFile(outFile))
+                            if (!cont.isActive) {
+                                outFile.delete()
+                                proxyMap.remove(key)
+                                return
+                            }
+                            if (outFile.isFile && outFile.length() > 0L) {
+                                val proxyUri = Uri.fromFile(outFile)
+                                proxyMap[key] = proxyUri
+                                cont.resume(proxyUri)
+                            } else {
+                                outFile.delete()
+                                cont.resume(null)
+                            }
                         }
                         override fun onError(composition: Composition, exportResult: androidx.media3.transformer.ExportResult, exportException: androidx.media3.transformer.ExportException) {
                             Log.e("ProxyEngine", "Proxy generation failed", exportException)
                             outFile.delete()
-                            cont.resume(null)
+                            proxyMap.remove(key)
+                            if (cont.isActive) cont.resume(null)
                         }
                     })
                     .build()
@@ -120,10 +159,12 @@ class ProxyEngine @Inject constructor(
                 cont.invokeOnCancellation {
                     transformer.cancel()
                     outFile.delete()
+                    proxyMap.remove(key)
                 }
             }
         } catch (e: Exception) {
             Log.e("ProxyEngine", "Proxy generation error", e)
+            proxyMap.remove(key)
             null
         } finally {
             // Always release the per-key mutex so the next caller (or a
@@ -135,11 +176,15 @@ class ProxyEngine @Inject constructor(
     }
 
     fun clearProxies() {
-        proxyDir.listFiles()?.forEach { it.delete() }
+        proxyDir.listFiles()?.forEach { file ->
+            canonicalManagedProxyFile(file)?.takeIf { it.isFile }?.delete()
+        }
         proxyMap.clear()
     }
 
     suspend fun getCacheSize(): Long = withContext(Dispatchers.IO) {
-        proxyDir.listFiles()?.sumOf { it.length() } ?: 0L
+        proxyDir.listFiles()?.sumOf { file ->
+            canonicalManagedProxyFile(file)?.takeIf { it.isFile }?.length() ?: 0L
+        } ?: 0L
     }
 }

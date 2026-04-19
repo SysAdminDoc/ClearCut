@@ -22,6 +22,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.zIndex
@@ -47,6 +49,8 @@ import com.novacut.editor.ui.export.BatchExportPanel
 import com.novacut.editor.ui.export.ExportSheet
 import com.novacut.editor.ui.mediapicker.MediaPickerSheet
 import com.novacut.editor.ui.theme.Mocha
+import com.novacut.editor.ui.theme.Radius
+import com.novacut.editor.ui.theme.TouchTarget
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -107,12 +111,34 @@ fun EditorScreen(
     // Radial menu state
     var showRadialMenu by remember { mutableStateOf(false) }
     var radialMenuPosition by remember { mutableStateOf(Offset.Zero) }
+    var isToolPanelExpanded by remember { mutableStateOf(false) }
 
     val focusRequester = remember { FocusRequester() }
 
     val hasOpenPanel = state.panels.hasOpenPanel || state.selectedEffectId != null || state.editingTextOverlayId != null
+    val isTutorialOpen = state.panels.isOpen(PanelId.TUTORIAL)
     val hasClipSelection = state.selectedClipIds.isNotEmpty()
     val isClipMode = state.selectedClipId != null
+    val screenHeightDp = LocalConfiguration.current.screenHeightDp
+    val isCompactEditorHeight = screenHeightDp < 820
+    val selectedPreviewHeight = when {
+        !isClipMode -> 0.dp
+        isToolPanelExpanded -> 154.dp
+        isCompactEditorHeight -> 224.dp
+        else -> 252.dp
+    }
+    val timelineMinHeight = when {
+        isClipMode && isToolPanelExpanded -> 184.dp
+        isClipMode && isCompactEditorHeight -> 204.dp
+        isClipMode -> 224.dp
+        else -> 240.dp
+    }
+    val timelineMaxHeight = when {
+        isClipMode && isToolPanelExpanded -> 208.dp
+        isClipMode && isCompactEditorHeight -> 248.dp
+        isClipMode -> 284.dp
+        else -> 330.dp
+    }
 
     val allClips by remember(state.tracks) {
         derivedStateOf { state.tracks.flatMap { it.clips } }
@@ -261,7 +287,11 @@ fun EditorScreen(
             } else false
         }
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(if (isTutorialOpen) Modifier.clearAndSetSemantics { } else Modifier)
+        ) {
             // Top bar (Home / Undo / Redo / Delete / More / Export)
             EditorTopBar(
                 projectName = state.project.name,
@@ -297,7 +327,7 @@ fun EditorScreen(
                     Card(
                         colors = CardDefaults.cardColors(containerColor = Mocha.Panel),
                         border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
-                        shape = RoundedCornerShape(26.dp)
+                        shape = RoundedCornerShape(Radius.xxl)
                     ) {
                         Box(
                             modifier = Modifier.background(
@@ -320,7 +350,7 @@ fun EditorScreen(
                                 ) {
                                     Icon(
                                         Icons.Default.VideoLibrary,
-                                        contentDescription = stringResource(R.string.editor_no_clips_yet),
+                                        contentDescription = null,
                                         tint = Mocha.Rosewater,
                                         modifier = Modifier
                                             .padding(16.dp)
@@ -337,7 +367,8 @@ fun EditorScreen(
                                 Text(
                                     stringResource(R.string.editor_empty_body),
                                     color = Mocha.Subtext0,
-                                    style = MaterialTheme.typography.bodyMedium
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    textAlign = TextAlign.Center
                                 )
                                 Spacer(Modifier.height(14.dp))
                                 Button(
@@ -346,11 +377,12 @@ fun EditorScreen(
                                         containerColor = Mocha.Rosewater,
                                         contentColor = Mocha.Midnight
                                     ),
-                                    shape = RoundedCornerShape(18.dp)
+                                    shape = RoundedCornerShape(Radius.lg),
+                                    modifier = Modifier.heightIn(min = TouchTarget.minimum)
                                 ) {
                                     Icon(
                                         Icons.Default.Add,
-                                        contentDescription = stringResource(R.string.editor_add_media),
+                                        contentDescription = null,
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Spacer(Modifier.width(8.dp))
@@ -367,8 +399,11 @@ fun EditorScreen(
 
             // Preview panel with long-press radial menu
             if (hasClips || hasOpenPanel) Box(
-                modifier = Modifier
-                    .weight(1f)
+                modifier = (if (isClipMode) {
+                    Modifier.height(selectedPreviewHeight)
+                } else {
+                    Modifier.weight(1f)
+                })
                     .pointerInput(Unit) {
                         detectTapGestures(
                             onLongPress = { offset ->
@@ -582,7 +617,7 @@ fun EditorScreen(
                     onScrubStart = viewModel::beginScrub,
                     onScrubEnd = viewModel::endScrub,
                     engine = viewModel.engine,
-                    modifier = Modifier.heightIn(min = 240.dp, max = 330.dp)
+                    modifier = Modifier.heightIn(min = timelineMinHeight, max = timelineMaxHeight)
                 )
             }
 
@@ -593,6 +628,7 @@ fun EditorScreen(
                 textOverlays = state.textOverlays,
                 onEditTextOverlay = { id -> viewModel.editTextOverlay(id) },
                 editorMode = state.editorMode,
+                onExpandedChange = { expanded -> isToolPanelExpanded = expanded },
                 onDeleteTextOverlay = { id ->
                     viewModel.removeTextOverlay(id)
                 },
@@ -607,7 +643,11 @@ fun EditorScreen(
                         "effects_disabled" -> viewModel.showToast(context.getString(R.string.editor_select_clip_effects))
                         "transition" -> viewModel.showTransitionPicker()
                         "aspect" -> viewModel.showCropPanel()
-                        "back" -> { viewModel.dismissAllPanels(); viewModel.selectClip(null) }
+                        "back" -> {
+                            viewModel.dismissAllPanels()
+                            viewModel.selectClip(null)
+                            viewModel.setTool(EditorTool.NONE)
+                        }
                         "add_text" -> viewModel.showTextEditor()
                         "split" -> { viewModel.splitClipAtPlayhead(); viewModel.setTool(EditorTool.NONE) }
                         "trim" -> { viewModel.setTool(EditorTool.TRIM); viewModel.dismissAllPanels() }
@@ -1641,12 +1681,13 @@ fun EditorScreen(
 
         // First Run Tutorial
         AnimatedVisibility(
-            visible = state.panels.isOpen(PanelId.TUTORIAL),
+            visible = isTutorialOpen,
             enter = fadeIn(),
             exit = fadeOut()
         ) {
             FirstRunTutorial(
-                onComplete = viewModel::hideTutorial
+                onComplete = viewModel::hideTutorial,
+                modifier = Modifier.zIndex(10f)
             )
         }
 
@@ -1867,12 +1908,14 @@ private fun EditorTopBar(
                     Text(stringResource(R.string.editor_cancel), color = Mocha.Subtext0)
                 }
             },
-            containerColor = Mocha.Mantle
+            containerColor = Mocha.PanelHighest,
+            shape = RoundedCornerShape(Radius.xxl)
         )
     }
 
     if (showSaveTemplateDialog) {
         var templateName by remember(projectName) { mutableStateOf("$projectName Template") }
+        val trimmedTemplateName = templateName.trim()
         AlertDialog(
             onDismissRequest = { showSaveTemplateDialog = false },
             title = { Text(stringResource(R.string.editor_save_as_template), color = Mocha.Text) },
@@ -1894,22 +1937,33 @@ private fun EditorTopBar(
                 )
             },
             confirmButton = {
-                TextButton(onClick = {
-                    if (templateName.isNotBlank()) onSaveTemplate(templateName.trim())
-                    showSaveTemplateDialog = false
-                }) { Text(stringResource(R.string.editor_save), color = Mocha.Mauve) }
+                TextButton(
+                    onClick = {
+                        onSaveTemplate(trimmedTemplateName)
+                        showSaveTemplateDialog = false
+                    },
+                    enabled = trimmedTemplateName.isNotBlank()
+                ) {
+                    Text(
+                        stringResource(R.string.editor_save),
+                        color = if (trimmedTemplateName.isNotBlank()) Mocha.Mauve else Mocha.Surface2
+                    )
+                }
             },
             dismissButton = {
                 TextButton(onClick = { showSaveTemplateDialog = false }) {
                     Text(stringResource(R.string.editor_cancel), color = Mocha.Subtext0)
                 }
             },
-            containerColor = Mocha.Mantle
+            containerColor = Mocha.PanelHighest,
+            shape = RoundedCornerShape(Radius.xxl)
         )
     }
 
     if (showRenameDialog) {
         var nameText by remember(projectName) { mutableStateOf(projectName) }
+        val trimmedNameText = nameText.trim()
+        val canSubmitRename = trimmedNameText.isNotBlank() && trimmedNameText != projectName
         AlertDialog(
             onDismissRequest = { showRenameDialog = false },
             title = { Text(stringResource(R.string.editor_rename_project), color = Mocha.Text) },
@@ -1930,17 +1984,26 @@ private fun EditorTopBar(
                 )
             },
             confirmButton = {
-                TextButton(onClick = {
-                    if (nameText.isNotBlank()) onRename(nameText.trim())
-                    showRenameDialog = false
-                }) { Text(stringResource(R.string.editor_save), color = Mocha.Mauve) }
+                TextButton(
+                    onClick = {
+                        onRename(trimmedNameText)
+                        showRenameDialog = false
+                    },
+                    enabled = canSubmitRename
+                ) {
+                    Text(
+                        stringResource(R.string.editor_save),
+                        color = if (canSubmitRename) Mocha.Mauve else Mocha.Surface2
+                    )
+                }
             },
             dismissButton = {
                 TextButton(onClick = { showRenameDialog = false }) {
                     Text(stringResource(R.string.editor_cancel), color = Mocha.Subtext0)
                 }
             },
-            containerColor = Mocha.Mantle
+            containerColor = Mocha.PanelHighest,
+            shape = RoundedCornerShape(Radius.xxl)
         )
     }
 

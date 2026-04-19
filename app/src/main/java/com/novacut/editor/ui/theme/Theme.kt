@@ -90,21 +90,21 @@ private val NovaCutTypography = Typography(
         fontWeight = FontWeight.SemiBold,
         fontSize = 36.sp,
         lineHeight = 40.sp,
-        letterSpacing = (-0.8).sp
+        letterSpacing = 0.sp
     ),
     displayMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.SemiBold,
         fontSize = 30.sp,
         lineHeight = 34.sp,
-        letterSpacing = (-0.6).sp
+        letterSpacing = 0.sp
     ),
     headlineLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.SemiBold,
         fontSize = 24.sp,
         lineHeight = 28.sp,
-        letterSpacing = (-0.3).sp
+        letterSpacing = 0.sp
     ),
     headlineMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,

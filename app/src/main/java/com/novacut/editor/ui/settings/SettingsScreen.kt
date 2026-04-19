@@ -14,10 +14,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.novacut.editor.NovaCutApp
@@ -28,7 +30,11 @@ import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.NovaCutChromeIconButton
 import com.novacut.editor.ui.theme.NovaCutHeroCard
 import com.novacut.editor.ui.theme.NovaCutMetricPill
+import com.novacut.editor.ui.theme.NovaCutScreenBackground
 import com.novacut.editor.ui.theme.NovaCutSectionHeader
+import com.novacut.editor.ui.theme.Radius
+import com.novacut.editor.ui.theme.Spacing
+import com.novacut.editor.ui.theme.TouchTarget
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -40,20 +46,12 @@ fun SettingsScreen(
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        Mocha.Midnight,
-                        Mocha.Base.copy(alpha = 0.98f),
-                        Mocha.Midnight
-                    )
-                )
-            )
-            .verticalScroll(rememberScrollState())
-    ) {
+    NovaCutScreenBackground(modifier = modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        ) {
         SettingsHero(
             settings = settings,
             onBack = onBack,
@@ -341,13 +339,15 @@ fun SettingsScreen(
         ) {
             OutlinedButton(
                 onClick = { showResetConfirm = true },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = TouchTarget.minimum),
                 colors = ButtonDefaults.outlinedButtonColors(
                     containerColor = Mocha.PanelHighest,
                     contentColor = Mocha.Text
                 ),
                 border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStrokeStrong),
-                shape = RoundedCornerShape(18.dp)
+                shape = RoundedCornerShape(Radius.lg)
             ) {
                 Icon(Icons.Default.School, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
@@ -370,7 +370,8 @@ fun SettingsScreen(
                         Text(stringResource(R.string.cancel), color = Mocha.Subtext0)
                     }
                 },
-                containerColor = Mocha.Mantle
+                containerColor = Mocha.PanelHighest,
+                shape = RoundedCornerShape(Radius.xxl)
             )
         }
 
@@ -384,7 +385,8 @@ fun SettingsScreen(
             SettingsInfo(Icons.Default.AutoAwesome, stringResource(R.string.settings_ai_models), stringResource(R.string.settings_ai_models_value), Mocha.Mauve)
         }
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(Spacing.xxl))
+        }
     }
 }
 
@@ -402,7 +404,7 @@ private fun SettingsHero(
     ) {
         NovaCutHeroCard(
             accent = Mocha.Sapphire,
-            shape = RoundedCornerShape(28.dp)
+            shape = RoundedCornerShape(Radius.xxl)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -418,13 +420,17 @@ private fun SettingsHero(
                     Text(
                         stringResource(R.string.settings_title),
                         color = Mocha.Text,
-                        style = MaterialTheme.typography.headlineLarge
+                        style = MaterialTheme.typography.headlineLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
                         stringResource(R.string.settings_subtitle),
                         color = Mocha.Subtext0,
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -451,7 +457,7 @@ private fun SettingsHero(
                     accent = Mocha.Rosewater,
                     modifier = Modifier
                         .widthIn(min = 132.dp)
-                        .clickable(onClick = onManageAiModels)
+                        .clickable(role = Role.Button, onClick = onManageAiModels)
                 )
             }
         }
@@ -468,7 +474,7 @@ private fun SettingsOverviewStat(
     Surface(
         modifier = modifier,
         color = accent.copy(alpha = 0.1f),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(Radius.xl),
         border = androidx.compose.foundation.BorderStroke(1.dp, accent.copy(alpha = 0.18f))
     ) {
         Column(
@@ -478,13 +484,16 @@ private fun SettingsOverviewStat(
             Text(
                 text = label,
                 color = accent,
-                style = MaterialTheme.typography.labelMedium
+                style = MaterialTheme.typography.labelMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = value,
                 color = Mocha.Text,
                 style = MaterialTheme.typography.titleSmall,
-                maxLines = 1
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
@@ -496,15 +505,15 @@ private fun SettingsSection(
     description: String? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+    Column(modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm)) {
         NovaCutSectionHeader(
             title = title,
             description = description,
-            modifier = Modifier.padding(bottom = 8.dp)
+            modifier = Modifier.padding(bottom = Spacing.sm)
         )
         Card(
             colors = CardDefaults.cardColors(containerColor = Mocha.Panel),
-            shape = RoundedCornerShape(22.dp),
+            shape = RoundedCornerShape(Radius.xl),
             border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.85f)),
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -521,8 +530,8 @@ private fun SettingsSection(
                 Column(
                     modifier = Modifier
                         .animateContentSize()
-                        .padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                        .padding(Spacing.md),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                     content = content
                 )
             }
@@ -615,7 +624,7 @@ private fun SettingsSlider(
     var localValue by remember(value) { mutableStateOf(value) }
     Surface(
         color = Mocha.PanelHighest,
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(Radius.lg),
         border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f))
     ) {
         Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp)) {
@@ -626,18 +635,36 @@ private fun SettingsSlider(
             ) {
                 Row(
                     modifier = Modifier.weight(1f),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.md)
                 ) {
                     SettingsTileIcon(icon = icon, accent = accent)
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(label, color = Mocha.Text, style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            label,
+                            color = Mocha.Text,
+                            style = MaterialTheme.typography.titleSmall,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
                         description?.let {
-                            Text(it, color = Mocha.Subtext0, style = MaterialTheme.typography.bodySmall)
+                            Text(
+                                it,
+                                color = Mocha.Subtext0,
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 3,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
                     }
                 }
                 Spacer(Modifier.width(12.dp))
-                Text(valueLabel, color = accent, style = MaterialTheme.typography.titleSmall)
+                Text(
+                    valueLabel,
+                    color = accent,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
             Spacer(modifier = Modifier.height(6.dp))
             Slider(
@@ -709,13 +736,25 @@ private fun SettingsChoiceHeader(
 ) {
     Row(
         modifier = Modifier.padding(top = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         verticalAlignment = Alignment.Top
     ) {
         SettingsTileIcon(icon = icon, accent = accent)
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(label, color = Mocha.Text, style = MaterialTheme.typography.titleSmall)
-            Text(description, color = Mocha.Subtext0, style = MaterialTheme.typography.bodySmall)
+            Text(
+                label,
+                color = Mocha.Text,
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                description,
+                color = Mocha.Subtext0,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
@@ -729,6 +768,8 @@ private fun SettingsSwitchTile(
     checked: Boolean,
     onChanged: (Boolean) -> Unit
 ) {
+    val switchState = stringResource(if (checked) R.string.settings_on else R.string.settings_off)
+
     SettingsTile(
         icon = icon,
         accent = accent,
@@ -739,6 +780,10 @@ private fun SettingsSwitchTile(
         Switch(
             checked = checked,
             onCheckedChange = onChanged,
+            modifier = Modifier.semantics {
+                contentDescription = label
+                stateDescription = switchState
+            },
             colors = SwitchDefaults.colors(
                 checkedTrackColor = accent.copy(alpha = 0.8f),
                 checkedThumbColor = Mocha.Crust,
@@ -760,15 +805,16 @@ private fun SettingsTile(
 ) {
     Surface(
         color = Mocha.PanelHighest,
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(Radius.lg),
         border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f))
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .defaultMinSize(minHeight = 72.dp)
                 .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
                 .padding(horizontal = 14.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
             verticalAlignment = Alignment.CenterVertically
         ) {
             SettingsTileIcon(icon = icon, accent = accent)
@@ -776,9 +822,21 @@ private fun SettingsTile(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                Text(label, color = Mocha.Text, style = MaterialTheme.typography.titleSmall)
+                Text(
+                    label,
+                    color = Mocha.Text,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
                 description?.let {
-                    Text(it, color = Mocha.Subtext0, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        it,
+                        color = Mocha.Subtext0,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
             Row(
@@ -797,7 +855,7 @@ private fun SettingsTileIcon(
 ) {
     Surface(
         color = accent.copy(alpha = 0.14f),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(Radius.md),
         border = androidx.compose.foundation.BorderStroke(1.dp, accent.copy(alpha = 0.2f))
     ) {
         Icon(

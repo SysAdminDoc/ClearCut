@@ -189,7 +189,7 @@ class AudioMixerDelegate(
                 stateFlow.update { s ->
                     s.copy(tracks = s.tracks.map { track ->
                         track.copy(clips = track.clips.map { c ->
-                            if (c.id == clipId) c.copy(volume = (c.volume * gain).coerceIn(0.1f, 3f)) else c
+                            if (c.id == clipId) c.copy(volume = (c.volume * gain).coerceIn(0f, 2f)) else c
                         })
                     })
                 }

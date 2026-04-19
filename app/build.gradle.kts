@@ -174,4 +174,5 @@ dependencies {
     implementation(libs.okhttp)
 
     testImplementation(libs.junit4)
+    testImplementation(libs.org.json)
 }

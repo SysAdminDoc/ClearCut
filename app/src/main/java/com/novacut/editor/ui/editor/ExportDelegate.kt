@@ -20,6 +20,7 @@ import com.novacut.editor.model.BatchExportItem
 import com.novacut.editor.model.BatchExportStatus
 import com.novacut.editor.model.ChapterMarker
 import com.novacut.editor.model.ExportConfig
+import com.novacut.editor.model.TrackType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
@@ -30,6 +31,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import kotlin.math.roundToInt
 
 /**
  * Delegate handling export, batch export, render preview, share, and save-to-gallery.
@@ -265,7 +267,14 @@ class ExportDelegate(
                         preferredOutputName = preferredOutputName ?: currentState.project.name
                     )
                     val targetGifFile = gifFile ?: return@launch
-                    val allClips = tracks.flatMap { it.clips }.sortedBy { it.timelineStartMs }
+                    val allClips = tracks
+                        .filter { it.type == TrackType.VIDEO || it.type == TrackType.OVERLAY }
+                        .flatMap { it.clips }
+                        .sortedBy { it.timelineStartMs }
+                    if (allClips.isEmpty()) {
+                        stateFlow.update { it.copy(exportState = ExportState.ERROR, exportErrorMessage = "No video clips") }
+                        return@launch
+                    }
                     val totalDurationMs = allClips.maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L
                     // Cap frameRate at 60 fps (sane GIF limit) and floor frameInterval at 1 ms so
                     // a misconfigured >1000 fps value can't produce a 0-ms interval, infinite frame
@@ -284,7 +293,14 @@ class ExportDelegate(
                         // Check for cancellation between frames
                         ensureActive()
                         val timeMs = i * frameIntervalMs
-                        val clip = allClips.lastOrNull { it.timelineStartMs <= timeMs } ?: continue
+                        val clip = allClips.firstOrNull { clip ->
+                            timeMs >= clip.timelineStartMs && timeMs < clip.timelineStartMs + clip.durationMs
+                        }
+                        if (clip == null) {
+                            frames.add(createGapGifFrame(maxWidth, configWithChapters.aspectRatio))
+                            stateFlow.update { it.copy(exportProgress = (i + 1).toFloat() / frameCount * 0.9f) }
+                            continue
+                        }
                         // Respect speedCurve — `timelineOffsetToSourceMs` integrates the
                         // curve when present and falls back to `* speed` for constant
                         // speed, so static clips still produce the same frame mapping
@@ -748,6 +764,17 @@ class ExportDelegate(
     }
 
     // --- GIF Encoder ---
+
+    private fun createGapGifFrame(
+        maxWidth: Int,
+        aspectRatio: com.novacut.editor.model.AspectRatio
+    ): android.graphics.Bitmap {
+        val width = maxWidth.coerceAtLeast(1)
+        val height = (width / aspectRatio.toFloat()).roundToInt().coerceAtLeast(1)
+        return android.graphics.Bitmap
+            .createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
+            .apply { eraseColor(android.graphics.Color.BLACK) }
+    }
 
     private fun encodeGif(frames: List<android.graphics.Bitmap>, delayMs: Int, output: java.io.OutputStream) {
         // GIF89a header

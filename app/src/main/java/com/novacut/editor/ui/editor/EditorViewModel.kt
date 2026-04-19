@@ -690,11 +690,11 @@ class EditorViewModel @Inject constructor(
         val trackVolume = if (track != null && !isTrackAudibleInPreview(track)) {
             0f
         } else {
-            track?.volume?.coerceIn(0f, 2f) ?: 1f
+            safeEditorFloat(track?.volume ?: 1f, 1f, 0f, 2f)
         }
         videoEngine.applyPreviewEffects(clip)
-        videoEngine.setPreviewSpeed(clip?.speed ?: 1f)
-        videoEngine.setPreviewVolume(((clip?.volume ?: 1f) * trackVolume).coerceIn(0f, 1f))
+        videoEngine.setPreviewSpeed(safeEditorFloat(clip?.speed ?: 1f, 1f, 0.01f, 100f))
+        videoEngine.setPreviewVolume(safeEditorFloat((clip?.volume ?: 1f) * trackVolume, 1f, 0f, 1f))
     }
 
     /**
@@ -714,7 +714,10 @@ class EditorViewModel @Inject constructor(
     }
 
     // --- Clip Editing (delegated) ---
-    fun addClipToTrack(uri: Uri, trackType: TrackType = TrackType.VIDEO) = clipEditingDelegate.addClipToTrack(uri, trackType)
+    fun addClipToTrack(uri: Uri, trackType: TrackType = TrackType.VIDEO) {
+        setTool(EditorTool.NONE)
+        clipEditingDelegate.addClipToTrack(uri, trackType)
+    }
     fun selectClip(clipId: String?, trackId: String? = null) {
         clipEditingDelegate.selectClip(clipId, trackId)
         generateAiSuggestion(clipId)
@@ -1847,7 +1850,9 @@ class EditorViewModel @Inject constructor(
             val currentClip = _state.value.tracks.flatMap { it.clips }
                 .find { it.sourceUri == originalClip.sourceUri && region.startMs >= it.trimStartMs && region.startMs < it.trimEndMs }
                 ?: continue
-            val timelinePos = currentClip.timelineStartMs + ((region.startMs - currentClip.trimStartMs) / currentClip.speed.coerceAtLeast(0.01f)).toLong()
+            val timelineOffset = currentClip.sourceTimeToTimelineOffsetMs(region.startMs, includeBoundaries = false)
+                ?: continue
+            val timelinePos = currentClip.timelineStartMs + timelineOffset
             if (timelinePos <= currentClip.timelineStartMs || timelinePos >= currentClip.timelineEndMs) continue
             splitClipAt(currentClip.id, timelinePos)
             val clips = _state.value.tracks.flatMap { it.clips }
@@ -2207,13 +2212,24 @@ class EditorViewModel @Inject constructor(
                             add(clip)
                         } else {
                             val sourcePos = splitPointInSource(clip, positionMs)
-                            add(clip.copy(trimEndMs = sourcePos, transition = null))
+                            val trimRange = (clip.trimEndMs - clip.trimStartMs).coerceAtLeast(0L)
+                            val splitFraction = if (trimRange > 0L) {
+                                ((sourcePos - clip.trimStartMs).toFloat() / trimRange.toFloat()).coerceIn(0f, 1f)
+                            } else {
+                                0f
+                            }
+                            add(clip.copy(
+                                trimEndMs = sourcePos,
+                                transition = null,
+                                speedCurve = clip.speedCurve?.restrictTo(0f, splitFraction, trimRange)
+                            ))
                             add(
                                 clip.copy(
                                     id = newId,
                                     trimStartMs = sourcePos,
                                     timelineStartMs = positionMs,
                                     transition = null,
+                                    speedCurve = clip.speedCurve?.restrictTo(splitFraction, 1f, trimRange),
                                     linkedClipId = clip.linkedClipId?.let { linkedId -> newIdsByOldId[linkedId] }
                                 )
                             )
@@ -2848,8 +2864,7 @@ class EditorViewModel @Inject constructor(
         val clip = getSelectedClip() ?: _state.value.tracks
             .flatMap { it.clips }.firstOrNull() ?: return
         val relativeOffset = _state.value.playheadMs - clip.timelineStartMs
-        val playheadInClip = (clip.trimStartMs + (relativeOffset * clip.speed).toLong())
-            .coerceIn(clip.trimStartMs, clip.trimEndMs)
+        val playheadInClip = clip.timelineOffsetToSourceMs(relativeOffset)
         viewModelScope.launch(Dispatchers.IO) {
             val frame = videoEngine.extractThumbnail(
                 clip.sourceUri, playheadInClip * 1000, 256, 144
@@ -2964,8 +2979,9 @@ class EditorViewModel @Inject constructor(
     }
 
     fun setClipVolume(clipId: String, volume: Float) {
-        updateClipById(clipId) { it.copy(volume = volume.coerceIn(0f, 2f)) }
-        videoEngine.setPreviewVolume(volume)
+        val safeVolume = safeEditorFloat(volume, 1f, 0f, 2f)
+        updateClipById(clipId) { it.copy(volume = safeVolume) }
+        videoEngine.setPreviewVolume(safeVolume)
         saveProject()
     }
 
@@ -2981,11 +2997,11 @@ class EditorViewModel @Inject constructor(
                          scaleX: Float? = null, scaleY: Float? = null, rotation: Float? = null) {
         updateClipById(clipId) { clip ->
             clip.copy(
-                positionX = positionX ?: clip.positionX,
-                positionY = positionY ?: clip.positionY,
-                scaleX = (scaleX ?: clip.scaleX).coerceIn(0.1f, 5f),
-                scaleY = (scaleY ?: clip.scaleY).coerceIn(0.1f, 5f),
-                rotation = rotation ?: clip.rotation
+                positionX = safeEditorFloat(positionX ?: clip.positionX, clip.positionX, -10f, 10f),
+                positionY = safeEditorFloat(positionY ?: clip.positionY, clip.positionY, -10f, 10f),
+                scaleX = safeEditorFloat(scaleX ?: clip.scaleX, clip.scaleX, 0.1f, 5f),
+                scaleY = safeEditorFloat(scaleY ?: clip.scaleY, clip.scaleY, 0.1f, 5f),
+                rotation = safeEditorFloat(rotation ?: clip.rotation, clip.rotation, -3600f, 3600f)
             )
         }
         updatePreview()
@@ -3380,7 +3396,7 @@ class EditorViewModel @Inject constructor(
         }
 
         val relativeMs = playheadMs - clip.timelineStartMs
-        val sourceTimeMs = clip.trimStartMs + (relativeMs * clip.speed).toLong()
+        val sourceTimeMs = clip.timelineOffsetToSourceMs(relativeMs)
 
         viewModelScope.launch {
             showToast("Extracting frame...")
@@ -3409,9 +3425,20 @@ class EditorViewModel @Inject constructor(
                     if (clipIndex < 0) return@map track
 
                     val c = track.clips[clipIndex]
-                    val splitInSource = c.trimStartMs + (relativeMs * c.speed).toLong()
+                    val relativeForClip = playheadMs - c.timelineStartMs
+                    val splitInSource = c.timelineOffsetToSourceMs(relativeForClip)
+                    if (splitInSource <= c.trimStartMs || splitInSource >= c.trimEndMs) return@map track
+                    val trimRange = (c.trimEndMs - c.trimStartMs).coerceAtLeast(0L)
+                    val splitFraction = if (trimRange > 0L) {
+                        ((splitInSource - c.trimStartMs).toFloat() / trimRange.toFloat()).coerceIn(0f, 1f)
+                    } else {
+                        0f
+                    }
 
-                    val firstHalf = c.copy(trimEndMs = splitInSource)
+                    val firstHalf = c.copy(
+                        trimEndMs = splitInSource,
+                        speedCurve = c.speedCurve?.restrictTo(0f, splitFraction, trimRange)
+                    )
                     val freezeClip = Clip(
                         id = freezeClipId,
                         sourceUri = frameUri,
@@ -3423,7 +3450,8 @@ class EditorViewModel @Inject constructor(
                     val secondHalf = c.copy(
                         id = secondHalfId,
                         timelineStartMs = freezeClip.timelineEndMs,
-                        trimStartMs = splitInSource
+                        trimStartMs = splitInSource,
+                        speedCurve = c.speedCurve?.restrictTo(splitFraction, 1f, trimRange)
                     )
 
                     // Shift subsequent clips
@@ -3568,17 +3596,20 @@ class EditorViewModel @Inject constructor(
     }
 
     private fun minimumSlideDurationMs(clip: Clip): Long {
-        return kotlin.math.ceil(100.0 / clip.speed.coerceAtLeast(0.01f).toDouble()).toLong().coerceAtLeast(1L)
+        val speed = safeEditorFloat(clip.speed, 1f, 0.01f, 100f)
+        return kotlin.math.ceil(100.0 / speed.toDouble()).toLong().coerceAtLeast(1L)
     }
 
     private fun maximumPreviousDurationMs(clip: Clip): Long {
-        return kotlin.math.floor((clip.sourceDurationMs - clip.trimStartMs).toDouble() / clip.speed.coerceAtLeast(0.01f).toDouble())
+        val speed = safeEditorFloat(clip.speed, 1f, 0.01f, 100f)
+        return kotlin.math.floor((clip.sourceDurationMs - clip.trimStartMs).toDouble() / speed.toDouble())
             .toLong()
             .coerceAtLeast(minimumSlideDurationMs(clip))
     }
 
     private fun maximumNextDurationMs(clip: Clip): Long {
-        return kotlin.math.floor(clip.trimEndMs.toDouble() / clip.speed.coerceAtLeast(0.01f).toDouble())
+        val speed = safeEditorFloat(clip.speed, 1f, 0.01f, 100f)
+        return kotlin.math.floor(clip.trimEndMs.toDouble() / speed.toDouble())
             .toLong()
             .coerceAtLeast(minimumSlideDurationMs(clip))
     }
@@ -3592,7 +3623,7 @@ class EditorViewModel @Inject constructor(
 
     private fun splitPointInSource(clip: Clip, positionMs: Long): Long {
         val relativePos = positionMs - clip.timelineStartMs
-        return clip.trimStartMs + (relativePos * clip.speed).toLong()
+        return clip.timelineOffsetToSourceMs(relativePos)
     }
 
     override fun onCleared() {
@@ -3614,4 +3645,9 @@ class EditorViewModel @Inject constructor(
         audioEngine.clearWaveformCache()
         // DON'T call videoEngine.release() or ttsEngine.release() — they're @Singletons
     }
+}
+
+private fun safeEditorFloat(value: Float, fallback: Float, min: Float, max: Float): Float {
+    val safeFallback = if (fallback.isFinite()) fallback.coerceIn(min, max) else min
+    return if (value.isFinite()) value.coerceIn(min, max) else safeFallback
 }

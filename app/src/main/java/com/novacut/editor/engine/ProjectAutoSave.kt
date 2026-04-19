@@ -280,11 +280,11 @@ data class AutoSaveState(
                             put("sourceUri", io.sourceUri.toString())
                             put("startTimeMs", io.startTimeMs)
                             put("endTimeMs", io.endTimeMs)
-                            put("positionX", io.positionX.toDouble())
-                            put("positionY", io.positionY.toDouble())
-                            put("scale", io.scale.toDouble())
-                            put("rotation", io.rotation.toDouble())
-                            put("opacity", io.opacity.toDouble())
+                            putSafeFloat("positionX", io.positionX)
+                            putSafeFloat("positionY", io.positionY)
+                            putSafeFloat("scale", io.scale, default = 0.3f)
+                            putSafeFloat("rotation", io.rotation)
+                            putSafeFloat("opacity", io.opacity, default = 1f)
                             put("type", io.type.name)
                         })
                     }
@@ -308,12 +308,12 @@ data class AutoSaveState(
                     drawingPaths.forEach { dp ->
                         put(JSONObject().apply {
                             put("color", dp.color)
-                            put("strokeWidth", dp.strokeWidth.toDouble())
+                            putSafeFloat("strokeWidth", dp.strokeWidth, default = 4f)
                             put("points", JSONArray().apply {
                                 dp.points.forEach { (x, y) ->
                                     put(JSONObject().apply {
-                                        put("x", x.toDouble())
-                                        put("y", y.toDouble())
+                                        putSafeFloat("x", x)
+                                        putSafeFloat("y", y)
                                     })
                                 }
                             })
@@ -336,6 +336,15 @@ data class AutoSaveState(
         // Safe enum valueOf with fallback — prevents crashes from stale/unknown enum values
         private inline fun <reified T : Enum<T>> safeValueOf(name: String, default: T): T {
             return try { enumValueOf<T>(name) } catch (_: IllegalArgumentException) { default }
+        }
+
+        private fun JSONObject.putSafeFloat(
+            name: String,
+            value: Float,
+            default: Float = 0f
+        ): JSONObject {
+            val fallback = if (default.isFinite()) default else 0f
+            return put(name, (if (value.isFinite()) value else fallback).toDouble())
         }
 
         fun deserialize(raw: String): AutoSaveState {
@@ -469,9 +478,9 @@ data class AutoSaveState(
                 put("isVisible", track.isVisible)
                 put("isMuted", track.isMuted)
                 put("isSolo", track.isSolo)
-                put("volume", track.volume.toDouble())
-                put("pan", track.pan.toDouble())
-                put("opacity", track.opacity.toDouble())
+                putSafeFloat("volume", track.volume, default = 1f)
+                putSafeFloat("pan", track.pan)
+                putSafeFloat("opacity", track.opacity, default = 1f)
                 put("blendMode", track.blendMode.name)
                 put("isLinkedAV", track.isLinkedAV)
                 put("showWaveform", track.showWaveform)
@@ -509,17 +518,17 @@ data class AutoSaveState(
                 put("timelineStartMs", clip.timelineStartMs)
                 put("trimStartMs", clip.trimStartMs)
                 put("trimEndMs", clip.trimEndMs)
-                put("volume", clip.volume.toDouble())
-                put("speed", clip.speed.toDouble())
+                putSafeFloat("volume", clip.volume, default = 1f)
+                putSafeFloat("speed", clip.speed, default = 1f)
                 put("isReversed", clip.isReversed)
-                put("opacity", clip.opacity.toDouble())
-                put("rotation", clip.rotation.toDouble())
-                put("scaleX", clip.scaleX.toDouble())
-                put("scaleY", clip.scaleY.toDouble())
-                put("positionX", clip.positionX.toDouble())
-                put("positionY", clip.positionY.toDouble())
-                put("anchorX", clip.anchorX.toDouble())
-                put("anchorY", clip.anchorY.toDouble())
+                putSafeFloat("opacity", clip.opacity, default = 1f)
+                putSafeFloat("rotation", clip.rotation)
+                putSafeFloat("scaleX", clip.scaleX, default = 1f)
+                putSafeFloat("scaleY", clip.scaleY, default = 1f)
+                putSafeFloat("positionX", clip.positionX)
+                putSafeFloat("positionY", clip.positionY)
+                putSafeFloat("anchorX", clip.anchorX, default = 0.5f)
+                putSafeFloat("anchorY", clip.anchorY, default = 0.5f)
                 put("fadeInMs", clip.fadeInMs)
                 put("fadeOutMs", clip.fadeOutMs)
                 put("blendMode", clip.blendMode.name)
@@ -566,12 +575,12 @@ data class AutoSaveState(
                             mtd.trackPoints.forEach { tp ->
                                 put(JSONObject().apply {
                                     put("timeOffsetMs", tp.timeOffsetMs)
-                                    put("x", tp.x.toDouble())
-                                    put("y", tp.y.toDouble())
-                                    put("scaleX", tp.scaleX.toDouble())
-                                    put("scaleY", tp.scaleY.toDouble())
-                                    put("rotation", tp.rotation.toDouble())
-                                    put("confidence", tp.confidence.toDouble())
+                                    putSafeFloat("x", tp.x)
+                                    putSafeFloat("y", tp.y)
+                                    putSafeFloat("scaleX", tp.scaleX, default = 1f)
+                                    putSafeFloat("scaleY", tp.scaleY, default = 1f)
+                                    putSafeFloat("rotation", tp.rotation)
+                                    putSafeFloat("confidence", tp.confidence, default = 1f)
                                 })
                             }
                         })
@@ -586,7 +595,7 @@ data class AutoSaveState(
                 put("type", effect.type.name)
                 put("enabled", effect.enabled)
                 put("params", JSONObject().apply {
-                    effect.params.forEach { (k, v) -> put(k, v.toDouble()) }
+                    effect.params.forEach { (k, v) -> putSafeFloat(k, v) }
                 })
                 if (effect.keyframes.isNotEmpty()) {
                     put("keyframes", JSONArray().apply {
@@ -600,12 +609,12 @@ data class AutoSaveState(
             return JSONObject().apply {
                 put("timeOffsetMs", kf.timeOffsetMs)
                 put("paramName", kf.paramName)
-                put("value", kf.value.toDouble())
+                putSafeFloat("value", kf.value, default = 1f)
                 put("easing", kf.easing.name)
-                put("handleInX", kf.handleInX.toDouble())
-                put("handleInY", kf.handleInY.toDouble())
-                put("handleOutX", kf.handleOutX.toDouble())
-                put("handleOutY", kf.handleOutY.toDouble())
+                putSafeFloat("handleInX", kf.handleInX)
+                putSafeFloat("handleInY", kf.handleInY)
+                putSafeFloat("handleOutX", kf.handleOutX)
+                putSafeFloat("handleOutY", kf.handleOutY)
             }
         }
 
@@ -613,12 +622,12 @@ data class AutoSaveState(
             return JSONObject().apply {
                 put("timeOffsetMs", kf.timeOffsetMs)
                 put("property", kf.property.name)
-                put("value", kf.value.toDouble())
+                putSafeFloat("value", kf.value, default = 1f)
                 put("easing", kf.easing.name)
-                put("handleInX", kf.handleInX.toDouble())
-                put("handleInY", kf.handleInY.toDouble())
-                put("handleOutX", kf.handleOutX.toDouble())
-                put("handleOutY", kf.handleOutY.toDouble())
+                putSafeFloat("handleInX", kf.handleInX)
+                putSafeFloat("handleInY", kf.handleInY)
+                putSafeFloat("handleOutX", kf.handleOutX)
+                putSafeFloat("handleOutY", kf.handleOutY)
                 put("interpolation", kf.interpolation.name)
             }
         }
@@ -626,21 +635,21 @@ data class AutoSaveState(
         private fun serializeColorGrade(g: ColorGrade): JSONObject {
             return JSONObject().apply {
                 put("enabled", g.enabled)
-                put("liftR", g.liftR.toDouble()); put("liftG", g.liftG.toDouble()); put("liftB", g.liftB.toDouble())
-                put("gammaR", g.gammaR.toDouble()); put("gammaG", g.gammaG.toDouble()); put("gammaB", g.gammaB.toDouble())
-                put("gainR", g.gainR.toDouble()); put("gainG", g.gainG.toDouble()); put("gainB", g.gainB.toDouble())
-                put("offsetR", g.offsetR.toDouble()); put("offsetG", g.offsetG.toDouble()); put("offsetB", g.offsetB.toDouble())
+                putSafeFloat("liftR", g.liftR); putSafeFloat("liftG", g.liftG); putSafeFloat("liftB", g.liftB)
+                putSafeFloat("gammaR", g.gammaR, default = 1f); putSafeFloat("gammaG", g.gammaG, default = 1f); putSafeFloat("gammaB", g.gammaB, default = 1f)
+                putSafeFloat("gainR", g.gainR, default = 1f); putSafeFloat("gainG", g.gainG, default = 1f); putSafeFloat("gainB", g.gainB, default = 1f)
+                putSafeFloat("offsetR", g.offsetR); putSafeFloat("offsetG", g.offsetG); putSafeFloat("offsetB", g.offsetB)
                 g.lutPath?.let { put("lutPath", it) }
-                put("lutIntensity", g.lutIntensity.toDouble())
+                putSafeFloat("lutIntensity", g.lutIntensity, default = 1f)
                 g.colorMatchRef?.let { put("colorMatchRef", it) }
                 put("curves", serializeColorCurves(g.curves))
                 g.hslQualifier?.let { hsl ->
                     put("hsl", JSONObject().apply {
-                        put("hueCenter", hsl.hueCenter.toDouble()); put("hueWidth", hsl.hueWidth.toDouble())
-                        put("satMin", hsl.satMin.toDouble()); put("satMax", hsl.satMax.toDouble())
-                        put("lumMin", hsl.lumMin.toDouble()); put("lumMax", hsl.lumMax.toDouble())
-                        put("softness", hsl.softness.toDouble())
-                        put("adjustHue", hsl.adjustHue.toDouble()); put("adjustSat", hsl.adjustSat.toDouble()); put("adjustLum", hsl.adjustLum.toDouble())
+                        putSafeFloat("hueCenter", hsl.hueCenter); putSafeFloat("hueWidth", hsl.hueWidth, default = 30f)
+                        putSafeFloat("satMin", hsl.satMin); putSafeFloat("satMax", hsl.satMax, default = 1f)
+                        putSafeFloat("lumMin", hsl.lumMin); putSafeFloat("lumMax", hsl.lumMax, default = 1f)
+                        putSafeFloat("softness", hsl.softness, default = 0.1f)
+                        putSafeFloat("adjustHue", hsl.adjustHue); putSafeFloat("adjustSat", hsl.adjustSat); putSafeFloat("adjustLum", hsl.adjustLum)
                     })
                 }
             }
@@ -659,9 +668,9 @@ data class AutoSaveState(
             return JSONArray().apply {
                 points.forEach { p ->
                     put(JSONObject().apply {
-                        put("x", p.x.toDouble()); put("y", p.y.toDouble())
-                        put("hix", p.handleInX.toDouble()); put("hiy", p.handleInY.toDouble())
-                        put("hox", p.handleOutX.toDouble()); put("hoy", p.handleOutY.toDouble())
+                        putSafeFloat("x", p.x); putSafeFloat("y", p.y)
+                        putSafeFloat("hix", p.handleInX); putSafeFloat("hiy", p.handleInY)
+                        putSafeFloat("hox", p.handleOutX); putSafeFloat("hoy", p.handleOutY)
                     })
                 }
             }
@@ -672,10 +681,11 @@ data class AutoSaveState(
                 put("points", JSONArray().apply {
                     sc.points.forEach { pt ->
                         put(JSONObject().apply {
-                            put("position", pt.position.toDouble())
-                            put("speed", pt.speed.toDouble())
-                            put("handleInY", pt.handleInY.toDouble())
-                            put("handleOutY", pt.handleOutY.toDouble())
+                            val pointSpeedDefault = if (pt.speed.isFinite()) pt.speed else 1f
+                            putSafeFloat("position", pt.position)
+                            putSafeFloat("speed", pt.speed, default = 1f)
+                            putSafeFloat("handleInY", pt.handleInY, default = pointSpeedDefault)
+                            putSafeFloat("handleOutY", pt.handleOutY, default = pointSpeedDefault)
                         })
                     }
                 })
@@ -686,19 +696,19 @@ data class AutoSaveState(
             return JSONObject().apply {
                 put("id", mask.id)
                 put("type", mask.type.name)
-                put("feather", mask.feather.toDouble())
-                put("opacity", mask.opacity.toDouble())
+                putSafeFloat("feather", mask.feather)
+                putSafeFloat("opacity", mask.opacity, default = 1f)
                 put("inverted", mask.inverted)
-                put("expansion", mask.expansion.toDouble())
+                putSafeFloat("expansion", mask.expansion)
                 put("trackToMotion", mask.trackToMotion)
                 put("points", JSONArray().apply {
                     mask.points.forEach { pt ->
                         put(JSONObject().apply {
-                            put("x", pt.x.toDouble()); put("y", pt.y.toDouble())
-                            put("handleInX", pt.handleInX.toDouble())
-                            put("handleInY", pt.handleInY.toDouble())
-                            put("handleOutX", pt.handleOutX.toDouble())
-                            put("handleOutY", pt.handleOutY.toDouble())
+                            putSafeFloat("x", pt.x); putSafeFloat("y", pt.y)
+                            putSafeFloat("handleInX", pt.handleInX, default = pt.x)
+                            putSafeFloat("handleInY", pt.handleInY, default = pt.y)
+                            putSafeFloat("handleOutX", pt.handleOutX, default = pt.x)
+                            putSafeFloat("handleOutY", pt.handleOutY, default = pt.y)
                         })
                     }
                 })
@@ -711,11 +721,11 @@ data class AutoSaveState(
                                 put("points", JSONArray().apply {
                                     mkf.points.forEach { pt ->
                                         put(JSONObject().apply {
-                                            put("x", pt.x.toDouble()); put("y", pt.y.toDouble())
-                                            put("handleInX", pt.handleInX.toDouble())
-                                            put("handleInY", pt.handleInY.toDouble())
-                                            put("handleOutX", pt.handleOutX.toDouble())
-                                            put("handleOutY", pt.handleOutY.toDouble())
+                                            putSafeFloat("x", pt.x); putSafeFloat("y", pt.y)
+                                            putSafeFloat("handleInX", pt.handleInX, default = pt.x)
+                                            putSafeFloat("handleInY", pt.handleInY, default = pt.y)
+                                            putSafeFloat("handleOutX", pt.handleOutX, default = pt.x)
+                                            putSafeFloat("handleOutY", pt.handleOutY, default = pt.y)
                                         })
                                     }
                                 })
@@ -732,7 +742,7 @@ data class AutoSaveState(
                 put("type", ae.type.name)
                 put("enabled", ae.enabled)
                 put("params", JSONObject().apply {
-                    ae.params.forEach { (k, v) -> put(k, v.toDouble()) }
+                    ae.params.forEach { (k, v) -> putSafeFloat(k, v) }
                 })
             }
         }
@@ -744,8 +754,8 @@ data class AutoSaveState(
                 put("startTimeMs", cap.startTimeMs)
                 put("endTimeMs", cap.endTimeMs)
                 put("styleType", cap.style.type.name)
-                put("fontSize", cap.style.fontSize.toDouble())
-                put("positionY", cap.style.positionY.toDouble())
+                putSafeFloat("fontSize", cap.style.fontSize, default = 36f)
+                putSafeFloat("positionY", cap.style.positionY, default = 0.85f)
                 put("fontFamily", cap.style.fontFamily)
                 put("color", cap.style.color)
                 put("backgroundColor", cap.style.backgroundColor)
@@ -759,7 +769,7 @@ data class AutoSaveState(
                                 put("text", w.text)
                                 put("startTimeMs", w.startTimeMs)
                                 put("endTimeMs", w.endTimeMs)
-                                put("confidence", w.confidence.toDouble())
+                                putSafeFloat("confidence", w.confidence, default = 1f)
                             })
                         }
                     })
@@ -787,43 +797,43 @@ data class AutoSaveState(
                 put("id", t.id)
                 put("text", t.text)
                 put("fontFamily", t.fontFamily)
-                put("fontSize", t.fontSize.toDouble())
+                putSafeFloat("fontSize", t.fontSize, default = 48f)
                 put("color", t.color)
                 put("backgroundColor", t.backgroundColor)
                 put("strokeColor", t.strokeColor)
-                put("strokeWidth", t.strokeWidth.toDouble())
+                putSafeFloat("strokeWidth", t.strokeWidth)
                 put("bold", t.bold)
                 put("italic", t.italic)
                 put("alignment", t.alignment.name)
-                put("positionX", t.positionX.toDouble())
-                put("positionY", t.positionY.toDouble())
+                putSafeFloat("positionX", t.positionX, default = 0.5f)
+                putSafeFloat("positionY", t.positionY, default = 0.5f)
                 put("startTimeMs", t.startTimeMs)
                 put("endTimeMs", t.endTimeMs)
                 put("animationIn", t.animationIn.name)
                 put("animationOut", t.animationOut.name)
-                put("rotation", t.rotation.toDouble())
-                put("scaleX", t.scaleX.toDouble())
-                put("scaleY", t.scaleY.toDouble())
+                putSafeFloat("rotation", t.rotation)
+                putSafeFloat("scaleX", t.scaleX, default = 1f)
+                putSafeFloat("scaleY", t.scaleY, default = 1f)
                 put("shadowColor", t.shadowColor)
-                put("shadowOffsetX", t.shadowOffsetX.toDouble())
-                put("shadowOffsetY", t.shadowOffsetY.toDouble())
-                put("shadowBlur", t.shadowBlur.toDouble())
+                putSafeFloat("shadowOffsetX", t.shadowOffsetX)
+                putSafeFloat("shadowOffsetY", t.shadowOffsetY)
+                putSafeFloat("shadowBlur", t.shadowBlur)
                 put("glowColor", t.glowColor)
-                put("glowRadius", t.glowRadius.toDouble())
-                put("letterSpacing", t.letterSpacing.toDouble())
-                put("lineHeight", t.lineHeight.toDouble())
+                putSafeFloat("glowRadius", t.glowRadius)
+                putSafeFloat("letterSpacing", t.letterSpacing)
+                putSafeFloat("lineHeight", t.lineHeight, default = 1.2f)
                 t.textPath?.let { tp ->
                     put("textPath", JSONObject().apply {
                         put("type", tp.type.name)
-                        put("progress", tp.progress.toDouble())
+                        putSafeFloat("progress", tp.progress, default = 1f)
                         put("points", JSONArray().apply {
                             tp.points.forEach { pt ->
                                 put(JSONObject().apply {
-                                    put("x", pt.x.toDouble()); put("y", pt.y.toDouble())
-                                    put("handleInX", pt.handleInX.toDouble())
-                                    put("handleInY", pt.handleInY.toDouble())
-                                    put("handleOutX", pt.handleOutX.toDouble())
-                                    put("handleOutY", pt.handleOutY.toDouble())
+                                    putSafeFloat("x", pt.x); putSafeFloat("y", pt.y)
+                                    putSafeFloat("handleInX", pt.handleInX, default = pt.x)
+                                    putSafeFloat("handleInY", pt.handleInY, default = pt.y)
+                                    putSafeFloat("handleOutX", pt.handleOutX, default = pt.x)
+                                    putSafeFloat("handleOutY", pt.handleOutY, default = pt.y)
                                 })
                             }
                         })
@@ -841,7 +851,14 @@ data class AutoSaveState(
         // --- Deserialization ---
 
         private fun deserializeTracks(arr: JSONArray): List<Track> {
-            return (0 until arr.length()).map { deserializeTrack(arr.getJSONObject(it)) }
+            return (0 until arr.length()).mapNotNull { i ->
+                try {
+                    deserializeTrack(arr.getJSONObject(i))
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to deserialize track $i", e)
+                    null
+                }
+            }
         }
 
         private fun deserializeTrack(json: JSONObject): Track {
@@ -850,18 +867,18 @@ data class AutoSaveState(
             return Track(
                 id = json.optString("id", java.util.UUID.randomUUID().toString()),
                 type = safeValueOf(json.optString("type", "VIDEO"), TrackType.VIDEO),
-                index = json.optInt("index", 0),
+                index = json.optInt("index", 0).coerceAtLeast(0),
                 isLocked = json.optBoolean("isLocked", false),
                 isVisible = json.optBoolean("isVisible", true),
                 isMuted = json.optBoolean("isMuted", false),
                 isSolo = json.optBoolean("isSolo", false),
-                volume = json.optDouble("volume", 1.0).toFloat(),
-                pan = json.optDouble("pan", 0.0).toFloat(),
-                opacity = json.optDouble("opacity", 1.0).toFloat(),
+                volume = safeFloat(json.optDouble("volume", 1.0), 1f).coerceIn(0f, 2f),
+                pan = safeFloat(json.optDouble("pan", 0.0), 0f).coerceIn(-1f, 1f),
+                opacity = safeFloat(json.optDouble("opacity", 1.0), 1f).coerceIn(0f, 1f),
                 blendMode = safeValueOf(json.optString("blendMode", "NORMAL"), BlendMode.NORMAL),
                 isLinkedAV = json.optBoolean("isLinkedAV", true),
                 showWaveform = json.optBoolean("showWaveform", true),
-                trackHeight = json.optInt("trackHeight", 64),
+                trackHeight = json.optInt("trackHeight", 64).coerceIn(32, 240),
                 isCollapsed = json.optBoolean("isCollapsed", false),
                 clips = (0 until clipsArr.length()).mapNotNull { i ->
                     try { deserializeClip(clipsArr.getJSONObject(i)) } catch (e: Exception) {
@@ -916,17 +933,17 @@ data class AutoSaveState(
                 timelineStartMs = json.optLong("timelineStartMs", 0L).coerceAtLeast(0L),
                 trimStartMs = trimStartMs,
                 trimEndMs = trimEndMs,
-                volume = json.optDouble("volume", 1.0).toFloat().coerceIn(0f, 2f),
-                speed = json.optDouble("speed", 1.0).toFloat().coerceAtLeast(0.01f),
+                volume = safeFloat(json.optDouble("volume", 1.0), 1f).coerceIn(0f, 2f),
+                speed = safeFloat(json.optDouble("speed", 1.0), 1f).coerceIn(0.01f, 100f),
                 isReversed = json.optBoolean("isReversed", false),
-                opacity = json.optDouble("opacity", 1.0).toFloat().coerceIn(0f, 1f),
-                rotation = json.optDouble("rotation", 0.0).toFloat(),
-                scaleX = json.optDouble("scaleX", 1.0).toFloat(),
-                scaleY = json.optDouble("scaleY", 1.0).toFloat(),
-                positionX = json.optDouble("positionX", 0.0).toFloat(),
-                positionY = json.optDouble("positionY", 0.0).toFloat(),
-                anchorX = json.optDouble("anchorX", 0.5).toFloat(),
-                anchorY = json.optDouble("anchorY", 0.5).toFloat(),
+                opacity = safeFloat(json.optDouble("opacity", 1.0), 1f).coerceIn(0f, 1f),
+                rotation = safeFloat(json.optDouble("rotation", 0.0), 0f),
+                scaleX = safeFloat(json.optDouble("scaleX", 1.0), 1f),
+                scaleY = safeFloat(json.optDouble("scaleY", 1.0), 1f),
+                positionX = safeFloat(json.optDouble("positionX", 0.0), 0f),
+                positionY = safeFloat(json.optDouble("positionY", 0.0), 0f),
+                anchorX = safeFloat(json.optDouble("anchorX", 0.5), 0.5f),
+                anchorY = safeFloat(json.optDouble("anchorY", 0.5), 0.5f),
                 fadeInMs = fadeInMs,
                 fadeOutMs = fadeOutMs,
                 blendMode = safeValueOf(json.optString("blendMode", "NORMAL"), BlendMode.NORMAL),
@@ -971,12 +988,12 @@ data class AutoSaveState(
                                 val tp = tpArr.getJSONObject(i)
                                 MotionTrackPoint(
                                     timeOffsetMs = tp.optLong("timeOffsetMs", 0L),
-                                    x = tp.optDouble("x", 0.0).toFloat(),
-                                    y = tp.optDouble("y", 0.0).toFloat(),
-                                    scaleX = tp.optDouble("scaleX", 1.0).toFloat(),
-                                    scaleY = tp.optDouble("scaleY", 1.0).toFloat(),
-                                    rotation = tp.optDouble("rotation", 0.0).toFloat(),
-                                    confidence = tp.optDouble("confidence", 1.0).toFloat()
+                                    x = safeFloat(tp.optDouble("x", 0.0), 0f),
+                                    y = safeFloat(tp.optDouble("y", 0.0), 0f),
+                                    scaleX = safeFloat(tp.optDouble("scaleX", 1.0), 1f),
+                                    scaleY = safeFloat(tp.optDouble("scaleY", 1.0), 1f),
+                                    rotation = safeFloat(tp.optDouble("rotation", 0.0), 0f),
+                                    confidence = safeFloat(tp.optDouble("confidence", 1.0), 1f).coerceIn(0f, 1f)
                                 )
                             } catch (e: Exception) { Log.w(TAG, "Failed to deserialize motion track point $i", e); null }
                         },
@@ -991,7 +1008,7 @@ data class AutoSaveState(
             val paramsJson = json.optJSONObject("params")
             val params = buildMap {
                 paramsJson?.keys()?.forEach { key ->
-                    put(key, paramsJson.optDouble(key, 0.0).toFloat())
+                    put(key, safeFloat(paramsJson.optDouble(key, 0.0), 0f))
                 }
             }
             val effectKfArr = json.optJSONArray("keyframes") ?: JSONArray()
@@ -1010,12 +1027,12 @@ data class AutoSaveState(
             return EffectKeyframe(
                 timeOffsetMs = json.optLong("timeOffsetMs", 0L),
                 paramName = json.optString("paramName", ""),
-                value = json.optDouble("value", 0.0).toFloat(),
+                value = safeFloat(json.optDouble("value", 0.0), 0f),
                 easing = safeValueOf(json.optString("easing", "LINEAR"), Easing.LINEAR),
-                handleInX = json.optDouble("handleInX", 0.0).toFloat(),
-                handleInY = json.optDouble("handleInY", 0.0).toFloat(),
-                handleOutX = json.optDouble("handleOutX", 0.0).toFloat(),
-                handleOutY = json.optDouble("handleOutY", 0.0).toFloat()
+                handleInX = safeFloat(json.optDouble("handleInX", 0.0), 0f),
+                handleInY = safeFloat(json.optDouble("handleInY", 0.0), 0f),
+                handleOutX = safeFloat(json.optDouble("handleOutX", 0.0), 0f),
+                handleOutY = safeFloat(json.optDouble("handleOutY", 0.0), 0f)
             )
         }
 
@@ -1023,12 +1040,12 @@ data class AutoSaveState(
             return Keyframe(
                 timeOffsetMs = json.optLong("timeOffsetMs", 0L),
                 property = safeValueOf(json.optString("property", "OPACITY"), KeyframeProperty.OPACITY),
-                value = json.optDouble("value", 1.0).toFloat(),
+                value = safeFloat(json.optDouble("value", 1.0), 1f),
                 easing = safeValueOf(json.optString("easing", "LINEAR"), Easing.LINEAR),
-                handleInX = json.optDouble("handleInX", 0.0).toFloat(),
-                handleInY = json.optDouble("handleInY", 0.0).toFloat(),
-                handleOutX = json.optDouble("handleOutX", 0.0).toFloat(),
-                handleOutY = json.optDouble("handleOutY", 0.0).toFloat(),
+                handleInX = safeFloat(json.optDouble("handleInX", 0.0), 0f),
+                handleInY = safeFloat(json.optDouble("handleInY", 0.0), 0f),
+                handleOutX = safeFloat(json.optDouble("handleOutX", 0.0), 0f),
+                handleOutY = safeFloat(json.optDouble("handleOutY", 0.0), 0f),
                 interpolation = safeValueOf(json.optString("interpolation", "BEZIER"), KeyframeInterpolation.BEZIER)
             )
         }
@@ -1107,22 +1124,27 @@ data class AutoSaveState(
             // Corrupted control points (speed<=0, position outside [0,1], NaN handles) feed
             // directly into the harmonic-mean duration math and the bezier evaluator — clamp
             // at the edge so downstream callers can trust the data.
-            val points = (0 until pointsArr.length()).map { i ->
-                val pt = pointsArr.getJSONObject(i)
-                val rawSpeed = pt.optDouble("speed", 1.0).toFloat()
-                val speed = if (rawSpeed.isFinite()) rawSpeed.coerceIn(0.01f, 100f) else 1f
-                val rawPosition = pt.optDouble("position", 0.0).toFloat()
-                val position = if (rawPosition.isFinite()) rawPosition.coerceIn(0f, 1f) else 0f
-                val rawInY = pt.optDouble("handleInY", pt.optDouble("speed", 1.0)).toFloat()
-                val handleInY = if (rawInY.isFinite()) rawInY.coerceIn(0.01f, 100f) else speed
-                val rawOutY = pt.optDouble("handleOutY", pt.optDouble("speed", 1.0)).toFloat()
-                val handleOutY = if (rawOutY.isFinite()) rawOutY.coerceIn(0.01f, 100f) else speed
-                SpeedPoint(
-                    position = position,
-                    speed = speed,
-                    handleInY = handleInY,
-                    handleOutY = handleOutY
-                )
+            val points = (0 until pointsArr.length()).mapNotNull { i ->
+                try {
+                    val pt = pointsArr.getJSONObject(i)
+                    val rawSpeed = pt.optDouble("speed", 1.0).toFloat()
+                    val speed = if (rawSpeed.isFinite()) rawSpeed.coerceIn(0.01f, 100f) else 1f
+                    val rawPosition = pt.optDouble("position", 0.0).toFloat()
+                    val position = if (rawPosition.isFinite()) rawPosition.coerceIn(0f, 1f) else 0f
+                    val rawInY = pt.optDouble("handleInY", pt.optDouble("speed", 1.0)).toFloat()
+                    val handleInY = if (rawInY.isFinite()) rawInY.coerceIn(0.01f, 100f) else speed
+                    val rawOutY = pt.optDouble("handleOutY", pt.optDouble("speed", 1.0)).toFloat()
+                    val handleOutY = if (rawOutY.isFinite()) rawOutY.coerceIn(0.01f, 100f) else speed
+                    SpeedPoint(
+                        position = position,
+                        speed = speed,
+                        handleInY = handleInY,
+                        handleOutY = handleOutY
+                    )
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to deserialize speed point $i", e)
+                    null
+                }
             }
             return SpeedCurve(points.ifEmpty { listOf(SpeedPoint(0f, 1f), SpeedPoint(1f, 1f)) })
         }
@@ -1132,21 +1154,13 @@ data class AutoSaveState(
             return Mask(
                 id = json.optString("id", java.util.UUID.randomUUID().toString()),
                 type = safeValueOf(json.optString("type", "RECTANGLE"), MaskType.RECTANGLE),
-                feather = json.optDouble("feather", 0.0).toFloat(),
-                opacity = json.optDouble("opacity", 1.0).toFloat(),
+                feather = safeFloat(json.optDouble("feather", 0.0), 0f).coerceAtLeast(0f),
+                opacity = safeFloat(json.optDouble("opacity", 1.0), 1f).coerceIn(0f, 1f),
                 inverted = json.optBoolean("inverted", false),
-                expansion = json.optDouble("expansion", 0.0).toFloat(),
+                expansion = safeFloat(json.optDouble("expansion", 0.0), 0f),
                 trackToMotion = json.optBoolean("trackToMotion", false),
                 points = (0 until pointsArr.length()).map { i ->
-                    val pt = pointsArr.getJSONObject(i)
-                    MaskPoint(
-                        x = pt.optDouble("x", 0.0).toFloat(),
-                        y = pt.optDouble("y", 0.0).toFloat(),
-                        handleInX = pt.optDouble("handleInX", 0.0).toFloat(),
-                        handleInY = pt.optDouble("handleInY", 0.0).toFloat(),
-                        handleOutX = pt.optDouble("handleOutX", 0.0).toFloat(),
-                        handleOutY = pt.optDouble("handleOutY", 0.0).toFloat()
-                    )
+                    deserializeMaskPoint(pointsArr.getJSONObject(i))
                 },
                 keyframes = json.optJSONArray("keyframes")?.let { kfArr ->
                     (0 until kfArr.length()).mapNotNull { i ->
@@ -1156,15 +1170,7 @@ data class AutoSaveState(
                             MaskKeyframe(
                                 timeOffsetMs = mkf.optLong("timeOffsetMs", 0L),
                                 points = (0 until mkfPointsArr.length()).map { j ->
-                                    val pt = mkfPointsArr.getJSONObject(j)
-                                    MaskPoint(
-                                        x = pt.optDouble("x", 0.0).toFloat(),
-                                        y = pt.optDouble("y", 0.0).toFloat(),
-                                        handleInX = pt.optDouble("handleInX", 0.0).toFloat(),
-                                        handleInY = pt.optDouble("handleInY", 0.0).toFloat(),
-                                        handleOutX = pt.optDouble("handleOutX", 0.0).toFloat(),
-                                        handleOutY = pt.optDouble("handleOutY", 0.0).toFloat()
-                                    )
+                                    deserializeMaskPoint(mkfPointsArr.getJSONObject(j))
                                 },
                                 easing = safeValueOf(mkf.optString("easing", "LINEAR"), Easing.LINEAR)
                             )
@@ -1174,11 +1180,24 @@ data class AutoSaveState(
             )
         }
 
+        private fun deserializeMaskPoint(json: JSONObject): MaskPoint {
+            val x = safeFloat(json.optDouble("x", 0.0), 0f)
+            val y = safeFloat(json.optDouble("y", 0.0), 0f)
+            return MaskPoint(
+                x = x,
+                y = y,
+                handleInX = safeFloat(json.optDouble("handleInX", x.toDouble()), x),
+                handleInY = safeFloat(json.optDouble("handleInY", y.toDouble()), y),
+                handleOutX = safeFloat(json.optDouble("handleOutX", x.toDouble()), x),
+                handleOutY = safeFloat(json.optDouble("handleOutY", y.toDouble()), y)
+            )
+        }
+
         private fun deserializeAudioEffect(json: JSONObject): AudioEffect {
             val paramsJson = json.optJSONObject("params")
             val params = buildMap {
                 paramsJson?.keys()?.forEach { key ->
-                    put(key, paramsJson.optDouble(key, 0.0).toFloat())
+                    put(key, safeFloat(paramsJson.optDouble(key, 0.0), 0f))
                 }
             }
             return AudioEffect(
@@ -1218,16 +1237,16 @@ data class AutoSaveState(
                 ),
                 words = (0 until wordsArr.length()).mapNotNull { i ->
                     val w = wordsArr.getJSONObject(i)
-                    val wStart = w.optLong("startTimeMs", 0L).coerceAtLeast(0L)
+                    val wStart = w.optLong("startTimeMs", rawStart).coerceIn(rawStart, endTimeMs)
                     val wEnd = w.optLong("endTimeMs", wStart).coerceAtLeast(wStart)
-                    if (wStart > endTimeMs) return@mapNotNull null
+                    if (wStart >= endTimeMs) return@mapNotNull null
                     CaptionWord(
                         text = w.optString("text", ""),
                         startTimeMs = wStart,
                         endTimeMs = wEnd.coerceAtMost(endTimeMs),
                         confidence = safeFloat(w.optDouble("confidence", 1.0), 1f).coerceIn(0f, 1f)
                     )
-                }
+                }.sortedBy { it.startTimeMs }
             )
         }
 
@@ -1249,51 +1268,50 @@ data class AutoSaveState(
         private fun deserializeTextOverlay(json: JSONObject): TextOverlay? {
             val text = json.optString("text", "")
             if (text.isEmpty()) return null // TextOverlay requires non-empty text
+            val startMs = json.optLong("startTimeMs", 0L).coerceAtLeast(0L)
+            val rawEndMs = json.optLong("endTimeMs", startMs + 3000L)
+            val endMs = if (rawEndMs > startMs) rawEndMs else startMs + 1L
+            val positionX = safeFloat(json.optDouble("positionX", 0.5), 0.5f).coerceIn(-5f, 5f)
+            val positionY = safeFloat(json.optDouble("positionY", 0.5), 0.5f).coerceIn(-5f, 5f)
+            val scaleX = safeFloat(json.optDouble("scaleX", 1.0), 1f).coerceIn(0.01f, 100f)
+            val scaleY = safeFloat(json.optDouble("scaleY", 1.0), 1f).coerceIn(0.01f, 100f)
             return TextOverlay(
                 id = json.optString("id", java.util.UUID.randomUUID().toString()),
                 text = text,
                 fontFamily = json.optString("fontFamily", "sans-serif"),
-                fontSize = json.optDouble("fontSize", 48.0).toFloat(),
+                fontSize = safeFloat(json.optDouble("fontSize", 48.0), 48f).coerceIn(1f, 512f),
                 color = json.optLong("color", 0xFFFFFFFF),
                 backgroundColor = json.optLong("backgroundColor", 0x00000000),
                 strokeColor = json.optLong("strokeColor", 0xFF000000),
-                strokeWidth = json.optDouble("strokeWidth", 0.0).toFloat(),
+                strokeWidth = safeFloat(json.optDouble("strokeWidth", 0.0), 0f).coerceAtLeast(0f),
                 bold = json.optBoolean("bold", false),
                 italic = json.optBoolean("italic", false),
                 alignment = safeValueOf(json.optString("alignment", "CENTER"), TextAlignment.CENTER),
-                positionX = json.optDouble("positionX", 0.5).toFloat(),
-                positionY = json.optDouble("positionY", 0.5).toFloat(),
-                startTimeMs = json.optLong("startTimeMs", 0L),
-                endTimeMs = json.optLong("endTimeMs", 3000L),
+                positionX = positionX,
+                positionY = positionY,
+                startTimeMs = startMs,
+                endTimeMs = endMs,
                 animationIn = safeValueOf(json.optString("animationIn", "NONE"), TextAnimation.NONE),
                 animationOut = safeValueOf(json.optString("animationOut", "NONE"), TextAnimation.NONE),
-                rotation = json.optDouble("rotation", 0.0).toFloat(),
-                scaleX = json.optDouble("scaleX", 1.0).toFloat(),
-                scaleY = json.optDouble("scaleY", 1.0).toFloat(),
+                rotation = safeFloat(json.optDouble("rotation", 0.0), 0f),
+                scaleX = scaleX,
+                scaleY = scaleY,
                 shadowColor = json.optLong("shadowColor", 0x80000000),
-                shadowOffsetX = json.optDouble("shadowOffsetX", 0.0).toFloat(),
-                shadowOffsetY = json.optDouble("shadowOffsetY", 0.0).toFloat(),
-                shadowBlur = json.optDouble("shadowBlur", 0.0).toFloat(),
+                shadowOffsetX = safeFloat(json.optDouble("shadowOffsetX", 0.0), 0f),
+                shadowOffsetY = safeFloat(json.optDouble("shadowOffsetY", 0.0), 0f),
+                shadowBlur = safeFloat(json.optDouble("shadowBlur", 0.0), 0f).coerceAtLeast(0f),
                 glowColor = json.optLong("glowColor", 0x00000000),
-                glowRadius = json.optDouble("glowRadius", 0.0).toFloat(),
-                letterSpacing = json.optDouble("letterSpacing", 0.0).toFloat(),
-                lineHeight = json.optDouble("lineHeight", 1.2).toFloat(),
+                glowRadius = safeFloat(json.optDouble("glowRadius", 0.0), 0f).coerceAtLeast(0f),
+                letterSpacing = safeFloat(json.optDouble("letterSpacing", 0.0), 0f),
+                lineHeight = safeFloat(json.optDouble("lineHeight", 1.2), 1.2f).coerceAtLeast(0.1f),
                 textPath = json.optJSONObject("textPath")?.let { tp ->
                     val tpPointsArr = tp.optJSONArray("points") ?: JSONArray()
                     TextPath(
                         type = safeValueOf(tp.optString("type", "STRAIGHT"), TextPathType.STRAIGHT),
                         points = (0 until tpPointsArr.length()).map { i ->
-                            val pt = tpPointsArr.getJSONObject(i)
-                            MaskPoint(
-                                x = pt.optDouble("x", 0.0).toFloat(),
-                                y = pt.optDouble("y", 0.0).toFloat(),
-                                handleInX = pt.optDouble("handleInX", 0.0).toFloat(),
-                                handleInY = pt.optDouble("handleInY", 0.0).toFloat(),
-                                handleOutX = pt.optDouble("handleOutX", 0.0).toFloat(),
-                                handleOutY = pt.optDouble("handleOutY", 0.0).toFloat()
-                            )
+                            deserializeMaskPoint(tpPointsArr.getJSONObject(i))
                         },
-                        progress = tp.optDouble("progress", 1.0).toFloat()
+                        progress = safeFloat(tp.optDouble("progress", 1.0), 1f).coerceIn(0f, 1f)
                     )
                 },
                 templateId = json.optString("templateId", "").takeIf { it.isNotEmpty() },

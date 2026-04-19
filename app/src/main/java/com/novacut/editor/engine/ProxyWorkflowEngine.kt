@@ -11,7 +11,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
-import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -129,9 +128,7 @@ class ProxyWorkflowEngine @Inject constructor(
     suspend fun deleteAllProxies() = withContext(Dispatchers.IO) {
         val current = _entries.value
         for ((_, entry) in current) {
-            entry.proxyUri?.path?.let { path ->
-                try { File(path).delete() } catch (_: Exception) {}
-            }
+            entry.proxyUri?.let { proxyEngine.deleteProxyUri(it) }
         }
         _entries.update { it.mapValues { (_, e) -> e.copy(proxyUri = null, proxyGenerated = false) } }
     }
@@ -141,7 +138,7 @@ class ProxyWorkflowEngine @Inject constructor(
      */
     suspend fun getProxyStorageBytes(): Long = withContext(Dispatchers.IO) {
         _entries.value.values.sumOf { entry ->
-            entry.proxyUri?.path?.let { File(it).length() } ?: 0L
+            entry.proxyUri?.let { proxyEngine.proxyFileLength(it) } ?: 0L
         }
     }
 }

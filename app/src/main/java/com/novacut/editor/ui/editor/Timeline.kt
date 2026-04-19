@@ -32,6 +32,12 @@ import androidx.compose.ui.text.*
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -44,6 +50,7 @@ import com.novacut.editor.ui.theme.Mocha
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 private const val BASE_SCALE = 0.15f // pixels per ms at zoom 1.0
 
@@ -909,6 +916,13 @@ fun Timeline(
                                     val compactClipBadges = clipWidthPx < 150f
                                     val clipContentPaddingHorizontal = if (compactClipBadges) 6.dp else 8.dp
                                     val clipContentPaddingVertical = if (compactClipBadges) 6.dp else 7.dp
+                                    val clipContentDescription = stringResource(
+                                        R.string.timeline_clip_content_description,
+                                        clipFileName,
+                                        formatTimelineDurationLabel(clip.durationMs),
+                                        formatTimelineTime(clip.timelineStartMs)
+                                    )
+                                    val selectClipActionLabel = stringResource(R.string.timeline_select_clip_action)
 
                                     // Hoist the per-clip background brush. Timeline recomposes on every
                                     // playhead tick (~30 Hz during playback); without this, each visible
@@ -953,8 +967,17 @@ fun Timeline(
                                                     RoundedCornerShape(12.dp)
                                                 )
                                             )
+                                            .semantics {
+                                                contentDescription = clipContentDescription
+                                                role = Role.Button
+                                                selected = isSelected || isMultiSelected
+                                                onClick(label = selectClipActionLabel) {
+                                                    onClipSelected(clip.id, track.id)
+                                                    true
+                                                }
+                                            }
                                             .then(
-                                                if (isSelected && !track.isLocked) Modifier.pointerInput(clip.id, currentIsTrimMode) {
+                                                if (!track.isLocked) Modifier.pointerInput(clip.id, currentIsTrimMode) {
                                                     val trimHandleWidthPx = trimHandleTouchWidth.toPx()
                                                     detectDragGestures(
                                                         onDragStart = {
@@ -1155,7 +1178,7 @@ fun Timeline(
                                                 }
                                                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                                     TimelineClipBadge(
-                                                        text = formatTimelineTime(clip.durationMs),
+                                                        text = formatTimelineDurationLabel(clip.durationMs),
                                                         accent = Mocha.Sky,
                                                         compact = compactClipBadges
                                                     )
@@ -1625,6 +1648,14 @@ private fun formatTimelineTime(ms: Long): String {
         "%d:%02d:%02d".format(hours, minutes, seconds)
     } else {
         "%d:%02d".format(minutes, seconds)
+    }
+}
+
+private fun formatTimelineDurationLabel(ms: Long): String {
+    return if (ms in 1L until 1_000L) {
+        "%.1fs".format(Locale.US, (ms / 1000f).coerceAtLeast(0.1f))
+    } else {
+        formatTimelineTime(ms)
     }
 }
 

@@ -10,14 +10,11 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -27,11 +24,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -61,13 +58,13 @@ fun NovaCutScreenBackground(
             modifier = Modifier
                 .matchParentSize()
                 .background(
-                    Brush.radialGradient(
-                        colors = listOf(
-                            Mocha.Mauve.copy(alpha = 0.12f),
-                            Color.Transparent
-                        ),
-                        center = Offset(180f, 120f),
-                        radius = 900f
+                    Brush.verticalGradient(
+                        colorStops = arrayOf(
+                            0f to Mocha.Mauve.copy(alpha = 0.08f),
+                            0.2f to Color.Transparent,
+                            0.78f to Color.Transparent,
+                            1f to Mocha.Sapphire.copy(alpha = 0.05f)
+                        )
                     )
                 )
         )
@@ -75,13 +72,12 @@ fun NovaCutScreenBackground(
             modifier = Modifier
                 .matchParentSize()
                 .background(
-                    Brush.radialGradient(
-                        colors = listOf(
-                            Mocha.Sapphire.copy(alpha = 0.1f),
-                            Color.Transparent
-                        ),
-                        center = Offset(1200f, 220f),
-                        radius = 960f
+                    Brush.horizontalGradient(
+                        colorStops = arrayOf(
+                            0f to Mocha.Mantle.copy(alpha = 0.32f),
+                            0.5f to Color.Transparent,
+                            1f to Mocha.Mantle.copy(alpha = 0.26f)
+                        )
                     )
                 )
         )
@@ -138,7 +134,7 @@ fun NovaCutMetricPill(
         border = BorderStroke(1.dp, accent.copy(alpha = 0.2f))
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm),
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -153,7 +149,9 @@ fun NovaCutMetricPill(
             Text(
                 text = text,
                 color = accent,
-                style = MaterialTheme.typography.labelMedium
+                style = MaterialTheme.typography.labelMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
@@ -210,18 +208,22 @@ fun NovaCutSectionHeader(
             Text(
                 text = title,
                 color = Mocha.Text,
-                style = MaterialTheme.typography.titleLarge
+                style = MaterialTheme.typography.titleLarge,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
             if (!description.isNullOrBlank()) {
                 Text(
                     text = description,
                     color = Mocha.Subtext0,
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
         Row(
-            modifier = Modifier.defaultMinSize(minHeight = 36.dp),
+            modifier = Modifier.defaultMinSize(minHeight = TouchTarget.minimum),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
             content = trailing

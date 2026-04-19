@@ -622,10 +622,6 @@ class ClipEditingDelegate(
         return clip.timelineOffsetToSourceMs(relativePosition)
     }
 
-    private fun canMergeAdjacentClips(first: Clip, second: Clip): Boolean {
-        return first.sourceUri == second.sourceUri && first.trimEndMs == second.trimStartMs
-    }
-
     private fun mergeClipWithNext(track: Track, clipId: String): Track {
         val clipIndex = track.clips.indexOfFirst { it.id == clipId }
         if (clipIndex < 0 || clipIndex >= track.clips.lastIndex) return track
