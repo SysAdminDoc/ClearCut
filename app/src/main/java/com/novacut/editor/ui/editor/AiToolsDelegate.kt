@@ -747,23 +747,31 @@ class AiToolsDelegate(
         }
         val outputFile = File(appContext.cacheDir, "stabilized_${clip.id}.mp4")
         showToast("Applying stabilization (${motionData.frameCount} frames)...")
-        val result = stabilizationEngine.stabilize(
-            uri = clip.sourceUri, motionData = motionData, config = config,
-            outputUri = Uri.fromFile(outputFile), onProgress = { }
-        )
-        if (result != null) {
-            saveUndoState("AI stabilize (OpenCV)")
-            stateFlow.update { s ->
-                s.copy(tracks = s.tracks.map { track ->
-                    track.copy(clips = track.clips.map { c ->
-                        if (c.id == clip.id) c.copy(sourceUri = Uri.fromFile(outputFile)) else c
+        try {
+            val result = stabilizationEngine.stabilize(
+                uri = clip.sourceUri, motionData = motionData, config = config,
+                outputUri = Uri.fromFile(outputFile), onProgress = { }
+            )
+            if (result != null) {
+                saveUndoState("AI stabilize (OpenCV)")
+                stateFlow.update { s ->
+                    s.copy(tracks = s.tracks.map { track ->
+                        track.copy(clips = track.clips.map { c ->
+                            if (c.id == clip.id) c.copy(sourceUri = Uri.fromFile(outputFile)) else c
+                        })
                     })
-                })
+                }
+                rebuildPlayerTimeline()
+                showToast("Stabilized with ${"%.0f".format(result.cropApplied * 100)}% crop")
+            } else {
+                outputFile.delete()
+                showToast("Stabilization not yet available \u2014 OpenCV integration pending")
             }
-            rebuildPlayerTimeline()
-            showToast("Stabilized with ${"%.0f".format(result.cropApplied * 100)}% crop")
-        } else {
-            showToast("Stabilization not yet available \u2014 OpenCV integration pending")
+        } catch (e: Exception) {
+            // Clean up any partial output before re-throwing (CancellationException is
+            // also an Exception subtype in coroutines, so this covers cancellation too).
+            outputFile.delete()
+            throw e
         }
     }
 
