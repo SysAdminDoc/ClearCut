@@ -1,5 +1,15 @@
 # Changelog
 
+## v3.63.0 — Deep Audit Phase 25: Segmentation and Stabilization Reliability
+
+Targeted correctness and defensive fixes from continued end-to-end engineering audit of AI processing and segmentation layers. No behaviour change on valid inputs, no new dependencies.
+
+### Bug fixes
+
+- **`SegmentationEngine` — `avgConfidence` divided by full pixel count instead of actual iteration count** — The confidence accumulation loop was bounded by `minOf(floatBuffer.remaining(), w * h)` to avoid over-reading a short buffer, but the average was computed as `totalConfidence / (w * h)` using the full frame size. When MediaPipe returns a shorter buffer than `w * h` pixels, the average is artificially deflated, potentially causing callers to reject a valid high-confidence segmentation mask as too uncertain. Edge case: if `w * h == 0` (e.g. the model output has degenerate dimensions), the division produces `NaN`, which propagates to the `SegmentationResult.confidence` field. Fixed: track the actual loop iteration count as `pixelCount = minOf(floatBuffer.remaining(), w * h)` and divide by `pixelCount`; guard against the zero case with an explicit `if (pixelCount > 0) … else 0f`.
+
+- **`AiToolsDelegate.applyStabilization` — partial output file not cleaned up on error or cancellation** — After `stabilizationEngine.analyzeMotion()` succeeds, a `File` object for the output MP4 (`cacheDir/stabilized_<clipId>.mp4`) is created and passed to `stabilize()`. If `stabilize()` returns `null` (error path) the output file was left on disk uncleaned; if the coroutine is cancelled during `stabilize()` (via `cancelAiTool()`) the `CancellationException` propagated without deleting any partial write. Repeated cancellations accumulate orphaned files, each potentially hundreds of MB when the real OpenCV integration ships. Fixed: wrapped the `stabilize()` call in `try/catch(Exception)` — deletes the output file before re-throwing so CancellationException also triggers cleanup. Added explicit `outputFile.delete()` in the null-result branch.
+
 ## v3.62.0 — Deep Audit Phase 24: Rendering, Subtitle, and Proxy Reliability
 
 Targeted correctness fixes from continued end-to-end engineering audit across Lottie rendering, subtitle export, and proxy generation. No behaviour change on valid inputs, no new dependencies.

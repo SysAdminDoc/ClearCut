@@ -173,13 +173,18 @@ class SegmentationEngine @Inject constructor(
                 .asFloatBuffer()
             val maskBytes = ByteArray(w * h)
             var totalConfidence = 0f
-            for (i in 0 until minOf(floatBuffer.remaining(), w * h)) {
+            val pixelCount = minOf(floatBuffer.remaining(), w * h)
+            for (i in 0 until pixelCount) {
                 val confidence = floatBuffer.get()
                 maskBytes[i] = (confidence * 255f).toInt().coerceIn(0, 255).toByte()
                 totalConfidence += confidence
             }
 
-            val avgConfidence = totalConfidence / (w * h)
+            // Divide by the number of pixels actually read from the buffer, not the
+            // full w*h.  If MediaPipe returns a shorter buffer than expected (or if
+            // w*h is 0), using w*h would produce an artificially-low (or NaN) average
+            // that callers use to decide whether the segmentation succeeded.
+            val avgConfidence = if (pixelCount > 0) totalConfidence / pixelCount else 0f
 
             SegmentationResult(
                 mask = maskBytes,
