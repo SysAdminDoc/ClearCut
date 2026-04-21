@@ -44,12 +44,17 @@ object FrameCapture {
                 // Downscale for performance
                 val scale = maxSize.toFloat() / maxOf(bitmap.width, bitmap.height)
                 if (scale < 1f) {
-                    val scaled = Bitmap.createScaledBitmap(
-                        bitmap,
-                        (bitmap.width * scale).toInt().coerceAtLeast(1),
-                        (bitmap.height * scale).toInt().coerceAtLeast(1),
-                        true
-                    )
+                    val scaled = try {
+                        Bitmap.createScaledBitmap(
+                            bitmap,
+                            (bitmap.width * scale).toInt().coerceAtLeast(1),
+                            (bitmap.height * scale).toInt().coerceAtLeast(1),
+                            true
+                        )
+                    } catch (t: Throwable) {
+                        bitmap.recycle()
+                        return null
+                    }
                     bitmap.recycle()
                     scaled
                 } else bitmap

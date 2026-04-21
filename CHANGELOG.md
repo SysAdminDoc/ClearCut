@@ -1,5 +1,18 @@
 # Changelog
 
+## v3.60.0 — Deep Audit Phase 22: Frame Capture & Timeline Reliability
+
+Targeted correctness fixes found during continued end-to-end engineering audit of delegate and engine files. No behaviour change on valid inputs, no new dependencies.
+
+### Bug fixes
+
+- **`FrameCapture` — bitmap leak on `createScaledBitmap` OOM** — `Bitmap.createScaledBitmap()` throws `OutOfMemoryError`, which is a `Throwable` (not an `Exception`). The outer `catch (e: Exception)` block did not catch it, so the source bitmap was never recycled on OOM, causing a native memory leak. Fixed: wrap the scale call in a dedicated `catch (t: Throwable)` that recycles the bitmap and returns `null`, consistent with the function's existing null-on-failure contract.
+
+- **`ClipEditingDelegate` — split clip loses linked audio ID when audio track is locked** — When a video clip on an unlocked track was split, the second-half copy had its `linkedClipId` resolved through `newIdsByOldId[linkedId]`. If the linked audio clip was on a locked track (and therefore not included in the split), `newIdsByOldId[linkedId]` returned `null`, silently setting `linkedClipId = null` on the new clip. Audio and video then played out of sync with no user-visible error. Fixed: fall back to `?: linkedId` to preserve the original link when the paired clip was not part of the split operation.
+
+### Notes
+- No DB schema changes. No new dependencies. No UI changes.
+
 ## v3.59.0 — Deep Audit Phase 21: Engine Reliability Fixes
 
 Targeted correctness and reliability fixes found during an end-to-end engineering audit of all engine and delegate files. No behaviour change on valid inputs, no new dependencies.
