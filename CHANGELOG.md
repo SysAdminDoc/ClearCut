@@ -1,5 +1,26 @@
 # Changelog
 
+## v3.61.0 — Deep Audit Phase 23: Concurrency, Export, and Storage Reliability
+
+Targeted correctness and reliability fixes from continued end-to-end engineering audit of export, persistence, and storage layers. No behaviour change on valid inputs, no new dependencies.
+
+### Bug fixes
+
+- **`ProjectListViewModel` — template share fails on devices without external storage** — `getExternalFilesDir(null)` returns `null` when external storage is unavailable (formatted as internal, removed, or permission-restricted). `File(null, "archives/templates")` creates a relative path, causing `FileProvider.getUriForFile()` to throw `IllegalArgumentException("Failed to find configured root")`, silently reporting "Template export failed". Fixed: fall back to `filesDir` when external storage is unavailable. Also added a `<files-path name="archives" path="archives/" />` entry to `file_paths.xml` so FileProvider can serve files from the internal fallback path.
+
+- **`ProjectAutoSave` — `copyAutoSave()` checked file existence outside the mutex** — `fromFile.exists()` was evaluated before `saveMutex.withLock {}`, leaving a race window where a concurrent `clearRecoveryData()` could delete the file between the check and the read, producing a `FileNotFoundException` rather than a clean `false` return. Moved the `exists()` check inside the lock so the check, read, mutate, and write happen atomically with respect to all other save/load operations.
+
+- **`VideoEngine` — `cancelExport()` read `activeExportOutputFile` without synchronization** — `export()` assigns `activeExportOutputFile = outputFile` inside a `synchronized(this)` block, but `cancelExport()` read and nulled it without any synchronization. Under the JVM memory model, a non-volatile field written after a volatile store has no happens-before guarantee for unsynchronized readers. In the narrow window between state being set to EXPORTING and `activeExportOutputFile` being assigned, a concurrent cancel call would read `null` and fail to delete the partial output file. Fixed: wrapped `cancelExport()` body in `synchronized(this)` to match the lock used in `export()`, keeping progress update outside the lock (non-critical, no synchronization requirement).
+
+- **`ExportDelegate` — `cancelExport()` missed state update for GIF and early-cancel paths** — The UI state update to `CANCELLED` was guarded by `if (currentState == ExportState.EXPORTING)`. For GIF exports (running on `nonVideoExportJob`, not through VideoEngine's state machine) or when cancel is tapped before state propagates to EXPORTING, the guard evaluated to false and the stateFlow was never updated. The cancel button would appear to do nothing. Fixed: always push `CANCELLED` state; the cancel button is only reachable while an export is active so CANCELLED is always the correct terminal state.
+
+- **`ExportDelegate` — batch export advanced to next item without waiting for current export** — `videoEngine.resetExportState()` resets the VideoEngine's internal state to IDLE but does not update the ExportDelegate's `stateFlow.exportState`. The wait loop `stateFlow.map { it.exportState }.first { it != IDLE && it != EXPORTING }` therefore immediately returned the previous item's COMPLETE/ERROR state, marking the new item as COMPLETED before its export had started. Two items would export concurrently, and their statuses would be misattributed. Fixed: reset `exportState` and `exportProgress` in the `stateFlow.update` call alongside `exportConfig` so the wait loop correctly waits for the new export to reach a terminal state.
+
+- **`ExportDelegate` — batch progress collector not joined before next item** — `progressJob.cancel()` signals cancellation but does not wait for the collector coroutine to finish. The collector could still be executing a `stateFlow.update` on the just-finished item while the next item's coroutine started its own `stateFlow.update`, producing a concurrent write race on the batch queue list. Fixed: added `progressJob.join()` after `progressJob.cancel()` to ensure the old collector fully stops before the next iteration begins.
+
+### Notes
+- No DB schema changes. No new dependencies. `file_paths.xml` adds `<files-path name="archives" path="archives/" />` as a new FileProvider root for internal-storage template sharing.
+
 ## v3.60.0 — Deep Audit Phase 22: Frame Capture & Timeline Reliability
 
 Targeted correctness fixes found during continued end-to-end engineering audit of delegate and engine files. No behaviour change on valid inputs, no new dependencies.

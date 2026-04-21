@@ -230,7 +230,7 @@ class ProjectListViewModel @Inject constructor(
             try {
                 val shareUri = withContext(Dispatchers.IO) {
                     val template = templateManager.getTemplate(templateId) ?: return@withContext null
-                    val dir = File(appContext.getExternalFilesDir(null), "archives/templates").apply { mkdirs() }
+                    val dir = File(appContext.getExternalFilesDir(null) ?: appContext.filesDir, "archives/templates").apply { mkdirs() }
                     val sanitized = sanitizeFileName(template.name, fallback = "template")
                     val outputFile = File(dir, "$sanitized.novacut-template")
                     val success = templateManager.exportTemplateToFile(template.id, outputFile)

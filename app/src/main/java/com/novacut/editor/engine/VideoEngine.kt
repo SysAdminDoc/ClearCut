@@ -1007,14 +1007,21 @@ class VideoEngine @Inject constructor(
 
     @androidx.annotation.OptIn(UnstableApi::class)
     fun cancelExport() {
-        if (_exportState.value != ExportState.EXPORTING) return
-        Log.d(TAG, "Cancelling export")
-        _exportState.value = ExportState.CANCELLED
+        // Synchronize to match the check-and-set in export(). Without this, cancelExport()
+        // could read activeExportOutputFile as null (stale) in the narrow window after
+        // _exportState was set to EXPORTING but before activeExportOutputFile was assigned —
+        // both happen inside the same synchronized block in export(), but non-synchronized
+        // reads have no formal happens-before guarantee for the non-volatile field.
+        synchronized(this) {
+            if (_exportState.value != ExportState.EXPORTING) return
+            Log.d(TAG, "Cancelling export")
+            _exportState.value = ExportState.CANCELLED
+            activeTransformer?.cancel()
+            activeTransformer = null
+            activeExportOutputFile?.delete()
+            activeExportOutputFile = null
+        }
         _exportProgress.value = 0f
-        activeTransformer?.cancel()
-        activeTransformer = null
-        activeExportOutputFile?.delete()
-        activeExportOutputFile = null
     }
 
     // --- Preview effects & speed ---

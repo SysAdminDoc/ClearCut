@@ -147,15 +147,13 @@ class ExportDelegate(
         nonVideoExportJob?.cancel()
         nonVideoExportJob = null
         videoEngine.cancelExport()
-        // If VideoEngine wasn't in EXPORTING state (e.g., GIF export path),
-        // ensure the UI state reflects cancellation
-        val currentState = stateFlow.value.exportState
-        if (currentState == ExportState.EXPORTING) {
-            stateFlow.update { it.copy(
-                exportState = ExportState.CANCELLED,
-                exportProgress = 0f
-            ) }
-        }
+        // Always push CANCELLED to the UI. The if-guard was only needed when we worried about
+        // overwriting a COMPLETE state, but cancelExport() is only called by explicit user
+        // action, so CANCELLED is always the right terminal state to show here.
+        stateFlow.update { it.copy(
+            exportState = ExportState.CANCELLED,
+            exportProgress = 0f
+        ) }
     }
 
     fun startExport(outputDir: File, preferredOutputName: String? = null) {
@@ -572,7 +570,11 @@ class ExportDelegate(
                     }
                     showToast("Exporting ${index + 1}/${queue.size}: ${item.outputName}")
                     videoEngine.resetExportState()
-                    stateFlow.update { it.copy(exportConfig = item.config) }
+                    // Reset exportState to IDLE in the delegate state as well. Without this,
+                    // the wait loop below immediately sees the previous item's COMPLETE/ERROR
+                    // state and advances before the new export has started, causing two items
+                    // to export concurrently and the batch queue to report incorrect statuses.
+                    stateFlow.update { it.copy(exportConfig = item.config, exportState = ExportState.IDLE, exportProgress = 0f) }
                     startExport(outputDir, item.outputName)
                     val progressJob = scope.launch {
                         stateFlow.map { it.exportProgress }
@@ -591,6 +593,11 @@ class ExportDelegate(
                             .first { it != ExportState.IDLE && it != ExportState.EXPORTING }
                     } finally {
                         progressJob.cancel()
+                        // Wait for the collector to fully stop before starting the next item.
+                        // cancel() is non-blocking; without join() the old collector can still
+                        // be running stateFlow.update calls when the next iteration launches,
+                        // causing races on the batch queue state.
+                        progressJob.join()
                     }
                     val newStatus = when (result) {
                         ExportState.COMPLETE -> BatchExportStatus.COMPLETED

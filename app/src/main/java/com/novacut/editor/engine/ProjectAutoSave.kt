@@ -152,24 +152,23 @@ class ProjectAutoSave @Inject constructor(
     }
 
     suspend fun copyAutoSave(fromProjectId: String, toProjectId: String): Boolean {
-        val fromFile = getAutoSaveFile(fromProjectId)
-        if (!fromFile.exists()) {
-            Log.w(TAG, "No auto-save found to copy for $fromProjectId")
-            return false
-        }
         return try {
-            // Hold the mutex for the entire read→mutate→write sequence. Releasing between
-            // read and write let a concurrent saveState() of the source project overwrite
-            // the file with newer data, after which we'd write stale (but newly-tagged)
-            // JSON to the destination — silently losing the source project's latest edits
-            // from the duplicate.
+            // Hold the mutex for the entire exists-check → read → mutate → write sequence.
+            // Checking exists() outside the lock created a window where a concurrent
+            // clearRecoveryData() or saveState() could delete or overwrite the source file
+            // between the check and the read, producing a FileNotFoundException or stale data.
             saveMutex.withLock {
+                val fromFile = getAutoSaveFile(fromProjectId)
+                if (!fromFile.exists()) {
+                    Log.w(TAG, "No auto-save found to copy for $fromProjectId")
+                    return@withLock false
+                }
                 val json = JSONObject(fromFile.readText(Charsets.UTF_8))
                 json.put("projectId", toProjectId)
                 json.put("timestamp", System.currentTimeMillis())
                 writeAutoSaveFileLocked(toProjectId, json.toString(2))
+                true
             }
-            true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to copy auto-save from $fromProjectId to $toProjectId", e)
             false
