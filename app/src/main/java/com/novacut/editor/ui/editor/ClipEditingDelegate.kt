@@ -450,7 +450,10 @@ class ClipEditingDelegate(
                                     trimStartMs = splitPointInSource,
                                     transition = null,
                                     linkedClipId = clip.linkedClipId?.let { linkedId ->
-                                        newIdsByOldId[linkedId]
+                                        // If the linked clip was also split, use its new second-half ID.
+                                        // If it wasn't split (e.g., on a locked track), preserve the original
+                                        // link rather than silently nulling it and desynchronising audio/video.
+                                        newIdsByOldId[linkedId] ?: linkedId
                                     },
                                     speedCurve = secondHalfCurve
                                 )
