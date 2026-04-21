@@ -1,5 +1,19 @@
 # Changelog
 
+## v3.62.0 — Deep Audit Phase 24: Rendering, Subtitle, and Proxy Reliability
+
+Targeted correctness fixes from continued end-to-end engineering audit across Lottie rendering, subtitle export, and proxy generation. No behaviour change on valid inputs, no new dependencies.
+
+### Bug fixes
+
+- **`LottieTemplateEngine` — NaN progress on zero-duration composition** — `(frameTimeMs.toFloat() / composition.duration).coerceIn(0f, 1f)` produces `NaN` when both operands are zero (frame 0 of a malformed/empty animation where `duration = 0`). IEEE 754: `0f / 0f = NaN`; `NaN.coerceIn(…)` returns `NaN` because all NaN comparisons return false. Passing `NaN` to `drawable.progress` renders the animation at an undefined frame position, corrupting any title overlay in the exported video. Fixed: guard the denominator with `takeIf { it > 0f } ?: 1f`.
+
+- **`ContactSheetExporter` — bitmap leaked when Paint or Canvas construction throws OOM** — `Canvas(sheet)` and three `Paint(…)` objects were created between the OOM-guarded `Bitmap.createBitmap` block and the `try { } finally { sheet.recycle() }` block. Any `OutOfMemoryError` raised during `Paint.ANTI_ALIAS_FLAG` native allocation or `Typeface.create()` would propagate past both the catch and the finally, leaving the large sheet bitmap unreleased. On devices that are already memory-constrained (the reason the batch-export flow exports in one-at-a-time fashion), repeated leaks accumulate and cause OOM crashes. Fixed: moved `Canvas` and all `Paint` initialisations inside the `try` block so the `finally { sheet.recycle() }` guards the entire render path.
+
+- **`SubtitleExporter` — VTT word-level cue timestamps not validated against caption bounds** — Word-level timestamps in `Caption.words` are passed directly into `<${formatVttTime(word.startTimeMs)}>` cues without checking that they fall within the caption's `startTimeMs..endTimeMs` range. The WebVTT spec requires word timestamps to lie within the parent cue's range; parsers in browsers and media players silently discard the entire cue when this is violated, causing the affected subtitle line to disappear entirely. Fixed: filter `caption.words` to only those whose `startTimeMs` falls in `caption.startTimeMs..caption.endTimeMs` before emitting cue tags. Falls back to plain caption text when no valid word cues remain.
+
+- **`ProxyWorkflowEngine` — cancellation not checked between proxy generation jobs** — The `for ((clipId, entry) in needsProxy)` loop did not call `ensureActive()` before starting each clip's `proxyEngine.generateProxy()` call. WorkManager cancels the owning coroutine when the device goes to sleep, battery-saver activates, or the user cancels the background task; without a cooperative check the loop continues until the process is forcibly killed, burning CPU/battery and leaving partial proxy files. Fixed: added `ensureActive()` at the top of each iteration so cancellation is observed promptly before each potentially multi-minute encode begins.
+
 ## v3.61.0 — Deep Audit Phase 23: Concurrency, Export, and Storage Reliability
 
 Targeted correctness and reliability fixes from continued end-to-end engineering audit of export, persistence, and storage layers. No behaviour change on valid inputs, no new dependencies.

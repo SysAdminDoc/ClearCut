@@ -90,8 +90,11 @@ class LottieTemplateEngine @Inject constructor(
             drawable.setTextDelegate(textDelegate)
         }
 
-        // Set progress (0..1)
-        val progress = (frameTimeMs.toFloat() / composition.duration).coerceIn(0f, 1f)
+        // Set progress (0..1). Guard against duration=0 on malformed/empty compositions:
+        // 0 / 0 = NaN, and NaN.coerceIn(0f, 1f) = NaN (NaN comparisons always return false),
+        // which would pass NaN to drawable.progress and render at an undefined frame position.
+        val safeDuration = composition.duration.takeIf { it > 0f } ?: 1f
+        val progress = (frameTimeMs.toFloat() / safeDuration).coerceIn(0f, 1f)
         drawable.progress = progress
 
         // Render to bitmap

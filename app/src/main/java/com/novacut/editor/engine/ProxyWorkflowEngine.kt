@@ -5,6 +5,7 @@ import android.net.Uri
 import com.novacut.editor.model.ProxyResolution
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -98,6 +99,9 @@ class ProxyWorkflowEngine @Inject constructor(
             var completed = 0
 
             for ((clipId, entry) in needsProxy) {
+                // Check cancellation before each potentially multi-minute proxy job so
+                // WorkManager can stop the worker promptly without force-killing the process.
+                ensureActive()
                 try {
                     _entries.update { current -> current + (clipId to entry.copy(proxyGenerating = true)) }
 

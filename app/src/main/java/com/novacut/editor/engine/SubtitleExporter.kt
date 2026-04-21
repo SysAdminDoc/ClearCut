@@ -52,10 +52,20 @@ object SubtitleExporter {
                 appendLine("${index + 1}")
                 appendLine("${formatVttTime(caption.startTimeMs)} --> ${formatVttTime(caption.endTimeMs)}")
 
-                // Word-level cues if available
+                // Word-level cues if available.
+                // Filter to words whose startTimeMs falls within the caption's own range —
+                // out-of-range word timestamps are rejected by VTT parsers and cause the
+                // entire cue to be silently dropped.
                 if (caption.words.isNotEmpty()) {
-                    val wordText = caption.words.joinToString(" ") { word ->
-                        "<${formatVttTime(word.startTimeMs)}><c>${escapeVttText(word.text)}</c>"
+                    val validWords = caption.words.filter {
+                        it.startTimeMs in caption.startTimeMs..caption.endTimeMs
+                    }
+                    val wordText = if (validWords.isNotEmpty()) {
+                        validWords.joinToString(" ") { word ->
+                            "<${formatVttTime(word.startTimeMs)}><c>${escapeVttText(word.text)}</c>"
+                        }
+                    } else {
+                        escapeVttText(caption.text)
                     }
                     appendLine(wordText)
                 } else {

@@ -75,22 +75,26 @@ object ContactSheetExporter {
             return@withContext false
         }
 
-        val canvas = Canvas(sheet)
-        canvas.drawColor(BG_COLOR)
-
-        val captionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = TEXT_COLOR
-            textSize = 13f
-            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
-        }
-        val durationPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = SUBTEXT_COLOR
-            textSize = 11f
-            typeface = Typeface.SANS_SERIF
-        }
-        val placeholderPaint = Paint().apply { color = 0xFF313244.toInt() }
-
+        // Canvas and Paint objects are initialised inside the try block so that any
+        // OOM thrown by their native allocations is covered by the finally that recycles
+        // `sheet`.  Leaving them outside (as was the case before) meant a native OOM
+        // during Paint construction leaked the bitmap before the finally scope began.
         try {
+            val canvas = Canvas(sheet)
+            canvas.drawColor(BG_COLOR)
+
+            val captionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = TEXT_COLOR
+                textSize = 13f
+                typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+            }
+            val durationPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = SUBTEXT_COLOR
+                textSize = 11f
+                typeface = Typeface.SANS_SERIF
+            }
+            val placeholderPaint = Paint().apply { color = 0xFF313244.toInt() }
+
             clips.forEachIndexed { index, clip ->
                 ensureActive()
                 val col = index % cols
