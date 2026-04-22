@@ -616,6 +616,8 @@ fun EditorScreen(
                     onSetTrackHeight = viewModel::setTrackHeight,
                     onScrubStart = viewModel::beginScrub,
                     onScrubEnd = viewModel::endScrub,
+                    onSplitAtPlayhead = viewModel::splitClipAtPlayhead,
+                    onDeleteSelectedClip = viewModel::deleteSelectedClip,
                     engine = viewModel.engine,
                     modifier = Modifier.heightIn(min = timelineMinHeight, max = timelineMaxHeight)
                 )

@@ -1577,6 +1577,9 @@
     <string name="cd_zoom_out">Zoom Out</string>
     <string name="cd_fit_timeline">Fit</string>
     <string name="cd_zoom_in">Zoom In</string>
+    <string name="cd_split_at_playhead">Cut at playhead</string>
+    <string name="cd_delete_selected">Delete selected clip</string>
+    <string name="cd_timeline_overview">Timeline overview — tap or drag to seek</string>
 
     <!-- MarkerListPanel -->
     <string name="cd_close_markers">Close markers</string>
