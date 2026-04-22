@@ -514,7 +514,10 @@ class ClipEditingDelegate(
             }
             recalculateDuration(state.copy(tracks = tracks))
         }
-        rebuildPlayerTimeline()
+        // rebuildPlayerTimeline() moved to endTrim() — trim fires at touch-event
+        // rate during drag, and rebuilding ExoPlayer's MediaItem set on every
+        // tick was the primary source of timeline clunkiness. beginTrim already
+        // sets scrubbingMode(true) so the player suppresses decode work mid-drag.
     }
 
     fun endTrim() {

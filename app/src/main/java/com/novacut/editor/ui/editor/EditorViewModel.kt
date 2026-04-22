@@ -1792,12 +1792,10 @@ class EditorViewModel @Inject constructor(
             enqueueWaveformLoad(clip.id, clip.sourceUri)
         }
         val suggestion: AiSuggestion? = when {
-            clipHasVisual && clip.effects.isEmpty() && clip.durationMs > 5000L ->
-                AiSuggestion(
-                    id = "auto_color_${clip.id}",
-                    message = "This clip could use color correction",
-                    actionId = "auto_color"
-                )
+            // Color-correction suggestion removed per user request — firing an
+            // unsolicited "this clip could use color correction" banner every
+            // time a long visual clip was selected was noise, not signal.
+            // Users can still trigger auto-color from the AI tools panel.
             s.tracks.filter { it.type == TrackType.VIDEO }.flatMap { it.clips }.size > 3 &&
                 s.tracks.flatMap { it.clips }.none { it.transition != null } ->
                 AiSuggestion(
@@ -2359,11 +2357,17 @@ class EditorViewModel @Inject constructor(
         if (isSlipEditActive) return
         isSlipEditActive = true
         saveUndoState("Slip edit")
+        // Freeze the player while the user drags so we don't rebuild it on every
+        // pixel of motion. `setScrubbingMode(true)` lets ExoPlayer skip the expensive
+        // seek+decode work; the actual timeline rebuild happens in endSlipEdit.
+        videoEngine.setScrubbingMode(true)
     }
 
     fun endSlipEdit() {
         if (!isSlipEditActive) return
         isSlipEditActive = false
+        videoEngine.setScrubbingMode(false)
+        rebuildPlayerTimeline()
         saveProject()
     }
 
@@ -2371,11 +2375,14 @@ class EditorViewModel @Inject constructor(
         if (isSlideEditActive) return
         isSlideEditActive = true
         saveUndoState("Slide edit")
+        videoEngine.setScrubbingMode(true)
     }
 
     fun endSlideEdit() {
         if (!isSlideEditActive) return
         isSlideEditActive = false
+        videoEngine.setScrubbingMode(false)
+        rebuildPlayerTimeline()
         saveProject()
     }
 
@@ -2400,7 +2407,11 @@ class EditorViewModel @Inject constructor(
                 })
             })
         }
-        rebuildPlayerTimeline()
+        // Intentionally NOT calling rebuildPlayerTimeline() here. Slip-drag fires
+        // this method at touch-event rate (60–120 Hz); rebuilding ExoPlayer's
+        // MediaItem set on every tick was the root cause of the "clunky" timeline.
+        // Rebuild happens once in endSlipEdit() instead. ScrubbingMode in
+        // beginSlipEdit() already suppresses intermediate decode work.
     }
 
     fun slideClip(clipId: String, slideAmountMs: Long) {
@@ -2448,7 +2459,8 @@ class EditorViewModel @Inject constructor(
                 }
             })
         }
-        rebuildPlayerTimeline()
+        // Deferred to endSlideEdit() to avoid per-frame player rebuilds during drag.
+        // Same perf fix as slipClip — see comment there.
     }
 
     // --- Export ---

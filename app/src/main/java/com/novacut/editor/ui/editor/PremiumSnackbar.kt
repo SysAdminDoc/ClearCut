@@ -10,13 +10,16 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CheckCircle
@@ -76,7 +79,12 @@ fun PremiumSnackbar(
         ToastSeverity.Error -> Icons.Outlined.ErrorOutline
     }
     Surface(
-        modifier = modifier,
+        // wrapContentHeight on the Surface caps the snackbar to the intrinsic height
+        // of its Row content. Without this, the accent stripe's `fillMaxHeight()`
+        // below cascades the ancestor Box's screen-height constraint all the way
+        // down, which stretched the snackbar to cover the full screen (and, being
+        // opaque-ish, absorbed touch input to the play button underneath).
+        modifier = modifier.wrapContentHeight(),
         color = Mocha.PanelHighest,
         contentColor = Mocha.Text,
         shape = RoundedCornerShape(Radius.lg),
@@ -86,6 +94,11 @@ fun PremiumSnackbar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                // IntrinsicSize.Min tells children "you can ask for fillMaxHeight and
+                // you'll get the row's intrinsic (wrap-content) height" rather than
+                // the incoming constraint from above. This is what makes the accent
+                // stripe match the text's line height instead of blowing up to screen.
+                .height(IntrinsicSize.Min)
                 .background(
                     Brush.horizontalGradient(
                         listOf(

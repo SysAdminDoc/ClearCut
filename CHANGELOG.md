@@ -1,5 +1,21 @@
 # Changelog
 
+## v3.67.0 — Snackbar Height, Drag Responsiveness, Suggestion Cleanup
+
+Follow-up fixes based on v3.66 user testing.
+
+### Snackbar covering the screen (also broke video playback)
+
+- **`PremiumSnackbar` accent stripe used `fillMaxHeight()` inside a height-unconstrained Row.** Compose resolves `fillMaxHeight` against the nearest height-constrained ancestor — which in this case was the screen-root `Box`. So a "Clips split" toast was not just visually oversized, its opaque-ish Surface absorbed touch input across the whole area, which is why the play button appeared unresponsive immediately after a split. Two-line fix: added `.wrapContentHeight()` on the Surface and `.height(IntrinsicSize.Min)` on the Row, so `fillMaxHeight` now resolves against the Row's wrap-content height (≈52dp) instead of the screen.
+
+### Timeline drag responsiveness
+
+- **`trimClip`, `slideClip`, and `slipClip` no longer call `rebuildPlayerTimeline()` on every tick.** All three fire at touch-event rate (60–120 Hz) during a drag; tearing down and rebuilding ExoPlayer's `MediaItem` + `ClippingConfiguration` set on every tick was the primary cause of the "clunky" feel. The rebuild is deferred to `endTrim` / `endSlideEdit` / `endSlipEdit`, which run exactly once per gesture. `beginSlideEdit` and `beginSlipEdit` now also call `videoEngine.setScrubbingMode(true)` (previously only `beginTrim` did), so ExoPlayer skips intermediate seek/decode work across all three edit modes.
+
+### Suggestion banner cleanup
+
+- **Removed the unsolicited "This clip could use color correction" suggestion banner.** Fired every time a long visual clip was selected that happened to have no effects — noise, not signal. Users can still trigger auto-color from the AI tools panel. The other two suggestions (add transitions, denoise on low-variance audio) are preserved because they gate on more specific conditions.
+
 ## v3.66.0 — Timeline & Editing Overhaul
 
 Focused rework of the timeline gesture model and viewport framing. Addresses three long-standing usability issues: trim handles not responding to drags, cut/split being hard to find, and long clips appearing to show only a tiny editable window. No DB schema changes, no new dependencies.
