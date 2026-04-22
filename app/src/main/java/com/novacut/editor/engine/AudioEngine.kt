@@ -162,7 +162,11 @@ class AudioEngine @Inject constructor(
             result
         } catch (e: Exception) {
             Log.e(TAG, "Waveform extraction failed for $uri", e)
-            FloatArray(sampleCount) { 0f }
+            // Use `boundedSampleCount` -- matching the other early-return paths in this
+            // function. Callers that pass a large `sampleCount` (e.g. 48_000) must never
+            // receive an oversized array from the error path, or the 10_000-cap applied
+            // everywhere else silently turns into a multi-MB allocation on decoder failure.
+            FloatArray(boundedSampleCount) { 0f }
         } finally {
             extractor.release()
         }

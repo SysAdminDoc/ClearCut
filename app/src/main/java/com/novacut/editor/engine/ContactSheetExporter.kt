@@ -146,8 +146,19 @@ object ContactSheetExporter {
             }
             onProgress(1f)
             true
-        } catch (e: Exception) {
-            Log.e(TAG, "Contact sheet render failed", e)
+        } catch (t: Throwable) {
+            // Catch Throwable (not just Exception) so that an OutOfMemoryError raised by
+            // `sheet.compress` on a very large grid -- the PNG encoder allocates its own
+            // native buffers -- still triggers the `outputFile.delete()` cleanup. Without
+            // this, the `finally` recycles `sheet` (no leak), but the half-written PNG is
+            // left behind as a corrupt 0-byte or truncated file that subsequent opens
+            // would silently serve as if the export succeeded. Coroutine cancellation
+            // must still propagate -- rethrow CancellationException before logging.
+            if (t is kotlinx.coroutines.CancellationException) {
+                outputFile.delete()
+                throw t
+            }
+            Log.e(TAG, "Contact sheet render failed", t)
             outputFile.delete()
             false
         } finally {

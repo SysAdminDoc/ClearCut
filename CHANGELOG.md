@@ -1,5 +1,18 @@
 # Changelog
 
+## v3.65.0 — Deep Audit Phase 27: Error-Path Allocation & OOM Cleanup
+
+Targeted correctness fixes from continued engineering audit. No behaviour change on valid inputs, no new dependencies.
+
+### Bug fixes
+
+- **`AudioEngine.extractWaveform` — exception path allocated unbounded `FloatArray(sampleCount)`** — Every other return path in `extractWaveform` allocates `FloatArray(boundedSampleCount)`, where `boundedSampleCount = sampleCount.coerceAtMost(10_000)` caps the result at ~40 KB. The outer `catch (e: Exception)` block silently violated this contract by allocating `FloatArray(sampleCount)`. Callers that pass a large `sampleCount` (e.g. `48_000` for a high-resolution scrub waveform) would receive a 192 KB array on decoder failure instead of the expected 40 KB, and — because callers may cache the result under the `"uri|sampleCount"` key — repeated failures compound into a persistent oversized cache entry. Fixed: use `boundedSampleCount` on the exception path to match the other four return paths in the function. Completes the v3.59.0 fix which patched the `audioTrackIndex < 0` path but left the outer catch unfixed.
+
+- **`ContactSheetExporter.export` — PNG-encoder OutOfMemoryError bypassed partial-file cleanup** — `sheet.compress(…)` allocates native PNG-encoder buffers (~bitmap-sized) and can raise `OutOfMemoryError` on very large contact-sheet grids. The outer `catch (e: Exception)` block did not catch `OutOfMemoryError` (a `Throwable` subclass, not `Exception`), so the `outputFile.delete()` cleanup was skipped. The `finally` block still recycled the source bitmap (no native leak), but a half-written or 0-byte PNG was left on disk — subsequent opens would silently serve that file as though the export had succeeded, and the user would see a truncated contact sheet without any error toast. Fixed: widen the catch to `Throwable`, but rethrow `CancellationException` first so coroutine cancellation still propagates to the caller instead of being swallowed as a generic "render failed" result.
+
+### Notes
+- No DB schema changes. No new dependencies. No UI changes.
+
 ## v3.64.0 — Deep Audit Phase 26: Defensive Hardening
 
 Defensive improvements from final end-to-end engineering audit sweep. No behaviour change on valid inputs, no new dependencies.
