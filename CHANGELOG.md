@@ -1,5 +1,30 @@
 # Changelog
 
+## v3.66.0 — Timeline & Editing Overhaul
+
+Focused rework of the timeline gesture model and viewport framing. Addresses three long-standing usability issues: trim handles not responding to drags, cut/split being hard to find, and long clips appearing to show only a tiny editable window. No DB schema changes, no new dependencies.
+
+### Timeline gesture unification
+
+- **Unified clip-body pointer input replaces three competing gesture detectors.** Previously each clip had a parent `detectDragGestures` for slide/slip and two nested `detectHorizontalDragGestures` blocks for the left and right trim handles. All three waited for drag-slop on the same down event, and the parent body detector routinely consumed edge drags before the handle detectors could react — which is why pulling on the edge of a clip to trim often did nothing. A single `detectDragGestures` on the clip body now measures the touch X position at drag start and routes the gesture to one of four zones: `TRIM_LEFT` (within the 28dp edge zone), `TRIM_RIGHT` (within the 28dp trailing zone), `SLIP` (middle zone, trim-tool active), or `SLIDE` (middle zone, arrange-tool active). The nested handle pointer inputs are removed. Drag events are explicitly consumed so the ancestor pinch-zoom detector doesn't double-handle them. Trim and slide/slip now work reliably regardless of the active tool mode.
+- **Selected clip shows thicker edge handles with grip lines.** When a clip is selected, the trim-handle visual width grows from 14dp to 18dp and three 1.2dp vertical grip lines appear — an unambiguous affordance cue that the edge is draggable. Matches the CapCut / KineMaster edit UX where the selected clip's edges are visibly distinct from inactive clips.
+
+### Full-duration viewport framing
+
+- **Minimum zoom lowered from 0.1 → 0.01.** The old 0.1 floor meant the fit-to-window calculation couldn't actually fit videos longer than ~60 seconds on a phone screen — the computed fit-zoom was clamped *above* the ratio that would have worked. The new 0.01 floor lets a 10-minute project fit the editable area cleanly. The max 10.0 remains unchanged.
+- **Auto-fit on first layout.** A new `fitTimelineToWindow()` method in `EditorViewModel` computes the fit-zoom from the current viewport width and project duration, and resets scroll to zero. It fires automatically: (1) the first time `setTimelineWidth` transitions from 0 → non-zero with content already present, (2) after autosave/Room restore populates tracks, and (3) after the first clip is added to an empty project. A `pendingInitialFit` flag ensures this runs once per session — the user's subsequent zoom preferences are not overridden. Matches the CapCut / VN behaviour where importing a clip immediately frames the whole asset.
+- **Viewport overview strip below the tracks.** A new `TimelineOverviewBar` composable renders a full-project-duration strip with one rectangle per clip (coloured per track type), a highlighted "viewport" window showing what's currently visible, and a playhead tick. Tap or drag on the strip to scroll — centering the viewport on the tapped position. Primary purpose is *discoverability*: users can see at a glance that there is more content off-screen and can jump directly to any timestamp without having to pinch-zoom out first. Only shown when `totalDurationMs > 0`.
+
+### Cut / delete accessibility
+
+- **Prominent "Cut at playhead" and "Delete selected" buttons added to the timeline toolbar row.** Previously split was only reachable through a two-level tool sub-menu or a radial long-press menu; both paths were difficult to find. The new split button sits between the zoom controls and the marker-add button, uses `Icons.AutoMirrored.Filled.CallSplit`, is styled with the Peach accent + highlight border so it reads as a primary action, and calls `viewModel::splitClipAtPlayhead` directly. The delete button auto-disables when no clip is selected. Both are always visible, regardless of the current tool mode.
+
+### Internals
+
+- `TimelineToolbarButton` gained `highlight: Boolean` and `enabled: Boolean` parameters so the split button can render as a prominent accented action and the delete button can render as greyed-out when disabled. Default values preserve existing call sites unchanged.
+- `ClipGestureZone` enum (`TRIM_LEFT`, `TRIM_RIGHT`, `SLIDE`, `SLIP`, `NONE`) defined at file scope in `Timeline.kt` to make the unified gesture routing explicit.
+- Zoom constants `MIN_TIMELINE_ZOOM = 0.01f` and `MAX_TIMELINE_ZOOM = 10f` lifted to file-scope constants in both `Timeline.kt` and `EditorViewModel.kt` to keep the zoom clamps consistent across pinch, toolbar buttons, and the fit-to-window calc.
+
 ## v3.65.0 — Deep Audit Phase 27: Error-Path Allocation & OOM Cleanup
 
 Targeted correctness fixes from continued engineering audit. No behaviour change on valid inputs, no new dependencies.

@@ -56,6 +56,12 @@ import javax.inject.Inject
 import kotlin.math.roundToLong
 
 private const val TIMELINE_BASE_SCALE = 0.15f
+// Min zoom lowered from 0.1 → 0.01 so a ~10-minute video fits the phone viewport
+// when the user taps "fit to window" or when the timeline auto-fits on first layout.
+// Previously fit-zoom was clamped before it could reach a ratio that actually fit,
+// which is why long clips appeared to only show a narrow window of editable content.
+private const val MIN_TIMELINE_ZOOM = 0.01f
+private const val MAX_TIMELINE_ZOOM = 10f
 private const val WAVEFORM_PRELOAD_PADDING_MS = 3_000L
 private const val WAVEFORM_FALLBACK_WINDOW_MS = 15_000L
 
@@ -330,6 +336,10 @@ class EditorViewModel @Inject constructor(
                     if (h > 1080) enqueueProxyGeneration()
                 }
             }
+            // Auto-fit on first clip: when we go from empty→populated, frame the full
+            // project so the user immediately sees the whole clip. Matches CapCut /
+            // VN UX where importing the first asset fills the editable area.
+            requestInitialFitIfNeeded()
         }
     )
 
@@ -393,7 +403,13 @@ class EditorViewModel @Inject constructor(
         return offsetMs.coerceIn(0L, maxTimelineScrollOffset(state))
     }
 
+    // True until fitTimelineToWindow has been applied at least once for this session.
+    // First layout with content should auto-fit so users immediately see the whole
+    // project rather than having to pinch-zoom out.
+    private var pendingInitialFit: Boolean = true
+
     fun setTimelineWidth(widthPx: Float) {
+        val wasZero = timelineWidthPx <= 0f
         timelineWidthPx = widthPx
         _state.update { state ->
             val clampedScrollOffsetMs = clampTimelineScrollOffset(state.scrollOffsetMs, state)
@@ -404,6 +420,23 @@ class EditorViewModel @Inject constructor(
             }
         }
         preloadVisibleWaveforms()
+        // Auto-fit on first layout after content is loaded. We defer the fit until we
+        // both know the timeline width AND there is actual content to frame. This
+        // means opening a project goes: (1) ViewModel boots empty, (2) setTimelineWidth
+        // arrives with width>0, (3) Room+autosave restore populates tracks, (4) the
+        // NEXT setTimelineWidth call (or the first one if content beat layout) fires
+        // the fit. A small deferred launch re-checks after the state write settles.
+        if (wasZero && widthPx > 0f && pendingInitialFit && _state.value.totalDurationMs > 0L) {
+            pendingInitialFit = false
+            fitTimelineToWindow()
+        }
+    }
+
+    internal fun requestInitialFitIfNeeded() {
+        if (pendingInitialFit && timelineWidthPx > 0f && _state.value.totalDurationMs > 0L) {
+            pendingInitialFit = false
+            fitTimelineToWindow()
+        }
     }
 
     init {
@@ -452,6 +485,11 @@ class EditorViewModel @Inject constructor(
                     rebuildPlayerTimeline()
                 }
                 preloadVisibleWaveforms(_state.value)
+                // Restored content may have arrived AFTER the timeline laid out with
+                // zero clips. In that race the first setTimelineWidth call saw an
+                // empty project and skipped the fit. Fire now so the user opens a
+                // restored project to the whole timeline framed, not a tiny window.
+                requestInitialFitIfNeeded()
             }
         }
 
@@ -930,7 +968,7 @@ class EditorViewModel @Inject constructor(
     // Zoom
     fun setZoomLevel(zoom: Float) {
         _state.update { state ->
-            val updatedState = state.copy(zoomLevel = zoom.coerceIn(0.1f, 10f))
+            val updatedState = state.copy(zoomLevel = zoom.coerceIn(MIN_TIMELINE_ZOOM, MAX_TIMELINE_ZOOM))
             updatedState.copy(
                 scrollOffsetMs = clampTimelineScrollOffset(updatedState.scrollOffsetMs, updatedState)
             )
@@ -942,6 +980,26 @@ class EditorViewModel @Inject constructor(
         _state.update { state ->
             state.copy(scrollOffsetMs = clampTimelineScrollOffset(offsetMs, state))
         }
+        preloadVisibleWaveforms(_state.value)
+    }
+
+    /**
+     * Compute and apply the zoom level that makes the entire project duration fit
+     * inside the current timeline viewport, and reset scroll to zero. Used on first
+     * clip add and on project load so the user doesn't open the editor to a timeline
+     * that shows only a few seconds of a long video.
+     *
+     * No-op when the timeline hasn't laid out yet (width=0) or there's no content.
+     */
+    fun fitTimelineToWindow() {
+        val width = timelineWidthPx
+        val state = _state.value
+        val duration = state.totalDurationMs
+        if (width <= 0f || duration <= 0L) return
+        // 0.92 leaves ~8% headroom so the last clip doesn't butt up against the edge.
+        val fit = (width / duration.toFloat() / TIMELINE_BASE_SCALE * 0.92f)
+            .coerceIn(MIN_TIMELINE_ZOOM, MAX_TIMELINE_ZOOM)
+        _state.update { s -> s.copy(zoomLevel = fit, scrollOffsetMs = 0L) }
         preloadVisibleWaveforms(_state.value)
     }
 
