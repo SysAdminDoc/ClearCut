@@ -551,8 +551,18 @@ class EditorViewModel @Inject constructor(
                     }
                     newScroll = clampTimelineScrollOffset(newScroll, s)
 
-                    // Sync full state every 5th frame (playhead + scroll)
-                    if (frameCount % 5 == 0 || newScroll != s.scrollOffsetMs) {
+                    // Push `_state` updates only when scroll moved OR playhead has
+                    // drifted at least 200ms from the last sync. Consumers of the
+                    // flow that care about live playhead (the timeline render) read
+                    // `_playheadMs` directly — the dedicated unboxed-Long flow that
+                    // we update every tick above. The 200ms threshold still keeps
+                    // `state.playheadMs` fresh enough for user-triggered ops like
+                    // `splitClipAtPlayhead` and auto-save, while cutting state.copy
+                    // broadcasts from ~6/sec to ~5/sec during playback. Previously
+                    // a new EditorState was constructed and emitted on every 5th
+                    // tick unconditionally, invalidating every Compose subscriber.
+                    val playheadDriftMs = kotlin.math.abs(currentMs - s.playheadMs)
+                    if (newScroll != s.scrollOffsetMs || playheadDriftMs >= 200L) {
                         _state.update { st ->
                             st.copy(playheadMs = currentMs, scrollOffsetMs = newScroll)
                         }
@@ -821,6 +831,7 @@ class EditorViewModel @Inject constructor(
     // --- Effects & Transitions (delegated) ---
     fun addEffect(clipId: String, effect: Effect) = effectsDelegate.addEffect(clipId, effect)
     fun beginEffectAdjust() = effectsDelegate.beginEffectAdjust()
+    fun endEffectAdjust() = effectsDelegate.endEffectAdjust()
     fun updateEffect(clipId: String, effectId: String, params: Map<String, Float>) = effectsDelegate.updateEffect(clipId, effectId, params)
     fun toggleEffectEnabled(clipId: String, effectId: String) = effectsDelegate.toggleEffectEnabled(clipId, effectId)
     fun removeEffect(clipId: String, effectId: String) = effectsDelegate.removeEffect(clipId, effectId)
@@ -1159,7 +1170,11 @@ class EditorViewModel @Inject constructor(
     // --- Audio Mixer (delegated) ---
     fun showAudioMixer() = audioMixerDelegate.showAudioMixer()
     fun hideAudioMixer() = audioMixerDelegate.hideAudioMixer()
+    fun beginVolumeAdjust() = audioMixerDelegate.beginVolumeAdjust()
+    fun endVolumeAdjust() = audioMixerDelegate.endVolumeAdjust()
     fun setTrackVolume(trackId: String, volume: Float) = audioMixerDelegate.setTrackVolume(trackId, volume)
+    fun beginPanAdjust() = audioMixerDelegate.beginPanAdjust()
+    fun endPanAdjust() = audioMixerDelegate.endPanAdjust()
     fun setTrackPan(trackId: String, pan: Float) = audioMixerDelegate.setTrackPan(trackId, pan)
     fun toggleTrackSolo(trackId: String) = audioMixerDelegate.toggleTrackSolo(trackId)
     fun addTrackAudioEffect(trackId: String, type: AudioEffectType) = audioMixerDelegate.addTrackAudioEffect(trackId, type)
@@ -3052,15 +3067,23 @@ class EditorViewModel @Inject constructor(
         val safeVolume = safeEditorFloat(volume, 1f, 0f, 2f)
         updateClipById(clipId) { it.copy(volume = safeVolume) }
         videoEngine.setPreviewVolume(safeVolume)
-        saveProject()
+        // saveProject() deferred to endVolumeChange() — slider fires this 60 Hz.
     }
 
     fun beginVolumeChange() {
         saveUndoState("Change volume")
     }
 
+    fun endVolumeChange() {
+        saveProject()
+    }
+
     fun beginTransformChange() {
         saveUndoState("Transform clip")
+    }
+
+    fun endTransformChange() {
+        saveProject()
     }
 
     fun setClipTransform(clipId: String, positionX: Float? = null, positionY: Float? = null,
@@ -3075,7 +3098,9 @@ class EditorViewModel @Inject constructor(
             )
         }
         updatePreview()
-        saveProject()
+        // saveProject() deferred to endTransformChange() — preview pinch/drag fires
+        // this method at touch-event rate. beginTransformChange + endTransformChange
+        // bracket the gesture.
     }
 
     fun resetClipTransform(clipId: String) {
@@ -3084,14 +3109,26 @@ class EditorViewModel @Inject constructor(
         saveProject()
     }
 
+    fun beginOpacityChange() {
+        saveUndoState("Adjust opacity")
+    }
+
+    fun endOpacityChange() {
+        saveProject()
+    }
+
     fun setClipOpacity(clipId: String, opacity: Float) {
         updateClipById(clipId) { it.copy(opacity = opacity.coerceIn(0f, 1f)) }
         updatePreview()
-        saveProject()
+        // saveProject() deferred to endOpacityChange() — slider-driven, see above.
     }
 
     fun beginFadeAdjust() {
         saveUndoState("Adjust fade")
+    }
+
+    fun endFadeAdjust() {
+        saveProject()
     }
 
     fun setClipFadeIn(clipId: String, fadeInMs: Long) {
@@ -3099,7 +3136,7 @@ class EditorViewModel @Inject constructor(
             val maxFade = (clip.durationMs - clip.fadeOutMs).coerceAtLeast(0L)
             clip.copy(fadeInMs = fadeInMs.coerceIn(0L, maxFade))
         }
-        saveProject()
+        // saveProject() deferred to endFadeAdjust().
     }
 
     fun setClipFadeOut(clipId: String, fadeOutMs: Long) {
@@ -3107,7 +3144,7 @@ class EditorViewModel @Inject constructor(
             val maxFade = (clip.durationMs - clip.fadeInMs).coerceAtLeast(0L)
             clip.copy(fadeOutMs = fadeOutMs.coerceIn(0L, maxFade))
         }
-        saveProject()
+        // saveProject() deferred to endFadeAdjust().
     }
 
     // Export

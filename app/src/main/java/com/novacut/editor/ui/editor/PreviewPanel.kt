@@ -1,7 +1,13 @@
 package com.novacut.editor.ui.editor
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateRotation
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -56,6 +62,7 @@ fun PreviewPanel(
     jumpToContentMs: Long? = null,
     onJumpToContent: (Long) -> Unit = {},
     onPreviewTransformStarted: () -> Unit = {},
+    onPreviewTransformEnded: () -> Unit = {},
     onPreviewTransformChanged: (dx: Float, dy: Float, scaleChange: Float, rotationChange: Float) -> Unit = { _, _, _, _ -> },
     showScopesButton: Boolean = false,
     onToggleScopes: () -> Unit = {}
@@ -120,13 +127,45 @@ fun PreviewPanel(
                             .clip(RoundedCornerShape(22.dp))
                             .background(Mocha.Crust)
                             .then(
+                                // `awaitEachGesture` lets us bracket each gesture so we can
+                                // fire `onPreviewTransformEnded` when the user lifts their
+                                // fingers. `detectTransformGestures` has no end hook, so
+                                // previously the VM had no way to know the drag was over
+                                // and had to call saveProject on every tick instead.
                                 if (canTransformPreview) Modifier.pointerInput(selectedClipId) {
-                                    detectTransformGestures { _, pan, zoom, rotation ->
-                                        if (!transformStarted) {
-                                            transformStarted = true
-                                            onPreviewTransformStarted()
+                                    awaitEachGesture {
+                                        awaitFirstDown(requireUnconsumed = false)
+                                        try {
+                                            var active = false
+                                            do {
+                                                val event = awaitPointerEvent()
+                                                val canceled = event.changes.any { it.isConsumed }
+                                                if (canceled) break
+                                                val zoomChange = event.calculateZoom()
+                                                val rotationChange = event.calculateRotation()
+                                                val panChange = event.calculatePan()
+                                                if (zoomChange != 1f || rotationChange != 0f ||
+                                                    panChange != Offset.Zero) {
+                                                    if (!active) {
+                                                        active = true
+                                                        if (!transformStarted) {
+                                                            transformStarted = true
+                                                            onPreviewTransformStarted()
+                                                        }
+                                                    }
+                                                    onPreviewTransformChanged(
+                                                        panChange.x, panChange.y,
+                                                        zoomChange, rotationChange
+                                                    )
+                                                    event.changes.forEach { it.consume() }
+                                                }
+                                            } while (event.changes.any { it.pressed })
+                                        } finally {
+                                            if (transformStarted) {
+                                                transformStarted = false
+                                                onPreviewTransformEnded()
+                                            }
                                         }
-                                        onPreviewTransformChanged(pan.x, pan.y, zoom, rotation)
                                     }
                                 } else Modifier
                             ),

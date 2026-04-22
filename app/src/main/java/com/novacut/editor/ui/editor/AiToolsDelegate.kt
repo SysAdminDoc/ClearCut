@@ -308,6 +308,9 @@ class AiToolsDelegate(
         val centerY = safeAiFloat(suggestion.centerY, 0.5f, 0f, 1f)
         saveUndoState("AI smart crop")
         setClipTransform(clip.id, centerX - 0.5f, centerY - 0.5f, null, null, null)
+        // setClipTransform no longer auto-saves (it's called per-tick from drag); AI
+        // tool invocations are one-shot, so persist explicitly after the change.
+        saveProject()
         showToast("Smart crop applied (${"%.0f".format(confidence * 100)}% confidence)")
     }
 
@@ -631,6 +634,7 @@ class AiToolsDelegate(
                     safeAiFloat(1f / height, 1f, 0.1f, 5f),
                     null
                 )
+                saveProject() // one-shot AI op; setClipTransform no longer auto-saves.
                 showToast("Smart reframed for vertical (${"%.0f".format(confidence * 100)}%)")
             } else {
                 showToast("Could not determine reframe region")

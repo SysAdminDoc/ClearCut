@@ -38,26 +38,44 @@ class AudioMixerDelegate(
         stateFlow.update { it.copy(panels = it.panels.close(PanelId.AUDIO_MIXER)) }
     }
 
-    fun setTrackVolume(trackId: String, volume: Float) {
+    // Volume + pan sliders fire onValueChange 60 Hz during a drag; writing an
+    // undo state + full project JSON to disk on every tick was hitching the UI.
+    // `beginVolumeAdjust` / `endVolumeAdjust` (and the equivalent pan pair) now
+    // bracket the drag so the undo snapshot happens once at drag-start and the
+    // project save happens once at drag-end. The per-tick `setTrackVolume` call
+    // only does the in-memory state mutation + preview refresh, which is cheap.
+    fun beginVolumeAdjust() {
         saveUndoState("Change track volume")
+    }
+
+    fun endVolumeAdjust() {
+        saveProject()
+    }
+
+    fun setTrackVolume(trackId: String, volume: Float) {
         stateFlow.update { s ->
             s.copy(tracks = s.tracks.map { track ->
                 if (track.id == trackId) track.copy(volume = volume.coerceIn(0f, 2f)) else track
             })
         }
         refreshPreview()
+    }
+
+    fun beginPanAdjust() {
+        saveUndoState("Change track pan")
+    }
+
+    fun endPanAdjust() {
         saveProject()
     }
 
     fun setTrackPan(trackId: String, pan: Float) {
-        saveUndoState("Change track pan")
         stateFlow.update { s ->
             s.copy(tracks = s.tracks.map { track ->
                 if (track.id == trackId) track.copy(pan = pan.coerceIn(-1f, 1f)) else track
             })
         }
         refreshPreview()
-        saveProject()
     }
 
     fun toggleTrackSolo(trackId: String) {

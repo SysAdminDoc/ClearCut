@@ -31,9 +31,11 @@ fun AudioPanel(
     onVolumeChanged: (Float) -> Unit,
     modifier: Modifier = Modifier,
     onVolumeDragStarted: () -> Unit = {},
+    onVolumeDragEnded: () -> Unit = {},
     onFadeInChanged: (Long) -> Unit,
     onFadeOutChanged: (Long) -> Unit,
     onFadeDragStarted: () -> Unit = {},
+    onFadeDragEnded: () -> Unit = {},
     onStartVoiceover: () -> Unit,
     onClose: () -> Unit
 ) {
@@ -157,6 +159,7 @@ fun AudioPanel(
                 min = 0f,
                 max = 2f,
                 onDragStarted = onVolumeDragStarted,
+                onDragEnded = onVolumeDragEnded,
                 onValueChange = onVolumeChanged
             )
             EffectSlider(
@@ -165,6 +168,7 @@ fun AudioPanel(
                 min = 0f,
                 max = fadeInMax,
                 onDragStarted = onFadeDragStarted,
+                onDragEnded = onFadeDragEnded,
                 onValueChange = { onFadeInChanged(it.toLong()) }
             )
             EffectSlider(
@@ -173,6 +177,7 @@ fun AudioPanel(
                 min = 0f,
                 max = fadeOutMax,
                 onDragStarted = onFadeDragStarted,
+                onDragEnded = onFadeDragEnded,
                 onValueChange = { onFadeOutChanged(it.toLong()) }
             )
         }

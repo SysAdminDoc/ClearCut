@@ -1,5 +1,39 @@
 # Changelog
 
+## v3.68.0 — Performance & Responsiveness Pass
+
+Broad optimization sweep across recomposition hotspots, per-tick I/O, and hot-path allocation. No new features. No DB schema changes. No new dependencies.
+
+### Compose recomposition fixes
+
+- **Per-clip `Brush.verticalGradient` overlay hoisted to `remember`** in `Timeline.kt`. The gradient applied on top of every clip body was allocated fresh per clip per frame. A 10-clip project recomposing at 30 Hz during playback was churning 300 `Brush` + `List` allocations/sec for a gradient whose contents never change.
+- **Render-phase snap-target list memoized** via `remember(track.clips, selectedClipId, playheadMs, beatMarkers, markers, snapToBeat, snapToMarker)`. The `flatMap { filter { } flatMap { } }.distinct().plus(...).let { ... }.let { ... }` chain was running on every playhead tick, allocating 5–7 `List` instances per tick.
+- **`volumeKeyframesSorted(clip)`** memoized per-clip on `clip.keyframes`. Sort is O(n log n); previously ran on every audio clip every recomposition.
+- **`previewTrackClips` / `previewClipAtPlayhead` derives decoupled from `playheadMs`** in `EditorScreen.kt`. The sort that built `previewTrackClips` was re-keyed on `playheadMs` via the downstream derive chain, so a static clip list was being re-sorted 30 times/sec during playback. The sort now only re-runs when the track structure actually changes; the per-tick scan stays cheap because the sorted list is cached.
+
+### Per-tick I/O reduction
+
+Eight slider/gesture paths no longer call `saveProject()` on every `onValueChange` tick. All have matching `begin*/end*` hooks so the full-project JSON serialize + disk write runs once per gesture instead of 60 times per second:
+
+- `EffectsDelegate.updateEffect` → `endEffectAdjust()`
+- `AudioMixerDelegate.setTrackVolume` → `endVolumeAdjust()`
+- `AudioMixerDelegate.setTrackPan` → `endPanAdjust()`
+- `setClipVolume` → `endVolumeChange()`
+- `setClipTransform` → `endTransformChange()`
+- `setClipOpacity` → `endOpacityChange()` (new hook)
+- `setClipFadeIn` / `setClipFadeOut` → `endFadeAdjust()`
+- `beginSlideEdit`/`beginSlipEdit` now call `setScrubbingMode(true)` too (previously only `beginTrim` did)
+
+The preview-pan pinch gesture in `PreviewPanel.kt` was rewritten from `detectTransformGestures` to `awaitEachGesture` so it actually has an end hook — the old implementation had no way to signal "gesture finished", which is why `setClipTransform` had been calling `saveProject()` on every frame in the first place. `TransformOverlay.onDragEnd` and `onDragCancel` now call `onTransformEnded()`. AI tool callers that relied on `setClipTransform` auto-saving (smart crop, smart reframe) explicitly `saveProject()` after their one-shot invocation.
+
+### Playback loop
+
+- **Playhead sync's per-5-frame state broadcast now gated on drift ≥200ms** in `EditorViewModel.kt`. During playback, every 5th frame unconditionally emitted a new `EditorState` with the updated `playheadMs` — a 40-field `state.copy()` that invalidated every Compose subscriber of the state flow ~6 times/sec. The dedicated `_playheadMs` flow already served live-playhead consumers, so the full-state broadcast is now only needed to keep `state.playheadMs` fresh enough for user-triggered reads like `splitClipAtPlayhead()` and autosave — a 200ms drift threshold cuts broadcasts from ~6/sec to ~5/sec while keeping staleness bounded.
+
+### Usability
+
+- **Clip-label picker close button grown from 24dp to 44dp** to meet the Material 3 minimum touch-target guideline. The icon inside went 16dp → 20dp. The previous tap target was below accessibility minimums and frequently misfired on small phones.
+
 ## v3.67.0 — Snackbar Height, Drag Responsiveness, Suggestion Cleanup
 
 Follow-up fixes based on v3.66 user testing.

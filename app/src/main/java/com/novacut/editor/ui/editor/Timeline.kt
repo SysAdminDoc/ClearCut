@@ -219,6 +219,23 @@ fun Timeline(
     val currentMarkers by rememberUpdatedState(markers)
     val currentTracks by rememberUpdatedState(tracks)
     val currentSelectedClipId by rememberUpdatedState(selectedClipId)
+
+    // Hoist the vertical gradient overlay applied on top of every clip body. The
+    // Timeline recomposes ~30 Hz during playback; without `remember` this brush
+    // was being allocated fresh per clip per frame (a 10-clip project = 300
+    // Brush + List allocations/sec). Brush contents are static, so one cached
+    // instance covers the entire session.
+    val clipOverlayBrush = remember {
+        Brush.verticalGradient(
+            listOf(
+                Color.Transparent,
+                Mocha.Crust.copy(alpha = 0.18f),
+                Mocha.Crust.copy(alpha = 0.42f)
+            )
+        )
+    }
+    // 8dp snap threshold in px — constant for the lifetime of the density scope.
+    val snapThresholdPx = with(density) { 8.dp.toPx() }
     val currentIsTrimMode by rememberUpdatedState(isTrimMode)
 
     // Thumbnail cache — quantize zoom to prevent unbounded cache growth
@@ -1139,7 +1156,13 @@ fun Timeline(
                                         // Audio waveform + volume envelope
                                         if (track.type == TrackType.AUDIO) {
                                             val waveform = waveforms[clip.id]
-                                            val volumeKfs = volumeKeyframesSorted(clip)
+                                            // Sort is O(n log n); Timeline recomposes ~30 Hz during
+                                            // playback. Key on clip.keyframes (identity-stable
+                                            // inside a single undo snapshot) so we only re-sort
+                                            // when the actual keyframe list changes.
+                                            val volumeKfs = remember(clip.keyframes) {
+                                                volumeKeyframesSorted(clip)
+                                            }
                                             Canvas(modifier = Modifier.fillMaxSize()) {
                                                 if (track.showWaveform) {
                                                     if (waveform != null && waveform.isNotEmpty()) {
@@ -1177,18 +1200,12 @@ fun Timeline(
                                             }
                                         }
 
+                                        // Hoisted Brush — see the `clipOverlayBrush` remember at the
+                                        // top of Timeline(). Previously allocated per clip per frame.
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxSize()
-                                                .background(
-                                                    Brush.verticalGradient(
-                                                        listOf(
-                                                            Color.Transparent,
-                                                            Mocha.Crust.copy(alpha = 0.18f),
-                                                            Mocha.Crust.copy(alpha = 0.42f)
-                                                        )
-                                                    )
-                                                )
+                                                .background(clipOverlayBrush)
                                         )
 
                                         Column(
@@ -1419,19 +1436,32 @@ fun Timeline(
                                 }
                             }
 
-                            // Magnetic snap indicator (shows when clip edges align)
-                            // Collect snap targets: all clip edges (except selected), playhead, and timeline origin
+                            // Magnetic snap indicator (shows when clip edges align).
+                            // Snap-target computation is memoized via `remember` keyed on the
+                            // static inputs (track clips, selection, beat/marker state). Without
+                            // this, the full flatMap+filter+distinct+let chain reran on every
+                            // playhead tick during playback (~30 Hz), allocating 5-7 Lists per
+                            // tick for a computation whose inputs hadn't changed.
                             val selectedClipObj = track.clips.find { it.id == selectedClipId }
                             if (selectedClipObj != null) {
-                                val snapTargets = track.clips
-                                    .filter { it.id != selectedClipId }
-                                    .flatMap { listOf(it.timelineStartMs, it.timelineEndMs) }
-                                    .distinct()
-                                    .plus(playheadMs)
-                                    .plus(0L)
-                                    .let { if (snapToBeat) it + beatMarkers else it }
-                                    .let { if (snapToMarker) it + markers.map { m -> m.timeMs } else it }
-                                val snapThresholdPx = with(density) { 8.dp.toPx() }
+                                val snapTargets = remember(
+                                    track.clips,
+                                    selectedClipId,
+                                    playheadMs,
+                                    beatMarkers,
+                                    markers,
+                                    snapToBeat,
+                                    snapToMarker
+                                ) {
+                                    track.clips
+                                        .filter { it.id != selectedClipId }
+                                        .flatMap { listOf(it.timelineStartMs, it.timelineEndMs) }
+                                        .distinct()
+                                        .plus(playheadMs)
+                                        .plus(0L)
+                                        .let { if (snapToBeat) it + beatMarkers else it }
+                                        .let { if (snapToMarker) it + markers.map { m -> m.timeMs } else it }
+                                }
                                 // Floor at 1ms so snapping still works at extreme zoom-in
                                 // (where 8dp / pixelsPerMs would round to 0L and disable snap).
                                 val snapThresholdMs = (snapThresholdPx / pixelsPerMs).toLong().coerceAtLeast(1L)

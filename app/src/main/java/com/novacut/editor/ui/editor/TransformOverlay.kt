@@ -41,6 +41,7 @@ fun TransformOverlay(
     onRotationChanged: (Float) -> Unit,
     onAnchorChanged: (Float, Float) -> Unit,
     onTransformStarted: () -> Unit,
+    onTransformEnded: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var isDragging by remember { mutableStateOf(false) }
@@ -167,6 +168,12 @@ fun TransformOverlay(
                     onDragEnd = {
                         isDragging = false
                         activeHandle = HandleType.NONE
+                        onTransformEnded()
+                    },
+                    onDragCancel = {
+                        isDragging = false
+                        activeHandle = HandleType.NONE
+                        onTransformEnded()
                     }
                 )
             }

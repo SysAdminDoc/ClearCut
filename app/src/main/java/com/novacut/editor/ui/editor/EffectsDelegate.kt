@@ -46,6 +46,11 @@ class EffectsDelegate(
         saveUndoState("Adjust effect")
     }
 
+    fun endEffectAdjust() {
+        // Persist once when the slider is released. See note in `updateEffect`.
+        saveProject()
+    }
+
     fun updateEffect(clipId: String, effectId: String, params: Map<String, Float>) {
         stateFlow.update { state ->
             val tracks = state.tracks.map { track ->
@@ -61,7 +66,12 @@ class EffectsDelegate(
             state.copy(tracks = tracks)
         }
         updatePreview()
-        saveProject()
+        // saveProject() moved to endEffectAdjust(). Effect sliders fire this method
+        // on every onValueChange event (~60 Hz during drag); serializing the whole
+        // project to JSON and writing it to disk 60 times/sec during a single
+        // slider adjustment was producing noticeable hitching. The beginEffectAdjust/
+        // endEffectAdjust pair already wraps the drag, so the saveProject call is
+        // deferred to the end-of-drag hook.
     }
 
     fun toggleEffectEnabled(clipId: String, effectId: String) {

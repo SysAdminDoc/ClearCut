@@ -788,6 +788,7 @@ fun EffectAdjustmentPanel(
     onUpdateParams: (Map<String, Float>) -> Unit,
     modifier: Modifier = Modifier,
     onEffectDragStarted: () -> Unit = {},
+    onEffectDragEnded: () -> Unit = {},
     onToggleEnabled: () -> Unit = {},
     onRemove: () -> Unit,
     onClose: () -> Unit
@@ -835,9 +836,10 @@ fun EffectAdjustmentPanel(
             val ranges = EffectType.paramRangesForType(effect.type)
             val defaults = EffectType.defaultParams(effect.type)
             val ds = onEffectDragStarted
+            val de = onEffectDragEnded
             for ((key, range) in ranges) {
                 val currentValue = effect.params[key] ?: defaults[key] ?: 0f
-                EffectSlider(range.label, currentValue, range.min, range.max, ds) {
+                EffectSlider(range.label, currentValue, range.min, range.max, ds, de) {
                     onUpdateParams(effect.params + (key to it))
                 }
             }
@@ -1030,7 +1032,10 @@ fun SpeedPanel(
 fun TransformPanel(
     clip: Clip,
     onTransformDragStarted: () -> Unit,
+    onTransformDragEnded: () -> Unit,
     onTransformChanged: (positionX: Float?, positionY: Float?, scaleX: Float?, scaleY: Float?, rotation: Float?) -> Unit,
+    onOpacityDragStarted: () -> Unit,
+    onOpacityDragEnded: () -> Unit,
     onOpacityChanged: (Float) -> Unit,
     onReset: () -> Unit,
     onClose: () -> Unit,
@@ -1118,16 +1123,16 @@ fun TransformPanel(
                 style = MaterialTheme.typography.bodyMedium
             )
             Spacer(modifier = Modifier.height(10.dp))
-            EffectSlider(stringResource(R.string.tool_position_x), clip.positionX, -1f, 1f, onTransformDragStarted) {
+            EffectSlider(stringResource(R.string.tool_position_x), clip.positionX, -1f, 1f, onTransformDragStarted, onTransformDragEnded) {
                 onTransformChanged(it, null, null, null, null)
             }
-            EffectSlider(stringResource(R.string.tool_position_y), clip.positionY, -1f, 1f, onTransformDragStarted) {
+            EffectSlider(stringResource(R.string.tool_position_y), clip.positionY, -1f, 1f, onTransformDragStarted, onTransformDragEnded) {
                 onTransformChanged(null, it, null, null, null)
             }
-            EffectSlider(stringResource(R.string.tool_scale_x), clip.scaleX, 0.1f, 5f, onTransformDragStarted) {
+            EffectSlider(stringResource(R.string.tool_scale_x), clip.scaleX, 0.1f, 5f, onTransformDragStarted, onTransformDragEnded) {
                 onTransformChanged(null, null, it, null, null)
             }
-            EffectSlider(stringResource(R.string.tool_scale_y), clip.scaleY, 0.1f, 5f, onTransformDragStarted) {
+            EffectSlider(stringResource(R.string.tool_scale_y), clip.scaleY, 0.1f, 5f, onTransformDragStarted, onTransformDragEnded) {
                 onTransformChanged(null, null, null, it, null)
             }
         }
@@ -1146,10 +1151,10 @@ fun TransformPanel(
                 style = MaterialTheme.typography.bodyMedium
             )
             Spacer(modifier = Modifier.height(10.dp))
-            EffectSlider(stringResource(R.string.tool_rotation), clip.rotation, -360f, 360f, onTransformDragStarted) {
+            EffectSlider(stringResource(R.string.tool_rotation), clip.rotation, -360f, 360f, onTransformDragStarted, onTransformDragEnded) {
                 onTransformChanged(null, null, null, null, it)
             }
-            EffectSlider(stringResource(R.string.tool_opacity), clip.opacity, 0f, 1f, onTransformDragStarted) {
+            EffectSlider(stringResource(R.string.tool_opacity), clip.opacity, 0f, 1f, onOpacityDragStarted, onOpacityDragEnded) {
                 onOpacityChanged(it)
             }
         }

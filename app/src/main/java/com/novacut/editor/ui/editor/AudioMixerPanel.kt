@@ -57,7 +57,11 @@ import com.novacut.editor.ui.theme.Mocha
 fun AudioMixerPanel(
     tracks: List<Track>,
     onTrackVolumeChanged: (String, Float) -> Unit,
+    onVolumeDragStarted: () -> Unit,
+    onVolumeDragEnded: () -> Unit,
     onTrackPanChanged: (String, Float) -> Unit,
+    onPanDragStarted: () -> Unit,
+    onPanDragEnded: () -> Unit,
     onTrackMuteToggled: (String) -> Unit,
     onTrackSoloToggled: (String) -> Unit,
     onTrackAudioEffectAdded: (String, AudioEffectType) -> Unit,
@@ -159,7 +163,11 @@ fun AudioMixerPanel(
                         track = track,
                         vuLevel = vuLevels[track.id] ?: (0f to 0f),
                         onVolumeChanged = { onTrackVolumeChanged(track.id, it) },
+                        onVolumeDragStarted = onVolumeDragStarted,
+                        onVolumeDragEnded = onVolumeDragEnded,
                         onPanChanged = { onTrackPanChanged(track.id, it) },
+                        onPanDragStarted = onPanDragStarted,
+                        onPanDragEnded = onPanDragEnded,
                         onMuteToggled = { onTrackMuteToggled(track.id) },
                         onSoloToggled = { onTrackSoloToggled(track.id) },
                         onEffectsClicked = {
@@ -319,7 +327,11 @@ private fun ChannelStrip(
     track: Track,
     vuLevel: Pair<Float, Float>,
     onVolumeChanged: (Float) -> Unit,
+    onVolumeDragStarted: () -> Unit,
+    onVolumeDragEnded: () -> Unit,
     onPanChanged: (Float) -> Unit,
+    onPanDragStarted: () -> Unit,
+    onPanDragEnded: () -> Unit,
     onMuteToggled: () -> Unit,
     onSoloToggled: () -> Unit,
     onEffectsClicked: () -> Unit,
@@ -402,6 +414,11 @@ private fun ChannelStrip(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    // Volume + pan sliders drive the `begin/end*Adjust` hooks so the
+                    // ViewModel can save an undo snapshot on drag-start and persist
+                    // the project on drag-release, instead of writing to disk on
+                    // every onValueChange event.
+                    var volumeDragging by remember { mutableStateOf(false) }
                     MixerControlBlock(
                         label = "Level",
                         valueLabel = formatVolume(track.volume),
@@ -409,7 +426,17 @@ private fun ChannelStrip(
                     ) {
                         Slider(
                             value = track.volume,
-                            onValueChange = onVolumeChanged,
+                            onValueChange = {
+                                if (!volumeDragging) {
+                                    volumeDragging = true
+                                    onVolumeDragStarted()
+                                }
+                                onVolumeChanged(it)
+                            },
+                            onValueChangeFinished = {
+                                volumeDragging = false
+                                onVolumeDragEnded()
+                            },
                             valueRange = 0f..2f,
                             colors = SliderDefaults.colors(
                                 thumbColor = accent,
@@ -419,6 +446,7 @@ private fun ChannelStrip(
                         )
                     }
 
+                    var panDragging by remember { mutableStateOf(false) }
                     MixerControlBlock(
                         label = "Pan",
                         valueLabel = formatPan(track.pan),
@@ -426,7 +454,17 @@ private fun ChannelStrip(
                     ) {
                         Slider(
                             value = track.pan,
-                            onValueChange = onPanChanged,
+                            onValueChange = {
+                                if (!panDragging) {
+                                    panDragging = true
+                                    onPanDragStarted()
+                                }
+                                onPanChanged(it)
+                            },
+                            onValueChangeFinished = {
+                                panDragging = false
+                                onPanDragEnded()
+                            },
                             valueRange = -1f..1f,
                             modifier = Modifier.semantics { contentDescription = panDesc },
                             colors = SliderDefaults.colors(

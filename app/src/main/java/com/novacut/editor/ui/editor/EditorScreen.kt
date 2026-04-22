@@ -171,15 +171,21 @@ fun EditorScreen(
                 }
         }
     }
+    // previewTrackClips is keyed on previewTrack only — the sortedBy call above
+    // was running on every playhead tick via the downstream derive chain below,
+    // costing an O(n log n) sort 30x/sec during playback for a static clip list.
     val previewTrackClips by remember(previewTrack) {
         derivedStateOf { previewTrack?.clips?.sortedBy { it.timelineStartMs } ?: emptyList() }
     }
-    val previewClipAtPlayhead by remember(previewTrackClips, playheadMs) {
+    // These two derives intentionally read `playheadMs` (the fast-path flow) so
+    // they recompute every playhead tick, but because the sorted list is cached
+    // above, each recompute is just a cheap linear scan over the sorted list.
+    val previewClipAtPlayhead by remember(previewTrackClips) {
         derivedStateOf {
             previewTrackClips.firstOrNull { playheadMs in it.timelineStartMs until it.timelineEndMs }
         }
     }
-    val nextPreviewClip by remember(previewTrackClips, playheadMs) {
+    val nextPreviewClip by remember(previewTrackClips) {
         derivedStateOf { previewTrackClips.firstOrNull { it.timelineStartMs > playheadMs } }
     }
     val previewRecoveryTargetMs by remember(previewClipAtPlayhead, nextPreviewClip, previewTrackClips) {
@@ -430,6 +436,7 @@ fun EditorScreen(
                     jumpToContentMs = previewRecoveryTargetMs,
                     onJumpToContent = viewModel::seekTo,
                     onPreviewTransformStarted = { viewModel.beginTransformChange() },
+                    onPreviewTransformEnded = { viewModel.endTransformChange() },
                     onPreviewTransformChanged = { dx, dy, scaleChange, rotationChange ->
                         val clip = selectedClip ?: return@PreviewPanel
                         viewModel.setClipTransform(
@@ -921,6 +928,7 @@ fun EditorScreen(
                         viewModel.setClipVolume(clipId, volume)
                     },
                     onVolumeDragStarted = viewModel::beginVolumeChange,
+                    onVolumeDragEnded = viewModel::endVolumeChange,
                     onFadeInChanged = { fadeMs ->
                         val clipId = state.selectedClipId ?: return@AudioPanel
                         viewModel.setClipFadeIn(clipId, fadeMs)
@@ -929,6 +937,7 @@ fun EditorScreen(
                         val clipId = state.selectedClipId ?: return@AudioPanel
                         viewModel.setClipFadeOut(clipId, fadeMs)
                     },
+                    onFadeDragEnded = viewModel::endFadeAdjust,
                     onFadeDragStarted = viewModel::beginFadeAdjust,
                     onStartVoiceover = viewModel::showVoiceoverPanel,
                     onClose = viewModel::hideAudioPanel
@@ -966,9 +975,12 @@ fun EditorScreen(
                 TransformPanel(
                     clip = clip,
                     onTransformDragStarted = viewModel::beginTransformChange,
+                    onTransformDragEnded = viewModel::endTransformChange,
                     onTransformChanged = { px, py, sx, sy, rot ->
                         viewModel.setClipTransform(clip.id, px, py, sx, sy, rot)
                     },
+                    onOpacityDragStarted = viewModel::beginOpacityChange,
+                    onOpacityDragEnded = viewModel::endOpacityChange,
                     onOpacityChanged = { viewModel.setClipOpacity(clip.id, it) },
                     onReset = { viewModel.resetClipTransform(clip.id) },
                     onClose = viewModel::hideTransformPanel
@@ -1028,6 +1040,7 @@ fun EditorScreen(
                         viewModel.updateEffect(clipId, effect.id, params)
                     },
                     onEffectDragStarted = viewModel::beginEffectAdjust,
+                    onEffectDragEnded = viewModel::endEffectAdjust,
                     onToggleEnabled = {
                         val clipId = state.selectedClipId ?: return@EffectAdjustmentPanel
                         viewModel.toggleEffectEnabled(clipId, effect.id)
@@ -1078,7 +1091,11 @@ fun EditorScreen(
             AudioMixerPanel(
                 tracks = state.tracks,
                 onTrackVolumeChanged = viewModel::setTrackVolume,
+                onVolumeDragStarted = viewModel::beginVolumeAdjust,
+                onVolumeDragEnded = viewModel::endVolumeAdjust,
                 onTrackPanChanged = viewModel::setTrackPan,
+                onPanDragStarted = viewModel::beginPanAdjust,
+                onPanDragEnded = viewModel::endPanAdjust,
                 onTrackMuteToggled = { viewModel.toggleTrackMute(it) },
                 onTrackSoloToggled = viewModel::toggleTrackSolo,
                 onTrackAudioEffectAdded = viewModel::addTrackAudioEffect,
@@ -1265,6 +1282,7 @@ fun EditorScreen(
                     onRotationChanged = { r -> state.selectedClipId?.let { viewModel.setClipTransform(it, rotation = r) } },
                     onAnchorChanged = viewModel::setClipAnchor,
                     onTransformStarted = viewModel::beginTransformChange,
+                    onTransformEnded = viewModel::endTransformChange,
                     modifier = Modifier.align(Alignment.Center)
                 )
             }
@@ -1771,8 +1789,11 @@ fun EditorScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(stringResource(R.string.panel_editor_clip_label), color = Mocha.Text, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                        IconButton(onClick = { showClipLabelPicker = false }, modifier = Modifier.size(24.dp)) {
-                            Icon(Icons.Default.Close, stringResource(R.string.cd_close_color_grading), tint = Mocha.Subtext0, modifier = Modifier.size(16.dp))
+                        // 44dp Material-3 minimum touch target; the old 24dp container
+                        // was below the Accessibility guideline minimum and frequently
+                        // misfired on small phones.
+                        IconButton(onClick = { showClipLabelPicker = false }, modifier = Modifier.size(44.dp)) {
+                            Icon(Icons.Default.Close, stringResource(R.string.cd_close_color_grading), tint = Mocha.Subtext0, modifier = Modifier.size(20.dp))
                         }
                     }
                     Spacer(Modifier.height(8.dp))
