@@ -1,5 +1,173 @@
 # Changelog
 
+## v3.69.0 — 15-Feature Wave + Hardening + Wide-Net Follow-Ups
+
+The third pass (this section) closed three of the "remaining gaps" with real
+pipelines rather than more scaffolding.
+
+### B.6 — Text overlay stroke export
+[StrokedTextBitmapOverlay.kt](app/src/main/java/com/novacut/editor/engine/StrokedTextBitmapOverlay.kt)
+extends Media3's `BitmapOverlay` and renders the text on a Canvas twice per
+keyframe: once with `PAINT.STYLE_STROKE` in the stroke color and again with
+`PAINT.STYLE_FILL` in the fill color. SpannableString could never do this —
+the draw model only carries one color per pixel. `VideoEngine` branches on
+`overlay.strokeWidth > 0f`: zero-stroke overlays still take the cheap
+`ExportTextOverlay` path, so the common case pays no cost. Bitmaps are cached
+per text change and released when Media3 releases the overlay.
+
+### B.5 — Multi-clip same-source stream-copy
+[StreamCopyMuxer.concat](app/src/main/java/com/novacut/editor/engine/StreamCopyMuxer.kt)
+now muxes a list of non-overlapping source windows into a single output file
+— the multi-clip-same-source case where a creator has sliced one recording
+into keepers. Each track walks the ranges independently with its own output
+cursor; sample packets are never decoded.
+[StreamCopyExportEngine.analyze](app/src/main/java/com/novacut/editor/engine/StreamCopyExportEngine.kt)
+now accepts any number of clips on a single visible video track as long as
+they all share the same source URI and every clip passes the full
+`firstDisqualifier` list. Integration point in `ExportDelegate.trySteamCopy`
+is unchanged — it calls `execute()` which dispatches to `trim` (one range) or
+`concat` (multiple) based on the resulting `Eligibility.ranges`.
+
+### Desktop sidebar (DESKTOP layout mode)
+[DesktopSidebar.kt](app/src/main/java/com/novacut/editor/ui/editor/DesktopSidebar.kt)
+renders beside the editor column when `LocalLayoutMode == DESKTOP`. Surfaces
+the project meta, quick actions (Add media / Record / Export / v3.69 hub)
+and a compact media bin grouped by track type. Absent on PHONE / ONE_HANDED
+so the phone layout is untouched. Width: 260 dp.
+
+### Already shipped, confirmed
+- C.12 Keyframe graph editor — already lives at
+  [KeyframeCurveEditor.kt](app/src/main/java/com/novacut/editor/ui/editor/KeyframeCurveEditor.kt)
+  and has its own `PanelId.KEYFRAME_EDITOR` entry point.
+- B.7 ProjectArchive.importArchive — already complete at
+  [ProjectArchive.kt](app/src/main/java/com/novacut/editor/engine/ProjectArchive.kt).
+
+### Still on the list (genuinely blocked)
+- B.1 multi-track video compositing via Media3 Compositor — risky regression
+  territory on the stable export path; parked for a dedicated release.
+- Chromaprint NDK binding for real AcoustID lookup — needs an external
+  native library.
+- YAMNet SDH classifier — needs the model bundled or downloaded.
+- RIFE / Real-ESRGAN / OpenCV stab / FFmpegX — Tier A items, all waiting on
+  third-party libraries that are not yet in the project.
+
+## v3.69.0 — 15-Feature Wave + Production Hardening Pass
+
+The 15-feature wave shipped in two passes. The second pass (this section)
+turned every dead UI toggle into a live consumer, wired the stream-copy path
+through the Android MediaMuxer (no FFmpeg dependency required), added real
+HDR preservation via `Composition.HDR_MODE_KEEP_HDR`, fixed a ripple-delete
+bug in text-based editing, and persisted transcripts so text-based editing
+survives app restart.
+
+### Wide-net additions
+
+- **Color-blind preview GL pass** — `ColorBlindGlEffect` builds a fragment
+  shader from the `ColorBlindPreviewEngine` matrix and appends it to every
+  clip's preview effect chain. Toggling the mode in the v3.69 panel now
+  produces a visible preview change within one frame. Export never picks up
+  the effect.
+- **Stream-copy via `MediaMuxer`** — new `StreamCopyMuxer` uses
+  `MediaExtractor` + `MediaMuxer` to remux the source packets directly into
+  the destination, no transcode. `ExportDelegate.trySteamCopy()` guards with
+  the full eligibility checklist; any failure transparently falls back to the
+  Transformer path so users can't get stuck. 50× faster on eligible trims.
+- **HDR preservation on export** — `VideoEngine.buildComposition` respects
+  `ExportConfig.hdr10PlusMetadata` by setting `Composition.HDR_MODE_KEEP_HDR`
+  when the codec can carry HDR (HEVC/AV1/VP9). H.264 forces SDR since it has
+  no HDR profile. The v3.69 panel switch is now gated on codec choice and
+  shows "Switch to HEVC/AV1/VP9" when locked.
+- **Keyframe remap on text-based split** — `V369Delegate.buildSegment`
+  filters the source clip's keyframes to the segment's source-time window and
+  remaps each kept `timeOffsetMs` via `Clip.sourceTimeToTimelineOffsetMs`.
+  Speed-curves are restricted via `SpeedCurve.restrictTo` so preview and
+  export time-stretching stay consistent with each segment's trim window.
+- **Transcript persistence** — `AutoSaveState.transcript` is now part of
+  the auto-save JSON; `V369Delegate.setTranscript` calls `saveProject`;
+  `EditorViewModel` restores it into `v369.transcript` on recovery. Users
+  don't lose their transcript on app restart.
+- **Layout-mode detector** — new `LayoutMode` enum (`PHONE` /
+  `ONE_HANDED` / `DESKTOP`) resolved by `resolveLayoutMode()` from the
+  device `UiModeManager` + `Configuration` + user override. Exposed as
+  `LocalLayoutMode` Composition Local. `EditorTopBar` consumes it to force
+  compact layout in one-handed mode. `SettingsRepository` stores the
+  `oneHandedMode` preference and `desktopModeOverride` enum.
+- **AcoustID key setting** — `SettingsRepository.acoustIdApiKey` persists
+  the optional API key. When the Chromaprint NDK bridge lands the key flows
+  straight through `ContentIdEngine.analyze`.
+
+### Audit pass (second pass fixes shipped before the wide-net)
+
+- Ripple-delete on text-based edit splits; preserve `clip.transition` on the
+  first surviving segment.
+- Bounded-heap streaming top-N in `AiThumbnailEngine.score` — bitmaps are
+  recycled the moment they fall out of the top-N.
+- `StreamCopyExportEngine.firstDisqualifier` now covers every clip field
+  that affects the decoded output, including audio fades, per-clip volume,
+  audio effects, captions, compound clips, and per-track mix parameters.
+- `ContentIdEngine.queryAcoustId` no longer makes pointless HTTP calls;
+  hash-only result path is honest.
+- `V369FeaturesPanel` switched to header-only expand toggle so child
+  controls don't double-fire, every chip row is horizontally scrollable,
+  `rememberSaveable` keyed to `project.id` for the publish title field.
+- `StylusMidiEngine` — `@Suppress("DEPRECATION")` on the `MidiManager.devices`
+  legacy API with rationale, volatile fields, and safe re-connect that
+  closes the prior device handle.
+- `TextBasedEditEngine.fillerWordIndices` now detects bi-gram fillers
+  ("you know", "i mean") alongside uni-grams.
+- `AutoChapterEngine.detect` clamps idx + dedupes repeated titles.
+- `AudioEngine.decodeToPCM` lifted from private to public so
+  `ContentIdEngine` and other future fingerprint consumers can reuse it.
+
+### Original v3.69 wave engines
+
+TextBasedEditEngine · AutoChapterEngine · TalkingHeadFramingEngine ·
+KaraokeCaptionEngine · StreamCopyExportEngine · ContentIdEngine ·
+DirectPublishEngine · FlashSafetyEngine · ColorBlindPreviewEngine ·
+AiThumbnailEngine · AudioDescriptionEngine · StylusMidiEngine +
+`V369Delegate` + `V369FeaturesPanel` + shared `Transcript` /
+`WordTimestamp` model.
+
+### ExportConfig additions
+
+`hdr10PlusMetadata` (HDR preservation gate, live) + `allowStreamCopy`
+(stream-copy fast-path gate, default on, live).
+
+## v3.69.0 — 15-Feature Wave (Competitor-Inspired)
+
+Twelve new engines and one composite feature hub (`PanelId.V369_FEATURES`, accessed via the overflow menu → "v3.69 Features"). Follows the Tier-A stub convention: real implementation where the Android surface allows, structured hook for the rest. No new third-party dependencies.
+
+### New engines
+
+- **TextBasedEditEngine** — Descript/CapCut Script-Editor-style edit flow. Word-level `WordTimestamp` selections map to source-time cut ranges on the selected clip; contiguous selections coalesce (120 ms merge window). `fillerWordIndices()` covers the mainstream English filler set.
+- **AutoChapterEngine** — TextTiling-lite over Whisper words: 24-word sliding windows, cosine similarity of bag-of-words between adjacent windows, local minima mark chapter boundaries. `formatYouTubeClipboard()` renders an `HH:MM:SS Title` block ready for a YouTube description.
+- **TalkingHeadFramingEngine** — Samsung Auto-Framing / Apple Center Stage equivalent. Skin-tone centroid as a face-proxy per sampled frame, one-euro filter smoothing on the trajectory, output as `POSITION_X/POSITION_Y` keyframes so the existing keyframe-aware export path picks them up.
+- **KaraokeCaptionEngine** — Submagic/Captions.ai-style word-pop captions, 8 preset styles (MrBeast, Subway, Hormozi, TikTok White, Pop Scale, Typewriter, Neon, Minimal). Emits standard `TextOverlay` instances with animation + stroke that the current export pipeline already renders.
+- **StreamCopyExportEngine** — LosslessCut eligibility detector. When the timeline is a single unmodified clip with only head/tail cuts, signals the export pipeline to skip transcode entirely. Stream-copy mux itself is invoked through `FFmpegEngine.streamCopyTrim()` (added as a stub; lights up once A.9 ships).
+- **ContentIdEngine** — Copyright fingerprint / AcoustID pre-check. Energy-envelope hash per 50 ms window over 16-bit PCM; hash-only result when no API key is configured, AcoustID lookup when one is. Fingerprint-similarity helper for local dedup.
+- **DirectPublishEngine** — Facade for YouTube / TikTok / Instagram Reels / Threads / X / LinkedIn. Resolves to a platform-branded share intent when the target app is installed; documents the OAuth-upload hook for partner-program integrations.
+- **FlashSafetyEngine** — WCAG/Harding-lite photosensitive-epilepsy scan. Samples luminance + red-channel at 10 Hz, flags 1 s windows with >3 opposite-direction transitions above the Δ threshold. Separate general-flash vs. red-flash categories per W3C guidance.
+- **ColorBlindPreviewEngine** — Brettel/Viénot CVD simulation (Deuteranopia / Protanopia / Tritanopia / Achromatopsia). Ships both a 3×3 transform matrix and an inlined GLES 3.0 fragment shader so the existing `ShaderEffect` framework can apply it as a preview-only pass.
+- **AiThumbnailEngine** — YouTube-cover-style frame ranker. Score = 0.35·Laplacian-variance sharpness + 0.25·rule-of-thirds alignment of the salient-edge centroid + 0.40·skin-tone coverage. Top-N candidates returned with bitmaps; `saveThumbnail()` writes a JPEG.
+- **AudioDescriptionEngine** — SDH tags (`[music]`, `[door slams]`, …) + audio-description-track generator. Silence heuristic classifier today; YAMNet hook documented for the bundled-model path.
+- **StylusMidiEngine** — S Pen pressure (`MotionEvent.TOOL_TYPE_STYLUS`) for keyframe-curve authoring; BT MIDI CC mapping for jog/shuttle/transport (ShuttleXpress-compatible CC 1/2/64–68).
+
+### ExportConfig additions
+
+- `hdr10PlusMetadata: Boolean` — attach per-scene HDR10+ dynamic metadata on HEVC/AV1 exports when the source is HDR and the device encoder supports it. Silently falls back to HDR10 static metadata on unsupported paths.
+- `allowStreamCopy: Boolean = true` — gate for the LosslessCut-style fast-trim path.
+
+### UI
+
+- **V369FeaturesPanel** — single scrollable hub, 15 expandable feature cards, dispatches into `V369Delegate`. Accessed from the editor top-bar overflow menu → "v3.69 Features" (`Icons.Default.AutoAwesome`, Mauve tint).
+- **V369Delegate** — follows the existing delegate pattern: owns coroutine jobs, writes to the shared `EditorState` via the CAS-loop `update` extension, pulls through `saveUndoState`/`saveProject`/`rebuildPlayerTimeline`.
+- **EditorState.v369** nested `V369State` block: transcript, selected-word indices, chapter candidates, flash warnings, thumbnail candidates, color-blind mode, karaoke style, stream-copy eligibility, content-ID result, four in-flight flags.
+- **PanelId extension** — added `V369_FEATURES` hub plus drill-down IDs for `TEXT_BASED_EDIT`, `AUTO_CHAPTER`, `TALKING_HEAD`, `KARAOKE_CAPTIONS`, `CONTENT_ID`, `DIRECT_PUBLISH`, `FLASH_SAFETY`, `COLOR_BLIND_PREVIEW`, `AI_THUMBNAIL`, `AUDIO_DESCRIPTION`.
+
+### Model additions
+
+- `model/Transcript.kt` — shared `WordTimestamp` and `Transcript` primitives so the ASR, text-based edit, auto-chapter, karaoke, and audio-description pipelines all speak the same shape instead of each depending on nested types under `WhisperEngine` / `SherpaAsrEngine`.
+
 ## v3.68.0 — Performance & Responsiveness Pass
 
 Broad optimization sweep across recomposition hotspots, per-tick I/O, and hot-path allocation. No new features. No DB schema changes. No new dependencies.

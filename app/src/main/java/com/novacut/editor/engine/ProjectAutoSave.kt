@@ -251,7 +251,10 @@ data class AutoSaveState(
     val imageOverlays: List<ImageOverlay> = emptyList(),
     val timelineMarkers: List<TimelineMarker> = emptyList(),
     val drawingPaths: List<com.novacut.editor.model.DrawingPath> = emptyList(),
-    val beatMarkers: List<Long> = emptyList()
+    val beatMarkers: List<Long> = emptyList(),
+    // v3.69: transcript cached from Auto Captions. Persisted so text-based
+    // editing survives app restart without forcing the user to re-transcribe.
+    val transcript: com.novacut.editor.model.Transcript? = null
 ) {
     fun serialize(): String {
         val json = JSONObject().apply {
@@ -325,12 +328,34 @@ data class AutoSaveState(
                     beatMarkers.forEach { put(it) }
                 })
             }
+            transcript?.let { tr ->
+                put("transcript", JSONObject().apply {
+                    put("id", tr.id)
+                    put("clipId", tr.clipId)
+                    put("language", tr.language)
+                    // Mirror the deserialize-side cap so a runaway transcript
+                    // can't produce an auto-save file that then fails to
+                    // re-open (or blows past DataStore's IO timeout).
+                    val capped = tr.words.take(MAX_TRANSCRIPT_WORDS)
+                    put("words", JSONArray().apply {
+                        capped.forEach { w ->
+                            put(JSONObject().apply {
+                                put("text", w.text)
+                                put("startMs", w.startMs)
+                                put("endMs", w.endMs)
+                                putSafeFloat("confidence", w.confidence, default = 1f)
+                            })
+                        }
+                    })
+                })
+            }
         }
         return json.toString(2)
     }
 
     companion object {
         const val FORMAT_VERSION = 1
+        private const val MAX_TRANSCRIPT_WORDS = 20_000
 
         // Safe enum valueOf with fallback — prevents crashes from stale/unknown enum values
         private inline fun <reified T : Enum<T>> safeValueOf(name: String, default: T): T {
@@ -446,6 +471,40 @@ data class AutoSaveState(
                 try { beatMarkersArr.getLong(i) }
                 catch (e: Exception) { Log.w(TAG, "Failed to deserialize beat marker $i", e); null }
             }
+            val transcriptObj = json.optJSONObject("transcript")
+            val transcript: com.novacut.editor.model.Transcript? = transcriptObj?.let { tr ->
+                try {
+                    val wordsArr = tr.optJSONArray("words") ?: JSONArray()
+                    // Cap at MAX_TRANSCRIPT_WORDS so a corrupt save with a
+                    // pathologically-long transcript can't stall startup.
+                    // Whisper Tiny produces roughly 2 words/sec of speech, so
+                    // 20k words is ~2.7 hours — far beyond realistic mobile use.
+                    val cappedLen = wordsArr.length().coerceAtMost(MAX_TRANSCRIPT_WORDS)
+                    val words = (0 until cappedLen).mapNotNull { wi ->
+                        val w = wordsArr.optJSONObject(wi) ?: return@mapNotNull null
+                        val text = w.optString("text", "").trim().take(128)
+                        if (text.isEmpty()) return@mapNotNull null
+                        val s = w.optLong("startMs", 0L).coerceAtLeast(0L)
+                        val e = w.optLong("endMs", s)
+                        val conf = w.optDouble("confidence", 1.0).toFloat().let {
+                            if (it.isFinite()) it.coerceIn(0f, 1f) else 1f
+                        }
+                        com.novacut.editor.model.WordTimestamp(
+                            text = text,
+                            startMs = s,
+                            endMs = if (e > s) e else s + 1L,
+                            confidence = conf
+                        )
+                    }
+                    if (words.isEmpty()) null
+                    else com.novacut.editor.model.Transcript(
+                        id = tr.optString("id", java.util.UUID.randomUUID().toString()),
+                        clipId = tr.optString("clipId", ""),
+                        language = tr.optString("language", "en").take(8),
+                        words = words
+                    )
+                } catch (e: Exception) { Log.w(TAG, "Failed to deserialize transcript", e); null }
+            }
             return AutoSaveState(
                 projectId = json.optString("projectId", ""),
                 timestamp = json.optLong("timestamp", System.currentTimeMillis()),
@@ -456,7 +515,8 @@ data class AutoSaveState(
                 imageOverlays = imageOverlays,
                 timelineMarkers = timelineMarkers,
                 drawingPaths = drawingPaths,
-                beatMarkers = beatMarkers
+                beatMarkers = beatMarkers,
+                transcript = transcript
             )
         }
 

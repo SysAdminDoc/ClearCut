@@ -30,7 +30,19 @@ data class ExportConfig(
     val filenameTemplate: String = "{name}",
     val exportAsContactSheet: Boolean = false,
     val contactSheetColumns: Int = 4,
-    val watermark: Watermark? = null
+    val watermark: Watermark? = null,
+    // v3.69 placeholder — reserved for the HDR10+ dynamic-metadata integration.
+    // The field is declared here so callers can opt-in ahead of the encoder
+    // wire-up; no export path consumes it yet. When the MediaCodec hook lands
+    // (HEVC/AV1 on devices advertising HDR10+ profile support), this flag will
+    // gate `MediaFormat.KEY_HDR10_PLUS_INFO` attachment.
+    val hdr10PlusMetadata: Boolean = false,
+    // v3.69 placeholder — gate for the LosslessCut-style stream-copy export
+    // path. Eligibility detection already ships (StreamCopyExportEngine); the
+    // actual mux uses FFmpeg's `-c copy` path and wakes up with the FFmpegX
+    // dependency (Tier A.9). Default true so the feature turns on automatically
+    // the moment the dependency is present.
+    val allowStreamCopy: Boolean = true
 ) {
     init {
         require(videoBitrate > 0) { "Bitrate must be positive" }

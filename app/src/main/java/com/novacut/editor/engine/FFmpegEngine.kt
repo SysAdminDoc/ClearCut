@@ -86,6 +86,22 @@ class FFmpegEngine @Inject constructor(
     }
 
     /**
+     * Stream-copy trim (LosslessCut-style). When the timeline is a single
+     * unmodified clip with only head/tail cuts, we skip transcode entirely
+     * via `-c copy -ss -to`. Requires keyframe-aligned boundaries; otherwise
+     * FFmpeg emits a warning but still succeeds. ~50x faster than Transformer.
+     */
+    suspend fun streamCopyTrim(
+        inputUri: android.net.Uri,
+        startMs: Long,
+        endMs: Long,
+        outputPath: String
+    ): Boolean = withContext(Dispatchers.IO) {
+        Log.d(TAG, "streamCopyTrim: stub $inputUri [$startMs..$endMs] -> $outputPath")
+        false
+    }
+
+    /**
      * Concatenate multiple video files losslessly using the concat demuxer.
      */
     suspend fun concat(

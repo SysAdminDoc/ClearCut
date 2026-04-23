@@ -380,7 +380,16 @@ class VideoEngine @Inject constructor(
                 addAll(audioSequences)
             }
 
-            val composition = buildComposition(allSequences, audioSequences.isNotEmpty(), videoTrackAudioGain <= 0f)
+            // Preserve HDR through the encoder chain only when the caller
+            // opted in AND the codec can carry HDR. H.264 has no HDR profile;
+            // HEVC, AV1 and VP9 do.
+            val preserveHdr = config.hdr10PlusMetadata && config.codec != VideoCodec.H264
+            val composition = buildComposition(
+                allSequences,
+                audioSequences.isNotEmpty(),
+                videoTrackAudioGain <= 0f,
+                preserveHdr = preserveHdr
+            )
 
             val mimeType = if (config.transparentBackground) {
                 MimeTypes.VIDEO_VP9
@@ -530,7 +539,16 @@ class VideoEngine @Inject constructor(
                 overlapping.forEach { overlay ->
                     val relStart = (overlay.startTimeMs - clipStart).coerceAtLeast(0L)
                     val relEnd = (overlay.endTimeMs - clipStart).coerceAtMost(clip.durationMs)
-                    add(ExportTextOverlay(overlay, relStart, relEnd))
+                    // Stroke-width > 0 requires Canvas rendering with a
+                    // distinct stroke+fill color pair, which SpannableString
+                    // cannot express. Fall through to the bitmap-based path
+                    // only when strokes are active so the cheap text path is
+                    // unchanged for the vast majority of overlays.
+                    if (overlay.strokeWidth > 0f) {
+                        add(StrokedTextBitmapOverlay(overlay, relStart, relEnd))
+                    } else {
+                        add(ExportTextOverlay(overlay, relStart, relEnd))
+                    }
                 }
                 config.watermark?.let { watermark ->
                     ExportWatermarkOverlay.create(
@@ -890,11 +908,26 @@ class VideoEngine @Inject constructor(
     private fun buildComposition(
         sequences: List<EditedMediaItemSequence>,
         hasAudioTracks: Boolean,
-        videoMuted: Boolean
+        videoMuted: Boolean,
+        preserveHdr: Boolean = false
     ): Composition {
-        return Composition.Builder(sequences)
+        val builder = Composition.Builder(sequences)
             .setTransmuxAudio(!hasAudioTracks && !videoMuted)
-            .build()
+        if (preserveHdr) {
+            // HDR_MODE_KEEP_HDR preserves HDR metadata through the pipeline
+            // rather than tone-mapping to SDR. Honoured only when the source
+            // track advertises HDR and the device's encoder supports an HDR
+            // profile for the chosen codec. On non-HDR sources or devices
+            // without HDR encode support, Media3 silently falls back to SDR
+            // and the output is identical to the default path — so setting
+            // this flag is always safe.
+            try {
+                builder.setHdrMode(Composition.HDR_MODE_KEEP_HDR)
+            } catch (e: Throwable) {
+                Log.w(TAG, "setHdrMode unavailable on this Media3 build", e)
+            }
+        }
+        return builder.build()
     }
 
     @androidx.annotation.OptIn(UnstableApi::class)
@@ -1049,6 +1082,21 @@ class VideoEngine @Inject constructor(
         }
     }
 
+    // v3.69 color-blind preview — a single-mode post-effect appended to every
+    // clip's preview chain. Never touches the export path.
+    @Volatile
+    private var colorBlindMode: ColorBlindPreviewEngine.Mode = ColorBlindPreviewEngine.Mode.OFF
+
+    fun setColorBlindMode(mode: ColorBlindPreviewEngine.Mode) {
+        if (mode == colorBlindMode) return
+        colorBlindMode = mode
+        // Re-apply effects so the preview updates without the user having to
+        // scrub. We target the currently visible clip; if there isn't one
+        // (e.g. empty project), the next applyPreviewEffects() call will pick
+        // up the new mode.
+        applyEffectsForCurrentClip()
+    }
+
     /**
      * Apply effects for the currently playing clip during playback.
      * Called automatically by the media item transition listener.
@@ -1103,6 +1151,10 @@ class VideoEngine @Inject constructor(
         }
         // Opacity + transform (keyframe-animated or static)
         addOpacityAndTransformEffects(clip)
+        // Color-blind preview simulation — applied last so the user sees the
+        // final composited frame under the simulated CVD. Only added when
+        // the mode is non-OFF so OFF has zero overhead.
+        ColorBlindGlEffect.create(colorBlindMode)?.let { add(it) }
     }
 
     /**

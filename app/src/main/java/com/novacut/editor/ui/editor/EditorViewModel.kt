@@ -18,6 +18,18 @@ import com.novacut.editor.engine.ProxyEngine
 import com.novacut.editor.engine.SettingsRepository
 import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.engine.SubtitleExporter
+import com.novacut.editor.engine.TextBasedEditEngine
+import com.novacut.editor.engine.AutoChapterEngine
+import com.novacut.editor.engine.TalkingHeadFramingEngine
+import com.novacut.editor.engine.KaraokeCaptionEngine
+import com.novacut.editor.engine.StreamCopyExportEngine
+import com.novacut.editor.engine.ContentIdEngine
+import com.novacut.editor.engine.DirectPublishEngine
+import com.novacut.editor.engine.FlashSafetyEngine
+import com.novacut.editor.engine.ColorBlindPreviewEngine
+import com.novacut.editor.engine.AiThumbnailEngine
+import com.novacut.editor.engine.AudioDescriptionEngine
+import com.novacut.editor.engine.StylusMidiEngine
 import com.novacut.editor.engine.BeatDetectionEngine
 import com.novacut.editor.engine.LoudnessEngine
 import com.novacut.editor.engine.NoiseReductionEngine
@@ -75,7 +87,12 @@ enum class PanelId {
     CLOUD_BACKUP, TUTORIAL, UNDO_HISTORY, CAPTION_STYLE_GALLERY,
     BEAT_SYNC, SMART_REFRAME, SPEED_PRESETS, FILLER_REMOVAL,
     AUTO_EDIT, TTS, EFFECT_LIBRARY, NOISE_REDUCTION, STICKER_PICKER,
-    DRAWING, MULTI_CAM, MARKER_LIST, SCRATCHPAD, RECOVERY_DIALOG
+    DRAWING, MULTI_CAM, MARKER_LIST, SCRATCHPAD, RECOVERY_DIALOG,
+    // v3.69 — 15-feature wave (composite hub + drill-downs).
+    V369_FEATURES,
+    TEXT_BASED_EDIT, AUTO_CHAPTER, TALKING_HEAD, KARAOKE_CAPTIONS,
+    CONTENT_ID, DIRECT_PUBLISH, FLASH_SAFETY, COLOR_BLIND_PREVIEW,
+    AI_THUMBNAIL, AUDIO_DESCRIPTION
 }
 
 data class PanelVisibility(
@@ -184,7 +201,34 @@ data class EditorState(
     val isDrawingMode: Boolean = false,
     val drawingColor: Long = 0xFFF38BA8L,
     val drawingStrokeWidth: Float = 4f,
-    val aiSuggestion: AiSuggestion? = null
+    val aiSuggestion: AiSuggestion? = null,
+    // v3.69 feature-wave state
+    val v369: V369State = V369State()
+)
+
+/**
+ * State bag for the v3.69 15-feature wave. Lives as a nested block to keep the
+ * top-level EditorState from ballooning; individual features pull what they
+ * need via `state.v369.xxx`. All fields default to an empty/neutral value so
+ * existing code paths keep working when the features are not in use.
+ */
+@androidx.compose.runtime.Immutable
+data class V369State(
+    val transcript: com.novacut.editor.model.Transcript? = null,
+    val selectedWordIndices: Set<Int> = emptySet(),
+    val chapterCandidates: List<com.novacut.editor.engine.AutoChapterEngine.ChapterCandidate> = emptyList(),
+    val flashWarnings: List<com.novacut.editor.engine.FlashSafetyEngine.Warning> = emptyList(),
+    val thumbnailCandidates: List<com.novacut.editor.engine.AiThumbnailEngine.Candidate> = emptyList(),
+    val colorBlindMode: com.novacut.editor.engine.ColorBlindPreviewEngine.Mode =
+        com.novacut.editor.engine.ColorBlindPreviewEngine.Mode.OFF,
+    val karaokeStyle: com.novacut.editor.engine.KaraokeCaptionEngine.KaraokeStyle =
+        com.novacut.editor.engine.KaraokeCaptionEngine.KaraokeStyle.MRBEAST,
+    val streamCopyEligibility: com.novacut.editor.engine.StreamCopyExportEngine.Eligibility? = null,
+    val contentIdResult: com.novacut.editor.engine.ContentIdEngine.Match? = null,
+    val isAnalyzingFlashes: Boolean = false,
+    val isScoringThumbnails: Boolean = false,
+    val isTrackingFaces: Boolean = false,
+    val isGeneratingChapters: Boolean = false
 )
 
 data class AiSuggestion(
@@ -267,6 +311,19 @@ class EditorViewModel @Inject constructor(
     private val timelineExchangeEngine: TimelineExchangeEngine,
     private val proxyWorkflowEngine: ProxyWorkflowEngine,
     private val multiCamEngine: MultiCamEngine,
+    // v3.69 engines (15-feature wave)
+    private val textBasedEditEngine: TextBasedEditEngine,
+    private val autoChapterEngine: AutoChapterEngine,
+    private val talkingHeadEngine: TalkingHeadFramingEngine,
+    private val karaokeCaptionEngine: KaraokeCaptionEngine,
+    private val streamCopyEngine: StreamCopyExportEngine,
+    private val contentIdEngine: ContentIdEngine,
+    private val directPublishEngine: DirectPublishEngine,
+    private val flashSafetyEngine: FlashSafetyEngine,
+    private val colorBlindEngine: ColorBlindPreviewEngine,
+    private val aiThumbnailEngine: AiThumbnailEngine,
+    private val audioDescriptionEngine: AudioDescriptionEngine,
+    private val stylusMidiEngine: StylusMidiEngine,
     @ApplicationContext private val appContext: Context,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -305,7 +362,8 @@ class EditorViewModel @Inject constructor(
         stateFlow = _state, videoEngine = videoEngine, appContext = appContext,
         scope = viewModelScope, showToast = ::showToast,
         pauseIfPlaying = ::pauseIfPlaying, dismissedPanelState = ::dismissedPanelState,
-        showExportSheet = ::showExportSheet
+        showExportSheet = ::showExportSheet,
+        streamCopyEngine = streamCopyEngine
     )
 
     val aiToolsDelegate = AiToolsDelegate(
@@ -355,6 +413,20 @@ class EditorViewModel @Inject constructor(
         saveProject = ::saveProject
     )
 
+    val v369Delegate = V369Delegate(
+        stateFlow = _state, scope = viewModelScope, appContext = appContext,
+        saveUndoState = ::saveUndoState, showToast = ::showToast,
+        saveProject = ::saveProject, rebuildPlayerTimeline = ::rebuildPlayerTimeline,
+        recalculateDuration = ::recalculateDuration,
+        textBased = textBasedEditEngine, autoChapter = autoChapterEngine,
+        talkingHead = talkingHeadEngine, karaoke = karaokeCaptionEngine,
+        streamCopy = streamCopyEngine, contentId = contentIdEngine,
+        publish = directPublishEngine, flashSafety = flashSafetyEngine,
+        colorBlind = colorBlindEngine, thumbnail = aiThumbnailEngine,
+        audioDescription = audioDescriptionEngine, stylusMidi = stylusMidiEngine,
+        audioEngine = audioEngine, videoEngine = videoEngine
+    )
+
     // Whisper model state (exposed via delegate for UI binding)
     val whisperModelState get() = aiToolsDelegate.whisperModelState
     val whisperDownloadProgress get() = aiToolsDelegate.whisperDownloadProgress
@@ -369,6 +441,24 @@ class EditorViewModel @Inject constructor(
     private val _snapToMarker = MutableStateFlow(true)
     val snapToBeat: Boolean get() = _snapToBeat.value
     val snapToMarker: Boolean get() = _snapToMarker.value
+
+    // v3.69 layout-mode inputs surfaced as StateFlows so Compose can observe.
+    private val _oneHandedMode = MutableStateFlow(false)
+    val oneHandedMode: StateFlow<Boolean> = _oneHandedMode.asStateFlow()
+    private val _desktopOverride =
+        MutableStateFlow(com.novacut.editor.engine.DesktopOverride.AUTO)
+    val desktopOverride: StateFlow<com.novacut.editor.engine.DesktopOverride> =
+        _desktopOverride.asStateFlow()
+
+    fun setOneHandedMode(enabled: Boolean) {
+        _oneHandedMode.value = enabled
+        viewModelScope.launch { settingsRepo.updateOneHandedMode(enabled) }
+    }
+
+    fun setDesktopOverride(value: com.novacut.editor.engine.DesktopOverride) {
+        _desktopOverride.value = value
+        viewModelScope.launch { settingsRepo.updateDesktopOverride(value) }
+    }
 
     // Confirm-before-delete / show-waveforms (driven by user settings)
     private val _confirmBeforeDelete = MutableStateFlow(true)
@@ -471,6 +561,7 @@ class EditorViewModel @Inject constructor(
                         playheadMs = recovery.playheadMs,
                         chapterMarkers = recovery.chapterMarkers,
                         beatMarkers = recovery.beatMarkers,
+                        v369 = it.v369.copy(transcript = recovery.transcript ?: it.v369.transcript),
                         totalDurationMs = recovery.tracks.maxOfOrNull { t ->
                             t.clips.maxOfOrNull { c -> c.timelineEndMs } ?: 0L
                         } ?: 0L,
@@ -606,6 +697,16 @@ class EditorViewModel @Inject constructor(
                             quality = quality
                         ))
                     }
+                }
+
+                // v3.69 layout-mode mirrors. Kept on dedicated StateFlows so
+                // Compose doesn't re-read the entire AppSettings snapshot on
+                // every unrelated change.
+                if (_oneHandedMode.value != settings.oneHandedMode) {
+                    _oneHandedMode.value = settings.oneHandedMode
+                }
+                if (_desktopOverride.value != settings.desktopModeOverride) {
+                    _desktopOverride.value = settings.desktopModeOverride
                 }
 
                 // Only restart auto-save when auto-save settings actually change
@@ -2935,6 +3036,10 @@ class EditorViewModel @Inject constructor(
     fun showChromaKey() = showPanel(PanelId.CHROMA_KEY)
     fun hideChromaKey() = hidePanel(PanelId.CHROMA_KEY)
 
+    // --- v3.69 features hub ---
+    fun showV369Features() = showPanel(PanelId.V369_FEATURES)
+    fun hideV369Features() = hidePanel(PanelId.V369_FEATURES)
+
     // --- Video Scopes ---
     private val _scopeFrame = MutableStateFlow<android.graphics.Bitmap?>(null)
     val scopeFrame: StateFlow<android.graphics.Bitmap?> = _scopeFrame.asStateFlow()
@@ -3331,7 +3436,8 @@ class EditorViewModel @Inject constructor(
             playheadMs = state.playheadMs,
             chapterMarkers = state.chapterMarkers,
             drawingPaths = state.drawingPaths,
-            beatMarkers = state.beatMarkers
+            beatMarkers = state.beatMarkers,
+            transcript = state.v369.transcript
         )
     }
 
