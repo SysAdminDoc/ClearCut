@@ -67,6 +67,9 @@ fun EditorScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val playheadMs by viewModel.playheadMs.collectAsStateWithLifecycle()
+    val oneHandedMode by viewModel.oneHandedMode.collectAsStateWithLifecycle()
+    val desktopOverride by viewModel.desktopOverride.collectAsStateWithLifecycle()
+    val layoutMode = rememberLayoutMode(oneHandedMode, desktopOverride)
     val whisperState by viewModel.whisperModelState.collectAsStateWithLifecycle()
     val whisperProgress by viewModel.whisperDownloadProgress.collectAsStateWithLifecycle()
     val segmentationState by viewModel.segmentationModelState.collectAsStateWithLifecycle()
@@ -216,6 +219,7 @@ fun EditorScreen(
         if (state.selectedClipId == null) showClipLabelPicker = false
     }
 
+    CompositionLocalProvider(LocalLayoutMode provides layoutMode) {
     Box(modifier = Modifier
         .fillMaxSize()
         .background(Mocha.Base)
@@ -293,9 +297,20 @@ fun EditorScreen(
             } else false
         }
     ) {
+        // v3.69 DESKTOP layout — fixed 260 dp left sidebar (Media Bin + quick
+        // actions + v3.69 hub entry). Absent on PHONE / ONE_HANDED so the
+        // existing layout is untouched when no desktop surface is present.
+        val desktopSidebarWidth = if (layoutMode == LayoutMode.DESKTOP) 260.dp else 0.dp
+        if (layoutMode == LayoutMode.DESKTOP) {
+            DesktopSidebar(
+                viewModel = viewModel,
+                modifier = Modifier.align(Alignment.TopStart)
+            )
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(start = desktopSidebarWidth)
                 .then(if (isTutorialOpen) Modifier.clearAndSetSemantics { } else Modifier)
         ) {
             // Top bar (Home / Undo / Redo / Delete / More / Export)
@@ -318,7 +333,8 @@ fun EditorScreen(
                 onSaveTemplate = viewModel::saveAsTemplate,
                 editorMode = state.editorMode,
                 onToggleEditorMode = viewModel::toggleEditorMode,
-                onOpenScratchpad = viewModel::showScratchpad
+                onOpenScratchpad = viewModel::showScratchpad,
+                onOpenV369Features = viewModel::showV369Features
             )
 
             // Empty project onboarding hint
@@ -1661,6 +1677,17 @@ fun EditorScreen(
             )
         }
 
+        // v3.69 Features Hub
+        BottomSheetSlot(
+            visible = state.panels.isOpen(PanelId.V369_FEATURES),
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            V369FeaturesPanel(
+                viewModel = viewModel,
+                onDismiss = viewModel::hideV369Features
+            )
+        }
+
         // Project Backup
         BottomSheetSlot(
             visible = state.panels.isOpen(PanelId.CLOUD_BACKUP),
@@ -1883,6 +1910,7 @@ fun EditorScreen(
             }
         }
     }
+    }
 }
 
 @Composable
@@ -1906,14 +1934,23 @@ private fun EditorTopBar(
     onSaveTemplate: (String) -> Unit = {},
     editorMode: EditorMode = EditorMode.PRO,
     onToggleEditorMode: () -> Unit = {},
-    onOpenScratchpad: () -> Unit = {}
+    onOpenScratchpad: () -> Unit = {},
+    onOpenV369Features: () -> Unit = {}
 ) {
     var showOverflow by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
     var showSaveTemplateDialog by remember { mutableStateOf(false) }
     var showAddTrackMenu by remember { mutableStateOf(false) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
-    val isCompactBar = LocalConfiguration.current.screenWidthDp < 430
+    // v3.69: honour layout mode. ONE_HANDED forces compact even on wider
+    // screens (user opted in). DESKTOP leaves the bar at its generous size
+    // — we would rather pad out on large screens than fake compact.
+    val layoutMode = LocalLayoutMode.current
+    val isCompactBar = when (layoutMode) {
+        LayoutMode.ONE_HANDED -> true
+        LayoutMode.DESKTOP -> false
+        LayoutMode.PHONE -> LocalConfiguration.current.screenWidthDp < 430
+    }
 
     if (showDeleteConfirmation) {
         AlertDialog(
@@ -2279,6 +2316,20 @@ private fun EditorTopBar(
                                     Icon(
                                         Icons.AutoMirrored.Filled.Notes,
                                         contentDescription = stringResource(R.string.scratchpad_menu_label)
+                                    )
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("v3.69 Features") },
+                                onClick = {
+                                    showOverflow = false
+                                    onOpenV369Features()
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.AutoAwesome,
+                                        contentDescription = "v3.69 Features",
+                                        tint = Mocha.Mauve
                                     )
                                 }
                             )

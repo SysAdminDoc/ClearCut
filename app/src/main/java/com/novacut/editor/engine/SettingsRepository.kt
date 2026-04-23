@@ -34,8 +34,19 @@ data class AppSettings(
     val snapToMarker: Boolean = true,
     val thumbnailCacheSizeMb: Int = 128,
     val confirmBeforeDelete: Boolean = true,
-    val defaultExportQuality: String = "HIGH"
+    val defaultExportQuality: String = "HIGH",
+    // v3.69: UI-mode flags. `desktopMode` is auto-detected from the device
+    // config (Samsung DeX, Chromebook, or generic large-screen + mouse). It
+    // can still be user-overridden via [updateDesktopModeOverride]. `oneHandedMode`
+    // is strictly user-opt-in and intended for phone-width sessions.
+    val oneHandedMode: Boolean = false,
+    val desktopModeOverride: DesktopOverride = DesktopOverride.AUTO,
+    // v3.69: optional AcoustID API key for content-ID lookup. Empty = use the
+    // local hash-only path (see ContentIdEngine).
+    val acoustIdApiKey: String = ""
 )
+
+enum class DesktopOverride { AUTO, FORCE_ON, FORCE_OFF }
 
 @Singleton
 class SettingsRepository @Inject constructor(
@@ -62,6 +73,9 @@ class SettingsRepository @Inject constructor(
         val THUMBNAIL_CACHE_SIZE_MB = intPreferencesKey("thumbnail_cache_size_mb")
         val CONFIRM_BEFORE_DELETE = booleanPreferencesKey("confirm_before_delete")
         val DEFAULT_EXPORT_QUALITY = stringPreferencesKey("default_export_quality")
+        val ONE_HANDED_MODE = booleanPreferencesKey("one_handed_mode")
+        val DESKTOP_OVERRIDE = stringPreferencesKey("desktop_override")
+        val ACOUSTID_KEY = stringPreferencesKey("acoustid_api_key")
     }
 
     private val data: Flow<Preferences> = context.dataStore.data
@@ -104,7 +118,12 @@ class SettingsRepository @Inject constructor(
                 confirmBeforeDelete = prefs[Keys.CONFIRM_BEFORE_DELETE] ?: true,
                 defaultExportQuality = prefs[Keys.DEFAULT_EXPORT_QUALITY]
                     ?.takeIf { quality -> runCatching { ExportQuality.valueOf(quality) }.isSuccess }
-                    ?: ExportQuality.HIGH.name
+                    ?: ExportQuality.HIGH.name,
+                oneHandedMode = prefs[Keys.ONE_HANDED_MODE] ?: false,
+                desktopModeOverride = prefs[Keys.DESKTOP_OVERRIDE]?.let {
+                    runCatching { DesktopOverride.valueOf(it) }.getOrNull()
+                } ?: DesktopOverride.AUTO,
+                acoustIdApiKey = prefs[Keys.ACOUSTID_KEY] ?: ""
             )
         }
 
@@ -228,5 +247,20 @@ class SettingsRepository @Inject constructor(
     suspend fun updateDefaultExportQuality(value: String) {
         val validated = try { ExportQuality.valueOf(value).name } catch (_: IllegalArgumentException) { return }
         context.dataStore.edit { it[Keys.DEFAULT_EXPORT_QUALITY] = validated }
+    }
+
+    suspend fun updateOneHandedMode(value: Boolean) {
+        context.dataStore.edit { it[Keys.ONE_HANDED_MODE] = value }
+    }
+
+    suspend fun updateDesktopOverride(value: DesktopOverride) {
+        context.dataStore.edit { it[Keys.DESKTOP_OVERRIDE] = value.name }
+    }
+
+    suspend fun updateAcoustIdKey(value: String) {
+        // Trim + cap to a sane length so corrupt pastes can't blow up the
+        // DataStore file.
+        val sanitised = value.trim().take(64)
+        context.dataStore.edit { it[Keys.ACOUSTID_KEY] = sanitised }
     }
 }

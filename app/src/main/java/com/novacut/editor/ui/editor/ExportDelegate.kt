@@ -12,6 +12,7 @@ import com.novacut.editor.engine.ContactSheetExporter
 import com.novacut.editor.engine.ExportService
 import com.novacut.editor.engine.ExportState
 import com.novacut.editor.engine.SmartRenderEngine
+import com.novacut.editor.engine.StreamCopyExportEngine
 import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.engine.exportMimeTypeFor
 import com.novacut.editor.engine.exportUsesImageCollection
@@ -45,7 +46,8 @@ class ExportDelegate(
     private val showToast: (String) -> Unit,
     private val pauseIfPlaying: () -> Unit,
     private val dismissedPanelState: (EditorState) -> EditorState,
-    private val showExportSheet: () -> Unit
+    private val showExportSheet: () -> Unit,
+    private val streamCopyEngine: StreamCopyExportEngine? = null
 ) {
     // --- Export ---
     // Holder for the GIF-style / contact-sheet / any other non-Transformer
@@ -132,6 +134,51 @@ class ExportDelegate(
      * on disk. No-op if the token wasn't used. Returns the final File (possibly
      * renamed) so the caller can update `lastExportedFilePath`.
      */
+    /**
+     * Attempt a zero-transcode stream-copy export. Returns true when the
+     * muxer succeeded and the export has been finalised (state → COMPLETE);
+     * returns false when not eligible or when the muxer failed — in which
+     * case the caller should fall through to the Transformer path.
+     */
+    private suspend fun trySteamCopy(
+        tracks: List<com.novacut.editor.model.Track>,
+        config: ExportConfig,
+        textOverlays: List<com.novacut.editor.model.TextOverlay>,
+        state: EditorState,
+        outputFile: File
+    ): Boolean {
+        val engine = streamCopyEngine ?: return false
+        if (!config.allowStreamCopy) return false
+        // Any overlay / chapter / subtitle / transparent-output / GIF mode
+        // disqualifies — the muxer can only copy sample packets.
+        if (textOverlays.isNotEmpty()) return false
+        if (state.imageOverlays.isNotEmpty()) return false
+        if (config.chapters.isNotEmpty()) return false
+        if (config.subtitleFormat != null) return false
+        if (config.transparentBackground) return false
+        if (config.exportAsGif || config.captureFrameOnly || config.exportAsContactSheet) return false
+        if (config.exportAudioOnly || config.exportStemsOnly) return false
+        if (config.watermark != null) return false
+        val hasOverlays = textOverlays.isNotEmpty() || state.imageOverlays.isNotEmpty()
+        val eligibility = engine.analyze(tracks, hasOverlays)
+        if (!eligibility.eligible) return false
+        val ok = engine.execute(eligibility, outputFile.absolutePath) { progress ->
+            stateFlow.update { it.copy(exportProgress = progress) }
+        }
+        if (!ok) {
+            android.util.Log.w("ExportDelegate", "stream-copy failed, falling back to Transformer")
+            runCatching { outputFile.delete() }
+            return false
+        }
+        stateFlow.update { it.copy(
+            exportState = ExportState.COMPLETE,
+            exportProgress = 1f,
+            lastExportedFilePath = outputFile.absolutePath
+        ) }
+        showToast("Stream-copy export complete: ${outputFile.name}")
+        return true
+    }
+
     private fun finalizeFilenameSize(outputFile: File): File {
         if (!outputFile.name.contains("{sizeMB}")) return outputFile
         val mb = (outputFile.length() + 524_288L) / 1_048_576L  // round to nearest MB
@@ -393,6 +440,17 @@ class ExportDelegate(
             appContext.startForegroundService(serviceIntent)
 
             try {
+                // v3.69 stream-copy fast-path. Only runs when the caller opted
+                // in via `allowStreamCopy` AND the timeline is a single
+                // unmodified clip with only head/tail cuts. Falls back to the
+                // Transformer path below on any failure so we never leave the
+                // user stuck if the MediaMuxer rejects the source.
+                if (trySteamCopy(
+                        tracks, configWithChapters, textOverlays, currentState, outputFile
+                    )
+                ) {
+                    return@launch
+                }
                 videoEngine.export(
                     tracks = tracks,
                     config = configWithChapters,
@@ -475,6 +533,13 @@ class ExportDelegate(
                         ) }
                     }
                 )
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // The user actively cancelled — do not surface as ERROR.
+                // VideoEngine's transformer listener handles the CANCELLED
+                // state transition; we just clean up the partial file and
+                // let cancellation propagate so the launched job finishes.
+                runCatching { outputFile.delete() }
+                throw e
             } catch (e: Exception) {
                 outputFile.delete()
                 stateFlow.update { it.copy(

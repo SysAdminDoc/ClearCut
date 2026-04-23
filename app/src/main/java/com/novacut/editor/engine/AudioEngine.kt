@@ -276,7 +276,14 @@ class AudioEngine @Inject constructor(
         return result
     }
 
-    private suspend fun decodeToPCM(uri: Uri): ShortArray = withContext(Dispatchers.IO) {
+    /**
+     * Decode the first audio track of `uri` to 16-bit signed-PCM samples.
+     * Exposed for non-waveform consumers (e.g. ContentIdEngine fingerprinting)
+     * that need the raw samples but don't want to duplicate the decoder loop.
+     * Returns an empty `ShortArray` when no audio track is present or decoding
+     * fails — callers should treat that as "no data" rather than an error.
+     */
+    suspend fun decodeToPCM(uri: Uri): ShortArray = withContext(Dispatchers.IO) {
         val extractor = MediaExtractor()
         try {
             extractor.setDataSource(context, uri, null)
