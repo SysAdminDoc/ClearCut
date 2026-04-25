@@ -867,6 +867,7 @@ class EditorViewModel @Inject constructor(
         setTool(EditorTool.NONE)
         clipEditingDelegate.addClipToTrack(uri, trackType)
     }
+    fun relinkMedia(oldUri: Uri, newUri: Uri) = clipEditingDelegate.relinkMedia(oldUri, newUri)
     fun selectClip(clipId: String?, trackId: String? = null) {
         clipEditingDelegate.selectClip(clipId, trackId)
         generateAiSuggestion(clipId)

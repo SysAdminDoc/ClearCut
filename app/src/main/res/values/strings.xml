@@ -523,7 +523,6 @@
     <string name="editor_select_clip_captions">Select a clip for captions</string>
     <string name="editor_select_clip_normalize">Select a clip to normalize</string>
     <string name="editor_alpha_matte_preview">Alpha matte preview</string>
-    <string name="editor_media_relink_unavailable">Media relink not available</string>
     <string name="editor_google_sign_in_required">Google Sign-In required</string>
     <string name="editor_sign_in_first">Sign in first</string>
     <string name="editor_use_file_picker_import">Use file picker to import .ncfx</string>
@@ -937,6 +936,7 @@
     <string name="media_manager_close_cd">Close media manager</string>
     <string name="media_manager_empty">No media assets in project</string>
     <string name="media_manager_relink_cd">Relink media</string>
+    <string name="media_manager_relink_action">Choose replacement</string>
     <string name="media_manager_subtitle">Review linked source files, spot missing footage, and keep the timeline stack lean before export.</string>
     <string name="media_manager_health_title">Project media health</string>
     <string name="media_manager_health_description">Check what is linked, what is offline, and whether any empty tracks can be trimmed out of the stack.</string>

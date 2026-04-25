@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.geometry.Offset
@@ -108,6 +109,24 @@ fun EditorScreen(
             viewModel.onLutFileSelected(uri)
         } else {
             viewModel.onLutPickerDismissed()
+        }
+    }
+    var pendingRelinkUri by remember { mutableStateOf<Uri?>(null) }
+    val mediaRelinkLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        val oldUri = pendingRelinkUri
+        pendingRelinkUri = null
+        if (uri != null && oldUri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (e: SecurityException) {
+                Log.w("EditorScreen", "Could not persist relink media permission", e)
+            }
+            viewModel.relinkMedia(oldUri, uri)
         }
     }
     LaunchedEffect(showLutPicker) {
@@ -1431,8 +1450,9 @@ fun EditorScreen(
             MediaManagerPanel(
                 tracks = state.tracks,
                 onJumpToClip = viewModel::jumpToClip,
-                onRelinkMedia = { _ ->
-                    viewModel.showToast(context.getString(R.string.editor_media_relink_unavailable))
+                onRelinkMedia = { uri ->
+                    pendingRelinkUri = uri
+                    mediaRelinkLauncher.launch(arrayOf("video/*", "audio/*", "image/*"))
                 },
                 onRemoveUnused = { viewModel.removeUnusedMedia() },
                 onClose = viewModel::hideMediaManager

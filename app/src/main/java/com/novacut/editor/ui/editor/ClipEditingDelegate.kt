@@ -146,6 +146,89 @@ class ClipEditingDelegate(
         }
     }
 
+    fun relinkMedia(oldUri: Uri, newUri: Uri) {
+        scope.launch {
+            val mediaInfo = try {
+                withContext(Dispatchers.IO) {
+                    Triple(
+                        videoEngine.getMediaDuration(newUri),
+                        videoEngine.hasVisualTrack(newUri),
+                        videoEngine.hasAudioTrack(newUri)
+                    )
+                }
+            } catch (e: Exception) {
+                showToast("Could not read replacement media")
+                return@launch
+            }
+            val (duration, hasVisualTrack, hasAudioTrack) = mediaInfo
+            if (duration <= 0L) {
+                showToast("Could not read replacement media")
+                return@launch
+            }
+
+            val oldUriKey = oldUri.toString()
+            val state = stateFlow.value
+            val affected = state.tracks.flatMap { track ->
+                track.clips
+                    .filter { it.sourceUri.toString() == oldUriKey }
+                    .map { clip -> track to clip }
+            }
+            if (affected.isEmpty()) {
+                showToast("Media is no longer used")
+                return@launch
+            }
+
+            val affectedClipIds = affected.map { it.second.id }.toSet()
+            if (tracksContainLockedClip(affectedClipIds)) {
+                showToast("Track is locked")
+                return@launch
+            }
+
+            val incompatibilityMessage = affected.firstNotNullOfOrNull { (track, _) ->
+                when (track.type) {
+                    TrackType.AUDIO -> if (!hasAudioTrack) "Replacement needs an audio track" else null
+                    TrackType.VIDEO, TrackType.OVERLAY -> {
+                        if (!hasVisualTrack) "Replacement needs a video or image track" else null
+                    }
+                    else -> "Replacement is not valid for this track type"
+                }
+            }
+            if (incompatibilityMessage != null) {
+                showToast(incompatibilityMessage)
+                return@launch
+            }
+
+            saveUndoState("Relink media")
+            stateFlow.update { current ->
+                val tracks = current.tracks.map { track ->
+                    track.copy(
+                        clips = track.clips.map { clip ->
+                            if (clip.sourceUri.toString() == oldUriKey) {
+                                clip.relinkedTo(newUri, duration)
+                            } else {
+                                clip
+                            }
+                        }
+                    )
+                }
+                recalculateDuration(
+                    current.copy(
+                        tracks = tracks,
+                        waveforms = current.waveforms - affectedClipIds
+                    )
+                )
+            }
+
+            rebuildPlayerTimeline()
+            updatePreview()
+            saveProject()
+            affectedClipIds.forEach { clipId ->
+                onClipAdded?.invoke(clipId, newUri)
+            }
+            showToast("Relinked ${affectedClipIds.size} timeline clip${if (affectedClipIds.size == 1) "" else "s"}")
+        }
+    }
+
     // --- Select Clip ---
     fun selectClip(clipId: String?, trackId: String? = null) {
         stateFlow.update { s ->
@@ -593,6 +676,18 @@ class ClipEditingDelegate(
             effects = clip.effects.map { it.copy(id = UUID.randomUUID().toString()) },
             transition = null,
             linkedClipId = linkedClipId
+        )
+    }
+
+    private fun Clip.relinkedTo(newUri: Uri, sourceDurationMs: Long): Clip {
+        val safeTrimStart = trimStartMs.coerceIn(0L, sourceDurationMs - 1L)
+        val safeTrimEnd = trimEndMs.coerceIn(safeTrimStart + 1L, sourceDurationMs)
+        return copy(
+            sourceUri = newUri,
+            sourceDurationMs = sourceDurationMs,
+            trimStartMs = safeTrimStart,
+            trimEndMs = safeTrimEnd,
+            proxyUri = null
         )
     }
 

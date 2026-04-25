@@ -569,7 +569,7 @@ private fun MediaAssetCard(
                                 contentDescription = stringResource(R.string.media_manager_relink_cd)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(text = stringResource(R.string.media_manager_relink_cd))
+                            Text(text = stringResource(R.string.media_manager_relink_action))
                         }
                     }
 
