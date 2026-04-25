@@ -26,6 +26,59 @@ object ProjectArchive {
     private const val MAX_ARCHIVE_TEXT_ENTRY_BYTES = 5_000_000L
     private const val MAX_ARCHIVE_TOTAL_BYTES = 4L * 1024L * 1024L * 1024L
 
+    /**
+     * How to handle the situation where the archive's project ID already exists
+     * locally. The default is [REGENERATE] — safest and matches the user
+     * expectation of "import as a copy".
+     */
+    enum class IdCollisionPolicy {
+        /** Mint a new UUID for the imported project. */
+        REGENERATE,
+
+        /** Keep the original ID, even if it overwrites an existing project. */
+        KEEP
+    }
+
+    /**
+     * Diagnostic detail attached to every import attempt. Surfaced to the user
+     * via the post-import sheet — historically the importer dropped media or
+     * silently truncated newer-schema archives, so the report exists to make
+     * those problems impossible to miss.
+     */
+    data class ImportReport(
+        val schemaVersion: Int,
+        val schemaTooNew: Boolean,
+        val originalProjectId: String?,
+        val effectiveProjectId: String?,
+        val projectIdCollided: Boolean,
+        val idCollisionPolicy: IdCollisionPolicy,
+        val mediaTotal: Int,
+        val mediaResolved: Int,
+        val unresolvedMediaUris: List<String>,
+        val warnings: List<String>,
+        val targetDirCreated: Boolean
+    ) {
+        val mediaMissing: Int get() = mediaTotal - mediaResolved
+        val canProceed: Boolean get() = !schemaTooNew
+        val summary: String get() = buildString {
+            append("schema v$schemaVersion")
+            if (schemaTooNew) append(" (too new)")
+            if (mediaMissing > 0) append(" · $mediaMissing missing media")
+            if (projectIdCollided) append(" · ID collision (${idCollisionPolicy.name.lowercase()})")
+            if (warnings.isNotEmpty()) append(" · ${warnings.size} warning(s)")
+        }
+    }
+
+    /**
+     * Outcome of [importArchiveWithReport]. The state is non-null only when the
+     * archive was structurally valid; the [report] is populated either way.
+     */
+    data class ImportResult(
+        val state: AutoSaveState?,
+        val report: ImportReport,
+        val errorMessage: String? = null
+    )
+
     private data class ArchivedMediaSource(
         val originalUri: String,
         val uri: Uri,
@@ -96,24 +149,61 @@ object ProjectArchive {
     }
 
     /**
-     * Import a .novacut zip archive, extracting media files and returning the project state.
+     * Backwards-compatible thin wrapper around [importArchiveWithReport] for
+     * callers that only need the resulting state. New code should prefer the
+     * report-returning variant so missing media and schema drift are surfaced.
      */
     suspend fun importArchive(
         context: Context,
         archiveUri: Uri,
         targetDir: File
-    ): AutoSaveState? = withContext(Dispatchers.IO) {
+    ): AutoSaveState? = importArchiveWithReport(
+        context = context,
+        archiveUri = archiveUri,
+        targetDir = targetDir,
+        existingProjectIds = emptySet(),
+        idCollisionPolicy = IdCollisionPolicy.REGENERATE
+    ).state
+
+    /**
+     * Import a .novacut zip archive and produce a structured [ImportResult]
+     * with diagnostics for the UI.
+     *
+     * @param existingProjectIds caller-supplied set used to detect ID
+     *     collisions. Empty by default — callers that intend to persist the
+     *     imported project should query [com.novacut.editor.engine.db.ProjectDao]
+     *     and pass the snapshot.
+     * @param idCollisionPolicy how to react when the archive's project ID is
+     *     already present in [existingProjectIds].
+     */
+    suspend fun importArchiveWithReport(
+        context: Context,
+        archiveUri: Uri,
+        targetDir: File,
+        existingProjectIds: Set<String> = emptySet(),
+        idCollisionPolicy: IdCollisionPolicy = IdCollisionPolicy.REGENERATE
+    ): ImportResult = withContext(Dispatchers.IO) {
         val canonicalTargetDir = targetDir.canonicalFile
         val targetDirAlreadyExisted = canonicalTargetDir.exists()
         val extractedPaths = mutableListOf<File>()
+        val warnings = mutableListOf<String>()
+
         try {
-            // Ensure target dir before opening the stream so a mkdirs() failure
-            // can't leak an already-open InputStream.
             if (!canonicalTargetDir.exists() && !canonicalTargetDir.mkdirs()) {
                 Log.e("ProjectArchive", "Failed to create import directory: ${canonicalTargetDir.path}")
-                return@withContext null
+                return@withContext ImportResult(
+                    state = null,
+                    report = blankFailureReport(idCollisionPolicy),
+                    errorMessage = "Failed to create import directory"
+                )
             }
-            val inputStream = context.contentResolver.openInputStream(archiveUri) ?: return@withContext null
+
+            val inputStream = context.contentResolver.openInputStream(archiveUri)
+                ?: return@withContext ImportResult(
+                    state = null,
+                    report = blankFailureReport(idCollisionPolicy),
+                    errorMessage = "Could not open archive"
+                )
 
             var projectJson: String? = null
             var mediaManifestJson: String? = null
@@ -147,21 +237,16 @@ object ProjectArchive {
                             else -> {
                                 if (!isSupportedMediaEntry(entry.name)) {
                                     Log.w("ProjectArchive", "Skipping unsupported archive entry: ${entry.name}")
+                                    warnings += "Skipped unsupported entry: ${entry.name}"
                                     zipInput.closeEntry()
                                     entry = zipInput.nextEntry
                                     continue
                                 }
                                 val outFile = File(canonicalTargetDir, entry.name).canonicalFile
-                                // ZIP-slip guard — compare using NIO `Path.startsWith` rather
-                                // than string prefix on `.path`. The string check mishandles
-                                // separators on Windows (canonicalTargetDir.path may or may
-                                // not end with `\`, letting `..\..\evil.mp4` slip through
-                                // when the prefix string matches) and is case-sensitive on
-                                // case-insensitive filesystems. `Path.startsWith` operates
-                                // on normalised path elements so neither bypass works.
                                 val targetPath = canonicalTargetDir.toPath()
                                 if (!outFile.toPath().startsWith(targetPath)) {
                                     Log.w("ProjectArchive", "Skipping zip entry with path traversal: ${entry.name}")
+                                    warnings += "Skipped path-traversal entry: ${entry.name}"
                                     zipInput.closeEntry()
                                     entry = zipInput.nextEntry
                                     continue
@@ -191,16 +276,94 @@ object ProjectArchive {
             if (stateJson == null) {
                 Log.e("ProjectArchive", "No $PROJECT_JSON_ENTRY in archive")
                 cleanupPartialImport(canonicalTargetDir, extractedPaths, targetDirAlreadyExisted)
-                return@withContext null
+                return@withContext ImportResult(
+                    state = null,
+                    report = blankFailureReport(idCollisionPolicy),
+                    errorMessage = "Archive missing $PROJECT_JSON_ENTRY"
+                )
+            }
+
+            val schemaVersion = parseSchemaVersion(stateJson)
+            val schemaTooNew = schemaVersion > AutoSaveState.FORMAT_VERSION
+            if (schemaTooNew) {
+                Log.w(
+                    "ProjectArchive",
+                    "Archive schema v$schemaVersion is newer than supported v${AutoSaveState.FORMAT_VERSION}; refusing best-effort load"
+                )
+                warnings += "Archive uses schema v$schemaVersion; this build supports up to v${AutoSaveState.FORMAT_VERSION}."
+                cleanupPartialImport(canonicalTargetDir, extractedPaths, targetDirAlreadyExisted)
+                return@withContext ImportResult(
+                    state = null,
+                    report = ImportReport(
+                        schemaVersion = schemaVersion,
+                        schemaTooNew = true,
+                        originalProjectId = parseProjectId(stateJson),
+                        effectiveProjectId = null,
+                        projectIdCollided = false,
+                        idCollisionPolicy = idCollisionPolicy,
+                        mediaTotal = 0,
+                        mediaResolved = 0,
+                        unresolvedMediaUris = emptyList(),
+                        warnings = warnings,
+                        targetDirCreated = !targetDirAlreadyExisted
+                    ),
+                    errorMessage = "Archive schema is newer than this app supports"
+                )
+            }
+            if (schemaVersion < AutoSaveState.FORMAT_VERSION) {
+                warnings += "Archive used schema v$schemaVersion; migrated to v${AutoSaveState.FORMAT_VERSION}."
             }
 
             val manifestMap = mediaManifestJson?.let(::parseMediaManifest).orEmpty()
-            AutoSaveState.deserialize(stateJson)
-                .rewriteArchivedMediaUris(manifestMap, extractedFiles)
+            val rawState = AutoSaveState.deserialize(stateJson)
+            val originalProjectId = rawState.projectId
+            val collided = originalProjectId in existingProjectIds
+            val effectiveProjectId = when {
+                collided && idCollisionPolicy == IdCollisionPolicy.REGENERATE ->
+                    java.util.UUID.randomUUID().toString()
+                else -> originalProjectId
+            }
+            if (collided) {
+                warnings += if (idCollisionPolicy == IdCollisionPolicy.REGENERATE) {
+                    "Project ID '$originalProjectId' already existed; assigned new ID '$effectiveProjectId'."
+                } else {
+                    "Project ID '$originalProjectId' overwrites an existing project (kept by policy)."
+                }
+            }
+
+            val unresolved = mutableListOf<String>()
+            val seenSourceUris = LinkedHashSet<String>()
+            val rewritten = rawState.copy(projectId = effectiveProjectId)
+                .rewriteArchivedMediaUris(manifestMap, extractedFiles, seenSourceUris, unresolved)
+
+            val mediaTotal = seenSourceUris.size
+            val mediaResolved = mediaTotal - unresolved.size
+
+            ImportResult(
+                state = rewritten,
+                report = ImportReport(
+                    schemaVersion = schemaVersion,
+                    schemaTooNew = false,
+                    originalProjectId = originalProjectId,
+                    effectiveProjectId = effectiveProjectId,
+                    projectIdCollided = collided,
+                    idCollisionPolicy = idCollisionPolicy,
+                    mediaTotal = mediaTotal,
+                    mediaResolved = mediaResolved,
+                    unresolvedMediaUris = unresolved,
+                    warnings = warnings,
+                    targetDirCreated = !targetDirAlreadyExisted
+                ),
+                errorMessage = null
+            )
         } catch (e: Exception) {
             Log.e("ProjectArchive", "Archive import failed", e)
             cleanupPartialImport(canonicalTargetDir, extractedPaths, targetDirAlreadyExisted)
-            null
+            ImportResult(
+                state = null,
+                report = blankFailureReport(idCollisionPolicy),
+                errorMessage = e.message ?: e.javaClass.simpleName
+            )
         }
     }
 
@@ -293,6 +456,30 @@ object ProjectArchive {
         }
     }
 
+    private fun parseSchemaVersion(raw: String): Int {
+        return runCatching { JSONObject(raw).optInt("version", 0) }.getOrDefault(0)
+    }
+
+    private fun parseProjectId(raw: String): String? {
+        return runCatching { JSONObject(raw).optString("projectId", "") }
+            .getOrNull()
+            ?.takeIf { it.isNotBlank() }
+    }
+
+    private fun blankFailureReport(policy: IdCollisionPolicy): ImportReport = ImportReport(
+        schemaVersion = 0,
+        schemaTooNew = false,
+        originalProjectId = null,
+        effectiveProjectId = null,
+        projectIdCollided = false,
+        idCollisionPolicy = policy,
+        mediaTotal = 0,
+        mediaResolved = 0,
+        unresolvedMediaUris = emptyList(),
+        warnings = emptyList(),
+        targetDirCreated = false
+    )
+
     private fun writeTextEntry(zip: ZipOutputStream, entryName: String, text: String) {
         zip.putNextEntry(ZipEntry(entryName))
         zip.write(text.toByteArray(Charsets.UTF_8))
@@ -312,15 +499,23 @@ object ProjectArchive {
 
     private fun AutoSaveState.rewriteArchivedMediaUris(
         manifestEntryMap: Map<String, String>,
-        extractedFiles: Map<String, Uri>
+        extractedFiles: Map<String, Uri>,
+        seenSourceUris: MutableSet<String>,
+        unresolvedSink: MutableList<String>
     ): AutoSaveState {
         fun resolveArchivedUri(originalUri: Uri): Uri {
-            val mappedEntry = manifestEntryMap[originalUri.toString()]
+            val key = originalUri.toString()
+            val isFresh = key.isNotBlank() && seenSourceUris.add(key)
+
+            val mappedEntry = manifestEntryMap[key]
             if (mappedEntry != null) {
                 extractedFiles[mappedEntry]?.let { return it }
             }
+            val fallback = fallbackArchivedUri(originalUri, extractedFiles)
+            if (fallback != null) return fallback
 
-            return fallbackArchivedUri(originalUri, extractedFiles) ?: originalUri
+            if (isFresh) unresolvedSink += key
+            return originalUri
         }
 
         fun rewriteClip(clip: Clip): Clip {

@@ -324,6 +324,7 @@ class EditorViewModel @Inject constructor(
     private val styleTransferEngine: StyleTransferEngine,
     private val smartReframeEngine: SmartReframeEngine,
     private val timelineExchangeEngine: TimelineExchangeEngine,
+    private val timelineExchangeValidator: com.novacut.editor.engine.TimelineExchangeValidator,
     private val proxyWorkflowEngine: ProxyWorkflowEngine,
     private val multiCamEngine: MultiCamEngine,
     // v3.69 engines (15-feature wave)
@@ -1689,7 +1690,16 @@ class EditorViewModel @Inject constructor(
             try {
                 showToast("Importing backup...")
                 val targetDir = File(appContext.filesDir, "imported_${System.currentTimeMillis()}")
-                val state = com.novacut.editor.engine.ProjectArchive.importArchive(appContext, uri, targetDir)
+                val existingProjectIds = runCatching {
+                    projectDao.getAllProjectsSnapshot().map { it.id }.toSet()
+                }.getOrDefault(emptySet())
+                val result = com.novacut.editor.engine.ProjectArchive.importArchiveWithReport(
+                    appContext,
+                    uri,
+                    targetDir,
+                    existingProjectIds = existingProjectIds
+                )
+                val state = result.state
                 if (state != null) {
                     saveUndoState("Import backup")
                     _state.update { s ->
@@ -1715,9 +1725,18 @@ class EditorViewModel @Inject constructor(
                     _playheadMs.value = _state.value.playheadMs
                     rebuildPlayerTimeline()
                     saveProject()
-                    showToast("Backup imported successfully")
+                    val report = result.report
+                    val message = when {
+                        report.mediaMissing > 0 ->
+                            "Backup imported — ${report.mediaMissing} media file(s) missing; relink before export"
+                        report.warnings.isNotEmpty() ->
+                            "Backup imported (${report.summary})"
+                        else -> "Backup imported successfully"
+                    }
+                    showToast(message)
                 } else {
-                    showToast("Failed to import backup")
+                    val reason = result.errorMessage ?: result.report.summary
+                    showToast("Failed to import backup: $reason")
                 }
             } catch (e: Exception) {
                 showToast("Import failed: ${e.message}")
@@ -2800,12 +2819,28 @@ class EditorViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val s = _state.value
+                val report = timelineExchangeValidator.validateExport(
+                    com.novacut.editor.engine.TimelineExchangeEngine.TimelineExchangeFormat.OTIO,
+                    s.tracks,
+                    s.textOverlays,
+                    s.exportConfig.frameRate
+                )
+                if (!report.canProceed) {
+                    val first = report.errors.first()
+                    withContext(Dispatchers.Main) {
+                        showToast("OTIO export blocked: ${first.path} — ${first.message}")
+                    }
+                    return@launch
+                }
                 val otioJson = timelineExchangeEngine.exportToOtio(s.tracks, s.textOverlays, s.project.name)
                 val dir = java.io.File(appContext.getExternalFilesDir(null), "exports")
                 dir.mkdirs()
                 val file = java.io.File(dir, "${sanitizedProjectFileStem(s.project.name)}.otio")
                 writeUtf8TextAtomically(file, otioJson)
-                withContext(Dispatchers.Main) { showToast("OTIO exported: ${file.name}") }
+                withContext(Dispatchers.Main) {
+                    val tail = if (report.warnings.isNotEmpty()) " (${report.summary})" else ""
+                    showToast("OTIO exported: ${file.name}$tail")
+                }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) { showToast("OTIO export failed: ${e.message}") }
             }
@@ -2816,12 +2851,28 @@ class EditorViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val s = _state.value
+                val report = timelineExchangeValidator.validateExport(
+                    com.novacut.editor.engine.TimelineExchangeEngine.TimelineExchangeFormat.FCPXML,
+                    s.tracks,
+                    s.textOverlays,
+                    s.exportConfig.frameRate
+                )
+                if (!report.canProceed) {
+                    val first = report.errors.first()
+                    withContext(Dispatchers.Main) {
+                        showToast("FCPXML export blocked: ${first.path} — ${first.message}")
+                    }
+                    return@launch
+                }
                 val xml = timelineExchangeEngine.exportToFcpxml(s.tracks, s.project.name, s.exportConfig.frameRate)
                 val dir = java.io.File(appContext.getExternalFilesDir(null), "exports")
                 dir.mkdirs()
                 val file = java.io.File(dir, "${sanitizedProjectFileStem(s.project.name)}.fcpxml")
                 writeUtf8TextAtomically(file, xml)
-                withContext(Dispatchers.Main) { showToast("FCPXML exported: ${file.name}") }
+                withContext(Dispatchers.Main) {
+                    val tail = if (report.warnings.isNotEmpty()) " (${report.summary})" else ""
+                    showToast("FCPXML exported: ${file.name}$tail")
+                }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) { showToast("FCPXML export failed: ${e.message}") }
             }

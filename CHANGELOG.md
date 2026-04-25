@@ -1,5 +1,61 @@
 # Changelog
 
+## v3.70.0 — 2026-04-25 — Foundation pass (highest-leverage roadmap items)
+
+First slice of the ROADMAP "Highest-leverage next tickets" batch — the
+prerequisites that unblock the rest of Tier A/B/C work.
+
+### TimelineExchangeValidator (R4.1, "Implement TimelineExchangeValidator and run it before every export/import")
+New [TimelineExchangeValidator.kt](app/src/main/java/com/novacut/editor/engine/TimelineExchangeValidator.kt)
+produces a categorised pre-flight report (ERROR / WARNING / INFO + path +
+suggested fix) for every supported interchange format. Wired ahead of
+`exportToOtio()` and `exportToFcpxml()` in `EditorViewModel` so blocking
+errors abort with a useful toast and lossy warnings ride along on the
+success toast (`OTIO exported: foo.otio (3 lossy)` instead of silent data
+loss). Covers: empty trim ranges, missing source URIs, EDL multi-track
+truncation, adjustment-track drop, blend-mode loss, masks, color grade,
+reverse playback, speed ramps, compound flatten, EDL transition downgrade.
+
+### ProjectArchive.importArchive() — full diagnostic pass (B.7)
+[ProjectArchive.kt](app/src/main/java/com/novacut/editor/engine/ProjectArchive.kt)
+gains `importArchiveWithReport()` returning an `ImportResult(state, report,
+errorMessage)`. The report carries schema version, schema-too-new gate,
+project-ID collision detection (with `IdCollisionPolicy.REGENERATE` /
+`KEEP`), per-archive media-resolution counts, and unresolved-media URI list.
+Legacy `importArchive()` stays as a thin wrapper for unchanged callers.
+`EditorViewModel.importProjectBackup()` now reads the existing project IDs
+from `ProjectDao`, calls the rich variant, and surfaces missing-media and
+collision warnings in the toast. Schema-newer-than-supported archives now
+abort cleanly with cleanup, instead of best-effort partial loads.
+
+### ModelDownloadManager — checksum, Wi-Fi-only, remove API
+[ModelDownloadManager.kt](app/src/main/java/com/novacut/editor/engine/ModelDownloadManager.kt)
+gains:
+- `ModelFile.sha256` — optional lowercase-hex SHA-256, verified during
+  download (and on re-use of an existing file). Catches partial downloads
+  from a prior crash that pass the byte-length check today.
+- `wifiOnly` parameter on `downloadFiles()` plus `isMeteredNetwork()` helper
+  using `ConnectivityManager.NET_CAPABILITY_NOT_METERED`. Throws
+  `MeteredNetworkException` when the active network is metered and the
+  caller required Wi-Fi only.
+- `removeModel(File)` and `removeModels(List<File>)` so the upcoming
+  per-feature "Remove model" UI can reclaim storage. Cleans matching
+  `<name>.*.tmp` siblings left behind by a prior interrupted download.
+- `installedBytes(List<File>)` for "uses N MB" disclosures next to a Remove
+  button.
+
+`AndroidManifest.xml` now declares `ACCESS_NETWORK_STATE` for the metered
+check.
+
+### Hardening notes
+- Existing call sites of `ModelDownloadManager` (Whisper, Inpainting,
+  Segmentation) are source-compatible — `sha256` defaults to null and
+  `wifiOnly` defaults to false; they continue to work unchanged until the
+  asset metadata grows checksums.
+- Existing call site of `ProjectArchive.importArchive()` (single internal
+  caller) now uses the rich result path; the public legacy signature is
+  preserved for any future caller that doesn't need diagnostics.
+
 ## v3.69.0 — 15-Feature Wave + Hardening + Wide-Net Follow-Ups
 
 The third pass (this section) closed three of the "remaining gaps" with real
