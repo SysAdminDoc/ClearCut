@@ -2057,46 +2057,63 @@ private fun EditorTopBar(
     if (showSaveTemplateDialog) {
         var templateName by remember(projectName) { mutableStateOf("$projectName Template") }
         val trimmedTemplateName = templateName.trim()
+        val canSaveTemplate = trimmedTemplateName.isNotBlank()
         AlertDialog(
             onDismissRequest = { showSaveTemplateDialog = false },
-            title = { Text(stringResource(R.string.editor_save_as_template), color = Mocha.Text) },
+            icon = {
+                NovaCutDialogIcon(
+                    icon = Icons.Default.Save,
+                    accent = Mocha.Mauve
+                )
+            },
+            title = {
+                Text(
+                    text = stringResource(R.string.editor_save_as_template),
+                    color = Mocha.Text,
+                    style = MaterialTheme.typography.titleLarge
+                )
+            },
             text = {
                 OutlinedTextField(
                     value = templateName,
                     onValueChange = { templateName = it },
                     singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(Radius.lg),
                     label = { Text(stringResource(R.string.editor_template_name)) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Mocha.Text,
                         unfocusedTextColor = Mocha.Text,
                         cursorColor = Mocha.Mauve,
                         focusedBorderColor = Mocha.Mauve,
-                        unfocusedBorderColor = Mocha.Surface1,
+                        unfocusedBorderColor = Mocha.CardStroke,
                         focusedLabelColor = Mocha.Mauve,
-                        unfocusedLabelColor = Mocha.Subtext0
+                        unfocusedLabelColor = Mocha.Subtext0,
+                        focusedContainerColor = Mocha.PanelRaised,
+                        unfocusedContainerColor = Mocha.PanelRaised
                     )
                 )
             },
             confirmButton = {
-                TextButton(
+                NovaCutPrimaryButton(
+                    text = stringResource(R.string.editor_save),
                     onClick = {
                         onSaveTemplate(trimmedTemplateName)
                         showSaveTemplateDialog = false
                     },
-                    enabled = trimmedTemplateName.isNotBlank()
-                ) {
-                    Text(
-                        stringResource(R.string.editor_save),
-                        color = if (trimmedTemplateName.isNotBlank()) Mocha.Mauve else Mocha.Surface2
-                    )
-                }
+                    enabled = canSaveTemplate,
+                    icon = Icons.Default.Check
+                )
             },
             dismissButton = {
-                TextButton(onClick = { showSaveTemplateDialog = false }) {
-                    Text(stringResource(R.string.editor_cancel), color = Mocha.Subtext0)
-                }
+                NovaCutSecondaryButton(
+                    text = stringResource(R.string.editor_cancel),
+                    onClick = { showSaveTemplateDialog = false }
+                )
             },
             containerColor = Mocha.PanelHighest,
+            titleContentColor = Mocha.Text,
+            textContentColor = Mocha.Subtext0,
             shape = RoundedCornerShape(Radius.xxl)
         )
     }
@@ -2107,12 +2124,27 @@ private fun EditorTopBar(
         val canSubmitRename = trimmedNameText.isNotBlank() && trimmedNameText != projectName
         AlertDialog(
             onDismissRequest = { showRenameDialog = false },
-            title = { Text(stringResource(R.string.editor_rename_project), color = Mocha.Text) },
+            icon = {
+                NovaCutDialogIcon(
+                    icon = Icons.Default.Edit,
+                    accent = Mocha.Rosewater
+                )
+            },
+            title = {
+                Text(
+                    text = stringResource(R.string.editor_rename_project),
+                    color = Mocha.Text,
+                    style = MaterialTheme.typography.titleLarge
+                )
+            },
             text = {
                 OutlinedTextField(
                     value = nameText,
                     onValueChange = { nameText = it },
                     singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(Radius.lg),
+                    label = { Text(stringResource(R.string.projects_rename_hint)) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Mocha.Text,
                         unfocusedTextColor = Mocha.Text,
@@ -2120,30 +2152,34 @@ private fun EditorTopBar(
                         focusedBorderColor = Mocha.Mauve,
                         // Normalized to match the editor's other input borders so the rename
                         // dialog feels like part of the same surface system rather than a fork.
-                        unfocusedBorderColor = Mocha.CardStroke
+                        unfocusedBorderColor = Mocha.CardStroke,
+                        focusedLabelColor = Mocha.Mauve,
+                        unfocusedLabelColor = Mocha.Subtext0,
+                        focusedContainerColor = Mocha.PanelRaised,
+                        unfocusedContainerColor = Mocha.PanelRaised
                     )
                 )
             },
             confirmButton = {
-                TextButton(
+                NovaCutPrimaryButton(
+                    text = stringResource(R.string.editor_save),
                     onClick = {
                         onRename(trimmedNameText)
                         showRenameDialog = false
                     },
-                    enabled = canSubmitRename
-                ) {
-                    Text(
-                        stringResource(R.string.editor_save),
-                        color = if (canSubmitRename) Mocha.Mauve else Mocha.Surface2
-                    )
-                }
+                    enabled = canSubmitRename,
+                    icon = Icons.Default.Check
+                )
             },
             dismissButton = {
-                TextButton(onClick = { showRenameDialog = false }) {
-                    Text(stringResource(R.string.editor_cancel), color = Mocha.Subtext0)
-                }
+                NovaCutSecondaryButton(
+                    text = stringResource(R.string.editor_cancel),
+                    onClick = { showRenameDialog = false }
+                )
             },
             containerColor = Mocha.PanelHighest,
+            titleContentColor = Mocha.Text,
+            textContentColor = Mocha.Subtext0,
             shape = RoundedCornerShape(Radius.xxl)
         )
     }
