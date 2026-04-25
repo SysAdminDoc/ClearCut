@@ -30,11 +30,12 @@ import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.NovaCutChromeIconButton
 import com.novacut.editor.ui.theme.NovaCutHeroCard
 import com.novacut.editor.ui.theme.NovaCutMetricPill
+import com.novacut.editor.ui.theme.NovaCutPrimaryButton
 import com.novacut.editor.ui.theme.NovaCutScreenBackground
 import com.novacut.editor.ui.theme.NovaCutSectionHeader
+import com.novacut.editor.ui.theme.NovaCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
-import com.novacut.editor.ui.theme.TouchTarget
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -337,41 +338,26 @@ fun SettingsScreen(
             title = stringResource(R.string.settings_tutorial),
             description = stringResource(R.string.settings_tutorial_description)
         ) {
-            OutlinedButton(
-                onClick = { showResetConfirm = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = TouchTarget.minimum),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = Mocha.PanelHighest,
-                    contentColor = Mocha.Text
-                ),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStrokeStrong),
-                shape = RoundedCornerShape(Radius.lg)
+            SettingsTile(
+                icon = Icons.Default.School,
+                accent = Mocha.Sapphire,
+                label = stringResource(R.string.settings_reset_tutorial),
+                description = stringResource(R.string.settings_reset_tutorial_row_description),
+                onClick = { showResetConfirm = true }
             ) {
-                Icon(Icons.Default.School, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.settings_reset_tutorial))
+                NovaCutMetricPill(
+                    text = stringResource(R.string.settings_reset_tutorial_action),
+                    accent = Mocha.Sapphire
+                )
             }
         }
         if (showResetConfirm) {
-            AlertDialog(
+            ResetTutorialConfirmDialog(
                 onDismissRequest = { showResetConfirm = false },
-                title = { Text(stringResource(R.string.settings_reset_tutorial_confirm_title), color = Mocha.Text) },
-                text = { Text(stringResource(R.string.settings_reset_tutorial_confirm), color = Mocha.Subtext0) },
-                confirmButton = {
-                    TextButton(onClick = {
-                        viewModel.resetTutorial()
-                        showResetConfirm = false
-                    }) { Text(stringResource(R.string.settings_confirm), color = Mocha.Mauve) }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showResetConfirm = false }) {
-                        Text(stringResource(R.string.cancel), color = Mocha.Subtext0)
-                    }
-                },
-                containerColor = Mocha.PanelHighest,
-                shape = RoundedCornerShape(Radius.xxl)
+                onConfirm = {
+                    viewModel.resetTutorial()
+                    showResetConfirm = false
+                }
             )
         }
 
@@ -388,6 +374,63 @@ fun SettingsScreen(
         Spacer(Modifier.height(Spacing.xxl))
         }
     }
+}
+
+@Composable
+private fun ResetTutorialConfirmDialog(
+    onDismissRequest: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        icon = {
+            Surface(
+                color = Mocha.Sapphire.copy(alpha = 0.14f),
+                shape = RoundedCornerShape(Radius.lg),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Sapphire.copy(alpha = 0.24f))
+            ) {
+                Icon(
+                    imageVector = Icons.Default.School,
+                    contentDescription = null,
+                    tint = Mocha.Sapphire,
+                    modifier = Modifier
+                        .padding(Spacing.md)
+                        .size(22.dp)
+                )
+            }
+        },
+        title = {
+            Text(
+                text = stringResource(R.string.settings_reset_tutorial_confirm_title),
+                color = Mocha.Text,
+                style = MaterialTheme.typography.titleLarge
+            )
+        },
+        text = {
+            Text(
+                text = stringResource(R.string.settings_reset_tutorial_confirm),
+                color = Mocha.Subtext0,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        },
+        confirmButton = {
+            NovaCutPrimaryButton(
+                text = stringResource(R.string.settings_reset_tutorial_action),
+                onClick = onConfirm,
+                icon = Icons.Default.Check
+            )
+        },
+        dismissButton = {
+            NovaCutSecondaryButton(
+                text = stringResource(R.string.cancel),
+                onClick = onDismissRequest
+            )
+        },
+        containerColor = Mocha.PanelHighest,
+        titleContentColor = Mocha.Text,
+        textContentColor = Mocha.Subtext0,
+        shape = RoundedCornerShape(Radius.xxl)
+    )
 }
 
 @OptIn(ExperimentalLayoutApi::class)
