@@ -208,6 +208,8 @@
     <string name="settings_tutorial">Tutorial</string>
     <string name="settings_tutorial_description">Replay the first-run walkthrough whenever you need a refresher.</string>
     <string name="settings_reset_tutorial">Reset First-Run Tutorial</string>
+    <string name="settings_reset_tutorial_row_description">Show the guided editor walkthrough the next time NovaCut opens.</string>
+    <string name="settings_reset_tutorial_action">Reset tutorial</string>
     <string name="settings_about">About</string>
     <string name="settings_about_description">Build and engine details for troubleshooting and support.</string>
     <string name="settings_version">Version</string>
