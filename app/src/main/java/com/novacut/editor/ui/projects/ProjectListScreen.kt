@@ -3,7 +3,6 @@ package com.novacut.editor.ui.projects
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -43,6 +42,7 @@ import com.novacut.editor.ui.editor.ToastSeverity
 import com.novacut.editor.ui.editor.inferSeverity
 import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.NovaCutChromeIconButton
+import com.novacut.editor.ui.theme.NovaCutDialogIcon
 import com.novacut.editor.ui.theme.NovaCutHeroCard
 import com.novacut.editor.ui.theme.NovaCutMetricPill
 import com.novacut.editor.ui.theme.NovaCutPrimaryButton
@@ -765,7 +765,7 @@ private fun ProjectCard(
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
             icon = {
-                DialogIcon(
+                NovaCutDialogIcon(
                     icon = Icons.Default.Delete,
                     accent = Mocha.Red
                 )
@@ -815,7 +815,7 @@ private fun ProjectCard(
         AlertDialog(
             onDismissRequest = { showRenameDialog = false },
             icon = {
-                DialogIcon(
+                NovaCutDialogIcon(
                     icon = Icons.Default.Edit,
                     accent = Mocha.Rosewater
                 )
@@ -872,27 +872,6 @@ private fun ProjectCard(
             titleContentColor = Mocha.Text,
             textContentColor = Mocha.Subtext0,
             shape = RoundedCornerShape(Radius.xxl)
-        )
-    }
-}
-
-@Composable
-private fun DialogIcon(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    accent: androidx.compose.ui.graphics.Color
-) {
-    Surface(
-        color = accent.copy(alpha = 0.14f),
-        shape = RoundedCornerShape(Radius.lg),
-        border = BorderStroke(1.dp, accent.copy(alpha = 0.24f))
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = accent,
-            modifier = Modifier
-                .padding(Spacing.md)
-                .size(22.dp)
         )
     }
 }

@@ -272,6 +272,29 @@ fun NovaCutChromeIconButton(
 }
 
 @Composable
+fun NovaCutDialogIcon(
+    icon: ImageVector,
+    accent: Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        color = accent.copy(alpha = 0.14f),
+        shape = RoundedCornerShape(Radius.lg),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.24f))
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = accent,
+            modifier = Modifier
+                .padding(Spacing.md)
+                .size(22.dp)
+        )
+    }
+}
+
+@Composable
 fun NovaCutSectionHeader(
     title: String,
     modifier: Modifier = Modifier,

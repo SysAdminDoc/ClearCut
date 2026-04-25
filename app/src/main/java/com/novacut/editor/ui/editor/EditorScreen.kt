@@ -53,6 +53,7 @@ import com.novacut.editor.ui.export.BatchExportPanel
 import com.novacut.editor.ui.export.ExportSheet
 import com.novacut.editor.ui.mediapicker.MediaPickerSheet
 import com.novacut.editor.ui.theme.Mocha
+import com.novacut.editor.ui.theme.NovaCutDialogIcon
 import com.novacut.editor.ui.theme.NovaCutPrimaryButton
 import com.novacut.editor.ui.theme.NovaCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
@@ -1356,20 +1357,10 @@ fun EditorScreen(
                     dismissOnClickOutside = false
                 ),
                 icon = {
-                    Surface(
-                        color = Mocha.Green.copy(alpha = 0.14f),
-                        shape = RoundedCornerShape(Radius.lg),
-                        border = BorderStroke(1.dp, Mocha.Green.copy(alpha = 0.24f))
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Restore,
-                            contentDescription = null,
-                            tint = Mocha.Green,
-                            modifier = Modifier
-                                .padding(Spacing.md)
-                                .size(22.dp)
-                        )
-                    }
+                    NovaCutDialogIcon(
+                        icon = Icons.Default.Restore,
+                        accent = Mocha.Green
+                    )
                 },
                 title = {
                     Text(
@@ -2020,20 +2011,10 @@ private fun EditorTopBar(
         AlertDialog(
             onDismissRequest = { showDeleteConfirmation = false },
             icon = {
-                Surface(
-                    color = Mocha.Red.copy(alpha = 0.14f),
-                    shape = RoundedCornerShape(Radius.lg),
-                    border = BorderStroke(1.dp, Mocha.Red.copy(alpha = 0.24f))
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = null,
-                        tint = Mocha.Red,
-                        modifier = Modifier
-                            .padding(Spacing.md)
-                            .size(22.dp)
-                    )
-                }
+                NovaCutDialogIcon(
+                    icon = Icons.Default.Delete,
+                    accent = Mocha.Red
+                )
             },
             title = {
                 Text(
