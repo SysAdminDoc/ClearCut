@@ -2,7 +2,7 @@
 
 Forward-looking tracker for planned work. Release history lives in [CHANGELOG.md](CHANGELOG.md).
 
-Current version: **v3.69.0** (versionCode 130).
+Current version: **v3.70.0** (versionCode 131).
 
 ### v3.69.0 — 15-Feature Wave (shipped)
 
@@ -48,7 +48,7 @@ Gaps listed in README "Known Limitations" that hurt quality today.
 - [ ] **B.4 — Speed-curve-aware `Clip.durationMs`** — Partially addressed in v3.50 (`timelineOffsetToSourceMs` inverse). Still need: forward integration of `speedCurve(t)` into duration so a 2×→0.5× ramp reports the correct timeline length. Touch: [model/Clip.kt](app/src/main/java/com/novacut/editor/model/), [engine/TimelineEditing.kt](app/src/main/java/com/novacut/editor/engine/).
 - [ ] **B.5 — `SmartRenderEngine` bypass activation** — Analysis already runs (identifies pass-through-eligible clips) but results are unused. Wire the bypass decision into `VideoEngine.buildEditedMediaItem` to skip transcode for unchanged segments. Touch: [engine/SmartRenderEngine.kt](app/src/main/java/com/novacut/editor/engine/SmartRenderEngine.kt), [engine/VideoEngine.kt](app/src/main/java/com/novacut/editor/engine/VideoEngine.kt).
 - [ ] **B.6 — Text overlay stroke export** — `SpannableString` has no native stroke; preview shows stroke but export does not. Fix: render stroke via Canvas in `ExportTextOverlay` (already composites text to bitmap) rather than delegating to Spannable. Touch: [engine/ExportTextOverlay.kt](app/src/main/java/com/novacut/editor/engine/ExportTextOverlay.kt).
-- [ ] **B.7 — `ProjectArchive.importArchive()` completion** — Export works; import is stubbed. Must: unzip, remap relative source URIs to app-managed media dir, run migration if archived project is older schema, confirm/merge if project ID collides. Touch: [engine/ProjectArchive.kt](app/src/main/java/com/novacut/editor/engine/ProjectArchive.kt).
+- [x] **B.7 — `ProjectArchive.importArchive()` completion** — Done in v3.70.0. `importArchiveWithReport()` returns schema version, schema-too-new gate, project-ID collision detection (`IdCollisionPolicy.REGENERATE` default), and per-archive media-resolution diagnostics (resolved vs unresolved URIs). `EditorViewModel` surfaces missing-media counts in the import toast.
 
 ---
 
@@ -293,9 +293,9 @@ Research date: 2026-04-25. Scope: complementary open-source projects, profession
 7. **Pro finishing release:** gyro/lens stabilization, advanced compositor graph, OpenFX-like effect descriptors, ACES-inspired color preset.
 
 ### Highest-leverage next tickets
-- [ ] Implement `TimelineExchangeValidator` and run it before every export/import.
-- [ ] Complete `ProjectArchive.importArchive()` with media remap, migration, duplicate-ID handling, and recovery copy.
-- [ ] Add shared `ModelDownloadManager` with checksum, retry, Wi-Fi-only, and remove-model controls.
+- [x] Implement `TimelineExchangeValidator` and run it before every export/import. *(v3.70.0 — wired ahead of `exportToOtio` / `exportToFcpxml`; categorised report drives the result toast.)*
+- [x] Complete `ProjectArchive.importArchive()` with media remap, migration, duplicate-ID handling, and recovery copy. *(v3.70.0 — new `importArchiveWithReport()` returns schema/version/media-resolution diagnostics; `IdCollisionPolicy.REGENERATE` default; legacy entry point preserved.)*
+- [x] Add shared `ModelDownloadManager` with checksum, retry, Wi-Fi-only, and remove-model controls. *(v3.70.0 — `sha256` per file, `wifiOnly`/`isMeteredNetwork()`, `removeModel`/`removeModels`/`installedBytes`; existing callers source-compatible.)*
 - [ ] Add Cut Assistant review UI using existing Whisper word timestamps plus silence detection.
 - [ ] Add `TrackedObject` model and bind one operation first: tracked blur or tracked sticker.
 - [ ] Add color/HDR export confidence chips and mismatch warnings.
