@@ -868,11 +868,18 @@ class VideoEngine @Inject constructor(
             val file = File(dir, "gap_frame.png")
             if (!file.exists() || file.length() == 0L) {
                 val bitmap = Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888)
-                bitmap.eraseColor(Color.BLACK)
-                file.outputStream().use { output ->
-                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)
+                try {
+                    bitmap.eraseColor(Color.BLACK)
+                    writeFileAtomically(file, requireNonEmpty = true) { tempFile ->
+                        tempFile.outputStream().use { output ->
+                            if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)) {
+                                throw IllegalStateException("Gap-frame encoder returned no data")
+                            }
+                        }
+                    }
+                } finally {
+                    bitmap.recycle()
                 }
-                bitmap.recycle()
             }
             return Uri.fromFile(file).also { previewGapUri = it }
         }

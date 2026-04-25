@@ -6,7 +6,6 @@ import android.provider.OpenableColumns
 import android.util.Log
 import android.webkit.MimeTypeMap
 import java.io.File
-import java.io.IOException
 
 private const val LOCAL_MEDIA_IMPORT_TAG = "LocalMediaImport"
 private const val LOCAL_MEDIA_FALLBACK_STEM = "media"
@@ -74,11 +73,13 @@ internal fun importUriToManagedMedia(
 
         if (!partialFile.renameTo(destinationFile)) {
             // Rename can fail across filesystems or if the dest appeared.
-            // Fall back to a stream copy + delete sequence so the user still
-            // gets a usable import when the cheap rename path fails.
+            // Fall back through the same atomic writer used by export paths so
+            // a failed fallback never exposes a truncated managed-media file.
             try {
-                partialFile.inputStream().use { input ->
-                    destinationFile.outputStream().use { output -> input.copyTo(output) }
+                writeFileAtomically(destinationFile, requireNonEmpty = true) { tempFile ->
+                    partialFile.inputStream().use { input ->
+                        tempFile.outputStream().use { output -> input.copyTo(output) }
+                    }
                 }
                 partialFile.delete()
             } catch (copyErr: Exception) {
