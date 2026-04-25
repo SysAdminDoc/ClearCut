@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -37,12 +38,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.model.ProjectSnapshot
 import com.novacut.editor.ui.theme.Mocha
+import com.novacut.editor.ui.theme.Radius
+import com.novacut.editor.ui.theme.Spacing
+import com.novacut.editor.ui.theme.TouchTarget
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -69,7 +74,8 @@ fun SnapshotHistoryPanel(
     if (showNameDialog) {
         AlertDialog(
             onDismissRequest = { showNameDialog = false },
-            containerColor = Mocha.Base,
+            containerColor = Mocha.PanelHighest,
+            shape = RoundedCornerShape(Radius.xxl),
             title = {
                 Text(
                     text = stringResource(R.string.panel_snapshot_save_title),
@@ -99,8 +105,11 @@ fun SnapshotHistoryPanel(
                             unfocusedBorderColor = Mocha.CardStroke,
                             focusedTextColor = Mocha.Text,
                             unfocusedTextColor = Mocha.Text,
-                            cursorColor = Mocha.Mauve
-                        )
+                            cursorColor = Mocha.Mauve,
+                            focusedContainerColor = Mocha.PanelRaised,
+                            unfocusedContainerColor = Mocha.PanelRaised
+                        ),
+                        shape = RoundedCornerShape(Radius.lg)
                     )
                 }
             },
@@ -133,7 +142,8 @@ fun SnapshotHistoryPanel(
     pendingDeleteSnapshot?.let { snapshot ->
         AlertDialog(
             onDismissRequest = { pendingDeleteSnapshot = null },
-            containerColor = Mocha.Base,
+            containerColor = Mocha.PanelHighest,
+            shape = RoundedCornerShape(Radius.xxl),
             title = {
                 Text(
                     text = stringResource(R.string.snapshot_delete_title),
@@ -298,14 +308,14 @@ private fun SnapshotMessageCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = Mocha.PanelRaised,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(Radius.xl),
         border = BorderStroke(1.dp, Mocha.CardStroke)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(Spacing.lg),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
             verticalAlignment = Alignment.Top
         ) {
             Surface(
@@ -353,14 +363,14 @@ private fun SnapshotRow(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = Mocha.PanelRaised,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(Radius.xl),
         border = BorderStroke(1.dp, Mocha.CardStroke)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -370,7 +380,7 @@ private fun SnapshotRow(
                 Row(
                     modifier = Modifier.weight(1f),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.md)
                 ) {
                     Surface(
                         color = Mocha.Mauve.copy(alpha = 0.14f),
@@ -413,8 +423,8 @@ private fun SnapshotRow(
 
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
                 SnapshotAction(
                     icon = Icons.Default.Restore,
@@ -442,15 +452,16 @@ private fun SnapshotAction(
 ) {
     Surface(
         color = accent.copy(alpha = 0.12f),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(Radius.lg),
         border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
     ) {
         Row(
             modifier = Modifier
-                .clickable(onClick = onClick)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .defaultMinSize(minHeight = TouchTarget.minimum)
+                .clickable(role = Role.Button, onClick = onClick)
+                .padding(horizontal = Spacing.md, vertical = Spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
             Icon(
                 imageVector = icon,
