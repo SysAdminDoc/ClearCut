@@ -74,6 +74,17 @@ data class AiToolConfig(
 
 val aiTools = listOf(
     AiToolConfig(
+        "cut_assistant",
+        R.string.ai_tool_cut_assistant,
+        R.string.ai_tool_cut_assistant_desc,
+        Icons.Default.ContentCut,
+        Mocha.Peach,
+        requiresClip = false,
+        readinessResId = R.string.ai_tool_status_review,
+        readinessHintResId = R.string.ai_tool_hint_review,
+        readinessAccent = Mocha.Peach
+    ),
+    AiToolConfig(
         "auto_captions",
         R.string.ai_tool_auto_captions,
         R.string.ai_tool_auto_captions_desc,

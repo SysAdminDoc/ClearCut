@@ -117,6 +117,7 @@ private val clipColorSubMenu = listOf(
 // Clip mode — AI Magic tab sub-menu (expanded)
 private val clipAiSubMenu = listOf(
     SubMenuItem("ai_hub", Icons.Default.AutoAwesome, R.string.tool_ai_hub),
+    SubMenuItem("cut_assistant", Icons.Default.ContentCut, R.string.tool_cut_assistant),
     SubMenuItem("scene_detect", Icons.Default.ContentCut, R.string.tool_scene_detect),
     SubMenuItem("remove_bg", Icons.Default.Wallpaper, R.string.tool_remove_bg),
     SubMenuItem("bg_replace", Icons.Default.PhotoFilter, R.string.tool_replace_bg),

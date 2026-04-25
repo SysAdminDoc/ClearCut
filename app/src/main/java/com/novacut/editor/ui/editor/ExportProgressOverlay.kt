@@ -49,11 +49,12 @@ fun ExportProgressOverlay(
 ) {
     val isExporting = exportState == ExportState.EXPORTING
     val progressValue = exportProgress.coerceIn(0f, 1f)
-    val now by produceState(initialValue = System.currentTimeMillis(), key1 = isExporting) {
-        value = System.currentTimeMillis()
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(isExporting) {
+        now = System.currentTimeMillis()
         while (isExporting) {
             delay(1000L)
-            value = System.currentTimeMillis()
+            now = System.currentTimeMillis()
         }
     }
     val elapsed = if (exportStartTime > 0L) (now - exportStartTime).coerceAtLeast(0L) else 0L

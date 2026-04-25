@@ -142,12 +142,16 @@
     <string name="ai_tool_status_fallback">Fallback</string>
     <string name="ai_tool_status_model_gated">Model gated</string>
     <string name="ai_tool_status_clip_required">Clip required</string>
+    <string name="ai_tool_status_review">Review</string>
     <string name="ai_tool_ready_hint">Tap to stage or run this assist.</string>
+    <string name="ai_tool_hint_review">Builds an editable cut list before touching the timeline.</string>
     <string name="ai_tool_hint_whisper_optional">Runs now; Whisper improves accuracy.</string>
     <string name="ai_tool_hint_segmentation_fallback">Uses AI matte when installed, fallback otherwise.</string>
     <string name="ai_tool_hint_stabilize_fallback">Uses OpenCV when available, fallback otherwise.</string>
     <string name="ai_tool_hint_model_required">Shows model requirements before processing.</string>
     <string name="ai_tool_locked_hint">Select a clip to unlock this workflow.</string>
+    <string name="ai_tool_cut_assistant">Cut Assistant</string>
+    <string name="ai_tool_cut_assistant_desc">Review silences and filler cuts</string>
     <string name="ai_tool_auto_captions">Auto Captions</string>
     <string name="ai_tool_auto_captions_desc">Generate subtitles from speech</string>
     <string name="ai_tool_remove_bg">Remove BG</string>
@@ -662,6 +666,7 @@
     <string name="tool_normalize_audio">Normalize\nAudio</string>
 
     <!-- ToolPanel: Clip AI sub-menu -->
+    <string name="tool_cut_assistant">Cut\nAssistant</string>
     <string name="tool_scene_detect">Scene\nDetect</string>
     <string name="tool_remove_bg">Remove\nBG</string>
     <string name="tool_replace_bg">Replace\nBG</string>
@@ -950,6 +955,41 @@
     <string name="filler_removal_waiting_title">Scan the clip first</string>
     <string name="filler_removal_waiting_body">Start with a quick scan and NovaCut will surface the spots most likely to benefit from cleanup.</string>
     <string name="filler_removal_disabled_hint">Scan the clip first to unlock one-tap cleanup.</string>
+
+    <!-- CutAssistantReviewPanel -->
+    <string name="cut_assistant_title">Cut Assistant</string>
+    <string name="cut_assistant_close_cd">Close cut assistant</string>
+    <string name="cut_assistant_subtitle">Review silence and filler-word cuts before they become one undoable timeline edit.</string>
+    <string name="cut_assistant_overview_title">Review before applying</string>
+    <string name="cut_assistant_overview_body">Detected pauses and filler words are selected by default. Deselect anything that protects timing, emphasis, or natural delivery.</string>
+    <plurals name="cut_assistant_selected_count">
+        <item quantity="one">%1$d selected</item>
+        <item quantity="other">%1$d selected</item>
+    </plurals>
+    <plurals name="cut_assistant_candidate_count">
+        <item quantity="one">%1$d candidate</item>
+        <item quantity="other">%1$d candidates</item>
+    </plurals>
+    <string name="cut_assistant_reclaim_pill">Reclaim %1$s</string>
+    <string name="cut_assistant_silence_count">%1$d pauses</string>
+    <string name="cut_assistant_filler_count">%1$d fillers</string>
+    <string name="cut_assistant_review_title">Suggested cuts</string>
+    <string name="cut_assistant_review_body">Tap any row to keep or remove that edit from the batch. Applying creates one undo entry.</string>
+    <string name="cut_assistant_reject_all">Reject All</string>
+    <string name="cut_assistant_accept_all">Accept All</string>
+    <string name="cut_assistant_apply_selected">Apply Selected (%1$d)</string>
+    <string name="cut_assistant_none_selected_hint">Select at least one proposed cut to apply the batch.</string>
+    <string name="cut_assistant_empty_title">No cleanup candidates</string>
+    <string name="cut_assistant_empty_body">The current timeline does not have filler words or silent gaps long enough to justify an automatic cut.</string>
+    <string name="cut_assistant_reason_silence">Silent pause</string>
+    <string name="cut_assistant_reason_filler">Filler word</string>
+    <string name="cut_assistant_detail_silence">Quiet gap detected in the source audio.</string>
+    <string name="cut_assistant_detail_filler">Transcript token detected as filler speech.</string>
+    <string name="cut_assistant_matched_text">Matched \"%1$s\"</string>
+    <string name="cut_assistant_duration_saved">%1$s saved</string>
+    <string name="cut_assistant_clip_pill">Clip %1$s</string>
+    <string name="cut_assistant_time_range">%1$s-%2$s</string>
+    <string name="cut_assistant_unknown_clip">Unknown clip</string>
 
     <!-- AutoEditPanel -->
     <string name="auto_edit_title">AI Auto Edit</string>

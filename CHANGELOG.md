@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — Cut Assistant review UI
+
+- Added a user-facing Cut Assistant workflow in the AI Hub and clip AI toolbar.
+- Added a review sheet for silence/filler-word proposals with selected-by-default candidates, per-row toggles, accept/reject all, reclaimed-duration summary, and an empty state.
+- Applying reviewed proposals still uses the existing `applyAcceptedCuts()` path, so the batch lands as one undoable timeline edit.
+
 ## v3.71.0 — 2026-04-25 — Cut Assistant + TrackedObject scaffolding
 
 Second slice of the ROADMAP "Highest-leverage next tickets" — the engine and

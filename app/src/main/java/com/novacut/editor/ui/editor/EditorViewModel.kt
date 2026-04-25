@@ -2532,8 +2532,11 @@ class EditorViewModel @Inject constructor(
                         )
                     }
                 }
-                val review = cutAssistantEngine.review(s.tracks, perClipAudio)
-                _state.update { it.copy(cutAssistantReview = review) }
+                val review = cutAssistantEngine.review(s.tracks, perClipAudio).acceptAll()
+                _state.update { it.copy(
+                    cutAssistantReview = review,
+                    panels = it.panels.closeAll()
+                ) }
                 showToast(
                     if (review.proposals.isEmpty()) "Cut Assistant: nothing to trim"
                     else "Cut Assistant: ${review.proposals.size} proposed cut(s)"

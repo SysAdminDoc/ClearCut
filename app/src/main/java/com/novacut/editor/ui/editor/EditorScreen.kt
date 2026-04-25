@@ -787,6 +787,7 @@ fun EditorScreen(
                         "marker_list" -> viewModel.showMarkerList()
                         // AI tools
                         "ai_hub" -> viewModel.showAiToolsPanel()
+                        "cut_assistant" -> viewModel.proposeCutsForReview()
                         "auto_captions" -> viewModel.runAiTool("auto_captions")
                         "scene_detect" -> viewModel.runAiTool("scene_detect")
                         "smart_crop" -> viewModel.runAiTool("smart_crop")
@@ -1082,7 +1083,13 @@ fun EditorScreen(
         ) {
             AiToolsPanel(
                 hasSelectedClip = state.selectedClipId != null,
-                onToolSelected = { toolId -> viewModel.runAiTool(toolId) },
+                onToolSelected = { toolId ->
+                    if (toolId == "cut_assistant") {
+                        viewModel.proposeCutsForReview()
+                    } else {
+                        viewModel.runAiTool(toolId)
+                    }
+                },
                 onDisabledToolTapped = { toolName -> viewModel.showToast("Select a clip to use $toolName") },
                 onCancelProcessing = viewModel::cancelAiTool,
                 onClose = viewModel::hideAiToolsPanel,
@@ -1096,6 +1103,24 @@ fun EditorScreen(
                 onDownloadSegmentation = viewModel::downloadSegmentationModel,
                 onDeleteSegmentation = viewModel::deleteSegmentationModel
             )
+        }
+
+        // Cut Assistant review
+        BottomSheetSlot(
+            visible = state.cutAssistantReview != null,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            state.cutAssistantReview?.let { review ->
+                CutAssistantReviewPanel(
+                    review = review,
+                    tracks = state.tracks,
+                    onToggleProposal = viewModel::toggleCutProposal,
+                    onAcceptAll = viewModel::acceptAllCutProposals,
+                    onRejectAll = viewModel::rejectAllCutProposals,
+                    onApply = viewModel::applyAcceptedCuts,
+                    onClose = viewModel::dismissCutAssistantReview
+                )
+            }
         }
 
         // Effect adjustment panel
