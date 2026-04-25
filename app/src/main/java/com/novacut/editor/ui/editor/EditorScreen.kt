@@ -54,6 +54,7 @@ import com.novacut.editor.ui.export.ExportSheet
 import com.novacut.editor.ui.mediapicker.MediaPickerSheet
 import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.NovaCutPrimaryButton
+import com.novacut.editor.ui.theme.NovaCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
 import com.novacut.editor.ui.theme.TouchTarget
@@ -1348,36 +1349,61 @@ fun EditorScreen(
         // an explicit choice. Previously `onDismissRequest` treated "tap outside"
         // as "Keep recovered", which silently overrode users who meant to discard.
         if (state.panels.isOpen(PanelId.RECOVERY_DIALOG)) {
-            androidx.compose.material3.AlertDialog(
+            AlertDialog(
                 onDismissRequest = { /* forced choice — handled by the two buttons */ },
                 properties = androidx.compose.ui.window.DialogProperties(
                     dismissOnBackPress = false,
                     dismissOnClickOutside = false
                 ),
+                icon = {
+                    Surface(
+                        color = Mocha.Green.copy(alpha = 0.14f),
+                        shape = RoundedCornerShape(Radius.lg),
+                        border = BorderStroke(1.dp, Mocha.Green.copy(alpha = 0.24f))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Restore,
+                            contentDescription = null,
+                            tint = Mocha.Green,
+                            modifier = Modifier
+                                .padding(Spacing.md)
+                                .size(22.dp)
+                        )
+                    }
+                },
                 title = {
-                    androidx.compose.material3.Text(
-                        text = androidx.compose.ui.res.stringResource(com.novacut.editor.R.string.recovery_title)
+                    Text(
+                        text = stringResource(R.string.recovery_title),
+                        color = Mocha.Text,
+                        style = MaterialTheme.typography.titleLarge
                     )
                 },
                 text = {
-                    androidx.compose.material3.Text(
-                        text = androidx.compose.ui.res.stringResource(com.novacut.editor.R.string.recovery_message)
+                    Text(
+                        text = stringResource(R.string.recovery_message),
+                        color = Mocha.Subtext0,
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 },
                 confirmButton = {
-                    androidx.compose.material3.TextButton(onClick = { viewModel.dismissRecoveryDialog(recover = true) }) {
-                        androidx.compose.material3.Text(
-                            text = androidx.compose.ui.res.stringResource(com.novacut.editor.R.string.recovery_keep)
-                        )
-                    }
+                    NovaCutPrimaryButton(
+                        text = stringResource(R.string.recovery_keep),
+                        onClick = { viewModel.dismissRecoveryDialog(recover = true) },
+                        icon = Icons.Default.Check
+                    )
                 },
                 dismissButton = {
-                    androidx.compose.material3.TextButton(onClick = { viewModel.dismissRecoveryDialog(recover = false) }) {
-                        androidx.compose.material3.Text(
-                            text = androidx.compose.ui.res.stringResource(com.novacut.editor.R.string.recovery_discard)
-                        )
-                    }
-                }
+                    NovaCutSecondaryButton(
+                        text = stringResource(R.string.recovery_discard),
+                        onClick = { viewModel.dismissRecoveryDialog(recover = false) },
+                        contentColor = Mocha.Red,
+                        icon = Icons.Default.Delete
+                    )
+                },
+                containerColor = Mocha.PanelHighest,
+                titleContentColor = Mocha.Text,
+                textContentColor = Mocha.Subtext0,
+                shape = RoundedCornerShape(Radius.xxl)
             )
         }
 

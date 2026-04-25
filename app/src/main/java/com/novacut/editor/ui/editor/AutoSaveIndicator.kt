@@ -17,9 +17,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.model.SaveIndicatorState
+import com.novacut.editor.ui.theme.Elevation
 import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.Motion
 import com.novacut.editor.ui.theme.Radius
@@ -69,7 +74,15 @@ fun AutoSaveIndicator(
             color = Mocha.PanelHighest.copy(alpha = 0.96f),
             shape = RoundedCornerShape(Radius.pill),
             border = BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
-            shadowElevation = 8.dp
+            shadowElevation = Elevation.toast,
+            modifier = Modifier.semantics {
+                contentDescription = label
+                liveRegion = if (state == SaveIndicatorState.ERROR) {
+                    LiveRegionMode.Assertive
+                } else {
+                    LiveRegionMode.Polite
+                }
+            }
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
