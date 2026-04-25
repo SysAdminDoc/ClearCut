@@ -426,6 +426,15 @@
     <string name="media_picker_source_kept_local">Imports stay available offline</string>
     <string name="media_picker_camera_permission_required">Camera permission is needed to record video.</string>
     <string name="media_picker_local_copy_failed">NovaCut couldn\'t keep that media available locally. Try choosing it again.</string>
+    <string name="media_picker_some_imports_failed">Some media couldn\'t be kept locally. The successful imports were added.</string>
+    <string name="media_picker_importing_batch_title">Preparing media</string>
+    <string name="media_picker_importing_batch_description">Keeping selected files available in this edit.</string>
+    <string name="media_picker_importing_video_title">Preparing video</string>
+    <string name="media_picker_importing_video_description">Creating a stable local copy for editing.</string>
+    <string name="media_picker_importing_image_title">Preparing image</string>
+    <string name="media_picker_importing_image_description">Keeping this still available in the project.</string>
+    <string name="media_picker_importing_capture_title">Saving capture</string>
+    <string name="media_picker_importing_capture_description">Moving the recorded clip into your project media.</string>
     <string name="media_picker_audio_only">That file isn\'t audio. Pick a .mp3, .m4a, .wav, .ogg, or .flac.</string>
 
     <!-- ProjectListScreen -->

@@ -21,6 +21,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -41,7 +44,15 @@ import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
 import com.novacut.editor.ui.theme.TouchTarget
 import java.io.File
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+private data class MediaPickerOperationState(
+    val title: String,
+    val description: String
+)
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -51,26 +62,64 @@ fun MediaPickerSheet(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     var pendingMediaType by remember { mutableStateOf("video") }
     var cameraVideoUri by remember { mutableStateOf<Uri?>(null) }
     var cameraVideoFile by remember { mutableStateOf<File?>(null) }
     var permissionMessage by remember { mutableStateOf<String?>(null) }
+    var operationState by remember { mutableStateOf<MediaPickerOperationState?>(null) }
+    val actionsEnabled = operationState == null
 
     val videoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenMultipleDocuments()
     ) { uris ->
-        sortMediaChronologically(context, uris).forEach { uri ->
-            // Take persistent permission
-            try {
-                context.contentResolver.takePersistableUriPermission(
-                    uri,
-                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
-                )
-            } catch (e: SecurityException) {
-                android.util.Log.w("MediaPicker", "Failed to persist URI permission", e)
+        if (uris.isNotEmpty()) {
+            uris.forEach { uri ->
+                // Take persistent permission
+                try {
+                    context.contentResolver.takePersistableUriPermission(
+                        uri,
+                        android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+                } catch (e: SecurityException) {
+                    android.util.Log.w("MediaPicker", "Failed to persist URI permission", e)
+                }
             }
-            val mediaType = resolvePickedMediaType(context, uri, fallbackType = "video")
-            onMediaSelected(uri, mediaType)
+            coroutineScope.launch {
+                operationState = MediaPickerOperationState(
+                    title = context.getString(R.string.media_picker_importing_batch_title),
+                    description = context.getString(R.string.media_picker_importing_batch_description)
+                )
+                try {
+                    val sortedUris = withContext(Dispatchers.IO) {
+                        sortMediaChronologically(context, uris)
+                    }
+                    sortedUris.forEach { uri ->
+                        val mediaType = resolvePickedMediaType(context, uri, fallbackType = "video")
+                        onMediaSelected(uri, mediaType)
+                    }
+                } finally {
+                    operationState = null
+                }
+            }
+        }
+    }
+
+    fun importPickedMedia(uri: Uri, mediaType: String, title: String, description: String) {
+        coroutineScope.launch {
+            operationState = MediaPickerOperationState(title = title, description = description)
+            try {
+                val localUri = withContext(Dispatchers.IO) {
+                    importUriToManagedMedia(context, uri, mediaType)
+                }
+                if (localUri != null) {
+                    onMediaSelected(localUri, mediaType)
+                } else {
+                    permissionMessage = context.getString(R.string.media_picker_local_copy_failed)
+                }
+            } finally {
+                operationState = null
+            }
         }
     }
 
@@ -109,12 +158,12 @@ fun MediaPickerSheet(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         if (uri != null) {
-            val localUri = importUriToManagedMedia(context, uri, "video")
-            if (localUri != null) {
-                onMediaSelected(localUri, "video")
-            } else {
-                permissionMessage = context.getString(R.string.media_picker_local_copy_failed)
-            }
+            importPickedMedia(
+                uri = uri,
+                mediaType = "video",
+                title = context.getString(R.string.media_picker_importing_video_title),
+                description = context.getString(R.string.media_picker_importing_video_description)
+            )
         }
     }
 
@@ -122,25 +171,44 @@ fun MediaPickerSheet(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         if (uri != null) {
-            val localUri = importUriToManagedMedia(context, uri, "image")
-            if (localUri != null) {
-                onMediaSelected(localUri, "image")
-            } else {
-                permissionMessage = context.getString(R.string.media_picker_local_copy_failed)
-            }
+            importPickedMedia(
+                uri = uri,
+                mediaType = "image",
+                title = context.getString(R.string.media_picker_importing_image_title),
+                description = context.getString(R.string.media_picker_importing_image_description)
+            )
         }
     }
 
     val photoPickerMultiLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia()
     ) { uris ->
-        sortMediaChronologically(context, uris).forEach { uri ->
-            val type = resolvePickedMediaType(context, uri, fallbackType = "video")
-            val localUri = importUriToManagedMedia(context, uri, type)
-            if (localUri != null) {
-                onMediaSelected(localUri, type)
-            } else {
-                permissionMessage = context.getString(R.string.media_picker_local_copy_failed)
+        if (uris.isNotEmpty()) {
+            coroutineScope.launch {
+                operationState = MediaPickerOperationState(
+                    title = context.getString(R.string.media_picker_importing_batch_title),
+                    description = context.getString(R.string.media_picker_importing_batch_description)
+                )
+                try {
+                    val imported = withContext(Dispatchers.IO) {
+                        sortMediaChronologically(context, uris).mapNotNull { uri ->
+                            val type = resolvePickedMediaType(context, uri, fallbackType = "video")
+                            importUriToManagedMedia(context, uri, type)?.let { localUri ->
+                                localUri to type
+                            }
+                        }
+                    }
+                    imported.forEach { (localUri, type) -> onMediaSelected(localUri, type) }
+                    if (imported.size < uris.size) {
+                        permissionMessage = if (imported.isEmpty()) {
+                            context.getString(R.string.media_picker_local_copy_failed)
+                        } else {
+                            context.getString(R.string.media_picker_some_imports_failed)
+                        }
+                    }
+                } finally {
+                    operationState = null
+                }
             }
         }
     }
@@ -148,19 +216,34 @@ fun MediaPickerSheet(
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CaptureVideo()
     ) { success ->
-        if (success) {
-            val finalizedUri = cameraVideoFile?.let { finalizePendingCameraCapture(context, it, "video") }
-            if (finalizedUri != null) {
-                onMediaSelected(finalizedUri, "video")
-            } else {
-                permissionMessage = context.getString(R.string.media_picker_local_copy_failed)
-                cameraVideoFile?.delete()
-            }
-        } else {
-            cameraVideoFile?.delete()
-        }
+        val capturedFile = cameraVideoFile
         cameraVideoUri = null
         cameraVideoFile = null
+        if (success) {
+            coroutineScope.launch {
+                operationState = MediaPickerOperationState(
+                    title = context.getString(R.string.media_picker_importing_capture_title),
+                    description = context.getString(R.string.media_picker_importing_capture_description)
+                )
+                try {
+                    val finalizedUri = withContext(Dispatchers.IO) {
+                        capturedFile?.let { finalizePendingCameraCapture(context, it, "video") }
+                    }
+                    if (finalizedUri != null) {
+                        onMediaSelected(finalizedUri, "video")
+                    } else {
+                        permissionMessage = context.getString(R.string.media_picker_local_copy_failed)
+                        withContext(Dispatchers.IO) { capturedFile?.delete() }
+                    }
+                } finally {
+                    operationState = null
+                }
+            }
+        } else {
+            coroutineScope.launch(Dispatchers.IO) {
+                capturedFile?.delete()
+            }
+        }
     }
 
     fun startCameraCapture() {
@@ -228,6 +311,10 @@ fun MediaPickerSheet(
         if (permissionMessage != null) {
             Spacer(modifier = Modifier.height(12.dp))
         }
+        operationState?.let { operation ->
+            MediaImportStatusCard(operation = operation)
+            Spacer(modifier = Modifier.height(12.dp))
+        }
 
         PremiumPanelCard(accent = Mocha.Blue) {
             Text(
@@ -257,6 +344,7 @@ fun MediaPickerSheet(
                 label = stringResource(R.string.media_picker_video),
                 description = stringResource(R.string.media_picker_video_description),
                 color = Mocha.Blue,
+                enabled = actionsEnabled,
                 onClick = {
                     if (usePhotoPicker) {
                         photoPickerVideoLauncher.launch(
@@ -274,6 +362,7 @@ fun MediaPickerSheet(
                 label = stringResource(R.string.media_picker_image),
                 description = stringResource(R.string.media_picker_image_description),
                 color = Mocha.Green,
+                enabled = actionsEnabled,
                 onClick = {
                     if (usePhotoPicker) {
                         photoPickerImageLauncher.launch(
@@ -291,6 +380,7 @@ fun MediaPickerSheet(
                 label = stringResource(R.string.media_picker_audio),
                 description = stringResource(R.string.media_picker_audio_description),
                 color = Mocha.Peach,
+                enabled = actionsEnabled,
                 onClick = {
                     pendingMediaType = "audio"
                     singlePickerLauncher.launch(arrayOf("audio/*"))
@@ -312,7 +402,8 @@ fun MediaPickerSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = TouchTarget.minimum),
-                contentColor = Mocha.Mauve
+                contentColor = Mocha.Mauve,
+                enabled = actionsEnabled
             )
             Text(
                 text = stringResource(R.string.media_picker_multi_description),
@@ -347,9 +438,50 @@ fun MediaPickerSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = TouchTarget.minimum),
-                contentColor = Mocha.Red
+                contentColor = Mocha.Red,
+                enabled = actionsEnabled
             )
         }
+    }
+}
+
+@Composable
+private fun MediaImportStatusCard(operation: MediaPickerOperationState) {
+    PremiumPanelCard(
+        accent = Mocha.Mauve,
+        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp),
+                color = Mocha.Mauve,
+                strokeWidth = 2.dp
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = operation.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = Mocha.Text
+                )
+                Text(
+                    text = operation.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Mocha.Subtext0
+                )
+            }
+        }
+        LinearProgressIndicator(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(5.dp)
+                .clip(RoundedCornerShape(Radius.pill)),
+            color = Mocha.Mauve,
+            trackColor = Mocha.Surface1
+        )
     }
 }
 
@@ -434,10 +566,12 @@ private fun MediaSourceActionCard(
     label: String,
     description: String,
     color: androidx.compose.ui.graphics.Color,
+    enabled: Boolean,
     onClick: () -> Unit
 ) {
     Card(
         onClick = onClick,
+        enabled = enabled,
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = Mocha.PanelHighest
@@ -481,14 +615,14 @@ private fun MediaSourceActionCard(
                 ) {
                     Text(
                         label,
-                        color = Mocha.Text,
+                        color = if (enabled) Mocha.Text else Mocha.Subtext0,
                         style = MaterialTheme.typography.titleSmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = description,
-                        color = Mocha.Subtext0,
+                        color = if (enabled) Mocha.Subtext0 else Mocha.Overlay1,
                         style = MaterialTheme.typography.bodySmall,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
@@ -498,7 +632,7 @@ private fun MediaSourceActionCard(
                 Icon(
                     imageVector = Icons.Default.ChevronRight,
                     contentDescription = null,
-                    tint = Mocha.Subtext0,
+                    tint = if (enabled) Mocha.Subtext0 else Mocha.Overlay1,
                     modifier = Modifier.size(18.dp)
                 )
             }
