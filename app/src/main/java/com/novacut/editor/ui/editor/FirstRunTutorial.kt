@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -20,14 +21,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.novacut.editor.R
 import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.Motion
+import com.novacut.editor.ui.theme.NovaCutPrimaryButton
+import com.novacut.editor.ui.theme.NovaCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
 import com.novacut.editor.ui.theme.TouchTarget
@@ -155,6 +161,11 @@ fun FirstRunTutorial(
                 ) {
                     val isFirstStep = step == 0
                     val isLastStep = step == tutorialStepDefs.size - 1
+                    val stepCounter = stringResource(
+                        R.string.tutorial_step_counter,
+                        step + 1,
+                        tutorialStepDefs.size
+                    )
 
                     // Direction arrow — kept but smaller and quieter so it's a hint, not a focal point.
                     Icon(
@@ -212,11 +223,7 @@ fun FirstRunTutorial(
                         border = BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.75f))
                     ) {
                         Text(
-                            text = stringResource(
-                                R.string.tutorial_step_counter,
-                                step + 1,
-                                tutorialStepDefs.size
-                            ),
+                            text = stepCounter,
                             color = Mocha.Subtext1,
                             style = MaterialTheme.typography.labelMedium,
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
@@ -229,7 +236,15 @@ fun FirstRunTutorial(
                     // accented, which reads as "you are here" much faster than equal-sized dots.
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.semantics {
+                            contentDescription = stepCounter
+                            progressBarRangeInfo = ProgressBarRangeInfo(
+                                current = (step + 1).toFloat(),
+                                range = 1f..tutorialStepDefs.size.toFloat(),
+                                steps = tutorialStepDefs.size - 2
+                            )
+                        }
                     ) {
                         repeat(tutorialStepDefs.size) { index ->
                             val width by animateDpAsState(
@@ -258,23 +273,18 @@ fun FirstRunTutorial(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         if (!isFirstStep) {
-                            OutlinedButton(
+                            NovaCutSecondaryButton(
+                                text = stringResource(R.string.tutorial_back),
                                 onClick = { currentStep-- },
                                 modifier = Modifier
                                     .weight(0.42f)
-                                    .height(48.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Text),
-                                border = BorderStroke(1.dp, Mocha.CardStrokeStrong),
-                                shape = RoundedCornerShape(Radius.lg)
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.tutorial_back),
-                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Medium)
-                                )
-                            }
+                                    .height(TouchTarget.minimum),
+                                icon = Icons.AutoMirrored.Filled.ArrowBack
+                            )
                         }
 
-                        Button(
+                        NovaCutPrimaryButton(
+                            text = stringResource(if (isLastStep) R.string.tutorial_get_started else R.string.tutorial_next),
                             onClick = {
                                 if (isLastStep) {
                                     onComplete()
@@ -282,28 +292,11 @@ fun FirstRunTutorial(
                                     currentStep++
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Mocha.Mauve,
-                                contentColor = Mocha.Crust
-                            ),
-                            shape = RoundedCornerShape(Radius.lg),
                             modifier = Modifier
                                 .weight(if (isFirstStep) 1f else 0.58f)
-                                .height(48.dp)
-                        ) {
-                            Text(
-                                text = stringResource(if (isLastStep) R.string.tutorial_get_started else R.string.tutorial_next),
-                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold)
-                            )
-                            if (!isLastStep) {
-                                Spacer(modifier = Modifier.width(Spacing.sm))
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
+                                .height(TouchTarget.minimum),
+                            icon = if (isLastStep) Icons.Default.Check else Icons.AutoMirrored.Filled.ArrowForward
+                        )
                     }
                 }
             }
