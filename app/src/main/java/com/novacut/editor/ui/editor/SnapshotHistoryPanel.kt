@@ -45,6 +45,9 @@ import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.model.ProjectSnapshot
 import com.novacut.editor.ui.theme.Mocha
+import com.novacut.editor.ui.theme.NovaCutDialogIcon
+import com.novacut.editor.ui.theme.NovaCutPrimaryButton
+import com.novacut.editor.ui.theme.NovaCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
 import com.novacut.editor.ui.theme.TouchTarget
@@ -64,6 +67,7 @@ fun SnapshotHistoryPanel(
 ) {
     var showNameDialog by remember { mutableStateOf(false) }
     var snapshotName by remember { mutableStateOf("") }
+    var pendingRestoreSnapshot by remember { mutableStateOf<ProjectSnapshot?>(null) }
     var pendingDeleteSnapshot by remember { mutableStateOf<ProjectSnapshot?>(null) }
     val dateFormat = remember { SimpleDateFormat("MMM d, h:mm a", Locale.getDefault()) }
     val snapshotNameFormat = remember { SimpleDateFormat("MMM d HH:mm", Locale.getDefault()) }
@@ -136,6 +140,55 @@ fun SnapshotHistoryPanel(
                     )
                 }
             }
+        )
+    }
+
+    pendingRestoreSnapshot?.let { snapshot ->
+        AlertDialog(
+            onDismissRequest = { pendingRestoreSnapshot = null },
+            icon = {
+                NovaCutDialogIcon(
+                    icon = Icons.Default.Restore,
+                    accent = Mocha.Green
+                )
+            },
+            title = {
+                Text(
+                    text = stringResource(R.string.snapshot_restore_title),
+                    color = Mocha.Text,
+                    style = MaterialTheme.typography.titleLarge
+                )
+            },
+            text = {
+                Text(
+                    text = stringResource(
+                        R.string.snapshot_restore_body,
+                        snapshot.label.ifEmpty { stringResource(R.string.panel_snapshot_untitled) }
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Mocha.Subtext0
+                )
+            },
+            confirmButton = {
+                NovaCutPrimaryButton(
+                    text = stringResource(R.string.snapshot_restore_confirm),
+                    onClick = {
+                        onRestoreSnapshot(snapshot.id)
+                        pendingRestoreSnapshot = null
+                    },
+                    icon = Icons.Default.Restore
+                )
+            },
+            dismissButton = {
+                NovaCutSecondaryButton(
+                    text = stringResource(R.string.panel_snapshot_cancel),
+                    onClick = { pendingRestoreSnapshot = null }
+                )
+            },
+            containerColor = Mocha.PanelHighest,
+            titleContentColor = Mocha.Text,
+            textContentColor = Mocha.Subtext0,
+            shape = RoundedCornerShape(Radius.xxl)
         )
     }
 
@@ -288,7 +341,7 @@ fun SnapshotHistoryPanel(
                         snapshot = snapshot,
                         dateFormat = dateFormat,
                         isLatest = snapshot.id == latestSnapshot?.id,
-                        onRestore = { onRestoreSnapshot(snapshot.id) },
+                        onRestore = { pendingRestoreSnapshot = snapshot },
                         onDelete = { pendingDeleteSnapshot = snapshot }
                     )
                     if (index < sortedSnapshots.lastIndex) {

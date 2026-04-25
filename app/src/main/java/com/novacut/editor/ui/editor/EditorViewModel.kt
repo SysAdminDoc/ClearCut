@@ -9,6 +9,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.Player
+import com.novacut.editor.R
 import com.novacut.editor.ai.AiFeatures
 import com.novacut.editor.engine.AudioEngine
 import com.novacut.editor.engine.AutoSaveState
@@ -1505,23 +1506,33 @@ class EditorViewModel @Inject constructor(
 
     fun restoreSnapshot(snapshotId: String) {
         val snapshot = _state.value.projectSnapshots.find { it.id == snapshotId } ?: return
-        val recovery = AutoSaveState.deserialize(snapshot.stateJson)
-        saveUndoState("Restore snapshot")
-        _state.update {
-            it.copy(
-                tracks = recovery.tracks,
-                textOverlays = recovery.textOverlays,
-                imageOverlays = recovery.imageOverlays,
-                timelineMarkers = recovery.timelineMarkers,
-                drawingPaths = recovery.drawingPaths,
-                playheadMs = recovery.playheadMs,
-                chapterMarkers = recovery.chapterMarkers
+        try {
+            val recovery = AutoSaveState.deserialize(snapshot.stateJson)
+            saveUndoState("Restore snapshot")
+            _state.update {
+                it.copy(
+                    tracks = recovery.tracks,
+                    textOverlays = recovery.textOverlays,
+                    imageOverlays = recovery.imageOverlays,
+                    timelineMarkers = recovery.timelineMarkers,
+                    drawingPaths = recovery.drawingPaths,
+                    playheadMs = recovery.playheadMs,
+                    chapterMarkers = recovery.chapterMarkers
+                )
+            }
+            _playheadMs.value = recovery.playheadMs
+            rebuildPlayerTimeline()
+            saveProject()
+            showToast(
+                appContext.getString(
+                    R.string.snapshot_restored_success,
+                    snapshot.label.ifEmpty { appContext.getString(R.string.panel_snapshot_untitled) }
+                )
             )
+        } catch (e: Exception) {
+            Log.w("EditorViewModel", "Snapshot restore failed for ${snapshot.id}", e)
+            showToast(appContext.getString(R.string.snapshot_restore_failed))
         }
-        _playheadMs.value = recovery.playheadMs
-        rebuildPlayerTimeline()
-        saveProject()
-        showToast("Restored: ${snapshot.label}")
     }
 
     // --- Proxy ---

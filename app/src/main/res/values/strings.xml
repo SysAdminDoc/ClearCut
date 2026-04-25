@@ -884,6 +884,11 @@
     <string name="snapshot_empty_body">Save a snapshot before a risky trim, grade, or timing pass so you can jump back without losing momentum.</string>
     <string name="snapshot_status_empty">No snapshots yet</string>
     <string name="snapshot_status_ready">Restore points ready</string>
+    <string name="snapshot_restore_title">Restore snapshot?</string>
+    <string name="snapshot_restore_body">Restore “%1$s”? This replaces the current timeline, overlays, markers, drawings, chapters, and playhead with this checkpoint. NovaCut saves an undo point first.</string>
+    <string name="snapshot_restore_confirm">Restore snapshot</string>
+    <string name="snapshot_restored_success">Restored snapshot: %1$s</string>
+    <string name="snapshot_restore_failed">Snapshot could not be restored</string>
     <string name="snapshot_delete_title">Delete snapshot?</string>
     <string name="snapshot_delete_body">Delete “%1$s” from version history? This cannot be undone.</string>
     <string name="snapshot_delete_confirm">Delete snapshot</string>
