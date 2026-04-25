@@ -19,7 +19,7 @@
 
     <!-- ExportSheet -->
     <string name="export_title">Export</string>
-    <string name="export_subtitle">Choose a delivery-ready master, a lightweight share render, or a single frame capture.</string>
+    <string name="export_subtitle">Choose a delivery master, social render, audio mix, or clean still with confidence.</string>
     <string name="export_exporting">Exporting\u2026</string>
     <string name="export_cancel">Cancel Export</string>
     <string name="export_complete">Export Complete!</string>
@@ -176,7 +176,7 @@
 
     <!-- SettingsScreen -->
     <string name="settings_title">Settings</string>
-    <string name="settings_subtitle">Tune performance, defaults, and editing behavior for the way you like to work.</string>
+    <string name="settings_subtitle">Tune export defaults, timeline behavior, AI models, and editing comfort in one place.</string>
     <string name="settings_export_defaults">Export Defaults</string>
     <string name="settings_export_defaults_description">Choose the defaults NovaCut reaches for when you start a new export.</string>
     <string name="settings_default_resolution">Default Resolution</string>
@@ -394,10 +394,10 @@
     <string name="media_picker_image">Image</string>
     <string name="media_picker_audio">Audio</string>
     <string name="media_picker_library_title">Import from Library</string>
-    <string name="media_picker_library_description">Choose the kind of source you want to bring into the timeline.</string>
-    <string name="media_picker_video_description">Pick clips from your gallery or files.</string>
-    <string name="media_picker_image_description">Bring in stills, graphics, or overlays.</string>
-    <string name="media_picker_audio_description">Browse music, voiceover, or sound effects.</string>
+    <string name="media_picker_library_description">Import the exact source type you need and keep picked media stable for editing.</string>
+    <string name="media_picker_video_description">Add timeline-ready clips from your gallery or file browser.</string>
+    <string name="media_picker_image_description">Add stills, title graphics, overlays, or visual references.</string>
+    <string name="media_picker_audio_description">Add music, voiceover, ambience, or sound effects.</string>
     <string name="media_picker_select_multiple">Select Multiple Files</string>
     <string name="media_picker_multi_description">Select multiple photos or videos in one pass.</string>
     <string name="media_picker_record_video">Record Video</string>
@@ -416,7 +416,7 @@
     <string name="projects_count">%1$d project%2$s</string>
     <string name="projects_settings">Settings</string>
     <string name="projects_headline">Create sharper edits with less friction.</string>
-    <string name="projects_subtitle">Jump into a fresh template, pick up a recent cut, or import work from storage.</string>
+    <string name="projects_subtitle">Start from a structured template, resume a recent cut, or bring in a saved setup.</string>
     <string name="projects_search_placeholder">Search projects\u2026</string>
     <string name="projects_search">Search</string>
     <string name="projects_clear">Clear</string>
@@ -424,7 +424,7 @@
     <string name="projects_no_matching">No matching projects</string>
     <string name="projects_no_projects_yet">No projects yet</string>
     <string name="projects_ready_title">Your studio starts here.</string>
-    <string name="projects_ready_body">Start with a polished template or open a blank timeline and build something original.</string>
+    <string name="projects_ready_body">Start with a guided template or open a clean timeline and build from scratch.</string>
     <string name="projects_create_first">Create First Project</string>
     <string name="projects_try_different_search">Try another keyword or clear the filter to bring every project back.</string>
     <string name="projects_tap_to_create">Tap + to create your first project</string>

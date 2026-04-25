@@ -24,7 +24,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -44,8 +44,10 @@ import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.NovaCutChromeIconButton
 import com.novacut.editor.ui.theme.NovaCutHeroCard
 import com.novacut.editor.ui.theme.NovaCutMetricPill
+import com.novacut.editor.ui.theme.NovaCutPrimaryButton
 import com.novacut.editor.ui.theme.NovaCutScreenBackground
 import com.novacut.editor.ui.theme.NovaCutSectionHeader
+import com.novacut.editor.ui.theme.NovaCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
 import com.novacut.editor.ui.theme.TouchTarget
@@ -287,56 +289,14 @@ private fun ProjectHomeHero(
             }
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Button(
-                onClick = onCreateProject,
-                shape = RoundedCornerShape(Radius.lg),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Mocha.Rosewater,
-                    contentColor = Mocha.Midnight
-                ),
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = TouchTarget.minimum)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stringResource(R.string.projects_new_project),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-
-            OutlinedButton(
-                onClick = onImportTemplate,
-                shape = RoundedCornerShape(Radius.lg),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStrokeStrong),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Text),
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = TouchTarget.minimum)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.FileOpen,
-                    contentDescription = null,
-                    tint = Mocha.Subtext1,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stringResource(R.string.template_import),
-                    style = MaterialTheme.typography.labelLarge
-                )
-            }
-        }
+        ProjectActionRow(
+            primaryLabel = stringResource(R.string.projects_new_project),
+            primaryIcon = Icons.Default.Add,
+            onPrimary = onCreateProject,
+            secondaryLabel = stringResource(R.string.template_import),
+            secondaryIcon = Icons.Default.FileOpen,
+            onSecondary = onImportTemplate
+        )
 
         OutlinedTextField(
             value = searchQuery,
@@ -550,50 +510,60 @@ private fun ProjectEmptyStateActions(
     onCreateProject: () -> Unit,
     onImportTemplate: () -> Unit
 ) {
-    val createButton: @Composable (Modifier) -> Unit = { modifier ->
-        Button(
-            onClick = onCreateProject,
-            shape = RoundedCornerShape(Radius.lg),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Mocha.Rosewater,
-                contentColor = Mocha.Midnight
-            ),
-            contentPadding = PaddingValues(horizontal = Spacing.sm),
-            modifier = modifier.height(TouchTarget.minimum)
-        ) {
-            Text(
-                text = stringResource(R.string.projects_create_first),
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-    }
-    val importButton: @Composable (Modifier) -> Unit = { modifier ->
-        OutlinedButton(
-            onClick = onImportTemplate,
-            shape = RoundedCornerShape(Radius.lg),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStrokeStrong),
-            contentPadding = PaddingValues(horizontal = Spacing.sm),
-            modifier = modifier.height(TouchTarget.minimum)
-        ) {
-            Text(
-                text = stringResource(R.string.template_import),
-                color = Mocha.Text,
-                style = MaterialTheme.typography.labelLarge,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-    }
+    ProjectActionRow(
+        primaryLabel = stringResource(R.string.projects_create_first),
+        primaryIcon = Icons.Default.Add,
+        onPrimary = onCreateProject,
+        secondaryLabel = stringResource(R.string.template_import),
+        secondaryIcon = Icons.Default.FileOpen,
+        onSecondary = onImportTemplate
+    )
+}
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        createButton(Modifier.weight(1f))
-        importButton(Modifier.weight(1f))
+@Composable
+private fun ProjectActionRow(
+    primaryLabel: String,
+    primaryIcon: androidx.compose.ui.graphics.vector.ImageVector,
+    onPrimary: () -> Unit,
+    secondaryLabel: String,
+    secondaryIcon: androidx.compose.ui.graphics.vector.ImageVector,
+    onSecondary: () -> Unit
+) {
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val stackActions = maxWidth < 360.dp
+        if (stackActions) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                NovaCutPrimaryButton(
+                    text = primaryLabel,
+                    icon = primaryIcon,
+                    onClick = onPrimary,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                NovaCutSecondaryButton(
+                    text = secondaryLabel,
+                    icon = secondaryIcon,
+                    onClick = onSecondary,
+                    modifier = Modifier.fillMaxWidth(),
+                    contentColor = Mocha.Text
+                )
+            }
+        } else {
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                NovaCutPrimaryButton(
+                    text = primaryLabel,
+                    icon = primaryIcon,
+                    onClick = onPrimary,
+                    modifier = Modifier.weight(1f)
+                )
+                NovaCutSecondaryButton(
+                    text = secondaryLabel,
+                    icon = secondaryIcon,
+                    onClick = onSecondary,
+                    modifier = Modifier.weight(1f),
+                    contentColor = Mocha.Text
+                )
+            }
+        }
     }
 }
 
@@ -649,7 +619,7 @@ private fun ProjectCard(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onClick),
+                .clickable(role = Role.Button, onClick = onClick),
             colors = CardDefaults.cardColors(containerColor = Mocha.Panel),
             border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
             shape = RoundedCornerShape(Radius.xl)

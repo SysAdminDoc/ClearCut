@@ -49,7 +49,9 @@ import com.novacut.editor.ui.export.BatchExportPanel
 import com.novacut.editor.ui.export.ExportSheet
 import com.novacut.editor.ui.mediapicker.MediaPickerSheet
 import com.novacut.editor.ui.theme.Mocha
+import com.novacut.editor.ui.theme.NovaCutPrimaryButton
 import com.novacut.editor.ui.theme.Radius
+import com.novacut.editor.ui.theme.Spacing
 import com.novacut.editor.ui.theme.TouchTarget
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -392,27 +394,13 @@ fun EditorScreen(
                                     style = MaterialTheme.typography.bodyMedium,
                                     textAlign = TextAlign.Center
                                 )
-                                Spacer(Modifier.height(14.dp))
-                                Button(
+                                Spacer(Modifier.height(Spacing.lg))
+                                NovaCutPrimaryButton(
+                                    text = stringResource(R.string.editor_add_media),
+                                    icon = Icons.Default.Add,
                                     onClick = viewModel::showMediaPicker,
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = Mocha.Rosewater,
-                                        contentColor = Mocha.Midnight
-                                    ),
-                                    shape = RoundedCornerShape(Radius.lg),
-                                    modifier = Modifier.heightIn(min = TouchTarget.minimum)
-                                ) {
-                                    Icon(
-                                        Icons.Default.Add,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        stringResource(R.string.editor_add_media),
-                                        style = MaterialTheme.typography.labelLarge
-                                    )
-                                }
+                                    modifier = Modifier.widthIn(min = 180.dp)
+                                )
                             }
                         }
                     }
@@ -2375,6 +2363,12 @@ private fun EditorTopBar(
                     contentPadding = PaddingValues(horizontal = if (isCompactBar) 12.dp else 14.dp, vertical = 0.dp),
                     modifier = Modifier.height(if (isCompactBar) 36.dp else 38.dp)
                 ) {
+                    Icon(
+                        Icons.Default.Upload,
+                        contentDescription = null,
+                        modifier = Modifier.size(if (isCompactBar) 16.dp else 17.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(stringResource(R.string.editor_export), style = MaterialTheme.typography.labelLarge)
                 }
             }

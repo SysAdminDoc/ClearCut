@@ -16,9 +16,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -48,7 +51,7 @@ fun NovaCutScreenBackground(
                     Brush.verticalGradient(
                         listOf(
                             Mocha.Midnight,
-                            Mocha.Base.copy(alpha = 0.98f),
+                            Mocha.Panel.copy(alpha = 0.98f),
                             Mocha.Midnight
                         )
                     )
@@ -60,10 +63,10 @@ fun NovaCutScreenBackground(
                 .background(
                     Brush.verticalGradient(
                         colorStops = arrayOf(
-                            0f to Mocha.Mauve.copy(alpha = 0.08f),
-                            0.2f to Color.Transparent,
-                            0.78f to Color.Transparent,
-                            1f to Mocha.Sapphire.copy(alpha = 0.05f)
+                            0f to Mocha.Rosewater.copy(alpha = 0.055f),
+                            0.18f to Color.Transparent,
+                            0.76f to Color.Transparent,
+                            1f to Mocha.Teal.copy(alpha = 0.045f)
                         )
                     )
                 )
@@ -97,16 +100,16 @@ fun NovaCutHeroCard(
         modifier = modifier.fillMaxWidth(),
         color = Mocha.Panel,
         shape = shape,
-        border = BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.88f))
+        border = BorderStroke(1.dp, Mocha.CardStrokeStrong.copy(alpha = 0.72f))
     ) {
         Box(
             modifier = Modifier.background(
                 Brush.verticalGradient(
                     colorStops = arrayOf(
-                        0f to accent.copy(alpha = 0.08f),
-                        0.22f to Mocha.PanelHighest.copy(alpha = 0.94f),
-                        0.72f to Mocha.Panel.copy(alpha = 0.98f),
-                        1f to Mocha.Mantle
+                        0f to accent.copy(alpha = 0.075f),
+                        0.2f to Mocha.PanelHighest.copy(alpha = 0.92f),
+                        0.68f to Mocha.Panel.copy(alpha = 0.98f),
+                        1f to Mocha.Mantle.copy(alpha = 0.98f)
                     )
                 )
             )
@@ -117,6 +120,81 @@ fun NovaCutHeroCard(
                 content = content
             )
         }
+    }
+}
+
+@Composable
+fun NovaCutPrimaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    enabled: Boolean = true
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        shape = RoundedCornerShape(Radius.lg),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Mocha.Rosewater,
+            contentColor = Mocha.Midnight,
+            disabledContainerColor = Mocha.Surface1.copy(alpha = 0.5f),
+            disabledContentColor = Mocha.Subtext0
+        ),
+        contentPadding = PaddingValues(horizontal = Spacing.lg, vertical = Spacing.sm),
+        modifier = modifier.defaultMinSize(minHeight = TouchTarget.minimum)
+    ) {
+        if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(Spacing.sm))
+        }
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+fun NovaCutSecondaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    contentColor: Color = Mocha.Text
+) {
+    OutlinedButton(
+        onClick = onClick,
+        shape = RoundedCornerShape(Radius.lg),
+        border = BorderStroke(1.dp, Mocha.CardStrokeStrong),
+        colors = ButtonDefaults.outlinedButtonColors(
+            containerColor = Mocha.PanelHighest.copy(alpha = 0.42f),
+            contentColor = contentColor
+        ),
+        contentPadding = PaddingValues(horizontal = Spacing.lg, vertical = Spacing.sm),
+        modifier = modifier.defaultMinSize(minHeight = TouchTarget.minimum)
+    ) {
+        if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(18.dp)
+            )
+            androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(Spacing.sm))
+        }
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 

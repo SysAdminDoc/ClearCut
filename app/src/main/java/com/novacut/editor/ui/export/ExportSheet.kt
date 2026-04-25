@@ -68,6 +68,8 @@ import com.novacut.editor.model.VideoCodec
 import com.novacut.editor.model.Watermark
 import com.novacut.editor.model.WatermarkPosition
 import com.novacut.editor.ui.theme.Mocha
+import com.novacut.editor.ui.theme.Radius
+import com.novacut.editor.ui.theme.Spacing
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -169,16 +171,16 @@ fun ExportSheet(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(Mocha.Panel, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+            .background(Mocha.Panel, RoundedCornerShape(topStart = Radius.xxl, topEnd = Radius.xxl))
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 14.dp)
+            .padding(horizontal = Spacing.lg, vertical = 14.dp)
     ) {
         Box(
             modifier = Modifier
                 .align(Alignment.CenterHorizontally)
-                .width(44.dp)
-                .height(4.dp)
-                .background(Mocha.Surface2.copy(alpha = 0.8f), RoundedCornerShape(999.dp))
+                .width(36.dp)
+                .height(3.dp)
+                .background(Mocha.Surface2.copy(alpha = 0.55f), RoundedCornerShape(Radius.pill))
         )
 
         Spacer(modifier = Modifier.height(14.dp))
@@ -189,7 +191,7 @@ fun ExportSheet(
         ) {
             Surface(
                 color = Mocha.Mauve.copy(alpha = 0.14f),
-                shape = RoundedCornerShape(18.dp),
+                shape = RoundedCornerShape(Radius.lg),
                 border = BorderStroke(1.dp, Mocha.Mauve.copy(alpha = 0.22f))
             ) {
                 Box(
@@ -320,7 +322,7 @@ fun ExportSheet(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = Mocha.Panel),
             border = BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
-            shape = RoundedCornerShape(24.dp)
+            shape = RoundedCornerShape(Radius.xl)
         ) {
             Box(
                 modifier = Modifier.background(
@@ -333,8 +335,8 @@ fun ExportSheet(
                 )
             ) {
                 Column(
-                    modifier = Modifier.padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.padding(Spacing.lg),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.md)
                 ) {
                     Text(
                         text = config.platformPreset?.displayName ?: stringResource(R.string.export_delivery_summary),
@@ -1061,7 +1063,7 @@ private fun ExportSectionCard(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Mocha.PanelHighest),
         border = BorderStroke(1.dp, Mocha.CardStrokeStrong.copy(alpha = 0.92f)),
-        shape = RoundedCornerShape(22.dp)
+        shape = RoundedCornerShape(Radius.xl)
     ) {
         Box(
             modifier = Modifier.background(
@@ -1075,8 +1077,8 @@ private fun ExportSectionCard(
             )
         ) {
             Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                modifier = Modifier.padding(Spacing.lg),
+                verticalArrangement = Arrangement.spacedBy(Spacing.md)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
@@ -1102,7 +1104,7 @@ private fun ExportChoiceGroup(
     accent: Color,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         Text(
             text = title,
             color = accent,
@@ -1366,7 +1368,7 @@ private fun ExportStateCard(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Mocha.Panel),
         border = BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
-        shape = RoundedCornerShape(26.dp)
+        shape = RoundedCornerShape(Radius.xxl)
     ) {
         Box(
             modifier = Modifier.background(

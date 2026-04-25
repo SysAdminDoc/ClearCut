@@ -36,7 +36,9 @@ import com.novacut.editor.ui.editor.PremiumPanelPill
 import com.novacut.editor.ui.editor.PremiumSnackbarHost
 import com.novacut.editor.ui.editor.ToastSeverity
 import com.novacut.editor.ui.theme.Mocha
+import com.novacut.editor.ui.theme.NovaCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
+import com.novacut.editor.ui.theme.Spacing
 import com.novacut.editor.ui.theme.TouchTarget
 import java.io.File
 import kotlinx.coroutines.delay
@@ -239,8 +241,8 @@ fun MediaPickerSheet(
                 color = Mocha.Subtext0
             )
             FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
                 PremiumPanelPill(text = librarySourceLabel, accent = Mocha.Blue)
                 PremiumPanelPill(text = stringResource(R.string.media_picker_source_audio), accent = Mocha.Peach)
@@ -295,7 +297,9 @@ fun MediaPickerSheet(
                 }
             )
 
-            OutlinedButton(
+            NovaCutSecondaryButton(
+                text = stringResource(R.string.media_picker_select_multiple),
+                icon = Icons.Default.LibraryAdd,
                 onClick = {
                     if (usePhotoPicker) {
                         photoPickerMultiLauncher.launch(
@@ -308,18 +312,8 @@ fun MediaPickerSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = TouchTarget.minimum),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Mauve),
-                border = BorderStroke(1.dp, Mocha.CardStrokeStrong),
-                shape = RoundedCornerShape(Radius.lg)
-            ) {
-                Icon(
-                    Icons.Default.LibraryAdd,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.media_picker_select_multiple), style = MaterialTheme.typography.labelLarge)
-            }
+                contentColor = Mocha.Mauve
+            )
             Text(
                 text = stringResource(R.string.media_picker_multi_description),
                 style = MaterialTheme.typography.bodySmall,
@@ -340,7 +334,9 @@ fun MediaPickerSheet(
                 style = MaterialTheme.typography.bodyMedium,
                 color = Mocha.Subtext0
             )
-            OutlinedButton(
+            NovaCutSecondaryButton(
+                text = stringResource(R.string.media_picker_record_video),
+                icon = Icons.Default.CameraAlt,
                 onClick = {
                     if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
                         startCameraCapture()
@@ -351,14 +347,8 @@ fun MediaPickerSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = TouchTarget.minimum),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Red),
-                border = BorderStroke(1.dp, Mocha.CardStrokeStrong),
-                shape = RoundedCornerShape(Radius.lg)
-            ) {
-                Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.media_picker_record_video), style = MaterialTheme.typography.labelLarge)
-            }
+                contentColor = Mocha.Red
+            )
         }
     }
 }
@@ -467,7 +457,7 @@ private fun MediaSourceActionCard(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(

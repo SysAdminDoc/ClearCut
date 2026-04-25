@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
@@ -323,7 +324,7 @@ private fun UserTemplateCard(
             .clip(RoundedCornerShape(Radius.xl))
             .background(Mocha.PanelHighest)
             .border(1.dp, Mocha.CardStrokeStrong, RoundedCornerShape(Radius.xl))
-            .clickable(onClick = onClick)
+            .clickable(role = Role.Button, onClick = onClick)
     ) {
         Box(
             modifier = Modifier
@@ -411,7 +412,7 @@ private fun ProjectTemplateCard(
             .clip(RoundedCornerShape(Radius.xl))
             .background(Mocha.PanelHighest)
             .border(1.dp, Mocha.CardStrokeStrong, RoundedCornerShape(Radius.xl))
-            .clickable(onClick = onClick)
+            .clickable(role = Role.Button, onClick = onClick)
     ) {
         Box(
             modifier = Modifier
