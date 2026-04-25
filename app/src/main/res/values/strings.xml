@@ -990,6 +990,7 @@
     <string name="collapse_all_tracks">Collapse all tracks</string>
     <string name="expand_all_tracks">Expand all tracks</string>
     <string name="clip_label_picker_title">Clip Label</string>
+    <string name="clip_label_picker_description">Mark selected clips for organization without changing the edit.</string>
 
     <!-- Keyboard shortcuts -->
     <string name="keyboard_shortcuts">Keyboard Shortcuts</string>

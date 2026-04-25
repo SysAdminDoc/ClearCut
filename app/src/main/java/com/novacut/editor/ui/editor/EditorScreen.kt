@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,7 +23,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.draw.clip
@@ -1794,52 +1798,83 @@ fun EditorScreen(
             modifier = Modifier.align(Alignment.BottomCenter).zIndex(20f)
         ) {
             Card(
-                colors = CardDefaults.cardColors(containerColor = Mocha.Surface0),
-                shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                colors = CardDefaults.cardColors(containerColor = Mocha.Panel),
+                border = BorderStroke(1.dp, Mocha.CardStrokeStrong.copy(alpha = 0.86f)),
+                shape = RoundedCornerShape(topStart = Radius.xxl, topEnd = Radius.xxl),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.lg)
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
+                Column(
+                    modifier = Modifier
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    Mocha.PanelHighest.copy(alpha = 0.86f),
+                                    Mocha.Panel
+                                )
+                            )
+                        )
+                        .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+                ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(stringResource(R.string.panel_editor_clip_label), color = Mocha.Text, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                        // 44dp Material-3 minimum touch target; the old 24dp container
-                        // was below the Accessibility guideline minimum and frequently
-                        // misfired on small phones.
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                stringResource(R.string.panel_editor_clip_label),
+                                color = Mocha.Text,
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                            Text(
+                                stringResource(R.string.clip_label_picker_description),
+                                color = Mocha.Subtext0,
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                         IconButton(onClick = { showClipLabelPicker = false }, modifier = Modifier.size(44.dp)) {
                             Icon(Icons.Default.Close, stringResource(R.string.cd_close_color_grading), tint = Mocha.Subtext0, modifier = Modifier.size(20.dp))
                         }
                     }
-                    Spacer(Modifier.height(8.dp))
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         val labelClip = selectedClip
                         ClipLabel.entries.forEach { label ->
                             val isSelected = labelClip?.clipLabel == label
+                            val labelName = if (label == ClipLabel.NONE) {
+                                stringResource(R.string.clip_label_none)
+                            } else {
+                                label.displayName
+                            }
                             Box(
                                 contentAlignment = Alignment.Center,
                                 modifier = Modifier
-                                    .size(36.dp)
+                                    .size(TouchTarget.minimum)
                                     .clip(CircleShape)
                                     .background(
                                         if (label == ClipLabel.NONE) Mocha.Surface2
                                         else Color(label.argb)
                                     )
                                     .then(
-                                        if (isSelected) Modifier.border(2.dp, Mocha.Text, CircleShape) else Modifier
+                                        if (isSelected) Modifier.border(2.dp, Mocha.Text, CircleShape)
+                                        else Modifier.border(1.dp, Mocha.CardStroke.copy(alpha = 0.7f), CircleShape)
                                     )
-                                    .clickable {
+                                    .semantics { contentDescription = labelName }
+                                    .clickable(role = Role.Button) {
                                         state.selectedClipId?.let { viewModel.setClipLabel(it, label) }
                                     }
                             ) {
                                 if (label == ClipLabel.NONE) {
-                                    Icon(Icons.Default.Close, stringResource(R.string.cd_close), tint = Mocha.Subtext0, modifier = Modifier.size(16.dp))
+                                    Icon(Icons.Default.Close, labelName, tint = Mocha.Subtext0, modifier = Modifier.size(16.dp))
                                 }
                                 if (isSelected && label != ClipLabel.NONE) {
-                                    Icon(Icons.Default.Check, stringResource(R.string.cd_confirm), tint = Mocha.Crust, modifier = Modifier.size(16.dp))
+                                    Icon(Icons.Default.Check, labelName, tint = Mocha.Crust, modifier = Modifier.size(16.dp))
                                 }
                             }
                         }
@@ -1873,7 +1908,7 @@ fun EditorScreen(
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 120.dp, start = 16.dp, end = 16.dp)
                     .zIndex(11f),
-                containerColor = Mocha.Surface0,
+                containerColor = Mocha.PanelHighest,
                 contentColor = Mocha.Text,
                 actionContentColor = Mocha.Peach,
                 action = {
@@ -1892,9 +1927,24 @@ fun EditorScreen(
                             tint = Mocha.Subtext0
                         )
                     }
-                }
+                },
+                shape = RoundedCornerShape(Radius.xl)
             ) {
-                Text(text = stringResource(R.string.bulk_undo_message, bulkPrompt.count))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Restore,
+                        contentDescription = null,
+                        tint = Mocha.Peach,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = stringResource(R.string.bulk_undo_message, bulkPrompt.count),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
             }
         }
     }
