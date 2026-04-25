@@ -3,6 +3,7 @@ package com.novacut.editor.ui.projects
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -763,22 +764,46 @@ private fun ProjectCard(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text(stringResource(R.string.projects_delete_title), color = Mocha.Text) },
-            text = { Text(stringResource(R.string.projects_delete_message, project.name), color = Mocha.Subtext0) },
+            icon = {
+                DialogIcon(
+                    icon = Icons.Default.Delete,
+                    accent = Mocha.Red
+                )
+            },
+            title = {
+                Text(
+                    text = stringResource(R.string.projects_delete_title),
+                    color = Mocha.Text,
+                    style = MaterialTheme.typography.titleLarge
+                )
+            },
+            text = {
+                Text(
+                    text = stringResource(R.string.projects_delete_message, project.name),
+                    color = Mocha.Subtext0,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
             confirmButton = {
-                TextButton(onClick = {
-                    onDelete()
-                    showDeleteConfirm = false
-                }) {
-                    Text(stringResource(R.string.projects_delete), color = Mocha.Red)
-                }
+                NovaCutSecondaryButton(
+                    text = stringResource(R.string.projects_delete),
+                    onClick = {
+                        onDelete()
+                        showDeleteConfirm = false
+                    },
+                    icon = Icons.Default.Delete,
+                    contentColor = Mocha.Red
+                )
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text(stringResource(R.string.cancel), color = Mocha.Subtext0)
-                }
+                NovaCutSecondaryButton(
+                    text = stringResource(R.string.cancel),
+                    onClick = { showDeleteConfirm = false }
+                )
             },
             containerColor = Mocha.PanelHighest,
+            titleContentColor = Mocha.Text,
+            textContentColor = Mocha.Subtext0,
             shape = RoundedCornerShape(Radius.xxl)
         )
     }
@@ -789,12 +814,26 @@ private fun ProjectCard(
         val canSubmitRename = trimmedProjectName.isNotBlank() && trimmedProjectName != project.name
         AlertDialog(
             onDismissRequest = { showRenameDialog = false },
-            title = { Text(stringResource(R.string.projects_rename_title), color = Mocha.Text) },
+            icon = {
+                DialogIcon(
+                    icon = Icons.Default.Edit,
+                    accent = Mocha.Rosewater
+                )
+            },
+            title = {
+                Text(
+                    text = stringResource(R.string.projects_rename_title),
+                    color = Mocha.Text,
+                    style = MaterialTheme.typography.titleLarge
+                )
+            },
             text = {
                 OutlinedTextField(
                     value = projectName,
                     onValueChange = { projectName = it },
                     singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(Radius.lg),
                     placeholder = {
                         Text(
                             text = stringResource(R.string.projects_rename_hint),
@@ -813,26 +852,47 @@ private fun ProjectCard(
                 )
             },
             confirmButton = {
-                TextButton(
+                NovaCutPrimaryButton(
+                    text = stringResource(R.string.done),
                     onClick = {
                         onRename(trimmedProjectName)
                         showRenameDialog = false
                     },
-                    enabled = canSubmitRename
-                ) {
-                    Text(
-                        stringResource(R.string.done),
-                        color = if (canSubmitRename) Mocha.Rosewater else Mocha.Surface2
-                    )
-                }
+                    enabled = canSubmitRename,
+                    icon = Icons.Default.Check
+                )
             },
             dismissButton = {
-                TextButton(onClick = { showRenameDialog = false }) {
-                    Text(stringResource(R.string.cancel), color = Mocha.Subtext0)
-                }
+                NovaCutSecondaryButton(
+                    text = stringResource(R.string.cancel),
+                    onClick = { showRenameDialog = false }
+                )
             },
             containerColor = Mocha.PanelHighest,
+            titleContentColor = Mocha.Text,
+            textContentColor = Mocha.Subtext0,
             shape = RoundedCornerShape(Radius.xxl)
+        )
+    }
+}
+
+@Composable
+private fun DialogIcon(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    accent: androidx.compose.ui.graphics.Color
+) {
+    Surface(
+        color = accent.copy(alpha = 0.14f),
+        shape = RoundedCornerShape(Radius.lg),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.24f))
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = accent,
+            modifier = Modifier
+                .padding(Spacing.md)
+                .size(22.dp)
         )
     }
 }
