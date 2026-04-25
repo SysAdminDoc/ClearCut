@@ -46,6 +46,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.focusable
 import androidx.compose.ui.graphics.Brush
 import com.novacut.editor.engine.ExportState
+import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.model.*
 import com.novacut.editor.model.ClipLabel
 import androidx.compose.ui.graphics.Color
@@ -886,6 +887,15 @@ fun EditorScreen(
             visible = state.panels.isOpen(PanelId.EXPORT_SHEET),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
+            val exportSmartRenderSummary = remember(state.tracks, state.exportConfig, state.textOverlays) {
+                SmartRenderEngine.getSummary(
+                    SmartRenderEngine.analyzeTimeline(
+                        tracks = state.tracks,
+                        config = state.exportConfig,
+                        textOverlays = state.textOverlays
+                    )
+                ).takeIf { it.totalSegments > 0 }
+            }
             ExportSheet(
                 config = state.exportConfig,
                 exportState = state.exportState,
@@ -894,6 +904,7 @@ fun EditorScreen(
                 errorMessage = state.exportErrorMessage,
                 exportStartTime = state.exportStartTime,
                 totalDurationMs = state.totalDurationMs,
+                smartRenderSummary = exportSmartRenderSummary,
                 onConfigChanged = viewModel::updateExportConfig,
                 onStartExport = {
                     // Use app-private external dir — works on all Android versions including 11+

@@ -35,6 +35,8 @@
     <string name="export_codec">Codec</string>
     <string name="export_quality">Quality</string>
     <string name="export_output_details">Output Details</string>
+    <string name="export_smart_render_title">Smart render outlook</string>
+    <string name="export_smart_render_detail">%1$d%% of the timeline can stream through. %2$d ranges copy directly; %3$d need re-encode.</string>
     <string name="export_delivery_summary">Delivery Summary</string>
     <string name="export_delivery_options">Delivery Options</string>
     <string name="export_delivery_options_description">Adjust the specs NovaCut will use for this export.</string>

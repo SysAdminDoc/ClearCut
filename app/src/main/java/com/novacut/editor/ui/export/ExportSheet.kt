@@ -55,6 +55,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.engine.ExportState
+import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.model.AspectRatio
 import com.novacut.editor.model.AudioCodec
 import com.novacut.editor.model.ExportConfig
@@ -84,6 +85,7 @@ fun ExportSheet(
     errorMessage: String? = null,
     exportStartTime: Long = 0L,
     totalDurationMs: Long = 0L,
+    smartRenderSummary: SmartRenderEngine.SmartRenderSummary? = null,
     onConfigChanged: (ExportConfig) -> Unit,
     onStartExport: () -> Unit,
     onShare: () -> Unit = {},
@@ -833,6 +835,9 @@ fun ExportSheet(
                     color = Mocha.Blue,
                     style = MaterialTheme.typography.bodySmall
                 )
+                if (smartRenderSummary != null) {
+                    SmartRenderExportOutlook(summary = smartRenderSummary)
+                }
                 // Pre-flight warnings. These are static heuristics so they run
                 // every recomposition without any state plumbing — the signal
                 // is whether the *currently selected* config will produce an
@@ -1092,6 +1097,118 @@ private fun ExportChoiceGroup(
             style = MaterialTheme.typography.labelLarge
         )
         content()
+    }
+}
+
+@Composable
+@OptIn(ExperimentalLayoutApi::class)
+private fun SmartRenderExportOutlook(summary: SmartRenderEngine.SmartRenderSummary) {
+    val passThroughPercent = if (summary.totalDurationMs > 0L) {
+        ((summary.passThroughDurationMs * 100L) / summary.totalDurationMs).toInt().coerceIn(0, 100)
+    } else {
+        0
+    }
+    val isInstant = summary.totalSegments > 0 && summary.reEncodeSegments == 0
+    val speedupText = if (isInstant) {
+        stringResource(R.string.render_speedup_instant)
+    } else {
+        stringResource(R.string.render_speedup_value, summary.estimatedSpeedup.coerceAtMost(99.9f))
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = Mocha.Blue.copy(alpha = 0.10f),
+        border = BorderStroke(1.dp, Mocha.Blue.copy(alpha = 0.24f)),
+        shape = RoundedCornerShape(Radius.lg)
+    ) {
+        Column(
+            modifier = Modifier.padding(Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Layers,
+                    contentDescription = null,
+                    tint = Mocha.Blue,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    text = stringResource(R.string.export_smart_render_title),
+                    color = Mocha.Text,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f)
+                )
+                Surface(
+                    color = Mocha.Blue.copy(alpha = 0.16f),
+                    shape = RoundedCornerShape(Radius.pill)
+                ) {
+                    Text(
+                        text = speedupText,
+                        color = Mocha.Blue,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+            }
+            Text(
+                text = stringResource(
+                    R.string.export_smart_render_detail,
+                    passThroughPercent,
+                    summary.passThroughSegments,
+                    summary.reEncodeSegments
+                ),
+                color = Mocha.Subtext0,
+                style = MaterialTheme.typography.bodySmall
+            )
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs)
+            ) {
+                SmartRenderMetricPill(
+                    text = stringResource(
+                        R.string.render_pass_through_duration,
+                        formatEtaSeconds((summary.passThroughDurationMs / 1000L).coerceAtLeast(0L))
+                    ),
+                    accent = Mocha.Green
+                )
+                SmartRenderMetricPill(
+                    text = stringResource(
+                        R.string.render_re_encode_duration,
+                        formatEtaSeconds((summary.reEncodeDurationMs / 1000L).coerceAtLeast(0L))
+                    ),
+                    accent = Mocha.Peach
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SmartRenderMetricPill(
+    text: String,
+    accent: Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        color = accent.copy(alpha = 0.11f),
+        shape = RoundedCornerShape(Radius.md)
+    ) {
+        Text(
+            text = text,
+            color = accent,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+        )
     }
 }
 
