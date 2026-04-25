@@ -4,7 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.net.Uri
-import com.novacut.editor.engine.moveFileReplacing
+import com.novacut.editor.engine.ModelDownloadManager
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.framework.image.ByteBufferExtractor
 import com.google.mediapipe.tasks.core.BaseOptions
@@ -17,8 +17,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
 import java.nio.ByteBuffer
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -40,7 +38,8 @@ data class SegmentationResult(
 
 @Singleton
 class SegmentationEngine @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val modelDownloadManager: ModelDownloadManager
 ) {
     private val modelDir = File(context.filesDir, "mediapipe")
     private val modelFile = File(modelDir, "selfie_segmenter.tflite")
@@ -88,56 +87,28 @@ class SegmentationEngine @Inject constructor(
                 return@withContext true
             }
 
-            val tempFile = File(modelDir, "selfie_segmenter.tflite.tmp")
-            val conn = URL(MODEL_URL).openConnection() as HttpURLConnection
-            conn.connectTimeout = 15000
-            conn.readTimeout = 30000
-            conn.setRequestProperty("User-Agent", "NovaCut/${com.novacut.editor.NovaCutApp.VERSION.removePrefix("v")}")
-            try {
-                conn.connect()
-
-                if (conn.responseCode != 200) {
-                    throw Exception("HTTP ${conn.responseCode}")
-                }
-
-                val totalBytes = conn.contentLengthLong
-                var downloaded = 0L
-
-                conn.inputStream.buffered().use { input ->
-                    tempFile.outputStream().buffered().use { output ->
-                        val buf = ByteArray(8192)
-                        var read: Int
-                        while (input.read(buf).also { read = it } != -1) {
-                            output.write(buf, 0, read)
-                            downloaded += read
-                            val progress = if (totalBytes > 0) {
-                                downloaded.toFloat() / totalBytes
-                            } else 0.5f
-                            _downloadProgress.value = progress.coerceIn(0f, 0.99f)
-                            onProgress(_downloadProgress.value)
-                        }
-                    }
-                }
-                if (tempFile.length() <= 0L) {
-                    throw IllegalStateException("Downloaded segmentation model is empty")
-                }
-                if (totalBytes > 0L && tempFile.length() != totalBytes) {
-                    throw IllegalStateException("Downloaded segmentation model is incomplete")
-                }
-                if (tempFile.length() < MIN_MODEL_BYTES) {
-                    throw IllegalStateException("Downloaded segmentation model is smaller than expected")
-                }
-            } finally {
-                conn.disconnect()
+            modelDownloadManager.downloadFiles(
+                files = listOf(
+                    ModelDownloadManager.ModelFile(
+                        url = MODEL_URL,
+                        targetFile = modelFile,
+                        minimumBytes = MIN_MODEL_BYTES,
+                        estimatedBytes = estimateModelSizeMB() * 1024L * 1024L,
+                        displayName = "Selfie segmenter"
+                    )
+                ),
+                connectTimeoutMs = 15_000,
+                readTimeoutMs = 30_000
+            ) { progress ->
+                _downloadProgress.value = progress.coerceIn(0f, 0.99f)
+                onProgress(_downloadProgress.value)
             }
 
-            moveFileReplacing(tempFile, modelFile)
             _downloadProgress.value = 1f
             onProgress(1f)
             _modelState.value = SegmentationModelState.READY
             true
         } catch (e: Exception) {
-            File(modelDir, "selfie_segmenter.tflite.tmp").delete()
             _modelState.value = if (hasDownloadedModelFile()) {
                 SegmentationModelState.READY
             } else {

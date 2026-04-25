@@ -11,12 +11,7 @@ import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.BufferedInputStream
 import java.io.File
-import java.io.FileOutputStream
-import java.io.IOException
-import java.net.HttpURLConnection
-import java.net.URL
 import java.nio.FloatBuffer
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -61,7 +56,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class InpaintingEngine @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val modelDownloadManager: ModelDownloadManager
 ) {
     companion object {
         private const val TAG = "InpaintingEngine"
@@ -118,54 +114,28 @@ class InpaintingEngine @Inject constructor(
     ): Boolean = withContext(Dispatchers.IO) {
         val modelDir = File(context.filesDir, "models/inpainting").also { it.mkdirs() }
         val outputFile = File(modelDir, MODEL_FILENAME)
-        val tempFile = File(modelDir, "$MODEL_FILENAME.tmp")
         try {
             Log.d(TAG, "Downloading LaMa-Dilated model from $MODEL_URL")
-            val connection = URL(MODEL_URL).openConnection() as HttpURLConnection
-            connection.connectTimeout = 30_000
-            connection.readTimeout = 30_000
-            try {
-                connection.setRequestProperty("User-Agent", "NovaCut/${com.novacut.editor.NovaCutApp.VERSION.removePrefix("v")}")
-                connection.connect()
-                if (connection.responseCode !in 200..299) {
-                    throw IOException("HTTP ${connection.responseCode}")
-                }
-                val contentLength = connection.contentLengthLong.let {
-                    if (it > 0) it else MODEL_SIZE_BYTES
-                }
-
-                BufferedInputStream(connection.inputStream, 8192).use { input ->
-                    FileOutputStream(tempFile).use { output ->
-                        val buffer = ByteArray(8192)
-                        var totalBytesRead = 0L
-                        var bytesRead: Int
-                        while (input.read(buffer).also { bytesRead = it } != -1) {
-                            output.write(buffer, 0, bytesRead)
-                            totalBytesRead += bytesRead
-                            onProgress((totalBytesRead.toFloat() / contentLength).coerceIn(0f, 1f))
-                        }
-                    }
-                }
-                if (tempFile.length() <= 0L) {
-                    throw IOException("Downloaded model is empty")
-                }
-                if (connection.contentLengthLong > 0L && tempFile.length() != connection.contentLengthLong) {
-                    throw IOException("Downloaded model is incomplete")
-                }
-                if (tempFile.length() < MODEL_SIZE_BYTES / 2) {
-                    throw IOException("Downloaded model is smaller than expected")
-                }
-            } finally {
-                connection.disconnect()
-            }
-
-            moveFileReplacing(tempFile, outputFile)
+            modelDownloadManager.downloadFiles(
+                files = listOf(
+                    ModelDownloadManager.ModelFile(
+                        url = MODEL_URL,
+                        targetFile = outputFile,
+                        minimumBytes = MODEL_SIZE_BYTES / 2,
+                        estimatedBytes = MODEL_SIZE_BYTES,
+                        displayName = "LaMa inpainting model"
+                    )
+                ),
+                totalEstimateBytes = MODEL_SIZE_BYTES,
+                connectTimeoutMs = 30_000,
+                readTimeoutMs = 30_000,
+                onProgress = onProgress
+            )
             Log.d(TAG, "LaMa model downloaded: ${outputFile.length()} bytes")
             onProgress(1f)
             true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to download LaMa model", e)
-            tempFile.delete()
             false
         }
     }
