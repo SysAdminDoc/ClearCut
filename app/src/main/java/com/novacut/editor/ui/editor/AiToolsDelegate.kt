@@ -93,8 +93,22 @@ class AiToolsDelegate(
     }
 
     fun deleteWhisperModel() {
-        aiFeatures.whisperEngine.deleteModel()
-        showToast("Whisper model deleted")
+        scope.launch {
+            val success = withContext(Dispatchers.IO) {
+                runCatching {
+                    aiFeatures.whisperEngine.deleteModel()
+                }.isSuccess
+            }
+            showToast(
+                appContext.getString(
+                    if (success) {
+                        R.string.ai_whisper_removed_toast
+                    } else {
+                        R.string.ai_model_remove_failed_toast
+                    }
+                )
+            )
+        }
     }
 
     fun downloadSegmentationModel() {
@@ -106,8 +120,22 @@ class AiToolsDelegate(
     }
 
     fun deleteSegmentationModel() {
-        aiFeatures.segmentationEngine.deleteModel()
-        showToast("Segmentation model deleted")
+        scope.launch {
+            val success = withContext(Dispatchers.IO) {
+                runCatching {
+                    aiFeatures.segmentationEngine.deleteModel()
+                }.isSuccess
+            }
+            showToast(
+                appContext.getString(
+                    if (success) {
+                        R.string.ai_segmentation_removed_toast
+                    } else {
+                        R.string.ai_model_remove_failed_toast
+                    }
+                )
+            )
+        }
     }
 
     fun saveAsTemplate(name: String) {

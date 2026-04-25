@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Straighten
 import androidx.compose.material.icons.filled.Style
 import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material.icons.filled.ZoomIn
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -31,6 +32,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Alignment
@@ -49,6 +54,7 @@ import com.novacut.editor.R
 import com.novacut.editor.engine.segmentation.SegmentationModelState
 import com.novacut.editor.engine.whisper.WhisperModelState
 import com.novacut.editor.ui.theme.Mocha
+import com.novacut.editor.ui.theme.NovaCutDialogIcon
 import com.novacut.editor.ui.theme.NovaCutPrimaryButton
 import com.novacut.editor.ui.theme.NovaCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
@@ -171,6 +177,11 @@ val aiTools = listOf(
     )
 )
 
+private enum class AiModelRemovalTarget {
+    WHISPER,
+    SEGMENTATION
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AiToolsPanel(
@@ -192,6 +203,7 @@ fun AiToolsPanel(
 ) {
     val readyTools = aiTools.filter { !it.requiresClip || hasSelectedClip }
     val lockedTools = aiTools.filter { it.requiresClip && !hasSelectedClip }
+    var pendingModelRemoval by remember { mutableStateOf<AiModelRemovalTarget?>(null) }
 
     PremiumEditorPanel(
         title = stringResource(R.string.ai_tools_title),
@@ -278,8 +290,16 @@ fun AiToolsPanel(
                 WhisperModelState.NOT_DOWNLOADED, WhisperModelState.ERROR -> onDownloadWhisper
                 else -> null
             },
-            secondaryActionLabel = if (whisperModelState == WhisperModelState.READY) stringResource(R.string.remove) else null,
-            onSecondaryAction = if (whisperModelState == WhisperModelState.READY) onDeleteWhisper else null
+            secondaryActionLabel = if (whisperModelState == WhisperModelState.READY) {
+                stringResource(R.string.ai_model_remove_action)
+            } else {
+                null
+            },
+            onSecondaryAction = if (whisperModelState == WhisperModelState.READY) {
+                { pendingModelRemoval = AiModelRemovalTarget.WHISPER }
+            } else {
+                null
+            }
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -308,8 +328,16 @@ fun AiToolsPanel(
                 SegmentationModelState.NOT_DOWNLOADED, SegmentationModelState.ERROR -> onDownloadSegmentation
                 else -> null
             },
-            secondaryActionLabel = if (segmentationModelState == SegmentationModelState.READY) stringResource(R.string.remove) else null,
-            onSecondaryAction = if (segmentationModelState == SegmentationModelState.READY) onDeleteSegmentation else null
+            secondaryActionLabel = if (segmentationModelState == SegmentationModelState.READY) {
+                stringResource(R.string.ai_model_remove_action)
+            } else {
+                null
+            },
+            onSecondaryAction = if (segmentationModelState == SegmentationModelState.READY) {
+                { pendingModelRemoval = AiModelRemovalTarget.SEGMENTATION }
+            } else {
+                null
+            }
         )
 
         if (processingTool != null) {
@@ -385,6 +413,20 @@ fun AiToolsPanel(
             )
         }
     }
+
+    pendingModelRemoval?.let { target ->
+        AiModelRemovalConfirmDialog(
+            target = target,
+            onDismissRequest = { pendingModelRemoval = null },
+            onConfirm = {
+                when (target) {
+                    AiModelRemovalTarget.WHISPER -> onDeleteWhisper()
+                    AiModelRemovalTarget.SEGMENTATION -> onDeleteSegmentation()
+                }
+                pendingModelRemoval = null
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -432,6 +474,64 @@ private fun AiToolSection(
             }
         }
     }
+}
+
+@Composable
+private fun AiModelRemovalConfirmDialog(
+    target: AiModelRemovalTarget,
+    onDismissRequest: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    val title = when (target) {
+        AiModelRemovalTarget.WHISPER -> stringResource(R.string.ai_remove_whisper_title)
+        AiModelRemovalTarget.SEGMENTATION -> stringResource(R.string.ai_remove_segmentation_title)
+    }
+    val body = when (target) {
+        AiModelRemovalTarget.WHISPER -> stringResource(R.string.ai_remove_whisper_message)
+        AiModelRemovalTarget.SEGMENTATION -> stringResource(R.string.ai_remove_segmentation_message)
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        icon = {
+            NovaCutDialogIcon(
+                icon = Icons.Default.Delete,
+                accent = Mocha.Red
+            )
+        },
+        title = {
+            Text(
+                text = title,
+                color = Mocha.Text,
+                style = MaterialTheme.typography.titleLarge
+            )
+        },
+        text = {
+            Text(
+                text = body,
+                color = Mocha.Subtext0,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        },
+        confirmButton = {
+            NovaCutSecondaryButton(
+                text = stringResource(R.string.ai_model_remove_confirm),
+                onClick = onConfirm,
+                icon = Icons.Default.Delete,
+                contentColor = Mocha.Red
+            )
+        },
+        dismissButton = {
+            NovaCutSecondaryButton(
+                text = stringResource(R.string.cancel),
+                onClick = onDismissRequest
+            )
+        },
+        containerColor = Mocha.PanelHighest,
+        titleContentColor = Mocha.Text,
+        textContentColor = Mocha.Subtext0,
+        shape = RoundedCornerShape(Radius.xxl)
+    )
 }
 
 @OptIn(ExperimentalLayoutApi::class)

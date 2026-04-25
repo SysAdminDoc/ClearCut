@@ -120,6 +120,15 @@
     <string name="ai_segmentation_description">Pixel-accurate background removal</string>
     <string name="ai_model_download_progress">Download progress</string>
     <string name="ai_model_download_percent">%1$d%%</string>
+    <string name="ai_model_remove_action">Remove model</string>
+    <string name="ai_model_remove_confirm">Remove model</string>
+    <string name="ai_remove_whisper_title">Remove Whisper model?</string>
+    <string name="ai_remove_whisper_message">This frees about 75 MB and disables new transcription until you download Whisper again. Existing captions and edits stay in the project.</string>
+    <string name="ai_remove_segmentation_title">Remove segmentation model?</string>
+    <string name="ai_remove_segmentation_message">This removes the local background-segmentation file and disables AI matte quality until you download it again. Existing edits stay intact.</string>
+    <string name="ai_whisper_removed_toast">Whisper model removed. You can download it again any time.</string>
+    <string name="ai_segmentation_removed_toast">Segmentation model removed. You can download it again any time.</string>
+    <string name="ai_model_remove_failed_toast">NovaCut couldn\'t remove that model. Try again from AI Tools.</string>
     <string name="ai_processing_format">Processing: %1$s\u2026</string>
     <string name="ai_tools_ready_now">Ready Now</string>
     <string name="ai_tools_ready_now_description">These assists can run immediately with the current timeline selection and downloaded models.</string>
