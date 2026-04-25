@@ -9,7 +9,7 @@ import android.net.Uri
 import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
-import com.novacut.editor.engine.moveFileReplacing
+import com.novacut.editor.engine.ModelDownloadManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,8 +18,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
@@ -41,7 +39,8 @@ enum class WhisperModelState {
 
 @Singleton
 class WhisperEngine @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val modelDownloadManager: ModelDownloadManager
 ) {
     private val modelDir = File(context.filesDir, "whisper")
     private val encoderFile = File(modelDir, "encoder_model.onnx")
@@ -105,69 +104,37 @@ class WhisperEngine @Inject constructor(
             modelDir.mkdirs()
 
             val files = listOf(
-                ENCODER_URL to encoderFile,
-                DECODER_URL to decoderFile,
-                VOCAB_URL to vocabFile
+                ModelDownloadManager.ModelFile(
+                    url = ENCODER_URL,
+                    targetFile = encoderFile,
+                    minimumBytes = MIN_ENCODER_BYTES,
+                    estimatedBytes = 40L * 1024L * 1024L,
+                    displayName = "Whisper encoder"
+                ),
+                ModelDownloadManager.ModelFile(
+                    url = DECODER_URL,
+                    targetFile = decoderFile,
+                    minimumBytes = MIN_DECODER_BYTES,
+                    estimatedBytes = 35L * 1024L * 1024L,
+                    displayName = "Whisper decoder"
+                ),
+                ModelDownloadManager.ModelFile(
+                    url = VOCAB_URL,
+                    targetFile = vocabFile,
+                    minimumBytes = MIN_VOCAB_BYTES,
+                    estimatedBytes = 512L * 1024L,
+                    displayName = "Whisper vocabulary"
+                )
             )
 
-            var completedBytes = 0L
-            val totalEstimate = estimateModelSizeMB() * 1024L * 1024L
-
-            for ((url, file) in files) {
-                if (file == encoderFile && file.exists() && file.length() >= MIN_ENCODER_BYTES) continue
-                if (file == decoderFile && file.exists() && file.length() >= MIN_DECODER_BYTES) continue
-                if (file == vocabFile && file.exists() && file.length() >= MIN_VOCAB_BYTES) continue
-                val tempFile = File(file.parentFile, "${file.name}.tmp")
-                val conn = URL(url).openConnection() as HttpURLConnection
-                conn.connectTimeout = 30000
-                conn.readTimeout = 60000
-                conn.setRequestProperty("User-Agent", "NovaCut/${com.novacut.editor.NovaCutApp.VERSION.removePrefix("v")}")
-                try {
-                    conn.connect()
-
-                    if (conn.responseCode != 200) {
-                        throw Exception("HTTP ${conn.responseCode} for $url")
-                    }
-
-                    val fileSize = conn.contentLengthLong
-                    conn.inputStream.buffered().use { input ->
-                        tempFile.outputStream().buffered().use { output ->
-                            val buf = ByteArray(8192)
-                            var read: Int
-                            while (input.read(buf).also { read = it } != -1) {
-                                output.write(buf, 0, read)
-                                completedBytes += read
-                                val progress = if (fileSize > 0) {
-                                    completedBytes.toFloat() / maxOf(totalEstimate, completedBytes + 1)
-                                } else {
-                                    completedBytes.toFloat() / totalEstimate
-                                }
-                                _downloadProgress.value = progress.coerceIn(0f, 0.99f)
-                                onProgress(_downloadProgress.value)
-                            }
-                        }
-                    }
-                    if (tempFile.length() <= 0L) {
-                        throw IllegalStateException("Downloaded model file is empty: ${file.name}")
-                    }
-                    if (fileSize > 0L && tempFile.length() != fileSize) {
-                        throw IllegalStateException("Downloaded model file is incomplete: ${file.name}")
-                    }
-                    val minimumBytes = when (file) {
-                        encoderFile -> MIN_ENCODER_BYTES
-                        decoderFile -> MIN_DECODER_BYTES
-                        else -> MIN_VOCAB_BYTES
-                    }
-                    if (tempFile.length() < minimumBytes) {
-                        throw IllegalStateException("Downloaded model file is smaller than expected: ${file.name}")
-                    }
-                    moveFileReplacing(tempFile, file)
-                } catch (e: Exception) {
-                    tempFile.delete()
-                    throw e
-                } finally {
-                    conn.disconnect()
-                }
+            modelDownloadManager.downloadFiles(
+                files = files,
+                totalEstimateBytes = estimateModelSizeMB() * 1024L * 1024L,
+                connectTimeoutMs = 30_000,
+                readTimeoutMs = 60_000
+            ) { progress ->
+                _downloadProgress.value = progress.coerceIn(0f, 0.99f)
+                onProgress(_downloadProgress.value)
             }
 
             _downloadProgress.value = 1f
