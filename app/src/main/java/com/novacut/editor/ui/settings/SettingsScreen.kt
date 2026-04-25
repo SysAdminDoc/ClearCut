@@ -28,6 +28,7 @@ import com.novacut.editor.engine.AppSettings
 import com.novacut.editor.model.*
 import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.NovaCutChromeIconButton
+import com.novacut.editor.ui.theme.NovaCutDialogIcon
 import com.novacut.editor.ui.theme.NovaCutHeroCard
 import com.novacut.editor.ui.theme.NovaCutMetricPill
 import com.novacut.editor.ui.theme.NovaCutPrimaryButton
@@ -384,20 +385,10 @@ private fun ResetTutorialConfirmDialog(
     AlertDialog(
         onDismissRequest = onDismissRequest,
         icon = {
-            Surface(
-                color = Mocha.Sapphire.copy(alpha = 0.14f),
-                shape = RoundedCornerShape(Radius.lg),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Sapphire.copy(alpha = 0.24f))
-            ) {
-                Icon(
-                    imageVector = Icons.Default.School,
-                    contentDescription = null,
-                    tint = Mocha.Sapphire,
-                    modifier = Modifier
-                        .padding(Spacing.md)
-                        .size(22.dp)
-                )
-            }
+            NovaCutDialogIcon(
+                icon = Icons.Default.School,
+                accent = Mocha.Sapphire
+            )
         },
         title = {
             Text(
