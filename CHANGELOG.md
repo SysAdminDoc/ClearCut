@@ -1,7 +1,10 @@
 # Changelog
 
-## Unreleased — Cut Assistant review UI
+## Unreleased — Export confidence and Cut Assistant polish
 
+- Added Color / HDR confidence chips to the export sheet, including SDR delivery status, HDR preservation intent, HDR10+ dynamic metadata support, and render-time source caveats.
+- Added export mismatch warnings for H.264 HDR requests, missing device HDR encode support, and advertised HDR resolution/bitrate limits.
+- Added a Preserve HDR Metadata control to Delivery Options so HDR intent is visible in the main export workflow instead of only the feature hub.
 - Added a user-facing Cut Assistant workflow in the AI Hub and clip AI toolbar.
 - Added a review sheet for silence/filler-word proposals with selected-by-default candidates, per-row toggles, accept/reject all, reclaimed-duration summary, and an empty state.
 - Applying reviewed proposals still uses the existing `applyAcceptedCuts()` path, so the batch lands as one undoable timeline edit.

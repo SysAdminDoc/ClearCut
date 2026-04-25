@@ -49,6 +49,11 @@
     <string name="export_warning_long_render">Heads up: estimated render time is %1$s. Exports run in the background, but plug in to avoid battery drain.</string>
     <string name="export_warning_large_file">Estimated output is over 1 GB. Most share targets reject files this large — consider a Target File Size preset.</string>
     <string name="export_warning_av1_slow">AV1 is slow on most Android devices. If file size isn\'t critical, HEVC encodes much faster.</string>
+    <string name="export_hdr_preserve">Preserve HDR Metadata</string>
+    <string name="export_hdr_preserve_description">Keep HDR color metadata when the source and selected encoder both support it.</string>
+    <string name="export_hdr_preserve_disabled">Requires HEVC, AV1, or VP9. H.264 exports are SDR.</string>
+    <string name="export_color_confidence_title">Color / HDR confidence</string>
+    <string name="export_color_confidence_description">NovaCut checks the chosen codec, metadata intent, and advertised device limits before export.</string>
     <string name="bulk_undo_message">%1$d clips deleted in quick succession</string>
     <string name="bulk_undo_action">Undo</string>
     <string name="bulk_undo_dismiss_cd">Dismiss</string>

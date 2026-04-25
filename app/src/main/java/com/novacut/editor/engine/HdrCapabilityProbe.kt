@@ -85,6 +85,13 @@ class HdrCapabilityProbe @Inject constructor() {
                 CodecProfileLevel.AV1ProfileMain10HDR10Plus -> HdrFormat.HDR10_PLUS
                 else -> null
             }
+            MediaFormat.MIMETYPE_VIDEO_VP9 -> when (pl.profile) {
+                CodecProfileLevel.VP9Profile2HDR,
+                CodecProfileLevel.VP9Profile3HDR -> HdrFormat.HDR10
+                CodecProfileLevel.VP9Profile2HDR10Plus,
+                CodecProfileLevel.VP9Profile3HDR10Plus -> HdrFormat.HDR10_PLUS
+                else -> null
+            }
             "video/dolby-vision" -> HdrFormat.DOLBY_VISION
             else -> null
         }

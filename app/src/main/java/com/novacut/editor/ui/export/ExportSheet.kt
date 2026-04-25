@@ -54,7 +54,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
+import com.novacut.editor.engine.ExportColorConfidenceEngine
 import com.novacut.editor.engine.ExportState
+import com.novacut.editor.engine.HdrCapabilityProbe
 import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.model.AspectRatio
 import com.novacut.editor.model.AudioCodec
@@ -107,6 +109,29 @@ fun ExportSheet(
     }
     val videoModeEnabled = !config.exportAudioOnly && !config.exportStemsOnly && !config.exportAsGif && !config.captureFrameOnly && !config.exportAsContactSheet
     val audioCodecVisible = !config.captureFrameOnly && !config.exportAsGif && !config.exportAsContactSheet
+    val codecCanCarryHdr = config.codec != VideoCodec.H264
+    val hdrEncodeSupport = remember(effectiveConfig.codec) {
+        val support = HdrCapabilityProbe().probe(effectiveConfig.codec.mimeType)
+        ExportColorConfidenceEngine.HdrEncodeSupport(
+            supportedFormats = support.supportedFormats.map { it.displayName }.toSet(),
+            maxWidth = support.maxWidth,
+            maxHeight = support.maxHeight,
+            maxBitrate = support.maxBitrate
+        )
+    }
+    val colorConfidenceReport = remember(
+        effectiveConfig,
+        width,
+        height,
+        hdrEncodeSupport
+    ) {
+        ExportColorConfidenceEngine.analyze(
+            config = effectiveConfig,
+            width = width,
+            height = height,
+            hdrSupport = hdrEncodeSupport
+        )
+    }
 
     val bitrateDescription = when {
         effectiveConfig.videoBitrate >= 40_000_000 -> stringResource(R.string.export_studio_quality)
@@ -762,6 +787,21 @@ fun ExportSheet(
                     }
                 }
 
+                ExportToggleRow(
+                    icon = Icons.Default.GraphicEq,
+                    title = stringResource(R.string.export_hdr_preserve),
+                    description = stringResource(
+                        if (codecCanCarryHdr) R.string.export_hdr_preserve_description
+                        else R.string.export_hdr_preserve_disabled
+                    ),
+                    checked = config.hdr10PlusMetadata && codecCanCarryHdr,
+                    enabled = codecCanCarryHdr,
+                    onCheckedChange = { enabled ->
+                        onConfigChanged(config.copy(hdr10PlusMetadata = enabled && codecCanCarryHdr))
+                    },
+                    accent = Mocha.Yellow
+                )
+
                 ExportChoiceGroup(
                     title = stringResource(R.string.export_quality),
                     accent = Mocha.Teal
@@ -821,6 +861,9 @@ fun ExportSheet(
                 color = Mocha.Subtext0,
                 style = MaterialTheme.typography.bodyMedium
             )
+            if (videoModeEnabled) {
+                ColorConfidenceOutlook(report = colorConfidenceReport)
+            }
             if (estimatedSize != null && videoModeEnabled) {
                 Text(
                     text = stringResource(R.string.export_estimated_size_format, estimatedSize),
@@ -1102,6 +1145,88 @@ private fun ExportChoiceGroup(
 
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
+private fun ColorConfidenceOutlook(report: ExportColorConfidenceEngine.Report) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = if (report.hasWarnings) Mocha.Yellow.copy(alpha = 0.08f) else Mocha.Green.copy(alpha = 0.08f),
+        border = BorderStroke(
+            1.dp,
+            if (report.hasWarnings) Mocha.Yellow.copy(alpha = 0.24f) else Mocha.Green.copy(alpha = 0.22f)
+        ),
+        shape = RoundedCornerShape(Radius.lg)
+    ) {
+        Column(
+            modifier = Modifier.padding(Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.export_color_confidence_title),
+                color = Mocha.Text,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = stringResource(R.string.export_color_confidence_description),
+                color = Mocha.Subtext0,
+                style = MaterialTheme.typography.bodySmall
+            )
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs)
+            ) {
+                report.chips.forEach { chip ->
+                    ColorConfidencePill(chip = chip)
+                }
+            }
+            report.warnings.forEach { warning ->
+                Text(
+                    text = warning,
+                    color = Mocha.Yellow,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ColorConfidencePill(
+    chip: ExportColorConfidenceEngine.Chip,
+    modifier: Modifier = Modifier
+) {
+    val accent = when (chip.tone) {
+        ExportColorConfidenceEngine.Tone.GOOD -> Mocha.Green
+        ExportColorConfidenceEngine.Tone.INFO -> Mocha.Blue
+        ExportColorConfidenceEngine.Tone.WARNING -> Mocha.Yellow
+    }
+    Surface(
+        modifier = modifier,
+        color = accent.copy(alpha = 0.12f),
+        shape = RoundedCornerShape(Radius.md),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.22f))
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = chip.label,
+                color = accent,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = chip.detail,
+                color = Mocha.Subtext0,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+}
+
+@Composable
+@OptIn(ExperimentalLayoutApi::class)
 private fun SmartRenderExportOutlook(summary: SmartRenderEngine.SmartRenderSummary) {
     val passThroughPercent = if (summary.totalDurationMs > 0L) {
         ((summary.passThroughDurationMs * 100L) / summary.totalDurationMs).toInt().coerceIn(0, 100)
@@ -1351,16 +1476,18 @@ private fun ExportToggleRow(
     title: String,
     description: String,
     checked: Boolean,
+    enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit,
     accent: Color
 ) {
+    val contentAlpha = if (enabled) 1f else 0.52f
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = if (checked) accent.copy(alpha = 0.08f) else Mocha.PanelRaised.copy(alpha = 0.7f),
+        color = if (checked && enabled) accent.copy(alpha = 0.08f) else Mocha.PanelRaised.copy(alpha = 0.7f),
         shape = RoundedCornerShape(18.dp),
         border = BorderStroke(
             1.dp,
-            if (checked) accent.copy(alpha = 0.24f) else Mocha.CardStroke
+            if (checked && enabled) accent.copy(alpha = 0.24f) else Mocha.CardStroke
         )
     ) {
         Row(
@@ -1368,6 +1495,7 @@ private fun ExportToggleRow(
                 .fillMaxWidth()
                 .toggleable(
                     value = checked,
+                    enabled = enabled,
                     role = Role.Switch,
                     onValueChange = onCheckedChange
                 )
@@ -1376,9 +1504,9 @@ private fun ExportToggleRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                color = accent.copy(alpha = 0.14f),
+                color = accent.copy(alpha = if (enabled) 0.14f else 0.07f),
                 shape = RoundedCornerShape(14.dp),
-                border = BorderStroke(1.dp, accent.copy(alpha = 0.22f))
+                border = BorderStroke(1.dp, accent.copy(alpha = if (enabled) 0.22f else 0.10f))
             ) {
                 Box(
                     modifier = Modifier
@@ -1389,7 +1517,7 @@ private fun ExportToggleRow(
                     Icon(
                         imageVector = icon,
                         contentDescription = title,
-                        tint = accent,
+                        tint = accent.copy(alpha = contentAlpha),
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -1401,24 +1529,24 @@ private fun ExportToggleRow(
             ) {
                 Text(
                     text = title,
-                    color = Mocha.Text,
+                    color = Mocha.Text.copy(alpha = contentAlpha),
                     style = MaterialTheme.typography.titleSmall
                 )
                 Text(
                     text = description,
-                    color = Mocha.Subtext0,
+                    color = Mocha.Subtext0.copy(alpha = contentAlpha),
                     style = MaterialTheme.typography.bodySmall
                 )
             }
 
             Surface(
-                color = if (checked) accent.copy(alpha = 0.14f) else Mocha.Panel,
+                color = if (checked && enabled) accent.copy(alpha = 0.14f) else Mocha.Panel,
                 shape = RoundedCornerShape(999.dp),
-                border = BorderStroke(1.dp, if (checked) accent.copy(alpha = 0.26f) else Mocha.CardStroke)
+                border = BorderStroke(1.dp, if (checked && enabled) accent.copy(alpha = 0.26f) else Mocha.CardStroke)
             ) {
                 Text(
-                    text = stringResource(if (checked) R.string.state_on else R.string.state_off),
-                    color = if (checked) accent else Mocha.Subtext0,
+                    text = stringResource(if (checked && enabled) R.string.state_on else R.string.state_off),
+                    color = if (checked && enabled) accent else Mocha.Subtext0.copy(alpha = contentAlpha),
                     style = MaterialTheme.typography.labelMedium,
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)
                 )
@@ -1426,6 +1554,7 @@ private fun ExportToggleRow(
 
             Switch(
                 checked = checked,
+                enabled = enabled,
                 onCheckedChange = null,
                 colors = SwitchDefaults.colors(
                     checkedTrackColor = accent,
