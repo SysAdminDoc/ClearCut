@@ -24,6 +24,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,7 +38,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.ui.theme.Mocha
-import com.novacut.editor.ui.theme.NovaCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
 import com.novacut.editor.ui.theme.TouchTarget
@@ -51,12 +51,14 @@ fun CloudBackupPanel(
     lastBackupTime: Long?,
     estimatedSizeBytes: Long,
     isExporting: Boolean,
+    isImporting: Boolean,
     onExportBackup: () -> Unit,
     onImportBackup: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val hasBackup = lastBackupTime != null
+    val isBusy = isExporting || isImporting
     val lastBackupLabel = lastBackupTime?.let(::formatBackupTime) ?: stringResource(R.string.panel_cloud_backup_never)
     val status = when {
         isExporting -> BackupStatus(
@@ -65,6 +67,13 @@ fun CloudBackupPanel(
             accent = Mocha.Mauve,
             icon = Icons.Default.Upload,
             label = stringResource(R.string.panel_cloud_backup_exporting)
+        )
+        isImporting -> BackupStatus(
+            title = stringResource(R.string.panel_cloud_backup_status_importing_title),
+            body = stringResource(R.string.panel_cloud_backup_status_importing_body),
+            accent = Mocha.Blue,
+            icon = Icons.Default.Download,
+            label = stringResource(R.string.panel_cloud_backup_importing)
         )
         hasBackup -> BackupStatus(
             title = stringResource(R.string.panel_cloud_backup_status_ready_title),
@@ -213,14 +222,15 @@ fun CloudBackupPanel(
                 BackupActionRow(
                     isCompact = maxWidth < 430.dp,
                     isExporting = isExporting,
+                    isImporting = isImporting,
                     onExportBackup = onExportBackup,
                     onImportBackup = onImportBackup
                 )
             }
 
-            if (isExporting) {
+            if (isBusy) {
                 Text(
-                    text = stringResource(R.string.panel_cloud_backup_actions_disabled),
+                    text = stringResource(R.string.panel_cloud_backup_actions_busy),
                     style = MaterialTheme.typography.bodySmall,
                     color = Mocha.Subtext0
                 )
@@ -233,9 +243,11 @@ fun CloudBackupPanel(
 private fun BackupActionRow(
     isCompact: Boolean,
     isExporting: Boolean,
+    isImporting: Boolean,
     onExportBackup: () -> Unit,
     onImportBackup: () -> Unit
 ) {
+    val isBusy = isExporting || isImporting
     if (isCompact) {
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -243,15 +255,14 @@ private fun BackupActionRow(
         ) {
             BackupExportButton(
                 isExporting = isExporting,
+                enabled = !isBusy,
                 onClick = onExportBackup,
                 modifier = Modifier.fillMaxWidth()
             )
-            NovaCutSecondaryButton(
-                text = stringResource(R.string.panel_cloud_backup_import),
+            BackupImportButton(
+                isImporting = isImporting,
+                enabled = !isBusy,
                 onClick = onImportBackup,
-                icon = Icons.Default.Download,
-                contentColor = Mocha.Blue,
-                enabled = !isExporting,
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -262,15 +273,14 @@ private fun BackupActionRow(
         ) {
             BackupExportButton(
                 isExporting = isExporting,
+                enabled = !isBusy,
                 onClick = onExportBackup,
                 modifier = Modifier.weight(1f)
             )
-            NovaCutSecondaryButton(
-                text = stringResource(R.string.panel_cloud_backup_import),
+            BackupImportButton(
+                isImporting = isImporting,
+                enabled = !isBusy,
                 onClick = onImportBackup,
-                icon = Icons.Default.Download,
-                contentColor = Mocha.Blue,
-                enabled = !isExporting,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -280,12 +290,13 @@ private fun BackupActionRow(
 @Composable
 private fun BackupExportButton(
     isExporting: Boolean,
+    enabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Button(
         onClick = onClick,
-        enabled = !isExporting,
+        enabled = enabled,
         modifier = modifier.defaultMinSize(minHeight = TouchTarget.minimum),
         colors = ButtonDefaults.buttonColors(
             containerColor = Mocha.Rosewater,
@@ -314,6 +325,54 @@ private fun BackupExportButton(
                 stringResource(R.string.panel_cloud_backup_exporting)
             } else {
                 stringResource(R.string.panel_cloud_backup_export)
+            },
+            style = MaterialTheme.typography.labelLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun BackupImportButton(
+    isImporting: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.defaultMinSize(minHeight = TouchTarget.minimum),
+        border = BorderStroke(
+            1.dp,
+            if (enabled) Mocha.Blue.copy(alpha = 0.32f) else Mocha.CardStroke.copy(alpha = 0.6f)
+        ),
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = Mocha.Blue,
+            disabledContentColor = Mocha.Subtext0
+        ),
+        shape = RoundedCornerShape(Radius.lg)
+    ) {
+        if (isImporting) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(16.dp),
+                color = Mocha.Subtext0,
+                strokeWidth = 2.dp
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Default.Download,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(Spacing.sm))
+        Text(
+            text = if (isImporting) {
+                stringResource(R.string.panel_cloud_backup_importing)
+            } else {
+                stringResource(R.string.panel_cloud_backup_import)
             },
             style = MaterialTheme.typography.labelLarge,
             maxLines = 1,

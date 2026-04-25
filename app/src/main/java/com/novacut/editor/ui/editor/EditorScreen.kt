@@ -1736,23 +1736,73 @@ fun EditorScreen(
             val lastBackupTime by viewModel.lastBackupTime.collectAsStateWithLifecycle()
             val backupSize by viewModel.backupEstimatedSize.collectAsStateWithLifecycle()
             val isExportingBackup by viewModel.isExportingBackup.collectAsStateWithLifecycle()
+            val isImportingBackup by viewModel.isImportingBackup.collectAsStateWithLifecycle()
+            var pendingBackupImportUri by remember { mutableStateOf<Uri?>(null) }
 
             LaunchedEffect(Unit) { viewModel.estimateBackupSize() }
 
             val backupImportLauncher = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.OpenDocument()
             ) { uri ->
-                if (uri != null) viewModel.importProjectBackup(uri)
+                if (uri != null) pendingBackupImportUri = uri
             }
 
             CloudBackupPanel(
                 lastBackupTime = lastBackupTime,
                 estimatedSizeBytes = backupSize,
                 isExporting = isExportingBackup,
+                isImporting = isImportingBackup,
                 onExportBackup = viewModel::exportProjectBackup,
-                onImportBackup = { backupImportLauncher.launch(arrayOf("*/*")) },
+                onImportBackup = { backupImportLauncher.launch(arrayOf("application/zip", "application/octet-stream", "*/*")) },
                 onClose = viewModel::hideCloudBackup
             )
+
+            pendingBackupImportUri?.let { importUri ->
+                AlertDialog(
+                    onDismissRequest = { pendingBackupImportUri = null },
+                    icon = {
+                        NovaCutDialogIcon(
+                            icon = Icons.Default.Restore,
+                            accent = Mocha.Blue
+                        )
+                    },
+                    title = {
+                        Text(
+                            text = stringResource(R.string.panel_cloud_backup_import_confirm_title),
+                            color = Mocha.Text,
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                    },
+                    text = {
+                        Text(
+                            text = stringResource(R.string.panel_cloud_backup_import_confirm_body),
+                            color = Mocha.Subtext0,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    },
+                    confirmButton = {
+                        NovaCutPrimaryButton(
+                            text = stringResource(R.string.panel_cloud_backup_import_confirm_action),
+                            onClick = {
+                                pendingBackupImportUri = null
+                                viewModel.importProjectBackup(importUri)
+                            },
+                            icon = Icons.Default.Restore
+                        )
+                    },
+                    dismissButton = {
+                        NovaCutSecondaryButton(
+                            text = stringResource(R.string.editor_cancel),
+                            onClick = { pendingBackupImportUri = null },
+                            icon = Icons.Default.Close
+                        )
+                    },
+                    containerColor = Mocha.PanelHighest,
+                    titleContentColor = Mocha.Text,
+                    textContentColor = Mocha.Subtext0,
+                    shape = RoundedCornerShape(Radius.xxl)
+                )
+            }
         }
 
         // Export Progress Overlay (floating card during export)

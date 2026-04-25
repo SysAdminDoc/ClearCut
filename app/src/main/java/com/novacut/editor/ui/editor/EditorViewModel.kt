@@ -1564,6 +1564,8 @@ class EditorViewModel @Inject constructor(
     val lastBackupTime: StateFlow<Long?> = _lastBackupTime.asStateFlow()
     private val _isExportingBackup = MutableStateFlow(false)
     val isExportingBackup: StateFlow<Boolean> = _isExportingBackup.asStateFlow()
+    private val _isImportingBackup = MutableStateFlow(false)
+    val isImportingBackup: StateFlow<Boolean> = _isImportingBackup.asStateFlow()
 
     fun estimateBackupSize() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -1614,6 +1616,10 @@ class EditorViewModel @Inject constructor(
     }
 
     fun exportProjectBackup() {
+        if (_isExportingBackup.value || _isImportingBackup.value) {
+            showToast("Backup action already in progress")
+            return
+        }
         _isExportingBackup.value = true
         viewModelScope.launch {
             try {
@@ -1649,6 +1655,11 @@ class EditorViewModel @Inject constructor(
     }
 
     fun importProjectBackup(uri: Uri) {
+        if (_isExportingBackup.value || _isImportingBackup.value) {
+            showToast("Backup action already in progress")
+            return
+        }
+        _isImportingBackup.value = true
         viewModelScope.launch {
             try {
                 showToast("Importing backup...")
@@ -1667,6 +1678,10 @@ class EditorViewModel @Inject constructor(
                                     chapterMarkers = state.chapterMarkers,
                                     drawingPaths = state.drawingPaths,
                                     beatMarkers = state.beatMarkers,
+                                    v369 = s.v369.copy(
+                                        transcript = state.transcript,
+                                        selectedWordIndices = emptySet()
+                                    ),
                                     playheadMs = state.playheadMs
                                 )
                             )
@@ -1681,6 +1696,8 @@ class EditorViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 showToast("Import failed: ${e.message}")
+            } finally {
+                _isImportingBackup.value = false
             }
         }
     }

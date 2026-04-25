@@ -1016,6 +1016,7 @@
     <string name="panel_cloud_backup_last_backup">Last Backup</string>
     <string name="panel_cloud_backup_never">Never</string>
     <string name="panel_cloud_backup_exporting">Exporting\u2026</string>
+    <string name="panel_cloud_backup_importing">Importing\u2026</string>
     <string name="panel_cloud_backup_export">Export Backup</string>
     <string name="panel_cloud_backup_import">Import Backup</string>
     <string name="panel_cloud_backup_subtitle">Package the project into a portable archive or restore a previous backup without leaving the edit.</string>
@@ -1025,6 +1026,8 @@
     <string name="panel_cloud_backup_status_empty_body">Create a project archive before risky changes so you have a clean rollback point that travels with the edit.</string>
     <string name="panel_cloud_backup_status_exporting_title">Preparing backup archive</string>
     <string name="panel_cloud_backup_status_exporting_body">NovaCut is packaging the timeline, linked media references, and current project state into a portable archive.</string>
+    <string name="panel_cloud_backup_status_importing_title">Restoring project archive</string>
+    <string name="panel_cloud_backup_status_importing_body">NovaCut is unpacking the archive, reconnecting bundled media, and rebuilding the timeline state.</string>
     <string name="panel_cloud_backup_status_ready_title">Portable archive ready</string>
     <string name="panel_cloud_backup_status_ready_body">Keep a recent backup on hand before major revisions, device transfers, or client review notes.</string>
     <string name="panel_cloud_backup_archive_title">Portable project archive</string>
@@ -1036,7 +1039,10 @@
     <string name="panel_cloud_backup_include_state">Project state</string>
     <string name="panel_cloud_backup_actions_title">Backup actions</string>
     <string name="panel_cloud_backup_actions_body">Create a fresh archive before risky changes, or import one to restore the whole project on this device.</string>
-    <string name="panel_cloud_backup_actions_disabled">Backup actions unlock again as soon as the current export finishes.</string>
+    <string name="panel_cloud_backup_actions_busy">Backup actions unlock again as soon as the current archive operation finishes.</string>
+    <string name="panel_cloud_backup_import_confirm_title">Replace current timeline?</string>
+    <string name="panel_cloud_backup_import_confirm_body">This imports the selected backup into the open project and replaces the current timeline, overlays, markers, drawings, beats, and transcript. NovaCut saves an undo point before restoring.</string>
+    <string name="panel_cloud_backup_import_confirm_action">Replace Timeline</string>
 
     <!-- PipPresetsPanel (ChromaKey section) -->
     <string name="panel_chroma_key_title">Chroma Key</string>
