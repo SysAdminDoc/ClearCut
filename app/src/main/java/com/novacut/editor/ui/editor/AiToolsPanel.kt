@@ -10,8 +10,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.ClosedCaption
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.Crop
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.Palette
@@ -22,24 +24,24 @@ import androidx.compose.material.icons.filled.Straighten
 import androidx.compose.material.icons.filled.Style
 import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material.icons.filled.ZoomIn
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -47,6 +49,10 @@ import com.novacut.editor.R
 import com.novacut.editor.engine.segmentation.SegmentationModelState
 import com.novacut.editor.engine.whisper.WhisperModelState
 import com.novacut.editor.ui.theme.Mocha
+import com.novacut.editor.ui.theme.NovaCutPrimaryButton
+import com.novacut.editor.ui.theme.NovaCutSecondaryButton
+import com.novacut.editor.ui.theme.Radius
+import kotlin.math.roundToInt
 
 data class AiToolConfig(
     val id: String,
@@ -288,7 +294,12 @@ fun AiToolsPanel(
         if (processingTool != null) {
             Spacer(modifier = Modifier.height(12.dp))
 
-            PremiumPanelCard(accent = Mocha.Mauve) {
+            PremiumPanelCard(
+                accent = Mocha.Mauve,
+                modifier = Modifier.semantics {
+                    liveRegion = LiveRegionMode.Polite
+                }
+            ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -315,12 +326,13 @@ fun AiToolsPanel(
                             color = Mocha.Subtext0
                         )
                     }
-                    TextButton(onClick = onCancelProcessing) {
-                        Text(
-                            text = stringResource(R.string.cancel),
-                            color = Mocha.Red
-                        )
-                    }
+                    NovaCutSecondaryButton(
+                        text = stringResource(R.string.cancel),
+                        onClick = onCancelProcessing,
+                        contentColor = Mocha.Red,
+                        icon = Icons.Default.Close,
+                        modifier = Modifier.widthIn(min = 112.dp)
+                    )
                 }
             }
         }
@@ -401,6 +413,7 @@ private fun AiToolSection(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ModelStatusCard(
     accent: Color,
@@ -413,102 +426,104 @@ private fun ModelStatusCard(
     secondaryActionLabel: String?,
     onSecondaryAction: (() -> Unit)?
 ) {
+    val hasPrimaryAction = primaryActionLabel != null && onPrimaryAction != null
+    val hasSecondaryAction = secondaryActionLabel != null && onSecondaryAction != null
+
     PremiumPanelCard(accent = accent) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.Top
         ) {
-            Row(
-                modifier = Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.Top
+            Surface(
+                color = accent.copy(alpha = 0.14f),
+                shape = RoundedCornerShape(Radius.lg),
+                border = BorderStroke(1.dp, accent.copy(alpha = 0.22f))
             ) {
-                Surface(
-                    color = accent.copy(alpha = 0.14f),
-                    shape = RoundedCornerShape(18.dp),
-                    border = BorderStroke(1.dp, accent.copy(alpha = 0.22f))
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(Color.Transparent),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .background(Color.Transparent),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = title,
-                            tint = accent,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = Mocha.Text
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Mocha.Subtext0
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = title,
+                        tint = accent,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
 
-            if (progress == null) {
-                val actionLabel = primaryActionLabel ?: secondaryActionLabel
-                val action = onPrimaryAction ?: onSecondaryAction
-                if (actionLabel != null && action != null) {
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Button(
-                        onClick = action,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = accent.copy(alpha = 0.18f),
-                            contentColor = accent
-                        ),
-                        shape = RoundedCornerShape(16.dp),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
-                    ) {
-                        Text(actionLabel)
-                    }
-                }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = Mocha.Text
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Mocha.Subtext0
+                )
             }
         }
 
         if (progress != null) {
+            val normalizedProgress = progress.coerceIn(0f, 1f)
+            val progressPercent = (normalizedProgress * 100).roundToInt()
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.ai_model_download_progress),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Mocha.Subtext0
+                )
+                Text(
+                    text = stringResource(R.string.ai_model_download_percent, progressPercent),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = accent
+                )
+            }
+
             LinearProgressIndicator(
-                progress = { progress },
+                progress = { normalizedProgress },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(6.dp),
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(Radius.pill)),
                 color = accent,
                 trackColor = Mocha.Surface1
             )
         }
 
-        if (progress == null && primaryActionLabel != null && secondaryActionLabel != null && onPrimaryAction != null && onSecondaryAction != null) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+        if (progress == null && (hasPrimaryAction || hasSecondaryAction)) {
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Button(
-                    onClick = onPrimaryAction,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = accent.copy(alpha = 0.18f),
-                        contentColor = accent
-                    ),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Text(primaryActionLabel)
+                if (hasPrimaryAction) {
+                    NovaCutPrimaryButton(
+                        text = primaryActionLabel,
+                        onClick = onPrimaryAction,
+                        icon = Icons.Default.Download,
+                        modifier = Modifier.widthIn(min = 112.dp)
+                    )
                 }
 
-                TextButton(onClick = onSecondaryAction) {
-                    Text(
+                if (hasSecondaryAction) {
+                    NovaCutSecondaryButton(
                         text = secondaryActionLabel,
-                        color = Mocha.Subtext0
+                        onClick = onSecondaryAction,
+                        contentColor = Mocha.Red,
+                        icon = Icons.Default.Delete,
+                        modifier = Modifier.widthIn(min = 112.dp)
                     )
                 }
             }

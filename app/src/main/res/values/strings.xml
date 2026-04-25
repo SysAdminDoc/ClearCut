@@ -116,6 +116,8 @@
     <string name="ai_segmentation_ready">BG Removal (AI segmentation)</string>
     <string name="ai_segmentation_size">Selfie segmenter (~256 KB)</string>
     <string name="ai_segmentation_description">Pixel-accurate background removal</string>
+    <string name="ai_model_download_progress">Download progress</string>
+    <string name="ai_model_download_percent">%1$d%%</string>
     <string name="ai_processing_format">Processing: %1$s\u2026</string>
     <string name="ai_tools_ready_now">Ready Now</string>
     <string name="ai_tools_ready_now_description">These assists can run immediately with the current timeline selection and downloaded models.</string>
