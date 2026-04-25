@@ -14,4 +14,5 @@
     <exclude domain="file" path="voiceovers/*.partial.m4a" />
     <exclude domain="file" path="tts_output/*.partial.wav" />
     <exclude domain="file" path="tts/*.partial.wav" />
+    <exclude domain="file" path="noise_reduced/*.partial.m4a" />
 </full-backup-content>
