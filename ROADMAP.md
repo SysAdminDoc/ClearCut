@@ -2,7 +2,7 @@
 
 Forward-looking tracker for planned work. Release history lives in [CHANGELOG.md](CHANGELOG.md).
 
-Current version: **v3.70.0** (versionCode 131).
+Current version: **v3.71.0** (versionCode 132).
 
 ### v3.69.0 — 15-Feature Wave (shipped)
 
@@ -296,7 +296,7 @@ Research date: 2026-04-25. Scope: complementary open-source projects, profession
 - [x] Implement `TimelineExchangeValidator` and run it before every export/import. *(v3.70.0 — wired ahead of `exportToOtio` / `exportToFcpxml`; categorised report drives the result toast.)*
 - [x] Complete `ProjectArchive.importArchive()` with media remap, migration, duplicate-ID handling, and recovery copy. *(v3.70.0 — new `importArchiveWithReport()` returns schema/version/media-resolution diagnostics; `IdCollisionPolicy.REGENERATE` default; legacy entry point preserved.)*
 - [x] Add shared `ModelDownloadManager` with checksum, retry, Wi-Fi-only, and remove-model controls. *(v3.70.0 — `sha256` per file, `wifiOnly`/`isMeteredNetwork()`, `removeModel`/`removeModels`/`installedBytes`; existing callers source-compatible.)*
-- [ ] Add Cut Assistant review UI using existing Whisper word timestamps plus silence detection.
-- [ ] Add `TrackedObject` model and bind one operation first: tracked blur or tracked sticker.
+- [~] Add Cut Assistant review UI using existing Whisper word timestamps plus silence detection. *(v3.71.0 — `CutAssistantEngine` + ViewModel orchestration landed: `proposeCutsForReview`, `toggleCutProposal`, `acceptAllCutProposals`, `rejectAllCutProposals`, `applyAcceptedCuts`. Proposals merge silences + filler tokens into clip-relative ranges, project to timeline ms, dedupe within 250 ms, apply via existing split + delete primitives in a single undo entry. Review *panel UI* still TODO — engine and state layer ready for hookup.)*
+- [~] Add `TrackedObject` model and bind one operation first: tracked blur or tracked sticker. *(v3.71.0 — `TrackedObject` + `TrackedObjectKeyframe` + `TrackedObjectSource` + `TrackedObjectCategory` data classes added; serialised through `AutoSaveState.trackedObjects`; ViewModel `upsertTrackedObject` / `removeTrackedObject` / `setTrackedObjectEnabled` wired with undo. Binding to a real operation (tracked blur shader pulling per-frame keyframes) still TODO — model is persistence-ready and survives autosave + project archive round-trip.)*
 - [ ] Add color/HDR export confidence chips and mismatch warnings.
 - [ ] Add template compatibility metadata and import validation before marketplace work.

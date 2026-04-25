@@ -254,7 +254,11 @@ data class AutoSaveState(
     val beatMarkers: List<Long> = emptyList(),
     // v3.69: transcript cached from Auto Captions. Persisted so text-based
     // editing survives app restart without forcing the user to re-transcribe.
-    val transcript: com.novacut.editor.model.Transcript? = null
+    val transcript: com.novacut.editor.model.Transcript? = null,
+    // v3.71: object-aware editing scaffolding. Tracked objects survive
+    // restart so accept/reject decisions about a tracked subject are not
+    // re-asked every session even before SAM 2 / MediaPipe trackers ship.
+    val trackedObjects: List<com.novacut.editor.model.TrackedObject> = emptyList()
 ) {
     fun serialize(): String {
         val json = JSONObject().apply {
@@ -326,6 +330,42 @@ data class AutoSaveState(
             if (beatMarkers.isNotEmpty()) {
                 put("beatMarkers", JSONArray().apply {
                     beatMarkers.forEach { put(it) }
+                })
+            }
+            if (trackedObjects.isNotEmpty()) {
+                put("trackedObjects", JSONArray().apply {
+                    trackedObjects.forEach { obj ->
+                        put(JSONObject().apply {
+                            put("id", obj.id)
+                            put("label", obj.label)
+                            put("sourceClipId", obj.sourceClipId)
+                            put("source", obj.source.name)
+                            put("category", obj.category.name)
+                            put("isEnabled", obj.isEnabled)
+                            put("keyframes", JSONArray().apply {
+                                obj.keyframes.forEach { kf ->
+                                    put(JSONObject().apply {
+                                        put("clipTimeMs", kf.clipTimeMs)
+                                        putSafeFloat("centerX", kf.centerX, default = 0.5f)
+                                        putSafeFloat("centerY", kf.centerY, default = 0.5f)
+                                        putSafeFloat("width", kf.width, default = 0.1f)
+                                        putSafeFloat("height", kf.height, default = 0.1f)
+                                        putSafeFloat("confidence", kf.confidence, default = 1f)
+                                        if (kf.maskPolygon.isNotEmpty()) {
+                                            put("maskPolygon", JSONArray().apply {
+                                                kf.maskPolygon.forEach { p ->
+                                                    put(JSONObject().apply {
+                                                        putSafeFloat("x", p.x)
+                                                        putSafeFloat("y", p.y)
+                                                    })
+                                                }
+                                            })
+                                        }
+                                    })
+                                }
+                            })
+                        })
+                    }
                 })
             }
             transcript?.let { tr ->
@@ -505,6 +545,72 @@ data class AutoSaveState(
                     )
                 } catch (e: Exception) { Log.w(TAG, "Failed to deserialize transcript", e); null }
             }
+            val trackedObjectsArr = json.optJSONArray("trackedObjects") ?: JSONArray()
+            val trackedObjects = (0 until trackedObjectsArr.length()).mapNotNull { i ->
+                try {
+                    val obj = trackedObjectsArr.optJSONObject(i) ?: return@mapNotNull null
+                    val label = obj.optString("label", "").trim().take(64)
+                    if (label.isEmpty()) return@mapNotNull null
+                    val sourceClipId = obj.optString("sourceClipId", "")
+                    if (sourceClipId.isBlank()) return@mapNotNull null
+                    val keyframesArr = obj.optJSONArray("keyframes") ?: JSONArray()
+                    val keyframes = (0 until keyframesArr.length()).mapNotNull { ki ->
+                        try {
+                            val kf = keyframesArr.optJSONObject(ki) ?: return@mapNotNull null
+                            // Coerce normalised coords into [0, 1] / (0, 1] BEFORE constructing
+                            // so a corrupt save can't trip the require() block and silently drop
+                            // every subsequent keyframe in this object.
+                            val w = kf.optDouble("width", 0.1).toFloat().let {
+                                if (it.isFinite() && it > 0f) it.coerceIn(0.001f, 1f) else 0.1f
+                            }
+                            val h = kf.optDouble("height", 0.1).toFloat().let {
+                                if (it.isFinite() && it > 0f) it.coerceIn(0.001f, 1f) else 0.1f
+                            }
+                            val maskArr = kf.optJSONArray("maskPolygon")
+                            val polygon = if (maskArr != null) {
+                                (0 until maskArr.length()).mapNotNull { pi ->
+                                    val pt = maskArr.optJSONObject(pi) ?: return@mapNotNull null
+                                    val x = pt.optDouble("x", Double.NaN).toFloat()
+                                    val y = pt.optDouble("y", Double.NaN).toFloat()
+                                    if (x.isFinite() && y.isFinite()) {
+                                        com.novacut.editor.model.MaskPoint(x = x, y = y)
+                                    } else null
+                                }
+                            } else emptyList()
+                            com.novacut.editor.model.TrackedObjectKeyframe(
+                                clipTimeMs = kf.optLong("clipTimeMs", 0L).coerceAtLeast(0L),
+                                centerX = kf.optDouble("centerX", 0.5).toFloat().let { if (it.isFinite()) it.coerceIn(0f, 1f) else 0.5f },
+                                centerY = kf.optDouble("centerY", 0.5).toFloat().let { if (it.isFinite()) it.coerceIn(0f, 1f) else 0.5f },
+                                width = w,
+                                height = h,
+                                confidence = kf.optDouble("confidence", 1.0).toFloat().let {
+                                    if (it.isFinite()) it.coerceIn(0f, 1f) else 1f
+                                },
+                                maskPolygon = polygon
+                            )
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Failed to deserialize tracked-object keyframe $ki", e); null
+                        }
+                    }
+                    com.novacut.editor.model.TrackedObject(
+                        id = obj.optString("id", java.util.UUID.randomUUID().toString()),
+                        label = label,
+                        sourceClipId = sourceClipId,
+                        source = safeValueOf(
+                            obj.optString("source", "MANUAL"),
+                            com.novacut.editor.model.TrackedObjectSource.MANUAL
+                        ),
+                        category = safeValueOf(
+                            obj.optString("category", "UNKNOWN"),
+                            com.novacut.editor.model.TrackedObjectCategory.UNKNOWN
+                        ),
+                        isEnabled = obj.optBoolean("isEnabled", true),
+                        keyframes = keyframes
+                    )
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to deserialize tracked object $i", e); null
+                }
+            }
             return AutoSaveState(
                 projectId = json.optString("projectId", ""),
                 timestamp = json.optLong("timestamp", System.currentTimeMillis()),
@@ -516,7 +622,8 @@ data class AutoSaveState(
                 timelineMarkers = timelineMarkers,
                 drawingPaths = drawingPaths,
                 beatMarkers = beatMarkers,
-                transcript = transcript
+                transcript = transcript,
+                trackedObjects = trackedObjects
             )
         }
 

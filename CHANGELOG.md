@@ -1,5 +1,69 @@
 # Changelog
 
+## v3.71.0 — 2026-04-25 — Cut Assistant + TrackedObject scaffolding
+
+Second slice of the ROADMAP "Highest-leverage next tickets" — the engine and
+state-layer prerequisites for the Creator-speed and Object-aware releases.
+
+### CutAssistantEngine (C.2 / R4.5)
+New [CutAssistantEngine.kt](app/src/main/java/com/novacut/editor/engine/CutAssistantEngine.kt)
+is a pure planner that combines `SilenceDetectionEngine.detectSilences()` and
+`detectFillerWords()` into a single sorted, de-duplicated `ReviewSet`:
+
+- Walks every video/audio clip on the timeline and projects clip-source ms
+  into timeline ms, accounting for trim handles + speed + speedCurve via
+  `Clip.durationMs` scaling. Proposals straddling a trim handle contribute
+  only the visible portion.
+- Merges abutting same-clip proposals within a 250 ms tolerance so a
+  "um... uh..." run shows up as one review row instead of three.
+- Drops contributions shorter than 80 ms after trim clipping (visual jolt
+  outweighs time saved).
+- `planAcceptedOperations()` emits `CutOperation.RippleDelete` entries
+  ordered latest-first so the applier can split + delete each one without
+  invalidating the indices of the remaining operations.
+
+### EditorViewModel orchestration
+`proposeCutsForReview()` extracts denser per-clip waveforms (~20 samples/sec,
+bounded 200..10 000) via `audioEngine.extractWaveform()`, looks up cached
+transcript words via `perClipWordsFor()`, runs the engine, stashes the
+`ReviewSet` in `state.cutAssistantReview`. Per-proposal `toggleCutProposal`,
+`acceptAllCutProposals`, `rejectAllCutProposals` are pure state-updaters.
+`applyAcceptedCuts()` wraps the whole batch in a single
+`saveUndoState("Apply Cut Assistant")`, processes ops latest-first, splits at
+start + end of each accepted range and deletes the middle slice via existing
+primitives. `dismissCutAssistantReview()` closes the review without
+applying.
+
+### TrackedObject model (R4.3 — object-aware editing scaffold)
+[TrackedObject.kt](app/src/main/java/com/novacut/editor/model/TrackedObject.kt)
+defines the engine-agnostic data classes that future tracked operations
+(blur, mosaic, sticker attach, color grade, audio focus) will bind to:
+
+- `TrackedObject` (id, label, sourceClipId, source, category, isEnabled,
+  keyframes).
+- `TrackedObjectKeyframe` (clipTimeMs, normalised centerX/centerY/width/height
+  in [0, 1] — survives a 1080p → 4K source swap without drift; confidence;
+  optional maskPolygon for SAM-class trackers).
+- `TrackedObjectSource` enum (MANUAL / MEDIAPIPE / MOBILE_SAM / SAM2 /
+  YOLO_TRACK) and `TrackedObjectCategory` enum (PERSON, FACE, VEHICLE,
+  LICENSE_PLATE, ANIMAL, TEXT, PRODUCT).
+- Persisted via new `AutoSaveState.trackedObjects` field; deserialiser
+  coerces coords into the valid range BEFORE constructing the keyframe so a
+  corrupt save can't trip `require()` and silently drop the rest of the
+  object's track. Survives autosave AND project-archive import.
+
+ViewModel: `upsertTrackedObject` / `removeTrackedObject` /
+`setTrackedObjectEnabled` (all undoable, all flush through `saveProject()`).
+
+### Notes
+- Review *panel UI* and tracked-blur shader binding are intentionally next-pass
+  work — engine + state layers are ready, future PRs only need a
+  Compose surface that consumes `state.cutAssistantReview` /
+  `state.trackedObjects` and emits the existing ViewModel intents.
+- Existing v3.69 code paths untouched — both new state fields default to
+  empty/null so nothing changes for projects that haven't run the new
+  workflows.
+
 ## v3.70.0 — 2026-04-25 — Foundation pass (highest-leverage roadmap items)
 
 First slice of the ROADMAP "Highest-leverage next tickets" batch — the
