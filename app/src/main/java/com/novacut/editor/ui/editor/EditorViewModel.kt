@@ -51,6 +51,7 @@ import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.engine.VoiceoverRecorderEngine
 import com.novacut.editor.engine.TemplateManager
 import com.novacut.editor.engine.sanitizeFileName
+import com.novacut.editor.engine.writeUtf8TextAtomically
 import com.novacut.editor.engine.db.ProjectDao
 import com.novacut.editor.model.*
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -2803,7 +2804,7 @@ class EditorViewModel @Inject constructor(
                 val dir = java.io.File(appContext.getExternalFilesDir(null), "exports")
                 dir.mkdirs()
                 val file = java.io.File(dir, "${sanitizedProjectFileStem(s.project.name)}.otio")
-                file.writeText(otioJson, Charsets.UTF_8)
+                writeUtf8TextAtomically(file, otioJson)
                 withContext(Dispatchers.Main) { showToast("OTIO exported: ${file.name}") }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) { showToast("OTIO export failed: ${e.message}") }
@@ -2819,7 +2820,7 @@ class EditorViewModel @Inject constructor(
                 val dir = java.io.File(appContext.getExternalFilesDir(null), "exports")
                 dir.mkdirs()
                 val file = java.io.File(dir, "${sanitizedProjectFileStem(s.project.name)}.fcpxml")
-                file.writeText(xml, Charsets.UTF_8)
+                writeUtf8TextAtomically(file, xml)
                 withContext(Dispatchers.Main) { showToast("FCPXML exported: ${file.name}") }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) { showToast("FCPXML export failed: ${e.message}") }

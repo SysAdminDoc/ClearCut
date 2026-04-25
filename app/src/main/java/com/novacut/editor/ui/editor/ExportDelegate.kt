@@ -17,6 +17,7 @@ import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.engine.exportMimeTypeFor
 import com.novacut.editor.engine.exportUsesImageCollection
 import com.novacut.editor.engine.sanitizeFileName
+import com.novacut.editor.engine.writeUtf8TextAtomically
 import com.novacut.editor.model.BatchExportItem
 import com.novacut.editor.model.BatchExportStatus
 import com.novacut.editor.model.ChapterMarker
@@ -471,7 +472,7 @@ class ExportDelegate(
                                         outputFile.parentFile,
                                         "${outputFile.nameWithoutExtension}.notes.txt"
                                     )
-                                    sidecar.writeText(notes)
+                                    writeUtf8TextAtomically(sidecar, notes)
                                 } catch (e: Exception) {
                                     android.util.Log.w("ExportDelegate", "Scratchpad sidecar write failed", e)
                                 }
