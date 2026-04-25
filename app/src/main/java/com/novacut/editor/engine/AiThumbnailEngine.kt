@@ -7,11 +7,11 @@ import android.net.Uri
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.FileOutputStream
 import java.util.PriorityQueue
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -106,14 +106,23 @@ class AiThumbnailEngine @Inject constructor(
                 Log.w(TAG, "saveThumbnail called with already-recycled bitmap")
                 return@withContext false
             }
+            var partialFile: File? = null
             try {
-                outputFile.parentFile?.mkdirs()
-                FileOutputStream(outputFile).use { os ->
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, quality.coerceIn(1, 100), os)
+                val outputFiles = createStillImageOutputFiles(outputFile)
+                partialFile = outputFiles.partialFile
+                partialFile.outputStream().use { os ->
+                    if (!bitmap.compress(Bitmap.CompressFormat.JPEG, quality.coerceIn(1, 100), os)) {
+                        throw IllegalStateException("Thumbnail encoder returned no data")
+                    }
                 }
-                true
+                finalizeStillImageOutputFile(partialFile, outputFiles.outputFile) != null
+            } catch (e: CancellationException) {
+                cleanupStillImageOutputFile(partialFile)
+                throw e
             } catch (e: Exception) {
-                Log.w(TAG, "saveThumbnail failed", e); false
+                cleanupStillImageOutputFile(partialFile)
+                Log.w(TAG, "saveThumbnail failed", e)
+                false
             }
         }
 

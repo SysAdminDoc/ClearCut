@@ -75,6 +75,8 @@ object ContactSheetExporter {
             return@withContext false
         }
 
+        var partialFile: File? = null
+
         // Canvas and Paint objects are initialised inside the try block so that any
         // OOM thrown by their native allocations is covered by the finally that recycles
         // `sheet`.  Leaving them outside (as was the case before) meant a native OOM
@@ -140,26 +142,30 @@ object ContactSheetExporter {
                 onProgress((index + 1).toFloat() / clips.size * 0.9f)
             }
 
-            outputFile.parentFile?.mkdirs()
-            outputFile.outputStream().buffered().use { out ->
-                sheet.compress(Bitmap.CompressFormat.PNG, 100, out)
+            val outputFiles = createStillImageOutputFiles(outputFile)
+            partialFile = outputFiles.partialFile
+            partialFile.outputStream().buffered().use { out ->
+                if (!sheet.compress(Bitmap.CompressFormat.PNG, 100, out)) {
+                    throw IllegalStateException("Contact sheet encoder returned no data")
+                }
             }
+            finalizeStillImageOutputFile(partialFile, outputFiles.outputFile)
+                ?: throw IllegalStateException("Contact sheet output was empty")
             onProgress(1f)
             true
         } catch (t: Throwable) {
             // Catch Throwable (not just Exception) so that an OutOfMemoryError raised by
             // `sheet.compress` on a very large grid -- the PNG encoder allocates its own
-            // native buffers -- still triggers the `outputFile.delete()` cleanup. Without
-            // this, the `finally` recycles `sheet` (no leak), but the half-written PNG is
-            // left behind as a corrupt 0-byte or truncated file that subsequent opens
-            // would silently serve as if the export succeeded. Coroutine cancellation
-            // must still propagate -- rethrow CancellationException before logging.
+            // native buffers -- still removes the in-progress partial file. The final PNG
+            // is only replaced after a non-empty partial is complete, so a failed export
+            // cannot destroy an earlier valid contact sheet at the same path. Coroutine
+            // cancellation must still propagate -- rethrow CancellationException before logging.
             if (t is kotlinx.coroutines.CancellationException) {
-                outputFile.delete()
+                cleanupStillImageOutputFile(partialFile)
                 throw t
             }
             Log.e(TAG, "Contact sheet render failed", t)
-            outputFile.delete()
+            cleanupStillImageOutputFile(partialFile)
             false
         } finally {
             if (!sheet.isRecycled) sheet.recycle()
