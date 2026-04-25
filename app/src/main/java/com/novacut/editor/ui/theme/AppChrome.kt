@@ -167,15 +167,19 @@ fun NovaCutSecondaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
-    contentColor: Color = Mocha.Text
+    contentColor: Color = Mocha.Text,
+    enabled: Boolean = true
 ) {
     OutlinedButton(
         onClick = onClick,
+        enabled = enabled,
         shape = RoundedCornerShape(Radius.lg),
         border = BorderStroke(1.dp, Mocha.CardStrokeStrong),
         colors = ButtonDefaults.outlinedButtonColors(
             containerColor = Mocha.PanelHighest.copy(alpha = 0.42f),
-            contentColor = contentColor
+            contentColor = contentColor,
+            disabledContainerColor = Mocha.Surface1.copy(alpha = 0.28f),
+            disabledContentColor = Mocha.Subtext0
         ),
         contentPadding = PaddingValues(horizontal = Spacing.lg, vertical = Spacing.sm),
         modifier = modifier.defaultMinSize(minHeight = TouchTarget.minimum)
@@ -184,7 +188,7 @@ fun NovaCutSecondaryButton(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = contentColor,
+                tint = if (enabled) contentColor else Mocha.Subtext0,
                 modifier = Modifier.size(18.dp)
             )
             androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(Spacing.sm))
