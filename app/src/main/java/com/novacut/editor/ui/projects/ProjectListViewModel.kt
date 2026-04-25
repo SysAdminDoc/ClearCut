@@ -3,6 +3,7 @@ package com.novacut.editor.ui.projects
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
@@ -44,6 +45,12 @@ import java.io.File
 import java.util.UUID
 import javax.inject.Inject
 
+data class ProjectListOperationState(
+    val id: Long = SystemClock.uptimeMillis(),
+    val title: String,
+    val description: String
+)
+
 @HiltViewModel
 class ProjectListViewModel @Inject constructor(
     private val projectDao: ProjectDao,
@@ -67,6 +74,9 @@ class ProjectListViewModel @Inject constructor(
 
     private val _toastMessage = MutableStateFlow<String?>(null)
     val toastMessage: StateFlow<String?> = _toastMessage.asStateFlow()
+
+    private val _operationState = MutableStateFlow<ProjectListOperationState?>(null)
+    val operationState: StateFlow<ProjectListOperationState?> = _operationState.asStateFlow()
 
     private var toastDismissJob: Job? = null
 
@@ -144,20 +154,28 @@ class ProjectListViewModel @Inject constructor(
         val initialTracks = buildTracks(trackTypes)
 
         viewModelScope.launch {
-            val created = withContext(Dispatchers.IO) {
-                createProjectWithInitialState(
-                    project = project,
-                    initialState = AutoSaveState(
-                        projectId = project.id,
-                        tracks = initialTracks,
-                        textOverlays = emptyList()
+            val operation = beginOperation(
+                title = appContext.getString(R.string.projects_operation_create_title),
+                description = appContext.getString(R.string.projects_operation_create_body)
+            )
+            try {
+                val created = withContext(Dispatchers.IO) {
+                    createProjectWithInitialState(
+                        project = project,
+                        initialState = AutoSaveState(
+                            projectId = project.id,
+                            tracks = initialTracks,
+                            textOverlays = emptyList()
+                        )
                     )
-                )
-            }
-            if (created) {
-                onCreated(project.id)
-            } else {
-                showToast(appContext.getString(R.string.project_create_failed))
+                }
+                if (created) {
+                    onCreated(project.id)
+                } else {
+                    showToast(appContext.getString(R.string.project_create_failed))
+                }
+            } finally {
+                endOperation(operation)
             }
         }
     }
@@ -206,27 +224,42 @@ class ProjectListViewModel @Inject constructor(
             withContext(Dispatchers.IO) {
                 templateManager.deleteTemplate(id)
             }
-            refreshUserTemplates()
+            loadUserTemplates()
         }
     }
 
     fun importTemplate(uri: Uri) {
         viewModelScope.launch {
-            val template = withContext(Dispatchers.IO) {
-                templateManager.importTemplateFromUri(uri)
-            }
-            refreshUserTemplates()
+            val operation = beginOperation(
+                title = appContext.getString(R.string.projects_operation_template_import_title),
+                description = appContext.getString(R.string.projects_operation_template_import_body)
+            )
+            try {
+                val template = withContext(Dispatchers.IO) {
+                    templateManager.importTemplateFromUri(uri)
+                }
+                loadUserTemplates()
 
-            if (template != null) {
-                showToast("Imported template: ${template.name}")
-            } else {
-                showToast("Failed to import template")
+                if (template != null) {
+                    showToast(appContext.getString(R.string.project_template_import_success, template.name))
+                } else {
+                    showToast(appContext.getString(R.string.project_template_import_failed))
+                }
+            } catch (e: Exception) {
+                Log.w("ProjectListVM", "Template import failed", e)
+                showToast(appContext.getString(R.string.project_template_import_failed))
+            } finally {
+                endOperation(operation)
             }
         }
     }
 
     fun shareTemplate(templateId: String) {
         viewModelScope.launch {
+            val operation = beginOperation(
+                title = appContext.getString(R.string.projects_operation_template_share_title),
+                description = appContext.getString(R.string.projects_operation_template_share_body)
+            )
             try {
                 val shareUri = withContext(Dispatchers.IO) {
                     val template = templateManager.getTemplate(templateId) ?: return@withContext null
@@ -244,7 +277,7 @@ class ProjectListViewModel @Inject constructor(
                 }
 
                 if (shareUri == null) {
-                    showToast("Template export failed")
+                    showToast(appContext.getString(R.string.project_template_export_failed))
                     return@launch
                 }
 
@@ -259,7 +292,9 @@ class ProjectListViewModel @Inject constructor(
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 )
             } catch (e: Exception) {
-                showToast("Template export failed: ${e.message}")
+                showToast(appContext.getString(R.string.project_template_export_failed))
+            } finally {
+                endOperation(operation)
             }
         }
     }
@@ -267,7 +302,7 @@ class ProjectListViewModel @Inject constructor(
     fun createFromTemplate(template: UserTemplate, onCreated: (String) -> Unit) {
         val state = templateManager.loadTemplateState(template)
         if (state == null) {
-            showToast("Template could not be opened")
+            showToast(appContext.getString(R.string.project_template_open_failed))
             return
         }
         val (tracks, textOverlays) = state
@@ -279,28 +314,36 @@ class ProjectListViewModel @Inject constructor(
             templateId = template.id
         )
         viewModelScope.launch {
-            val created = withContext(Dispatchers.IO) {
-                createProjectWithInitialState(
-                    project = project,
-                    initialState = AutoSaveState(
-                        projectId = project.id,
-                        tracks = tracks.map { track ->
-                            track.copy(
-                                clips = if (track.type == TrackType.VIDEO || track.type == TrackType.AUDIO) {
-                                    emptyList()
-                                } else {
-                                    track.clips
-                                }
-                            )
-                        },
-                        textOverlays = textOverlays
+            val operation = beginOperation(
+                title = appContext.getString(R.string.projects_operation_template_create_title),
+                description = appContext.getString(R.string.projects_operation_template_create_body)
+            )
+            try {
+                val created = withContext(Dispatchers.IO) {
+                    createProjectWithInitialState(
+                        project = project,
+                        initialState = AutoSaveState(
+                            projectId = project.id,
+                            tracks = tracks.map { track ->
+                                track.copy(
+                                    clips = if (track.type == TrackType.VIDEO || track.type == TrackType.AUDIO) {
+                                        emptyList()
+                                    } else {
+                                        track.clips
+                                    }
+                                )
+                            },
+                            textOverlays = textOverlays
+                        )
                     )
-                )
-            }
-            if (created) {
-                onCreated(project.id)
-            } else {
-                showToast(appContext.getString(R.string.project_create_failed))
+                }
+                if (created) {
+                    onCreated(project.id)
+                } else {
+                    showToast(appContext.getString(R.string.project_create_failed))
+                }
+            } finally {
+                endOperation(operation)
             }
         }
     }
@@ -309,122 +352,156 @@ class ProjectListViewModel @Inject constructor(
         val newId = UUID.randomUUID().toString()
         val baseName = project.name.replace("""\s*\(Copy\s*\d*\)\s*$""".toRegex(), "").trim()
         viewModelScope.launch {
-            val duplicated = withContext(Dispatchers.IO) {
-                try {
-                    // Compute the unique copy name inside the IO coroutine so the
-                    // name-uniqueness check reads the freshest DAO snapshot instead
-                    // of a potentially stale StateFlow value on the UI thread. This
-                    // closes a race where two near-simultaneous duplicate taps could
-                    // mint the same "(Copy)" name before either insertion settles.
-                    val existingNames = projectDao.getAllProjectsSnapshot().map { it.name }.toSet()
-                    var copyName = "$baseName (Copy)"
-                    var counter = 2
-                    while (copyName in existingNames) {
-                        copyName = "$baseName (Copy $counter)"
-                        counter++
-                    }
-                    val newProject = project.copy(
-                        id = newId,
-                        name = copyName,
-                        createdAt = System.currentTimeMillis(),
-                        updatedAt = System.currentTimeMillis()
-                    )
-                    projectDao.insertProject(newProject)
-                    if (autoSave.copyAutoSave(project.id, newId)) {
-                        true
-                    } else {
-                        projectDao.deleteById(newId)
+            val operation = beginOperation(
+                title = appContext.getString(R.string.projects_operation_duplicate_title),
+                description = appContext.getString(R.string.projects_operation_duplicate_body, project.name)
+            )
+            try {
+                val duplicated = withContext(Dispatchers.IO) {
+                    try {
+                        // Compute the unique copy name inside the IO coroutine so the
+                        // name-uniqueness check reads the freshest DAO snapshot instead
+                        // of a potentially stale StateFlow value on the UI thread. This
+                        // closes a race where two near-simultaneous duplicate taps could
+                        // mint the same "(Copy)" name before either insertion settles.
+                        val existingNames = projectDao.getAllProjectsSnapshot().map { it.name }.toSet()
+                        var copyName = "$baseName (Copy)"
+                        var counter = 2
+                        while (copyName in existingNames) {
+                            copyName = "$baseName (Copy $counter)"
+                            counter++
+                        }
+                        val newProject = project.copy(
+                            id = newId,
+                            name = copyName,
+                            createdAt = System.currentTimeMillis(),
+                            updatedAt = System.currentTimeMillis()
+                        )
+                        projectDao.insertProject(newProject)
+                        if (autoSave.copyAutoSave(project.id, newId)) {
+                            true
+                        } else {
+                            projectDao.deleteById(newId)
+                            false
+                        }
+                    } catch (e: Exception) {
+                        Log.w("ProjectListVM", "Failed to duplicate project ${project.id}", e)
+                        runCatching { projectDao.deleteById(newId) }
                         false
                     }
-                } catch (e: Exception) {
-                    Log.w("ProjectListVM", "Failed to duplicate project ${project.id}", e)
-                    runCatching { projectDao.deleteById(newId) }
-                    false
                 }
-            }
-            if (!duplicated) {
-                showToast(appContext.getString(R.string.project_duplicate_failed))
+                if (duplicated) {
+                    showToast(appContext.getString(R.string.project_duplicate_success))
+                } else {
+                    showToast(appContext.getString(R.string.project_duplicate_failed))
+                }
+            } finally {
+                endOperation(operation)
             }
         }
     }
 
     fun createProjectFromImport(videoUri: Uri, onCreated: (String) -> Unit) {
         viewModelScope.launch {
-            val importedUri = withContext(Dispatchers.IO) {
-                importUriToManagedMedia(appContext, videoUri, "video")
-            }
-            if (importedUri == null) {
-                showToast(appContext.getString(R.string.project_import_copy_failed))
-                return@launch
-            }
-            val copiedForImport = importedUri.toString() != videoUri.toString()
-            val importCheck = withContext(Dispatchers.IO) {
-                val readable = runCatching {
-                    appContext.contentResolver.openAssetFileDescriptor(importedUri, "r")?.use { true } ?: false
-                }.getOrDefault(importedUri.scheme == "file")
-                readable to videoEngine.hasVisualTrack(importedUri)
-            }
-            if (!importCheck.first || !importCheck.second) {
-                if (copiedForImport) {
-                    deleteManagedMediaUri(appContext, importedUri)
-                }
-                showToast("Couldn't import that video")
-                return@launch
-            }
-            val durationMs = withContext(Dispatchers.IO) {
-                videoEngine.getVideoDuration(importedUri).takeIf { it > 0 } ?: 3_000L
-            }
-            val fileName = resolveMediaDisplayName(appContext, videoUri)
-                ?.substringBeforeLast('.')
-                ?.let(::normalizeProjectName)
-                ?: "Imported"
-
-            val project = Project(
-                name = fileName,
-                durationMs = durationMs,
-                thumbnailUri = importedUri.toString()
+            val operation = beginOperation(
+                title = appContext.getString(R.string.projects_operation_video_import_title),
+                description = appContext.getString(R.string.projects_operation_video_import_body)
             )
-
-            val clip = Clip(
-                sourceUri = importedUri,
-                sourceDurationMs = durationMs,
-                timelineStartMs = 0L,
-                trimStartMs = 0L,
-                trimEndMs = durationMs
-            )
-            val importedTracks = buildTracks(listOf(TrackType.VIDEO, TrackType.AUDIO)).map { track ->
-                if (track.type == TrackType.VIDEO && track.index == 0) {
-                    track.copy(clips = listOf(clip))
-                } else {
-                    track
+            var copiedForImport = false
+            var importedUri: Uri? = null
+            try {
+                importedUri = withContext(Dispatchers.IO) {
+                    importUriToManagedMedia(appContext, videoUri, "video")
                 }
-            }
+                val managedUri = importedUri
+                if (managedUri == null) {
+                    showToast(appContext.getString(R.string.project_import_copy_failed))
+                    return@launch
+                }
+                copiedForImport = managedUri.toString() != videoUri.toString()
+                val importCheck = withContext(Dispatchers.IO) {
+                    val readable = runCatching {
+                        appContext.contentResolver.openAssetFileDescriptor(managedUri, "r")?.use { true } ?: false
+                    }.getOrDefault(managedUri.scheme == "file")
+                    readable to videoEngine.hasVisualTrack(managedUri)
+                }
+                if (!importCheck.first || !importCheck.second) {
+                    if (copiedForImport) {
+                        deleteManagedMediaUri(appContext, managedUri)
+                    }
+                    showToast(appContext.getString(R.string.project_import_invalid_video))
+                    return@launch
+                }
+                val durationMs = withContext(Dispatchers.IO) {
+                    videoEngine.getVideoDuration(managedUri).takeIf { it > 0 } ?: 3_000L
+                }
+                val fileName = resolveMediaDisplayName(appContext, videoUri)
+                    ?.substringBeforeLast('.')
+                    ?.let(::normalizeProjectName)
+                    ?: appContext.getString(R.string.project_imported_default_name)
 
-            val created = withContext(Dispatchers.IO) {
-                createProjectWithInitialState(
-                    project = project,
-                    initialState = AutoSaveState(
-                        projectId = project.id,
-                        tracks = importedTracks,
-                        textOverlays = emptyList()
-                    )
+                val project = Project(
+                    name = fileName,
+                    durationMs = durationMs,
+                    thumbnailUri = managedUri.toString()
                 )
-            }
-            if (created) {
-                onCreated(project.id)
-            } else {
-                if (copiedForImport) {
-                    deleteManagedMediaUri(appContext, importedUri)
+
+                val clip = Clip(
+                    sourceUri = managedUri,
+                    sourceDurationMs = durationMs,
+                    timelineStartMs = 0L,
+                    trimStartMs = 0L,
+                    trimEndMs = durationMs
+                )
+                val importedTracks = buildTracks(listOf(TrackType.VIDEO, TrackType.AUDIO)).map { track ->
+                    if (track.type == TrackType.VIDEO && track.index == 0) {
+                        track.copy(clips = listOf(clip))
+                    } else {
+                        track
+                    }
                 }
-                showToast(appContext.getString(R.string.project_create_failed))
+
+                val created = withContext(Dispatchers.IO) {
+                    createProjectWithInitialState(
+                        project = project,
+                        initialState = AutoSaveState(
+                            projectId = project.id,
+                            tracks = importedTracks,
+                            textOverlays = emptyList()
+                        )
+                    )
+                }
+                if (created) {
+                    onCreated(project.id)
+                } else {
+                    if (copiedForImport) {
+                        deleteManagedMediaUri(appContext, managedUri)
+                    }
+                    showToast(appContext.getString(R.string.project_create_failed))
+                }
+            } catch (e: Exception) {
+                Log.w("ProjectListVM", "Video import failed", e)
+                if (copiedForImport) {
+                    importedUri?.let { deleteManagedMediaUri(appContext, it) }
+                }
+                showToast(appContext.getString(R.string.project_import_invalid_video))
+            } finally {
+                endOperation(operation)
             }
         }
     }
 
     private fun refreshUserTemplates() {
-        viewModelScope.launch(Dispatchers.IO) {
-            _userTemplates.value = templateManager.listTemplates()
+        viewModelScope.launch {
+            loadUserTemplates()
         }
+    }
+
+    private suspend fun loadUserTemplates() {
+        val templates = withContext(Dispatchers.IO) {
+            templateManager.listTemplates()
+        }
+        _userTemplates.value = templates
     }
 
     private fun buildTracks(trackTypes: List<TrackType>): List<Track> {
@@ -436,6 +513,18 @@ class ProjectListViewModel @Inject constructor(
 
     private fun normalizeProjectName(raw: String): String {
         return raw.trim().ifBlank { "Untitled" }
+    }
+
+    private fun beginOperation(title: String, description: String): ProjectListOperationState {
+        return ProjectListOperationState(title = title, description = description).also {
+            _operationState.value = it
+        }
+    }
+
+    private fun endOperation(operation: ProjectListOperationState) {
+        if (_operationState.value?.id == operation.id) {
+            _operationState.value = null
+        }
     }
 
     private suspend fun createProjectWithInitialState(

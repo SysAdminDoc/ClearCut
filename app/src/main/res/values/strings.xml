@@ -466,6 +466,25 @@
     <string name="projects_template_badge">Template</string>
     <string name="projects_proxy_badge">Proxy</string>
     <string name="project_untitled">Untitled</string>
+    <string name="projects_operation_create_title">Creating project</string>
+    <string name="projects_operation_create_body">Preparing the timeline, tracks, and autosave state.</string>
+    <string name="projects_operation_duplicate_title">Duplicating project</string>
+    <string name="projects_operation_duplicate_body">Copying \"%1$s\" with its saved edit state.</string>
+    <string name="projects_operation_video_import_title">Importing video</string>
+    <string name="projects_operation_video_import_body">Copying, validating, and opening the source as a new edit.</string>
+    <string name="projects_operation_template_import_title">Importing template</string>
+    <string name="projects_operation_template_import_body">Checking the file and adding it to saved templates.</string>
+    <string name="projects_operation_template_share_title">Preparing template</string>
+    <string name="projects_operation_template_share_body">Packaging the template for sharing.</string>
+    <string name="projects_operation_template_create_title">Building from template</string>
+    <string name="projects_operation_template_create_body">Creating a new edit from the saved structure.</string>
+    <string name="project_duplicate_success">Project duplicated</string>
+    <string name="project_import_invalid_video">NovaCut couldn\'t import that video. Choose a readable video file and try again.</string>
+    <string name="project_imported_default_name">Imported</string>
+    <string name="project_template_import_success">Imported template: %1$s</string>
+    <string name="project_template_import_failed">Template import failed</string>
+    <string name="project_template_export_failed">Template export failed</string>
+    <string name="project_template_open_failed">Template could not be opened</string>
 
     <!-- ProjectTemplateSheet -->
     <string name="template_new_project">New Project</string>

@@ -2,7 +2,12 @@ package com.novacut.editor.ui.projects
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -25,6 +30,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -68,6 +76,8 @@ fun ProjectListScreen(
     val filterMode by viewModel.filterMode.collectAsStateWithLifecycle()
     val userTemplates by viewModel.userTemplates.collectAsStateWithLifecycle()
     val toastMessage by viewModel.toastMessage.collectAsStateWithLifecycle()
+    val operationState by viewModel.operationState.collectAsStateWithLifecycle()
+    val actionsEnabled = operationState == null
     var showTemplateSheet by remember { mutableStateOf(false) }
     val templateImportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -103,7 +113,8 @@ fun ProjectListScreen(
                 onSortModeChanged = viewModel::setSortMode,
                 onCreateProject = { showTemplateSheet = true },
                 onImportTemplate = importTemplate,
-                onSettings = onSettings
+                onSettings = onSettings,
+                actionsEnabled = actionsEnabled
             )
 
             ProjectFilterChipsRow(
@@ -113,6 +124,21 @@ fun ProjectListScreen(
                     .fillMaxWidth()
                     .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
             )
+
+            AnimatedVisibility(
+                visible = operationState != null,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                operationState?.let { operation ->
+                    ProjectOperationCard(
+                        operation = operation,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = Spacing.lg, vertical = Spacing.xs)
+                    )
+                }
+            }
 
             if (projects.isEmpty()) {
                 Box(
@@ -126,7 +152,8 @@ fun ProjectListScreen(
                         hasActiveSearch = searchQuery.isNotEmpty(),
                         onCreateProject = { showTemplateSheet = true },
                         onImportTemplate = importTemplate,
-                        onClearSearch = { viewModel.setSearchQuery("") }
+                        onClearSearch = { viewModel.setSearchQuery("") },
+                        actionsEnabled = actionsEnabled
                     )
                 }
             } else {
@@ -224,7 +251,8 @@ private fun ProjectHomeHero(
     onSortModeChanged: (SortMode) -> Unit,
     onCreateProject: () -> Unit,
     onImportTemplate: () -> Unit,
-    onSettings: () -> Unit
+    onSettings: () -> Unit,
+    actionsEnabled: Boolean
 ) {
     NovaCutHeroCard(
         modifier = Modifier.fillMaxWidth(),
@@ -296,7 +324,8 @@ private fun ProjectHomeHero(
             onPrimary = onCreateProject,
             secondaryLabel = stringResource(R.string.template_import),
             secondaryIcon = Icons.Default.FileOpen,
-            onSecondary = onImportTemplate
+            onSecondary = onImportTemplate,
+            enabled = actionsEnabled
         )
 
         OutlinedTextField(
@@ -387,6 +416,65 @@ private fun HeroMetricPill(
     NovaCutMetricPill(text = label, accent = accent, icon = icon)
 }
 
+@Composable
+private fun ProjectOperationCard(
+    operation: ProjectListOperationState,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.semantics { liveRegion = LiveRegionMode.Polite },
+        color = Mocha.PanelHighest,
+        shape = RoundedCornerShape(Radius.xl),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Mauve.copy(alpha = 0.26f))
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Surface(
+                    color = Mocha.Mauve.copy(alpha = 0.14f),
+                    shape = RoundedCornerShape(Radius.lg),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Mauve.copy(alpha = 0.22f))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Sync,
+                        contentDescription = null,
+                        tint = Mocha.Mauve,
+                        modifier = Modifier
+                            .padding(10.dp)
+                            .size(20.dp)
+                    )
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = operation.title,
+                        color = Mocha.Text,
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                    Text(
+                        text = operation.description,
+                        color = Mocha.Subtext0,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+            LinearProgressIndicator(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(5.dp)
+                    .clip(RoundedCornerShape(Radius.pill)),
+                color = Mocha.Mauve,
+                trackColor = Mocha.Surface1
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ProjectFilterChipsRow(
@@ -423,7 +511,8 @@ private fun ProjectEmptyState(
     hasActiveSearch: Boolean,
     onCreateProject: () -> Unit,
     onImportTemplate: () -> Unit,
-    onClearSearch: () -> Unit
+    onClearSearch: () -> Unit,
+    actionsEnabled: Boolean
 ) {
     Surface(
         color = Mocha.Panel,
@@ -498,7 +587,8 @@ private fun ProjectEmptyState(
                 } else {
                     ProjectEmptyStateActions(
                         onCreateProject = onCreateProject,
-                        onImportTemplate = onImportTemplate
+                        onImportTemplate = onImportTemplate,
+                        enabled = actionsEnabled
                     )
                 }
             }
@@ -509,7 +599,8 @@ private fun ProjectEmptyState(
 @Composable
 private fun ProjectEmptyStateActions(
     onCreateProject: () -> Unit,
-    onImportTemplate: () -> Unit
+    onImportTemplate: () -> Unit,
+    enabled: Boolean
 ) {
     ProjectActionRow(
         primaryLabel = stringResource(R.string.projects_create_first),
@@ -517,7 +608,8 @@ private fun ProjectEmptyStateActions(
         onPrimary = onCreateProject,
         secondaryLabel = stringResource(R.string.template_import),
         secondaryIcon = Icons.Default.FileOpen,
-        onSecondary = onImportTemplate
+        onSecondary = onImportTemplate,
+        enabled = enabled
     )
 }
 
@@ -528,7 +620,8 @@ private fun ProjectActionRow(
     onPrimary: () -> Unit,
     secondaryLabel: String,
     secondaryIcon: androidx.compose.ui.graphics.vector.ImageVector,
-    onSecondary: () -> Unit
+    onSecondary: () -> Unit,
+    enabled: Boolean = true
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         val stackActions = maxWidth < 360.dp
@@ -538,6 +631,7 @@ private fun ProjectActionRow(
                     text = primaryLabel,
                     icon = primaryIcon,
                     onClick = onPrimary,
+                    enabled = enabled,
                     modifier = Modifier.fillMaxWidth()
                 )
                 NovaCutSecondaryButton(
@@ -545,7 +639,8 @@ private fun ProjectActionRow(
                     icon = secondaryIcon,
                     onClick = onSecondary,
                     modifier = Modifier.fillMaxWidth(),
-                    contentColor = Mocha.Text
+                    contentColor = Mocha.Text,
+                    enabled = enabled
                 )
             }
         } else {
@@ -554,6 +649,7 @@ private fun ProjectActionRow(
                     text = primaryLabel,
                     icon = primaryIcon,
                     onClick = onPrimary,
+                    enabled = enabled,
                     modifier = Modifier.weight(1f)
                 )
                 NovaCutSecondaryButton(
@@ -561,7 +657,8 @@ private fun ProjectActionRow(
                     icon = secondaryIcon,
                     onClick = onSecondary,
                     modifier = Modifier.weight(1f),
-                    contentColor = Mocha.Text
+                    contentColor = Mocha.Text,
+                    enabled = enabled
                 )
             }
         }
