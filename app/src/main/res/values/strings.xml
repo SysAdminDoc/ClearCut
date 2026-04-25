@@ -1471,6 +1471,12 @@
 
     <!-- AiSuggestionBanner -->
     <string name="cd_dismiss_suggestion">Dismiss suggestion</string>
+    <string name="desktop_sidebar_project">PROJECT</string>
+    <string name="desktop_sidebar_quick">QUICK</string>
+    <string name="desktop_sidebar_record">Record</string>
+    <string name="desktop_sidebar_media_count">MEDIA (%1$d)</string>
+    <string name="desktop_sidebar_media_empty">No media yet. Add media above to build the project library.</string>
+    <string name="v369_features_label">Feature hub</string>
     <string name="ai_apply">Apply</string>
 
     <!-- DrawingOverlayPanel -->

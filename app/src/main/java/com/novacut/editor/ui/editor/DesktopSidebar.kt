@@ -16,12 +16,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.novacut.editor.R
 import com.novacut.editor.model.TrackType
 import com.novacut.editor.ui.theme.Mocha
+import com.novacut.editor.ui.theme.Radius
+import com.novacut.editor.ui.theme.Spacing
 
 /**
  * Desktop-class left sidebar. Rendered beside the editor column when
@@ -52,8 +57,8 @@ fun DesktopSidebar(
             .fillMaxHeight()
             .width(260.dp)
             .background(Mocha.Mantle)
-            .padding(horizontal = 12.dp, vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(horizontal = Spacing.md, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md)
     ) {
         ProjectHeaderBlock(
             name = state.project.name,
@@ -75,12 +80,12 @@ private fun ProjectHeaderBlock(
 ) {
     Column {
         Text(
-            text = "PROJECT",
+            text = stringResource(R.string.desktop_sidebar_project),
             color = Mocha.Overlay1,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold
         )
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(Spacing.xs))
         Text(
             text = name,
             color = Mocha.Text,
@@ -100,21 +105,21 @@ private fun ProjectHeaderBlock(
 private fun QuickActionsBlock(viewModel: EditorViewModel) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
-            text = "QUICK",
+            text = stringResource(R.string.desktop_sidebar_quick),
             color = Mocha.Overlay1,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold
         )
-        SidebarAction(icon = Icons.Default.Add, label = "Add media", tint = Mocha.Blue) {
+        SidebarAction(icon = Icons.Default.Add, label = stringResource(R.string.editor_add_media), tint = Mocha.Blue) {
             viewModel.showMediaPicker()
         }
-        SidebarAction(icon = Icons.Default.Videocam, label = "Record", tint = Mocha.Green) {
+        SidebarAction(icon = Icons.Default.Videocam, label = stringResource(R.string.desktop_sidebar_record), tint = Mocha.Green) {
             viewModel.showMediaPicker()
         }
-        SidebarAction(icon = Icons.Default.FileDownload, label = "Export", tint = Mocha.Rosewater) {
+        SidebarAction(icon = Icons.Default.FileDownload, label = stringResource(R.string.editor_export), tint = Mocha.Rosewater) {
             viewModel.showExportSheet()
         }
-        SidebarAction(icon = Icons.Default.AutoAwesome, label = "v3.69 features", tint = Mocha.Mauve) {
+        SidebarAction(icon = Icons.Default.AutoAwesome, label = stringResource(R.string.v369_features_label), tint = Mocha.Mauve) {
             viewModel.showV369Features()
         }
     }
@@ -130,13 +135,14 @@ private fun SidebarAction(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 8.dp, vertical = 8.dp),
+            .clip(RoundedCornerShape(Radius.md))
+            .background(tint.copy(alpha = 0.06f))
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = Spacing.sm, vertical = Spacing.sm),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(icon, null, tint = tint, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(Spacing.sm))
         Text(label, color = Mocha.Text, fontSize = 13.sp)
     }
 }
@@ -153,15 +159,15 @@ private fun ColumnScope.MediaLibraryBlock(
     }
     Column(modifier = Modifier.weight(1f, fill = true)) {
         Text(
-            text = "MEDIA (${entries.size})",
+            text = stringResource(R.string.desktop_sidebar_media_count, entries.size),
             color = Mocha.Overlay1,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold
         )
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(Spacing.sm))
         if (entries.isEmpty()) {
             Text(
-                text = "No media yet — tap Add media above.",
+                text = stringResource(R.string.desktop_sidebar_media_empty),
                 color = Mocha.Subtext0,
                 fontSize = 11.sp
             )
@@ -175,10 +181,10 @@ private fun ColumnScope.MediaLibraryBlock(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(6.dp))
+                        .clip(RoundedCornerShape(Radius.sm))
                         .background(Mocha.PanelRaised)
-                        .clickable { viewModel.selectClip(clip.id) }
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                        .clickable(role = Role.Button) { viewModel.selectClip(clip.id) }
+                        .padding(horizontal = Spacing.sm, vertical = 7.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
@@ -193,7 +199,7 @@ private fun ColumnScope.MediaLibraryBlock(
                         tint = Mocha.Subtext1,
                         modifier = Modifier.size(14.dp)
                     )
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(Spacing.sm))
                     Text(
                         text = clip.sourceUri.lastPathSegment?.substringAfterLast('/') ?: "clip",
                         color = Mocha.Text,

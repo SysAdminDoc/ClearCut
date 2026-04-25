@@ -1,8 +1,9 @@
 package com.novacut.editor.ui.editor
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -18,9 +19,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.sp
 import com.novacut.editor.R
 import com.novacut.editor.ui.theme.Mocha
+import com.novacut.editor.ui.theme.Motion
+import com.novacut.editor.ui.theme.Radius
+import com.novacut.editor.ui.theme.Spacing
+import com.novacut.editor.ui.theme.TouchTarget
 
 @Composable
 fun AiSuggestionBanner(
@@ -31,16 +35,25 @@ fun AiSuggestionBanner(
 ) {
     AnimatedVisibility(
         visible = suggestion != null,
-        enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
-        exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
+        enter = slideInVertically(
+            animationSpec = tween(Motion.DurationMedium, easing = Motion.DecelerateEasing),
+            initialOffsetY = { -it / 2 }
+        ) + fadeIn(tween(Motion.DurationMedium, easing = Motion.DecelerateEasing)),
+        exit = slideOutVertically(
+            animationSpec = tween(Motion.DurationFast, easing = Motion.AccelerateEasing),
+            targetOffsetY = { -it / 2 }
+        ) + fadeOut(tween(Motion.DurationFast, easing = Motion.AccelerateEasing)),
         modifier = modifier
     ) {
         suggestion?.let { s ->
             Surface(
                 color = Mocha.Panel,
-                shape = RoundedCornerShape(18.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
-                modifier = Modifier.fillMaxWidth()
+                shape = RoundedCornerShape(Radius.xl),
+                border = BorderStroke(1.dp, Mocha.Mauve.copy(alpha = 0.22f)),
+                shadowElevation = 3.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.sm, vertical = Spacing.xs)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -55,54 +68,59 @@ fun AiSuggestionBanner(
                                 )
                             )
                         )
-                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                        .padding(horizontal = Spacing.md, vertical = Spacing.sm)
                 ) {
                     Surface(
                         color = Mocha.Mauve.copy(alpha = 0.14f),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(Radius.md),
+                        border = BorderStroke(1.dp, Mocha.Mauve.copy(alpha = 0.2f))
                     ) {
                         Icon(
                             imageVector = Icons.Default.AutoAwesome,
                             contentDescription = stringResource(R.string.cd_ai_suggestion),
                             tint = Mocha.Rosewater,
                             modifier = Modifier
-                                .padding(8.dp)
-                                .size(16.dp)
+                                .padding(Spacing.sm)
+                                .size(18.dp)
                         )
                     }
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(Spacing.md))
                     Text(
                         text = s.message,
-                        color = Mocha.Subtext1,
-                        fontSize = 12.sp,
-                        maxLines = 1,
+                        color = Mocha.Text,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(Spacing.sm))
                     Surface(
                         onClick = { onApply(s.actionId) },
                         color = Mocha.Rosewater,
                         contentColor = Mocha.Midnight,
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(Radius.md),
+                        modifier = Modifier.defaultMinSize(minHeight = 40.dp)
                     ) {
                         Text(
                             text = stringResource(R.string.ai_apply),
                             color = Mocha.Midnight,
-                            fontSize = 11.sp,
+                            style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                            modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm)
                         )
                     }
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = stringResource(R.string.cd_dismiss_suggestion),
-                        tint = Mocha.Subtext0,
-                        modifier = Modifier
-                            .size(16.dp)
-                            .clickable { onDismiss() }
-                    )
+                    Spacer(modifier = Modifier.width(Spacing.xs))
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.size(TouchTarget.minimum)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = stringResource(R.string.cd_dismiss_suggestion),
+                            tint = Mocha.Subtext0,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
         }

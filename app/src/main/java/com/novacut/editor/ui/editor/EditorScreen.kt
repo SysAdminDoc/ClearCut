@@ -2308,7 +2308,7 @@ private fun EditorTopBar(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("v3.69 Features") },
+                                text = { Text(stringResource(R.string.v369_features_label)) },
                                 onClick = {
                                     showOverflow = false
                                     onOpenV369Features()
@@ -2316,7 +2316,7 @@ private fun EditorTopBar(
                                 leadingIcon = {
                                     Icon(
                                         Icons.Default.AutoAwesome,
-                                        contentDescription = "v3.69 Features",
+                                        contentDescription = stringResource(R.string.v369_features_label),
                                         tint = Mocha.Mauve
                                     )
                                 }
