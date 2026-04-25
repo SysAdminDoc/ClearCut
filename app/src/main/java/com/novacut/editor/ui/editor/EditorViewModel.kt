@@ -32,6 +32,9 @@ import com.novacut.editor.engine.AiThumbnailEngine
 import com.novacut.editor.engine.AudioDescriptionEngine
 import com.novacut.editor.engine.StylusMidiEngine
 import com.novacut.editor.engine.BeatDetectionEngine
+import com.novacut.editor.engine.cleanupFrameOutputFiles
+import com.novacut.editor.engine.createFrameCaptureOutputFiles
+import com.novacut.editor.engine.finalizeFrameOutputFile
 import com.novacut.editor.engine.LoudnessEngine
 import com.novacut.editor.engine.NoiseReductionEngine
 import com.novacut.editor.engine.FrameInterpolationEngine
@@ -3444,18 +3447,43 @@ class EditorViewModel @Inject constructor(
                 val format = if (config.captureFormat == FrameCaptureFormat.JPEG)
                     android.graphics.Bitmap.CompressFormat.JPEG else android.graphics.Bitmap.CompressFormat.PNG
                 val quality = if (config.captureFormat == FrameCaptureFormat.JPEG) 90 else 100
-                val bitmap = videoEngine.extractThumbnail(
-                    clip.sourceUri, _playheadMs.value * 1000
-                ) ?: return@launch
                 val ext = config.captureFormat.extension
-                val captureDir = java.io.File(appContext.cacheDir, "frames").apply { mkdirs() }
-                val file = java.io.File(captureDir, "frame_${System.currentTimeMillis()}.$ext")
-                file.outputStream().use { bitmap.compress(format, quality, it) }
-                bitmap.recycle()
-                _state.update { it.copy(lastExportedFilePath = file.absolutePath, exportState = ExportState.COMPLETE) }
+                val captureTimeUs = _playheadMs.value * 1000
+                val file = withContext(Dispatchers.IO) {
+                    val bitmap = videoEngine.extractThumbnail(clip.sourceUri, captureTimeUs)
+                        ?: throw IllegalStateException("No frame available at the current timestamp")
+                    val outputFiles = createFrameCaptureOutputFiles(appContext, ext)
+                    try {
+                        outputFiles.partialFile.outputStream().use { output ->
+                            if (!bitmap.compress(format, quality, output)) {
+                                throw IllegalStateException("Frame encoder returned no data")
+                            }
+                        }
+                        finalizeFrameOutputFile(outputFiles.partialFile, outputFiles.outputFile)
+                            ?: throw IllegalStateException("Frame capture output was empty")
+                    } catch (e: Exception) {
+                        cleanupFrameOutputFiles(outputFiles.partialFile, outputFiles.outputFile)
+                        throw e
+                    } finally {
+                        bitmap.recycle()
+                    }
+                }
+                _state.update {
+                    it.copy(
+                        lastExportedFilePath = file.absolutePath,
+                        exportState = ExportState.COMPLETE,
+                        exportErrorMessage = null
+                    )
+                }
                 showToast("Frame saved: ${file.name}")
             } catch (e: Exception) {
                 Log.w("EditorVM", "Frame capture failed", e)
+                _state.update {
+                    it.copy(
+                        exportState = ExportState.ERROR,
+                        exportErrorMessage = "Frame capture failed. Try another timestamp or source clip."
+                    )
+                }
                 showToast("Frame capture failed")
             }
         }

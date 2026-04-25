@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
     <cache-path name="frame_capture" path="frames/" />
+    <files-path name="frame_captures" path="frame_captures/" />
+    <files-path name="freeze_frames" path="freeze_frames/" />
     <files-path name="camera_media" path="media/" />
     <files-path name="archives" path="archives/" />
     <external-files-path name="exports" path="Movies/NovaCut/" />

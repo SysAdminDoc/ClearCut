@@ -1203,13 +1203,21 @@ class VideoEngine @Inject constructor(
                 timeMs * 1000L,
                 MediaMetadataRetriever.OPTION_CLOSEST_SYNC
             ) ?: return null
-            val dir = File(context.filesDir, "freeze_frames").also { it.mkdirs() }
-            val file = File(dir, "freeze_${System.currentTimeMillis()}.jpg")
-            file.outputStream().use { out ->
-                frame.compress(Bitmap.CompressFormat.JPEG, 95, out)
+            val outputFiles = createFreezeFrameOutputFiles(context)
+            try {
+                outputFiles.partialFile.outputStream().use { out ->
+                    if (!frame.compress(Bitmap.CompressFormat.JPEG, 95, out)) {
+                        throw IllegalStateException("Freeze frame encoder returned no data")
+                    }
+                }
+                finalizeFrameOutputFile(outputFiles.partialFile, outputFiles.outputFile)
+                    ?: throw IllegalStateException("Freeze frame output was empty")
+            } catch (e: Exception) {
+                cleanupFrameOutputFiles(outputFiles.partialFile, outputFiles.outputFile)
+                throw e
+            } finally {
+                frame.recycle()
             }
-            frame.recycle()
-            file
         } catch (e: Exception) {
             Log.w(TAG, "Frame extraction failed", e)
             null
