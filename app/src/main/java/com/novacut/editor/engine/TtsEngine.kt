@@ -27,7 +27,7 @@ class TtsEngine @Inject constructor(
 ) {
     private var tts: TextToSpeech? = null
     @Volatile private var isReady = false
-    private val outputDir = File(context.filesDir, "tts").also { it.mkdirs() }
+    private val outputDir = File(context.filesDir, TTS_OUTPUT_DIR_NAME).also { it.mkdirs() }
     private val mutex = Mutex()
 
     // Available voice styles mapped to TTS parameters
@@ -82,64 +82,93 @@ class TtsEngine @Inject constructor(
         engine.setPitch(style.pitch)
         engine.setSpeechRate(style.rate)
 
-        val outputFile = File(outputDir, "tts_${UUID.randomUUID()}.wav")
+        cleanupOldFiles()
+        val fileId = UUID.randomUUID().toString()
+        val outputFile = File(outputDir, "${TTS_FILE_PREFIX}${fileId}.wav")
+        val partialFile = File(outputDir, "${TTS_FILE_PREFIX}${fileId}.partial.wav")
         val utteranceId = UUID.randomUUID().toString()
 
         try {
             mutex.withLock {
-            suspendCancellableCoroutine { cont ->
-                engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                    override fun onStart(id: String?) {
-                        onProgress(0.1f)
+                suspendCancellableCoroutine { cont ->
+                    fun cleanupGeneratedFiles() {
+                        partialFile.delete()
+                        outputFile.delete()
                     }
 
-                    override fun onDone(id: String?) {
-                        if (id == utteranceId) {
-                            onProgress(1f)
-                            if (cont.isActive) cont.resume(outputFile)
+                    fun finish(result: File?) {
+                        try { engine.setOnUtteranceProgressListener(null) } catch (_: Exception) {}
+                        if (cont.isActive) cont.resume(result)
+                    }
+
+                    fun reportProgress(value: Float) {
+                        runCatching { onProgress(value) }
+                            .onFailure { Log.w("TtsEngine", "TTS progress callback failed", it) }
+                    }
+
+                    engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                        override fun onStart(id: String?) {
+                            if (id == utteranceId) reportProgress(0.1f)
                         }
-                    }
 
-                    @Deprecated("Deprecated in API")
-                    override fun onError(id: String?) {
-                        if (id == utteranceId) {
-                            Log.e("TtsEngine", "TTS error for utterance $id")
-                            outputFile.delete()
-                            if (cont.isActive) cont.resume(null)
+                        override fun onDone(id: String?) {
+                            if (id == utteranceId) {
+                                val finalizedFile = runCatching {
+                                    finalizeSynthesizedTtsFile(partialFile, outputFile)
+                                }.onFailure {
+                                    Log.e("TtsEngine", "TTS output finalization failed for $id", it)
+                                    cleanupGeneratedFiles()
+                                }.getOrNull()
+                                if (finalizedFile != null) {
+                                    reportProgress(1f)
+                                } else {
+                                    Log.e("TtsEngine", "TTS finished without a readable audio file for $id")
+                                }
+                                finish(finalizedFile)
+                            }
                         }
-                    }
 
-                    override fun onError(id: String?, errorCode: Int) {
-                        if (id == utteranceId) {
-                            Log.e("TtsEngine", "TTS error code $errorCode for $id")
-                            outputFile.delete()
-                            if (cont.isActive) cont.resume(null)
+                        @Deprecated("Deprecated in API")
+                        override fun onError(id: String?) {
+                            if (id == utteranceId) {
+                                Log.e("TtsEngine", "TTS error for utterance $id")
+                                cleanupGeneratedFiles()
+                                finish(null)
+                            }
                         }
-                    }
-                })
 
-                val result = engine.synthesizeToFile(text, null, outputFile, utteranceId)
-                if (result != TextToSpeech.SUCCESS && cont.isActive) {
-                    outputFile.delete()
-                    cont.resume(null)
+                        override fun onError(id: String?, errorCode: Int) {
+                            if (id == utteranceId) {
+                                Log.e("TtsEngine", "TTS error code $errorCode for $id")
+                                cleanupGeneratedFiles()
+                                finish(null)
+                            }
+                        }
+                    })
+
+                    val result = engine.synthesizeToFile(text, null, partialFile, utteranceId)
+                    if (result != TextToSpeech.SUCCESS && cont.isActive) {
+                        cleanupGeneratedFiles()
+                        finish(null)
+                    }
+
+                    cont.invokeOnCancellation {
+                        // Clear the progress listener before stop() so a stale
+                        // `onDone` / `onError` callback from a cancelled job
+                        // can't fire into the next synthesis coroutine's
+                        // continuation. Without this, the old listener remains
+                        // registered on the shared `engine` (the TextToSpeech
+                        // instance is a singleton) and would attempt to resume
+                        // a continuation that already threw CancellationException.
+                        try { engine.setOnUtteranceProgressListener(null) } catch (_: Exception) {}
+                        engine.stop()
+                        cleanupGeneratedFiles()
+                    }
                 }
-
-                cont.invokeOnCancellation {
-                    // Clear the progress listener before stop() so a stale
-                    // `onDone` / `onError` callback from a cancelled job
-                    // can't fire into the next synthesis coroutine's
-                    // continuation. Without this, the old listener remains
-                    // registered on the shared `engine` (the TextToSpeech
-                    // instance is a singleton) and would attempt to resume
-                    // a continuation that already threw CancellationException.
-                    try { engine.setOnUtteranceProgressListener(null) } catch (_: Exception) {}
-                    engine.stop()
-                    outputFile.delete()
-                }
-            }
             }
         } catch (e: Exception) {
             Log.e("TtsEngine", "Synthesis failed", e)
+            partialFile.delete()
             outputFile.delete()
             null
         }
@@ -148,9 +177,14 @@ class TtsEngine @Inject constructor(
     /**
      * Preview text with TTS (plays through speaker, doesn't save file).
      */
-    suspend fun preview(text: String, style: VoiceStyle = VoiceStyle.NARRATOR, locale: Locale = Locale.US) {
-        val engine = tts ?: return
-        if (!isReady) return
+    suspend fun preview(
+        text: String,
+        style: VoiceStyle = VoiceStyle.NARRATOR,
+        locale: Locale = Locale.US
+    ) = withContext(Dispatchers.Main) {
+        val engine = tts ?: return@withContext
+        if (!isReady) return@withContext
+        if (text.isBlank()) return@withContext
         mutex.withLock {
             engine.language = locale
             engine.setPitch(style.pitch)
@@ -171,10 +205,33 @@ class TtsEngine @Inject constructor(
     }
 
     /**
-     * Clean up old TTS files (older than 24 hours).
+     * Clean up abandoned partial TTS files. Finished clips are project assets and
+     * can be referenced by saved timelines, so age-based deletion is unsafe.
      */
     fun cleanupOldFiles() {
-        val cutoff = System.currentTimeMillis() - 24 * 60 * 60 * 1000
-        outputDir.listFiles()?.filter { it.lastModified() < cutoff }?.forEach { it.delete() }
+        val cutoff = System.currentTimeMillis() - ABANDONED_PARTIAL_MAX_AGE_MS
+        outputDir.listFiles()
+            ?.filter { it.isFile && it.name.endsWith(TTS_PARTIAL_SUFFIX) && it.lastModified() < cutoff }
+            ?.forEach { it.delete() }
+    }
+}
+
+internal const val TTS_OUTPUT_DIR_NAME = "tts_output"
+private const val TTS_FILE_PREFIX = "tts_"
+private const val TTS_PARTIAL_SUFFIX = ".partial.wav"
+private const val ABANDONED_PARTIAL_MAX_AGE_MS = 10 * 60 * 1000L
+
+internal fun finalizeSynthesizedTtsFile(partialFile: File, outputFile: File): File? {
+    if (!partialFile.isFile || partialFile.length() <= 0L) {
+        partialFile.delete()
+        outputFile.delete()
+        return null
+    }
+    moveFileReplacing(partialFile, outputFile)
+    return if (outputFile.isFile && outputFile.length() > 0L) {
+        outputFile
+    } else {
+        outputFile.delete()
+        null
     }
 }

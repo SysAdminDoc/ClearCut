@@ -60,14 +60,14 @@ class DirectPublishEngine @Inject constructor(
         meta: PublishMeta
     ): Result = withContext(Dispatchers.IO) {
         val file = File(filePath)
-        if (!file.exists()) {
-            return@withContext Result(null, Method.NONE, "Export file not found")
+        validatePublishableFile(file)?.let { message ->
+            return@withContext Result(null, Method.NONE, message)
         }
         val uri = try {
             FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
         } catch (e: Exception) {
             Log.w(TAG, "FileProvider failed for $filePath", e)
-            return@withContext Result(null, Method.NONE, "Share provider unavailable")
+            return@withContext Result(null, Method.NONE, "Export is not in a shareable NovaCut location")
         }
         val intent = buildShareIntent(uri, target, meta)
         if (target.packageName != null && isInstalled(target.packageName)) {
@@ -82,8 +82,11 @@ class DirectPublishEngine @Inject constructor(
             if (meta.description.isNotBlank()) append("\n\n").append(meta.description)
             if (meta.chapters.isNotBlank()) append("\n\n").append(meta.chapters)
             if (meta.tags.isNotEmpty()) {
-                append("\n\n")
-                append(meta.tags.joinToString(" ") { "#${it.replace(Regex("[^A-Za-z0-9_]"), "")}" })
+                val tags = meta.tags
+                    .map { it.replace(SAFE_HASHTAG_CHARS, "") }
+                    .filter { it.isNotBlank() }
+                    .joinToString(" ") { "#$it" }
+                if (tags.isNotBlank()) append("\n\n").append(tags)
             }
         }
         return Intent(Intent.ACTION_SEND).apply {
@@ -102,4 +105,14 @@ class DirectPublishEngine @Inject constructor(
     } catch (_: Exception) { false }
 
     companion object { private const val TAG = "DirectPublishEngine" }
+}
+
+private val SAFE_HASHTAG_CHARS = Regex("[^A-Za-z0-9_]")
+
+internal fun validatePublishableFile(file: File): String? = when {
+    !file.exists() -> "Export file not found"
+    !file.isFile -> "Export path is not a video file"
+    file.length() <= 0L -> "Export file is empty"
+    !file.canRead() -> "Export file is not readable"
+    else -> null
 }

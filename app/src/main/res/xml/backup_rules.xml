@@ -8,6 +8,9 @@
          device transfers. Without these, a restored project's clips that reference these
          files would resolve to dangling URIs and disappear from the timeline. -->
     <include domain="file" path="tts_output" />
+    <include domain="file" path="tts" />
     <include domain="file" path="noise_reduced" />
     <exclude domain="file" path="autosave/*.tmp" />
+    <exclude domain="file" path="tts_output/*.partial.wav" />
+    <exclude domain="file" path="tts/*.partial.wav" />
 </full-backup-content>
