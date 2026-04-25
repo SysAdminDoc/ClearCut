@@ -9,6 +9,7 @@
         <include domain="file" path="tts" />
         <include domain="file" path="noise_reduced" />
         <exclude domain="file" path="autosave/*.tmp" />
+        <exclude domain="file" path="voiceovers/*.partial.m4a" />
         <exclude domain="file" path="tts_output/*.partial.wav" />
         <exclude domain="file" path="tts/*.partial.wav" />
     </cloud-backup>
@@ -21,6 +22,7 @@
         <include domain="file" path="tts" />
         <include domain="file" path="noise_reduced" />
         <exclude domain="file" path="autosave/*.tmp" />
+        <exclude domain="file" path="voiceovers/*.partial.m4a" />
         <exclude domain="file" path="tts_output/*.partial.wav" />
         <exclude domain="file" path="tts/*.partial.wav" />
     </device-transfer>
