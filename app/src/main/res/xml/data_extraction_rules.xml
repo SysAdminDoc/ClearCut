@@ -8,11 +8,13 @@
         <include domain="file" path="tts_output" />
         <include domain="file" path="tts" />
         <include domain="file" path="noise_reduced" />
+        <include domain="file" path="stabilized" />
         <exclude domain="file" path="autosave/*.tmp" />
         <exclude domain="file" path="voiceovers/*.partial.m4a" />
         <exclude domain="file" path="tts_output/*.partial.wav" />
         <exclude domain="file" path="tts/*.partial.wav" />
         <exclude domain="file" path="noise_reduced/*.partial.m4a" />
+        <exclude domain="file" path="stabilized/*.partial.mp4" />
     </cloud-backup>
     <device-transfer>
         <include domain="database" path="." />
@@ -22,10 +24,12 @@
         <include domain="file" path="tts_output" />
         <include domain="file" path="tts" />
         <include domain="file" path="noise_reduced" />
+        <include domain="file" path="stabilized" />
         <exclude domain="file" path="autosave/*.tmp" />
         <exclude domain="file" path="voiceovers/*.partial.m4a" />
         <exclude domain="file" path="tts_output/*.partial.wav" />
         <exclude domain="file" path="tts/*.partial.wav" />
         <exclude domain="file" path="noise_reduced/*.partial.m4a" />
+        <exclude domain="file" path="stabilized/*.partial.mp4" />
     </device-transfer>
 </data-extraction-rules>

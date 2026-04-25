@@ -815,32 +815,42 @@ class AiToolsDelegate(
             showToast("Motion analysis failed \u2014 using basic stabilization fallback")
             return
         }
-        val outputFile = File(appContext.cacheDir, "stabilized_${clip.id}.mp4")
+        val outputFiles = createStabilizedVideoOutputFiles(appContext, clip.id)
         showToast("Applying stabilization (${motionData.frameCount} frames)...")
         try {
             val result = stabilizationEngine.stabilize(
                 uri = clip.sourceUri, motionData = motionData, config = config,
-                outputUri = Uri.fromFile(outputFile), onProgress = { }
+                outputUri = Uri.fromFile(outputFiles.partialFile), onProgress = { }
             )
             if (result != null) {
+                val stabilizedFile = finalizeStabilizedVideoFile(
+                    partialFile = outputFiles.partialFile,
+                    outputFile = outputFiles.outputFile
+                )
+                if (stabilizedFile == null) {
+                    showToast("Stabilization failed: output file was empty")
+                    return
+                }
+                val stabilizedUri = Uri.fromFile(stabilizedFile)
                 saveUndoState("AI stabilize (OpenCV)")
                 stateFlow.update { s ->
                     s.copy(tracks = s.tracks.map { track ->
                         track.copy(clips = track.clips.map { c ->
-                            if (c.id == clip.id) c.copy(sourceUri = Uri.fromFile(outputFile)) else c
+                            if (c.id == clip.id) c.copy(sourceUri = stabilizedUri) else c
                         })
                     })
                 }
                 rebuildPlayerTimeline()
+                saveProject()
                 showToast("Stabilized with ${"%.0f".format(result.cropApplied * 100)}% crop")
             } else {
-                outputFile.delete()
+                cleanupStabilizedVideoFiles(outputFiles.partialFile, outputFiles.outputFile)
                 showToast("Stabilization not yet available \u2014 OpenCV integration pending")
             }
         } catch (e: Exception) {
             // Clean up any partial output before re-throwing (CancellationException is
             // also an Exception subtype in coroutines, so this covers cancellation too).
-            outputFile.delete()
+            cleanupStabilizedVideoFiles(outputFiles.partialFile, outputFiles.outputFile)
             throw e
         }
     }

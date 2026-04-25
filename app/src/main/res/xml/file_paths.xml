@@ -10,5 +10,6 @@
     <files-path name="tts_output" path="tts_output/" />
     <files-path name="legacy_tts_output" path="tts/" />
     <files-path name="noise_reduced" path="noise_reduced/" />
+    <files-path name="stabilized" path="stabilized/" />
     <files-path name="luts" path="luts/" />
 </paths>
