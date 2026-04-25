@@ -1,16 +1,23 @@
 package com.novacut.editor.ui.editor
 
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Notes
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CloudSync
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -19,10 +26,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.ui.theme.Mocha
+import com.novacut.editor.ui.theme.Radius
+import com.novacut.editor.ui.theme.Spacing
 import kotlinx.coroutines.delay
 
 /**
@@ -62,12 +72,25 @@ fun ScratchpadSheet(
         modifier = modifier,
         closeContentDescription = stringResource(R.string.scratchpad_close_content_description)
     ) {
-        Text(
-            text = stringResource(R.string.scratchpad_hint),
-            color = Mocha.Subtext0,
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(bottom = 10.dp)
-        )
+        val isSaved = text == committed.value
+        PremiumPanelCard(accent = Mocha.Yellow) {
+            Text(
+                text = stringResource(R.string.scratchpad_hint),
+                color = Mocha.Subtext0,
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            ScratchpadStatusPill(
+                text = if (isSaved) {
+                    stringResource(R.string.scratchpad_saved, text.length)
+                } else {
+                    stringResource(R.string.scratchpad_saving)
+                },
+                saved = isSaved
+            )
+        }
+
+        Spacer(Modifier.height(Spacing.md))
 
         OutlinedTextField(
             value = text,
@@ -84,24 +107,52 @@ fun ScratchpadSheet(
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = Mocha.Text,
                 unfocusedTextColor = Mocha.Text,
-                focusedBorderColor = Mocha.Yellow,
+                focusedBorderColor = Mocha.Yellow.copy(alpha = 0.88f),
                 unfocusedBorderColor = Mocha.CardStroke,
-                focusedContainerColor = Mocha.PanelRaised,
+                focusedContainerColor = Mocha.PanelHighest,
                 unfocusedContainerColor = Mocha.PanelRaised,
-                cursorColor = Mocha.Yellow
-            )
+                cursorColor = Mocha.Yellow,
+                focusedPlaceholderColor = Mocha.Subtext0,
+                unfocusedPlaceholderColor = Mocha.Overlay1
+            ),
+            shape = RoundedCornerShape(Radius.xl),
+            textStyle = MaterialTheme.typography.bodyLarge
         )
+    }
+}
 
-        Spacer(Modifier.height(8.dp))
-        val status = if (text == committed.value) {
-            stringResource(R.string.scratchpad_saved, text.length)
-        } else {
-            stringResource(R.string.scratchpad_saving)
+@Composable
+private fun ScratchpadStatusPill(
+    text: String,
+    saved: Boolean
+) {
+    val accent = if (saved) Mocha.Green else Mocha.Sapphire
+    Surface(
+        color = accent.copy(alpha = 0.1f),
+        shape = RoundedCornerShape(Radius.pill),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.2f))
+    ) {
+        androidx.compose.foundation.layout.Row(
+            modifier = Modifier
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(accent.copy(alpha = 0.1f), Mocha.PanelHighest.copy(alpha = 0.0f))
+                    )
+                )
+                .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
+        ) {
+            Icon(
+                imageVector = if (saved) Icons.Default.CheckCircle else Icons.Default.CloudSync,
+                contentDescription = null,
+                tint = accent,
+                modifier = Modifier.height(16.dp)
+            )
+            Text(
+                text = text,
+                color = accent,
+                style = MaterialTheme.typography.labelMedium
+            )
         }
-        Text(
-            text = status,
-            color = Mocha.Subtext0,
-            style = MaterialTheme.typography.labelSmall
-        )
     }
 }

@@ -1425,8 +1425,8 @@
     <string name="scratchpad_title">Scratchpad</string>
     <string name="scratchpad_subtitle_default">Project notes</string>
     <string name="scratchpad_close_content_description">Close scratchpad</string>
-    <string name="scratchpad_hint">Free-form notes stay with the project. Auto-saved as you type.</string>
-    <string name="scratchpad_placeholder">Ideas, timestamps, review notes…</string>
+    <string name="scratchpad_hint">Capture timestamps, review notes, and cut ideas. Notes stay with this project and save automatically.</string>
+    <string name="scratchpad_placeholder">Add edit notes, feedback, timestamps, or ideas…</string>
     <string name="scratchpad_saved">Saved · %1$d chars</string>
     <string name="scratchpad_saving">Saving…</string>
     <string name="scratchpad_menu_label">Scratchpad Notes</string>
