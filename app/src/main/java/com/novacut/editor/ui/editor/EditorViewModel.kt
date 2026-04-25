@@ -209,7 +209,15 @@ data class EditorState(
     val drawingStrokeWidth: Float = 4f,
     val aiSuggestion: AiSuggestion? = null,
     // v3.69 feature-wave state
-    val v369: V369State = V369State()
+    val v369: V369State = V369State(),
+    // v3.71 object-aware editing scaffolding. The list lives in editor state so
+    // the timeline can light up tracked-subject lanes the moment a tracker
+    // populates them; persistence flows through AutoSaveState.trackedObjects.
+    val trackedObjects: List<com.novacut.editor.model.TrackedObject> = emptyList(),
+    // v3.71 Cut Assistant review state. Null until the user opens the panel;
+    // mutating per-proposal acceptance does not split clips — the apply step is
+    // explicit so undo records a single "Apply Cut Assistant" entry.
+    val cutAssistantReview: com.novacut.editor.engine.CutAssistantEngine.ReviewSet? = null
 )
 
 /**
@@ -325,6 +333,7 @@ class EditorViewModel @Inject constructor(
     private val smartReframeEngine: SmartReframeEngine,
     private val timelineExchangeEngine: TimelineExchangeEngine,
     private val timelineExchangeValidator: com.novacut.editor.engine.TimelineExchangeValidator,
+    private val cutAssistantEngine: com.novacut.editor.engine.CutAssistantEngine,
     private val proxyWorkflowEngine: ProxyWorkflowEngine,
     private val multiCamEngine: MultiCamEngine,
     // v3.69 engines (15-feature wave)
@@ -578,6 +587,7 @@ class EditorViewModel @Inject constructor(
                         chapterMarkers = recovery.chapterMarkers,
                         beatMarkers = recovery.beatMarkers,
                         v369 = it.v369.copy(transcript = recovery.transcript ?: it.v369.transcript),
+                        trackedObjects = recovery.trackedObjects.ifEmpty { it.trackedObjects },
                         totalDurationMs = recovery.tracks.maxOfOrNull { t ->
                             t.clips.maxOfOrNull { c -> c.timelineEndMs } ?: 0L
                         } ?: 0L,
@@ -1717,6 +1727,7 @@ class EditorViewModel @Inject constructor(
                                         transcript = state.transcript,
                                         selectedWordIndices = emptySet()
                                     ),
+                                    trackedObjects = state.trackedObjects,
                                     playheadMs = state.playheadMs
                                 )
                             )
@@ -2477,6 +2488,185 @@ class EditorViewModel @Inject constructor(
 
     private fun rebuildTimeline() {
         rebuildPlayerTimeline()
+    }
+
+    // --- Cut Assistant (review proposed silences + filler-word cuts) ---
+
+    /**
+     * Generate a non-destructive review of silences and filler words across
+     * every video/audio clip currently on the timeline. Stores the result in
+     * `state.cutAssistantReview` for the UI to render. The timeline is not
+     * mutated until [applyAcceptedCuts] is called.
+     */
+    fun proposeCutsForReview() {
+        val s = _state.value
+        val audioClips = s.tracks
+            .filter { it.type == TrackType.VIDEO || it.type == TrackType.AUDIO }
+            .flatMap { it.clips }
+            .filter { it.sourceDurationMs > 0L }
+        if (audioClips.isEmpty()) {
+            showToast("Add a clip before running Cut Assistant")
+            return
+        }
+        viewModelScope.launch {
+            showToast("Cut Assistant: scanning ${audioClips.size} clip(s)…")
+            try {
+                val perClipAudio = withContext(Dispatchers.IO) {
+                    audioClips.associate { clip ->
+                        // Sample at ~20 samples/sec — coarse enough to keep extraction
+                        // cheap for long clips, dense enough that a 250 ms minimum
+                        // silence still spans 5+ samples for stable detection.
+                        val targetCount = ((clip.sourceDurationMs / 50L)
+                            .coerceIn(200L, 10_000L)).toInt()
+                        val waveform = audioEngine.extractWaveform(clip.sourceUri, targetCount)
+                        val sampleRate = if (clip.sourceDurationMs > 0L) {
+                            (waveform.size * 1000L / clip.sourceDurationMs).coerceAtLeast(1L).toInt()
+                        } else 20
+                        clip.id to com.novacut.editor.engine.CutAssistantEngine.ClipAudio(
+                            clipId = clip.id,
+                            waveform = waveform,
+                            sampleRate = sampleRate,
+                            // Word-level timestamps come from the v3.69 transcript when present;
+                            // otherwise filler-word detection no-ops and silence is the only signal.
+                            words = perClipWordsFor(clip.id, _state.value)
+                        )
+                    }
+                }
+                val review = cutAssistantEngine.review(s.tracks, perClipAudio)
+                _state.update { it.copy(cutAssistantReview = review) }
+                showToast(
+                    if (review.proposals.isEmpty()) "Cut Assistant: nothing to trim"
+                    else "Cut Assistant: ${review.proposals.size} proposed cut(s)"
+                )
+            } catch (e: Exception) {
+                Log.e("CutAssistant", "review failed", e)
+                showToast("Cut Assistant failed: ${e.message}")
+            }
+        }
+    }
+
+    fun toggleCutProposal(id: String) {
+        _state.update { s ->
+            s.copy(cutAssistantReview = s.cutAssistantReview?.toggle(id))
+        }
+    }
+
+    fun acceptAllCutProposals() {
+        _state.update { s ->
+            s.copy(cutAssistantReview = s.cutAssistantReview?.acceptAll())
+        }
+    }
+
+    fun rejectAllCutProposals() {
+        _state.update { s ->
+            s.copy(cutAssistantReview = s.cutAssistantReview?.rejectAll())
+        }
+    }
+
+    fun dismissCutAssistantReview() {
+        _state.update { it.copy(cutAssistantReview = null) }
+    }
+
+    /**
+     * Apply every accepted proposal as a single undoable batch. Operations are
+     * processed latest-first so each split's right-hand neighbours stay at
+     * stable positions while we work backwards through the timeline.
+     */
+    fun applyAcceptedCuts() {
+        val review = _state.value.cutAssistantReview ?: return
+        val ops = cutAssistantEngine.planAcceptedOperations(review)
+        if (ops.isEmpty()) {
+            showToast("No proposed cuts selected")
+            return
+        }
+        saveUndoState("Apply Cut Assistant")
+        var appliedSecondsReclaimed = 0L
+        ops.forEach { op ->
+            when (op) {
+                is com.novacut.editor.engine.CutAssistantEngine.CutOperation.RippleDelete -> {
+                    val target = _state.value.tracks
+                        .flatMap { it.clips }
+                        .firstOrNull { it.id == op.clipId } ?: return@forEach
+                    // Split twice (start, end). The middle slice keeps the original id; the
+                    // tail gets a fresh id, then we delete the middle. splitClipAt mutates
+                    // state synchronously so re-querying after each call is safe.
+                    splitClipAt(op.clipId, op.timelineStartMs)
+                    val middleClipId = _state.value.tracks
+                        .flatMap { it.clips }
+                        .firstOrNull { it.id == op.clipId }?.id ?: return@forEach
+                    splitClipAt(middleClipId, op.timelineEndMs)
+                    _state.update { s ->
+                        s.copy(tracks = s.tracks.map { track ->
+                            track.copy(clips = track.clips.filterNot { it.id == middleClipId })
+                        })
+                    }
+                    appliedSecondsReclaimed += (op.timelineEndMs - op.timelineStartMs)
+                    val unused = target // suppress unused-warning; keeps the fail-fast lookup above
+                    Log.d("CutAssistant", "Applied ${op.reason} cut ${op.timelineStartMs}..${op.timelineEndMs} on ${unused.id}")
+                }
+            }
+        }
+        _state.update { s ->
+            recalculateDuration(s.copy(cutAssistantReview = null))
+        }
+        rebuildPlayerTimeline()
+        saveProject()
+        showToast("Applied ${ops.size} cut(s) — reclaimed ${appliedSecondsReclaimed / 1000}s")
+    }
+
+    private fun perClipWordsFor(
+        clipId: String,
+        state: EditorState
+    ): List<com.novacut.editor.engine.whisper.SherpaAsrEngine.WordTimestamp> {
+        val transcript = state.v369.transcript ?: return emptyList()
+        if (transcript.clipId != clipId) return emptyList()
+        return transcript.words.map { w ->
+            com.novacut.editor.engine.whisper.SherpaAsrEngine.WordTimestamp(
+                word = w.text,
+                startTimeMs = w.startMs,
+                endTimeMs = w.endMs,
+                confidence = w.confidence
+            )
+        }
+    }
+
+    // --- Tracked objects (object-aware editing scaffold) ---
+
+    /**
+     * Insert or update a tracked object. Persisted via AutoSaveState so the
+     * track survives app restart even before SAM 2 / MediaPipe are wired up
+     * (manual placements still ride this same surface).
+     */
+    fun upsertTrackedObject(obj: com.novacut.editor.model.TrackedObject) {
+        saveUndoState("Update tracked object")
+        _state.update { s ->
+            val existingIdx = s.trackedObjects.indexOfFirst { it.id == obj.id }
+            val nextList = if (existingIdx >= 0) {
+                s.trackedObjects.toMutableList().also { it[existingIdx] = obj }
+            } else {
+                s.trackedObjects + obj
+            }
+            s.copy(trackedObjects = nextList)
+        }
+        saveProject()
+    }
+
+    fun removeTrackedObject(id: String) {
+        if (_state.value.trackedObjects.none { it.id == id }) return
+        saveUndoState("Remove tracked object")
+        _state.update { s ->
+            s.copy(trackedObjects = s.trackedObjects.filterNot { it.id == id })
+        }
+        saveProject()
+    }
+
+    fun setTrackedObjectEnabled(id: String, enabled: Boolean) {
+        _state.update { s ->
+            s.copy(trackedObjects = s.trackedObjects.map { obj ->
+                if (obj.id == id) obj.copy(isEnabled = enabled) else obj
+            })
+        }
+        saveProject()
     }
 
     // --- Multi-Cam Sync ---
@@ -3556,7 +3746,8 @@ class EditorViewModel @Inject constructor(
             chapterMarkers = state.chapterMarkers,
             drawingPaths = state.drawingPaths,
             beatMarkers = state.beatMarkers,
-            transcript = state.v369.transcript
+            transcript = state.v369.transcript,
+            trackedObjects = state.trackedObjects
         )
     }
 
