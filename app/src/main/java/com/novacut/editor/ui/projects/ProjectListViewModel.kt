@@ -11,6 +11,8 @@ import androidx.lifecycle.viewModelScope
 import com.novacut.editor.R
 import com.novacut.editor.engine.AutoSaveState
 import com.novacut.editor.engine.ProjectAutoSave
+import com.novacut.editor.engine.TemplateImportFailure
+import com.novacut.editor.engine.TemplateImportResult
 import com.novacut.editor.engine.TemplateManager
 import com.novacut.editor.engine.UserTemplate
 import com.novacut.editor.engine.VideoEngine
@@ -248,15 +250,16 @@ class ProjectListViewModel @Inject constructor(
                 description = appContext.getString(R.string.projects_operation_template_import_body)
             )
             try {
-                val template = withContext(Dispatchers.IO) {
-                    templateManager.importTemplateFromUri(uri)
+                val importResult = withContext(Dispatchers.IO) {
+                    templateManager.importTemplateFromUriDetailed(uri)
                 }
                 loadUserTemplates()
 
+                val template = importResult.template
                 if (template != null) {
                     showToast(appContext.getString(R.string.project_template_import_success, template.name))
                 } else {
-                    showToast(appContext.getString(R.string.project_template_import_failed))
+                    showToast(templateImportFailureMessage(importResult))
                 }
             } catch (e: Exception) {
                 Log.w("ProjectListVM", "Template import failed", e)
@@ -264,6 +267,18 @@ class ProjectListViewModel @Inject constructor(
             } finally {
                 endOperation(operation)
             }
+        }
+    }
+
+    private fun templateImportFailureMessage(result: TemplateImportResult): String {
+        return when (result.failure) {
+            TemplateImportFailure.INCOMPATIBLE -> appContext.getString(R.string.project_template_import_incompatible)
+            TemplateImportFailure.OVERSIZED_FILE -> appContext.getString(R.string.project_template_import_too_large)
+            TemplateImportFailure.INVALID_JSON,
+            TemplateImportFailure.INVALID_STATE -> appContext.getString(R.string.project_template_import_invalid)
+            TemplateImportFailure.UNREADABLE_FILE,
+            TemplateImportFailure.WRITE_FAILED,
+            TemplateImportFailure.NONE -> appContext.getString(R.string.project_template_import_failed)
         }
     }
 

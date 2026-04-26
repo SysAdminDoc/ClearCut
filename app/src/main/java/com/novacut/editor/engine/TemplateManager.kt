@@ -3,6 +3,7 @@ package com.novacut.editor.engine
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import com.novacut.editor.BuildConfig
 import com.novacut.editor.model.*
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -10,6 +11,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.io.IOException
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -24,9 +26,26 @@ data class UserTemplate(
     val trackTypes: List<TrackType>,
     val textOverlayCount: Int = 0,
     val effectSummary: String = "",
+    val compatibility: TemplateCompatibilityMetadata = TemplateCompatibilityMetadata(),
     val createdAt: Long = System.currentTimeMillis(),
     val stateJson: String
 )
+
+data class TemplateImportResult(
+    val template: UserTemplate? = null,
+    val failure: TemplateImportFailure = TemplateImportFailure.NONE,
+    val compatibilityReport: TemplateCompatibilityReport? = null
+)
+
+enum class TemplateImportFailure {
+    NONE,
+    UNREADABLE_FILE,
+    OVERSIZED_FILE,
+    INVALID_JSON,
+    INVALID_STATE,
+    INCOMPATIBLE,
+    WRITE_FAILED
+}
 
 @Singleton
 class TemplateManager @Inject constructor(
@@ -64,6 +83,12 @@ class TemplateManager @Inject constructor(
             textOverlays = textOverlays
         )
         val stateJson = autoState.serialize()
+        val compatibility = TemplateCompatibilityEngine.createMetadata(
+            state = autoState,
+            minVersionCode = BuildConfig.VERSION_CODE,
+            minVersionName = BuildConfig.VERSION_NAME,
+            schemaVersion = templateSchemaVersion
+        )
 
         val effectTypes = tracks.flatMap { it.clips }.flatMap { it.effects }
             .map { it.type.displayName }.distinct().take(3)
@@ -79,6 +104,7 @@ class TemplateManager @Inject constructor(
             trackTypes = tracks.map { it.type }.ifEmpty { defaultTemplateTrackTypes },
             textOverlayCount = textOverlays.size,
             effectSummary = effectSummary,
+            compatibility = compatibility,
             stateJson = stateJson
         )
 
@@ -94,6 +120,11 @@ class TemplateManager @Inject constructor(
 
     fun loadTemplateState(template: UserTemplate): Pair<List<Track>, List<TextOverlay>>? {
         return try {
+            val report = validateTemplateCompatibility(template.compatibility)
+            if (!report.canImport) {
+                Log.w("TemplateManager", "Template '${template.name}' is not compatible: ${report.issues.joinToString { it.code }}")
+                return null
+            }
             val state = AutoSaveState.deserialize(template.stateJson)
             state.tracks to state.textOverlays
         } catch (e: Exception) {
@@ -115,25 +146,52 @@ class TemplateManager @Inject constructor(
     }
 
     suspend fun importTemplateFromUri(uri: Uri): UserTemplate? = withContext(Dispatchers.IO) {
+        importTemplateFromUriDetailed(uri).template
+    }
+
+    suspend fun importTemplateFromUriDetailed(uri: Uri): TemplateImportResult = withContext(Dispatchers.IO) {
         try {
-            val text = context.contentResolver.openInputStream(uri)?.use { stream ->
-                readUtf8WithByteLimit(stream, maxTemplateBytes)
-            } ?: return@withContext null
-            val json = JSONObject(text)
-            val importedTemplate = parseTemplateJson(
+            val text = try {
+                context.contentResolver.openInputStream(uri)?.use { stream ->
+                    readUtf8WithByteLimit(stream, maxTemplateBytes)
+                } ?: return@withContext TemplateImportResult(failure = TemplateImportFailure.UNREADABLE_FILE)
+            } catch (e: IOException) {
+                val failure = if (e.message?.contains("byte limit", ignoreCase = true) == true) {
+                    TemplateImportFailure.OVERSIZED_FILE
+                } else {
+                    TemplateImportFailure.UNREADABLE_FILE
+                }
+                Log.w("TemplateManager", "Template import read failed", e)
+                return@withContext TemplateImportResult(failure = failure)
+            }
+            val json = try {
+                JSONObject(text)
+            } catch (e: Exception) {
+                Log.w("TemplateManager", "Template import JSON is invalid", e)
+                return@withContext TemplateImportResult(failure = TemplateImportFailure.INVALID_JSON)
+            }
+            val importedTemplate = when (val parsed = parseTemplateJson(
                 json = json,
                 fallbackId = UUID.randomUUID().toString(),
                 defaultCreatedAt = System.currentTimeMillis()
-            ) ?: return@withContext null
+            )) {
+                is TemplateParseResult.Success -> parsed.template
+                is TemplateParseResult.Failure -> {
+                    return@withContext TemplateImportResult(
+                        failure = parsed.failure,
+                        compatibilityReport = parsed.compatibilityReport
+                    )
+                }
+            }
             val template = normalizeImportedTemplate(importedTemplate, listTemplates())
-            // Save locally
             templateDir.mkdirs()
-            val templateFile = templateFileForId(template.id) ?: return@withContext null
+            val templateFile = templateFileForId(template.id)
+                ?: return@withContext TemplateImportResult(failure = TemplateImportFailure.WRITE_FAILED)
             writeUtf8TextAtomically(templateFile, templateToJson(template).toString(2))
-            template
+            TemplateImportResult(template = template)
         } catch (e: Exception) {
             Log.e("TemplateManager", "Failed to import template from URI", e)
-            null
+            TemplateImportResult(failure = TemplateImportFailure.WRITE_FAILED)
         }
     }
 
@@ -146,11 +204,14 @@ class TemplateManager @Inject constructor(
             val json = JSONObject(file.inputStream().use { input ->
                 readUtf8WithByteLimit(input, maxTemplateBytes)
             })
-            parseTemplateJson(
+            when (val parsed = parseTemplateJson(
                 json = json,
                 fallbackId = file.nameWithoutExtension,
                 defaultCreatedAt = file.lastModified().takeIf { it > 0L } ?: System.currentTimeMillis()
-            )
+            )) {
+                is TemplateParseResult.Success -> parsed.template
+                is TemplateParseResult.Failure -> null
+            }
         } catch (e: Exception) {
             Log.e("TemplateManager", "Failed to load template ${file.name}", e)
             null
@@ -161,18 +222,49 @@ class TemplateManager @Inject constructor(
         json: JSONObject,
         fallbackId: String,
         defaultCreatedAt: Long
-    ): UserTemplate? {
+    ): TemplateParseResult {
+        val schemaVersion = json.optInt("novacut_template_version", 1).coerceAtLeast(1)
+        if (schemaVersion > templateSchemaVersion) {
+            val report = TemplateCompatibilityEngine.validate(
+                metadata = TemplateCompatibilityMetadata(schemaVersion = schemaVersion),
+                currentSchemaVersion = templateSchemaVersion,
+                currentVersionCode = BuildConfig.VERSION_CODE
+            )
+            Log.w("TemplateManager", "Template schema $schemaVersion is newer than supported $templateSchemaVersion")
+            return TemplateParseResult.Failure(
+                failure = TemplateImportFailure.INCOMPATIBLE,
+                compatibilityReport = report
+            )
+        }
+
         val stateJson = json.optString("stateJson", "").trim()
         if (stateJson.isBlank()) {
             Log.w("TemplateManager", "Template JSON missing stateJson payload")
-            return null
+            return TemplateParseResult.Failure(TemplateImportFailure.INVALID_STATE)
         }
 
         val state = try {
             AutoSaveState.deserialize(stateJson)
         } catch (e: Exception) {
             Log.e("TemplateManager", "Template stateJson is invalid", e)
-            return null
+            return TemplateParseResult.Failure(TemplateImportFailure.INVALID_STATE)
+        }
+
+        val inferredCompatibility = TemplateCompatibilityEngine.createMetadata(
+            state = state,
+            schemaVersion = schemaVersion
+        )
+        val compatibility = TemplateCompatibilityEngine.merge(
+            declared = TemplateCompatibilityEngine.fromJson(json.optJSONObject("compatibility")),
+            inferred = inferredCompatibility
+        )
+        val compatibilityReport = validateTemplateCompatibility(compatibility)
+        if (!compatibilityReport.canImport) {
+            Log.w("TemplateManager", "Template import blocked: ${compatibilityReport.issues.joinToString { it.code }}")
+            return TemplateParseResult.Failure(
+                failure = TemplateImportFailure.INCOMPATIBLE,
+                compatibilityReport = compatibilityReport
+            )
         }
 
         val trackTypesFromState = state.tracks.map { it.type }
@@ -188,7 +280,7 @@ class TemplateManager @Inject constructor(
             .joinToString(", ")
             .ifBlank { "No effects" }
 
-        return UserTemplate(
+        return TemplateParseResult.Success(UserTemplate(
             id = json.optString("id", fallbackId).ifBlank { fallbackId },
             name = normalizeTemplateName(json.optString("name", "Untitled Template")),
             description = json.optString("description", "").trim(),
@@ -198,9 +290,10 @@ class TemplateManager @Inject constructor(
             trackTypes = normalizedTrackTypes,
             textOverlayCount = state.textOverlays.size,
             effectSummary = effectSummary,
+            compatibility = compatibility,
             createdAt = json.optLong("createdAt", defaultCreatedAt).takeIf { it > 0L } ?: defaultCreatedAt,
             stateJson = stateJson
-        )
+        ))
     }
 
     private fun templateToJson(template: UserTemplate): JSONObject {
@@ -215,9 +308,22 @@ class TemplateManager @Inject constructor(
             put("trackTypes", JSONArray(template.trackTypes.map { it.name }))
             put("textOverlayCount", template.textOverlayCount)
             put("effectSummary", template.effectSummary)
+            put("compatibility", TemplateCompatibilityEngine.toJson(template.compatibility))
             put("createdAt", template.createdAt)
             put("stateJson", template.stateJson)
         }
+    }
+
+    fun validateTemplateCompatibility(template: UserTemplate): TemplateCompatibilityReport {
+        return validateTemplateCompatibility(template.compatibility)
+    }
+
+    private fun validateTemplateCompatibility(metadata: TemplateCompatibilityMetadata): TemplateCompatibilityReport {
+        return TemplateCompatibilityEngine.validate(
+            metadata = metadata,
+            currentSchemaVersion = templateSchemaVersion,
+            currentVersionCode = BuildConfig.VERSION_CODE
+        )
     }
 
     private fun normalizeImportedTemplate(
@@ -305,6 +411,14 @@ class TemplateManager @Inject constructor(
 
     private fun normalizeTemplateName(raw: String): String {
         return raw.trim().ifBlank { "Untitled Template" }
+    }
+
+    private sealed class TemplateParseResult {
+        data class Success(val template: UserTemplate) : TemplateParseResult()
+        data class Failure(
+            val failure: TemplateImportFailure,
+            val compatibilityReport: TemplateCompatibilityReport? = null
+        ) : TemplateParseResult()
     }
 
 }

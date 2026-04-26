@@ -9,6 +9,9 @@
 - Added a review sheet for silence/filler-word proposals with selected-by-default candidates, per-row toggles, accept/reject all, reclaimed-duration summary, and an empty state.
 - Applying reviewed proposals still uses the existing `applyAcceptedCuts()` path, so the batch lands as one undoable timeline edit.
 - Added a Tracked Mosaic effect that binds persisted TrackedObject keyframes to a Media3 shader mask, with preview/export wiring, target-ID autosave, interpolation tests, and an Effects panel action for tracked masks on the selected clip.
+- Added template compatibility metadata to saved/exported templates, including schema version, minimum app version, required feature list, and media/text slot counts.
+- Added compatibility validation to template imports so future-schema, newer-app, or unknown required-feature templates are rejected before they are saved locally, with clearer user-facing failure copy.
+- Saved template cards now surface slot counts so reusable setups feel more inspectable before opening.
 
 ## v3.71.0 — 2026-04-25 — Cut Assistant + TrackedObject scaffolding
 

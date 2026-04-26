@@ -410,6 +410,16 @@ private fun UserTemplateCard(
                         .background(Mocha.Mauve.copy(alpha = 0.12f), RoundedCornerShape(999.dp))
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 )
+                if (template.compatibility.slotCount > 0) {
+                    Text(
+                        stringResource(R.string.template_slots_format, template.compatibility.slotCount),
+                        color = Mocha.Sapphire,
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier
+                            .background(Mocha.Sapphire.copy(alpha = 0.12f), RoundedCornerShape(999.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
             }
         }
     }

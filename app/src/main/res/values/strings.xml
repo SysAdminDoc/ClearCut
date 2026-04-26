@@ -502,7 +502,7 @@
     <string name="projects_operation_video_import_title">Importing video</string>
     <string name="projects_operation_video_import_body">Copying, validating, and opening the source as a new edit.</string>
     <string name="projects_operation_template_import_title">Importing template</string>
-    <string name="projects_operation_template_import_body">Checking the file and adding it to saved templates.</string>
+    <string name="projects_operation_template_import_body">Checking compatibility and adding the file to saved templates.</string>
     <string name="projects_operation_template_share_title">Preparing template</string>
     <string name="projects_operation_template_share_body">Packaging the template for sharing.</string>
     <string name="projects_operation_template_create_title">Building from template</string>
@@ -514,6 +514,9 @@
     <string name="project_imported_default_name">Imported</string>
     <string name="project_template_import_success">Imported template: %1$s</string>
     <string name="project_template_import_failed">Template import failed</string>
+    <string name="project_template_import_incompatible">Template needs a newer NovaCut version or unsupported tools.</string>
+    <string name="project_template_import_invalid">Template file is not readable.</string>
+    <string name="project_template_import_too_large">Template file is too large.</string>
     <string name="project_template_export_failed">Template export failed</string>
     <string name="project_template_open_failed">Template could not be opened</string>
     <string name="project_template_delete_success">Deleted template: %1$s</string>
@@ -562,6 +565,7 @@
     <string name="template_square_duration">15–60s</string>
     <string name="template_tracks_format">%1$d tracks</string>
     <string name="template_tracks_texts_format">%1$d tracks, %2$d texts</string>
+    <string name="template_slots_format">%1$d slots</string>
     <string name="template_delete">Delete</string>
     <string name="template_delete_confirm_title">Delete saved template?</string>
     <string name="template_delete_confirm_body">Delete \"%1$s\" from your saved templates? Projects already created from it stay unchanged, but this template cannot be restored.</string>
