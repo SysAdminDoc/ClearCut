@@ -42,6 +42,16 @@ class ClipTimingTest {
         assertWithin(500L, clip.timelineOffsetToSourceMs(250L), toleranceMs = 2L)
     }
 
+    @Test
+    fun `eased speed ramp duration integrates wall clock curve`() {
+        val clip = clip(speedCurve = SpeedCurve.rampUp(from = 0.5f, to = 2f))
+
+        assertWithin(930L, clip.durationMs, toleranceMs = 2L)
+        val timelineMidpoint = clip.sourceTimeToTimelineOffsetMs(500L) ?: -1L
+        assertWithin(618L, timelineMidpoint, toleranceMs = 3L)
+        assertWithin(500L, clip.timelineOffsetToSourceMs(timelineMidpoint), toleranceMs = 3L)
+    }
+
     private fun assertWithin(expected: Long, actual: Long, toleranceMs: Long) {
         assertTrue(
             "expected $actual to be within ${toleranceMs}ms of $expected",

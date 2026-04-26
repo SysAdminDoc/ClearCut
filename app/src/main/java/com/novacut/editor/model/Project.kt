@@ -95,6 +95,7 @@ enum class ClipLabel(val argb: Long, val displayName: String) {
 }
 
 private const val MIN_PLAYBACK_SPEED = 0.01f
+private const val SPEED_CURVE_INTEGRATION_STEPS = 256
 
 private fun finitePositiveSpeed(value: Float, fallback: Float = 1f): Float {
     val safeFallback = if (fallback.isFinite() && fallback > 0f) fallback else 1f
@@ -159,33 +160,33 @@ data class Clip(
     val durationMs: Long get() {
         val trimRange = trimEndMs - trimStartMs
         if (trimRange <= 0) return 0L
-        val effectiveSpeed = if (speedCurve != null && speedCurve.points.size >= 2) {
-            // Real-time duration is integral(dt_source / speed(t)), so the *harmonic*
-            // mean of speed (= 1 / average(1/speed)) is what scales trim range to
-            // wall-clock duration. Arithmetic mean would underestimate duration on a
-            // curve that mixes fast + slow segments (e.g. 0.5x then 2x = harmonic 0.8x,
-            // arithmetic 1.25x — using arithmetic shrinks the timeline by 56%).
-            val samples = 20
-            var sumReciprocal = 0f
-            for (i in 0 until samples) {
-                val t = i.toLong() * trimRange / samples
-                // getSpeedAt can return NaN if the curve has NaN handles (corrupt save);
-                // NaN.coerceAtLeast(x) stays NaN (comparisons against NaN are false),
-                // so guard explicitly before the reciprocal — otherwise the entire duration
-                // goes to 0 silently and the clip disappears from the timeline.
-                val s = speedCurve.getSpeedAt(t, trimRange)
-                val safeS = finitePositiveSpeed(s)
-                sumReciprocal += 1f / safeS
+        val curve = speedCurve
+        if (curve != null && curve.points.size >= 2) {
+            // Real-time duration is integral(dt_source / speed(t)). Use the
+            // same midpoint integration shape as timelineOffsetToSourceMs so
+            // eased ramps report the wall-clock length the scrubber/export
+            // mapping will actually follow.
+            val stepSourceMs = trimRange.toDouble() / SPEED_CURVE_INTEGRATION_STEPS
+            var timelineDurationMs = 0.0
+            for (i in 0 until SPEED_CURVE_INTEGRATION_STEPS) {
+                val sampleOffsetMs = ((i + 0.5) * stepSourceMs)
+                    .toLong()
+                    .coerceIn(0L, trimRange)
+                // getSpeedAt can return NaN if the curve has corrupt handles,
+                // so guard before division or the clip can disappear.
+                val safeSpeed = finitePositiveSpeed(
+                    curve.getSpeedAt(sampleOffsetMs, trimRange),
+                    fallback = speed
+                )
+                timelineDurationMs += stepSourceMs / safeSpeed.toDouble()
             }
-            if (sumReciprocal.isFinite() && sumReciprocal > 0f) {
-                finitePositiveSpeed(samples / sumReciprocal)
+            return if (timelineDurationMs.isFinite() && timelineDurationMs > 0.0) {
+                timelineDurationMs.toLong()
             } else {
-                finitePositiveSpeed(speed)
+                (trimRange / finitePositiveSpeed(speed)).toLong()
             }
-        } else {
-            finitePositiveSpeed(speed)
         }
-        return (trimRange / effectiveSpeed).toLong()
+        return (trimRange / finitePositiveSpeed(speed)).toLong()
     }
     val timelineEndMs: Long get() = timelineStartMs + durationMs
 
