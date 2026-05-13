@@ -41,6 +41,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -89,6 +90,11 @@ class ProjectListViewModel @Inject constructor(
         // recompose on every unrelated project update (e.g. auto-save bumping updatedAt).
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val projectTotalCount: StateFlow<Int> = allProjects
+        .map { it.size }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     val projects: StateFlow<List<Project>> = combine(
         allProjects, _searchQuery, _sortMode, _filterMode

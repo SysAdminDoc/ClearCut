@@ -1,5 +1,14 @@
 # Changelog
 
+## v3.73.2 — 2026-05-13 — Project home recovery polish
+
+- **Project home counts now stay trustworthy while filtering.** The hero metric uses the total project library size instead of the currently filtered result count, so an empty filter no longer makes the library look empty.
+- **Empty states now explain the real situation.** First-run, no search results, empty filter views, and search-plus-filter misses get distinct copy, icon treatment, and recovery behavior.
+- **Filter recovery is now one clear action.** Empty filtered views offer “Show All Projects,” which clears search and filter together, plus a secondary new-project path for users who want to keep moving.
+- **Filtered result headers are more specific.** Active filter views show the filter name, visible/total project counts, and current sort context instead of the generic recent-projects heading.
+- **Mobile first-run layout no longer buries the empty state.** The project home hides irrelevant search, sort, filter, and duplicate hero actions until a library exists, and filter chips now stay in a compact single-line rail.
+- **Verification** — `git diff --check`, `assembleDebug`, `testDebugUnitTest`, `installDebug`, and an adb launch/UI-dump smoke pass verified the first-run project home on the connected device.
+
 ## v3.73.1 — 2026-05-13 — Settings AI model removal polish
 
 - **Settings AI model removal now matches the AI Tools trust flow.** Removing Whisper or segmentation from Settings opens a clear confirmation dialog with the model impact before deleting local files.

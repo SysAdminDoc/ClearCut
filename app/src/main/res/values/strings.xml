@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.73.1</string>
+    <string name="app_version">v3.73.2</string>
 
     <!-- Common -->
     <string name="close">Close</string>
@@ -488,6 +488,10 @@
     <string name="projects_ready_body">Start with a guided template or open a clean timeline and build from scratch.</string>
     <string name="projects_create_first">Create First Project</string>
     <string name="projects_try_different_search">Try another keyword or clear the filter to bring every project back.</string>
+    <string name="projects_no_filter_results">No projects for %1$s</string>
+    <string name="projects_filter_empty_body">That view is empty right now. Show all projects or start a new edit from a template.</string>
+    <string name="projects_try_different_view">That search and filter combination returned nothing. Show all projects or try a different keyword.</string>
+    <string name="projects_show_all">Show All Projects</string>
     <string name="projects_tap_to_create">Tap + to create your first project</string>
     <string name="projects_updated">Updated %1$s</string>
     <string name="projects_templates_count">%1$d built-in templates</string>
