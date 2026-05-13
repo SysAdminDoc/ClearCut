@@ -5,6 +5,7 @@ import android.net.Uri
 import android.util.Log
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.ImageOverlay
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.*
@@ -141,6 +142,12 @@ object ProjectArchive {
             moveFileReplacing(tempFile, targetFile)
 
             true
+        } catch (e: CancellationException) {
+            // Cooperative cancellation must propagate so the caller's scope
+            // tears down — swallowing it would leave the UI thinking the export
+            // is still in progress while the coroutine has actually died.
+            tempFile.delete()
+            throw e
         } catch (e: Exception) {
             Log.e("ProjectArchive", "Archive export failed", e)
             tempFile.delete()
@@ -356,6 +363,9 @@ object ProjectArchive {
                 ),
                 errorMessage = null
             )
+        } catch (e: CancellationException) {
+            cleanupPartialImport(canonicalTargetDir, extractedPaths, targetDirAlreadyExisted)
+            throw e
         } catch (e: Exception) {
             Log.e("ProjectArchive", "Archive import failed", e)
             cleanupPartialImport(canonicalTargetDir, extractedPaths, targetDirAlreadyExisted)

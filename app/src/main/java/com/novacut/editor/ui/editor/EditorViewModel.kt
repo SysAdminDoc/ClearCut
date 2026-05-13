@@ -1208,7 +1208,11 @@ class EditorViewModel @Inject constructor(
             selectedEffectId = null,
             editingTextOverlayId = null,
             selectedMaskId = null,
-            isDrawingMode = false
+            isDrawingMode = false,
+            // v3.71 — Cut Assistant review survives panel transitions today, which
+            // leaks a potentially large ReviewSet (proposals + cached words) into
+            // unrelated workflows. Drop it alongside the other auxiliary state.
+            cutAssistantReview = null
         )
     )
 
@@ -2499,23 +2503,24 @@ class EditorViewModel @Inject constructor(
      * mutated until [applyAcceptedCuts] is called.
      */
     fun proposeCutsForReview() {
-        val s = _state.value
-        val audioClips = s.tracks
+        val initialAudioClips = _state.value.tracks
             .filter { it.type == TrackType.VIDEO || it.type == TrackType.AUDIO }
             .flatMap { it.clips }
             .filter { it.sourceDurationMs > 0L }
-        if (audioClips.isEmpty()) {
+        if (initialAudioClips.isEmpty()) {
             showToast("Add a clip before running Cut Assistant")
             return
         }
+        // Capture only the ids we plan to scan — by the time the IO scan returns
+        // some of those clips may have been deleted, trimmed, or replaced. The
+        // post-scan filter below re-validates against the live state so we never
+        // hand the engine a stale Track snapshot.
+        val targetClipIds = initialAudioClips.map { it.id }.toSet()
         viewModelScope.launch {
-            showToast("Cut Assistant: scanning ${audioClips.size} clip(s)…")
+            showToast("Cut Assistant: scanning ${initialAudioClips.size} clip(s)…")
             try {
                 val perClipAudio = withContext(Dispatchers.IO) {
-                    audioClips.associate { clip ->
-                        // Sample at ~20 samples/sec — coarse enough to keep extraction
-                        // cheap for long clips, dense enough that a 250 ms minimum
-                        // silence still spans 5+ samples for stable detection.
+                    initialAudioClips.associate { clip ->
                         val targetCount = ((clip.sourceDurationMs / 50L)
                             .coerceIn(200L, 10_000L)).toInt()
                         val waveform = audioEngine.extractWaveform(clip.sourceUri, targetCount)
@@ -2526,13 +2531,26 @@ class EditorViewModel @Inject constructor(
                             clipId = clip.id,
                             waveform = waveform,
                             sampleRate = sampleRate,
-                            // Word-level timestamps come from the v3.69 transcript when present;
-                            // otherwise filler-word detection no-ops and silence is the only signal.
                             words = perClipWordsFor(clip.id, _state.value)
                         )
                     }
                 }
-                val review = cutAssistantEngine.review(s.tracks, perClipAudio).acceptAll()
+                // Re-read live tracks AFTER the IO scan completes — clips may have
+                // been mutated while we were busy. Filter both sides so the engine
+                // only sees clips that still exist in both the scan and the live
+                // state (and whose key invariants haven't drifted).
+                val liveTracks = _state.value.tracks
+                val liveClipIds = liveTracks.flatMap { it.clips }.map { it.id }.toSet()
+                val validIds = targetClipIds intersect liveClipIds intersect perClipAudio.keys
+                if (validIds.isEmpty()) {
+                    showToast("Cut Assistant: source clips no longer on timeline")
+                    return@launch
+                }
+                val filteredTracks = liveTracks.map { track ->
+                    track.copy(clips = track.clips.filter { it.id in validIds })
+                }
+                val filteredAudio = perClipAudio.filterKeys { it in validIds }
+                val review = cutAssistantEngine.review(filteredTracks, filteredAudio).acceptAll()
                 _state.update { it.copy(
                     cutAssistantReview = review,
                     panels = it.panels.closeAll()
@@ -2541,6 +2559,8 @@ class EditorViewModel @Inject constructor(
                     if (review.proposals.isEmpty()) "Cut Assistant: nothing to trim"
                     else "Cut Assistant: ${review.proposals.size} proposed cut(s)"
                 )
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e("CutAssistant", "review failed", e)
                 showToast("Cut Assistant failed: ${e.message}")
@@ -2584,28 +2604,68 @@ class EditorViewModel @Inject constructor(
         }
         saveUndoState("Apply Cut Assistant")
         var appliedSecondsReclaimed = 0L
+        var appliedCount = 0
         ops.forEach { op ->
             when (op) {
                 is com.novacut.editor.engine.CutAssistantEngine.CutOperation.RippleDelete -> {
-                    val target = _state.value.tracks
+                    val originalClip = _state.value.tracks
                         .flatMap { it.clips }
                         .firstOrNull { it.id == op.clipId } ?: return@forEach
-                    // Split twice (start, end). The middle slice keeps the original id; the
-                    // tail gets a fresh id, then we delete the middle. splitClipAt mutates
-                    // state synchronously so re-querying after each call is safe.
+                    // Snapshot the set of clip IDs in the original clip's track BEFORE the
+                    // first split so we can identify the freshly-minted right-half by id
+                    // diff (splitClipAt mints a UUID, but the LEFT half keeps op.clipId).
+                    val targetTrackId = _state.value.tracks
+                        .firstOrNull { track -> track.clips.any { it.id == op.clipId } }
+                        ?.id ?: return@forEach
+                    val idsBeforeFirstSplit = _state.value.tracks
+                        .firstOrNull { it.id == targetTrackId }
+                        ?.clips?.map { it.id }?.toSet().orEmpty()
                     splitClipAt(op.clipId, op.timelineStartMs)
-                    val middleClipId = _state.value.tracks
-                        .flatMap { it.clips }
-                        .firstOrNull { it.id == op.clipId }?.id ?: return@forEach
-                    splitClipAt(middleClipId, op.timelineEndMs)
+                    val idsAfterFirstSplit = _state.value.tracks
+                        .firstOrNull { it.id == targetTrackId }
+                        ?.clips?.map { it.id }.orEmpty()
+                    // The middle+tail slice is the new id created by the first split. If
+                    // canSplitClipAtPosition rejected the cut (proposal endpoints landed
+                    // exactly on a clip boundary), no new id is created and we skip.
+                    val rightHalfId = idsAfterFirstSplit.firstOrNull { it !in idsBeforeFirstSplit }
+                        ?: return@forEach
+                    val idsBeforeSecondSplit = _state.value.tracks
+                        .firstOrNull { it.id == targetTrackId }
+                        ?.clips?.map { it.id }?.toSet().orEmpty()
+                    splitClipAt(rightHalfId, op.timelineEndMs)
+                    val idsAfterSecondSplit = _state.value.tracks
+                        .firstOrNull { it.id == targetTrackId }
+                        ?.clips?.map { it.id }.orEmpty()
+                    val tailId = idsAfterSecondSplit.firstOrNull { it !in idsBeforeSecondSplit }
+                    // If the second split was rejected (proposal range collapsed against the
+                    // clip's right edge) nothing was minted, so the "middle" is rightHalfId
+                    // itself extending to the original clip end. Either way we delete
+                    // rightHalfId — that is the silence slice — and ripple-shift the tail
+                    // (if any) and every clip to its right back by the deleted span.
+                    val deletedSpanMs = (op.timelineEndMs - op.timelineStartMs).coerceAtLeast(0L)
+                    val deletedTimelineStart = op.timelineStartMs
                     _state.update { s ->
                         s.copy(tracks = s.tracks.map { track ->
-                            track.copy(clips = track.clips.filterNot { it.id == middleClipId })
+                            track.copy(
+                                clips = track.clips
+                                    .filterNot { it.id == rightHalfId }
+                                    .map { clip ->
+                                        // Ripple-shift everything after the deletion point.
+                                        // Linked audio on other tracks lines up because we
+                                        // compare timeline coords, not track membership.
+                                        if (clip.timelineStartMs >= deletedTimelineStart + deletedSpanMs) {
+                                            clip.copy(timelineStartMs = clip.timelineStartMs - deletedSpanMs)
+                                        } else clip
+                                    }
+                            )
                         })
                     }
-                    appliedSecondsReclaimed += (op.timelineEndMs - op.timelineStartMs)
-                    val unused = target // suppress unused-warning; keeps the fail-fast lookup above
-                    Log.d("CutAssistant", "Applied ${op.reason} cut ${op.timelineStartMs}..${op.timelineEndMs} on ${unused.id}")
+                    appliedSecondsReclaimed += deletedSpanMs
+                    appliedCount++
+                    Log.d(
+                        "CutAssistant",
+                        "Applied ${op.reason} cut ${op.timelineStartMs}..${op.timelineEndMs} on ${originalClip.id} (rightHalf=$rightHalfId, tail=$tailId)"
+                    )
                 }
             }
         }
@@ -2614,7 +2674,11 @@ class EditorViewModel @Inject constructor(
         }
         rebuildPlayerTimeline()
         saveProject()
-        showToast("Applied ${ops.size} cut(s) — reclaimed ${appliedSecondsReclaimed / 1000}s")
+        if (appliedCount == 0) {
+            showToast("No cuts applied — endpoints fell on clip boundaries")
+        } else {
+            showToast("Applied $appliedCount cut(s) — reclaimed ${appliedSecondsReclaimed / 1000}s")
+        }
     }
 
     private fun perClipWordsFor(

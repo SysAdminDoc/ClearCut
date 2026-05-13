@@ -104,8 +104,21 @@ data class TrackedObjectKeyframe(
     val maskPolygon: List<MaskPoint> = emptyList()
 ) {
     init {
+        // NaN bypasses ordering comparisons (NaN > 0 is false), so the (0, 1] and
+        // [0, 1] requires below ALREADY reject NaN for width/height/confidence —
+        // but `centerX in 0f..1f` would silently accept NaN if we relied only on
+        // ranges. Reject all non-finite inputs explicitly so corrupt JSON cannot
+        // sneak NaN coordinates into mosaic/blur masks where they would render
+        // as gigantic off-screen rectangles. clipTimeMs guard prevents negative
+        // ms (legacy saves before v3.71 used 0L for "missing", not a negative).
+        require(clipTimeMs >= 0L) { "clipTimeMs must be non-negative, got $clipTimeMs" }
+        require(centerX.isFinite() && centerY.isFinite()) {
+            "centerX/centerY must be finite, got ($centerX, $centerY)"
+        }
+        require(centerX in 0f..1f) { "centerX must be in [0, 1], got $centerX" }
+        require(centerY in 0f..1f) { "centerY must be in [0, 1], got $centerY" }
         require(width > 0f && width <= 1f) { "width must be in (0, 1], got $width" }
         require(height > 0f && height <= 1f) { "height must be in (0, 1], got $height" }
-        require(confidence in 0f..1f) { "confidence must be in [0, 1]" }
+        require(confidence in 0f..1f) { "confidence must be in [0, 1], got $confidence" }
     }
 }

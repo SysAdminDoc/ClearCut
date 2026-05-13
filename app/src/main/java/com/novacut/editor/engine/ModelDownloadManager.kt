@@ -3,6 +3,7 @@ package com.novacut.editor.engine
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
@@ -241,11 +242,23 @@ class ModelDownloadManager @Inject constructor(
          * byte threshold, and (if a checksum was declared) matches it. Without
          * the checksum gate, a partial-but-large-enough download from a prior
          * crash would be accepted and surface as a corrupt-model crash later.
+         *
+         * On checksum mismatch we delete the corrupt file before returning false
+         * so a subsequent retry doesn't waste a SHA-256 pass over the same bad
+         * bytes on every isValidModelFile() call (this method is hot — called
+         * from every downloadFiles() invocation and every Whisper init).
          */
         internal fun isValidModelFile(file: File, minimumBytes: Long, expectedSha256: String? = null): Boolean {
             if (!file.isFile || file.length() < minimumBytes) return false
             if (expectedSha256 == null) return true
-            return runCatching { sha256Of(file) == expectedSha256.lowercase() }.getOrDefault(false)
+            val actual = runCatching { sha256Of(file) }.getOrNull() ?: return false
+            if (actual == expectedSha256.lowercase()) return true
+            Log.w(
+                "ModelDownloadManager",
+                "Checksum mismatch for ${file.name} — deleting corrupt cached file"
+            )
+            runCatching { file.delete() }
+            return false
         }
 
         internal fun validateDownloadedFile(

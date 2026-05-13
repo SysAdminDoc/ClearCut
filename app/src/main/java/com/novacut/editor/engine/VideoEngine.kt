@@ -275,16 +275,39 @@ class VideoEngine @Inject constructor(
         thumbnailCache.get(key)?.let { return it }
 
         val retriever = MediaMetadataRetriever()
+        var frame: Bitmap? = null
         return try {
             retriever.setDataSource(context, uri)
-            val frame = retriever.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
-            frame?.let {
-                val scaled = Bitmap.createScaledBitmap(it, width, height, true)
-                if (scaled !== it) it.recycle()
-                thumbnailCache.put(key, scaled)
-                scaled
+            frame = retriever.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+            val original = frame ?: return null
+            // createScaledBitmap allocates natively and may throw OOM (an Error,
+            // not an Exception) or IllegalArgumentException for zero-area sizes —
+            // catch Throwable so the source `frame` is always recycled before
+            // returning null. Previously OOM here leaked a full-resolution frame.
+            val scaled = try {
+                Bitmap.createScaledBitmap(original, width, height, true)
+            } catch (t: Throwable) {
+                Log.w(TAG, "Thumbnail scale failed at ${timeUs}us for $uri", t)
+                null
             }
+            if (scaled == null) {
+                // Original frame is the only reference we own; recycle and bail.
+                original.recycle()
+                frame = null
+                return null
+            }
+            if (scaled !== original) {
+                original.recycle()
+                frame = null
+            }
+            thumbnailCache.put(key, scaled)
+            scaled
         } catch (e: Exception) {
+            // Cooperative cancellation isn't possible here (sync API), but any
+            // IO / setDataSource failure must still recycle the partial frame
+            // before we return so we don't accumulate native bitmaps.
+            frame?.recycle()
+            Log.w(TAG, "Thumbnail extract failed at ${timeUs}us for $uri", e)
             null
         } finally {
             retriever.release()
