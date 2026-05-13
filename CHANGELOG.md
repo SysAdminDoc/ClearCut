@@ -1,5 +1,13 @@
 # Changelog
 
+## v3.73.1 — 2026-05-13 — Settings AI model removal polish
+
+- **Settings AI model removal now matches the AI Tools trust flow.** Removing Whisper or segmentation from Settings opens a clear confirmation dialog with the model impact before deleting local files.
+- **AI model storage copy is now cleaner and localized.** Installed/download-size labels use string resources, and removal confirmations state the exact local storage that will be freed.
+- **Settings feedback is calmer for assistive tech.** AI model success/error banners now announce as polite live-region updates instead of relying only on visual change.
+- **Segmentation downloads work again.** Replaced the dead MediaPipe `float32` selfie-segmenter URL with the current `float16` model URL and pinned the downloaded file with a SHA-256 check.
+- **Verification** — `git diff --check`, `assembleDebug`, `testDebugUnitTest`, `installDebug`, and an adb settings smoke pass verified segmentation download, confirmation, and removal on the connected device.
+
 ## v3.73.0 — 2026-05-13 — Premium polish pass (trust surfaces, model storage, visual system)
 
 - **AI model settings now feel like a managed product surface instead of a static list.** Added a Wi-Fi-only model download preference, live install/download/error state badges, local storage disclosure, and per-model download/remove controls for Whisper and segmentation models.

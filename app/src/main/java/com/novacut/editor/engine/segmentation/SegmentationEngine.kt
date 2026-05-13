@@ -57,7 +57,9 @@ class SegmentationEngine @Inject constructor(
 
     companion object {
         private const val MODEL_URL =
-            "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float32/latest/selfie_segmenter.tflite"
+            "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite"
+        private const val MODEL_SHA256 =
+            "191ac9529ae506ee0beefa6b2c945a172dab9d07d1e802a290a4e4038226658b"
         private const val MIN_MODEL_BYTES = 32L * 1024L
 
         fun estimateModelSizeMB(): Int = 1 // ~256KB
@@ -95,7 +97,8 @@ class SegmentationEngine @Inject constructor(
                         targetFile = modelFile,
                         minimumBytes = MIN_MODEL_BYTES,
                         estimatedBytes = estimateModelSizeMB() * 1024L * 1024L,
-                        displayName = "Selfie segmenter"
+                        displayName = "Selfie segmenter",
+                        sha256 = MODEL_SHA256
                     )
                 ),
                 connectTimeoutMs = 15_000,

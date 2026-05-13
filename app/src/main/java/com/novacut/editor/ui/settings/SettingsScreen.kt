@@ -16,8 +16,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
@@ -44,6 +46,11 @@ import com.novacut.editor.ui.theme.Spacing
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
+private enum class SettingsAiModelRemovalTarget {
+    WHISPER,
+    SEGMENTATION
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
@@ -63,6 +70,9 @@ fun SettingsScreen(
     val aiModelStorage by viewModel.aiModelStorage.collectAsStateWithLifecycle()
     val whisperModelState by viewModel.whisperModelState.collectAsStateWithLifecycle()
     val segmentationModelState by viewModel.segmentationModelState.collectAsStateWithLifecycle()
+    val canRemoveWhisperModel = whisperModelState == WhisperModelState.READY && aiModelStorage.whisperBytes > 0L
+    val canRemoveSegmentationModel = segmentationModelState == SegmentationModelState.READY && aiModelStorage.segmentationBytes > 0L
+    var pendingAiModelRemoval by remember { mutableStateOf<SettingsAiModelRemovalTarget?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.refreshAiModelStorage()
@@ -265,20 +275,20 @@ fun SettingsScreen(
                     description = stringResource(R.string.ai_whisper_description),
                     stateLabel = whisperModelState.displayLabel(),
                     storageLabel = modelStorageLabel(aiModelStorage.whisperBytes, stringResource(R.string.settings_whisper_size)),
-                    canRemove = whisperModelState == WhisperModelState.READY && aiModelStorage.whisperBytes > 0L,
+                    canRemove = canRemoveWhisperModel,
                     isBusy = aiModelStorage.isRemovingWhisper || whisperModelState == WhisperModelState.DOWNLOADING,
-                    actionLabel = if (whisperModelState == WhisperModelState.READY && aiModelStorage.whisperBytes > 0L) {
+                    actionLabel = if (canRemoveWhisperModel) {
                         stringResource(R.string.remove)
                     } else {
                         stringResource(R.string.download)
                     },
-                    actionIcon = if (whisperModelState == WhisperModelState.READY && aiModelStorage.whisperBytes > 0L) {
+                    actionIcon = if (canRemoveWhisperModel) {
                         Icons.Default.Delete
                     } else {
                         Icons.Default.Download
                     },
-                    onAction = if (whisperModelState == WhisperModelState.READY && aiModelStorage.whisperBytes > 0L) {
-                        viewModel::removeWhisperModel
+                    onAction = if (canRemoveWhisperModel) {
+                        { pendingAiModelRemoval = SettingsAiModelRemovalTarget.WHISPER }
                     } else {
                         viewModel::downloadWhisperModel
                     }
@@ -290,20 +300,20 @@ fun SettingsScreen(
                     description = stringResource(R.string.ai_segmentation_description),
                     stateLabel = segmentationModelState.displayLabel(),
                     storageLabel = modelStorageLabel(aiModelStorage.segmentationBytes, stringResource(R.string.settings_segmentation_size)),
-                    canRemove = segmentationModelState == SegmentationModelState.READY && aiModelStorage.segmentationBytes > 0L,
+                    canRemove = canRemoveSegmentationModel,
                     isBusy = aiModelStorage.isRemovingSegmentation || segmentationModelState == SegmentationModelState.DOWNLOADING,
-                    actionLabel = if (segmentationModelState == SegmentationModelState.READY && aiModelStorage.segmentationBytes > 0L) {
+                    actionLabel = if (canRemoveSegmentationModel) {
                         stringResource(R.string.remove)
                     } else {
                         stringResource(R.string.download)
                     },
-                    actionIcon = if (segmentationModelState == SegmentationModelState.READY && aiModelStorage.segmentationBytes > 0L) {
+                    actionIcon = if (canRemoveSegmentationModel) {
                         Icons.Default.Delete
                     } else {
                         Icons.Default.Download
                     },
-                    onAction = if (segmentationModelState == SegmentationModelState.READY && aiModelStorage.segmentationBytes > 0L) {
-                        viewModel::removeSegmentationModel
+                    onAction = if (canRemoveSegmentationModel) {
+                        { pendingAiModelRemoval = SettingsAiModelRemovalTarget.SEGMENTATION }
                     } else {
                         viewModel::downloadSegmentationModel
                     }
@@ -466,6 +476,24 @@ fun SettingsScreen(
 
         Spacer(Modifier.height(Spacing.xxl))
         }
+
+        pendingAiModelRemoval?.let { target ->
+            SettingsAiModelRemovalConfirmDialog(
+                target = target,
+                storageLabel = when (target) {
+                    SettingsAiModelRemovalTarget.WHISPER -> formatStorageBytes(aiModelStorage.whisperBytes)
+                    SettingsAiModelRemovalTarget.SEGMENTATION -> formatStorageBytes(aiModelStorage.segmentationBytes)
+                },
+                onDismissRequest = { pendingAiModelRemoval = null },
+                onConfirm = {
+                    when (target) {
+                        SettingsAiModelRemovalTarget.WHISPER -> viewModel.removeWhisperModel()
+                        SettingsAiModelRemovalTarget.SEGMENTATION -> viewModel.removeSegmentationModel()
+                    }
+                    pendingAiModelRemoval = null
+                }
+            )
+        }
     }
 }
 
@@ -501,6 +529,65 @@ private fun ResetTutorialConfirmDialog(
                 text = stringResource(R.string.settings_reset_tutorial_action),
                 onClick = onConfirm,
                 icon = Icons.Default.Check
+            )
+        },
+        dismissButton = {
+            NovaCutSecondaryButton(
+                text = stringResource(R.string.cancel),
+                onClick = onDismissRequest
+            )
+        },
+        containerColor = Mocha.PanelHighest,
+        titleContentColor = Mocha.Text,
+        textContentColor = Mocha.Subtext0,
+        shape = RoundedCornerShape(Radius.xxl)
+    )
+}
+
+@Composable
+private fun SettingsAiModelRemovalConfirmDialog(
+    target: SettingsAiModelRemovalTarget,
+    storageLabel: String,
+    onDismissRequest: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    val title = when (target) {
+        SettingsAiModelRemovalTarget.WHISPER -> stringResource(R.string.ai_remove_whisper_title)
+        SettingsAiModelRemovalTarget.SEGMENTATION -> stringResource(R.string.ai_remove_segmentation_title)
+    }
+    val body = when (target) {
+        SettingsAiModelRemovalTarget.WHISPER -> stringResource(R.string.settings_remove_whisper_model_message, storageLabel)
+        SettingsAiModelRemovalTarget.SEGMENTATION -> stringResource(R.string.settings_remove_segmentation_model_message, storageLabel)
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        icon = {
+            NovaCutDialogIcon(
+                icon = Icons.Default.Delete,
+                accent = Mocha.Red
+            )
+        },
+        title = {
+            Text(
+                text = title,
+                color = Mocha.Text,
+                style = MaterialTheme.typography.titleLarge
+            )
+        },
+        text = {
+            Text(
+                text = body,
+                color = Mocha.Subtext0,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        },
+        confirmButton = {
+            NovaCutSecondaryButton(
+                text = stringResource(R.string.ai_model_remove_confirm),
+                onClick = onConfirm,
+                icon = Icons.Default.Delete,
+                contentColor = Mocha.Red
             )
         },
         dismissButton = {
@@ -633,7 +720,8 @@ private fun SettingsFeedbackBanner(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+            .padding(horizontal = Spacing.lg, vertical = Spacing.xs)
+            .semantics { liveRegion = LiveRegionMode.Polite },
         color = Mocha.Green.copy(alpha = 0.10f),
         shape = RoundedCornerShape(Radius.lg),
         border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Green.copy(alpha = 0.22f))
@@ -766,11 +854,12 @@ private fun SegmentationModelState.displayLabel(): String = when (this) {
     SegmentationModelState.NOT_DOWNLOADED -> stringResource(R.string.settings_model_not_installed)
 }
 
+@Composable
 private fun modelStorageLabel(bytes: Long, downloadSize: String): String {
     return if (bytes > 0L) {
-        "Installed size: ${formatStorageBytes(bytes)}."
+        stringResource(R.string.settings_installed_size_format, formatStorageBytes(bytes))
     } else {
-        "Download size: $downloadSize."
+        stringResource(R.string.settings_download_size_format, downloadSize)
     }
 }
 

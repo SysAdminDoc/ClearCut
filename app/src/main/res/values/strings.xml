@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.73.0</string>
+    <string name="app_version">v3.73.1</string>
 
     <!-- Common -->
     <string name="close">Close</string>
@@ -247,6 +247,9 @@
     <string name="settings_piper_system_voice_description">Uses Android system voices today; downloadable local voice packs will appear here when bundled.</string>
     <string name="settings_piper_system_voice_status">System voices</string>
     <string name="settings_download_size_format">Download size: %1$s</string>
+    <string name="settings_installed_size_format">Installed size: %1$s</string>
+    <string name="settings_remove_whisper_model_message">This frees %1$s. Captions will ask before downloading Whisper again, and existing captions and edits stay in the project.</string>
+    <string name="settings_remove_segmentation_model_message">This frees %1$s. Background tools can download segmentation again when you need AI matte quality, and existing edits stay intact.</string>
     <string name="settings_model_description_with_size">%1$s. %2$s</string>
     <string name="settings_model_installed">Installed</string>
     <string name="settings_model_not_installed">Not installed</string>
