@@ -10,8 +10,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -71,6 +69,7 @@ fun ProjectListScreen(
     viewModel: ProjectListViewModel = hiltViewModel()
 ) {
     val projects by viewModel.projects.collectAsStateWithLifecycle()
+    val projectTotalCount by viewModel.projectTotalCount.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val sortMode by viewModel.sortMode.collectAsStateWithLifecycle()
     val filterMode by viewModel.filterMode.collectAsStateWithLifecycle()
@@ -78,6 +77,7 @@ fun ProjectListScreen(
     val toastMessage by viewModel.toastMessage.collectAsStateWithLifecycle()
     val operationState by viewModel.operationState.collectAsStateWithLifecycle()
     val actionsEnabled = operationState == null
+    val hasAnyProjects = projectTotalCount > 0
     var showTemplateSheet by remember { mutableStateOf(false) }
     val templateImportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -104,7 +104,7 @@ fun ProjectListScreen(
 
         Column(modifier = Modifier.fillMaxSize()) {
             ProjectHomeHero(
-                projectCount = projects.size,
+                projectCount = projectTotalCount,
                 savedTemplateCount = userTemplates.size,
                 searchQuery = searchQuery,
                 sortMode = sortMode,
@@ -114,16 +114,21 @@ fun ProjectListScreen(
                 onCreateProject = { showTemplateSheet = true },
                 onImportTemplate = importTemplate,
                 onSettings = onSettings,
+                showProjectActions = projects.isNotEmpty(),
+                showSearch = hasAnyProjects,
+                showSortControls = projects.isNotEmpty(),
                 actionsEnabled = actionsEnabled
             )
 
-            ProjectFilterChipsRow(
-                filterMode = filterMode,
-                onFilterModeChanged = viewModel::setFilterMode,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
-            )
+            if (hasAnyProjects) {
+                ProjectFilterChipsRow(
+                    filterMode = filterMode,
+                    onFilterModeChanged = viewModel::setFilterMode,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = Spacing.lg, vertical = Spacing.xs)
+                )
+            }
 
             AnimatedVisibility(
                 visible = operationState != null,
@@ -149,25 +154,38 @@ fun ProjectListScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     ProjectEmptyState(
-                        hasActiveSearch = searchQuery.isNotEmpty(),
+                        projectTotalCount = projectTotalCount,
+                        searchQuery = searchQuery,
+                        filterMode = filterMode,
                         onCreateProject = { showTemplateSheet = true },
                         onImportTemplate = importTemplate,
-                        onClearSearch = { viewModel.setSearchQuery("") },
+                        onShowAllProjects = {
+                            viewModel.setSearchQuery("")
+                            viewModel.setFilterMode(ProjectFilterMode.ALL)
+                        },
                         actionsEnabled = actionsEnabled
                     )
                 }
             } else {
+                val hasActiveSearch = searchQuery.isNotBlank()
+                val hasActiveFilter = filterMode != ProjectFilterMode.ALL
                 NovaCutSectionHeader(
-                    title = if (searchQuery.isNotBlank()) {
+                    title = if (hasActiveSearch) {
                         buildString {
                             append(projects.size)
                             append(if (projects.size == 1) " result" else " results")
                         }
+                    } else if (hasActiveFilter) {
+                        filterMode.label
                     } else {
                         stringResource(R.string.projects_recent)
                     },
-                    description = if (searchQuery.isNotBlank()) {
-                        "Sorted by ${sortMode.label.lowercase(Locale.getDefault())}"
+                    description = if (hasActiveSearch && hasActiveFilter) {
+                        "Filtered by ${filterMode.label.lowercase(Locale.getDefault())}, sorted by ${sortMode.label.lowercase(Locale.getDefault())}."
+                    } else if (hasActiveSearch) {
+                        "Sorted by ${sortMode.label.lowercase(Locale.getDefault())}."
+                    } else if (hasActiveFilter) {
+                        "${projects.size} of $projectTotalCount projects, sorted by ${sortMode.label.lowercase(Locale.getDefault())}."
                     } else {
                         "Pick up where you left off, duplicate a cut, or jump into a template."
                     },
@@ -252,6 +270,9 @@ private fun ProjectHomeHero(
     onCreateProject: () -> Unit,
     onImportTemplate: () -> Unit,
     onSettings: () -> Unit,
+    showProjectActions: Boolean,
+    showSearch: Boolean,
+    showSortControls: Boolean,
     actionsEnabled: Boolean
 ) {
     NovaCutHeroCard(
@@ -318,90 +339,97 @@ private fun ProjectHomeHero(
             }
         }
 
-        ProjectActionRow(
-            primaryLabel = stringResource(R.string.projects_new_project),
-            primaryIcon = Icons.Default.Add,
-            onPrimary = onCreateProject,
-            secondaryLabel = stringResource(R.string.template_import),
-            secondaryIcon = Icons.Default.FileOpen,
-            onSecondary = onImportTemplate,
-            enabled = actionsEnabled
-        )
+        if (showProjectActions) {
+            ProjectActionRow(
+                primaryLabel = stringResource(R.string.projects_new_project),
+                primaryIcon = Icons.Default.Add,
+                onPrimary = onCreateProject,
+                secondaryLabel = stringResource(R.string.template_import),
+                secondaryIcon = Icons.Default.FileOpen,
+                onSecondary = onImportTemplate,
+                enabled = actionsEnabled
+            )
+        }
 
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = onSearchQueryChanged,
-            placeholder = {
-                Text(
-                    text = stringResource(R.string.projects_search_placeholder),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = stringResource(R.string.projects_search),
-                    tint = Mocha.Subtext0,
-                    modifier = Modifier.size(20.dp)
-                )
-            },
-            trailingIcon = {
-                if (searchQuery.isNotEmpty()) {
-                    IconButton(onClick = onClearSearch) {
-                        Icon(
-                            imageVector = Icons.Default.Clear,
-                            contentDescription = stringResource(R.string.projects_clear),
-                            tint = Mocha.Subtext0,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-            },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(Radius.lg),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Mocha.PanelRaised.copy(alpha = 0.92f),
-                unfocusedContainerColor = Mocha.PanelRaised.copy(alpha = 0.82f),
-                focusedBorderColor = Mocha.Mauve.copy(alpha = 0.55f),
-                unfocusedBorderColor = Mocha.CardStroke,
-                cursorColor = Mocha.Rosewater,
-                focusedTextColor = Mocha.Text,
-                unfocusedTextColor = Mocha.Text,
-                focusedPlaceholderColor = Mocha.Overlay1,
-                unfocusedPlaceholderColor = Mocha.Overlay1
-            ),
-            textStyle = MaterialTheme.typography.bodyLarge.copy(color = Mocha.Text)
-        )
-
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(SortMode.entries.toList()) { mode ->
-                FilterChip(
-                    onClick = { onSortModeChanged(mode) },
-                    label = {
-                        Text(
-                            text = mode.label,
-                            style = MaterialTheme.typography.labelMedium
-                        )
-                    },
-                    leadingIcon = if (sortMode == mode) {
-                        {
+        if (showSearch) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onSearchQueryChanged,
+                placeholder = {
+                    Text(
+                        text = stringResource(R.string.projects_search_placeholder),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = stringResource(R.string.projects_search),
+                        tint = Mocha.Subtext0,
+                        modifier = Modifier.size(20.dp)
+                    )
+                },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = onClearSearch) {
                             Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
+                                imageVector = Icons.Default.Clear,
+                                contentDescription = stringResource(R.string.projects_clear),
+                                tint = Mocha.Subtext0,
+                                modifier = Modifier.size(18.dp)
                             )
                         }
-                    } else null,
-                    selected = sortMode == mode,
-                    colors = FilterChipDefaults.filterChipColors(
-                        containerColor = Mocha.PanelRaised,
-                        selectedContainerColor = Mocha.Mauve.copy(alpha = 0.16f),
-                        selectedLabelColor = Mocha.Rosewater,
-                        labelColor = Mocha.Subtext0,
-                        selectedLeadingIconColor = Mocha.Rosewater
+                    }
+                },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(Radius.lg),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Mocha.PanelRaised.copy(alpha = 0.92f),
+                    unfocusedContainerColor = Mocha.PanelRaised.copy(alpha = 0.82f),
+                    focusedBorderColor = Mocha.Mauve.copy(alpha = 0.55f),
+                    unfocusedBorderColor = Mocha.CardStroke,
+                    cursorColor = Mocha.Rosewater,
+                    focusedTextColor = Mocha.Text,
+                    unfocusedTextColor = Mocha.Text,
+                    focusedPlaceholderColor = Mocha.Overlay1,
+                    unfocusedPlaceholderColor = Mocha.Overlay1
+                ),
+                textStyle = MaterialTheme.typography.bodyLarge.copy(color = Mocha.Text)
+            )
+        }
+
+        if (showSortControls) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(SortMode.entries.toList()) { mode ->
+                    FilterChip(
+                        onClick = { onSortModeChanged(mode) },
+                        label = {
+                            Text(
+                                text = mode.label,
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        },
+                        leadingIcon = if (sortMode == mode) {
+                            {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        } else null,
+                        selected = sortMode == mode,
+                        shape = RoundedCornerShape(Radius.sm),
+                        colors = FilterChipDefaults.filterChipColors(
+                            containerColor = Mocha.PanelRaised,
+                            selectedContainerColor = Mocha.Mauve.copy(alpha = 0.16f),
+                            selectedLabelColor = Mocha.Rosewater,
+                            labelColor = Mocha.Subtext0,
+                            selectedLeadingIconColor = Mocha.Rosewater
+                        )
                     )
-                )
+                }
             }
         }
     }
@@ -475,26 +503,23 @@ private fun ProjectOperationCard(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ProjectFilterChipsRow(
     filterMode: ProjectFilterMode,
     onFilterModeChanged: (ProjectFilterMode) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Horizontal FlowRow wraps gracefully on narrow screens so the full chip
-    // set is always reachable without horizontal scroll gestures (which would
-    // fight the outer LazyVerticalGrid's own gesture handling).
-    FlowRow(
+    LazyRow(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        contentPadding = PaddingValues(horizontal = 0.dp)
     ) {
-        ProjectFilterMode.entries.forEach { mode ->
+        items(ProjectFilterMode.entries.toList()) { mode ->
             FilterChip(
                 onClick = { onFilterModeChanged(mode) },
                 label = { Text(mode.label, style = MaterialTheme.typography.labelMedium) },
                 selected = filterMode == mode,
+                shape = RoundedCornerShape(Radius.sm),
                 colors = FilterChipDefaults.filterChipColors(
                     containerColor = Mocha.Surface0,
                     labelColor = Mocha.Subtext0,
@@ -508,12 +533,19 @@ private fun ProjectFilterChipsRow(
 
 @Composable
 private fun ProjectEmptyState(
-    hasActiveSearch: Boolean,
+    projectTotalCount: Int,
+    searchQuery: String,
+    filterMode: ProjectFilterMode,
     onCreateProject: () -> Unit,
     onImportTemplate: () -> Unit,
-    onClearSearch: () -> Unit,
+    onShowAllProjects: () -> Unit,
     actionsEnabled: Boolean
 ) {
+    val hasAnyProjects = projectTotalCount > 0
+    val hasActiveSearch = searchQuery.isNotBlank()
+    val hasActiveFilter = filterMode != ProjectFilterMode.ALL
+    val isConstrainedEmpty = hasAnyProjects && (hasActiveSearch || hasActiveFilter)
+
     Surface(
         color = Mocha.Panel,
         shape = RoundedCornerShape(Radius.xxl),
@@ -537,14 +569,25 @@ private fun ProjectEmptyState(
                 verticalArrangement = Arrangement.spacedBy(Spacing.md)
             ) {
                 Surface(
-                    color = Mocha.Mauve.copy(alpha = 0.14f),
+                    color = if (isConstrainedEmpty) {
+                        Mocha.Sapphire.copy(alpha = 0.14f)
+                    } else {
+                        Mocha.Mauve.copy(alpha = 0.14f)
+                    },
                     shape = CircleShape,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Mauve.copy(alpha = 0.22f))
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (isConstrainedEmpty) {
+                            Mocha.Sapphire.copy(alpha = 0.24f)
+                        } else {
+                            Mocha.Mauve.copy(alpha = 0.22f)
+                        }
+                    )
                 ) {
                     Icon(
-                        imageVector = Icons.Default.VideoLibrary,
+                        imageVector = if (isConstrainedEmpty) Icons.Default.Search else Icons.Default.VideoLibrary,
                         contentDescription = null,
-                        tint = Mocha.Rosewater,
+                        tint = if (isConstrainedEmpty) Mocha.Sapphire else Mocha.Rosewater,
                         modifier = Modifier
                             .padding(18.dp)
                             .size(30.dp)
@@ -552,38 +595,37 @@ private fun ProjectEmptyState(
                 }
 
                 Text(
-                    text = if (hasActiveSearch) {
-                        stringResource(R.string.projects_no_matching)
-                    } else {
-                        stringResource(R.string.projects_ready_title)
-                    },
+                    text = projectEmptyStateTitle(
+                        isConstrainedEmpty = isConstrainedEmpty,
+                        hasActiveSearch = hasActiveSearch,
+                        hasActiveFilter = hasActiveFilter,
+                        filterLabel = filterMode.label
+                    ),
                     color = Mocha.Text,
                     style = MaterialTheme.typography.headlineMedium
                 )
 
                 Text(
-                    text = if (hasActiveSearch) {
-                        stringResource(R.string.projects_try_different_search)
-                    } else {
-                        stringResource(R.string.projects_ready_body)
-                    },
+                    text = projectEmptyStateBody(
+                        isConstrainedEmpty = isConstrainedEmpty,
+                        hasActiveSearch = hasActiveSearch,
+                        hasActiveFilter = hasActiveFilter
+                    ),
                     color = Mocha.Subtext0,
                     style = MaterialTheme.typography.bodyLarge,
                     textAlign = TextAlign.Center
                 )
 
-                if (hasActiveSearch) {
-                    OutlinedButton(
-                        onClick = onClearSearch,
-                        shape = RoundedCornerShape(Radius.lg),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStrokeStrong)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.projects_clear),
-                            color = Mocha.Text,
-                            style = MaterialTheme.typography.labelLarge
-                        )
-                    }
+                if (isConstrainedEmpty) {
+                    ProjectActionRow(
+                        primaryLabel = stringResource(R.string.projects_show_all),
+                        primaryIcon = Icons.Default.Clear,
+                        onPrimary = onShowAllProjects,
+                        secondaryLabel = stringResource(R.string.projects_new_project),
+                        secondaryIcon = Icons.Default.Add,
+                        onSecondary = onCreateProject,
+                        enabled = actionsEnabled
+                    )
                 } else {
                     ProjectEmptyStateActions(
                         onCreateProject = onCreateProject,
@@ -594,6 +636,31 @@ private fun ProjectEmptyState(
             }
         }
     }
+}
+
+@Composable
+private fun projectEmptyStateTitle(
+    isConstrainedEmpty: Boolean,
+    hasActiveSearch: Boolean,
+    hasActiveFilter: Boolean,
+    filterLabel: String
+): String = when {
+    !isConstrainedEmpty -> stringResource(R.string.projects_ready_title)
+    hasActiveSearch && hasActiveFilter -> stringResource(R.string.projects_no_matching)
+    hasActiveFilter -> stringResource(R.string.projects_no_filter_results, filterLabel)
+    else -> stringResource(R.string.projects_no_matching)
+}
+
+@Composable
+private fun projectEmptyStateBody(
+    isConstrainedEmpty: Boolean,
+    hasActiveSearch: Boolean,
+    hasActiveFilter: Boolean
+): String = when {
+    !isConstrainedEmpty -> stringResource(R.string.projects_ready_body)
+    hasActiveSearch && hasActiveFilter -> stringResource(R.string.projects_try_different_view)
+    hasActiveFilter -> stringResource(R.string.projects_filter_empty_body)
+    else -> stringResource(R.string.projects_try_different_search)
 }
 
 @Composable
