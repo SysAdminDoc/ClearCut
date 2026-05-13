@@ -1,6 +1,18 @@
 # Changelog
 
-## Unreleased — Export confidence and Cut Assistant polish
+## Unreleased — Hardening pass (Cut Assistant correctness, resource leaks, persistence guards)
+
+- **Cut Assistant slice-deletion bug fixed.** `applyAcceptedCuts()` was looking up `op.clipId` AFTER the first `splitClipAt()`, which keeps the LEFT half on the original id. The "middle" lookup therefore matched the wrong slice and the engine deleted content BEFORE the silence range instead of the silence itself. The new applier diffs the per-track clip-id set across both splits, identifies the freshly-minted right half, deletes the correct slice, and ripple-shifts every subsequent clip back by the deleted span so the timeline has no orphan gaps after a batch of cuts.
+- **Cut Assistant proposeCutsForReview no longer trusts pre-IO state.** Tracks are re-read from `_state.value` after `withContext(Dispatchers.IO)` returns; clips that were deleted, moved, or replaced during the waveform scan are filtered out before the engine runs, and `CancellationException` is propagated so cancelling the operation actually tears down the scope.
+- **Cut Assistant review panel now drops on panel dismissal.** `dismissedPanelState()` resets `cutAssistantReview = null` alongside the other auxiliary state — opening Effects / Media Picker / any other panel no longer leaks the previous ReviewSet (which can hold per-clip word transcripts).
+- **TrackedObjectKeyframe rejects NaN, out-of-range, and negative-time inputs.** Adds `require()` guards for `clipTimeMs >= 0`, finite `centerX`/`centerY`, and `[0, 1]` bounds on the center — corrupt JSON or pre-v3.71 saves can no longer slip NaN coordinates into the mosaic/blur shader pipeline where they would render as giant off-screen rectangles.
+- **ProjectArchive no longer swallows CancellationException.** Both `exportArchive` and `importArchiveWithReport` re-throw `CancellationException` after cleanup, so the UI's coroutine scope sees a real cancellation instead of a misleading "import failed" `ImportResult`.
+- **VideoEngine.extractThumbnail closes the bitmap leak on scale failure.** `Bitmap.createScaledBitmap` can throw OOM (an `Error`, not an `Exception`) or `IllegalArgumentException` for zero-area sizes; the source `frame` is now released on every exit path, and failure paths log so flaky thumbnail extraction is visible in logcat.
+- **ModelDownloadManager deletes corrupt cached models on SHA-256 mismatch.** `isValidModelFile()` now removes the bad file before returning false, so subsequent `downloadFiles()` calls don't waste a SHA-256 pass over the same bad bytes on every launch.
+- **keystore.properties added to `.gitignore`.** The file containing release-signing credentials was untracked but unprotected — one `git add -A` away from public exposure.
+- **Test coverage** — Added `TrackedObjectKeyframeTest` (13 cases covering NaN/range/boundary) and `CutAssistantEngineTest` (9 cases covering projection, trim clipping, merge tolerance, accept/reject round-trip, and apply-order ordering).
+
+## Previous Unreleased — Export confidence and Cut Assistant polish
 
 - Added Color / HDR confidence chips to the export sheet, including SDR delivery status, HDR preservation intent, HDR10+ dynamic metadata support, and render-time source caveats.
 - Added export mismatch warnings for H.264 HDR requests, missing device HDR encode support, and advertised HDR resolution/bitrate limits.
