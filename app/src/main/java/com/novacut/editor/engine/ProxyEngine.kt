@@ -3,6 +3,7 @@ package com.novacut.editor.engine
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.Presentation
@@ -153,8 +154,9 @@ class ProxyEngine @Inject constructor(
                     })
                     .build()
 
-                @Suppress("DEPRECATION")
-                val sequence = EditedMediaItemSequence.Builder().addItem(editedItem).build()
+                val sequence = EditedMediaItemSequence.Builder(setOf(C.TRACK_TYPE_VIDEO))
+                    .addItem(editedItem)
+                    .build()
                 transformer.start(
                     Composition.Builder(sequence).build(),
                     outFile.absolutePath

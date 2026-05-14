@@ -1,5 +1,12 @@
 # Changelog
 
+## v3.74.1 — 2026-05-14 — Multi-track export composition
+
+- **Multi-track visual export is wired through Media3 1.10 Composition.** `VideoEngine` now builds one `EditedMediaItemSequence` per visible video or overlay track instead of exporting only the first visual track.
+- **Track audio semantics are preserved.** Embedded clip audio now follows the source track's mute, solo, visibility, and volume settings, while dedicated audio tracks remain separate audio-only sequences in the same composition.
+- **Media3 sequence builders now declare explicit track types.** `VideoEngine` uses video/audio or video-only visual sequences, audio tracks use audio-only sequences, and `ProxyEngine` emits video-only proxy transcodes.
+- **Docs and roadmap are synced.** B.1 is closed, B.2 remains scoped to the real dual-input blend shader path, and stale README limitations for already-shipped speed-curve duration, text stroke export, and archive import work were removed.
+
 ## v3.74.0 — 2026-05-14 — Media3 1.10 foundation
 
 - **Media3 is upgraded to 1.10.0.** The dependency catalog now pulls the current stable `androidx.media3` release across ExoPlayer, Transformer, Effect, Common, UI, and Muxer.
