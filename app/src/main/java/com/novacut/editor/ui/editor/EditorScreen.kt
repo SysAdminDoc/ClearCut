@@ -595,6 +595,14 @@ fun EditorScreen(
         if (state.selectedClipId == null) showClipLabelPicker = false
     }
 
+    fun nudgeSelectedClip(deltaMs: Long): Boolean {
+        val selectedClipId = state.selectedClipId ?: return false
+        viewModel.beginSlideEdit()
+        viewModel.slideClip(selectedClipId, deltaMs)
+        viewModel.endSlideEdit()
+        return true
+    }
+
     CompositionLocalProvider(LocalLayoutMode provides layoutMode) {
     Box(modifier = Modifier
         .fillMaxSize()
@@ -618,6 +626,13 @@ fun EditorScreen(
                     // Shift+Z or Ctrl+Y = redo
                     (event.key == Key.Z && event.isCtrlPressed && event.isShiftPressed) ||
                     (event.key == Key.Y && event.isCtrlPressed) -> { viewModel.redo(); true }
+                    // Shift+Arrow = nudge selected clip by 100 ms; Ctrl+Shift = 1 second.
+                    event.key == Key.DirectionLeft && event.isShiftPressed && state.selectedClipId != null -> {
+                        nudgeSelectedClip(if (event.isCtrlPressed) -1000L else -100L)
+                    }
+                    event.key == Key.DirectionRight && event.isShiftPressed && state.selectedClipId != null -> {
+                        nudgeSelectedClip(if (event.isCtrlPressed) 1000L else 100L)
+                    }
                     // Left arrow = seek back 1s
                     event.key == Key.DirectionLeft && !event.isCtrlPressed -> {
                         viewModel.seekTo((playheadMs - 1000).coerceAtLeast(0))
