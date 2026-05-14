@@ -3,6 +3,7 @@ package com.novacut.editor.ui.editor
 import android.graphics.Bitmap
 import androidx.compose.foundation.*
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -30,6 +31,13 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.*
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -58,6 +66,8 @@ import java.util.Locale
 
 private const val BASE_SCALE = 0.15f // pixels per ms at zoom 1.0
 private const val ACCESSIBILITY_NUDGE_MS = 100L
+private const val KEYBOARD_FINE_NUDGE_MS = 100L
+private const val KEYBOARD_COARSE_NUDGE_MS = 1000L
 
 // Minimum zoom — low enough that a ~10-minute video fits on a phone screen. The old
 // 0.1f floor meant long videos could never fit the viewport, which combined with no
@@ -89,6 +99,9 @@ private fun Clip.accessibleSplitPointMs(playheadMs: Long): Long? {
     }
     return preferredSplitMs.coerceIn(earliestSplitMs, latestSplitMs)
 }
+
+private fun keyboardNudgeAmountMs(isShiftPressed: Boolean): Long =
+    if (isShiftPressed) KEYBOARD_COARSE_NUDGE_MS else KEYBOARD_FINE_NUDGE_MS
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
@@ -241,6 +254,9 @@ fun Timeline(
     val currentOnSlideClip by rememberUpdatedState(onSlideClip)
     val currentOnSlideEditStarted by rememberUpdatedState(onSlideEditStarted)
     val currentOnSlideEditEnded by rememberUpdatedState(onSlideEditEnded)
+    val currentOnSlipClip by rememberUpdatedState(onSlipClip)
+    val currentOnSlipEditStarted by rememberUpdatedState(onSlipEditStarted)
+    val currentOnSlipEditEnded by rememberUpdatedState(onSlipEditEnded)
     val currentSelectedClipId by rememberUpdatedState(selectedClipId)
 
     // Hoist the vertical gradient overlay applied on top of every clip body. The
@@ -1075,6 +1091,39 @@ fun Timeline(
                                             }
                                         }
                                     }
+                                    var isKeyboardFocused by remember(clip.id) { mutableStateOf(false) }
+                                    val runKeyboardNudge: (Long) -> Boolean = { deltaMs ->
+                                        if (track.isLocked) {
+                                            false
+                                        } else {
+                                            currentOnClipSelected(clip.id, track.id)
+                                            if (currentIsTrimMode) {
+                                                currentOnSlipEditStarted()
+                                                currentOnSlipClip(clip.id, deltaMs)
+                                                currentOnSlipEditEnded()
+                                            } else {
+                                                currentOnSlideEditStarted()
+                                                currentOnSlideClip(clip.id, deltaMs)
+                                                currentOnSlideEditEnded()
+                                            }
+                                            true
+                                        }
+                                    }
+                                    val runKeyboardSplit: () -> Boolean = {
+                                        if (track.isLocked) {
+                                            false
+                                        } else {
+                                            val splitPointMs = clip.accessibleSplitPointMs(currentPlayheadMs)
+                                            if (splitPointMs == null) {
+                                                false
+                                            } else {
+                                                currentOnClipSelected(clip.id, track.id)
+                                                currentOnPlayheadMoved(splitPointMs)
+                                                currentOnSplitAtPlayhead()
+                                                true
+                                            }
+                                        }
+                                    }
 
                                     // Hoist the per-clip background brush. Timeline recomposes on every
                                     // playhead tick (~30 Hz during playback); without this, each visible
@@ -1113,6 +1162,7 @@ fun Timeline(
                                                     if (isSelected) 2.dp else 1.dp,
                                                     when {
                                                         isSelected -> clipColor
+                                                        isKeyboardFocused -> Mocha.Sky.copy(alpha = 0.95f)
                                                         isMultiSelected -> Mocha.Peach.copy(alpha = 0.85f)
                                                         else -> clipColor.copy(alpha = 0.25f)
                                                     },
@@ -1132,6 +1182,40 @@ fun Timeline(
                                                 }
                                                 customActions = clipCustomActions
                                             }
+                                            .onFocusChanged { isKeyboardFocused = it.isFocused }
+                                            .onPreviewKeyEvent { event ->
+                                                if (event.type != KeyEventType.KeyDown) {
+                                                    false
+                                                } else {
+                                                    when (event.key) {
+                                                        Key.Enter,
+                                                        Key.NumPadEnter,
+                                                        Key.DirectionCenter -> {
+                                                            currentOnClipSelected(clip.id, track.id)
+                                                            true
+                                                        }
+                                                        Key.DirectionLeft -> {
+                                                            runKeyboardNudge(-keyboardNudgeAmountMs(event.isShiftPressed))
+                                                        }
+                                                        Key.DirectionRight -> {
+                                                            runKeyboardNudge(keyboardNudgeAmountMs(event.isShiftPressed))
+                                                        }
+                                                        Key.S -> runKeyboardSplit()
+                                                        Key.Delete,
+                                                        Key.Backspace -> {
+                                                            if (track.isLocked) {
+                                                                false
+                                                            } else {
+                                                                currentOnClipSelected(clip.id, track.id)
+                                                                currentOnDeleteSelectedClip()
+                                                                true
+                                                            }
+                                                        }
+                                                        else -> false
+                                                    }
+                                                }
+                                            }
+                                            .focusable()
                                             .then(
                                                 // UNIFIED clip gesture handler. Replaces the previous tree of three
                                                 // competing pointer-inputs (parent body-drag + left-handle drag + right-handle
