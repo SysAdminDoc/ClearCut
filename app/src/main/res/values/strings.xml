@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.74.8</string>
+    <string name="app_version">v3.74.9</string>
 
     <!-- Common -->
     <string name="close">Close</string>
@@ -1705,12 +1705,17 @@
     <string name="caption_styles_library_description">These templates update the selected clip’s captions in one shot, so it is easy to move from utility subtitles to a branded treatment.</string>
     <string name="caption_styles_looks_format">Looks: %1$d</string>
     <string name="caption_styles_motion_format">Motion: %1$d</string>
+    <string name="caption_styles_accessible_format">Accessible: %1$d</string>
+    <string name="caption_accessibility_title">Accessible Caption Presets</string>
+    <string name="caption_accessibility_subtitle">High-contrast, large-text, and reduced-motion looks for readable captions on busy video.</string>
     <string name="caption_styles_karaoke_subtitle">Word-by-word, bounce, and sing-along styles built to feel animated and rhythmic.</string>
     <string name="caption_editorial_title">Editorial Styles</string>
     <string name="caption_editorial_subtitle">Classic subtitle, lower-third, neon, and bold center treatments for more intentional framing.</string>
     <string name="caption_style_word_by_word">Word-by-word</string>
     <string name="caption_style_static_look">Static look</string>
+    <string name="caption_style_accessibility_label">%1$s preset</string>
     <string name="caption_styles_close_cd">Close caption styles</string>
+    <string name="cd_caption_accessibility_section">Accessible caption presets</string>
 
     <!-- AudioPanel -->
     <string name="cd_close_audio_panel">Close audio panel</string>

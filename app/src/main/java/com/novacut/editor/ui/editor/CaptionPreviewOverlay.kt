@@ -19,6 +19,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.novacut.editor.model.Caption
+import com.novacut.editor.model.CaptionStyle
 import com.novacut.editor.model.CaptionStyleType
 
 /**
@@ -73,9 +74,7 @@ private fun SubtitleBarCaption(caption: Caption, progress: Float) {
         textAlign = TextAlign.Center,
         fontFamily = fontFamilyFromName(style.fontFamily),
         style = TextStyle(
-            shadow = if (style.shadow) Shadow(
-                Color.Black.copy(alpha = 0.8f), Offset(1f, 1f), 4f
-            ) else null
+            shadow = captionTextShadow(style)
         ),
         modifier = Modifier
             .drawBehind {
@@ -111,7 +110,8 @@ private fun WordByWordCaption(caption: Caption, currentTimeMs: Long) {
                 color = if (isActive) Color(style.highlightColor) else Color(style.color).copy(alpha = 0.5f),
                 fontSize = (if (isActive) style.fontSize * 1.15f else style.fontSize).sp,
                 fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-                fontFamily = fontFamilyFromName(style.fontFamily)
+                fontFamily = fontFamilyFromName(style.fontFamily),
+                style = TextStyle(shadow = captionTextShadow(style))
             )
         }
     }
@@ -143,7 +143,8 @@ private fun KaraokeCaption(caption: Caption, currentTimeMs: Long) {
                 color = if (highlighted) Color(style.highlightColor) else Color(style.color),
                 fontSize = style.fontSize.sp,
                 fontWeight = FontWeight.Medium,
-                fontFamily = fontFamilyFromName(style.fontFamily)
+                fontFamily = fontFamilyFromName(style.fontFamily),
+                style = TextStyle(shadow = captionTextShadow(style))
             )
         }
     }
@@ -161,6 +162,7 @@ private fun BounceCaption(caption: Caption, progress: Float) {
         fontWeight = FontWeight.Bold,
         textAlign = TextAlign.Center,
         fontFamily = fontFamilyFromName(style.fontFamily),
+        style = TextStyle(shadow = captionTextShadow(style)),
         modifier = Modifier
             .offset(y = (-bounceOffset).dp)
             .drawBehind {
@@ -187,6 +189,7 @@ private fun TypewriterCaption(caption: Caption, progress: Float) {
             fontWeight = FontWeight.Normal,
             fontFamily = FontFamily.Monospace,
             textAlign = TextAlign.Center,
+            style = TextStyle(shadow = captionTextShadow(style)),
             modifier = Modifier
                 .drawBehind {
                     drawRoundRect(
@@ -216,9 +219,23 @@ private fun MinimalCaption(caption: Caption, progress: Float) {
         textAlign = TextAlign.Center,
         fontFamily = fontFamilyFromName(style.fontFamily),
         style = TextStyle(
-            shadow = Shadow(Color.Black.copy(alpha = 0.6f * alpha), Offset(1f, 1f), 3f)
+            shadow = captionTextShadow(style, alpha)
         )
     )
+}
+
+private fun captionTextShadow(style: CaptionStyle, alpha: Float = 1f): Shadow? = when {
+    style.outline && style.outlineWidth > 0f -> Shadow(
+        color = Color(style.outlineColor).copy(alpha = alpha),
+        offset = Offset(1f, 1f),
+        blurRadius = style.outlineWidth.coerceAtLeast(2f)
+    )
+    style.shadow -> Shadow(
+        color = Color.Black.copy(alpha = 0.75f * alpha),
+        offset = Offset(1f, 1f),
+        blurRadius = 4f
+    )
+    else -> null
 }
 
 private fun fontFamilyFromName(name: String): FontFamily = when (name) {

@@ -2,7 +2,7 @@
 
 Forward-looking tracker for planned work. Release history lives in [CHANGELOG.md](CHANGELOG.md).
 
-Current version: **v3.74.8** (versionCode 145).
+Current version: **v3.74.9** (versionCode 146).
 
 ### v3.69.0 — 15-Feature Wave (shipped)
 
@@ -323,7 +323,7 @@ Media3 1.10 (March 2026) ships the multi-sequence/multi-track Composition API, w
 ### R5.3 — Accessibility coverage gap
 - [x] **R5.3a — TalkBack semantics for the timeline custom view.** Done in v3.74.4. Custom-drawn clip nodes now expose richer Compose semantics with clip name/type/track/duration/start-time descriptions, selected and locked-track state, and `customActions` for split, delete, nudge earlier, and nudge later. Accessibility split actions select the clip and move the playhead to a valid split point when needed before reusing the existing split operation. Source: https://developer.android.com/jetpack/compose/accessibility
 - [x] **R5.3b — Switch Access + keyboard-only editing flow.** Done in v3.74.8. Visible timeline clips are now focusable nodes with keyboard handling for select, split, delete, and left/right nudge. Focused clips use 100 ms arrow nudges, Shift+arrow uses 1 second nudges, and trim mode maps the same focused arrows to slip edits. The editor shell also supports Shift+arrow selected-clip nudging so hardware keyboards and Switch Access can move a clip without touch.
-- [ ] **R5.3c — Caption style accessibility presets.** Add WCAG-AA contrast presets for caption fill/stroke, large-text preset (≥ 24sp at 1080p), and reduce-motion preset that disables shimmer/parallax in templates. Composes with the v3.69 flash-safety / color-blind work already shipped.
+- [x] **R5.3c — Caption style accessibility presets.** Done in v3.74.9. Caption Style Gallery now has a dedicated accessible preset section with WCAG-AA high-contrast fill/background/stroke templates, a large-text preset above the 24sp 1080p floor, and a reduced-motion preset that maps to static subtitle rendering with no word-by-word or animated caption style. Applying a caption template now carries font, fill, background, highlight, position, outline color/width, shadow, and style-type intent into actual caption data, with autosave preserving the new stroke fields.
 - [ ] **R5.3d — Closed audio description track export.** Already in §Backlog. Promote to Round 5 because `SDH / audio-description` text export shipped in v3.69 — the audio track itself is the missing piece. Use TTS engine (A.8) to render the audio-description text into a sidecar or muxed AD track on export.
 
 ### R5.4 — Internationalization / localization
