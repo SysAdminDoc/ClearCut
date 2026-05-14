@@ -34,6 +34,8 @@ data class CaptionStyle(
     val highlightColor: Long = 0xFFFFD700,
     val positionY: Float = 0.85f,
     val outline: Boolean = true,
+    val outlineColor: Long = 0xFF000000,
+    val outlineWidth: Float = 2f,
     val shadow: Boolean = true
 )
 
@@ -47,6 +49,9 @@ enum class CaptionStyleType(val displayName: String) {
 }
 
 enum class CaptionTemplateType(val displayName: String) {
+    HIGH_CONTRAST("High Contrast"),
+    LARGE_TEXT("Large Text"),
+    REDUCED_MOTION("Reduced Motion"),
     CLASSIC("Classic"),
     KARAOKE("Karaoke"),
     WORD_BY_WORD("Word by Word"),
@@ -64,6 +69,13 @@ enum class CaptionTemplateType(val displayName: String) {
     SUBTITLE("Subtitle")
 }
 
+enum class CaptionAccessibilityPreset(val displayName: String) {
+    STANDARD("Standard"),
+    WCAG_AA_CONTRAST("WCAG AA Contrast"),
+    LARGE_TEXT("Large Text"),
+    REDUCED_MOTION("Reduced Motion")
+}
+
 data class CaptionStyleTemplate(
     val id: String = UUID.randomUUID().toString(),
     val type: CaptionTemplateType,
@@ -79,5 +91,19 @@ data class CaptionStyleTemplate(
     val positionY: Float = 0.85f,
     val animation: TextAnimation = TextAnimation.FADE,
     val highlightColor: Long = 0xFFFFD700,
-    val wordByWord: Boolean = false
+    val wordByWord: Boolean = false,
+    val accessibilityPreset: CaptionAccessibilityPreset = CaptionAccessibilityPreset.STANDARD
 )
+
+val CaptionStyleTemplate.isAccessibilityPreset: Boolean
+    get() = accessibilityPreset != CaptionAccessibilityPreset.STANDARD
+
+fun CaptionStyleTemplate.toCaptionStyleType(): CaptionStyleType = when {
+    accessibilityPreset == CaptionAccessibilityPreset.REDUCED_MOTION -> CaptionStyleType.SUBTITLE_BAR
+    type == CaptionTemplateType.KARAOKE -> CaptionStyleType.KARAOKE
+    type == CaptionTemplateType.WORD_BY_WORD -> CaptionStyleType.WORD_BY_WORD
+    type == CaptionTemplateType.BOUNCE -> CaptionStyleType.BOUNCE
+    type == CaptionTemplateType.TYPEWRITER -> CaptionStyleType.TYPEWRITER
+    type == CaptionTemplateType.MINIMAL -> CaptionStyleType.MINIMAL
+    else -> CaptionStyleType.SUBTITLE_BAR
+}

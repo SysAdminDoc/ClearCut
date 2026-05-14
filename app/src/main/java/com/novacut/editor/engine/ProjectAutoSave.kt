@@ -945,6 +945,8 @@ data class AutoSaveState(
                 put("backgroundColor", cap.style.backgroundColor)
                 put("highlightColor", cap.style.highlightColor)
                 put("outline", cap.style.outline)
+                put("outlineColor", cap.style.outlineColor)
+                putSafeFloat("outlineWidth", cap.style.outlineWidth, default = 2f)
                 put("shadow", cap.style.shadow)
                 if (cap.words.isNotEmpty()) {
                     put("words", JSONArray().apply {
@@ -1437,6 +1439,8 @@ data class AutoSaveState(
                     backgroundColor = json.optLong("backgroundColor", 0xCC000000L),
                     highlightColor = json.optLong("highlightColor", 0xFFFFD700L),
                     outline = json.optBoolean("outline", true),
+                    outlineColor = json.optLong("outlineColor", 0xFF000000L),
+                    outlineWidth = safeFloat(json.optDouble("outlineWidth", 2.0), 2f).coerceAtLeast(0f),
                     shadow = json.optBoolean("shadow", false)
                 ),
                 words = (0 until wordsArr.length()).mapNotNull { i ->
