@@ -32,12 +32,15 @@ import androidx.compose.ui.text.*
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
@@ -54,6 +57,7 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 
 private const val BASE_SCALE = 0.15f // pixels per ms at zoom 1.0
+private const val ACCESSIBILITY_NUDGE_MS = 100L
 
 // Minimum zoom — low enough that a ~10-minute video fits on a phone screen. The old
 // 0.1f floor meant long videos could never fit the viewport, which combined with no
@@ -72,6 +76,18 @@ private fun findSnapTarget(positionMs: Long, targets: List<Long>, thresholdMs: L
 
 private fun Clip.containsTimelinePosition(positionMs: Long): Boolean {
     return positionMs >= timelineStartMs && positionMs < timelineEndMs
+}
+
+private fun Clip.accessibleSplitPointMs(playheadMs: Long): Long? {
+    val earliestSplitMs = timelineStartMs + MIN_TIMELINE_CLIP_DURATION_MS
+    val latestSplitMs = timelineEndMs - MIN_TIMELINE_CLIP_DURATION_MS
+    if (latestSplitMs < earliestSplitMs) return null
+    val preferredSplitMs = if (playheadMs in earliestSplitMs..latestSplitMs) {
+        playheadMs
+    } else {
+        timelineStartMs + durationMs / 2
+    }
+    return preferredSplitMs.coerceIn(earliestSplitMs, latestSplitMs)
 }
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
@@ -218,6 +234,13 @@ fun Timeline(
     val currentPlayheadMs by rememberUpdatedState(playheadMs)
     val currentMarkers by rememberUpdatedState(markers)
     val currentTracks by rememberUpdatedState(tracks)
+    val currentOnClipSelected by rememberUpdatedState(onClipSelected)
+    val currentOnPlayheadMoved by rememberUpdatedState(onPlayheadMoved)
+    val currentOnSplitAtPlayhead by rememberUpdatedState(onSplitAtPlayhead)
+    val currentOnDeleteSelectedClip by rememberUpdatedState(onDeleteSelectedClip)
+    val currentOnSlideClip by rememberUpdatedState(onSlideClip)
+    val currentOnSlideEditStarted by rememberUpdatedState(onSlideEditStarted)
+    val currentOnSlideEditEnded by rememberUpdatedState(onSlideEditEnded)
     val currentSelectedClipId by rememberUpdatedState(selectedClipId)
 
     // Hoist the vertical gradient overlay applied on top of every clip body. The
@@ -960,13 +983,98 @@ fun Timeline(
                                     val compactClipBadges = clipWidthPx < 150f
                                     val clipContentPaddingHorizontal = if (compactClipBadges) 6.dp else 8.dp
                                     val clipContentPaddingVertical = if (compactClipBadges) 6.dp else 7.dp
+                                    val clipTypeLabel = clipLabelForType(track.type)
+                                    val trackTypeLabel = trackLabelForType(track.type)
+                                    val clipDurationLabel = formatTimelineDurationLabel(clip.durationMs)
+                                    val clipStartLabel = formatTimelineTime(clip.timelineStartMs)
                                     val clipContentDescription = stringResource(
                                         R.string.timeline_clip_content_description,
                                         clipFileName,
-                                        formatTimelineDurationLabel(clip.durationMs),
-                                        formatTimelineTime(clip.timelineStartMs)
+                                        clipTypeLabel,
+                                        trackTypeLabel,
+                                        clipDurationLabel,
+                                        clipStartLabel
                                     )
                                     val selectClipActionLabel = stringResource(R.string.timeline_select_clip_action)
+                                    val lockedClipStateLabel = stringResource(R.string.timeline_clip_state_locked)
+                                    val splitClipActionLabel = stringResource(R.string.timeline_clip_action_split)
+                                    val deleteClipActionLabel = stringResource(R.string.timeline_clip_action_delete)
+                                    val nudgeDurationLabel = formatTimelineDurationLabel(ACCESSIBILITY_NUDGE_MS)
+                                    val nudgeEarlierActionLabel = stringResource(
+                                        R.string.timeline_clip_action_nudge_earlier,
+                                        nudgeDurationLabel
+                                    )
+                                    val nudgeLaterActionLabel = stringResource(
+                                        R.string.timeline_clip_action_nudge_later,
+                                        nudgeDurationLabel
+                                    )
+                                    val clipCustomActions = remember(
+                                        clip.id,
+                                        track.id,
+                                        track.isLocked,
+                                        clip.timelineStartMs,
+                                        clip.timelineEndMs,
+                                        clip.durationMs,
+                                        splitClipActionLabel,
+                                        deleteClipActionLabel,
+                                        nudgeEarlierActionLabel,
+                                        nudgeLaterActionLabel
+                                    ) {
+                                        if (track.isLocked) {
+                                            emptyList()
+                                        } else {
+                                            buildList {
+                                                if (clip.durationMs >= MIN_TIMELINE_CLIP_DURATION_MS * 2) {
+                                                    add(
+                                                        CustomAccessibilityAction(
+                                                            label = splitClipActionLabel
+                                                        ) {
+                                                            val splitPointMs = clip.accessibleSplitPointMs(currentPlayheadMs)
+                                                            if (splitPointMs == null) {
+                                                                false
+                                                            } else {
+                                                                currentOnClipSelected(clip.id, track.id)
+                                                                currentOnPlayheadMoved(splitPointMs)
+                                                                currentOnSplitAtPlayhead()
+                                                                true
+                                                            }
+                                                        }
+                                                    )
+                                                }
+                                                add(
+                                                    CustomAccessibilityAction(
+                                                        label = deleteClipActionLabel
+                                                    ) {
+                                                        currentOnClipSelected(clip.id, track.id)
+                                                        currentOnDeleteSelectedClip()
+                                                        true
+                                                    }
+                                                )
+                                                add(
+                                                    CustomAccessibilityAction(
+                                                        label = nudgeEarlierActionLabel
+                                                    ) {
+                                                        currentOnClipSelected(clip.id, track.id)
+                                                        currentOnSlideEditStarted()
+                                                        currentOnSlideClip(clip.id, -ACCESSIBILITY_NUDGE_MS)
+                                                        currentOnSlideEditEnded()
+                                                        true
+                                                    }
+                                                )
+                                                add(
+                                                    CustomAccessibilityAction(
+                                                        label = nudgeLaterActionLabel
+                                                    ) {
+                                                        currentOnClipSelected(clip.id, track.id)
+                                                        currentOnSlideEditStarted()
+                                                        currentOnSlideClip(clip.id, ACCESSIBILITY_NUDGE_MS)
+                                                        currentOnSlideEditEnded()
+                                                        true
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    }
 
                                     // Hoist the per-clip background brush. Timeline recomposes on every
                                     // playhead tick (~30 Hz during playback); without this, each visible
@@ -1015,10 +1123,14 @@ fun Timeline(
                                                 contentDescription = clipContentDescription
                                                 role = Role.Button
                                                 selected = isSelected || isMultiSelected
+                                                if (track.isLocked) {
+                                                    stateDescription = lockedClipStateLabel
+                                                }
                                                 onClick(label = selectClipActionLabel) {
                                                     onClipSelected(clip.id, track.id)
                                                     true
                                                 }
+                                                customActions = clipCustomActions
                                             }
                                             .then(
                                                 // UNIFIED clip gesture handler. Replaces the previous tree of three

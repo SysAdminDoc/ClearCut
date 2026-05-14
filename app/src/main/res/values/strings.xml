@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.74.3</string>
+    <string name="app_version">v3.74.4</string>
 
     <!-- Common -->
     <string name="close">Close</string>
@@ -1681,8 +1681,13 @@
     <string name="timeline_track_make_smaller">Make track shorter</string>
     <string name="timeline_track_make_larger">Make track taller</string>
     <string name="timeline_trim_mode_hint">Trim mode: drag edges to resize; drag the clip body to slip media.</string>
-    <string name="timeline_clip_content_description">%1$s, %2$s, starts at %3$s</string>
+    <string name="timeline_clip_content_description">%1$s, %2$s on %3$s, %4$s, starts at %5$s</string>
     <string name="timeline_select_clip_action">Select clip</string>
+    <string name="timeline_clip_state_locked">Locked track</string>
+    <string name="timeline_clip_action_split">Split clip</string>
+    <string name="timeline_clip_action_delete">Delete clip</string>
+    <string name="timeline_clip_action_nudge_earlier">Nudge earlier by %1$s</string>
+    <string name="timeline_clip_action_nudge_later">Nudge later by %1$s</string>
 
     <!-- ColorGradingPanel -->
     <string name="color_wheel_lift">Lift</string>

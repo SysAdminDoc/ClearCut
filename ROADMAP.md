@@ -2,7 +2,7 @@
 
 Forward-looking tracker for planned work. Release history lives in [CHANGELOG.md](CHANGELOG.md).
 
-Current version: **v3.74.3** (versionCode 140).
+Current version: **v3.74.4** (versionCode 141).
 
 ### v3.69.0 — 15-Feature Wave (shipped)
 
@@ -315,13 +315,13 @@ Media3 1.10 (March 2026) ships the multi-sequence/multi-track Composition API, w
 - [x] **R5.1d — Android 15/16 Ultra HDR ingest** — Done in v3.74.3. `MediaImportEngine` now records source color metadata for imported clips, classifies video HDR10 / HDR10+ / HLG / Dolby Vision from `MediaFormat`, detects Android Ultra HDR gain-map still images via `Bitmap.hasGainmap()` on Android 14+, persists the metadata in autosave, and feeds source HDR / Ultra HDR chips into ExportSheet confidence. Sources: https://developer.android.com/media/grow/ultra-hdr · https://source.android.com/docs/core/display/hdr
 
 ### R5.2 — Dependency successor pivots
-- [ ] **R5.2a — Pin `salahawad/ffmpeg-kit-community` instead of FFmpegX-Android (A.9).** `arthenica/ffmpeg-kit` was officially archived April 2025; the community fork has the most active commit cadence, retains the original Maven coordinates path, and ships AAR artifacts. FFmpegX-Android (mzgs) remains a viable secondary candidate but has lower commit velocity. Re-evaluate primary choice at next release. Sources: https://github.com/arthenica/ffmpeg-kit · https://github.com/salahawad/ffmpeg-kit-community
+- [~] **R5.2a — Pin `salahawad/ffmpeg-kit-community` instead of FFmpegX-Android (A.9).** Blocked in v3.74.4 after re-checking the successor fork: the GitHub project is public and active, but exposes no releases/tags yet, and Maven Central does not currently expose a pinnable `ffmpeg-kit-community` artifact. Do not add an unversioned JitPack dependency for release builds; re-evaluate when the fork publishes a stable tag/AAR coordinate, keeping FFmpegX-Android (mzgs) as the secondary candidate. Sources: https://github.com/arthenica/ffmpeg-kit · https://github.com/salahawad/ffmpeg-kit-community
 - [ ] **R5.2b — Upgrade Sherpa-ONNX target to v1.12.28+ for Moonshine v2 (A.1).** Moonshine v2 (Feb 2026 release line) is faster than Whisper Tiny on the same audio with comparable WER on EN; ship as the default English ASR, keep Whisper Tiny multilingual as fallback. Source: https://github.com/k2-fsa/sherpa-onnx/releases
 - [ ] **R5.2c — SAM 2.1 ONNX path now viable for tracked masks (R4.3 follow-up).** SAM 2.1 (Meta) ships ONNX exports with video-segment propagation. Pairs with the `TrackedObject` model already shipped in v3.71 to upgrade Tracked Mosaic's mask quality. Gate on premium-tier devices (model + state cache > 200 MB). Source: https://github.com/facebookresearch/sam2
 - [ ] **R5.2d — Generative video stays cloud-optional, not on-device.** Wan 2.2, HunyuanVideo, VideoCrafter2 all remain server-side at this scale; NovaCut should expose them as opt-in cloud effects (clearly labelled), not bundled engines. Use the same trust pattern already documented in §Architecture guardrails. Sources: https://github.com/Wan-Video/Wan2.2 · https://github.com/Tencent-Hunyuan/HunyuanVideo
 
 ### R5.3 — Accessibility coverage gap
-- [ ] **R5.3a — TalkBack semantics for the timeline custom view.** The timeline is rendered with custom drawing; TalkBack currently announces nothing meaningful. Apply Compose `Modifier.semantics { contentDescription, customActions }` for clip nodes, with custom actions for split / delete / nudge. Source: https://developer.android.com/jetpack/compose/accessibility
+- [x] **R5.3a — TalkBack semantics for the timeline custom view.** Done in v3.74.4. Custom-drawn clip nodes now expose richer Compose semantics with clip name/type/track/duration/start-time descriptions, selected and locked-track state, and `customActions` for split, delete, nudge earlier, and nudge later. Accessibility split actions select the clip and move the playhead to a valid split point when needed before reusing the existing split operation. Source: https://developer.android.com/jetpack/compose/accessibility
 - [ ] **R5.3b — Switch Access + keyboard-only editing flow.** Hardware keyboard + Switch Access users cannot reach jog/shuttle, trim handles, or the keyframe graph today. Add a focus traversal pass and arrow-key nudge equivalents.
 - [ ] **R5.3c — Caption style accessibility presets.** Add WCAG-AA contrast presets for caption fill/stroke, large-text preset (≥ 24sp at 1080p), and reduce-motion preset that disables shimmer/parallax in templates. Composes with the v3.69 flash-safety / color-blind work already shipped.
 - [ ] **R5.3d — Closed audio description track export.** Already in §Backlog. Promote to Round 5 because `SDH / audio-description` text export shipped in v3.69 — the audio track itself is the missing piece. Use TTS engine (A.8) to render the audio-description text into a sidecar or muxed AD track on export.

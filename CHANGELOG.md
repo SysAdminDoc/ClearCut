@@ -1,5 +1,11 @@
 # Changelog
 
+## v3.74.4 — 2026-05-14 — Timeline accessibility actions
+
+- **Timeline clips now have richer TalkBack descriptions.** Clip semantics include the clip name, clip type, track type, duration, start time, selected state, and locked-track state instead of relying on custom-drawn visuals.
+- **Screen-reader users can edit clips directly.** Each unlocked timeline clip exposes custom accessibility actions for split, delete, nudge earlier, and nudge later; the actions select the clip first and reuse the existing editor operations.
+- **Split from accessibility actions is resilient.** When the playhead is not inside the focused clip, NovaCut moves it to a safe midpoint before invoking the same split path used by the toolbar.
+
 ## v3.74.3 — 2026-05-14 — Ultra HDR source ingest
 
 - **Import now records source color metadata.** `MediaImportEngine` inspects imported video tracks for HDR10, HDR10+, HLG, and Dolby Vision metadata and stores the result on clips for future export decisions.
