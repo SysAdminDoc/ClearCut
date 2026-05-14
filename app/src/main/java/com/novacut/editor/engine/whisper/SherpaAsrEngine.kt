@@ -8,21 +8,23 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Stub engine -- requires com.k2fsa.sherpa:onnx-android for Sherpa-ONNX backend.
+ * Stub engine -- requires the official Sherpa-ONNX Android AAR for the native backend.
  * See ROADMAP.md
  *
  * Delegates to built-in [WhisperEngine] (ONNX Runtime) when Sherpa-ONNX is unavailable.
  *
- * Sherpa-ONNX dependency (add to app/build.gradle.kts when ready):
- *   implementation("com.k2fsa.sherpa:onnx-android:1.10.+")
+ * Sherpa-ONNX target:
+ *   https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.2/sherpa-onnx-1.13.2.aar
  *
- * Models (download on first use from HuggingFace):
- *   - Whisper Tiny multilingual: ~100MB, 27 tok/s, 99 languages
- *   - Moonshine Tiny: ~125MB, 42 tok/s, English only
+ * Models stay explicit downloads:
+ *   - Moonshine v2 Tiny EN: ~33 MB, default English target
+ *   - Moonshine v2 Base EN: ~110 MB, higher-quality English target
+ *   - Whisper Tiny multilingual: ~100 MB, multilingual fallback
  */
 @Singleton
 class SherpaAsrEngine @Inject constructor(
@@ -30,10 +32,41 @@ class SherpaAsrEngine @Inject constructor(
     private val whisperEngine: WhisperEngine
 ) {
     enum class AsrBackend { SHERPA_ONNX, BUILTIN_WHISPER }
-    enum class ModelVariant(val displayName: String, val languages: String, val sizeMb: Int) {
-        WHISPER_TINY("Whisper Tiny", "99 languages", 100),
-        MOONSHINE_TINY("Moonshine Tiny", "English", 125),
-        WHISPER_BASE("Whisper Base", "99 languages", 200)
+    enum class ModelVariant(
+        val displayName: String,
+        val languages: String,
+        val sizeMb: Int,
+        val modelPackageName: String,
+        val isMoonshineV2: Boolean
+    ) {
+        MOONSHINE_V2_TINY_EN(
+            displayName = "Moonshine v2 Tiny",
+            languages = "English",
+            sizeMb = 33,
+            modelPackageName = "moonshine-v2-tiny-en",
+            isMoonshineV2 = true
+        ),
+        MOONSHINE_V2_BASE_EN(
+            displayName = "Moonshine v2 Base",
+            languages = "English",
+            sizeMb = 110,
+            modelPackageName = "moonshine-v2-base-en",
+            isMoonshineV2 = true
+        ),
+        WHISPER_TINY_MULTILINGUAL(
+            displayName = "Whisper Tiny",
+            languages = "99 languages",
+            sizeMb = 100,
+            modelPackageName = "whisper-tiny-multilingual",
+            isMoonshineV2 = false
+        ),
+        WHISPER_BASE_MULTILINGUAL(
+            displayName = "Whisper Base",
+            languages = "99 languages",
+            sizeMb = 200,
+            modelPackageName = "whisper-base-multilingual",
+            isMoonshineV2 = false
+        )
     }
 
     data class TranscriptionSegment(
@@ -75,6 +108,16 @@ class SherpaAsrEngine @Inject constructor(
     fun getActiveBackend(): AsrBackend = activeBackend
 
     /**
+     * Target model policy for the future native Sherpa-ONNX path.
+     *
+     * The active runtime still falls back to [WhisperEngine] until NovaCut has a
+     * deliberate packaging decision for the 50+ MB Android AAR/native payload,
+     * but callers and settings surfaces should converge on this model order.
+     */
+    fun getPreferredModel(language: String = "en"): ModelVariant =
+        preferredModelFor(language)
+
+    /**
      * Transcribe audio from a video/audio URI.
      * Delegates to the built-in [WhisperEngine] and converts results.
      */
@@ -107,6 +150,22 @@ class SherpaAsrEngine @Inject constructor(
 
     companion object {
         private const val TAG = "SherpaASR"
+        const val TARGET_SHERPA_ONNX_VERSION = "1.13.2"
+        const val MIN_MOONSHINE_V2_SHERPA_VERSION = "1.12.28"
+        const val ANDROID_AAR_ASSET_NAME = "sherpa-onnx-$TARGET_SHERPA_ONNX_VERSION.aar"
+        const val ANDROID_AAR_DOWNLOAD_URL =
+            "https://github.com/k2-fsa/sherpa-onnx/releases/download/v$TARGET_SHERPA_ONNX_VERSION/$ANDROID_AAR_ASSET_NAME"
+        val DEFAULT_ENGLISH_MODEL: ModelVariant = ModelVariant.MOONSHINE_V2_TINY_EN
+        val MULTILINGUAL_FALLBACK_MODEL: ModelVariant = ModelVariant.WHISPER_TINY_MULTILINGUAL
+
+        fun preferredModelFor(language: String): ModelVariant {
+            val normalized = language.trim().lowercase(Locale.US)
+            return if (normalized == "en" || normalized.startsWith("en-") || normalized == "english") {
+                DEFAULT_ENGLISH_MODEL
+            } else {
+                MULTILINGUAL_FALLBACK_MODEL
+            }
+        }
 
         val WHISPER_LANGUAGES = listOf(
             "en", "zh", "de", "es", "ru", "ko", "fr", "ja", "pt", "tr",
