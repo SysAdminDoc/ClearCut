@@ -1,5 +1,11 @@
 # Changelog
 
+## v3.74.8 — 2026-05-14 — Keyboard timeline editing
+
+- **Timeline clips are now keyboard-focusable.** Focus traversal can land directly on visible clip nodes, with a visible focus border and the same select/delete/split affordances exposed through keyboard events.
+- **Arrow keys can move focused clips without touch.** Focused clips respond to left/right arrows with 100 ms nudges, and Shift+left/right uses a 1 second nudge; trim mode maps the same keys to slip edits.
+- **Selected clips gain root-level nudge shortcuts.** Shift+left/right nudges the selected clip even when focus is on the editor shell, while Ctrl+Shift+left/right nudges by one second.
+
 ## v3.74.7 — 2026-05-14 — Generative video cloud policy
 
 - **Generative video is now codified as cloud-optional only.** `GenerativeVideoPolicy` records Wan 2.2, HunyuanVideo, and VideoCrafter2 as optional cloud providers rather than on-device bundled engines.
