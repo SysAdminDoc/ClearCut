@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.73.2</string>
+    <string name="app_version">v3.74.0</string>
 
     <!-- Common -->
     <string name="close">Close</string>
@@ -264,7 +264,7 @@
     <string name="settings_about_description">Build and engine details for troubleshooting and support.</string>
     <string name="settings_version">Version</string>
     <string name="settings_engine">Engine</string>
-    <string name="settings_engine_value">Media3 Transformer 1.9.2</string>
+    <string name="settings_engine_value">Media3 Transformer 1.10.0</string>
     <string name="settings_ai_models_value">Whisper ONNX + MediaPipe</string>
     <string name="settings_on">On</string>
     <string name="settings_off">Off</string>

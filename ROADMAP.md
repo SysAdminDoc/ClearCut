@@ -2,7 +2,7 @@
 
 Forward-looking tracker for planned work. Release history lives in [CHANGELOG.md](CHANGELOG.md).
 
-Current version: **v3.71.0** (versionCode 132).
+Current version: **v3.74.0** (versionCode 137).
 
 ### v3.69.0 — 15-Feature Wave (shipped)
 
@@ -309,7 +309,7 @@ Research date: 2026-05. Scope: refresh Tier A/B unblocks against current upstrea
 
 ### R5.1 — Media3 1.10 unblocks Tier B.1/B.2/C.9
 Media3 1.10 (March 2026) ships the multi-sequence/multi-track Composition API, Dolby Vision Profile 10 export, and VVC ingest. This is a direct dependency bump that retires the longest-standing limitation in this roadmap.
-- [ ] **R5.1a — Bump `androidx.media3` from 1.9.2 → 1.10.x** in [app/build.gradle.kts](app/build.gradle.kts). Audit `EditedMediaItemSequence` builder usage — the deprecated list constructor is removed in 1.10. Sources: https://github.com/androidx/media/releases · https://developer.android.com/media/media3/transformer/composition
+- [x] **R5.1a — Bump `androidx.media3` from 1.9.2 → 1.10.x** in [app/build.gradle.kts](app/build.gradle.kts). Done in v3.74.0 with Media3 1.10.0 across ExoPlayer / Transformer / Effect / Common / UI / Muxer. Audit confirmed `VideoEngine` and `ProxyEngine` already use `EditedMediaItemSequence.Builder`, so no removed list-constructor migration was needed. Sources: https://github.com/androidx/media/releases · https://developer.android.com/media/media3/transformer/composition
 - [ ] **R5.1b — Wire multi-sequence Composition into `VideoEngine`** to unblock B.1 (multi-track export) and B.2 (true dual-texture blends). Confirm transition-beyond-crossfade gap is still present (issue #1662 open at time of research) and keep the wipe/slide effect-chain workaround until upstream lands it. Touch: [engine/VideoEngine.kt](app/src/main/java/com/novacut/editor/engine/VideoEngine.kt), [engine/EffectBuilder.kt](app/src/main/java/com/novacut/editor/engine/EffectBuilder.kt).
 - [ ] **R5.1c — Enable Dolby Vision Profile 10 + HDR10+ export paths** in `EncoderCapabilityProbe` (closes C.9 on capable devices). Pixel 10 / Tensor G5 ships AV1 + VP9 hardware encode — surface as a "device tier: premium" hint in ExportSheet. Sources: https://developer.android.com/media/media3/transformer/hdr · https://www.androidauthority.com/google-tensor-g5/
 - [ ] **R5.1d — Android 15/16 Ultra HDR ingest** — flagship phones now capture Ultra HDR video by default; widen `MediaImportEngine` HDR detection beyond HDR10/HLG to include the gain-map/Ultra HDR path. Source: https://developer.android.com/about/versions/15/features#ultra-hdr-video

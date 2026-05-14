@@ -221,7 +221,7 @@ See [CHANGELOG.md](CHANGELOG.md) for full release history.
 |-----------|-----------|
 | Language | Kotlin 2.1.0 |
 | UI | Jetpack Compose + Material 3 (Catppuccin Mocha theme) |
-| Video | Media3 1.9.2 (Transformer + ExoPlayer) |
+| Video | Media3 1.10.0 (Transformer + ExoPlayer) |
 | Effects | OpenGL ES 3.0 (37 GLSL transitions, 40+ effect shaders) |
 | Audio DSP | Custom engine (EQ, compressor, chorus, delay, pitch shift) |
 | Speech-to-Text | ONNX Runtime 1.17.0 (Whisper) |

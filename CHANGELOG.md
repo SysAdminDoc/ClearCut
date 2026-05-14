@@ -1,5 +1,12 @@
 # Changelog
 
+## v3.74.0 — 2026-05-14 — Media3 1.10 foundation
+
+- **Media3 is upgraded to 1.10.0.** The dependency catalog now pulls the current stable `androidx.media3` release across ExoPlayer, Transformer, Effect, Common, UI, and Muxer.
+- **Export builder usage is ready for the removed sequence constructor.** Existing `VideoEngine` and `ProxyEngine` export paths already use `EditedMediaItemSequence.Builder`, so the 1.10 upgrade does not require a production call-site migration.
+- **Version and engine labels are synced.** Build metadata, the app version string, Settings engine value, README stack table, and roadmap state now reflect the Media3 1.10 foundation release.
+- **Verification** — `git diff --check`, `assembleDebug`, `testDebugUnitTest`, `assembleRelease`, release APK metadata/signature checks, and an adb install/launch smoke pass on `R5CY34G070L` all passed.
+
 ## v3.73.2 — 2026-05-13 — Project home recovery polish
 
 - **Project home counts now stay trustworthy while filtering.** The hero metric uses the total project library size instead of the currently filtered result count, so an empty filter no longer makes the library look empty.
