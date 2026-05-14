@@ -1,5 +1,11 @@
 # Changelog
 
+## v3.74.9 — 2026-05-14 — Caption accessibility presets
+
+- **Caption Style Gallery now includes accessible presets.** A dedicated section adds WCAG-AA high-contrast, large-text, and reduced-motion caption looks instead of forcing readability work through decorative templates.
+- **Template application now carries real caption style intent.** Applying a template updates caption type, font, fill, background, highlight, position, outline color/width, and shadow state so the preset affects the actual caption data, not just the gallery preview.
+- **Caption stroke metadata now survives recovery.** Caption autosave serializes and restores outline color and width, and preview rendering uses the stored stroke settings for more legible text over busy video.
+
 ## v3.74.8 — 2026-05-14 — Keyboard timeline editing
 
 - **Timeline clips are now keyboard-focusable.** Focus traversal can land directly on visible clip nodes, with a visible focus border and the same select/delete/split affordances exposed through keyboard events.

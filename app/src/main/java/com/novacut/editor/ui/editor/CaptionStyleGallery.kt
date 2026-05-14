@@ -41,9 +41,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.novacut.editor.R
+import com.novacut.editor.model.CaptionAccessibilityPreset
 import com.novacut.editor.model.CaptionStyleTemplate
 import com.novacut.editor.model.CaptionTemplateType
 import com.novacut.editor.model.TextAnimation
+import com.novacut.editor.model.isAccessibilityPreset
 import com.novacut.editor.ui.theme.Mocha
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -54,11 +56,14 @@ fun CaptionStyleGallery(
     modifier: Modifier = Modifier
 ) {
     val templates = remember { defaultTemplates() }
+    val accessibilityTemplates = remember(templates) {
+        templates.filter { it.isAccessibilityPreset }
+    }
     val karaokeTemplates = remember(templates) {
-        templates.filter { it.wordByWord || it.type == CaptionTemplateType.KARAOKE }
+        templates.filter { !it.isAccessibilityPreset && (it.wordByWord || it.type == CaptionTemplateType.KARAOKE) }
     }
     val editorialTemplates = remember(templates) {
-        templates.filter { !it.wordByWord && it.type != CaptionTemplateType.KARAOKE }
+        templates.filter { !it.isAccessibilityPreset && !it.wordByWord && it.type != CaptionTemplateType.KARAOKE }
     }
 
     PremiumEditorPanel(
@@ -101,6 +106,10 @@ fun CaptionStyleGallery(
                                 text = stringResource(R.string.caption_styles_motion_format, karaokeTemplates.size),
                                 accent = Mocha.Yellow
                             )
+                            PremiumPanelPill(
+                                text = stringResource(R.string.caption_styles_accessible_format, accessibilityTemplates.size),
+                                accent = Mocha.Green
+                            )
                         }
                     }
                 } else {
@@ -137,6 +146,10 @@ fun CaptionStyleGallery(
                                 text = stringResource(R.string.caption_styles_motion_format, karaokeTemplates.size),
                                 accent = Mocha.Yellow
                             )
+                            PremiumPanelPill(
+                                text = stringResource(R.string.caption_styles_accessible_format, accessibilityTemplates.size),
+                                accent = Mocha.Green
+                            )
                         }
                     }
                 }
@@ -144,11 +157,12 @@ fun CaptionStyleGallery(
 
             BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                 val isCompactLayout = maxWidth < 360.dp
-                val metricWidth = if (isCompactLayout) {
-                    maxWidth
-                } else {
-                    (maxWidth - 8.dp) / 2
+                val columns = when {
+                    isCompactLayout -> 1
+                    maxWidth < 560.dp -> 2
+                    else -> 3
                 }
+                val metricWidth = (maxWidth - (8 * (columns - 1)).dp) / columns.toFloat()
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -166,9 +180,26 @@ fun CaptionStyleGallery(
                         accent = Mocha.Mauve,
                         modifier = Modifier.width(metricWidth.coerceAtLeast(0.dp))
                     )
+                    StyleMetric(
+                        title = "Accessible",
+                        value = accessibilityTemplates.size.toString(),
+                        accent = Mocha.Green,
+                        modifier = Modifier.width(metricWidth.coerceAtLeast(0.dp))
+                    )
                 }
             }
         }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        CaptionStyleSection(
+            title = stringResource(R.string.caption_accessibility_title),
+            subtitle = stringResource(R.string.caption_accessibility_subtitle),
+            accent = Mocha.Green,
+            sectionContentDescription = stringResource(R.string.cd_caption_accessibility_section),
+            templates = accessibilityTemplates,
+            onStyleSelected = onStyleSelected
+        )
 
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -298,8 +329,21 @@ private fun CaptionStyleCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
+    val accessibilityLabel = if (template.isAccessibilityPreset) {
+        stringResource(R.string.caption_style_accessibility_label, template.accessibilityPreset.displayName)
+    } else {
+        null
+    }
     Surface(
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = modifier
+            .semantics {
+                contentDescription = listOfNotNull(
+                    template.type.displayName,
+                    accessibilityLabel,
+                    template.animation.displayName
+                ).joinToString(", ")
+            }
+            .clickable(onClick = onClick),
         color = Mocha.PanelRaised,
         shape = RoundedCornerShape(22.dp),
         border = BorderStroke(1.dp, Mocha.CardStroke)
@@ -357,6 +401,13 @@ private fun CaptionStyleCard(
                         style = MaterialTheme.typography.labelMedium,
                         color = Mocha.Subtext0
                     )
+                    if (accessibilityLabel != null) {
+                        Text(
+                            text = accessibilityLabel,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Mocha.Green
+                        )
+                    }
                 }
             }
         }
@@ -365,7 +416,13 @@ private fun CaptionStyleCard(
 
 @Composable
 private fun CaptionStylePreview(template: CaptionStyleTemplate) {
-    val previewText = if (template.wordByWord) "Hello World" else "Sample Text"
+    val previewText = when {
+        template.wordByWord -> "Hello World"
+        template.accessibilityPreset == CaptionAccessibilityPreset.REDUCED_MOTION -> "No Motion"
+        template.accessibilityPreset == CaptionAccessibilityPreset.LARGE_TEXT -> "Large Text"
+        template.isAccessibilityPreset -> "Readable Text"
+        else -> "Sample Text"
+    }
     val textColor = Color(template.textColor)
     val backgroundColor = Color(template.backgroundColor)
     val outlineColor = Color(template.outlineColor)
@@ -432,7 +489,10 @@ private fun CaptionStylePreview(template: CaptionStyleTemplate) {
                 text = previewText,
                 color = textColor,
                 fontSize = previewSize.sp,
-                fontWeight = if (template.type == CaptionTemplateType.BOLD_CENTER) {
+                fontWeight = if (
+                    template.type == CaptionTemplateType.BOLD_CENTER ||
+                    template.accessibilityPreset == CaptionAccessibilityPreset.LARGE_TEXT
+                ) {
                     FontWeight.ExtraBold
                 } else {
                     FontWeight.Medium
@@ -454,6 +514,45 @@ private fun CaptionStylePreview(template: CaptionStyleTemplate) {
 }
 
 fun defaultTemplates(): List<CaptionStyleTemplate> = listOf(
+    CaptionStyleTemplate(
+        type = CaptionTemplateType.HIGH_CONTRAST,
+        fontFamily = "sans-serif-medium",
+        fontSize = 28f,
+        textColor = 0xFFFFFFFF,
+        backgroundColor = 0xF0000000,
+        outlineColor = 0xFF000000,
+        outlineWidth = 3f,
+        shadowColor = 0x00000000,
+        positionY = 0.86f,
+        animation = TextAnimation.NONE,
+        accessibilityPreset = CaptionAccessibilityPreset.WCAG_AA_CONTRAST
+    ),
+    CaptionStyleTemplate(
+        type = CaptionTemplateType.LARGE_TEXT,
+        fontFamily = "sans-serif-medium",
+        fontSize = 40f,
+        textColor = 0xFFFFFFFF,
+        backgroundColor = 0xF0000000,
+        outlineColor = 0xFF000000,
+        outlineWidth = 4f,
+        shadowColor = 0x00000000,
+        positionY = 0.78f,
+        animation = TextAnimation.NONE,
+        accessibilityPreset = CaptionAccessibilityPreset.LARGE_TEXT
+    ),
+    CaptionStyleTemplate(
+        type = CaptionTemplateType.REDUCED_MOTION,
+        fontFamily = "sans-serif",
+        fontSize = 28f,
+        textColor = 0xFFF9E2AF,
+        backgroundColor = 0xF0000000,
+        outlineColor = 0xFF000000,
+        outlineWidth = 2f,
+        shadowColor = 0x00000000,
+        positionY = 0.86f,
+        animation = TextAnimation.NONE,
+        accessibilityPreset = CaptionAccessibilityPreset.REDUCED_MOTION
+    ),
     CaptionStyleTemplate(
         type = CaptionTemplateType.KARAOKE,
         fontFamily = "sans-serif",

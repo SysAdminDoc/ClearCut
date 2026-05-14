@@ -1932,10 +1932,17 @@ class EditorViewModel @Inject constructor(
                     track.copy(clips = track.clips.map { clip ->
                         clip.copy(captions = clip.captions.map { caption ->
                             caption.copy(style = caption.style.copy(
+                                type = template.toCaptionStyleType(),
                                 fontSize = template.fontSize,
                                 fontFamily = template.fontFamily,
                                 color = template.textColor,
-                                backgroundColor = template.backgroundColor
+                                backgroundColor = template.backgroundColor,
+                                highlightColor = template.highlightColor,
+                                positionY = template.positionY,
+                                outline = template.outlineWidth > 0f,
+                                outlineColor = template.outlineColor,
+                                outlineWidth = template.outlineWidth.coerceAtLeast(0f),
+                                shadow = (template.shadowColor ushr 24) > 0
                             ))
                         })
                     })
