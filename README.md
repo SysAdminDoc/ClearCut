@@ -238,6 +238,7 @@ See [CHANGELOG.md](CHANGELOG.md) for full release history.
 | Style Transfer | Planned (AnimeGANv2 + Fast NST) |
 | Stabilization | Planned (OpenCV) |
 | TTS | Android System TTS (Piper via Sherpa-ONNX planned) |
+| ASR acceleration target | Sherpa-ONNX v1.13.2 AAR + Moonshine v2 Tiny EN policy (native backend still gated) |
 | Animated Titles | Lottie (Airbnb) |
 | Timeline Exchange | Planned (OpenTimelineIO) |
 | DI | Hilt / Dagger |
@@ -279,7 +280,7 @@ com.novacut.editor/
 │   ├── EditCommand          # Command-pattern undo/redo
 │   ├── db/ProjectDatabase   # Room database with migrations
 │   ├── whisper/WhisperEngine     # Built-in Whisper (ONNX)
-│   ├── whisper/SherpaAsrEngine   # Sherpa-ONNX ASR (stub)
+│   ├── whisper/SherpaAsrEngine   # Sherpa-ONNX ASR target metadata + fallback
 │   └── segmentation/        # MediaPipe selfie segmentation
 ├── model/                  # Data classes (Project, Clip, Track, Effect, etc.)
 ├── ui/
@@ -327,6 +328,7 @@ Key external dependencies currently in `build.gradle.kts`:
 | Dependency | Version | Purpose |
 |-----------|---------|---------|
 | ONNX Runtime | 1.17.0 | Whisper ASR + LaMa inpainting |
+| Sherpa-ONNX | 1.13.2 target | Future native Moonshine v2 ASR path; official AAR is a GitHub release asset, not a Maven dependency |
 | MediaPipe | 0.10.14 | Selfie segmentation |
 | Lottie | 6.6.2 | Animated title templates |
 | OkHttp | 4.12.0 | Cloud inpainting API |
