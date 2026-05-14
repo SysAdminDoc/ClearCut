@@ -56,6 +56,24 @@ class ExportColorConfidenceEngineTest {
     }
 
     @Test
+    fun av1DolbyVisionProfile10SupportReportsDynamicPath() {
+        val report = ExportColorConfidenceEngine.analyze(
+            config = ExportConfig(codec = VideoCodec.AV1, hdr10PlusMetadata = true),
+            width = 1920,
+            height = 1080,
+            hdrSupport = ExportColorConfidenceEngine.HdrEncodeSupport(
+                supportedFormats = setOf("HDR10", "Dolby Vision Profile 10"),
+                maxWidth = 3840,
+                maxHeight = 2160,
+                maxBitrate = 120_000_000
+            )
+        )
+
+        assertFalse(report.hasWarnings)
+        assertTrue(report.chips.any { it.label == "Dolby Vision path" })
+    }
+
+    @Test
     fun hdrRequestWarnsWhenDeviceDoesNotAdvertiseSupport() {
         val report = ExportColorConfidenceEngine.analyze(
             config = ExportConfig(codec = VideoCodec.HEVC, hdr10PlusMetadata = true),

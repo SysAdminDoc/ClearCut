@@ -2,7 +2,7 @@
 
 Forward-looking tracker for planned work. Release history lives in [CHANGELOG.md](CHANGELOG.md).
 
-Current version: **v3.74.1** (versionCode 138).
+Current version: **v3.74.2** (versionCode 139).
 
 ### v3.69.0 — 15-Feature Wave (shipped)
 
@@ -66,7 +66,7 @@ Not covered in [RESEARCH.md](RESEARCH.md). Ranked by viral-content / pro-differe
 ### Media & assets
 - [ ] **C.7 — Stock asset library** — Pexels + Pixabay (video + photo) + Freesound (SFX) + Free Music Archive (music) API tabs in MediaPicker. Each needs license compliance (attribution strings cached per asset). Touch: [ui/mediapicker/MediaPickerSheet.kt](app/src/main/java/com/novacut/editor/ui/mediapicker/).
 - [ ] **C.8 — In-app camera with teleprompter** — `CameraX` capture, drop directly into timeline, optional scrolling teleprompter overlay while recording voiceover. Closes "record → edit → export" loop without leaving the app. New `ui/capture/` package.
-- [ ] **C.9 — HDR10 / Dolby Vision export** — Android 14+ supports HDR encode via `MediaCodec` profile flags. Walk `EncoderCapabilityProbe` (v3.55) for HDR profile support; surface in ExportSheet when source is HDR. Genuine differentiator — no FOSS mobile NLE ships this.
+- [x] **C.9 — HDR10 / Dolby Vision export** — Done in v3.74.2 for capable devices. `EncoderCapabilityProbe` now walks advertised HDR profiles for HEVC, AV1, VP9, and AV1-based Dolby Vision Profile 10; `ExportSheet` surfaces HDR10+, Dolby Vision Profile 10, encoder limits, and device-tier hardware encode hints before render.
 - [ ] **C.10 — 360 / VR equirectangular editing** — Spherical navigation preview (yaw/pitch/roll gestures), equirectangular-aware crop and transitions. Target Insta360 / GoPro Max footage. New `effect/EquirectangularEffect.kt`, pose metadata passthrough via spatial media (XMP GPano).
 
 ### Timeline & composition
@@ -308,10 +308,10 @@ Research date: 2026-04-25. Scope: complementary open-source projects, profession
 Research date: 2026-05. Scope: refresh Tier A/B unblocks against current upstream releases, identify successor dependencies for archived ones, and surface coverage gaps the previous rounds left thin (accessibility, i18n, observability, distribution, plugin ecosystem, security). Treat as a delta on top of Rounds 2–4 — items already covered are not repeated.
 
 ### R5.1 — Media3 1.10 unblocks Tier B.1/B.2/C.9
-Media3 1.10 (March 2026) ships the multi-sequence/multi-track Composition API, Dolby Vision Profile 10 export, and VVC ingest. This is a direct dependency bump that retires the longest-standing limitation in this roadmap.
-- [x] **R5.1a — Bump `androidx.media3` from 1.9.2 → 1.10.x** in [app/build.gradle.kts](app/build.gradle.kts). Done in v3.74.0 with Media3 1.10.0 across ExoPlayer / Transformer / Effect / Common / UI / Muxer. Audit confirmed `VideoEngine` and `ProxyEngine` already use `EditedMediaItemSequence.Builder`, so no removed list-constructor migration was needed. Sources: https://github.com/androidx/media/releases · https://developer.android.com/media/media3/transformer/composition
+Media3 1.10 (March 2026) ships the multi-sequence/multi-track Composition API, wider Dolby Vision / HDR handling, and VVC ingest. This is a direct dependency bump that retires the longest-standing limitation in this roadmap.
+- [x] **R5.1a — Bump `androidx.media3` from 1.9.2 → 1.10.x** in [app/build.gradle.kts](app/build.gradle.kts). Done in v3.74.0 with Media3 1.10.0 across ExoPlayer / Transformer / Effect / Common / UI / Muxer, then lifted to 1.10.1 in v3.74.2 for the AV1-based Dolby Vision handling fix. Audit confirmed `VideoEngine` and `ProxyEngine` already use `EditedMediaItemSequence.Builder`, so no removed list-constructor migration was needed. Sources: https://github.com/androidx/media/releases · https://developer.android.com/media/media3/transformer/composition
 - [x] **R5.1b — Wire multi-sequence Composition into `VideoEngine`** — Done in v3.74.1. `VideoEngine` now exports one sequence per visible visual track, preserves per-track mute/solo/volume semantics for embedded audio, appends dedicated audio-track sequences, and disables embedded-audio transmuxing when multiple visual sequences require compositing. `VideoEngine` and `ProxyEngine` builders now use explicit Media3 track types. Upstream issue #1662 is closed as of 2025-09-09, so NovaCut keeps the existing wipe/slide effect-chain workaround until a dedicated transition migration is implemented.
-- [ ] **R5.1c — Enable Dolby Vision Profile 10 + HDR10+ export paths** in `EncoderCapabilityProbe` (closes C.9 on capable devices). Pixel 10 / Tensor G5 ships AV1 + VP9 hardware encode — surface as a "device tier: premium" hint in ExportSheet. Sources: https://developer.android.com/media/media3/transformer/hdr · https://www.androidauthority.com/google-tensor-g5/
+- [x] **R5.1c — Enable Dolby Vision Profile 10 + HDR10+ export paths** in `EncoderCapabilityProbe` (closes C.9 on capable devices). Done in v3.74.2. The probe now classifies HDR10, HDR10+, and AV1-based Dolby Vision Profile 10 profiles; ExportSheet shows Color / HDR confidence plus a capability-derived Standard / Advanced / Premium device tier. Pixel 10 / Tensor G5-style AV1 + VP9 hardware encode is detected from actual encoders rather than hard-coded model names. Sources: https://developer.android.com/media/media3/transformer/supported-formats · https://developer.android.com/reference/android/media/MediaCodecInfo.CodecProfileLevel · https://www.androidauthority.com/pixel-10-video-recording-av1-vp9-3586429/
 - [ ] **R5.1d — Android 15/16 Ultra HDR ingest** — flagship phones now capture Ultra HDR video by default; widen `MediaImportEngine` HDR detection beyond HDR10/HLG to include the gain-map/Ultra HDR path. Source: https://developer.android.com/about/versions/15/features#ultra-hdr-video
 
 ### R5.2 — Dependency successor pivots
@@ -365,11 +365,11 @@ Media3 1.10 (March 2026) ships the multi-sequence/multi-track Composition API, D
 Items in earlier rounds that 2026 upstream releases now resolve or trivialise — reconciled here so they don't get re-researched:
 - **A.1 Sherpa-ONNX dep target** — bump to `1.12.28+` for Moonshine v2 (was pinned to 1.10.x).
 - **A.9 FFmpegEngine dep target** — switch from FFmpegX-Android to `salahawad/ffmpeg-kit-community` as primary (FFmpegX kept as fallback note).
-- **B.1 / B.2 / C.9** — Media3 1.10 dependency bump and multi-sequence export wiring are complete. Remaining follow-up is the real dual-input blend shader path for B.2 and HDR/Dolby Vision capability work in R5.1c.
+- **B.1 / B.2 / C.9** — Media3 1.10 dependency bump, multi-sequence export wiring, and HDR/Dolby Vision capability surfacing are complete. Remaining follow-up is the real dual-input blend shader path for B.2.
 - **Open Video Editor (devhyper)** — confirmed still the only direct OSS Compose+Media3 competitor at ~650 stars; no new direct competitor surfaced this round.
 
 ### Round 5 appendix
-- https://github.com/androidx/media/releases — Media3 release notes (1.10 multi-sequence + Dolby Vision Profile 10 + VVC).
+- https://github.com/androidx/media/releases — Media3 release notes (1.10 multi-sequence, HDR / Dolby Vision handling, VVC).
 - https://github.com/androidx/media/issues/1662 — multi-item transitions beyond crossfade still open.
 - https://github.com/arthenica/ffmpeg-kit — archived April 2025.
 - https://github.com/salahawad/ffmpeg-kit-community — primary maintained successor fork.
@@ -382,7 +382,7 @@ Items in earlier rounds that 2026 upstream releases now resolve or trivialise �
 - https://github.com/WyattBlue/auto-editor — silence + filler-word algorithm reference for C.2.
 - https://developer.android.com/about/versions/15/features#ultra-hdr-video — Ultra HDR video ingest path.
 - https://developer.android.com/media/media3/transformer/composition — multi-sequence Composition API.
-- https://developer.android.com/media/media3/transformer/hdr — HDR encode profiles.
+- https://developer.android.com/media/media3/transformer/supported-formats — Transformer HDR handling and device encode support.
 - https://developer.android.com/jetpack/compose/accessibility — Compose semantics + custom actions.
 - https://developer.android.com/training/basics/supporting-devices/languages#BidirectionalText — RTL guidance.
 - https://developer.android.com/guide/playcore/asset-delivery — Play Asset Delivery for large ML payloads.

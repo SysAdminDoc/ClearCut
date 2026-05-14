@@ -25,7 +25,7 @@ class HdrCapabilityProbe @Inject constructor() {
     enum class HdrFormat(val displayName: String) {
         HDR10(displayName = "HDR10"),
         HDR10_PLUS(displayName = "HDR10+"),
-        DOLBY_VISION(displayName = "Dolby Vision"),
+        DOLBY_VISION(displayName = "Dolby Vision Profile 10"),
         HLG(displayName = "HLG")
     }
 
@@ -55,7 +55,7 @@ class HdrCapabilityProbe @Inject constructor() {
             val list = MediaCodecList(MediaCodecList.REGULAR_CODECS)
             for (info in list.codecInfos) {
                 if (!info.isEncoder) continue
-                if (mimeType !in info.supportedTypes) continue
+                if (info.supportedTypes.none { it.equals(mimeType, ignoreCase = true) }) continue
                 val caps = try { info.getCapabilitiesForType(mimeType) } catch (_: Throwable) { continue }
                 val videoCaps = caps.videoCapabilities ?: continue
                 maxWidth = maxOf(maxWidth, videoCaps.supportedWidths.upper)
@@ -92,7 +92,10 @@ class HdrCapabilityProbe @Inject constructor() {
                 CodecProfileLevel.VP9Profile3HDR10Plus -> HdrFormat.HDR10_PLUS
                 else -> null
             }
-            "video/dolby-vision" -> HdrFormat.DOLBY_VISION
+            "video/dolby-vision" -> when (pl.profile) {
+                CodecProfileLevel.DolbyVisionProfileDvav110 -> HdrFormat.DOLBY_VISION
+                else -> null
+            }
             else -> null
         }
     }

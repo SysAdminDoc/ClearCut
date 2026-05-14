@@ -1,7 +1,10 @@
 package com.novacut.editor.engine
 
 import android.media.MediaCodecInfo
+import android.media.MediaCodecInfo.CodecProfileLevel
 import android.media.MediaCodecList
+import android.media.MediaFormat
+import android.os.Build
 import android.util.Log
 import com.novacut.editor.model.VideoCodec
 
@@ -26,6 +29,43 @@ import com.novacut.editor.model.VideoCodec
 object EncoderCapabilityProbe {
 
     private const val TAG = "EncoderCapabilityProbe"
+    private const val MIME_DOLBY_VISION = "video/dolby-vision"
+
+    enum class HdrExportFormat(val displayName: String) {
+        HDR10("HDR10"),
+        HDR10_PLUS("HDR10+"),
+        DOLBY_VISION_PROFILE_10("Dolby Vision Profile 10")
+    }
+
+    enum class DeviceEncodingTier(val displayName: String) {
+        STANDARD("Standard"),
+        ADVANCED("Advanced"),
+        PREMIUM("Premium")
+    }
+
+    data class HdrProfileSupport(
+        val codec: VideoCodec,
+        val supportedFormats: Set<HdrExportFormat>,
+        val maxWidth: Int = 0,
+        val maxHeight: Int = 0,
+        val maxBitrate: Int = 0,
+        val encoderNames: Set<String> = emptySet()
+    ) {
+        val hasAnyHdr: Boolean get() = supportedFormats.isNotEmpty()
+        val hasHdr10Plus: Boolean get() = HdrExportFormat.HDR10_PLUS in supportedFormats
+        val hasDolbyVisionProfile10: Boolean
+            get() = HdrExportFormat.DOLBY_VISION_PROFILE_10 in supportedFormats
+    }
+
+    data class DeviceEncodingTierHint(
+        val tier: DeviceEncodingTier,
+        val detail: String,
+        val availableCodecs: Set<VideoCodec>,
+        val hdrFormats: Set<HdrExportFormat>,
+        val hasHardwareHevc: Boolean,
+        val hasHardwareAv1: Boolean,
+        val hasHardwareVp9: Boolean
+    )
 
     /**
      * Per-codec capability snapshot. `supported = false` means no
@@ -102,5 +142,191 @@ object EncoderCapabilityProbe {
             return Capability(true)
         }
         return Capability(false, firstReason ?: "${codec.label} can't encode this configuration")
+    }
+
+    /**
+     * Returns the HDR profiles the device advertises for the selected export codec.
+     *
+     * Dolby Vision Profile 10 is AV1-based on Android (`dav1.10`), so NovaCut
+     * reports it with AV1 rather than HEVC. This is still an advisory: Media3
+     * and the platform encoder perform the authoritative negotiation at export
+     * time.
+     */
+    fun queryHdrProfiles(codec: VideoCodec): HdrProfileSupport {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            return HdrProfileSupport(codec = codec, supportedFormats = emptySet())
+        }
+
+        val mimeTypes = buildSet {
+            add(codec.mimeType)
+            if (codec == VideoCodec.AV1) add(MIME_DOLBY_VISION)
+        }
+        val formats = mutableSetOf<HdrExportFormat>()
+        val encoders = mutableSetOf<String>()
+        var maxWidth = 0
+        var maxHeight = 0
+        var maxBitrate = 0
+
+        for ((info, mimeType) in matchingEncoderEntries(mimeTypes)) {
+            val caps = try {
+                info.getCapabilitiesForType(mimeType)
+            } catch (_: IllegalArgumentException) {
+                continue
+            } catch (t: Throwable) {
+                Log.w(TAG, "Capability lookup failed for ${info.name} / $mimeType", t)
+                continue
+            }
+
+            val discovered = caps.profileLevels
+                ?.mapNotNull { classifyHdrProfile(mimeType, it) }
+                ?.toSet()
+                .orEmpty()
+            if (discovered.isEmpty()) continue
+
+            formats += discovered
+            encoders += info.name
+            caps.videoCapabilities?.let { videoCaps ->
+                maxWidth = maxOf(maxWidth, videoCaps.supportedWidths.upper)
+                maxHeight = maxOf(maxHeight, videoCaps.supportedHeights.upper)
+                maxBitrate = maxOf(maxBitrate, videoCaps.bitrateRange.upper)
+            }
+        }
+
+        return HdrProfileSupport(
+            codec = codec,
+            supportedFormats = formats,
+            maxWidth = maxWidth,
+            maxHeight = maxHeight,
+            maxBitrate = maxBitrate,
+            encoderNames = encoders
+        )
+    }
+
+    /**
+     * Coarse user-facing device tier. It is intentionally derived from actual
+     * advertised encoders instead of model names so Tensor, Snapdragon, Exynos,
+     * and future devices all get the same treatment.
+     */
+    fun deviceTierHint(): DeviceEncodingTierHint {
+        val availableCodecs = VideoCodec.entries
+            .filter { matchingEncoderEntries(setOf(it.mimeType)).isNotEmpty() }
+            .toSet()
+        val hdrFormats = VideoCodec.entries
+            .flatMap { queryHdrProfiles(it).supportedFormats }
+            .toSet()
+        val hasHardwareHevc = hasHardwareEncoder(VideoCodec.HEVC.mimeType)
+        val hasHardwareAv1 = hasHardwareEncoder(VideoCodec.AV1.mimeType)
+        val hasHardwareVp9 = hasHardwareEncoder(VideoCodec.VP9.mimeType)
+
+        val tier = when {
+            hasHardwareAv1 && hasHardwareVp9 -> DeviceEncodingTier.PREMIUM
+            hasHardwareHevc || hasHardwareAv1 || hasHardwareVp9 || hdrFormats.isNotEmpty() ->
+                DeviceEncodingTier.ADVANCED
+            else -> DeviceEncodingTier.STANDARD
+        }
+        val detail = when (tier) {
+            DeviceEncodingTier.PREMIUM -> {
+                val hdr = formatHdrList(hdrFormats)
+                if (hdr.isNotBlank()) {
+                    "Hardware AV1 and VP9 encoders detected with $hdr HDR profile support."
+                } else {
+                    "Hardware AV1 and VP9 encoders detected for efficient modern exports."
+                }
+            }
+            DeviceEncodingTier.ADVANCED -> {
+                val codecs = availableCodecs
+                    .filter { it != VideoCodec.H264 }
+                    .joinToString(", ") { it.label }
+                    .ifBlank { "modern codec" }
+                val hdr = formatHdrList(hdrFormats)
+                if (hdr.isNotBlank()) {
+                    "$codecs encode is available with $hdr HDR profile support."
+                } else {
+                    "$codecs encode is available. HDR support depends on the selected codec and source."
+                }
+            }
+            DeviceEncodingTier.STANDARD ->
+                "Baseline H.264 export path detected. Choose conservative settings for long renders."
+        }
+
+        return DeviceEncodingTierHint(
+            tier = tier,
+            detail = detail,
+            availableCodecs = availableCodecs,
+            hdrFormats = hdrFormats,
+            hasHardwareHevc = hasHardwareHevc,
+            hasHardwareAv1 = hasHardwareAv1,
+            hasHardwareVp9 = hasHardwareVp9
+        )
+    }
+
+    private fun matchingEncoderEntries(mimeTypes: Set<String>): List<Pair<MediaCodecInfo, String>> {
+        return try {
+            MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos
+                .filter { it.isEncoder }
+                .flatMap { info ->
+                    info.supportedTypes
+                        .filter { supported ->
+                            mimeTypes.any { wanted -> supported.equals(wanted, ignoreCase = true) }
+                        }
+                        .map { supported -> info to supported }
+                }
+        } catch (t: Throwable) {
+            Log.w(TAG, "MediaCodecList lookup failed", t)
+            emptyList()
+        }
+    }
+
+    private fun hasHardwareEncoder(mimeType: String): Boolean {
+        return matchingEncoderEntries(setOf(mimeType)).any { (info, _) -> info.isHardwareAcceleratedCompat() }
+    }
+
+    private fun MediaCodecInfo.isHardwareAcceleratedCompat(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            isHardwareAccelerated
+        } else {
+            val lower = name.lowercase()
+            !lower.startsWith("omx.google.") &&
+                !lower.startsWith("c2.android.") &&
+                !lower.contains(".sw.") &&
+                !lower.contains("software")
+        }
+    }
+
+    private fun classifyHdrProfile(
+        mimeType: String,
+        profileLevel: CodecProfileLevel
+    ): HdrExportFormat? {
+        return when {
+            mimeType.equals(MediaFormat.MIMETYPE_VIDEO_HEVC, ignoreCase = true) -> when (profileLevel.profile) {
+                CodecProfileLevel.HEVCProfileMain10HDR10 -> HdrExportFormat.HDR10
+                CodecProfileLevel.HEVCProfileMain10HDR10Plus -> HdrExportFormat.HDR10_PLUS
+                else -> null
+            }
+            mimeType.equals(MediaFormat.MIMETYPE_VIDEO_AV1, ignoreCase = true) -> when (profileLevel.profile) {
+                CodecProfileLevel.AV1ProfileMain10HDR10 -> HdrExportFormat.HDR10
+                CodecProfileLevel.AV1ProfileMain10HDR10Plus -> HdrExportFormat.HDR10_PLUS
+                else -> null
+            }
+            mimeType.equals(MediaFormat.MIMETYPE_VIDEO_VP9, ignoreCase = true) -> when (profileLevel.profile) {
+                CodecProfileLevel.VP9Profile2HDR,
+                CodecProfileLevel.VP9Profile3HDR -> HdrExportFormat.HDR10
+                CodecProfileLevel.VP9Profile2HDR10Plus,
+                CodecProfileLevel.VP9Profile3HDR10Plus -> HdrExportFormat.HDR10_PLUS
+                else -> null
+            }
+            mimeType.equals(MIME_DOLBY_VISION, ignoreCase = true) -> when (profileLevel.profile) {
+                CodecProfileLevel.DolbyVisionProfileDvav110 -> HdrExportFormat.DOLBY_VISION_PROFILE_10
+                else -> null
+            }
+            else -> null
+        }
+    }
+
+    private fun formatHdrList(formats: Set<HdrExportFormat>): String {
+        return formats
+            .map { it.displayName }
+            .sorted()
+            .joinToString(", ")
     }
 }

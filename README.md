@@ -176,6 +176,7 @@ See [CHANGELOG.md](CHANGELOG.md) for full release history.
 - **Frame capture** — PNG/JPEG single-frame export from current playhead position
 - 480p to 4K Ultra HD
 - **4 codecs** — H.264, H.265 (HEVC), AV1, VP9 with hardware capability detection via `MediaCodecList`
+- **HDR export confidence** — HEVC, AV1, and VP9 preflight reports HDR10+, Dolby Vision Profile 10, and device-tier hardware encode support before render
 - **One-tap platform presets** — YouTube 1080p, YouTube 4K, TikTok, Instagram Reels, Instagram Square, Threads
 - Multi-sequence Media3 Composition export for visible video and overlay tracks, with dedicated audio-track mixdown
 - Batch export with multiple presets simultaneously
@@ -222,7 +223,7 @@ See [CHANGELOG.md](CHANGELOG.md) for full release history.
 |-----------|-----------|
 | Language | Kotlin 2.1.0 |
 | UI | Jetpack Compose + Material 3 (Catppuccin Mocha theme) |
-| Video | Media3 1.10.0 (Transformer + ExoPlayer) |
+| Video | Media3 1.10.1 (Transformer + ExoPlayer) |
 | Effects | OpenGL ES 3.0 (37 GLSL transitions, 40+ effect shaders) |
 | Audio DSP | Custom engine (EQ, compressor, chorus, delay, pitch shift) |
 | Speech-to-Text | ONNX Runtime 1.17.0 (Whisper) |

@@ -85,14 +85,27 @@ object ExportColorConfidenceEngine {
             )
         }
 
-        if (hdrSupport.hasAnyHdr && hdrSupport.supportedFormats.none { it.equals("HDR10+", ignoreCase = true) }) {
+        val hasHdr10Plus = hdrSupport.supportedFormats.any { it.equals("HDR10+", ignoreCase = true) }
+        val hasDolbyVisionProfile10 = hdrSupport.supportedFormats.any {
+            it.equals("Dolby Vision Profile 10", ignoreCase = true)
+        }
+
+        if (hasDolbyVisionProfile10) {
+            chips += Chip(
+                label = "Dolby Vision path",
+                detail = "Profile 10 is advertised on this device.",
+                tone = Tone.GOOD
+            )
+        }
+
+        if (hdrSupport.hasAnyHdr && !hasHdr10Plus && !hasDolbyVisionProfile10) {
             chips += Chip(
                 label = "Static HDR only",
-                detail = "Dynamic HDR10+ metadata is not advertised by this encoder.",
+                detail = "Dynamic HDR metadata is not advertised by this encoder.",
                 tone = Tone.INFO
             )
-            warnings += "The selected encoder advertises HDR, but not HDR10+ dynamic metadata."
-        } else if (hdrSupport.supportedFormats.any { it.equals("HDR10+", ignoreCase = true) }) {
+            warnings += "The selected encoder advertises HDR, but not HDR10+ or Dolby Vision dynamic metadata."
+        } else if (hasHdr10Plus) {
             chips += Chip(
                 label = "HDR10+ metadata",
                 detail = "Dynamic HDR metadata is supported by the selected encoder.",

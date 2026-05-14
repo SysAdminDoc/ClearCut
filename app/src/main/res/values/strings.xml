@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.74.1</string>
+    <string name="app_version">v3.74.2</string>
 
     <!-- Common -->
     <string name="close">Close</string>
@@ -49,7 +49,7 @@
     <string name="export_filename_template_description">Tokens: {name}, {date}, {time}, {res}, {codec}, {fps}, {preset}, {duration}, {sizeMB}, {clipCount}, {projectFolder}.</string>
     <string name="export_warning_long_render">Heads up: estimated render time is %1$s. Exports run in the background, but plug in to avoid battery drain.</string>
     <string name="export_warning_large_file">Estimated output is over 1 GB. Most share targets reject files this large — consider a Target File Size preset.</string>
-    <string name="export_warning_av1_slow">AV1 is slow on most Android devices. If file size isn\'t critical, HEVC encodes much faster.</string>
+    <string name="export_warning_av1_slow">AV1 can be slow when this device does not advertise hardware encode. If file size isn\'t critical, HEVC is safer for long renders.</string>
     <string name="export_hdr_preserve">Preserve HDR Metadata</string>
     <string name="export_hdr_preserve_description">Keep HDR color metadata when the source and selected encoder both support it.</string>
     <string name="export_hdr_preserve_disabled">Requires HEVC, AV1, or VP9. H.264 exports are SDR.</string>
@@ -57,6 +57,10 @@
     <string name="export_fast_trim_description">Use stream-copy for untouched single-source trims and fall back to a full render when edits require it.</string>
     <string name="export_color_confidence_title">Color / HDR confidence</string>
     <string name="export_color_confidence_description">NovaCut checks the chosen codec, metadata intent, and advertised device limits before export.</string>
+    <string name="export_device_tier_title">Device tier: %1$s</string>
+    <string name="export_hardware_hevc">Hardware HEVC</string>
+    <string name="export_hardware_av1">Hardware AV1</string>
+    <string name="export_hardware_vp9">Hardware VP9</string>
     <string name="bulk_undo_message">%1$d clips deleted in quick succession</string>
     <string name="bulk_undo_action">Undo</string>
     <string name="bulk_undo_dismiss_cd">Dismiss</string>
@@ -264,7 +268,7 @@
     <string name="settings_about_description">Build and engine details for troubleshooting and support.</string>
     <string name="settings_version">Version</string>
     <string name="settings_engine">Engine</string>
-    <string name="settings_engine_value">Media3 Transformer 1.10.0</string>
+    <string name="settings_engine_value">Media3 Transformer 1.10.1</string>
     <string name="settings_ai_models_value">Whisper ONNX + MediaPipe</string>
     <string name="settings_on">On</string>
     <string name="settings_off">Off</string>

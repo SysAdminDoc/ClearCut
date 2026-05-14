@@ -31,11 +31,10 @@ data class ExportConfig(
     val exportAsContactSheet: Boolean = false,
     val contactSheetColumns: Int = 4,
     val watermark: Watermark? = null,
-    // v3.69 placeholder — reserved for the HDR10+ dynamic-metadata integration.
-    // The field is declared here so callers can opt-in ahead of the encoder
-    // wire-up; no export path consumes it yet. When the MediaCodec hook lands
-    // (HEVC/AV1 on devices advertising HDR10+ profile support), this flag will
-    // gate `MediaFormat.KEY_HDR10_PLUS_INFO` attachment.
+    // Requests HDR preservation for compatible HEVC / AV1 / VP9 exports.
+    // VideoEngine maps this to Media3 Composition.HDR_MODE_KEEP_HDR, while
+    // EncoderCapabilityProbe and ExportSheet warn when the selected encoder
+    // does not advertise HDR10+, Dolby Vision Profile 10, or other HDR support.
     val hdr10PlusMetadata: Boolean = false,
     // Gate for the LosslessCut-style stream-copy export path. The exporter
     // attempts direct MediaExtractor/MediaMuxer copy for untouched single-source

@@ -55,9 +55,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
+import com.novacut.editor.engine.EncoderCapabilityProbe
 import com.novacut.editor.engine.ExportColorConfidenceEngine
 import com.novacut.editor.engine.ExportState
-import com.novacut.editor.engine.HdrCapabilityProbe
 import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.model.AspectRatio
 import com.novacut.editor.model.AudioCodec
@@ -111,13 +111,18 @@ fun ExportSheet(
     val videoModeEnabled = !config.exportAudioOnly && !config.exportStemsOnly && !config.exportAsGif && !config.captureFrameOnly && !config.exportAsContactSheet
     val audioCodecVisible = !config.captureFrameOnly && !config.exportAsGif && !config.exportAsContactSheet
     val codecCanCarryHdr = config.codec != VideoCodec.H264
-    val hdrEncodeSupport = remember(effectiveConfig.codec) {
-        val support = HdrCapabilityProbe().probe(effectiveConfig.codec.mimeType)
+    val hdrProfileSupport = remember(effectiveConfig.codec) {
+        EncoderCapabilityProbe.queryHdrProfiles(effectiveConfig.codec)
+    }
+    val deviceTierHint = remember {
+        EncoderCapabilityProbe.deviceTierHint()
+    }
+    val hdrEncodeSupport = remember(hdrProfileSupport) {
         ExportColorConfidenceEngine.HdrEncodeSupport(
-            supportedFormats = support.supportedFormats.map { it.displayName }.toSet(),
-            maxWidth = support.maxWidth,
-            maxHeight = support.maxHeight,
-            maxBitrate = support.maxBitrate
+            supportedFormats = hdrProfileSupport.supportedFormats.map { it.displayName }.toSet(),
+            maxWidth = hdrProfileSupport.maxWidth,
+            maxHeight = hdrProfileSupport.maxHeight,
+            maxBitrate = hdrProfileSupport.maxBitrate
         )
     }
     val colorConfidenceReport = remember(
@@ -875,6 +880,7 @@ fun ExportSheet(
             )
             if (videoModeEnabled) {
                 ColorConfidenceOutlook(report = colorConfidenceReport)
+                DeviceTierOutlook(hint = deviceTierHint)
             }
             if (estimatedSize != null && videoModeEnabled) {
                 Text(
@@ -916,10 +922,10 @@ fun ExportSheet(
                     if (estimatedBytes >= 1_073_741_824L) {
                         add(stringResource(R.string.export_warning_large_file))
                     }
-                    // AV1 software encode is brutally slow on most Android
-                    // devices. Hardware AV1 is rare in 2025. Warn so users who
-                    // selected it for file-size reasons can fall back to HEVC.
-                    if (effectiveConfig.codec == VideoCodec.AV1) {
+                    // AV1 is efficient when hardware-backed, but expensive
+                    // when the device only exposes software encode. The tier
+                    // probe lets premium devices keep the UI calm.
+                    if (effectiveConfig.codec == VideoCodec.AV1 && !deviceTierHint.hasHardwareAv1) {
                         add(stringResource(R.string.export_warning_av1_slow))
                     }
                     // Device-aware encoder capability probe. Surfaces a
@@ -935,7 +941,7 @@ fun ExportSheet(
                         effectiveConfig.frameRate,
                         effectiveConfig.videoBitrate
                     ) {
-                        com.novacut.editor.engine.EncoderCapabilityProbe.check(
+                        EncoderCapabilityProbe.check(
                             codec = effectiveConfig.codec,
                             width = width,
                             height = height,
@@ -1199,6 +1205,90 @@ private fun ColorConfidenceOutlook(report: ExportColorConfidenceEngine.Report) {
                 )
             }
         }
+    }
+}
+
+@Composable
+@OptIn(ExperimentalLayoutApi::class)
+private fun DeviceTierOutlook(hint: EncoderCapabilityProbe.DeviceEncodingTierHint) {
+    val accent = when (hint.tier) {
+        EncoderCapabilityProbe.DeviceEncodingTier.PREMIUM -> Mocha.Mauve
+        EncoderCapabilityProbe.DeviceEncodingTier.ADVANCED -> Mocha.Blue
+        EncoderCapabilityProbe.DeviceEncodingTier.STANDARD -> Mocha.Subtext0
+    }
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = accent.copy(alpha = 0.08f),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.22f)),
+        shape = RoundedCornerShape(Radius.lg)
+    ) {
+        Column(
+            modifier = Modifier.padding(Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Speed,
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    text = stringResource(R.string.export_device_tier_title, hint.tier.displayName),
+                    color = Mocha.Text,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+            Text(
+                text = hint.detail,
+                color = Mocha.Subtext0,
+                style = MaterialTheme.typography.bodySmall
+            )
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs)
+            ) {
+                if (hint.hasHardwareHevc) {
+                    DeviceCapabilityPill(stringResource(R.string.export_hardware_hevc), Mocha.Blue)
+                }
+                if (hint.hasHardwareAv1) {
+                    DeviceCapabilityPill(stringResource(R.string.export_hardware_av1), Mocha.Green)
+                }
+                if (hint.hasHardwareVp9) {
+                    DeviceCapabilityPill(stringResource(R.string.export_hardware_vp9), Mocha.Teal)
+                }
+                hint.hdrFormats
+                    .sortedBy { it.displayName }
+                    .forEach { format ->
+                        DeviceCapabilityPill(format.displayName, Mocha.Yellow)
+                    }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DeviceCapabilityPill(
+    text: String,
+    accent: Color
+) {
+    Surface(
+        color = accent.copy(alpha = 0.12f),
+        shape = RoundedCornerShape(Radius.sm),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.2f))
+    ) {
+        Text(
+            text = text,
+            color = accent,
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+        )
     }
 }
 

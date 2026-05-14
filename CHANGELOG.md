@@ -1,5 +1,13 @@
 # Changelog
 
+## v3.74.2 — 2026-05-14 — HDR export capability tiering
+
+- **HDR profile probing now lives in `EncoderCapabilityProbe`.** NovaCut classifies HEVC, AV1, VP9, and AV1-based Dolby Vision Profile 10 encoder profiles from `MediaCodecList`, including advertised resolution / bitrate envelopes and encoder names.
+- **Export confidence now distinguishes dynamic HDR paths.** The export sheet reports HDR10+ and Dolby Vision Profile 10 support separately, avoids the generic static-HDR warning when a dynamic HDR path is available, and keeps H.264 locked to SDR.
+- **Device-tier hints are visible in export.** The output details panel now shows a Standard / Advanced / Premium encode tier based on actual hardware HEVC / AV1 / VP9 encoders instead of model-name guesses, with hardware-codec and HDR-profile chips.
+- **Media3 is patched to 1.10.1.** This keeps the 1.10 export foundation current and picks up the AV1-based Dolby Vision handling fix from the May 12, 2026 Media3 release.
+- **Verification** — `git diff --check`, `assembleDebug`, `testDebugUnitTest`, `assembleRelease`, release APK metadata/signature checks, and an adb uninstall/install/launch smoke pass on `R5CY34G070L` all passed.
+
 ## v3.74.1 — 2026-05-14 — Multi-track export composition
 
 - **Multi-track visual export is wired through Media3 1.10 Composition.** `VideoEngine` now builds one `EditedMediaItemSequence` per visible video or overlay track instead of exporting only the first visual track.
