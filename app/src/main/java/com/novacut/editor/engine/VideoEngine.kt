@@ -7,7 +7,9 @@ import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.util.Log
 import android.webkit.MimeTypeMap
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
@@ -26,7 +28,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import android.util.Log
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
@@ -60,6 +61,11 @@ class VideoEngine @Inject constructor(
     ) {
         val timelineEndMs: Long get() = timelineStartMs + durationMs
     }
+
+    private data class VisualTrackSequence(
+        val sequence: EditedMediaItemSequence,
+        val hasEmbeddedAudio: Boolean
+    )
 
     private var player: ExoPlayer? = null
     private var playerListener: Player.Listener? = null
@@ -357,21 +363,16 @@ class VideoEngine @Inject constructor(
             val visibleVideoTracks = tracks
                 .sortedBy { it.index }
                 .filter {
-                (it.type == TrackType.VIDEO || it.type == TrackType.OVERLAY) && it.isVisible && it.clips.isNotEmpty()
-            }
+                    (it.type == TrackType.VIDEO || it.type == TrackType.OVERLAY) &&
+                        it.isVisible &&
+                        it.clips.any { clip -> clip.durationMs > 0L }
+                }
             if (visibleVideoTracks.isEmpty()) {
                 throw IllegalStateException("No video clips to export")
             }
-            val videoTrack = visibleVideoTracks.first()
             val soloTrackIds = tracks.filter { it.isSolo }.map { it.id }.toSet()
-            val videoTrackAudioGain = if (isTrackAudibleForMix(videoTrack, soloTrackIds)) {
-                videoTrack.volume.coerceIn(0f, 2f)
-            } else {
-                0f
-            }
             val (targetW, targetH) = config.resolution.forAspect(config.aspectRatio)
 
-            val clips = videoTrack.clips.sortedBy { it.timelineStartMs }
             val totalTimelineDurationMs = maxOf(
                 tracks.maxOfOrNull { track ->
                     track.clips.maxOfOrNull { clip -> clip.timelineEndMs } ?: 0L
@@ -382,16 +383,15 @@ class VideoEngine @Inject constructor(
             // Diagnostic: Media3 Transformer doesn't natively support reverse playback. Any
             // clip flagged isReversed exports forward — log so users / logs can surface this
             // limitation when the visible result doesn't match expectations.
-            val reversedCount = clips.count { it.isReversed }
+            val reversedCount = visibleVideoTracks.sumOf { track -> track.clips.count { it.isReversed } }
             if (reversedCount > 0) {
                 Log.w(TAG, "Export: $reversedCount reversed clip(s) will render forward (Transformer limitation)")
             }
-            val videoSequence = buildVideoSequence(
-                clips = clips,
-                totalTimelineDurationMs = totalTimelineDurationMs,
-                videoMuted = videoTrackAudioGain <= 0f,
-                trackAudioGain = videoTrackAudioGain,
+            val visualTrackSequences = buildVideoSequences(
+                visibleVideoTracks = visibleVideoTracks,
+                soloTrackIds = soloTrackIds,
                 tracks = tracks,
+                totalTimelineDurationMs = totalTimelineDurationMs,
                 config = config,
                 targetW = targetW,
                 targetH = targetH,
@@ -402,9 +402,10 @@ class VideoEngine @Inject constructor(
 
             val audioSequences = buildAudioSequences(tracks, soloTrackIds)
             val allSequences = buildList {
-                add(videoSequence)
+                visualTrackSequences.forEach { add(it.sequence) }
                 addAll(audioSequences)
             }
+            val hasEmbeddedVisualAudio = visualTrackSequences.any { it.hasEmbeddedAudio }
 
             // Preserve HDR through the encoder chain only when the caller
             // opted in AND the codec can carry HDR. H.264 has no HDR profile;
@@ -413,7 +414,8 @@ class VideoEngine @Inject constructor(
             val composition = buildComposition(
                 allSequences,
                 audioSequences.isNotEmpty(),
-                videoTrackAudioGain <= 0f,
+                hasEmbeddedVisualAudio,
+                hasMultipleVideoSequences = visualTrackSequences.size > 1,
                 preserveHdr = preserveHdr
             )
 
@@ -439,7 +441,48 @@ class VideoEngine @Inject constructor(
         }
     }
 
-    @Suppress("DEPRECATION")
+    @androidx.annotation.OptIn(UnstableApi::class)
+    private fun buildVideoSequences(
+        visibleVideoTracks: List<Track>,
+        soloTrackIds: Set<String>,
+        tracks: List<Track>,
+        totalTimelineDurationMs: Long,
+        config: ExportConfig,
+        targetW: Int,
+        targetH: Int,
+        textOverlays: List<com.novacut.editor.model.TextOverlay>,
+        lottieOverlays: List<LottieOverlaySpec>,
+        trackedObjects: List<TrackedObject>
+    ): List<VisualTrackSequence> {
+        return visibleVideoTracks.map { track ->
+            val includesEmbeddedAudio = track.clips.any { clip ->
+                clip.durationMs > 0L && hasAudioTrack(clip.sourceUri)
+            }
+            val trackAudioGain = if (includesEmbeddedAudio && isTrackAudibleForMix(track, soloTrackIds)) {
+                track.volume.coerceIn(0f, 2f)
+            } else {
+                0f
+            }
+            val hasEmbeddedAudio = trackAudioGain > 0f
+            VisualTrackSequence(
+                sequence = buildVideoSequence(
+                    clips = track.clips,
+                    totalTimelineDurationMs = totalTimelineDurationMs,
+                    videoMuted = !hasEmbeddedAudio,
+                    trackAudioGain = trackAudioGain,
+                    tracks = tracks,
+                    config = config,
+                    targetW = targetW,
+                    targetH = targetH,
+                    textOverlays = textOverlays,
+                    lottieOverlays = lottieOverlays,
+                    trackedObjects = trackedObjects
+                ),
+                hasEmbeddedAudio = hasEmbeddedAudio
+            )
+        }
+    }
+
     @androidx.annotation.OptIn(UnstableApi::class)
     private fun buildVideoSequence(
         clips: List<Clip>,
@@ -455,7 +498,12 @@ class VideoEngine @Inject constructor(
         trackedObjects: List<TrackedObject>
     ): EditedMediaItemSequence {
         val sortedClips = clips.filter { it.durationMs > 0L }.sortedBy { it.timelineStartMs }
-        val builder = EditedMediaItemSequence.Builder(emptyList<EditedMediaItem>())
+        val trackTypes = if (videoMuted) {
+            setOf(C.TRACK_TYPE_VIDEO)
+        } else {
+            setOf(C.TRACK_TYPE_VIDEO, C.TRACK_TYPE_AUDIO)
+        }
+        val builder = EditedMediaItemSequence.Builder(trackTypes)
         var clipIndex = 0
 
         for (step in buildTimelineSequenceSteps(sortedClips, totalTimelineDurationMs)) {
@@ -785,7 +833,6 @@ class VideoEngine @Inject constructor(
         }
     }
 
-    @Suppress("DEPRECATION")
     @androidx.annotation.OptIn(UnstableApi::class)
     private fun buildAudioSequences(
         tracks: List<Track>,
@@ -795,7 +842,7 @@ class VideoEngine @Inject constructor(
             .sortedBy { it.index }
             .filter { it.type == TrackType.AUDIO && it.clips.isNotEmpty() && isTrackAudibleForMix(it, soloTrackIds) }
         return audioTracks.map { at ->
-            val builder = EditedMediaItemSequence.Builder(emptyList<EditedMediaItem>())
+            val builder = EditedMediaItemSequence.Builder(setOf(C.TRACK_TYPE_AUDIO))
             for (step in buildTimelineSequenceSteps(at.clips)) {
                 when (step) {
                     is TimelineSequenceStep.GapStep -> {
@@ -837,7 +884,6 @@ class VideoEngine @Inject constructor(
                     }
                 }
             }
-            @Suppress("DEPRECATION")
             builder.build()
         }
     }
@@ -950,11 +996,12 @@ class VideoEngine @Inject constructor(
     private fun buildComposition(
         sequences: List<EditedMediaItemSequence>,
         hasAudioTracks: Boolean,
-        videoMuted: Boolean,
+        hasEmbeddedVisualAudio: Boolean,
+        hasMultipleVideoSequences: Boolean = false,
         preserveHdr: Boolean = false
     ): Composition {
         val builder = Composition.Builder(sequences)
-            .setTransmuxAudio(!hasAudioTracks && !videoMuted)
+            .setTransmuxAudio(!hasAudioTracks && hasEmbeddedVisualAudio && !hasMultipleVideoSequences)
         if (preserveHdr) {
             // HDR_MODE_KEEP_HDR preserves HDR metadata through the pipeline
             // rather than tone-mapping to SDR. Honoured only when the source
