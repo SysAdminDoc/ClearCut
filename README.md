@@ -148,7 +148,7 @@ See [CHANGELOG.md](CHANGELOG.md) for full release history.
 | **Style Transfer** | Planned -- AnimeGANv2 + Fast NST (requires model integration) | Planned |
 | **Stabilization** | Planned -- OpenCV (requires dependency) | Planned |
 | **Smart Reframe** | EMA-smoothed crop trajectory, 3 strategies (face/pose detection is stub) | Partial |
-| **Tap-to-Segment** | Planned -- MobileSAM (requires dependency) | Planned |
+| **Tap-to-Segment** | Planned -- SAM 2.1 Hiera Tiny target with MobileSAM fallback | Planned |
 | **Scene Detection** | Content-aware frame difference analysis with auto-split | Yes |
 | **Auto Color** | Histogram-based brightness/contrast/saturation/temperature | Yes |
 | **Motion Tracking** | Template matching with position keyframe generation | Yes |
@@ -269,7 +269,7 @@ com.novacut.editor/
 │   ├── StabilizationEngine  # OpenCV optical flow (stub)
 │   ├── StyleTransferEngine  # AnimeGAN + Fast NST (stub)
 │   ├── SmartReframeEngine   # Subject-tracking auto-crop
-│   ├── TapSegmentEngine     # MobileSAM tap-to-segment (stub)
+│   ├── TapSegmentEngine     # SAM 2.1 / MobileSAM target metadata (stub)
 │   ├── PiperTtsEngine       # Piper VITS TTS (stub, system TTS fallback)
 │   ├── LottieTemplateEngine # Animated title rendering
 │   ├── FFmpegEngine         # FFmpegX fallback encoder (stub)
@@ -329,6 +329,7 @@ Key external dependencies currently in `build.gradle.kts`:
 |-----------|---------|---------|
 | ONNX Runtime | 1.17.0 | Whisper ASR + LaMa inpainting |
 | Sherpa-ONNX | 1.13.2 target | Future native Moonshine v2 ASR path; official AAR is a GitHub release asset, not a Maven dependency |
+| SAM 2.1 ONNX | Targeted | Future tracked-mask path via explicit model download; MobileSAM remains the small-device fallback |
 | MediaPipe | 0.10.14 | Selfie segmentation |
 | Lottie | 6.6.2 | Animated title templates |
 | OkHttp | 4.12.0 | Cloud inpainting API |

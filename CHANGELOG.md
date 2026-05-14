@@ -1,5 +1,11 @@
 # Changelog
 
+## v3.74.6 — 2026-05-14 — SAM 2.1 tracked-mask target
+
+- **Tap-to-segment now has a concrete SAM 2.1 target policy.** `TapSegmentEngine` records SAM 2.1 Hiera Tiny ONNX as the default tracked-mask target and keeps MobileSAM as the small-device fallback.
+- **Premium-device gating is explicit.** The engine now models model bytes, state-cache bytes, minimum RAM, video-propagation support, and the >200 MB premium working-set threshold instead of treating SAM as an undifferentiated stub.
+- **Regression tests cover the recommendation policy.** JVM tests lock in SAM 2.1 selection on premium devices and MobileSAM fallback when premium downloads are disabled or memory is insufficient.
+
 ## v3.74.5 — 2026-05-14 — Sherpa-ONNX Moonshine v2 target
 
 - **Sherpa-ONNX now targets v1.13.2.** The ASR stub records the current official Android AAR release asset and the minimum Moonshine v2 support line instead of the stale 1.10-era dependency note.

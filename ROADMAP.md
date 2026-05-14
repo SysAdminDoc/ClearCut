@@ -2,7 +2,7 @@
 
 Forward-looking tracker for planned work. Release history lives in [CHANGELOG.md](CHANGELOG.md).
 
-Current version: **v3.74.5** (versionCode 142).
+Current version: **v3.74.6** (versionCode 143).
 
 ### v3.69.0 — 15-Feature Wave (shipped)
 
@@ -26,7 +26,7 @@ Engines are already implemented with fallback paths and UI wiring. Each needs on
 | A.4 | **RIFE v4.6 frame interpolation** — 24→60/120 fps slow-mo, NCNN+Vulkan | [engine/FrameInterpolationEngine.kt](app/src/main/java/com/novacut/editor/engine/FrameInterpolationEngine.kt) | NCNN prebuilt + RIFE v4.6 model | ~7–10 MB | Frame duplication |
 | A.5 | **Real-ESRGAN upscaling** — x4plus + general-x4v3 variants, tile-based | [engine/UpscaleEngine.kt](app/src/main/java/com/novacut/editor/engine/UpscaleEngine.kt) | ONNX Runtime (already active) + model download | ~17 MB | Bicubic scale |
 | A.6 | **RobustVideoMatting** — true alpha matte, temporal coherence, hair detail | [engine/VideoMattingEngine.kt](app/src/main/java/com/novacut/editor/engine/VideoMattingEngine.kt) | ONNX Runtime (already active) + RVM model | ~15 MB | MediaPipe binary mask |
-| A.7 | **MobileSAM tap-to-segment** — point/box prompts, optical-flow mask propagation | [engine/TapSegmentEngine.kt](app/src/main/java/com/novacut/editor/engine/TapSegmentEngine.kt) | ONNX Runtime (already active) + MobileSAM model | ~10 MB | Stub toast |
+| A.7 | **SAM 2.1 / MobileSAM tap-to-segment** — point/box prompts, tracked-mask propagation | [engine/TapSegmentEngine.kt](app/src/main/java/com/novacut/editor/engine/TapSegmentEngine.kt) | ONNX Runtime (already active) + explicit SAM 2.1 or MobileSAM model download | ~10 MB (MobileSAM) / >200 MB working set (SAM 2.1 Hiera Tiny + state cache) | Stub toast |
 | A.8 | **Piper TTS via Sherpa-ONNX** — 10 voices / 8 languages, VITS quality | [engine/TtsEngine.kt](app/src/main/java/com/novacut/editor/engine/TtsEngine.kt) | Same dep as A.1 | 15–65 MB / voice | Android system TTS |
 | A.9 | **FFmpegX-Android** — fallback encoder; unlocks reverse playback, 300+ filters, subtitle burn-in, EBU R128 two-pass | [engine/FFmpegEngine.kt](app/src/main/java/com/novacut/editor/engine/FFmpegEngine.kt) | `com.github.mzgs:FFmpegX-Android` (jitpack) | ~40 MB native | Media3 Transformer only |
 | A.10 | **Oboe resampler** — replaces Android `AudioFormat` resample for 44.1↔48 kHz mixing | (new) | `com.google.oboe:oboe:1.9.x` | — | Media3 resample |
@@ -317,7 +317,7 @@ Media3 1.10 (March 2026) ships the multi-sequence/multi-track Composition API, w
 ### R5.2 — Dependency successor pivots
 - [~] **R5.2a — Pin `salahawad/ffmpeg-kit-community` instead of FFmpegX-Android (A.9).** Blocked in v3.74.4 after re-checking the successor fork: the GitHub project is public and active, but exposes no releases/tags yet, and Maven Central does not currently expose a pinnable `ffmpeg-kit-community` artifact. Do not add an unversioned JitPack dependency for release builds; re-evaluate when the fork publishes a stable tag/AAR coordinate, keeping FFmpegX-Android (mzgs) as the secondary candidate. Sources: https://github.com/arthenica/ffmpeg-kit · https://github.com/salahawad/ffmpeg-kit-community
 - [x] **R5.2b — Upgrade Sherpa-ONNX target to v1.12.28+ for Moonshine v2 (A.1).** Done in v3.74.5. `SherpaAsrEngine` now targets Sherpa-ONNX v1.13.2, records the official Android AAR asset URL, and codifies the target model policy: Moonshine v2 Tiny as the default English ASR target and Whisper Tiny multilingual as the non-English fallback. Runtime activation still stays under A.1 because the official project currently ships Android AARs as GitHub release assets rather than a normal Maven Central coordinate, so NovaCut should not silently vendor the native payload into the base app. Source: https://github.com/k2-fsa/sherpa-onnx/releases
-- [ ] **R5.2c — SAM 2.1 ONNX path now viable for tracked masks (R4.3 follow-up).** SAM 2.1 (Meta) ships ONNX exports with video-segment propagation. Pairs with the `TrackedObject` model already shipped in v3.71 to upgrade Tracked Mosaic's mask quality. Gate on premium-tier devices (model + state cache > 200 MB). Source: https://github.com/facebookresearch/sam2
+- [x] **R5.2c — SAM 2.1 ONNX path now viable for tracked masks (R4.3 follow-up).** Done in v3.74.6. `TapSegmentEngine` now records SAM 2.1 Hiera Tiny ONNX as the default tracked-mask target, preserves MobileSAM as the smaller fallback, and exposes a tested device-gating policy that only recommends SAM 2.1 when premium model downloads are allowed and available RAM meets the >200 MB working-set requirement. Runtime activation remains under A.7 because the model must still be an explicit download. Sources: https://github.com/facebookresearch/sam2 · https://huggingface.co/onnx-community/sam2.1-hiera-tiny-ONNX
 - [ ] **R5.2d — Generative video stays cloud-optional, not on-device.** Wan 2.2, HunyuanVideo, VideoCrafter2 all remain server-side at this scale; NovaCut should expose them as opt-in cloud effects (clearly labelled), not bundled engines. Use the same trust pattern already documented in §Architecture guardrails. Sources: https://github.com/Wan-Video/Wan2.2 · https://github.com/Tencent-Hunyuan/HunyuanVideo
 
 ### R5.3 — Accessibility coverage gap
