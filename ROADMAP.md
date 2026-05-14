@@ -2,7 +2,7 @@
 
 Forward-looking tracker for planned work. Release history lives in [CHANGELOG.md](CHANGELOG.md).
 
-Current version: **v3.74.0** (versionCode 137).
+Current version: **v3.74.1** (versionCode 138).
 
 ### v3.69.0 — 15-Feature Wave (shipped)
 
@@ -42,8 +42,8 @@ Every stub already wires through ViewModel + UI panel; switching on a dep is ~1 
 ## Tier B — Fix Known Limitations
 Gaps listed in README "Known Limitations" that hurt quality today.
 
-- [ ] **B.1 — Media3 Compositor multi-track export** — Today only the first video track renders to file; PiP, split-screen, podcast layouts silently drop tracks 2+ on export. Required for true multi-track and true dual-texture blend modes. Touch: [engine/VideoEngine.kt](app/src/main/java/com/novacut/editor/engine/VideoEngine.kt), [engine/EffectBuilder.kt](app/src/main/java/com/novacut/editor/engine/EffectBuilder.kt).
-- [ ] **B.2 — True dual-texture blend modes** — 18 blend modes currently composite against mid-gray because there is no second texture to blend against. Blocked on B.1 (needs Compositor API).
+- [x] **B.1 — Media3 Compositor multi-track export** — Done in v3.74.1. All visible `VIDEO` / `OVERLAY` tracks now build independent Media3 1.10 `EditedMediaItemSequence`s and feed one `Composition`; explicit audio tracks remain mixed as separate audio-only sequences.
+- [ ] **B.2 — True dual-texture blend modes** — 18 blend modes currently composite against mid-gray because there is no second texture to blend against. Multi-sequence export is now wired; remaining work is replacing the mid-gray shader input with a real dual-input blend path.
 - [ ] **B.3 — Reverse playback in export** — `clip.isReversed` works in preview only; Media3 Transformer has no reverse playback. Unblocks once A.9 (FFmpegX) lands — filter complex `[0:v]reverse[v]`.
 - [x] **B.4 — Speed-curve-aware `Clip.durationMs`** — Done in this pass. `Clip.durationMs` now integrates `speedCurve(t)` with midpoint sampling, matching the source/timeline inverse mapping so eased ramps report the correct wall-clock length.
 - [ ] **B.5 — Segment-level `SmartRenderEngine` bypass activation** — Whole-timeline stream-copy is wired through `ExportDelegate` + `StreamCopyExportEngine` and is now visible in `ExportSheet` as "Fast Trim When Possible". Remaining work: use the analysis ranges to stitch mixed copy/re-encode segments instead of falling back to a full Transformer pass whenever any segment needs processing. Touch: [engine/SmartRenderEngine.kt](app/src/main/java/com/novacut/editor/engine/SmartRenderEngine.kt), [engine/VideoEngine.kt](app/src/main/java/com/novacut/editor/engine/VideoEngine.kt).
@@ -310,7 +310,7 @@ Research date: 2026-05. Scope: refresh Tier A/B unblocks against current upstrea
 ### R5.1 — Media3 1.10 unblocks Tier B.1/B.2/C.9
 Media3 1.10 (March 2026) ships the multi-sequence/multi-track Composition API, Dolby Vision Profile 10 export, and VVC ingest. This is a direct dependency bump that retires the longest-standing limitation in this roadmap.
 - [x] **R5.1a — Bump `androidx.media3` from 1.9.2 → 1.10.x** in [app/build.gradle.kts](app/build.gradle.kts). Done in v3.74.0 with Media3 1.10.0 across ExoPlayer / Transformer / Effect / Common / UI / Muxer. Audit confirmed `VideoEngine` and `ProxyEngine` already use `EditedMediaItemSequence.Builder`, so no removed list-constructor migration was needed. Sources: https://github.com/androidx/media/releases · https://developer.android.com/media/media3/transformer/composition
-- [ ] **R5.1b — Wire multi-sequence Composition into `VideoEngine`** to unblock B.1 (multi-track export) and B.2 (true dual-texture blends). Confirm transition-beyond-crossfade gap is still present (issue #1662 open at time of research) and keep the wipe/slide effect-chain workaround until upstream lands it. Touch: [engine/VideoEngine.kt](app/src/main/java/com/novacut/editor/engine/VideoEngine.kt), [engine/EffectBuilder.kt](app/src/main/java/com/novacut/editor/engine/EffectBuilder.kt).
+- [x] **R5.1b — Wire multi-sequence Composition into `VideoEngine`** — Done in v3.74.1. `VideoEngine` now exports one sequence per visible visual track, preserves per-track mute/solo/volume semantics for embedded audio, appends dedicated audio-track sequences, and disables embedded-audio transmuxing when multiple visual sequences require compositing. `VideoEngine` and `ProxyEngine` builders now use explicit Media3 track types. Upstream issue #1662 is closed as of 2025-09-09, so NovaCut keeps the existing wipe/slide effect-chain workaround until a dedicated transition migration is implemented.
 - [ ] **R5.1c — Enable Dolby Vision Profile 10 + HDR10+ export paths** in `EncoderCapabilityProbe` (closes C.9 on capable devices). Pixel 10 / Tensor G5 ships AV1 + VP9 hardware encode — surface as a "device tier: premium" hint in ExportSheet. Sources: https://developer.android.com/media/media3/transformer/hdr · https://www.androidauthority.com/google-tensor-g5/
 - [ ] **R5.1d — Android 15/16 Ultra HDR ingest** — flagship phones now capture Ultra HDR video by default; widen `MediaImportEngine` HDR detection beyond HDR10/HLG to include the gain-map/Ultra HDR path. Source: https://developer.android.com/about/versions/15/features#ultra-hdr-video
 
@@ -365,7 +365,7 @@ Media3 1.10 (March 2026) ships the multi-sequence/multi-track Composition API, D
 Items in earlier rounds that 2026 upstream releases now resolve or trivialise — reconciled here so they don't get re-researched:
 - **A.1 Sherpa-ONNX dep target** — bump to `1.12.28+` for Moonshine v2 (was pinned to 1.10.x).
 - **A.9 FFmpegEngine dep target** — switch from FFmpegX-Android to `salahawad/ffmpeg-kit-community` as primary (FFmpegX kept as fallback note).
-- **B.1 / B.2 / C.9** — unblocked by Media3 1.10 multi-sequence Composition + Dolby Vision Profile 10 + VVC; remaining work is the bump itself plus wiring (R5.1).
+- **B.1 / B.2 / C.9** — Media3 1.10 dependency bump and multi-sequence export wiring are complete. Remaining follow-up is the real dual-input blend shader path for B.2 and HDR/Dolby Vision capability work in R5.1c.
 - **Open Video Editor (devhyper)** — confirmed still the only direct OSS Compose+Media3 competitor at ~650 stars; no new direct competitor surfaced this round.
 
 ### Round 5 appendix

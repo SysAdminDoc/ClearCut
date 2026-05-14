@@ -177,6 +177,7 @@ See [CHANGELOG.md](CHANGELOG.md) for full release history.
 - 480p to 4K Ultra HD
 - **4 codecs** — H.264, H.265 (HEVC), AV1, VP9 with hardware capability detection via `MediaCodecList`
 - **One-tap platform presets** — YouTube 1080p, YouTube 4K, TikTok, Instagram Reels, Instagram Square, Threads
+- Multi-sequence Media3 Composition export for visible video and overlay tracks, with dedicated audio-track mixdown
 - Batch export with multiple presets simultaneously
 - Background export with progress notification, ETA display, and cancel
 - **Timeline interchange** — OTIO (OpenTimelineIO) JSON export/import + FCPXML export for desktop NLE round-tripping (DaVinci Resolve, Premiere Pro, Final Cut Pro)
@@ -352,12 +353,9 @@ Key external dependencies currently in `build.gradle.kts`:
 | `VIBRATE` | Haptic feedback |
 
 ## Known Limitations
-- Blend modes use mid-gray as virtual blend layer (not true dual-texture compositing — requires Media3 Compositor API)
+- Blend modes still use mid-gray as a virtual blend layer; the remaining work is a real dual-input blend shader path
 - `clip.isReversed` works in preview but not in export (Media3 Transformer has no reverse playback support)
-- Speed curve clips don't correctly affect timeline duration calculation (`Clip.durationMs` uses constant speed only)
 - SmartRenderEngine analysis results not used for actual export bypass
-- Text overlay strokeWidth not exported (SpannableString has no native stroke support)
-- ProjectArchive.importArchive() is export-only (import not fully implemented)
 - 11 AI/ML engine stubs awaiting dependency integration (see ROADMAP.md)
 
 ## License
