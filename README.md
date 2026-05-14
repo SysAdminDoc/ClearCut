@@ -274,7 +274,7 @@ com.novacut.editor/
 │   ├── LottieTemplateEngine # Animated title rendering
 │   ├── FFmpegEngine         # FFmpegX fallback encoder (stub)
 │   ├── SubtitleRenderEngine # Canvas + ASS subtitle rendering
-│   ├── CloudInpaintingEngine   # ProPainter cloud API (stub)
+│   ├── GenerativeVideoPolicy # Cloud-only trust gates for large video generators
 │   ├── TimelineExchangeEngine  # OTIO/FCPXML interchange
 │   ├── ProxyWorkflowEngine  # 3-tier media management
 │   ├── EditCommand          # Command-pattern undo/redo
@@ -332,7 +332,7 @@ Key external dependencies currently in `build.gradle.kts`:
 | SAM 2.1 ONNX | Targeted | Future tracked-mask path via explicit model download; MobileSAM remains the small-device fallback |
 | MediaPipe | 0.10.14 | Selfie segmentation |
 | Lottie | 6.6.2 | Animated title templates |
-| OkHttp | 4.12.0 | Cloud inpainting API |
+| OkHttp | 4.12.0 | Future opt-in cloud APIs |
 
 ## Supported Devices
 
