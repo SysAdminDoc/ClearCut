@@ -1,5 +1,11 @@
 # Changelog
 
+## v3.74.5 — 2026-05-14 — Sherpa-ONNX Moonshine v2 target
+
+- **Sherpa-ONNX now targets v1.13.2.** The ASR stub records the current official Android AAR release asset and the minimum Moonshine v2 support line instead of the stale 1.10-era dependency note.
+- **Moonshine v2 is the English ASR target.** `SherpaAsrEngine` now codifies Moonshine v2 Tiny as the default English model target and keeps Whisper Tiny multilingual as the fallback for non-English transcription.
+- **The native payload remains intentionally gated.** NovaCut does not vendor the 50+ MB AAR into the base app until the packaging path is explicit; the runtime still falls back to the built-in Whisper ONNX engine.
+
 ## v3.74.4 — 2026-05-14 — Timeline accessibility actions
 
 - **Timeline clips now have richer TalkBack descriptions.** Clip semantics include the clip name, clip type, track type, duration, start time, selected state, and locked-track state instead of relying on custom-drawn visuals.

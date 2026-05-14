@@ -2,7 +2,7 @@
 
 Forward-looking tracker for planned work. Release history lives in [CHANGELOG.md](CHANGELOG.md).
 
-Current version: **v3.74.4** (versionCode 141).
+Current version: **v3.74.5** (versionCode 142).
 
 ### v3.69.0 — 15-Feature Wave (shipped)
 
@@ -20,7 +20,7 @@ Engines are already implemented with fallback paths and UI wiring. Each needs on
 
 | # | Item | Stub file | Dependency | Model size | Fallback today |
 |---|------|-----------|------------|------------|----------------|
-| A.1 | **Sherpa-ONNX ASR** — 51× faster than current Whisper path; word-level timestamps; 99 languages | [engine/whisper/SherpaAsrEngine.kt](app/src/main/java/com/novacut/editor/engine/whisper/) | `com.k2fsa.sherpa.onnx:sherpa-onnx:1.10.x` | ~100 MB (Whisper Tiny) / ~125 MB (Moonshine EN) | Built-in Whisper ONNX |
+| A.1 | **Sherpa-ONNX ASR** — 51× faster than current Whisper path; word-level timestamps; 99 languages | [engine/whisper/SherpaAsrEngine.kt](app/src/main/java/com/novacut/editor/engine/whisper/) | GitHub Android AAR target `sherpa-onnx-1.13.2.aar` (min Moonshine v2 target `1.12.28+`) | ~33 MB (Moonshine v2 Tiny EN) / ~100 MB (Whisper Tiny multilingual) | Built-in Whisper ONNX |
 | A.2 | **DeepFilterNet noise reduction** — ML path for aggressive mode, replaces spectral-gate heuristic | [engine/NoiseReductionEngine.kt](app/src/main/java/com/novacut/editor/engine/NoiseReductionEngine.kt) | `com.github.KaleyraVideo:AndroidDeepFilterNet` (jitpack) | ~8 MB | Spectral gate heuristic |
 | A.3 | **OpenCV stabilization** — L-K sparse optical flow + Kalman smoothing, configurable crop | [engine/StabilizationEngine.kt](app/src/main/java/com/novacut/editor/engine/StabilizationEngine.kt) | `org.opencv:opencv:4.10.0` (arm64 only, ~40 MB) | Frame-diff only, no motion compensation |
 | A.4 | **RIFE v4.6 frame interpolation** — 24→60/120 fps slow-mo, NCNN+Vulkan | [engine/FrameInterpolationEngine.kt](app/src/main/java/com/novacut/editor/engine/FrameInterpolationEngine.kt) | NCNN prebuilt + RIFE v4.6 model | ~7–10 MB | Frame duplication |
@@ -166,7 +166,7 @@ Not covered in [RESEARCH.md](RESEARCH.md). Ranked by viral-content / pro-differe
 - **Media3 shader diverges between GLSurfaceView preview and Transformer export** — androidx/media#1080 — Transformer feeds sRGB-linearized textures; preview path was gamma-encoded. Always sample via `getFromColor` helper or pre-apply gamma in the fragment shader. https://github.com/androidx/media/issues/1080
 - **Transformer multi-item transitions unsupported beyond crossfade** — androidx/media#1662 — Composition API supports only crossfade. Wipe/slide require overlapping clips on separate sequences and blending via a custom effect chain. https://github.com/androidx/media/issues/1662
 - **gl-transitions Android bundling unresolved** — gl-transitions#129 — no native-library ship; NovaCut will always be string-literal shaders, plan disk/assets storage + SHA validation accordingly. https://github.com/gl-transitions/gl-transitions/issues/129
-- **Sherpa-ONNX APK bloat** — each Whisper model per-ABI ~100MB. Use ABI splits + Play Asset Delivery to avoid 200MB base-APK limit. See release naming `sherpa-onnx-1.10.41-arm64-v8a-…apk`. https://github.com/k2-fsa/sherpa-onnx/releases
+- **Sherpa-ONNX APK bloat** — the official Android AAR is ~54MB before model downloads, and Whisper/Moonshine model bundles can add 30–100MB each. Use ABI splits + Play Asset Delivery before enabling the native backend in base release builds. See release assets such as `sherpa-onnx-1.13.2.aar`. https://github.com/k2-fsa/sherpa-onnx/releases
 - **ffmpeg-kit archived in 2025** — upstream stopped publishing. FFmpegEngine stub notes FFmpegX-Android (mzgs) — verify activity before pinning. https://github.com/arthenica/ffmpeg-kit
 - **RIFE NCNN VRAM spikes on 1080p mid-range Adreno** — tile-based processing required; use `-t 256` tile size on devices with <6GB RAM or hit `VK_ERROR_OUT_OF_DEVICE_MEMORY`. https://github.com/nihui/rife-ncnn-vulkan/issues
 - **LaMa NNAPI delegates silently fall back to CPU on Samsung Exynos** — probe `NnApiDelegate.Options.setAcceleratorName("google-edgetpu")` first, bail to `XnnPackDelegate`. https://github.com/advimman/lama/issues
@@ -175,7 +175,7 @@ Not covered in [RESEARCH.md](RESEARCH.md). Ranked by viral-content / pro-differe
 - **`EditedMediaItemSequence(list)` constructor deprecation continues at 1.9.2** — only the Builder is future-proof. https://github.com/androidx/media
 
 ### Library Integration Checklist
-- **Sherpa-ONNX (Kotlin ASR)** — `com.k2fsa.sherpa.onnx:sherpa-onnx-android:1.10.41` (pin to model-release tag) — entry: `OfflineRecognizer(config).decode(samples, sampleRate).text`. Gotcha: constructor requires encoder + decoder + tokens as file paths; ship via `assets/` + first-run `copyToFilesDir()` because ONNX Runtime cannot read from Android asset FD.
+- **Sherpa-ONNX (Kotlin ASR)** — target GitHub asset `sherpa-onnx-1.13.2.aar` until an official Maven Central coordinate is published. Entry remains `OfflineRecognizer(config).decode(samples, sampleRate).text`. Gotcha: constructor requires model component file paths; ship via explicit model download + first-run extraction because ONNX Runtime cannot read zipped Android assets directly.
 - **gl-transitions (80+ transitions)** — no package; vendor shaders into `app/src/main/assets/transitions/*.glsl`. Entry: build a shim header defining `getFromColor(uv) = texture(uFrom, uv)` + `getToColor(uv) = texture(uTo, uv)` and prepend to each shader at load time. Gotcha: some transitions declare `uniform float ratio`; default it to the clip aspect or the shader divide-by-zeros.
 - **AndroidDeepFilterNet** — `com.kaleyra:deepfilternet-android:<latest>` (verify on Sonatype; artifact has moved) — entry: `DeepFilterNet.init(context)` then `process(FloatArray 480 samples @ 48kHz)`. Gotcha: fixed 48kHz; NovaCut's 16kHz Whisper path must resample to 48k then back — do it once per export, not per frame.
 - **RIFE NCNN+Vulkan** — ship `librife.so` + `rife-v4.6/flownet.param` + `flownet.bin` in `jniLibs/arm64-v8a/` and `assets/models/rife/`. Entry: JNI `nativeInterpolate(prev: Bitmap, next: Bitmap, timestep: Float): Bitmap`. Gotcha: Vulkan device init must happen off the main thread; wrap the first call in `withContext(Dispatchers.Default)` or the ANR watchdog fires on cold start.
@@ -316,7 +316,7 @@ Media3 1.10 (March 2026) ships the multi-sequence/multi-track Composition API, w
 
 ### R5.2 — Dependency successor pivots
 - [~] **R5.2a — Pin `salahawad/ffmpeg-kit-community` instead of FFmpegX-Android (A.9).** Blocked in v3.74.4 after re-checking the successor fork: the GitHub project is public and active, but exposes no releases/tags yet, and Maven Central does not currently expose a pinnable `ffmpeg-kit-community` artifact. Do not add an unversioned JitPack dependency for release builds; re-evaluate when the fork publishes a stable tag/AAR coordinate, keeping FFmpegX-Android (mzgs) as the secondary candidate. Sources: https://github.com/arthenica/ffmpeg-kit · https://github.com/salahawad/ffmpeg-kit-community
-- [ ] **R5.2b — Upgrade Sherpa-ONNX target to v1.12.28+ for Moonshine v2 (A.1).** Moonshine v2 (Feb 2026 release line) is faster than Whisper Tiny on the same audio with comparable WER on EN; ship as the default English ASR, keep Whisper Tiny multilingual as fallback. Source: https://github.com/k2-fsa/sherpa-onnx/releases
+- [x] **R5.2b — Upgrade Sherpa-ONNX target to v1.12.28+ for Moonshine v2 (A.1).** Done in v3.74.5. `SherpaAsrEngine` now targets Sherpa-ONNX v1.13.2, records the official Android AAR asset URL, and codifies the target model policy: Moonshine v2 Tiny as the default English ASR target and Whisper Tiny multilingual as the non-English fallback. Runtime activation still stays under A.1 because the official project currently ships Android AARs as GitHub release assets rather than a normal Maven Central coordinate, so NovaCut should not silently vendor the native payload into the base app. Source: https://github.com/k2-fsa/sherpa-onnx/releases
 - [ ] **R5.2c — SAM 2.1 ONNX path now viable for tracked masks (R4.3 follow-up).** SAM 2.1 (Meta) ships ONNX exports with video-segment propagation. Pairs with the `TrackedObject` model already shipped in v3.71 to upgrade Tracked Mosaic's mask quality. Gate on premium-tier devices (model + state cache > 200 MB). Source: https://github.com/facebookresearch/sam2
 - [ ] **R5.2d — Generative video stays cloud-optional, not on-device.** Wan 2.2, HunyuanVideo, VideoCrafter2 all remain server-side at this scale; NovaCut should expose them as opt-in cloud effects (clearly labelled), not bundled engines. Use the same trust pattern already documented in §Architecture guardrails. Sources: https://github.com/Wan-Video/Wan2.2 · https://github.com/Tencent-Hunyuan/HunyuanVideo
 
@@ -363,7 +363,7 @@ Media3 1.10 (March 2026) ships the multi-sequence/multi-track Composition API, w
 
 ### R5.10 — Resolved / superseded by upstream
 Items in earlier rounds that 2026 upstream releases now resolve or trivialise — reconciled here so they don't get re-researched:
-- **A.1 Sherpa-ONNX dep target** — bump to `1.12.28+` for Moonshine v2 (was pinned to 1.10.x).
+- **A.1 Sherpa-ONNX dep target** — bumped to v1.13.2 for Moonshine v2 (was pinned to 1.10.x).
 - **A.9 FFmpegEngine dep target** — switch from FFmpegX-Android to `salahawad/ffmpeg-kit-community` as primary (FFmpegX kept as fallback note).
 - **B.1 / B.2 / C.9** — Media3 1.10 dependency bump, multi-sequence export wiring, and HDR/Dolby Vision capability surfacing are complete. Remaining follow-up is the real dual-input blend shader path for B.2.
 - **Open Video Editor (devhyper)** — confirmed still the only direct OSS Compose+Media3 competitor at ~650 stars; no new direct competitor surfaced this round.
