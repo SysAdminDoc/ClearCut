@@ -1,5 +1,11 @@
 # Changelog
 
+## v3.74.7 — 2026-05-14 — Generative video cloud policy
+
+- **Generative video is now codified as cloud-optional only.** `GenerativeVideoPolicy` records Wan 2.2, HunyuanVideo, and VideoCrafter2 as optional cloud providers rather than on-device bundled engines.
+- **Cloud trust requirements are enforced in code.** Future integrations must disclose destination, estimated upload size, data retention, and collect explicit consent before a cloud render can start.
+- **Policy tests prevent accidental bundling.** JVM coverage asserts that known large video-generation providers cannot be treated as bundled on-device engines and cannot run without consent.
+
 ## v3.74.6 — 2026-05-14 — SAM 2.1 tracked-mask target
 
 - **Tap-to-segment now has a concrete SAM 2.1 target policy.** `TapSegmentEngine` records SAM 2.1 Hiera Tiny ONNX as the default tracked-mask target and keeps MobileSAM as the small-device fallback.
