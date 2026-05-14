@@ -50,6 +50,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.focusable
 import androidx.compose.ui.graphics.Brush
+import com.novacut.editor.engine.ExportColorConfidenceEngine
 import com.novacut.editor.engine.ExportState
 import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.engine.TimelineExchangeValidator
@@ -1268,6 +1269,9 @@ fun EditorScreen(
                     )
                 ).takeIf { it.totalSegments > 0 }
             }
+            val sourceHdrSummary = remember(state.tracks) {
+                ExportColorConfidenceEngine.summarizeSources(state.tracks)
+            }
             ExportSheet(
                 config = state.exportConfig,
                 exportState = state.exportState,
@@ -1277,6 +1281,7 @@ fun EditorScreen(
                 exportStartTime = state.exportStartTime,
                 totalDurationMs = state.totalDurationMs,
                 smartRenderSummary = exportSmartRenderSummary,
+                sourceHdrSummary = sourceHdrSummary,
                 onConfigChanged = viewModel::updateExportConfig,
                 onStartExport = {
                     // Use app-private external dir — works on all Android versions including 11+

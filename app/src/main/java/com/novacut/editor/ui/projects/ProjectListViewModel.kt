@@ -14,6 +14,7 @@ import com.novacut.editor.engine.ProjectAutoSave
 import com.novacut.editor.engine.TemplateImportFailure
 import com.novacut.editor.engine.TemplateImportResult
 import com.novacut.editor.engine.TemplateManager
+import com.novacut.editor.engine.MediaImportEngine
 import com.novacut.editor.engine.UserTemplate
 import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.engine.deleteManagedMediaUri
@@ -61,6 +62,7 @@ class ProjectListViewModel @Inject constructor(
     private val autoSave: ProjectAutoSave,
     private val templateManager: TemplateManager,
     private val videoEngine: VideoEngine,
+    private val mediaImportEngine: MediaImportEngine,
     @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
@@ -474,6 +476,9 @@ class ProjectListViewModel @Inject constructor(
                 val durationMs = withContext(Dispatchers.IO) {
                     videoEngine.getVideoDuration(managedUri).takeIf { it > 0 } ?: 3_000L
                 }
+                val sourceColorMetadata = withContext(Dispatchers.IO) {
+                    mediaImportEngine.inspectSourceColor(managedUri)
+                }
                 val fileName = resolveMediaDisplayName(appContext, videoUri)
                     ?.substringBeforeLast('.')
                     ?.let(::normalizeProjectName)
@@ -490,7 +495,8 @@ class ProjectListViewModel @Inject constructor(
                     sourceDurationMs = durationMs,
                     timelineStartMs = 0L,
                     trimStartMs = 0L,
-                    trimEndMs = durationMs
+                    trimEndMs = durationMs,
+                    sourceColorMetadata = sourceColorMetadata
                 )
                 val importedTracks = buildTracks(listOf(TrackType.VIDEO, TrackType.AUDIO)).map { track ->
                     if (track.type == TrackType.VIDEO && track.index == 0) {

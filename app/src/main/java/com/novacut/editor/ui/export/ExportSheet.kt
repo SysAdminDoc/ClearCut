@@ -89,6 +89,7 @@ fun ExportSheet(
     exportStartTime: Long = 0L,
     totalDurationMs: Long = 0L,
     smartRenderSummary: SmartRenderEngine.SmartRenderSummary? = null,
+    sourceHdrSummary: ExportColorConfidenceEngine.SourceHdrSummary = ExportColorConfidenceEngine.SourceHdrSummary(),
     onConfigChanged: (ExportConfig) -> Unit,
     onStartExport: () -> Unit,
     onShare: () -> Unit = {},
@@ -129,13 +130,15 @@ fun ExportSheet(
         effectiveConfig,
         width,
         height,
-        hdrEncodeSupport
+        hdrEncodeSupport,
+        sourceHdrSummary
     ) {
         ExportColorConfidenceEngine.analyze(
             config = effectiveConfig,
             width = width,
             height = height,
-            hdrSupport = hdrEncodeSupport
+            hdrSupport = hdrEncodeSupport,
+            sourceSummary = sourceHdrSummary
         )
     }
 

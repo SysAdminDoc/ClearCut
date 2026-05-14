@@ -49,6 +49,7 @@ import com.novacut.editor.engine.TimelineExchangeEngine
 import com.novacut.editor.engine.TimelineExchangeValidator
 import com.novacut.editor.engine.ProxyWorkflowEngine
 import com.novacut.editor.engine.MultiCamEngine
+import com.novacut.editor.engine.MediaImportEngine
 import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.engine.VoiceoverRecorderEngine
 import com.novacut.editor.engine.TemplateManager
@@ -358,6 +359,7 @@ class EditorViewModel @Inject constructor(
     private val cutAssistantEngine: com.novacut.editor.engine.CutAssistantEngine,
     private val proxyWorkflowEngine: ProxyWorkflowEngine,
     private val multiCamEngine: MultiCamEngine,
+    private val mediaImportEngine: MediaImportEngine,
     // v3.69 engines (15-feature wave)
     private val textBasedEditEngine: TextBasedEditEngine,
     private val autoChapterEngine: AutoChapterEngine,
@@ -431,6 +433,7 @@ class EditorViewModel @Inject constructor(
 
     val clipEditingDelegate = ClipEditingDelegate(
         stateFlow = _state, videoEngine = videoEngine,
+        mediaImportEngine = mediaImportEngine,
         scope = viewModelScope, saveUndoState = ::saveUndoState, showToast = ::showToast,
         rebuildPlayerTimeline = ::rebuildPlayerTimeline, saveProject = ::saveProject,
         updatePreview = ::updatePreview, recalculateDuration = ::recalculateDuration,

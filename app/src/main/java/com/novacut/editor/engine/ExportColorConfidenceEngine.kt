@@ -1,6 +1,8 @@
 package com.novacut.editor.engine
 
 import com.novacut.editor.model.ExportConfig
+import com.novacut.editor.model.Track
+import com.novacut.editor.model.TrackType
 import com.novacut.editor.model.VideoCodec
 
 /**
@@ -23,6 +25,18 @@ object ExportColorConfidenceEngine {
         val hasAnyHdr: Boolean get() = supportedFormats.isNotEmpty()
     }
 
+    data class SourceHdrSummary(
+        val supportedFormats: Set<String> = emptySet(),
+        val inspectedSourceCount: Int = 0,
+        val totalSourceCount: Int = 0
+    ) {
+        val hasHdrSource: Boolean get() = supportedFormats.isNotEmpty()
+        val hasUltraHdrGainMap: Boolean
+            get() = supportedFormats.any { it.equals("Ultra HDR gain map", ignoreCase = true) }
+        val isFullyInspected: Boolean
+            get() = totalSourceCount > 0 && inspectedSourceCount >= totalSourceCount
+    }
+
     data class Chip(
         val label: String,
         val detail: String,
@@ -40,10 +54,13 @@ object ExportColorConfidenceEngine {
         config: ExportConfig,
         width: Int,
         height: Int,
-        hdrSupport: HdrEncodeSupport
+        hdrSupport: HdrEncodeSupport,
+        sourceSummary: SourceHdrSummary = SourceHdrSummary()
     ): Report {
         val chips = mutableListOf<Chip>()
         val warnings = mutableListOf<String>()
+
+        addSourceChips(sourceSummary, chips)
 
         if (!config.hdr10PlusMetadata) {
             chips += Chip(
@@ -56,6 +73,13 @@ object ExportColorConfidenceEngine {
                 detail = "Export settings favor the standard SDR social-video path.",
                 tone = Tone.INFO
             )
+            if (sourceSummary.hasHdrSource) {
+                chips += Chip(
+                    label = "HDR source",
+                    detail = "Detected ${sourceSummary.formatList()} source media; enable Preserve HDR Metadata for HDR delivery.",
+                    tone = Tone.INFO
+                )
+            }
             return Report(chips = chips, warnings = warnings)
         }
 
@@ -125,12 +149,69 @@ object ExportColorConfidenceEngine {
 
         chips += Chip(
             label = "Source checked at render",
-            detail = "HDR is preserved only when the input track actually carries HDR.",
+            detail = if (sourceSummary.hasHdrSource) {
+                "Source metadata was detected during import and Media3 still verifies it at render."
+            } else {
+                "HDR is preserved only when the input track actually carries HDR."
+            },
             tone = Tone.INFO
         )
 
         return Report(chips = chips, warnings = warnings.distinct())
     }
+
+    fun summarizeSources(tracks: List<Track>): SourceHdrSummary {
+        val visualClips = tracks
+            .filter { it.type == TrackType.VIDEO || it.type == TrackType.OVERLAY }
+            .flatMap { it.clips }
+        val clips = (visualClips.ifEmpty { tracks.flatMap { it.clips } })
+            .distinctBy { it.sourceUri.toString() }
+
+        val inspected = clips.filter { it.sourceColorMetadata.isInspected }
+        val formats = inspected
+            .flatMap { clip -> clip.sourceColorMetadata.hdrFormats.map { it.displayName } }
+            .toSet()
+
+        return SourceHdrSummary(
+            supportedFormats = formats,
+            inspectedSourceCount = inspected.size,
+            totalSourceCount = clips.size
+        )
+    }
+
+    private fun addSourceChips(
+        sourceSummary: SourceHdrSummary,
+        chips: MutableList<Chip>
+    ) {
+        if (sourceSummary.hasUltraHdrGainMap) {
+            chips += Chip(
+                label = "Ultra HDR source",
+                detail = "Gain-map HDR was detected during import.",
+                tone = Tone.GOOD
+            )
+        } else if (sourceSummary.hasHdrSource) {
+            chips += Chip(
+                label = "HDR source",
+                detail = "Detected ${sourceSummary.formatList()} source media during import.",
+                tone = Tone.GOOD
+            )
+        } else if (sourceSummary.isFullyInspected) {
+            chips += Chip(
+                label = "SDR source",
+                detail = "No HDR source metadata was found during import.",
+                tone = Tone.INFO
+            )
+        } else if (sourceSummary.totalSourceCount > 0) {
+            chips += Chip(
+                label = "Source HDR unknown",
+                detail = "Some clips were created before source HDR inspection was added.",
+                tone = Tone.INFO
+            )
+        }
+    }
+
+    private fun SourceHdrSummary.formatList(): String =
+        supportedFormats.sorted().joinToString(", ").ifBlank { "HDR" }
 
     private fun VideoCodec.canCarryHdr(): Boolean = this != VideoCodec.H264
 }

@@ -2,7 +2,7 @@
 
 Forward-looking tracker for planned work. Release history lives in [CHANGELOG.md](CHANGELOG.md).
 
-Current version: **v3.74.2** (versionCode 139).
+Current version: **v3.74.3** (versionCode 140).
 
 ### v3.69.0 — 15-Feature Wave (shipped)
 
@@ -312,7 +312,7 @@ Media3 1.10 (March 2026) ships the multi-sequence/multi-track Composition API, w
 - [x] **R5.1a — Bump `androidx.media3` from 1.9.2 → 1.10.x** in [app/build.gradle.kts](app/build.gradle.kts). Done in v3.74.0 with Media3 1.10.0 across ExoPlayer / Transformer / Effect / Common / UI / Muxer, then lifted to 1.10.1 in v3.74.2 for the AV1-based Dolby Vision handling fix. Audit confirmed `VideoEngine` and `ProxyEngine` already use `EditedMediaItemSequence.Builder`, so no removed list-constructor migration was needed. Sources: https://github.com/androidx/media/releases · https://developer.android.com/media/media3/transformer/composition
 - [x] **R5.1b — Wire multi-sequence Composition into `VideoEngine`** — Done in v3.74.1. `VideoEngine` now exports one sequence per visible visual track, preserves per-track mute/solo/volume semantics for embedded audio, appends dedicated audio-track sequences, and disables embedded-audio transmuxing when multiple visual sequences require compositing. `VideoEngine` and `ProxyEngine` builders now use explicit Media3 track types. Upstream issue #1662 is closed as of 2025-09-09, so NovaCut keeps the existing wipe/slide effect-chain workaround until a dedicated transition migration is implemented.
 - [x] **R5.1c — Enable Dolby Vision Profile 10 + HDR10+ export paths** in `EncoderCapabilityProbe` (closes C.9 on capable devices). Done in v3.74.2. The probe now classifies HDR10, HDR10+, and AV1-based Dolby Vision Profile 10 profiles; ExportSheet shows Color / HDR confidence plus a capability-derived Standard / Advanced / Premium device tier. Pixel 10 / Tensor G5-style AV1 + VP9 hardware encode is detected from actual encoders rather than hard-coded model names. Sources: https://developer.android.com/media/media3/transformer/supported-formats · https://developer.android.com/reference/android/media/MediaCodecInfo.CodecProfileLevel · https://www.androidauthority.com/pixel-10-video-recording-av1-vp9-3586429/
-- [ ] **R5.1d — Android 15/16 Ultra HDR ingest** — flagship phones now capture Ultra HDR video by default; widen `MediaImportEngine` HDR detection beyond HDR10/HLG to include the gain-map/Ultra HDR path. Source: https://developer.android.com/about/versions/15/features#ultra-hdr-video
+- [x] **R5.1d — Android 15/16 Ultra HDR ingest** — Done in v3.74.3. `MediaImportEngine` now records source color metadata for imported clips, classifies video HDR10 / HDR10+ / HLG / Dolby Vision from `MediaFormat`, detects Android Ultra HDR gain-map still images via `Bitmap.hasGainmap()` on Android 14+, persists the metadata in autosave, and feeds source HDR / Ultra HDR chips into ExportSheet confidence. Sources: https://developer.android.com/media/grow/ultra-hdr · https://source.android.com/docs/core/display/hdr
 
 ### R5.2 — Dependency successor pivots
 - [ ] **R5.2a — Pin `salahawad/ffmpeg-kit-community` instead of FFmpegX-Android (A.9).** `arthenica/ffmpeg-kit` was officially archived April 2025; the community fork has the most active commit cadence, retains the original Maven coordinates path, and ships AAR artifacts. FFmpegX-Android (mzgs) remains a viable secondary candidate but has lower commit velocity. Re-evaluate primary choice at next release. Sources: https://github.com/arthenica/ffmpeg-kit · https://github.com/salahawad/ffmpeg-kit-community
@@ -380,7 +380,8 @@ Items in earlier rounds that 2026 upstream releases now resolve or trivialise �
 - https://github.com/devhyper/open-video-editor — direct OSS competitor.
 - https://github.com/furudo-erika/awesome-capcut-alternatives — awesome-list crosswalk.
 - https://github.com/WyattBlue/auto-editor — silence + filler-word algorithm reference for C.2.
-- https://developer.android.com/about/versions/15/features#ultra-hdr-video — Ultra HDR video ingest path.
+- https://developer.android.com/media/grow/ultra-hdr — Ultra HDR gain-map image format and Android API handling.
+- https://source.android.com/docs/core/display/hdr — Android HDR metadata / HDR10+ platform keys and playback behavior.
 - https://developer.android.com/media/media3/transformer/composition — multi-sequence Composition API.
 - https://developer.android.com/media/media3/transformer/supported-formats — Transformer HDR handling and device encode support.
 - https://developer.android.com/jetpack/compose/accessibility — Compose semantics + custom actions.

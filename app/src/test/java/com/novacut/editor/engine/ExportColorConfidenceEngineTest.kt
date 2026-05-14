@@ -24,6 +24,25 @@ class ExportColorConfidenceEngineTest {
     }
 
     @Test
+    fun sdrExportReportsUltraHdrSourceWithoutWarning() {
+        val report = ExportColorConfidenceEngine.analyze(
+            config = ExportConfig(codec = VideoCodec.HEVC, hdr10PlusMetadata = false),
+            width = 1920,
+            height = 1080,
+            hdrSupport = ExportColorConfidenceEngine.HdrEncodeSupport(setOf("HDR10+")),
+            sourceSummary = ExportColorConfidenceEngine.SourceHdrSummary(
+                supportedFormats = setOf("Ultra HDR gain map"),
+                inspectedSourceCount = 1,
+                totalSourceCount = 1
+            )
+        )
+
+        assertFalse(report.hasWarnings)
+        assertTrue(report.chips.any { it.label == "Ultra HDR source" })
+        assertTrue(report.chips.any { it.detail.contains("Preserve HDR Metadata") })
+    }
+
+    @Test
     fun h264HdrRequestWarnsAboutSdrCodec() {
         val report = ExportColorConfidenceEngine.analyze(
             config = ExportConfig(codec = VideoCodec.H264, hdr10PlusMetadata = true),

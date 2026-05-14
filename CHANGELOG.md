@@ -1,5 +1,13 @@
 # Changelog
 
+## v3.74.3 — 2026-05-14 — Ultra HDR source ingest
+
+- **Import now records source color metadata.** `MediaImportEngine` inspects imported video tracks for HDR10, HDR10+, HLG, and Dolby Vision metadata and stores the result on clips for future export decisions.
+- **Ultra HDR still-image gain maps are detected on Android 14+.** Imported image sources now check `Bitmap.hasGainmap()` through a bounded decode path, so Ultra HDR gain-map sources are no longer treated as ordinary SDR media.
+- **Export confidence now understands source HDR.** The export sheet summarizes imported HDR / Ultra HDR source media before render, distinguishing SDR delivery choices from missing source metadata.
+- **Autosave preserves import HDR metadata.** Clip source color metadata now round-trips through project autosave so recovery and reopened projects keep their HDR confidence context.
+- **Verification** — `git diff --check`, `testDebugUnitTest`, `assembleDebug`, `assembleRelease`, release APK metadata/signature checks, and an adb uninstall/install/launch smoke pass on `R5CY34G070L` all passed.
+
 ## v3.74.2 — 2026-05-14 — HDR export capability tiering
 
 - **HDR profile probing now lives in `EncoderCapabilityProbe`.** NovaCut classifies HEVC, AV1, VP9, and AV1-based Dolby Vision Profile 10 encoder profiles from `MediaCodecList`, including advertised resolution / bitrate envelopes and encoder names.

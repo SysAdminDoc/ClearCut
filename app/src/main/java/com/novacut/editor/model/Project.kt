@@ -94,6 +94,27 @@ enum class ClipLabel(val argb: Long, val displayName: String) {
     YELLOW(0xFFF9E2AF, "Yellow")
 }
 
+enum class SourceHdrFormat(val displayName: String) {
+    HDR10("HDR10"),
+    HDR10_PLUS("HDR10+"),
+    HLG("HLG"),
+    DOLBY_VISION("Dolby Vision"),
+    ULTRA_HDR_GAIN_MAP("Ultra HDR gain map")
+}
+
+@Immutable
+data class SourceColorMetadata(
+    val mimeType: String? = null,
+    val colorStandard: String? = null,
+    val colorTransfer: String? = null,
+    val hdrFormats: Set<SourceHdrFormat> = emptySet(),
+    val inspectedAtMs: Long = 0L
+) {
+    val isInspected: Boolean get() = inspectedAtMs > 0L
+    val hasHdr: Boolean get() = hdrFormats.isNotEmpty()
+    val hasUltraHdrGainMap: Boolean get() = SourceHdrFormat.ULTRA_HDR_GAIN_MAP in hdrFormats
+}
+
 private const val MIN_PLAYBACK_SPEED = 0.01f
 private const val SPEED_CURVE_INTEGRATION_STEPS = 256
 
@@ -146,7 +167,8 @@ data class Clip(
     val motionTrackingData: MotionTrackingData? = null,
     val captions: List<Caption> = emptyList(),
     val groupId: String? = null,
-    val clipLabel: ClipLabel = ClipLabel.NONE
+    val clipLabel: ClipLabel = ClipLabel.NONE,
+    val sourceColorMetadata: SourceColorMetadata = SourceColorMetadata()
 ) {
     init {
         require(speed > 0f) { "Clip speed must be positive" }

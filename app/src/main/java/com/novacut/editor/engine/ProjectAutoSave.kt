@@ -707,6 +707,9 @@ data class AutoSaveState(
                 clip.linkedClipId?.let { put("linkedClipId", it) }
                 clip.groupId?.let { put("groupId", it) }
                 put("clipLabel", clip.clipLabel.name)
+                if (clip.sourceColorMetadata.isInspected) {
+                    put("sourceColorMetadata", serializeSourceColorMetadata(clip.sourceColorMetadata))
+                }
                 put("effects", JSONArray().apply {
                     clip.effects.forEach { put(serializeEffect(it)) }
                 })
@@ -752,6 +755,18 @@ data class AutoSaveState(
                         })
                     })
                 }
+            }
+        }
+
+        private fun serializeSourceColorMetadata(metadata: SourceColorMetadata): JSONObject {
+            return JSONObject().apply {
+                metadata.mimeType?.let { put("mimeType", it) }
+                metadata.colorStandard?.let { put("colorStandard", it) }
+                metadata.colorTransfer?.let { put("colorTransfer", it) }
+                put("inspectedAtMs", metadata.inspectedAtMs)
+                put("hdrFormats", JSONArray().apply {
+                    metadata.hdrFormats.forEach { put(it.name) }
+                })
             }
         }
 
@@ -1125,6 +1140,7 @@ data class AutoSaveState(
                 linkedClipId = json.optString("linkedClipId", "").takeIf { it.isNotEmpty() },
                 groupId = json.optString("groupId", "").takeIf { it.isNotEmpty() },
                 clipLabel = safeValueOf(json.optString("clipLabel", "NONE"), ClipLabel.NONE),
+                sourceColorMetadata = deserializeSourceColorMetadata(json.optJSONObject("sourceColorMetadata")),
                 effects = (0 until effectsArr.length()).mapNotNull { i ->
                     try { deserializeEffect(effectsArr.getJSONObject(i)) } catch (e: Exception) {
                         Log.w(TAG, "Failed to deserialize effect $i", e); null
@@ -1170,6 +1186,23 @@ data class AutoSaveState(
                         isActive = mtd.optBoolean("isActive", true)
                     )
                 }
+            )
+        }
+
+        private fun deserializeSourceColorMetadata(json: JSONObject?): SourceColorMetadata {
+            if (json == null) return SourceColorMetadata()
+            val formatsArr = json.optJSONArray("hdrFormats") ?: JSONArray()
+            val formats = (0 until formatsArr.length()).mapNotNull { i ->
+                formatsArr.optString(i)
+                    .takeIf { it.isNotBlank() }
+                    ?.let { runCatching { SourceHdrFormat.valueOf(it) }.getOrNull() }
+            }.toSet()
+            return SourceColorMetadata(
+                mimeType = json.optString("mimeType", "").takeIf { it.isNotBlank() },
+                colorStandard = json.optString("colorStandard", "").takeIf { it.isNotBlank() },
+                colorTransfer = json.optString("colorTransfer", "").takeIf { it.isNotBlank() },
+                hdrFormats = formats,
+                inspectedAtMs = json.optLong("inspectedAtMs", 0L).coerceAtLeast(0L)
             )
         }
 

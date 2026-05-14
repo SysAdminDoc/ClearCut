@@ -1,8 +1,10 @@
 package com.novacut.editor.ui.editor
 
 import android.net.Uri
+import com.novacut.editor.engine.MediaImportEngine
 import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.model.Clip
+import com.novacut.editor.model.SourceColorMetadata
 import com.novacut.editor.model.Track
 import com.novacut.editor.model.TrackType
 import kotlinx.coroutines.CoroutineScope
@@ -21,6 +23,7 @@ import java.util.UUID
 class ClipEditingDelegate(
     private val stateFlow: MutableStateFlow<EditorState>,
     private val videoEngine: VideoEngine,
+    private val mediaImportEngine: MediaImportEngine,
     private val scope: CoroutineScope,
     private val saveUndoState: (String) -> Unit,
     private val showToast: (String) -> Unit,
@@ -30,6 +33,13 @@ class ClipEditingDelegate(
     private val recalculateDuration: (EditorState) -> EditorState,
     private val onClipAdded: ((clipId: String, uri: Uri) -> Unit)? = null
 ) {
+    private data class ImportedMediaInfo(
+        val durationMs: Long,
+        val hasVisualTrack: Boolean,
+        val hasAudioTrack: Boolean,
+        val sourceColorMetadata: SourceColorMetadata
+    )
+
     // Rolling timestamps of recent delete operations for the bulk-change
     // detector. Bounded to the window length so the structure can't grow.
     // Accessed only from the delegate's own methods, which in turn are only
@@ -42,17 +52,18 @@ class ClipEditingDelegate(
         scope.launch {
             val mediaInfo = try {
                 withContext(Dispatchers.IO) {
-                    Triple(
-                        videoEngine.getMediaDuration(uri),
-                        videoEngine.hasVisualTrack(uri),
-                        videoEngine.hasAudioTrack(uri)
+                    ImportedMediaInfo(
+                        durationMs = videoEngine.getMediaDuration(uri),
+                        hasVisualTrack = videoEngine.hasVisualTrack(uri),
+                        hasAudioTrack = videoEngine.hasAudioTrack(uri),
+                        sourceColorMetadata = mediaImportEngine.inspectSourceColor(uri)
                     )
                 }
             } catch (e: Exception) {
                 showToast("Could not read media: ${e.message ?: "Unknown error"}")
                 return@launch
             }
-            val (duration, hasVisualTrack, hasAudioTrack) = mediaInfo
+            val (duration, hasVisualTrack, hasAudioTrack, sourceColorMetadata) = mediaInfo
             if (duration <= 0) {
                 showToast("Could not read media file")
                 return@launch
@@ -89,7 +100,8 @@ class ClipEditingDelegate(
                     timelineStartMs = timelineStart,
                     trimStartMs = 0L,
                     trimEndMs = duration,
-                    linkedClipId = linkedAudioClipId
+                    linkedClipId = linkedAudioClipId,
+                    sourceColorMetadata = sourceColorMetadata
                 )
 
                 var tracks = baseTracks.mapIndexed { i, t ->
@@ -104,7 +116,8 @@ class ClipEditingDelegate(
                         timelineStartMs = timelineStart,
                         trimStartMs = 0L,
                         trimEndMs = duration,
-                        linkedClipId = clipId
+                        linkedClipId = clipId,
+                        sourceColorMetadata = sourceColorMetadata
                     )
                     val clipEndMs = timelineStart + linkedAudioClip.durationMs
                     val audioTrackIndex = preferredAudioTrackIndex(
@@ -150,17 +163,18 @@ class ClipEditingDelegate(
         scope.launch {
             val mediaInfo = try {
                 withContext(Dispatchers.IO) {
-                    Triple(
-                        videoEngine.getMediaDuration(newUri),
-                        videoEngine.hasVisualTrack(newUri),
-                        videoEngine.hasAudioTrack(newUri)
+                    ImportedMediaInfo(
+                        durationMs = videoEngine.getMediaDuration(newUri),
+                        hasVisualTrack = videoEngine.hasVisualTrack(newUri),
+                        hasAudioTrack = videoEngine.hasAudioTrack(newUri),
+                        sourceColorMetadata = mediaImportEngine.inspectSourceColor(newUri)
                     )
                 }
             } catch (e: Exception) {
                 showToast("Could not read replacement media")
                 return@launch
             }
-            val (duration, hasVisualTrack, hasAudioTrack) = mediaInfo
+            val (duration, hasVisualTrack, hasAudioTrack, sourceColorMetadata) = mediaInfo
             if (duration <= 0L) {
                 showToast("Could not read replacement media")
                 return@launch
@@ -204,7 +218,7 @@ class ClipEditingDelegate(
                     track.copy(
                         clips = track.clips.map { clip ->
                             if (clip.sourceUri.toString() == oldUriKey) {
-                                clip.relinkedTo(newUri, duration)
+                                clip.relinkedTo(newUri, duration, sourceColorMetadata)
                             } else {
                                 clip
                             }
@@ -679,7 +693,11 @@ class ClipEditingDelegate(
         )
     }
 
-    private fun Clip.relinkedTo(newUri: Uri, sourceDurationMs: Long): Clip {
+    private fun Clip.relinkedTo(
+        newUri: Uri,
+        sourceDurationMs: Long,
+        sourceColorMetadata: SourceColorMetadata
+    ): Clip {
         val safeTrimStart = trimStartMs.coerceIn(0L, sourceDurationMs - 1L)
         val safeTrimEnd = trimEndMs.coerceIn(safeTrimStart + 1L, sourceDurationMs)
         return copy(
@@ -687,7 +705,8 @@ class ClipEditingDelegate(
             sourceDurationMs = sourceDurationMs,
             trimStartMs = safeTrimStart,
             trimEndMs = safeTrimEnd,
-            proxyUri = null
+            proxyUri = null,
+            sourceColorMetadata = sourceColorMetadata
         )
     }
 
