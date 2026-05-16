@@ -29,6 +29,7 @@ Every native AAR shipped with NovaCut must be 16 KB page-size aligned. Google Pl
 | `deepfilternet-android` | Planned (A.2) | `com.kaleyra:deepfilternet-android` (Sonatype) | ⚠ Verify on first integration | LGPL-3.0 | DeepFilterNet 3 model targeted (R6.6a). |
 | `librife.so` + RIFE v4.6 NCNN model | Planned (A.4) | [`nihui/rife-ncnn-vulkan`](https://github.com/nihui/rife-ncnn-vulkan) | ⚠ Self-build with NDK r28+ required | MIT (model: paper authors) | Vulkan-only; arm64-v8a only. ABI split required. |
 | OpenCV Android `:opencv:4.10.0+` | Planned (A.3) | opencv.org | ⚠ Verify per release | Apache-2.0 | arm64-only; ~40 MB. Must ABI-split to avoid Play 200 MB base ceiling. |
+| `com.google.oboe:oboe:1.9.0` | Planned (A.10) | Maven Central | ⚠ Verify on first integration — arm64 native blob ~700 KB | Apache-2.0 | High-quality sinc resampler for 44.1↔48 kHz mixing. Scaffold + reflection probe + output-frame estimator land 2026-05; runtime path waits for the dep wiring. |
 
 ## 3. Targeted future models (Round 5 / 6 plans)
 
