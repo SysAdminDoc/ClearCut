@@ -41,18 +41,25 @@ import javax.inject.Singleton
  * 2. Deploy via Qualcomm AI Engine Direct SDK
  * 3. Leverages Hexagon NPU for optimal performance
  *
- * ### Option B: ONNX Runtime (cross-device)
- * 1. Add `implementation("com.microsoft.onnxruntime:onnxruntime-android:1.17+")`
- * 2. Load LaMa ONNX model from assets or downloaded cache
- * 3. Run inference via OrtSession with NNAPI execution provider
- * 4. Falls back to CPU if NNAPI unavailable
+ * ### Option B: ONNX Runtime (cross-device, currently active)
+ * 1. `implementation("com.microsoft.onnxruntime:onnxruntime-android:1.17.0")` is already in
+ *    [gradle/libs.versions.toml](../../../../../../gradle/libs.versions.toml).
+ * 2. Load LaMa ONNX model from the cache populated by `ModelDownloadManager`.
+ * 3. Run inference via `OrtSession` with execution providers in this order:
+ *    XNNPACK (Arm CPU SIMD, ships with onnxruntime-android), then CPU fallback.
+ *    The legacy NNAPI EP is intentionally **not** added — NNAPI is deprecated in
+ *    Android 15 (API 35) and removed from Google's recommended path. See
+ *    https://developer.android.com/ndk/guides/neuralnetworks/migration-guide.
+ *    For Qualcomm NPU acceleration on supported Snapdragon devices, the QNN EP
+ *    or Option A (Qualcomm AI Engine Direct SDK) is the forward path. For a
+ *    future TFLite-backed engine, target LiteRT's CompiledModel API instead.
  *
- * ## Dependencies (to be added to build.gradle.kts)
+ * ## Dependencies (already present in build.gradle.kts)
  * ```
- * // implementation("com.microsoft.onnxruntime:onnxruntime-android:1.17.0")
- * // or
- * // implementation("com.qualcomm.qnn:qnn-runtime-android:2.+")
+ * implementation("com.microsoft.onnxruntime:onnxruntime-android:1.17.0")
  * ```
+ *
+ * See ROADMAP.md R6.2 (LiteRT migration / NNAPI deprecation surface).
  */
 @Singleton
 class InpaintingEngine @Inject constructor(
@@ -182,8 +189,12 @@ class InpaintingEngine @Inject constructor(
             // ONNX Runtime inference for LaMa-Dilated
             val env = OrtEnvironment.getEnvironment()
             val sessionOptions = OrtSession.SessionOptions().apply {
-                // Try NNAPI first (Qualcomm NPU), fall back to CPU
-                try { addNnapi() } catch (e: Exception) { Log.w(TAG, "NNAPI not available, falling back to CPU", e) }
+                // NNAPI EP intentionally not added: NNAPI is deprecated as of Android 15
+                // (API 35) per https://developer.android.com/ndk/guides/neuralnetworks/migration-guide
+                // and Play Store may surface warnings on its use. We rely on the default CPU EP,
+                // which is correct and portable. Future vendor-specific acceleration (Qualcomm QNN,
+                // CoreML) and the TFLite path (LiteRT CompiledModel API) are tracked under
+                // ROADMAP.md R6.2 and require explicit per-EP capability probing before adding.
             }
             var session: OrtSession? = null
             var inputBitmap: Bitmap? = null

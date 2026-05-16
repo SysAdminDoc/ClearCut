@@ -514,7 +514,7 @@ Google Play requires 16 KB page-size alignment for all new apps and updates targ
 
 NNAPI is deprecated as of Android 15 (API 35). The replacement is LiteRT (TensorFlow Lite successor) with the CompiledModel API. NovaCut's [`InpaintingEngine.kt`](app/src/main/java/com/novacut/editor/engine/InpaintingEngine.kt) still references NNAPI in its docstring as the recommended execution provider — this is now misleading.
 
-- [ ] **R6.2a — Strip NNAPI guidance from `InpaintingEngine` docs**; document the ONNX Runtime + XNNPACK/QNN/CoreML EP path as primary, with the LiteRT CompiledModel API as the future TFLite-backed alternative.
+- [x] **R6.2a — Strip NNAPI guidance from `InpaintingEngine` docs**; document the ONNX Runtime + XNNPACK/QNN/CoreML EP path as primary, with the LiteRT CompiledModel API as the future TFLite-backed alternative. *(Done — docstring rewritten and the `addNnapi()` call removed from `SessionOptions`. Default CPU EP is used until per-EP capability probing lands. The Tier A InpaintingEngine activation path is unchanged.)*
 - [ ] **R6.2b — Audit segmentation / MediaPipe TFLite path** ([`SegmentationEngine.kt`](app/src/main/java/com/novacut/editor/engine/segmentation/SegmentationEngine.kt)) — when MediaPipe Tasks Vision upgrades its internal TFLite to LiteRT, no NovaCut change is needed. Track the upstream version. Sources: https://developer.android.com/ndk/guides/neuralnetworks/migration-guide · https://github.com/google-ai-edge/litert · https://ai.google.dev/edge/litert/overview
 
 ### R6.3 — Gemini Nano via ML Kit GenAI Prompt API
