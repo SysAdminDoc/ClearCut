@@ -634,9 +634,9 @@ Lottie shipped state machines in late 2025 (formerly Rive-exclusive). dotLottie 
 
 R4.6 (Live Studio mode) scopes scene/source graph composition. The companion output side has a clear reference: Larix Broadcaster on Android does RTMP / RTMPS / SRT / WebRTC / RIST / RTSP / NDI|HX2 with adaptive bitrate, Talkback audio return, and concurrent front+rear camera streaming on Android 11+.
 
-- [ ] **R6.17a — Add an `OutputStreamingEngine` stub** with `RTMP` + `SRT` as the first two protocols (most common for creator workflows). Cloud RTMP target = YouTube / Twitch / Kick endpoints; SRT for low-latency.
-- [ ] **R6.17b — Compose against `CameraCaptureEngine`** (already stubbed) once R4.6 lands so a live scene can be sent direct from the scene graph.
-- [ ] **R6.17c — Adaptive bitrate** mirrors the Larix pattern: probe network, scale resolution + framerate downward, never block the encoder thread. Sources: https://softvelum.com/larix/ · https://play.google.com/store/apps/details?id=com.wmspanel.larix_broadcaster
+- [x] **R6.17a — Add an `OutputStreamingEngine` stub** with `RTMP` + `SRT` as the first two protocols (most common for creator workflows). *(Done — [OutputStreamingEngine](app/src/main/java/com/novacut/editor/engine/OutputStreamingEngine.kt) exposes the 6-protocol `Protocol` enum (RTMP/RTMPS/SRT/RIST/WebRTC/RTSP), `OutputDestination` value type, `StreamStatus` state, reflection probe for Stream-Pack / Larix / LibSRT-Android. Pre-flight `validateDestination(protocol, url)` and `recommendedBitrateBps(w, h, fps)` are pure functions the UI can use today. 11 new tests.)*
+- [ ] **R6.17b — Compose against `CameraCaptureEngine`** (already stubbed) once R4.6 lands so a live scene can be sent direct from the scene graph. *(Waits on R4.6 Live Studio scene graph.)*
+- [ ] **R6.17c — Adaptive bitrate** mirrors the Larix pattern: probe network, scale resolution + framerate downward, never block the encoder thread. *(Documented as a hard requirement in the engine class docstring; implementation lands with the chosen streaming library.)* Sources: https://softvelum.com/larix/ · https://play.google.com/store/apps/details?id=com.wmspanel.larix_broadcaster
 
 ### R6.18 — MuseTalk / LatentSync supersede Wav2Lip for C.4
 
