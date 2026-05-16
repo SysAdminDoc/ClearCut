@@ -14,17 +14,31 @@ import javax.inject.Singleton
 
 /**
  * Stub engine -- requires the official Sherpa-ONNX Android AAR for the native backend.
- * See ROADMAP.md
+ * See ROADMAP.md (Tier A.1, refreshed in Round 6 R6.8).
  *
  * Delegates to built-in [WhisperEngine] (ONNX Runtime) when Sherpa-ONNX is unavailable.
  *
  * Sherpa-ONNX target:
  *   https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.2/sherpa-onnx-1.13.2.aar
  *
- * Models stay explicit downloads:
- *   - Moonshine v2 Tiny EN: ~33 MB, default English target
- *   - Moonshine v2 Base EN: ~110 MB, higher-quality English target
- *   - Whisper Tiny multilingual: ~100 MB, multilingual fallback
+ * ## Three-target model policy (R6.8)
+ *
+ * Models stay explicit downloads. The recommendation order is:
+ *
+ *   1. Moonshine v2 Tiny EN — ~33 MB, fastest English ASR target.
+ *      Default for English content on every device tier.
+ *   2. Whisper Tiny multilingual — ~100 MB, default multilingual fallback.
+ *      Smallest universal-language footprint suitable for mid-range devices.
+ *   3. Whisper Large V3 Turbo — ~800 MB FP16 (4-decoder-layer ONNX).
+ *      Premium multilingual target. ONNX Runtime + Arm KleidiAI delivers
+ *      ~2.6x speedup on modern Arm Android. **Gated** on the same premium
+ *      tier as SAM 2.1: requires `allowPremiumModels = true` AND
+ *      `availableRamMb >= MIN_TURBO_RAM_MB`. Falls back to Whisper Tiny
+ *      multilingual when the tier check fails.
+ *
+ * Higher-accuracy English variants (Moonshine v2 Base) are kept in the enum
+ * for callers who explicitly opt in via Settings; they are not part of the
+ * default `preferredModelFor(language, ...)` recommendation.
  */
 @Singleton
 class SherpaAsrEngine @Inject constructor(
@@ -37,7 +51,12 @@ class SherpaAsrEngine @Inject constructor(
         val languages: String,
         val sizeMb: Int,
         val modelPackageName: String,
-        val isMoonshineV2: Boolean
+        val isMoonshineV2: Boolean,
+        val isMultilingual: Boolean = false,
+        /** Premium-tier models require the device-gating rule in [preferredModelFor]. */
+        val requiresPremiumTier: Boolean = false,
+        /** Minimum available RAM in MB before the model can be recommended. */
+        val minimumRamMb: Int = 0,
     ) {
         MOONSHINE_V2_TINY_EN(
             displayName = "Moonshine v2 Tiny",
@@ -58,15 +77,31 @@ class SherpaAsrEngine @Inject constructor(
             languages = "99 languages",
             sizeMb = 100,
             modelPackageName = "whisper-tiny-multilingual",
-            isMoonshineV2 = false
+            isMoonshineV2 = false,
+            isMultilingual = true
         ),
         WHISPER_BASE_MULTILINGUAL(
             displayName = "Whisper Base",
             languages = "99 languages",
             sizeMb = 200,
             modelPackageName = "whisper-base-multilingual",
-            isMoonshineV2 = false
-        )
+            isMoonshineV2 = false,
+            isMultilingual = true
+        ),
+        // R6.8 — Whisper Large V3 Turbo (4-decoder-layer ONNX, FP16). Premium tier:
+        // ~800 MB on disk, recommended only when allowPremiumModels and the
+        // device meets the RAM floor. ONNX Runtime + Arm KleidiAI delivers ~2.6x
+        // speedup on Arm Android over the Tiny baseline.
+        WHISPER_LARGE_V3_TURBO_MULTILINGUAL(
+            displayName = "Whisper Large V3 Turbo",
+            languages = "99 languages",
+            sizeMb = 800,
+            modelPackageName = "whisper-large-v3-turbo",
+            isMoonshineV2 = false,
+            isMultilingual = true,
+            requiresPremiumTier = true,
+            minimumRamMb = 6_144
+        ),
     }
 
     data class TranscriptionSegment(
@@ -113,9 +148,16 @@ class SherpaAsrEngine @Inject constructor(
      * The active runtime still falls back to [WhisperEngine] until NovaCut has a
      * deliberate packaging decision for the 50+ MB Android AAR/native payload,
      * but callers and settings surfaces should converge on this model order.
+     *
+     * Pass [allowPremiumModels] = true and a real [availableRamMb] reading
+     * (from `ActivityManager.getMemoryInfo()`) to opt into Whisper Large V3 Turbo
+     * for multilingual content on premium devices (R6.8).
      */
-    fun getPreferredModel(language: String = "en"): ModelVariant =
-        preferredModelFor(language)
+    fun getPreferredModel(
+        language: String = "en",
+        allowPremiumModels: Boolean = false,
+        availableRamMb: Int = 0,
+    ): ModelVariant = preferredModelFor(language, allowPremiumModels, availableRamMb)
 
     /**
      * Transcribe audio from a video/audio URI.
@@ -157,15 +199,33 @@ class SherpaAsrEngine @Inject constructor(
             "https://github.com/k2-fsa/sherpa-onnx/releases/download/v$TARGET_SHERPA_ONNX_VERSION/$ANDROID_AAR_ASSET_NAME"
         val DEFAULT_ENGLISH_MODEL: ModelVariant = ModelVariant.MOONSHINE_V2_TINY_EN
         val MULTILINGUAL_FALLBACK_MODEL: ModelVariant = ModelVariant.WHISPER_TINY_MULTILINGUAL
+        val PREMIUM_MULTILINGUAL_MODEL: ModelVariant = ModelVariant.WHISPER_LARGE_V3_TURBO_MULTILINGUAL
 
-        fun preferredModelFor(language: String): ModelVariant {
+        /**
+         * Three-target ASR policy (R6.8):
+         * - English → Moonshine v2 Tiny (always).
+         * - Multilingual on a premium device with premium-models enabled →
+         *   Whisper Large V3 Turbo.
+         * - Multilingual otherwise → Whisper Tiny multilingual.
+         */
+        fun preferredModelFor(
+            language: String,
+            allowPremiumModels: Boolean = false,
+            availableRamMb: Int = 0,
+        ): ModelVariant {
             val normalized = language.trim().lowercase(Locale.US)
-            return if (normalized == "en" || normalized.startsWith("en-") || normalized == "english") {
-                DEFAULT_ENGLISH_MODEL
-            } else {
-                MULTILINGUAL_FALLBACK_MODEL
-            }
+            val isEnglish = normalized == "en" ||
+                normalized.startsWith("en-") ||
+                normalized == "english"
+            if (isEnglish) return DEFAULT_ENGLISH_MODEL
+            val premiumOk = allowPremiumModels &&
+                availableRamMb >= PREMIUM_MULTILINGUAL_MODEL.minimumRamMb
+            return if (premiumOk) PREMIUM_MULTILINGUAL_MODEL else MULTILINGUAL_FALLBACK_MODEL
         }
+
+        // No legacy single-arg `preferredModelFor(String)` overload — the three-target
+        // function above accepts defaults for both premium flags, so existing one-arg
+        // call sites keep working. Avoids Kotlin overload-resolution ambiguity.
 
         val WHISPER_LANGUAGES = listOf(
             "en", "zh", "de", "es", "ru", "ko", "fr", "ja", "pt", "tr",
