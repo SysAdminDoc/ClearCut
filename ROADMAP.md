@@ -2,7 +2,108 @@
 
 Forward-looking tracker for planned work. Release history lives in [CHANGELOG.md](CHANGELOG.md).
 
-Current version: **v3.74.9** (versionCode 146).
+Current version: **v3.74.9** (versionCode 146). Last refresh: **2026-05-16** (Round 6).
+
+Legend: `[ ]` not started · `[~]` in progress · `[x]` done (moved to CHANGELOG).
+
+> **How to read this doc.** Tier A/B/C are the *implementation tables* — every row is a single dependency-bump or limitation fix with a known touch point. Rounds 2–6 are *research deltas* — each captures what changed in the outside world since the prior round and which Tier A/B/C rows it unblocks. The [Forward View](#forward-view--now--next--later--under-consideration--rejected-2026-05) at the end is the synthesis layer: every item from every round classified into Now / Next / Later / Under Consideration / Rejected with one-line justification.
+
+---
+
+## Forward View — Now / Next / Later / Under Consideration / Rejected (2026-05)
+
+This is the **prioritized synthesis** across all rounds. Every line maps back to an item ID elsewhere in this file (Tier A.N, B.N, C.N, R4.N, R5.N, R6.N, or CROSS-PROJECT-ROADMAP §N) so traceability is one search away. New IDs introduced in Round 6 are tagged `R6.*`.
+
+### Now — next 1–2 release cycles
+Maximum leverage, builds on shipped foundations, no new model downloads required.
+
+| ID | Item | Why now |
+|---|---|---|
+| [R6.1](#r61--16-kb-page-size-compliance-play-store-gate) | 16 KB page-size compliance audit | `targetSdk = 36` (Android 16) — Play Store **blocks** non-compliant uploads since 2025-11-01. We bundle ONNX Runtime, MediaPipe; future RIFE/OpenCV/Sherpa-ONNX native deps must be NDK r28+. Compliance is a hard gate. |
+| [R6.5](#r65--ffmpeg-kit-16kb-supersedes-r52a-block) | Pin `com.moizhassan.ffmpeg:ffmpeg-kit-16kb:6.1.1` for A.9 | Unblocks B.3 (reverse export), libass subtitle burn-in, two-pass loudnorm, sidechain ducking. Maven Central artifact, 16 KB aligned — supersedes R5.2a "no pinnable artifact" block. |
+| [A.2](#tier-a--activate-scaffolded-stubs) | DeepFilterNet 3 activation (model bump) | Already wired with fallback; v3 supersedes v2 with measurably better PESQ on short audio, same ~8 MB footprint, same JNI surface. |
+| [A.10](#tier-a--activate-scaffolded-stubs) | Oboe resampler | Pure correctness fix for 44.1↔48 kHz mixing — current Media3 resample drops samples on long mixes. |
+| [B.2](#tier-b--fix-known-limitations) | True dual-texture programmable blend modes | Single-texture fallback now covers all 18 modes (shipped), but real Hue/Sat/Color/Luminosity math still requires the custom compositor path. Fork or upstream Media3 hook — track androidx/media#1662. |
+| [B.5](#tier-b--fix-known-limitations) | Mixed copy/re-encode segment stitching | Whole-timeline stream-copy is wired and surfaced in ExportSheet. Last step: use analysis ranges to stitch mixed segments. Massive perf win for partial edits. |
+| [R6.10](#r610--media3-110-modular-ui-adoption) | Adopt `media3-effect-lottie` module | Removes custom LottieOverlayEffect overlap; one-line dep swap; shipped in Media3 1.10 we already pull. |
+| [R5.3d](#r53--accessibility-coverage-gap) | Closed audio description audio track export | SDH text already ships. Pair with system TTS (already wired) for the audio side; muxed AD track via Media3. |
+| [R5.4c](#r54--internationalization--localization) | Strings extraction audit | One-time `lint` pass to catch hardcoded `Log.d` / `Toast` literals in engine stubs (`UpscaleEngine`, `StyleTransferEngine`, etc.). Pure mechanical work. |
+| [R5.5d](#r55--observability--privacy-preserving-telemetry) | Local-only diagnostic export ZIP | No telemetry pipe to add. Single screen, single button. Strict on-device guarantee. Lowers issue triage cost immediately. |
+| [C.6](#audio--speech) | Audio mastering presets (one-tap chains) | Composes A.2 + EBU R128 (both shipped). Pure UI/preset work. High user value, zero new deps. |
+
+### Next — 3–5 release cycles
+Dependency activations and engine swaps with concrete upstream targets.
+
+| ID | Item | Cost / gating |
+|---|---|---|
+| [A.4](#tier-a--activate-scaffolded-stubs) | RIFE v4.6 via NCNN+Vulkan with zero-copy AHardwareBuffer pipeline | ~7–10 MB model. Concrete impl reference: [allenkuo.medium.com](https://allenkuo.medium.com/building-a-high-performance-ai-frame-interpolation-pipeline-on-android-with-vulkan-ncnn-rife-8f279cef51cd). ~10 FPS @ 720p on SD 8 Gen 3. ABI-split required. |
+| [A.6](#tier-a--activate-scaffolded-stubs) | RobustVideoMatting activation | ONNX Runtime already in tree; ~15 MB model; Play Asset Delivery (R5.6a) for the bundle. |
+| [A.5](#tier-a--activate-scaffolded-stubs) | Real-ESRGAN upscaling activation | Same path as A.6; ~17 MB. Best-paired with R5.6a. |
+| [A.7](#tier-a--activate-scaffolded-stubs) | SAM 2.1 Hiera Tiny tap-to-segment activation | Policy + metadata shipped in v3.74.6; remaining work is the model download + inference path. |
+| [A.11](#tier-a--activate-scaffolded-stubs) | Style transfer (AnimeGANv2 + Fast NST) activation | 6–9 MB per style; opt-in style packs via PAD. |
+| [C.1](#audio--speech) | Demucs htdemucs stem separation | ~80 MB. **Implementation cost > inference cost**: STFT pre/post pipeline is non-trivial — budget engineering for that, not just the ONNX swap. Source: [DEV Community Demucs guide](https://dev.to/stevecase430/spleeter-is-dead-heres-why-everyones-switching-to-demucs-in-2026-j6e). |
+| [C.2](#audio--speech) | Silence + filler-word auto-cut | Extends shipped Cut Assistant with word-class filtering. Touch existing `CutAssistantEngine`. |
+| [R6.7](#r67--caption-translation-target-pivot-to-madlad-400--bergamot) | Pivot C.5 caption translation target to MADLAD-400 + Mozilla Bergamot | 419 languages, mobile-quantizable. Supersedes NLLB-200 in size/quality. Reference: [Picovoice mobile translation](https://picovoice.ai/blog/open-source-translation/), [RTranslator 3 roadmap](https://nlnet.nl/project/RTranslator/). |
+| [R6.8](#r68--whisper-large-v3-turbo-as-multilingual-track-for-a1) | Whisper Large V3 Turbo as the multilingual high-accuracy ASR track | Sits parallel to Moonshine v2 (English-only). 4-decoder-layer ONNX with KleidiAI delivers 2.6× speedup on Arm Android. Pairs cleanly with A.1's existing two-target policy. |
+| [R6.2](#r62--litert-migration--nnapi-deprecation) | Remove deprecated NNAPI references from `InpaintingEngine`; document LiteRT CompiledModel path | NNAPI deprecated in Android 15. No code change today (we use ONNX Runtime, not raw NNAPI), but stub docstring lies. Update text + plan future TFLite-backed engines on LiteRT 2.x. |
+| [R5.6a](#r56--distribution-and-packaging) | Play Asset Delivery for ML model bundles | Whisper + Moonshine + RVM + RIFE + Real-ESRGAN + SAM + Demucs together blow past the 200 MB base-AAB ceiling. PAD on-demand asset packs keyed off existing `ModelDownloadManager`. F-Droid track still buildable. |
+| [R5.5a](#r55--observability--privacy-preserving-telemetry) | Sentry-Android opt-in crash reporting | Strict opt-in, redaction of media URIs, settings toggle. Lowers issue triage cost; no privacy compromise. |
+| [R5.5b](#r55--observability--privacy-preserving-telemetry) | Glean aggregate engine-usage metrics | Drives future stub-activation priority. Strictly aggregate, no identifiers. |
+| [R4.4](#capability-bets-to-add-to-the-product-roadmap) | Gyro/lens-aware stabilization | **Start with R6.9** (import [Gyroflow project files](https://github.com/gyroflow/gyroflow) as sidecar) before reimplementing gyro math. Falls back to existing optical flow. |
+| [C.11](#timeline--composition) | Adjustment layers UX | `AdjustmentLayerEngine` already wired in tree; missing the visual layer model + EffectBuilder bridge. |
+| [C.12](#timeline--composition) | Keyframe graph editor (visual bezier UI) | `KeyframeEngine` already supports 12 easings; this is purely UI work in `KeyframeCurveEditor`. |
+| [C.13](#timeline--composition) | Compound clip / nested-sequence editor UX | Model exists; missing the "open sub-timeline" gesture and exit flow. |
+| [R6.16](#r616--lottie-state-machines--dotlottie-interactive-templates) | Lottie state machines / dotLottie | Closes parity with Rive for A.13 with no new SDK; dotLottie reduces bundle size. |
+
+### Later — beyond 5 cycles or speculative
+Larger surface area, premium device tiers, or platform-dependent.
+
+- **[R6.3](#r63--gemini-nano-via-ml-kit-genai-prompt-api)** — Gemini Nano via ML Kit GenAI Prompt API. Auto-summarize project, generate scene descriptions for accessibility, suggest templates, draft caption alternates. Gated on Pixel 10 / 12 GB RAM / NPU; falls back to no-op on other devices.
+- **[R6.13](#r613--ai-auto-edit-text-prompt--draft-cut)** — Text-prompt AI Auto-Edit. CapCut Pro 2026 / DaVinci 20 IntelliScript benchmark. Build on Cut Assistant + transcript + beat + face/object track. Reversible operations only.
+- **[R6.14](#r614--multicam-smartswitch-via-speaker-detection)** — Multicam SmartSwitch via speaker detection. Binds existing `MultiCamEngine` + Whisper word timestamps + voice-activity detection. DaVinci 20 parity.
+- **[R6.15](#r615--ai-animated-subtitles-per-word-emphasis-presets)** — AI Animated Subtitles preset library (per-word emphasis). Extends karaoke captions already shipped in v3.69.
+- **[R6.4](#r64--sam-3--sam-31-watch-item-for-tapsegmentengine)** — SAM 3 / SAM 3.1 watch item. 848M-param model, multiplexes 16 objects per forward pass. Not yet mobile-viable; preserve current SAM 2.1 default policy. Refresh when an ONNX-export Hiera-Tiny equivalent ships.
+- **[R6.11](#r611--apv-codec-ingest-android-16)** — APV (Advanced Professional Video) codec ingest. Android 16 native; Galaxy S26 Ultra first device. 4:2:2 10-bit, up to 2 Gbps intra-frame.
+- **[R6.12](#r612--android-16-ultra-hdr-iso-21496-1-v2)** — Android 16 Ultra HDR ISO 21496-1 v2 (HDR base + SDR gainmap, HEIC encoding). Layer onto shipped v3.74.3 ingest work.
+- **[R6.17](#r617--larix-style-live-streaming-output-on-r46)** — Larix-style live streaming output (RTMP / SRT / WebRTC / RIST / NDI). Composes Live Studio mode (R4.6).
+- **[R6.18](#r618--musetalk--latentsync-supersede-wav2lip-for-c4)** — MuseTalk / LatentSync supersede Wav2Lip for C.4. **Cloud-only** via shipped `GenerativeVideoPolicy` (R5.2d) — diffusion models are GPU-heavy.
+- **[C.4](#audio--speech)** — AI lip-sync. See R6.18 — keep the Wav2Lip stub but pivot to MuseTalk/LatentSync as the actual cloud target.
+- **[C.7](#media--assets)** — Stock asset library (Pexels / Pixabay / Freesound / FMA tabs in MediaPicker).
+- **[C.8](#media--assets)** — In-app camera with teleprompter. `CameraCaptureEngine` already stubbed.
+- **[C.10](#media--assets)** — 360 / VR equirectangular editing. `EquirectangularEngine` already stubbed.
+- **[C.14](#interop--distribution)** — NLE round-trip *import* (parse FCPXML/OTIO → NovaCut). Export already ships; inverse is the harder half.
+- **[C.15](#interop--distribution)** — Template marketplace. Compatibility metadata shipped post-v3.71; remaining UI + registry.
+- **[C.16](#interop--distribution)** — Cross-device project sync. `ProjectSyncEngine` stubbed.
+- **[R4.6](#capability-bets-to-add-to-the-product-roadmap)** — Live Studio full scene/source graph.
+- **[R4.7](#capability-bets-to-add-to-the-product-roadmap)** — Advanced compositor graph (Natron / Blender VSE inspiration).
+- **[R6.19](#r619--libplacebo-as-reference-for-hdr-tone-mapping)** — `libplacebo` as architectural *reference* for HDR tone mapping. Don't embed (Vulkan-only, desktop-first); borrow shader/algo design.
+- **CROSS-PROJECT §2.5, §3.1, §3.2, §3.3, §6.5, §6.6/§7.5, §7.4, §8.4, §8.5** — every Cross-Project Tier 2/3 item that isn't a Now/Next clear win. See [CROSS-PROJECT-ROADMAP.md](CROSS-PROJECT-ROADMAP.md).
+
+### Under Consideration — explicit "decide later"
+| ID | Item | What blocks the decision |
+|---|---|---|
+| [A.12](#tier-a--activate-scaffolded-stubs) | ProPainter cloud inpainting | Server cost + ops vs. LaMa per-frame. Decide when usage data justifies the hosting bill. |
+| [R5.2d](#r52--dependency-successor-pivots) | Generative video (Wan 2.2 / HunyuanVideo) cloud integration | Policy + tests shipped in v3.74.7. Actual provider integration is speculative until a clear creator workflow demands it. |
+| [R6.20](#r620--opencut-arch-cross-pollination-watch-only) | OpenCut architecture cross-pollination (Rust GPU compositor via NDK) | OpenCut is at 50.7k stars but its Android story is thin and the Rust core would be a giant porting effort. Track, don't port. |
+| [C.3](#audio--speech) | XTTS v2 voice cloning | License + abuse-risk audit needed; Sherpa-ONNX XTTS bindings exist but cloning consent UX must be designed first. |
+| [CROSS §7.7](CROSS-PROJECT-ROADMAP.md) | Geo-tagged clip map | Needs map dep (osmdroid or Mapbox). Worth waiting for §7.4 metadata ingest to ship first. |
+| [CROSS §7.8](CROSS-PROJECT-ROADMAP.md) | Preset marketplace scaffold | Depends on §2.1 unified preset library landing first. |
+| [CROSS §7.9](CROSS-PROJECT-ROADMAP.md) | AI edit-coach | Heuristic v1 is feasible now; LLM-grade upgrade should pair with R6.3 (Gemini Nano). |
+| [R5.7b](#r57--plugin-ecosystem) | OpenFX-style read-only effect descriptor | Useful only if C.14 (NLE round-trip import) lands and round-trip-preserves effect intent. |
+
+### Rejected — explicit "no"
+| Item | Why |
+|---|---|
+| Re-pin `arthenica/ffmpeg-kit` AAR | Archived 2025-04; binaries removed from Maven Central; bundling stale 16 KB-misaligned native lib would fail Play upload. Use R6.5 successor. |
+| Always-cloud ASR/TTS that removes the offline fallback | Privacy contract violation; the on-device-by-default stance is explicitly part of the product. |
+| Bundling GPL-only native libs without dual license | NovaCut is MIT-licensed; relicensing the binary as GPL is not on the table. Affects: vid.stab (GPL), some Demucs forks. Use Apache/MIT alternatives or shell-out paths. |
+| Lip-reading / visual speech recognition | Subsumed by Whisper STT for the 99% case; already evaluated and dropped in CROSS-PROJECT §4. |
+| OS-level "Edit in NovaCut" context-menu registry hook | Android `ACTION_EDIT` intent system already covers this; no registry hook needed. CROSS-PROJECT §4. |
+| Web-only DOM isolation patterns | N/A on Android native. CROSS-PROJECT §4. |
+
+---
+
+
 
 ### v3.69.0 — 15-Feature Wave (shipped)
 
@@ -315,7 +416,7 @@ Media3 1.10 (March 2026) ships the multi-sequence/multi-track Composition API, w
 - [x] **R5.1d — Android 15/16 Ultra HDR ingest** — Done in v3.74.3. `MediaImportEngine` now records source color metadata for imported clips, classifies video HDR10 / HDR10+ / HLG / Dolby Vision from `MediaFormat`, detects Android Ultra HDR gain-map still images via `Bitmap.hasGainmap()` on Android 14+, persists the metadata in autosave, and feeds source HDR / Ultra HDR chips into ExportSheet confidence. Sources: https://developer.android.com/media/grow/ultra-hdr · https://source.android.com/docs/core/display/hdr
 
 ### R5.2 — Dependency successor pivots
-- [~] **R5.2a — Pin `salahawad/ffmpeg-kit-community` instead of FFmpegX-Android (A.9).** Blocked in v3.74.4 after re-checking the successor fork: the GitHub project is public and active, but exposes no releases/tags yet, and Maven Central does not currently expose a pinnable `ffmpeg-kit-community` artifact. Do not add an unversioned JitPack dependency for release builds; re-evaluate when the fork publishes a stable tag/AAR coordinate, keeping FFmpegX-Android (mzgs) as the secondary candidate. Sources: https://github.com/arthenica/ffmpeg-kit · https://github.com/salahawad/ffmpeg-kit-community
+- [~] **R5.2a — Pin `salahawad/ffmpeg-kit-community` instead of FFmpegX-Android (A.9).** Blocked in v3.74.4 after re-checking the successor fork: the GitHub project is public and active, but exposes no releases/tags yet, and Maven Central does not currently expose a pinnable `ffmpeg-kit-community` artifact. Do not add an unversioned JitPack dependency for release builds; re-evaluate when the fork publishes a stable tag/AAR coordinate, keeping FFmpegX-Android (mzgs) as the secondary candidate. **Superseded by [R6.5](#r65--ffmpeg-kit-16kb-supersedes-r52a-block)** — `com.moizhassan.ffmpeg:ffmpeg-kit-16kb:6.1.1` is now published on Maven Central, is 16 KB page-size aligned for Android 15+, and is the recommended A.9 pin going forward. Sources: https://github.com/arthenica/ffmpeg-kit · https://github.com/salahawad/ffmpeg-kit-community · https://libraries.io/maven/com.moizhassan.ffmpeg:ffmpeg-kit-16kb
 - [x] **R5.2b — Upgrade Sherpa-ONNX target to v1.12.28+ for Moonshine v2 (A.1).** Done in v3.74.5. `SherpaAsrEngine` now targets Sherpa-ONNX v1.13.2, records the official Android AAR asset URL, and codifies the target model policy: Moonshine v2 Tiny as the default English ASR target and Whisper Tiny multilingual as the non-English fallback. Runtime activation still stays under A.1 because the official project currently ships Android AARs as GitHub release assets rather than a normal Maven Central coordinate, so NovaCut should not silently vendor the native payload into the base app. Source: https://github.com/k2-fsa/sherpa-onnx/releases
 - [x] **R5.2c — SAM 2.1 ONNX path now viable for tracked masks (R4.3 follow-up).** Done in v3.74.6. `TapSegmentEngine` now records SAM 2.1 Hiera Tiny ONNX as the default tracked-mask target, preserves MobileSAM as the smaller fallback, and exposes a tested device-gating policy that only recommends SAM 2.1 when premium model downloads are allowed and available RAM meets the >200 MB working-set requirement. Runtime activation remains under A.7 because the model must still be an explicit download. Sources: https://github.com/facebookresearch/sam2 · https://huggingface.co/onnx-community/sam2.1-hiera-tiny-ONNX
 - [x] **R5.2d — Generative video stays cloud-optional, not on-device.** Done in v3.74.7. Added `GenerativeVideoPolicy` so Wan 2.2, HunyuanVideo, and VideoCrafter2-class providers are represented only as optional cloud effects, never bundled on-device engines. The policy requires destination, upload-size, retention, and explicit-consent disclosure before a future cloud render can start, with tests preventing accidental on-device bundling. Sources: https://github.com/Wan-Video/Wan2.2 · https://github.com/Tencent-Hunyuan/HunyuanVideo · https://github.com/AILab-CVC/VideoCrafter
@@ -394,4 +495,246 @@ Items in earlier rounds that 2026 upstream releases now resolve or trivialise �
 - https://opentelemetry.io/docs/platforms/client-apps/android/ — OpenTelemetry Android SDK.
 - https://docs.sigstore.dev/ — cosign signing.
 - https://www.androidauthority.com/google-tensor-g5/ — Pixel 10 / Tensor G5 AV1 + VP9 hardware encode.
+
+---
+
+## Research Round 6 — 2026-05 Refresh
+
+Research date: 2026-05-16. Scope: changes since the Round 5 cut on 2026-05-14 that materially affect Tier A/B/C sequencing — primarily the 16 KB Play Store gate, the LiteRT migration, the Gemini Nano on-device LLM surface, a concrete ffmpeg-kit successor, SAM 3 / SAM 3.1, and Whisper Turbo. Delta-only: anything already covered in Rounds 2–5 is not repeated. Every item below maps into a tier in the [Forward View](#forward-view--now--next--later--under-consideration--rejected-2026-05) at the top.
+
+### R6.1 — 16 KB page-size compliance (Play Store gate)
+
+Google Play requires 16 KB page-size alignment for all new apps and updates targeting Android 15 (API 35) and higher since 2025-11-01. NovaCut ships with `targetSdk = 36`, so this is a **blocking** constraint, not a future one. The compliance check fires at Play Console upload time, not at runtime. Any bundled native code (ONNX Runtime, MediaPipe Tasks, future NCNN / OpenCV / Sherpa-ONNX / DeepFilterNet / RIFE / Real-ESRGAN AAR payloads) must be NDK r28+ compiled.
+
+- [ ] **R6.1a — Audit every bundled `.so` for 16 KB alignment.** Run `objdump -p` / `python check_elf_alignment.py` over `app/build/intermediates/merged_native_libs/release/out/lib/arm64-v8a/*.so` before each release. Add a CI gate.
+- [ ] **R6.1b — Pin NDK r28+ in `gradle.properties`.** Required for any project rebuild path.
+- [ ] **R6.1c — Document the alignment status in [docs/models.md](docs/models.md).** Every Tier A model AAR must record alignment status before it can graduate. Sources: https://developer.android.com/guide/practices/page-sizes · https://source.android.com/docs/core/architecture/16kb-page-size/16kb · https://developer.android.com/google/play
+
+### R6.2 — LiteRT migration / NNAPI deprecation
+
+NNAPI is deprecated as of Android 15 (API 35). The replacement is LiteRT (TensorFlow Lite successor) with the CompiledModel API. NovaCut's [`InpaintingEngine.kt`](app/src/main/java/com/novacut/editor/engine/InpaintingEngine.kt) still references NNAPI in its docstring as the recommended execution provider — this is now misleading.
+
+- [ ] **R6.2a — Strip NNAPI guidance from `InpaintingEngine` docs**; document the ONNX Runtime + XNNPACK/QNN/CoreML EP path as primary, with the LiteRT CompiledModel API as the future TFLite-backed alternative.
+- [ ] **R6.2b — Audit segmentation / MediaPipe TFLite path** ([`SegmentationEngine.kt`](app/src/main/java/com/novacut/editor/engine/segmentation/SegmentationEngine.kt)) — when MediaPipe Tasks Vision upgrades its internal TFLite to LiteRT, no NovaCut change is needed. Track the upstream version. Sources: https://developer.android.com/ndk/guides/neuralnetworks/migration-guide · https://github.com/google-ai-edge/litert · https://ai.google.dev/edge/litert/overview
+
+### R6.3 — Gemini Nano via ML Kit GenAI Prompt API
+
+Google shipped the ML Kit GenAI Prompt API in alpha 2025-10 and stabilized GenAI APIs (Summarization / Proofreading / Rewriting / Image Description / Speech Recognition) on the Pixel 10 series in 2026. These run on-device via AICore on devices with ≥12 GB RAM and a supported NPU. This is the first time NovaCut can plausibly add a *user-facing* LLM feature without breaking the on-device-by-default privacy stance.
+
+- [ ] **R6.3a — Gated AI Hub card: "Smart Suggestions (Pixel 10 / 12 GB RAM)"** that surfaces device capability and a one-time consent sheet before any Gemini Nano call.
+- [ ] **R6.3b — Use cases (in priority order):**
+  - Image Description for accessibility — auto-generate spoken audio-description text for a clip range (pair with R5.3d AD track export).
+  - Project Summarization — natural-language "what's in this project" for the project list, generated from clip names + caption text.
+  - Caption Style Suggestions — rewrite caption text for tone presets (Reels Hook, Tutorial Voice, ASMR Whisper) without leaving the device.
+  - Template Pick — given the clip set + transcript, suggest the best `.novacut-template`.
+- [ ] **R6.3c — Hard fallback policy:** no GenAI call ever blocks an edit operation. All paths must no-op on non-Pixel-10 / pre-Nano devices.
+- [ ] **R6.3d — Never call cloud Gemini from this codepath** — the entire feature is `media3-gen-on-device-only`. Cloud generative work continues to live under `GenerativeVideoPolicy` (R5.2d). Sources: https://developer.android.com/ai/gemini-nano · https://developers.google.com/ml-kit/genai · https://android-developers.googleblog.com/2025/10/ml-kit-genai-prompt-api-alpha-release.html · https://developer.android.com/google/play/on-device-ai
+
+### R6.4 — SAM 3 / SAM 3.1: watch item for `TapSegmentEngine`
+
+SAM 3 (Nov 2025) introduces text-prompted concept segmentation in addition to point/box prompts. SAM 3.1 (Mar 2026) adds object multiplexing (16 objects per forward pass; doubles video throughput). Combined model is 848M parameters and is currently only feasible on H100-class GPUs.
+
+- **Decision for now:** keep the SAM 2.1 Hiera Tiny default policy shipped in v3.74.6 ([`TapSegmentEngine.kt`](app/src/main/java/com/novacut/editor/engine/TapSegmentEngine.kt)). Do *not* promote SAM 3 / 3.1 to the recommended target until an ONNX-export Tiny variant exists with realistic mobile memory characteristics.
+- [ ] **R6.4a — Add a `SAM3_HIERA_TINY_ONNX` `ModelVariant` placeholder** with `requiresPremiumTier = true` and `supportsVideoPropagation = true`, gated behind a feature flag that defaults off until upstream ships the export.
+- [ ] **R6.4b — Add a "text prompt → mask" stub method** on `TapSegmentEngine` that delegates to SAM 3 when available; until then, falls back to `MediaPipe.detect()` + bbox → SAM 2.1 mask. Closes the API shape early so the eventual SAM 3 swap is one-line. Sources: https://ai.meta.com/blog/segment-anything-model-3/ · https://github.com/facebookresearch/sam3 · https://arxiv.org/abs/2511.16719
+
+### R6.5 — `ffmpeg-kit-16kb` supersedes R5.2a block
+
+The R5.2a R&D pass blocked on "no pinnable Maven artifact for ffmpeg-kit successor". As of 2026, `moizhassankh/ffmpeg-kit-android-16KB` publishes to Maven Central as `com.moizhassan.ffmpeg:ffmpeg-kit-16kb:6.1.1`, is 16 KB aligned for Android 15+, and is built with NDK r27d, Full-GPL, and MediaCodec support — the exact wiring [`FFmpegEngine.kt`](app/src/main/java/com/novacut/editor/engine/FFmpegEngine.kt) expects.
+
+- [ ] **R6.5a — Pin `com.moizhassan.ffmpeg:ffmpeg-kit-16kb:6.1.1`** in [gradle/libs.versions.toml](gradle/libs.versions.toml) and replace the `FFmpegEngine` stub `execute()` body with the `FFmpegKitConfig.executeAsync` bridge.
+- [ ] **R6.5b — Unblocks downstream:** B.3 reverse playback in export (`filter_complex` `[0:v]reverse[v]`), libass subtitle burn-in (replaces shipped Canvas path on demand), two-pass `loudnorm` filter, sidechain compress ducking, AV1 software-encode fallback on devices without hardware AV1.
+- [ ] **R6.5c — GPL note:** `ffmpeg-kit-16kb` is the Full-GPL build. NovaCut is MIT-licensed; bundling a GPL `.so` does not relicense Kotlin source under GPL but does require shipping the LGPL/GPL notice + offer-of-source per FFmpeg's license. Document in [LICENSE](LICENSE) addendum before shipping. (LGPL-only variant exists if we want to dodge the obligation, at the cost of losing libx264/libx265/libfdk — accept H.264/HEVC via MediaCodec only.) Sources: https://github.com/moizhassankh/ffmpeg-kit-android-16KB · https://libraries.io/maven/com.moizhassan.ffmpeg:ffmpeg-kit-16kb · https://www.itpathsolutions.com/ffmpegkit-shutdown-what-to-do-next
+
+### R6.6 — DeepFilterNet 3 model bump for A.2
+
+DeepFilterNet 3 (rolling 2025–2026) raises PESQ to 3.5–4.0+ and STOI past 0.95 on short audio, with the same ~8 MB model footprint and the same JNI surface that A.2 already targets via `KaleyraVideo/AndroidDeepFilterNet`. This is a pure model-bump.
+
+- [ ] **R6.6a — When A.2 activates, target DeepFilterNet 3 model weights** (not v2). Verify the `AndroidDeepFilterNet` Android library picks up v3 by version bump or whether a model URL override is needed. Sources: https://github.com/Rikorose/DeepFilterNet · https://github.com/KaleyraVideo/AndroidDeepFilterNet · https://noisereducerai.com/deepfilternet-ai-noise-reduction/
+
+### R6.7 — Caption translation target pivot to MADLAD-400 + Bergamot
+
+C.5 (auto-translate captions) was scoped against NLLB-200 in earlier rounds. The 2026 mobile-translation landscape has moved: RTranslator 3 (NGI Mobifree grant, beta Apr–Jun 2026) is replacing NLLB-200 with **MADLAD-400 3B** (419 languages, mobile-quantizable) and **Mozilla Bergamot** (Firefox's offline translation models). Quality benchmarks beat NLLB 54B in their target language pairs.
+
+- [ ] **R6.7a — Re-target C.5 caption translation to MADLAD-400 + Bergamot.** NLLB-200 distilled remains the fallback for languages neither MADLAD nor Bergamot covers well.
+- [ ] **R6.7b — In-editor preview UX (already in R5.4a):** side-by-side source/target caption rows, per-caption regenerate action, per-language quality chip. Sources: https://nlnet.nl/project/RTranslator/ · https://github.com/niedev/RTranslator · https://picovoice.ai/blog/open-source-translation/ · https://blog.spikeseed.ai/luxembourgish-translators/
+
+### R6.8 — Whisper Large V3 Turbo as multilingual track for A.1
+
+A.1 already documents the two-target Moonshine v2 (English) + Whisper Tiny multilingual policy. Whisper Large V3 Turbo (4-decoder-layer ONNX) is now the practical multilingual upgrade: ONNX Runtime + Arm KleidiAI delivers ~2.6× faster inference on Android than the Tiny baseline, with substantially better WER. Sherpa-ONNX v1.13.2 already includes the bindings.
+
+- [ ] **R6.8a — Document a three-target policy** in `SherpaAsrEngine` model metadata: Moonshine v2 Tiny (English, fastest), Whisper Tiny (multilingual, smallest), Whisper Large V3 Turbo (multilingual, premium accuracy).
+- [ ] **R6.8b — Gate Turbo on the same premium-tier rule** used for SAM 2.1 (≥6 GB RAM + premium-models-allowed setting). The 4-layer-decoder ONNX is still a heavier download than Tiny. Sources: https://huggingface.co/onnx-community/whisper-large-v3-turbo · https://aihub.qualcomm.com/mobile/models/whisper_large_v3_turbo · https://onnxruntime.ai/blogs · https://github.com/k2-fsa/sherpa-onnx/releases
+
+### R6.9 — Gyroflow project file import for R4.4
+
+R4.4 (gyro/lens-aware stabilization) scopes a from-scratch gyro pipeline. The pragmatic first step is *not* to reimplement: Gyroflow already ships on Google Play, accepts gyro/lens data from GoPro / Sony / DJI / Insta360 / many phones, and writes a `.gyroflow` project file describing the stabilization decisions. NovaCut can accept that file as a sidecar on import, apply the resulting affine + per-frame crop, and skip the whole gyro-math layer entirely.
+
+- [ ] **R6.9a — Add `.gyroflow` sidecar detection** in `MediaImportEngine`. If a sibling file with the same basename exists, parse the JSON (Gyroflow's format is open) and store the resulting per-frame transforms on the imported clip.
+- [ ] **R6.9b — Apply Gyroflow transforms during preview/export** via `MatrixTransformation` (already used for clip transforms). Crop ratio surfaced in the stabilization panel.
+- [ ] **R6.9c — Full gyro-math reimplementation deferred** to a future round; the sidecar import covers ~80% of the creator value with ~10% of the engineering cost. Sources: https://github.com/gyroflow/gyroflow · https://docs.gyroflow.xyz/app/getting-started/supported-cameras/mobile-phones · https://gyroflow.xyz/
+
+### R6.10 — Media3 1.10 modular UI adoption
+
+Media3 1.10 (we pull 1.10.1) ships several new Compose modules and module splits that NovaCut should opt into rather than maintain custom equivalents.
+
+- [ ] **R6.10a — Swap custom `LottieOverlayEffect` for `media3-effect-lottie`** module. Reduces NovaCut's surface area; identical behavior.
+- [ ] **R6.10b — Evaluate `media3-ui-compose-material3` Player Composable** to replace bespoke `PreviewPanel` controls. Risk: the new Composable's gesture model differs from our trim-aware preview — likely keep custom for now, but document the parity gap.
+- [ ] **R6.10c — Track the `media3-inspector-frame` migration** (the old `FrameExtractor` moved out of `media3-inspector` in 1.10). Audit `extractThumbnail` paths.
+- [ ] **R6.10d — `ProgressSlider` Composable** could replace the timeline ruler's progress indicator. Cosmetic, low-priority. Sources: https://developer.android.com/jetpack/androidx/releases/media3 · https://android-developers.googleblog.com/2026/03/media3-110-is-out.html · https://developer.android.com/media/media3/ui/compose
+
+### R6.11 — APV codec ingest (Android 16)
+
+Android 16 ships native APV (Advanced Professional Video) codec support — perceptually lossless intra-frame coding designed for pro post-production. Galaxy S26 Ultra is the first phone to record APV; expect more flagships through 2026. APV 422-10 supports YUV 4:2:2 10-bit at up to 2 Gbps for 2K/4K/8K.
+
+- [ ] **R6.11a — Add APV decode probe** to `EncoderCapabilityProbe` / `MediaImportEngine` so APV source files are flagged on import as "pro intra-frame; expect very large files".
+- [ ] **R6.11b — Surface a "Source is APV" chip** in ExportSheet (already chip-driven post-v3.74.3).
+- [ ] **R6.11c — Do NOT encode to APV by default.** APV is intra-frame; output files are 10–50× larger than HEVC. Treat as an ingest-only codec for now. Sources: https://source.android.com/docs/whatsnew/android-16-release · https://www.sammobile.com/news/galaxy-s26-ultra-world-first-phone-apv-codec-support/
+
+### R6.12 — Android 16 Ultra HDR ISO 21496-1 v2
+
+v3.74.3 shipped Ultra HDR gain-map ingest using `Bitmap.hasGainmap()` on Android 14+. Android 16 implements additional ISO 21496-1 draft v2 parameters: HDR base + SDR gainmap (inverse of v1), per-colorspace gainmap math, HEIC encoding with gainmap.
+
+- [ ] **R6.12a — Detect HDR-base + SDR-gainmap variants** in `MediaImportEngine`. Today we assume v1 (SDR base + HDR gainmap).
+- [ ] **R6.12b — HEIC + gainmap encoding** for still-frame export. Pairs with frame-capture export already shipped.
+- [ ] **R6.12c — Update [docs/models.md](docs/models.md)** with the ISO 21496-1 v1 vs v2 distinction. Sources: https://source.android.com/docs/whatsnew/android-16-release · https://developer.android.com/media/grow/ultra-hdr
+
+### R6.13 — AI Auto-Edit (text prompt → draft cut)
+
+The single highest-leverage 2026 competitor feature: CapCut Desktop Pro 2026's AI Auto-Edit and DaVinci Resolve 20's AI IntelliScript both take a text description + raw footage and produce a draft cut (scene recognition, speech transcription, quality scoring, automatic color, audio leveling, transitions). NovaCut has every ingredient — Cut Assistant, Whisper transcripts, beat detection, SmartReframe, color confidence — but no composer that turns a prompt into a draft.
+
+- [ ] **R6.13a — Compose AI Auto-Edit pipeline** as a new `AutoEditComposerEngine` that orchestrates Cut Assistant + transcript + beat + face/object salience.
+- [ ] **R6.13b — Input form:** clip set + optional 1-line description + target duration + target platform preset.
+- [ ] **R6.13c — Output:** a new `Project` sequence created as a *draft branch*, not a destructive replace. User reviews in a "Proposed Edit" panel (pattern from shipped Cut Assistant Review) and accepts whole-or-piecemeal.
+- [ ] **R6.13d — All decisions reversible** — pin to existing command-based undo. Sources: https://flowith.io/blog/capcut-desktop-pro-2026-ai-auto-edit-define-short-form-video-2026/ · https://www.miracamp.com/learn/davinci-resolve/whats-new-all-new-features-explained · https://filmora.wondershare.com/video-editor-review/davinci-resolve-editing-software.html
+
+### R6.14 — Multicam SmartSwitch via speaker detection
+
+DaVinci Resolve 20's Multicam SmartSwitch auto-cuts between camera angles based on which speaker is active. NovaCut has `MultiCamEngine` (audio-based sync) and Whisper word timestamps with speaker labels — missing only the binder.
+
+- [ ] **R6.14a — Add a `SpeakerSwitchPlanner`** that consumes `MultiCamEngine.syncedTracks` + Whisper diarization metadata and emits a cut plan (per-speaker → preferred angle).
+- [ ] **R6.14b — Surface in the multicam panel** as "Auto-switch by speaker" toggle, with manual override per speaker → angle assignment. Sources: https://www.miracamp.com/learn/davinci-resolve/whats-new-all-new-features-explained · https://filmora.wondershare.com/video-editor-review/davinci-resolve-editing-software.html
+
+### R6.15 — AI Animated Subtitles (per-word emphasis presets)
+
+DaVinci 20's AI Animated Subtitles animates each word as it's spoken. NovaCut shipped karaoke captions in v3.69 (`KaraokeCaptionEngine`); this is an extension of the same pipeline with motion presets per word.
+
+- [ ] **R6.15a — Extend the caption style gallery** with "Word Pop", "Word Bounce", "Word Glow", "Word Slide-In" presets that operate on word boundaries (already exposed by Whisper word timestamps).
+- [ ] **R6.15b — Performance budget:** per-word animation should run on the existing Canvas overlay path; do not add a GPU pass per word. Cap concurrent animating words at 3 to bound the per-frame cost. Sources: https://www.miracamp.com/learn/davinci-resolve/whats-new-all-new-features-explained
+
+### R6.16 — Lottie state machines / dotLottie interactive templates
+
+Lottie shipped state machines in late 2025 (formerly Rive-exclusive). dotLottie is a compressed container (10–15× smaller binaries) with theming + state-machine support. This narrows the A.13 (Rive interactive templates) gap without needing the Rive Android dep.
+
+- [ ] **R6.16a — Bump `lottie-compose` to 7.x** when it ships dotLottie + state-machine APIs. Today we pin 6.6.2.
+- [ ] **R6.16b — Add dotLottie import path** to `LottieTemplateEngine` — accept `.lottie` zip in addition to `.json`.
+- [ ] **R6.16c — Re-scope A.13 (Rive):** Lottie state machines may obviate Rive for the *interactive template* use case. Keep A.13 in the table but downgrade to "Under Consideration" until a concrete feature requires Rive's specific renderer. Sources: https://lottiefiles.com/blog/lottie-animations/lottiefiles-or-rive · https://unicornicons.com/learn/rive-vs-lottie · https://www.rivemasterclass.com/blog/rive-vs-lottie
+
+### R6.17 — Larix-style live streaming output (on R4.6)
+
+R4.6 (Live Studio mode) scopes scene/source graph composition. The companion output side has a clear reference: Larix Broadcaster on Android does RTMP / RTMPS / SRT / WebRTC / RIST / RTSP / NDI|HX2 with adaptive bitrate, Talkback audio return, and concurrent front+rear camera streaming on Android 11+.
+
+- [ ] **R6.17a — Add an `OutputStreamingEngine` stub** with `RTMP` + `SRT` as the first two protocols (most common for creator workflows). Cloud RTMP target = YouTube / Twitch / Kick endpoints; SRT for low-latency.
+- [ ] **R6.17b — Compose against `CameraCaptureEngine`** (already stubbed) once R4.6 lands so a live scene can be sent direct from the scene graph.
+- [ ] **R6.17c — Adaptive bitrate** mirrors the Larix pattern: probe network, scale resolution + framerate downward, never block the encoder thread. Sources: https://softvelum.com/larix/ · https://play.google.com/store/apps/details?id=com.wmspanel.larix_broadcaster
+
+### R6.18 — MuseTalk / LatentSync supersede Wav2Lip for C.4
+
+C.4 (AI lip-sync) was scoped against Wav2Lip. The 2026 quality bar has moved: MuseTalk and LatentSync (diffusion-based, latent-space) produce near-photorealistic results where Wav2Lip's GAN artifacts are visible. Wav2Lip retains the cost crown (3-min video → 5–15 min compute on cloud GPU), but quality demand pushes new work toward MuseTalk / LatentSync.
+
+- [ ] **R6.18a — Pivot C.4's target to MuseTalk (primary) / LatentSync (high-quality variant)** and document Wav2Lip as the legacy fallback.
+- [ ] **R6.18b — Cloud-only path enforced via shipped `GenerativeVideoPolicy`** (R5.2d). No on-device bundling — all three models are far too heavy.
+- [ ] **R6.18c — License audit:** Wav2Lip has non-commercial weights for some checkpoints; MuseTalk is CC-BY-NC; LatentSync uses Stable Diffusion derivatives. Document license per provider in `GenerativeVideoPolicy` provider metadata before any consent sheet ships. Sources: https://www.pixazo.ai/blog/best-open-source-lip-sync-models · https://lipsync.com/blog/open-source-lip-sync · https://sync.so/blog/the-best-free-open-source-lipsync-tools-2/
+
+### R6.19 — `libplacebo` as reference for HDR tone mapping
+
+R4.2 (studio color / HDR backbone) names ACES, OCIO, libplacebo as references. As of 2026, libplacebo is the de-facto HDR tone-mapper for mpv/VLC/FFmpeg with dynamic HDR, Dolby Vision Profile 5 conversion, perceptual gamut stretching, debanding, contrast recovery. Vulkan-first, no Android port — embedding is not practical.
+
+- [ ] **R6.19a — Borrow the algorithm design** (specifically the HDR→SDR display transform with measurement + dynamic exposure) for NovaCut's HDR confidence path. Today we report capability; tomorrow we should report *quality estimate* (banding risk, clipping risk).
+- [ ] **R6.19b — Do not embed libplacebo** — Vulkan-only and desktop-first. Borrow patterns into pure GLSL ES 3.0 shaders consistent with the existing 37-transition pipeline. Sources: https://libplacebo.org/options/ · https://github.com/haasn/libplacebo · https://carlosfelic.io/misc/mpv-hdr-guide-2026/
+
+### R6.20 — OpenCut arch cross-pollination (watch-only)
+
+OpenCut (~50.7k stars, v0.3.0 in Apr 2026) is the closest open-source CapCut competitor by attention. Architecture: Next.js web + Rust core (GPU compositor + effects + masks via WASM) + early GPUI desktop. **Android story is thin** — no concrete Android target.
+
+- **Watch, don't port.** The Rust GPU compositor is conceptually exciting (could inspire B.2's programmable dual-texture blend) but porting Rust via NDK to coexist with Media3 is a multi-quarter engineering effort with unclear ROI given NovaCut's Kotlin-first stack.
+- [ ] **R6.20a — Track OpenCut's Android proof of concept** if one materializes. No code action yet. Sources: https://github.com/opencut-app/opencut · https://b-lab.team/en/content/c5595409-729f-49d5-9ad7-bd58ae5b8bc9
+
+### R6.21 — Open Video Editor (direct OSS competitor) — community asks
+
+[`devhyper/open-video-editor`](https://github.com/devhyper/open-video-editor) remains the only direct Compose + Media3 + Android-native OSS competitor (~654 stars, latest v1.1.3 in Sep 2024). The open enhancement issues are revealing:
+
+| Their open ask | NovaCut status |
+|---|---|
+| Timeline (#48) | ✅ Multi-track with thumbs, waveforms, snap, markers, color labels |
+| Keyframes for filters (#47) | ✅ KeyframeEngine + 12 easings + bezier editor (graph editor pending — C.12) |
+| Image layer support (#24) | ✅ Sticker/GIF/image overlays with position/scale/rotate/opacity |
+| Face blurring (#31) | ✅ Tracked Mosaic (post-v3.71) |
+| Pitch audio controls (#46) | ✅ Pitch shift in AudioEffectsEngine |
+| Audio-video muxing (#37) | ✅ Multi-sequence Media3 Composition (v3.74.1) |
+| Rotate quick buttons (#57) | ✅ Crop panel + transform rotation |
+| Opus audio support (#35) | ⚠️ Via Media3 ExoPlayer; verify import path |
+| RGB alpha adjustment (#39) | ✅ Color grading + blend modes |
+
+**Takeaway:** NovaCut is *meaningfully ahead* of the only direct OSS Android NLE on every published community ask. The community signal is not "what to add" but "differentiate harder on the polished UX of features you already have." Source: https://github.com/devhyper/open-video-editor/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement
+
+### Round 6 appendix
+
+- https://github.com/androidx/media/releases — Media3 1.10.1 (May 2026), 1.10.0 (Mar 2026); Lottie module split; Dolby Vision Profile 10.
+- https://developer.android.com/jetpack/androidx/releases/media3 — Media3 release notes index.
+- https://developer.android.com/media/media3/ui/compose — Media3 Compose UI modules (`ui-compose`, `ui-compose-material3`).
+- https://android-developers.googleblog.com/2026/03/media3-110-is-out.html — Media3 1.10 announcement.
+- https://github.com/androidx/media/issues/1662 — Multi-item transitions beyond crossfade (still closed-but-unimplemented as of 2026-05).
+- https://developer.android.com/guide/practices/page-sizes — 16 KB page-size compliance.
+- https://source.android.com/docs/core/architecture/16kb-page-size/16kb — 16 KB AOSP docs.
+- https://developer.android.com/ndk/guides/neuralnetworks/migration-guide — NNAPI migration guide.
+- https://github.com/google-ai-edge/litert — LiteRT (TFLite successor).
+- https://ai.google.dev/edge/litert/overview — LiteRT overview, CompiledModel API.
+- https://developer.android.com/ai/gemini-nano — Gemini Nano + AICore on Android.
+- https://developers.google.com/ml-kit/genai — ML Kit GenAI APIs (Summarization, Proofreading, Rewriting, Image Description, Speech Recognition).
+- https://android-developers.googleblog.com/2025/10/ml-kit-genai-prompt-api-alpha-release.html — ML Kit GenAI Prompt API alpha.
+- https://developer.android.com/google/play/on-device-ai — Play for On-device AI.
+- https://developer.android.com/guide/playcore/asset-delivery — Play Asset Delivery (200 MB base / 4 GB cumulative quotas).
+- https://ai.meta.com/blog/segment-anything-model-3/ — SAM 3.1 (Mar 2026 update; multiplexed video tracking).
+- https://github.com/facebookresearch/sam3 — SAM 3 model + checkpoints.
+- https://arxiv.org/abs/2511.16719 — SAM 3 paper.
+- https://github.com/moizhassankh/ffmpeg-kit-android-16KB — ffmpeg-kit successor, 16 KB aligned.
+- https://libraries.io/maven/com.moizhassan.ffmpeg:ffmpeg-kit-16kb — Maven Central coordinate.
+- https://www.itpathsolutions.com/ffmpegkit-shutdown-what-to-do-next — ffmpeg-kit EOL context.
+- https://github.com/Rikorose/DeepFilterNet — DeepFilterNet 3.
+- https://github.com/KaleyraVideo/AndroidDeepFilterNet — Android JNI bindings.
+- https://noisereducerai.com/deepfilternet-ai-noise-reduction/ — DeepFilterNet 3 quality benchmarks.
+- https://nlnet.nl/project/RTranslator/ — RTranslator 3 NGI grant (MADLAD-400 + Bergamot pivot).
+- https://github.com/niedev/RTranslator — RTranslator Android source.
+- https://picovoice.ai/blog/open-source-translation/ — MADLAD-400 mobile deployability.
+- https://huggingface.co/onnx-community/whisper-large-v3-turbo — Whisper Turbo ONNX.
+- https://aihub.qualcomm.com/mobile/models/whisper_large_v3_turbo — Qualcomm AI Hub Turbo build.
+- https://onnxruntime.ai/blogs — ONNX Runtime + KleidiAI 2.6× Arm Android speedup.
+- https://github.com/gyroflow/gyroflow — Gyroflow project + Android app.
+- https://docs.gyroflow.xyz/app/getting-started/supported-cameras/mobile-phones — Gyroflow mobile camera support.
+- https://allenkuo.medium.com/building-a-high-performance-ai-frame-interpolation-pipeline-on-android-with-vulkan-ncnn-rife-8f279cef51cd — RIFE + NCNN + Vulkan zero-copy AHardwareBuffer pipeline (Snapdragon 8 Gen 3 benchmarks; 720p ~10 FPS, 1080p ~4 FPS).
+- https://github.com/nihui/rife-ncnn-vulkan — RIFE NCNN+Vulkan reference impl.
+- https://github.com/hzwer/Practical-RIFE — PracticalRIFE lite model variants for mobile.
+- https://flowith.io/blog/capcut-desktop-pro-2026-ai-auto-edit-define-short-form-video-2026/ — CapCut Desktop Pro 2026 AI Auto-Edit pipeline detail.
+- https://www.miracamp.com/learn/davinci-resolve/whats-new-all-new-features-explained — DaVinci Resolve 20 AI feature list (IntelliScript, SmartSwitch, Animated Subtitles).
+- https://filmora.wondershare.com/video-editor-review/davinci-resolve-editing-software.html — DaVinci 20 deep dive.
+- https://source.android.com/docs/whatsnew/android-16-release — Android 16 release notes (APV codec, Ultra HDR ISO 21496-1 v2).
+- https://www.sammobile.com/news/galaxy-s26-ultra-world-first-phone-apv-codec-support/ — First-device APV ingest.
+- https://lottiefiles.com/blog/lottie-animations/lottiefiles-or-rive — Lottie state machines (dotLottie).
+- https://unicornicons.com/learn/rive-vs-lottie — Rive vs Lottie 2026.
+- https://softvelum.com/larix/ — Larix Broadcaster protocol surface (RTMP/SRT/WebRTC/RIST/NDI).
+- https://play.google.com/store/apps/details?id=com.wmspanel.larix_broadcaster — Larix on Google Play.
+- https://www.pixazo.ai/blog/best-open-source-lip-sync-models — MuseTalk / LatentSync state of the art.
+- https://lipsync.com/blog/open-source-lip-sync — Lip-sync OSS comparison.
+- https://libplacebo.org/options/ — libplacebo HDR options.
+- https://github.com/haasn/libplacebo — libplacebo source.
+- https://carlosfelic.io/misc/mpv-hdr-guide-2026/ — 2026 HDR pipeline reference.
+- https://github.com/opencut-app/opencut — OpenCut (50.7k stars, Rust core).
+- https://github.com/devhyper/open-video-editor — Open Video Editor (only direct Android Compose+Media3 OSS competitor).
+- https://github.com/devhyper/open-video-editor/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement — competitor open enhancement list.
+- https://github.com/furudo-erika/awesome-capcut-alternatives — awesome-list crosswalk (still relevant; refreshed Round 6).
+- https://www.androidauthority.com/snapdragon-8-elite-gen-5-benchmarks-3600242/ — Snapdragon 8 Elite Gen 5 benchmarks (multicore performance + sustained throttle context for AI inference budgets).
+- https://www.androidcentral.com/phones/google-pixel/google-tensor-g5 — Tensor G5 TPU 60% uplift over G4 (Gemini Nano host).
+- https://developer.android.com/jetpack/androidx/releases/compose — Compose runtime + Material 3 release notes (drives R6.10 evaluation).
+- https://docs.gyroflow.xyz/app/getting-started/basic-usage/stabilization — Gyroflow stabilization parameter surface (drives R6.9 sidecar parser scope).
 
