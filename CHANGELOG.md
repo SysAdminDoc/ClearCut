@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **Multi-sequence export now carries NovaCut layer opacity into Media3.** `VideoEngine` builds per-input compositor layer metadata and applies it through `NovaCutVideoCompositorSettings`, so visible video/overlay tracks keep their track opacity in the real Media3 composition path.
+- **Blend fallback coverage now matches the 18-mode UI.** Hue, Saturation, Color, and Luminosity no longer fall through to Normal; the single-texture fallback now gives every exposed blend mode a distinct result while the roadmap keeps the true programmable dual-texture compositor gap explicit.
+- **Editor recovery, project autosave, publish metadata, template import, LUT import, and project naming paths were hardened.** The pass adds defensive caps and safer discard behavior around paths that can otherwise lose work, parse oversized data, or create brittle saved state.
+- **Project home, settings, template, media picker, and snackbar surfaces received a premium polish pass.** Reused shared chips, strengthened busy/empty/disabled/accessibility states, tightened rename validation, and improved card semantics.
+- **Verification** — `git diff --check` passed. Gradle tests could not run in this environment because no Java runtime or `JAVA_HOME` is installed.
+
 ## v3.74.9 — 2026-05-14 — Caption accessibility presets
 
 - **Caption Style Gallery now includes accessible presets.** A dedicated section adds WCAG-AA high-contrast, large-text, and reduced-motion caption looks instead of forcing readability work through decorative templates.

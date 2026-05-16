@@ -149,4 +149,55 @@ class TemplateCompatibilityEngineTest {
 
         assertEquals(metadata, restored)
     }
+
+    @Test
+    fun fromJson_blocksPathologicalFeatureLists() {
+        val json = JSONObject().apply {
+            put("schemaVersion", 1)
+            put("features", JSONArray().apply {
+                repeat(300) { index ->
+                    put(JSONObject().apply {
+                        put("type", "EFFECT")
+                        put("key", "CUSTOM_$index")
+                        put("displayName", "Custom $index")
+                        put("required", false)
+                    })
+                }
+            })
+        }
+
+        val metadata = TemplateCompatibilityEngine.fromJson(json)!!
+        val report = TemplateCompatibilityEngine.validate(metadata)
+
+        assertTrue(metadata.features.any {
+            it.type == TemplateFeatureType.UNKNOWN && it.key == "FEATURE_LIMIT_EXCEEDED"
+        })
+        assertFalse(report.canImport)
+        assertEquals(TemplateCompatibilityStatus.BLOCKED, report.status)
+    }
+
+    @Test
+    fun fromJson_boundsUntrustedMetadataText() {
+        val longText = "x".repeat(500)
+        val json = JSONObject().apply {
+            put("minAppVersionName", longText)
+            put("slotCount", Int.MAX_VALUE)
+            put("features", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("type", "EFFECT")
+                    put("key", longText)
+                    put("displayName", "Name\n$longText")
+                })
+            })
+        }
+
+        val metadata = TemplateCompatibilityEngine.fromJson(json)!!
+        val feature = metadata.features.single()
+
+        assertTrue(metadata.minVersionName.length <= 40)
+        assertEquals(100_000, metadata.slotCount)
+        assertTrue(feature.key.length <= 120)
+        assertTrue(feature.displayName.length <= 160)
+        assertFalse(feature.displayName.contains("\n"))
+    }
 }

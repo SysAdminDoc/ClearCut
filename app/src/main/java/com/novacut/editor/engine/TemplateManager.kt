@@ -51,6 +51,13 @@ enum class TemplateImportFailure {
 class TemplateManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
+    private companion object {
+        private const val MAX_TEMPLATE_ID_CHARS = 128
+        private const val MAX_TEMPLATE_NAME_CHARS = 80
+        private const val MAX_TEMPLATE_DESCRIPTION_CHARS = 2_000
+        private const val MAX_TEMPLATE_TRACK_TYPES = 16
+    }
+
     private val templateDir = File(context.filesDir, "templates")
     private val defaultTemplateTrackTypes = listOf(TrackType.VIDEO, TrackType.AUDIO)
     private val templateSchemaVersion = 1
@@ -97,7 +104,7 @@ class TemplateManager @Inject constructor(
 
         val template = UserTemplate(
             name = normalizeTemplateName(name),
-            description = description.trim(),
+            description = normalizeTemplateDescription(description),
             aspectRatio = project.aspectRatio,
             frameRate = project.frameRate,
             resolution = project.resolution,
@@ -283,7 +290,7 @@ class TemplateManager @Inject constructor(
         return TemplateParseResult.Success(UserTemplate(
             id = json.optString("id", fallbackId).ifBlank { fallbackId },
             name = normalizeTemplateName(json.optString("name", "Untitled Template")),
-            description = json.optString("description", "").trim(),
+            description = normalizeTemplateDescription(json.optString("description", "")),
             aspectRatio = parseAspectRatio(json.optString("aspectRatio", "RATIO_16_9")),
             frameRate = json.optInt("frameRate", 30).coerceIn(1, 240),
             resolution = parseResolution(json.optString("resolution", "FHD_1080P")),
@@ -356,13 +363,16 @@ class TemplateManager @Inject constructor(
         // Keep only filename-safe characters; everything else (slashes, dots, control chars,
         // unicode separators, reserved Windows characters) is dropped. The caller decides
         // what to do if the result differs from the input.
-        return value.filter { c -> c.isLetterOrDigit() || c == '_' || c == '-' }
+        return value.asSequence()
+            .filter { c -> c.isLetterOrDigit() || c == '_' || c == '-' }
+            .take(MAX_TEMPLATE_ID_CHARS)
+            .joinToString("")
     }
 
     private fun templateFileForId(id: String): File? {
         val sanitizedId = sanitizeFilenameSafe(id)
         if (sanitizedId.isEmpty() || sanitizedId != id) {
-            Log.w("TemplateManager", "Rejected unsafe template id: $id")
+            Log.w("TemplateManager", "Rejected unsafe template id")
             return null
         }
         return File(templateDir, "$sanitizedId.json")
@@ -371,19 +381,25 @@ class TemplateManager @Inject constructor(
     private fun ensureUniqueImportedName(name: String, existingNames: Set<String>): String {
         if (name.lowercase() !in existingNames) return name
 
-        val baseName = name.trim().ifBlank { "Untitled Template" }
-        var candidate = "$baseName (Imported)"
+        val baseName = normalizeTemplateName(name)
+        var candidate = importedNameCandidate(baseName, " (Imported)")
         var counter = 2
         while (candidate.lowercase() in existingNames) {
-            candidate = "$baseName (Imported $counter)"
+            candidate = importedNameCandidate(baseName, " (Imported $counter)")
             counter++
         }
         return candidate
     }
 
+    private fun importedNameCandidate(baseName: String, suffix: String): String {
+        val maxBaseChars = (MAX_TEMPLATE_NAME_CHARS - suffix.length).coerceAtLeast(1)
+        val boundedBase = baseName.take(maxBaseChars).trim().ifBlank { "Untitled Template".take(maxBaseChars) }
+        return "$boundedBase$suffix"
+    }
+
     private fun parseTrackTypes(jsonArray: JSONArray?, fallback: List<TrackType>): List<TrackType> {
         return jsonArray?.let { arr ->
-            (0 until arr.length()).mapNotNull { index ->
+            (0 until arr.length().coerceAtMost(MAX_TEMPLATE_TRACK_TYPES)).mapNotNull { index ->
                 try {
                     TrackType.valueOf(arr.getString(index))
                 } catch (_: Exception) {
@@ -410,7 +426,20 @@ class TemplateManager @Inject constructor(
     }
 
     private fun normalizeTemplateName(raw: String): String {
-        return raw.trim().ifBlank { "Untitled Template" }
+        return normalizeDisplayText(raw, fallback = "Untitled Template", maxChars = MAX_TEMPLATE_NAME_CHARS)
+    }
+
+    private fun normalizeTemplateDescription(raw: String): String {
+        return normalizeDisplayText(raw, fallback = "", maxChars = MAX_TEMPLATE_DESCRIPTION_CHARS)
+    }
+
+    private fun normalizeDisplayText(raw: String, fallback: String, maxChars: Int): String {
+        val normalized = raw
+            .map { char -> if (char.isISOControl()) ' ' else char }
+            .joinToString("")
+            .replace(Regex("""\s+"""), " ")
+            .trim()
+        return normalized.ifBlank { fallback }.take(maxChars).trim().ifBlank { fallback.take(maxChars) }
     }
 
     private sealed class TemplateParseResult {

@@ -1772,17 +1772,12 @@ fun EditorScreen(
             )
         }
 
-        // Recovery dialog — shown on editor open when auto-save data was restored.
-        // Modal (no back-press, no outside-tap dismissal) so the user must make
-        // an explicit choice. Previously `onDismissRequest` treated "tap outside"
-        // as "Keep recovered", which silently overrode users who meant to discard.
+        // Recovery dialog — informational only. Full timeline state is persisted
+        // through auto-save, so this dialog must not offer a destructive discard
+        // path unless a separate saved baseline exists.
         if (state.panels.isOpen(PanelId.RECOVERY_DIALOG)) {
             AlertDialog(
-                onDismissRequest = { /* forced choice — handled by the two buttons */ },
-                properties = androidx.compose.ui.window.DialogProperties(
-                    dismissOnBackPress = false,
-                    dismissOnClickOutside = false
-                ),
+                onDismissRequest = { viewModel.dismissRecoveryDialog(recover = true) },
                 icon = {
                     NovaCutDialogIcon(
                         icon = Icons.Default.Restore,
@@ -1808,14 +1803,6 @@ fun EditorScreen(
                         text = stringResource(R.string.recovery_keep),
                         onClick = { viewModel.dismissRecoveryDialog(recover = true) },
                         icon = Icons.Default.Check
-                    )
-                },
-                dismissButton = {
-                    NovaCutSecondaryButton(
-                        text = stringResource(R.string.recovery_discard),
-                        onClick = { viewModel.dismissRecoveryDialog(recover = false) },
-                        contentColor = Mocha.Red,
-                        icon = Icons.Default.Delete
                     )
                 },
                 containerColor = Mocha.PanelHighest,

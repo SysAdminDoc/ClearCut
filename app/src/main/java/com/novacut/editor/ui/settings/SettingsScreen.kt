@@ -35,6 +35,7 @@ import com.novacut.editor.model.*
 import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.NovaCutChromeIconButton
 import com.novacut.editor.ui.theme.NovaCutDialogIcon
+import com.novacut.editor.ui.theme.NovaCutFilterChip
 import com.novacut.editor.ui.theme.NovaCutHeroCard
 import com.novacut.editor.ui.theme.NovaCutMetricPill
 import com.novacut.editor.ui.theme.NovaCutPrimaryButton
@@ -224,22 +225,12 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 listOf(48, 64, 80, 96).forEach { height ->
-                    FilterChip(
+                    NovaCutFilterChip(
                         selected = settings.defaultTrackHeight == height,
                         onClick = { viewModel.setDefaultTrackHeight(height) },
-                        label = { Text("${height}dp", style = MaterialTheme.typography.labelMedium) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Mocha.Teal.copy(alpha = 0.18f),
-                            selectedLabelColor = Mocha.Teal,
-                            containerColor = Mocha.PanelHighest,
-                            labelColor = Mocha.Text
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(
-                            enabled = true,
-                            selected = settings.defaultTrackHeight == height,
-                            borderColor = Mocha.CardStroke,
-                            selectedBorderColor = Mocha.Teal.copy(alpha = 0.32f)
-                        )
+                        text = "${height}dp",
+                        accent = Mocha.Teal,
+                        icon = if (settings.defaultTrackHeight == height) Icons.Default.Check else null
                     )
                 }
             }
@@ -376,22 +367,12 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 listOf(64 to "64 MB", 128 to "128 MB", 256 to "256 MB").forEach { (size, label) ->
-                    FilterChip(
+                    NovaCutFilterChip(
                         selected = settings.thumbnailCacheSizeMb == size,
                         onClick = { viewModel.setThumbnailCacheSize(size) },
-                        label = { Text(label, style = MaterialTheme.typography.labelMedium) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Mocha.Peach.copy(alpha = 0.18f),
-                            selectedLabelColor = Mocha.Peach,
-                            containerColor = Mocha.PanelHighest,
-                            labelColor = Mocha.Text
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(
-                            enabled = true,
-                            selected = settings.thumbnailCacheSizeMb == size,
-                            borderColor = Mocha.CardStroke,
-                            selectedBorderColor = Mocha.Peach.copy(alpha = 0.32f)
-                        )
+                        text = label,
+                        accent = Mocha.Peach,
+                        icon = if (settings.thumbnailCacheSizeMb == size) Icons.Default.Check else null
                     )
                 }
             }
@@ -414,22 +395,12 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 qualityLabels.forEach { (key, label) ->
-                    FilterChip(
+                    NovaCutFilterChip(
                         selected = settings.defaultExportQuality == key,
                         onClick = { viewModel.setDefaultExportQuality(key) },
-                        label = { Text(label, style = MaterialTheme.typography.labelMedium) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Mocha.Yellow.copy(alpha = 0.18f),
-                            selectedLabelColor = Mocha.Yellow,
-                            containerColor = Mocha.PanelHighest,
-                            labelColor = Mocha.Text
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(
-                            enabled = true,
-                            selected = settings.defaultExportQuality == key,
-                            borderColor = Mocha.CardStroke,
-                            selectedBorderColor = Mocha.Yellow.copy(alpha = 0.32f)
-                        )
+                        text = label,
+                        accent = Mocha.Yellow,
+                        icon = if (settings.defaultExportQuality == key) Icons.Default.Check else null
                     )
                 }
             }
@@ -798,14 +769,26 @@ private fun SettingsAiModelRow(
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(Spacing.xs)
         ) {
-            SettingsStatusBadge(
-                text = stateLabel,
-                accent = when {
-                    canRemove -> Mocha.Green
-                    isBusy -> Mocha.Sapphire
-                    else -> Mocha.Overlay1
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (isBusy) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        color = accent,
+                        strokeWidth = 2.dp
+                    )
                 }
-            )
+                SettingsStatusBadge(
+                    text = stateLabel,
+                    accent = when {
+                        canRemove -> Mocha.Green
+                        isBusy -> Mocha.Sapphire
+                        else -> Mocha.Overlay1
+                    }
+                )
+            }
             NovaCutSecondaryButton(
                 text = actionLabel,
                 onClick = onAction,
@@ -939,6 +922,18 @@ private fun SettingsDropdown(
             options.forEachIndexed { idx, opt ->
                 DropdownMenuItem(
                     text = { Text(opt, style = MaterialTheme.typography.bodyMedium) },
+                    trailingIcon = if (opt == value) {
+                        {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = Mocha.Rosewater,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    } else {
+                        null
+                    },
                     onClick = { onSelected(idx); expanded = false }
                 )
             }
@@ -1139,11 +1134,13 @@ private fun SettingsSwitchTile(
         accent = accent,
         label = label,
         description = description,
-        onClick = { onChanged(!checked) }
+        onClick = { onChanged(!checked) },
+        role = Role.Switch,
+        semanticState = switchState
     ) {
         Switch(
             checked = checked,
-            onCheckedChange = onChanged,
+            onCheckedChange = null,
             modifier = Modifier.semantics {
                 contentDescription = label
                 stateDescription = switchState
@@ -1165,6 +1162,8 @@ private fun SettingsTile(
     label: String,
     description: String? = null,
     onClick: (() -> Unit)? = null,
+    role: Role = Role.Button,
+    semanticState: String? = null,
     trailing: @Composable RowScope.() -> Unit
 ) {
     Surface(
@@ -1176,7 +1175,14 @@ private fun SettingsTile(
             modifier = Modifier
                 .fillMaxWidth()
                 .defaultMinSize(minHeight = 72.dp)
-                .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
+                .then(if (onClick != null) Modifier.clickable(role = role, onClick = onClick) else Modifier)
+                .then(
+                    if (semanticState != null) {
+                        Modifier.semantics { stateDescription = semanticState }
+                    } else {
+                        Modifier
+                    }
+                )
                 .padding(horizontal = 14.dp, vertical = 14.dp),
             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
             verticalAlignment = Alignment.CenterVertically

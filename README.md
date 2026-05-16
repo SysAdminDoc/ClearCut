@@ -350,14 +350,15 @@ Key external dependencies currently in `build.gradle.kts`:
 | `READ_EXTERNAL_STORAGE` | Legacy media access (API < 33) |
 | `WRITE_EXTERNAL_STORAGE` | Save exports (API < 29) |
 | `RECORD_AUDIO` | Voiceover recording |
-| `CAMERA` | Video capture from camera |
 | `FOREGROUND_SERVICE` | Background export processing |
+| `FOREGROUND_SERVICE_MEDIA_PROCESSING` | Android 14+ foreground export classification |
 | `POST_NOTIFICATIONS` | Export progress notifications |
 | `INTERNET` | Model downloads (Whisper), cloud inpainting API |
+| `ACCESS_NETWORK_STATE` | Respect Wi-Fi-only model download settings |
 | `VIBRATE` | Haptic feedback |
 
 ## Known Limitations
-- Blend modes still use mid-gray as a virtual blend layer; the remaining work is a real dual-input blend shader path
+- Multi-sequence export now honors track opacity through Media3 compositor settings, and all 18 fallback blend modes render distinctly; true source-over-destination blend math still needs a custom programmable compositor because Media3's public settings only expose alpha/transform
 - `clip.isReversed` works in preview but not in export (Media3 Transformer has no reverse playback support)
 - SmartRenderEngine analysis results not used for actual export bypass
 - 11 AI/ML engine stubs awaiting dependency integration (see ROADMAP.md)

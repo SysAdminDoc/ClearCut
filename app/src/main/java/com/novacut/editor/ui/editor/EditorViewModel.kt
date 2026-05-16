@@ -84,6 +84,16 @@ private const val MIN_TIMELINE_ZOOM = 0.01f
 private const val MAX_TIMELINE_ZOOM = 10f
 private const val WAVEFORM_PRELOAD_PADDING_MS = 3_000L
 private const val WAVEFORM_FALLBACK_WINDOW_MS = 15_000L
+private const val RECOVERY_DIALOG_NEWER_THAN_PROJECT_MS = 5_000L
+
+internal fun shouldShowRecoveryDialog(
+    projectUpdatedAtMs: Long,
+    recoveryTimestampMs: Long,
+    hasRecoveredContent: Boolean
+): Boolean {
+    if (!hasRecoveredContent) return false
+    return recoveryTimestampMs > projectUpdatedAtMs + RECOVERY_DIALOG_NEWER_THAN_PROJECT_MS
+}
 
 enum class PanelId {
     MEDIA_PICKER, EXPORT_SHEET, EFFECTS, TEXT_EDITOR, TRANSITION_PICKER,
@@ -602,6 +612,11 @@ class EditorViewModel @Inject constructor(
                 val hadContent = recovery.tracks.any { it.clips.isNotEmpty() } ||
                     recovery.textOverlays.isNotEmpty() ||
                     recovery.imageOverlays.isNotEmpty()
+                val showRecoveryDialog = shouldShowRecoveryDialog(
+                    projectUpdatedAtMs = _state.value.project.updatedAt,
+                    recoveryTimestampMs = recovery.timestamp,
+                    hasRecoveredContent = hadContent
+                )
                 _state.update {
                     it.copy(
                         tracks = recovery.tracks.ifEmpty { it.tracks },
@@ -617,10 +632,10 @@ class EditorViewModel @Inject constructor(
                         totalDurationMs = recovery.tracks.maxOfOrNull { t ->
                             t.clips.maxOfOrNull { c -> c.timelineEndMs } ?: 0L
                         } ?: 0L,
-                        // Surface a dialog so the user knows auto-save recovered work — they can
-                        // either keep the recovered state (default, already applied) or ack and
-                        // discard the on-disk recovery file.
-                        panels = if (hadContent) it.panels.open(PanelId.RECOVERY_DIALOG) else it.panels
+                        // Surface a dialog only when the autosave is materially newer than
+                        // the project metadata. Auto-save is also the normal full-state
+                        // persistence path, so routine opens should stay quiet.
+                        panels = if (showRecoveryDialog) it.panels.open(PanelId.RECOVERY_DIALOG) else it.panels
                     )
                 }
                 _playheadMs.value = recovery.playheadMs
@@ -4027,16 +4042,7 @@ class EditorViewModel @Inject constructor(
     fun dismissRecoveryDialog(recover: Boolean) {
         _state.update { it.copy(panels = it.panels.close(PanelId.RECOVERY_DIALOG)) }
         if (!recover) {
-            viewModelScope.launch(Dispatchers.IO) {
-                val projectId = _state.value.project.id
-                if (projectId.isNotBlank()) {
-                    try {
-                        autoSave.clearRecoveryData(projectId)
-                    } catch (e: Exception) {
-                        Log.w("EditorViewModel", "Failed to discard recovery data", e)
-                    }
-                }
-            }
+            showToast("Autosaved project data was kept to avoid losing this edit.", ToastSeverity.Warning)
         }
     }
 

@@ -1,9 +1,7 @@
 package com.novacut.editor.ui.mediapicker
 
-import android.Manifest
 import android.net.Uri
 import android.os.Build
-import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -26,7 +24,6 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.novacut.editor.R
 import com.novacut.editor.engine.finalizePendingCameraCapture
@@ -259,17 +256,6 @@ fun MediaPickerSheet(
         cameraLauncher.launch(uri)
     }
 
-    val cameraPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            permissionMessage = null
-            startCameraCapture()
-        } else {
-            permissionMessage = context.getString(R.string.media_picker_camera_permission_required)
-        }
-    }
-
     // Clean up stale, unfinalized camera captures without touching imported media that
     // projects already depend on.
     LaunchedEffect(Unit) {
@@ -429,11 +415,7 @@ fun MediaPickerSheet(
                 text = stringResource(R.string.media_picker_record_video),
                 icon = Icons.Default.CameraAlt,
                 onClick = {
-                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-                        startCameraCapture()
-                    } else {
-                        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                    }
+                    startCameraCapture()
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -572,7 +554,9 @@ private fun MediaSourceActionCard(
     Card(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 76.dp),
         colors = CardDefaults.cardColors(
             containerColor = Mocha.PanelHighest
         ),

@@ -64,7 +64,8 @@ class VideoEngine @Inject constructor(
 
     private data class VisualTrackSequence(
         val sequence: EditedMediaItemSequence,
-        val hasEmbeddedAudio: Boolean
+        val hasEmbeddedAudio: Boolean,
+        val compositorLayer: NovaCutCompositorLayer
     )
 
     private var player: ExoPlayer? = null
@@ -399,6 +400,15 @@ class VideoEngine @Inject constructor(
                 lottieOverlays = lottieOverlays,
                 trackedObjects = trackedObjects
             )
+            val unsupportedTrackBlendModes = visualTrackSequences
+                .count { it.compositorLayer.blendMode != BlendMode.NORMAL }
+            if (unsupportedTrackBlendModes > 0) {
+                Log.w(
+                    TAG,
+                    "Export: $unsupportedTrackBlendModes track blend mode(s) render with normal alpha " +
+                        "because Media3's public compositor settings expose alpha/transform only"
+                )
+            }
 
             val audioSequences = buildAudioSequences(tracks, soloTrackIds)
             val allSequences = buildList {
@@ -415,8 +425,11 @@ class VideoEngine @Inject constructor(
                 allSequences,
                 audioSequences.isNotEmpty(),
                 hasEmbeddedVisualAudio,
+                targetWidth = targetW,
+                targetHeight = targetH,
                 hasMultipleVideoSequences = visualTrackSequences.size > 1,
-                preserveHdr = preserveHdr
+                preserveHdr = preserveHdr,
+                compositorLayers = visualTrackSequences.map { it.compositorLayer }
             )
 
             val mimeType = if (config.transparentBackground) {
@@ -454,7 +467,7 @@ class VideoEngine @Inject constructor(
         lottieOverlays: List<LottieOverlaySpec>,
         trackedObjects: List<TrackedObject>
     ): List<VisualTrackSequence> {
-        return visibleVideoTracks.map { track ->
+        return visibleVideoTracks.mapIndexed { inputId, track ->
             val includesEmbeddedAudio = track.clips.any { clip ->
                 clip.durationMs > 0L && hasAudioTrack(clip.sourceUri)
             }
@@ -478,7 +491,14 @@ class VideoEngine @Inject constructor(
                     lottieOverlays = lottieOverlays,
                     trackedObjects = trackedObjects
                 ),
-                hasEmbeddedAudio = hasEmbeddedAudio
+                hasEmbeddedAudio = hasEmbeddedAudio,
+                compositorLayer = NovaCutCompositorLayer(
+                    inputId = inputId,
+                    trackId = track.id,
+                    trackIndex = track.index,
+                    opacity = track.opacity,
+                    blendMode = track.blendMode
+                )
             )
         }
     }
@@ -997,11 +1017,23 @@ class VideoEngine @Inject constructor(
         sequences: List<EditedMediaItemSequence>,
         hasAudioTracks: Boolean,
         hasEmbeddedVisualAudio: Boolean,
+        targetWidth: Int,
+        targetHeight: Int,
         hasMultipleVideoSequences: Boolean = false,
-        preserveHdr: Boolean = false
+        preserveHdr: Boolean = false,
+        compositorLayers: List<NovaCutCompositorLayer> = emptyList()
     ): Composition {
         val builder = Composition.Builder(sequences)
             .setTransmuxAudio(!hasAudioTracks && hasEmbeddedVisualAudio && !hasMultipleVideoSequences)
+        if (hasMultipleVideoSequences) {
+            builder.setVideoCompositorSettings(
+                NovaCutVideoCompositorSettings(
+                    outputWidth = targetWidth,
+                    outputHeight = targetHeight,
+                    layers = compositorLayers
+                )
+            )
+        }
         if (preserveHdr) {
             // HDR_MODE_KEEP_HDR preserves HDR metadata through the pipeline
             // rather than tone-mapping to SDR. Honoured only when the source

@@ -20,6 +20,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
@@ -333,6 +335,12 @@ private fun UserTemplateCard(
     onDelete: () -> Unit,
     onShare: () -> Unit = {}
 ) {
+    val templateDescription = stringResource(
+        R.string.template_user_card_cd,
+        template.name,
+        template.aspectRatio.label
+    )
+
     Column(
         modifier = Modifier
             .height(176.dp)
@@ -340,6 +348,7 @@ private fun UserTemplateCard(
             .background(Mocha.PanelHighest)
             .border(1.dp, Mocha.CardStrokeStrong, RoundedCornerShape(Radius.xl))
             .clickable(role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = templateDescription }
     ) {
         Box(
             modifier = Modifier
@@ -402,22 +411,11 @@ private fun UserTemplateCard(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Text(
-                    template.aspectRatio.label,
-                    color = Mocha.Mauve,
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier
-                        .background(Mocha.Mauve.copy(alpha = 0.12f), RoundedCornerShape(10.dp))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                )
+                TemplateBadge(text = template.aspectRatio.label, accent = Mocha.Mauve)
                 if (template.compatibility.slotCount > 0) {
-                    Text(
-                        stringResource(R.string.template_slots_format, template.compatibility.slotCount),
-                        color = Mocha.Sapphire,
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier
-                            .background(Mocha.Sapphire.copy(alpha = 0.12f), RoundedCornerShape(10.dp))
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    TemplateBadge(
+                        text = stringResource(R.string.template_slots_format, template.compatibility.slotCount),
+                        accent = Mocha.Sapphire
                     )
                 }
             }
@@ -431,6 +429,15 @@ private fun ProjectTemplateCard(
     template: ProjectTemplateUI,
     onClick: () -> Unit
 ) {
+    val templateName = stringResource(template.nameResId)
+    val category = formatCategory(template.category)
+    val templateDescription = stringResource(
+        R.string.template_builtin_card_cd,
+        templateName,
+        category,
+        template.aspectRatio.label
+    )
+
     Column(
         modifier = Modifier
             .height(184.dp)
@@ -438,6 +445,7 @@ private fun ProjectTemplateCard(
             .background(Mocha.PanelHighest)
             .border(1.dp, Mocha.CardStrokeStrong, RoundedCornerShape(Radius.xl))
             .clickable(role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = templateDescription }
     ) {
         Box(
             modifier = Modifier
@@ -490,7 +498,7 @@ private fun ProjectTemplateCard(
         ) {
             Column {
                 Text(
-                    stringResource(template.nameResId),
+                    templateName,
                     color = Mocha.Text,
                     style = MaterialTheme.typography.titleMedium
                 )
@@ -507,32 +515,32 @@ private fun ProjectTemplateCard(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Text(
-                    formatCategory(template.category),
-                    color = template.accentColor,
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier
-                        .background(template.accentColor.copy(alpha = 0.1f), RoundedCornerShape(10.dp))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                )
-                Text(
-                    stringResource(template.suggestedDurationResId),
-                    color = Mocha.Subtext0,
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier
-                        .background(Mocha.Panel.copy(alpha = 0.7f), RoundedCornerShape(10.dp))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                )
-                Text(
-                    stringResource(R.string.template_tracks_format, template.tracks.size),
-                    color = Mocha.Subtext0,
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier
-                        .background(Mocha.Panel.copy(alpha = 0.7f), RoundedCornerShape(10.dp))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                )
+                TemplateBadge(text = category, accent = template.accentColor)
+                TemplateBadge(text = stringResource(template.suggestedDurationResId), accent = Mocha.Subtext0)
+                TemplateBadge(text = stringResource(R.string.template_tracks_format, template.tracks.size), accent = Mocha.Subtext0)
             }
         }
+    }
+}
+
+@Composable
+private fun TemplateBadge(
+    text: String,
+    accent: Color
+) {
+    Surface(
+        color = accent.copy(alpha = 0.10f),
+        shape = RoundedCornerShape(Radius.sm),
+        border = androidx.compose.foundation.BorderStroke(1.dp, accent.copy(alpha = 0.18f))
+    ) {
+        Text(
+            text = text,
+            color = accent,
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        )
     }
 }
 

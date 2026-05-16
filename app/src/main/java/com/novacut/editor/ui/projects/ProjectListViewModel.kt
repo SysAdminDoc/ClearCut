@@ -65,6 +65,9 @@ class ProjectListViewModel @Inject constructor(
     private val mediaImportEngine: MediaImportEngine,
     @ApplicationContext private val appContext: Context
 ) : ViewModel() {
+    private companion object {
+        private const val MAX_PROJECT_NAME_CHARS = 80
+    }
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -391,7 +394,7 @@ class ProjectListViewModel @Inject constructor(
 
     fun duplicateProject(project: Project) {
         val newId = UUID.randomUUID().toString()
-        val baseName = project.name.replace("""\s*\(Copy\s*\d*\)\s*$""".toRegex(), "").trim()
+        val baseName = normalizeProjectName(project.name.replace("""\s*\(Copy\s*\d*\)\s*$""".toRegex(), ""))
         viewModelScope.launch {
             val operation = beginOperation(
                 title = appContext.getString(R.string.projects_operation_duplicate_title),
@@ -406,10 +409,10 @@ class ProjectListViewModel @Inject constructor(
                         // closes a race where two near-simultaneous duplicate taps could
                         // mint the same "(Copy)" name before either insertion settles.
                         val existingNames = projectDao.getAllProjectsSnapshot().map { it.name }.toSet()
-                        var copyName = "$baseName (Copy)"
+                        var copyName = projectCopyName(baseName, " (Copy)")
                         var counter = 2
                         while (copyName in existingNames) {
-                            copyName = "$baseName (Copy $counter)"
+                            copyName = projectCopyName(baseName, " (Copy $counter)")
                             counter++
                         }
                         val newProject = project.copy(
@@ -557,7 +560,21 @@ class ProjectListViewModel @Inject constructor(
     }
 
     private fun normalizeProjectName(raw: String): String {
-        return raw.trim().ifBlank { "Untitled" }
+        val normalized = raw
+            .map { char -> if (char.isISOControl()) ' ' else char }
+            .joinToString("")
+            .replace(Regex("""\s+"""), " ")
+            .trim()
+        return normalized.ifBlank { "Untitled" }
+            .take(MAX_PROJECT_NAME_CHARS)
+            .trim()
+            .ifBlank { "Untitled" }
+    }
+
+    private fun projectCopyName(baseName: String, suffix: String): String {
+        val maxBaseChars = (MAX_PROJECT_NAME_CHARS - suffix.length).coerceAtLeast(1)
+        val boundedBase = baseName.take(maxBaseChars).trim().ifBlank { "Untitled".take(maxBaseChars) }
+        return "$boundedBase$suffix"
     }
 
     private fun beginOperation(title: String, description: String): ProjectListOperationState {

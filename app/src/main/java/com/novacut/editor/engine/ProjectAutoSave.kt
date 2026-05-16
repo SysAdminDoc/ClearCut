@@ -16,6 +16,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val TAG = "ProjectAutoSave"
+private const val MAX_AUTOSAVE_FILE_BYTES = 25_000_000L
 
 @Singleton
 class ProjectAutoSave @Inject constructor(
@@ -88,7 +89,7 @@ class ProjectAutoSave @Inject constructor(
             }
             if (!file.exists()) return@withLock null
             try {
-                AutoSaveState.deserialize(file.readText(Charsets.UTF_8)).also {
+                AutoSaveState.deserialize(readAutoSaveText(file)).also {
                     backupFile.delete()
                 }
             } catch (e: Exception) {
@@ -98,7 +99,7 @@ class ProjectAutoSave @Inject constructor(
                 }
                 try {
                     Log.w(TAG, "Primary auto-save is corrupt; attempting backup restore for $projectId")
-                    AutoSaveState.deserialize(backupFile.readText(Charsets.UTF_8)).also {
+                    AutoSaveState.deserialize(readAutoSaveText(backupFile)).also {
                         moveFileReplacing(backupFile, file)
                     }
                 } catch (backupError: Exception) {
@@ -139,7 +140,7 @@ class ProjectAutoSave @Inject constructor(
             autoSaveDir.listFiles { f -> f.isFile && f.name.endsWith(".json") }
                 ?.forEach { file ->
                     try {
-                        val text = file.readText(Charsets.UTF_8)
+                        val text = readAutoSaveText(file)
                         sourceUriRegex.findAll(text).forEach { match ->
                             uris += match.groupValues[1]
                         }
@@ -163,7 +164,7 @@ class ProjectAutoSave @Inject constructor(
                     Log.w(TAG, "No auto-save found to copy for $fromProjectId")
                     return@withLock false
                 }
-                val json = JSONObject(fromFile.readText(Charsets.UTF_8))
+                val json = JSONObject(readAutoSaveText(fromFile))
                 json.put("projectId", toProjectId)
                 json.put("timestamp", System.currentTimeMillis())
                 writeAutoSaveFileLocked(toProjectId, json.toString(2))
@@ -232,6 +233,15 @@ class ProjectAutoSave @Inject constructor(
 
     private fun getBackupFile(projectId: String): File {
         return File(autoSaveDir, "${autoSaveFileStem(projectId)}.bak")
+    }
+
+    private fun readAutoSaveText(file: File): String {
+        if (file.length() > MAX_AUTOSAVE_FILE_BYTES) {
+            throw java.io.IOException("Auto-save file exceeds $MAX_AUTOSAVE_FILE_BYTES byte limit")
+        }
+        return file.inputStream().use { input ->
+            readUtf8WithByteLimit(input, MAX_AUTOSAVE_FILE_BYTES)
+        }
     }
 }
 
@@ -396,11 +406,46 @@ data class AutoSaveState(
     companion object {
         const val FORMAT_VERSION = 1
         private const val MAX_TRANSCRIPT_WORDS = 20_000
+        private const val MAX_TRACKS = 64
+        private const val MAX_CLIPS_PER_TRACK = 2_000
+        private const val MAX_AUDIO_EFFECTS_PER_SCOPE = 128
+        private const val MAX_COMPOUND_CLIP_DEPTH = 8
+        private const val MAX_COMPOUND_CLIPS_PER_CLIP = 256
+        private const val MAX_CLIP_EFFECTS = 256
+        private const val MAX_EFFECT_PARAMS = 256
+        private const val MAX_KEYFRAMES_PER_SCOPE = 2_000
+        private const val MAX_MASKS_PER_CLIP = 256
+        private const val MAX_MASK_POINTS = 512
+        private const val MAX_CAPTIONS_PER_CLIP = 5_000
+        private const val MAX_CAPTION_WORDS = 512
+        private const val MAX_MOTION_TRACK_POINTS = 10_000
+        private const val MAX_PROJECT_MARKERS = 5_000
+        private const val MAX_IMAGE_OVERLAYS = 2_000
+        private const val MAX_DRAWING_PATHS = 2_000
+        private const val MAX_DRAWING_POINTS_PER_PATH = 4_096
+        private const val MAX_BEAT_MARKERS = 20_000
+        private const val MAX_TRACKED_OBJECTS = 1_000
+        private const val MAX_TRACKED_OBJECT_KEYFRAMES = 10_000
+        private const val MAX_TEXT_OVERLAYS = 5_000
+        private const val MAX_TEXT_VALUE_CHARS = 4_000
+        private const val MAX_SHORT_TEXT_CHARS = 256
+        private const val MAX_NOTES_CHARS = 2_000
+        private const val MAX_CURVE_POINTS = 256
 
         // Safe enum valueOf with fallback — prevents crashes from stale/unknown enum values
         private inline fun <reified T : Enum<T>> safeValueOf(name: String, default: T): T {
             return try { enumValueOf<T>(name) } catch (_: IllegalArgumentException) { default }
         }
+
+        private fun cappedArrayLength(arr: JSONArray, max: Int, label: String): Int {
+            if (arr.length() > max) {
+                Log.w(TAG, "Auto-save contains ${arr.length()} $label; loading first $max")
+            }
+            return arr.length().coerceAtMost(max)
+        }
+
+        private fun boundedText(raw: String, maxChars: Int): String =
+            raw.take(maxChars)
 
         private fun JSONObject.putSafeFloat(
             name: String,
@@ -431,17 +476,17 @@ data class AutoSaveState(
                 })
             }
             val chaptersArr = json.optJSONArray("chapterMarkers") ?: JSONArray()
-            val chapters = (0 until chaptersArr.length()).mapNotNull { i ->
+            val chapters = (0 until cappedArrayLength(chaptersArr, MAX_PROJECT_MARKERS, "chapter markers")).mapNotNull { i ->
                 try {
                     val ch = chaptersArr.getJSONObject(i)
                     ChapterMarker(
                         timeMs = ch.optLong("timeMs", 0L),
-                        title = ch.optString("title", "")
+                        title = boundedText(ch.optString("title", ""), MAX_SHORT_TEXT_CHARS)
                     )
                 } catch (e: Exception) { Log.w(TAG, "Failed to deserialize chapter marker $i", e); null }
             }
             val imageOverlaysArr = json.optJSONArray("imageOverlays") ?: JSONArray()
-            val imageOverlays = (0 until imageOverlaysArr.length()).mapNotNull { i ->
+            val imageOverlays = (0 until cappedArrayLength(imageOverlaysArr, MAX_IMAGE_OVERLAYS, "image overlays")).mapNotNull { i ->
                 try {
                     val io = imageOverlaysArr.getJSONObject(i)
                     val srcUri = io.optString("sourceUri", "")
@@ -471,27 +516,27 @@ data class AutoSaveState(
                 } catch (e: Exception) { Log.w(TAG, "Failed to deserialize image overlay $i", e); null }
             }
             val timelineMarkersArr = json.optJSONArray("timelineMarkers") ?: JSONArray()
-            val timelineMarkers = (0 until timelineMarkersArr.length()).mapNotNull { i ->
+            val timelineMarkers = (0 until cappedArrayLength(timelineMarkersArr, MAX_PROJECT_MARKERS, "timeline markers")).mapNotNull { i ->
                 try {
                     val m = timelineMarkersArr.getJSONObject(i)
                     TimelineMarker(
                         id = m.optString("id", java.util.UUID.randomUUID().toString()),
                         timeMs = m.optLong("timeMs", 0L),
-                        label = m.optString("label", ""),
+                        label = boundedText(m.optString("label", ""), MAX_SHORT_TEXT_CHARS),
                         color = safeValueOf(m.optString("color", "BLUE"), MarkerColor.BLUE),
-                        notes = m.optString("notes", "")
+                        notes = boundedText(m.optString("notes", ""), MAX_NOTES_CHARS)
                     )
                 } catch (e: Exception) { Log.w(TAG, "Failed to deserialize timeline marker $i", e); null }
             }
             val drawingPathsArr = json.optJSONArray("drawingPaths") ?: JSONArray()
-            val drawingPaths = (0 until drawingPathsArr.length()).mapNotNull { i ->
+            val drawingPaths = (0 until cappedArrayLength(drawingPathsArr, MAX_DRAWING_PATHS, "drawing paths")).mapNotNull { i ->
                 try {
                     val dp = drawingPathsArr.getJSONObject(i)
                     val pointsArr = dp.optJSONArray("points") ?: return@mapNotNull null
                     // Drop NaN/Infinity coordinates — Compose Canvas drawPath silently breaks
                     // rendering for the whole layer when a single segment contains a
                     // non-finite coord, dropping every subsequent drawing on the overlay.
-                    val points = (0 until pointsArr.length()).mapNotNull { j ->
+                    val points = (0 until cappedArrayLength(pointsArr, MAX_DRAWING_POINTS_PER_PATH, "drawing points")).mapNotNull { j ->
                         val pt = pointsArr.getJSONObject(j)
                         val x = pt.optDouble("x", Double.NaN).toFloat()
                         val y = pt.optDouble("y", Double.NaN).toFloat()
@@ -507,7 +552,7 @@ data class AutoSaveState(
                 } catch (e: Exception) { Log.w(TAG, "Failed to deserialize drawing path $i", e); null }
             }
             val beatMarkersArr = json.optJSONArray("beatMarkers") ?: JSONArray()
-            val beatMarkers = (0 until beatMarkersArr.length()).mapNotNull { i ->
+            val beatMarkers = (0 until cappedArrayLength(beatMarkersArr, MAX_BEAT_MARKERS, "beat markers")).mapNotNull { i ->
                 try { beatMarkersArr.getLong(i) }
                 catch (e: Exception) { Log.w(TAG, "Failed to deserialize beat marker $i", e); null }
             }
@@ -546,7 +591,7 @@ data class AutoSaveState(
                 } catch (e: Exception) { Log.w(TAG, "Failed to deserialize transcript", e); null }
             }
             val trackedObjectsArr = json.optJSONArray("trackedObjects") ?: JSONArray()
-            val trackedObjects = (0 until trackedObjectsArr.length()).mapNotNull { i ->
+            val trackedObjects = (0 until cappedArrayLength(trackedObjectsArr, MAX_TRACKED_OBJECTS, "tracked objects")).mapNotNull { i ->
                 try {
                     val obj = trackedObjectsArr.optJSONObject(i) ?: return@mapNotNull null
                     val label = obj.optString("label", "").trim().take(64)
@@ -554,7 +599,7 @@ data class AutoSaveState(
                     val sourceClipId = obj.optString("sourceClipId", "")
                     if (sourceClipId.isBlank()) return@mapNotNull null
                     val keyframesArr = obj.optJSONArray("keyframes") ?: JSONArray()
-                    val keyframes = (0 until keyframesArr.length()).mapNotNull { ki ->
+                    val keyframes = (0 until cappedArrayLength(keyframesArr, MAX_TRACKED_OBJECT_KEYFRAMES, "tracked-object keyframes")).mapNotNull { ki ->
                         try {
                             val kf = keyframesArr.optJSONObject(ki) ?: return@mapNotNull null
                             // Coerce normalised coords into [0, 1] / (0, 1] BEFORE constructing
@@ -568,7 +613,7 @@ data class AutoSaveState(
                             }
                             val maskArr = kf.optJSONArray("maskPolygon")
                             val polygon = if (maskArr != null) {
-                                (0 until maskArr.length()).mapNotNull { pi ->
+                                (0 until cappedArrayLength(maskArr, MAX_MASK_POINTS, "tracked-object mask points")).mapNotNull { pi ->
                                     val pt = maskArr.optJSONObject(pi) ?: return@mapNotNull null
                                     val x = pt.optDouble("x", Double.NaN).toFloat()
                                     val y = pt.optDouble("y", Double.NaN).toFloat()
@@ -1037,7 +1082,10 @@ data class AutoSaveState(
         // --- Deserialization ---
 
         private fun deserializeTracks(arr: JSONArray): List<Track> {
-            return (0 until arr.length()).mapNotNull { i ->
+            if (arr.length() > MAX_TRACKS) {
+                Log.w(TAG, "Auto-save contains ${arr.length()} tracks; loading first $MAX_TRACKS")
+            }
+            return (0 until arr.length().coerceAtMost(MAX_TRACKS)).mapNotNull { i ->
                 try {
                     deserializeTrack(arr.getJSONObject(i))
                 } catch (e: Exception) {
@@ -1050,6 +1098,9 @@ data class AutoSaveState(
         private fun deserializeTrack(json: JSONObject): Track {
             val clipsArr = json.optJSONArray("clips") ?: JSONArray()
             val audioFxArr = json.optJSONArray("audioEffects") ?: JSONArray()
+            if (clipsArr.length() > MAX_CLIPS_PER_TRACK) {
+                Log.w(TAG, "Track ${json.optString("id", "?")} has ${clipsArr.length()} clips; loading first $MAX_CLIPS_PER_TRACK")
+            }
             return Track(
                 id = json.optString("id", java.util.UUID.randomUUID().toString()),
                 type = safeValueOf(json.optString("type", "VIDEO"), TrackType.VIDEO),
@@ -1066,18 +1117,22 @@ data class AutoSaveState(
                 showWaveform = json.optBoolean("showWaveform", true),
                 trackHeight = json.optInt("trackHeight", 64).coerceIn(32, 240),
                 isCollapsed = json.optBoolean("isCollapsed", false),
-                clips = (0 until clipsArr.length()).mapNotNull { i ->
+                clips = (0 until clipsArr.length().coerceAtMost(MAX_CLIPS_PER_TRACK)).mapNotNull { i ->
                     try { deserializeClip(clipsArr.getJSONObject(i)) } catch (e: Exception) {
                         Log.w(TAG, "Failed to deserialize clip $i", e); null
                     }
                 },
-                audioEffects = (0 until audioFxArr.length()).mapNotNull { i ->
+                audioEffects = (0 until audioFxArr.length().coerceAtMost(MAX_AUDIO_EFFECTS_PER_SCOPE)).mapNotNull { i ->
                     try { deserializeAudioEffect(audioFxArr.getJSONObject(i)) } catch (e: Exception) { Log.w(TAG, "Failed to deserialize track audio effect $i", e); null }
                 }
             )
         }
 
-        private fun deserializeClip(json: JSONObject): Clip? {
+        private fun deserializeClip(json: JSONObject, depth: Int = 0): Clip? {
+            if (depth > MAX_COMPOUND_CLIP_DEPTH) {
+                Log.w(TAG, "Skipping compound clip beyond depth $MAX_COMPOUND_CLIP_DEPTH")
+                return null
+            }
             val effectsArr = json.optJSONArray("effects") ?: JSONArray()
             val keyframesArr = json.optJSONArray("keyframes") ?: JSONArray()
             val masksArr = json.optJSONArray("masks") ?: JSONArray()
@@ -1135,20 +1190,26 @@ data class AutoSaveState(
                 blendMode = safeValueOf(json.optString("blendMode", "NORMAL"), BlendMode.NORMAL),
                 isCompound = json.optBoolean("isCompound", false),
                 compoundClips = json.optJSONArray("compoundClips")?.let { arr ->
-                    (0 until arr.length()).mapNotNull { i ->
-                        try { deserializeClip(arr.getJSONObject(i)) } catch (e: Exception) { Log.w(TAG, "Failed to deserialize compound clip $i", e); null }
+                    if (depth >= MAX_COMPOUND_CLIP_DEPTH) {
+                        if (arr.length() > 0) {
+                            Log.w(TAG, "Dropping nested compound clips at max depth $MAX_COMPOUND_CLIP_DEPTH")
+                        }
+                        return@let emptyList()
+                    }
+                    (0 until cappedArrayLength(arr, MAX_COMPOUND_CLIPS_PER_CLIP, "compound clips")).mapNotNull { i ->
+                        try { deserializeClip(arr.getJSONObject(i), depth + 1) } catch (e: Exception) { Log.w(TAG, "Failed to deserialize compound clip $i", e); null }
                     }
                 } ?: emptyList(),
                 linkedClipId = json.optString("linkedClipId", "").takeIf { it.isNotEmpty() },
                 groupId = json.optString("groupId", "").takeIf { it.isNotEmpty() },
                 clipLabel = safeValueOf(json.optString("clipLabel", "NONE"), ClipLabel.NONE),
                 sourceColorMetadata = deserializeSourceColorMetadata(json.optJSONObject("sourceColorMetadata")),
-                effects = (0 until effectsArr.length()).mapNotNull { i ->
+                effects = (0 until cappedArrayLength(effectsArr, MAX_CLIP_EFFECTS, "clip effects")).mapNotNull { i ->
                     try { deserializeEffect(effectsArr.getJSONObject(i)) } catch (e: Exception) {
                         Log.w(TAG, "Failed to deserialize effect $i", e); null
                     }
                 },
-                keyframes = (0 until keyframesArr.length()).mapNotNull { i ->
+                keyframes = (0 until cappedArrayLength(keyframesArr, MAX_KEYFRAMES_PER_SCOPE, "clip keyframes")).mapNotNull { i ->
                     try { deserializeKeyframe(keyframesArr.getJSONObject(i)) } catch (e: Exception) {
                         Log.w(TAG, "Failed to deserialize keyframe $i", e); null
                     }
@@ -1156,13 +1217,13 @@ data class AutoSaveState(
                 transition = json.optJSONObject("transition")?.let { deserializeTransition(it) },
                 colorGrade = json.optJSONObject("colorGrade")?.let { deserializeColorGrade(it) },
                 speedCurve = json.optJSONObject("speedCurve")?.let { deserializeSpeedCurve(it) },
-                masks = (0 until masksArr.length()).mapNotNull { i ->
+                masks = (0 until cappedArrayLength(masksArr, MAX_MASKS_PER_CLIP, "clip masks")).mapNotNull { i ->
                     try { deserializeMask(masksArr.getJSONObject(i)) } catch (e: Exception) { Log.w(TAG, "Failed to deserialize mask $i", e); null }
                 },
-                audioEffects = (0 until audioFxArr.length()).mapNotNull { i ->
+                audioEffects = (0 until cappedArrayLength(audioFxArr, MAX_AUDIO_EFFECTS_PER_SCOPE, "clip audio effects")).mapNotNull { i ->
                     try { deserializeAudioEffect(audioFxArr.getJSONObject(i)) } catch (e: Exception) { Log.w(TAG, "Failed to deserialize clip audio effect $i", e); null }
                 },
-                captions = (0 until captionsArr.length()).mapNotNull { i ->
+                captions = (0 until cappedArrayLength(captionsArr, MAX_CAPTIONS_PER_CLIP, "clip captions")).mapNotNull { i ->
                     try { deserializeCaption(captionsArr.getJSONObject(i)) } catch (e: Exception) { Log.w(TAG, "Failed to deserialize caption $i", e); null }
                 },
                 proxyUri = proxyUri,
@@ -1170,7 +1231,7 @@ data class AutoSaveState(
                     val tpArr = mtd.optJSONArray("trackPoints") ?: JSONArray()
                     MotionTrackingData(
                         id = mtd.optString("id", java.util.UUID.randomUUID().toString()),
-                        trackPoints = (0 until tpArr.length()).mapNotNull { i ->
+                        trackPoints = (0 until cappedArrayLength(tpArr, MAX_MOTION_TRACK_POINTS, "motion track points")).mapNotNull { i ->
                             try {
                                 val tp = tpArr.getJSONObject(i)
                                 MotionTrackPoint(
@@ -1211,8 +1272,12 @@ data class AutoSaveState(
         private fun deserializeEffect(json: JSONObject): Effect {
             val paramsJson = json.optJSONObject("params")
             val params = buildMap {
-                paramsJson?.keys()?.forEach { key ->
-                    put(key, safeFloat(paramsJson.optDouble(key, 0.0), 0f))
+                val keys = paramsJson?.keys()
+                var count = 0
+                while (keys != null && keys.hasNext() && count < MAX_EFFECT_PARAMS) {
+                    val key = keys.next()
+                    put(boundedText(key, MAX_SHORT_TEXT_CHARS), safeFloat(paramsJson.optDouble(key, 0.0), 0f))
+                    count++
                 }
             }
             val effectKfArr = json.optJSONArray("keyframes") ?: JSONArray()
@@ -1221,7 +1286,7 @@ data class AutoSaveState(
                 type = safeValueOf(json.optString("type", "BRIGHTNESS"), EffectType.BRIGHTNESS),
                 enabled = json.optBoolean("enabled", true),
                 params = params,
-                keyframes = (0 until effectKfArr.length()).mapNotNull { i ->
+                keyframes = (0 until cappedArrayLength(effectKfArr, MAX_KEYFRAMES_PER_SCOPE, "effect keyframes")).mapNotNull { i ->
                     try { deserializeEffectKeyframe(effectKfArr.getJSONObject(i)) } catch (e: Exception) { Log.w(TAG, "Failed to deserialize effect keyframe $i", e); null }
                 }.distinctBy { Pair(it.timeOffsetMs, it.paramName) },
                 targetTrackedObjectId = json.optString("targetTrackedObjectId", "")
@@ -1304,7 +1369,7 @@ data class AutoSaveState(
 
         private fun deserializeCurvePoints(arr: JSONArray?): List<CurvePoint>? {
             if (arr == null || arr.length() == 0) return null
-            return (0 until arr.length()).mapNotNull { i ->
+            return (0 until cappedArrayLength(arr, MAX_CURVE_POINTS, "curve points")).mapNotNull { i ->
                 try {
                     val pt = arr.getJSONObject(i)
                     val rawX = pt.optDouble("x", 0.0).toFloat()
@@ -1330,7 +1395,7 @@ data class AutoSaveState(
             // Corrupted control points (speed<=0, position outside [0,1], NaN handles) feed
             // directly into the harmonic-mean duration math and the bezier evaluator — clamp
             // at the edge so downstream callers can trust the data.
-            val points = (0 until pointsArr.length()).mapNotNull { i ->
+            val points = (0 until cappedArrayLength(pointsArr, MAX_CURVE_POINTS, "speed-curve points")).mapNotNull { i ->
                 try {
                     val pt = pointsArr.getJSONObject(i)
                     val rawSpeed = pt.optDouble("speed", 1.0).toFloat()
@@ -1365,17 +1430,17 @@ data class AutoSaveState(
                 inverted = json.optBoolean("inverted", false),
                 expansion = safeFloat(json.optDouble("expansion", 0.0), 0f),
                 trackToMotion = json.optBoolean("trackToMotion", false),
-                points = (0 until pointsArr.length()).map { i ->
+                points = (0 until cappedArrayLength(pointsArr, MAX_MASK_POINTS, "mask points")).map { i ->
                     deserializeMaskPoint(pointsArr.getJSONObject(i))
                 },
                 keyframes = json.optJSONArray("keyframes")?.let { kfArr ->
-                    (0 until kfArr.length()).mapNotNull { i ->
+                    (0 until cappedArrayLength(kfArr, MAX_KEYFRAMES_PER_SCOPE, "mask keyframes")).mapNotNull { i ->
                         try {
                             val mkf = kfArr.getJSONObject(i)
                             val mkfPointsArr = mkf.optJSONArray("points") ?: JSONArray()
                             MaskKeyframe(
                                 timeOffsetMs = mkf.optLong("timeOffsetMs", 0L),
-                                points = (0 until mkfPointsArr.length()).map { j ->
+                                points = (0 until cappedArrayLength(mkfPointsArr, MAX_MASK_POINTS, "mask keyframe points")).map { j ->
                                     deserializeMaskPoint(mkfPointsArr.getJSONObject(j))
                                 },
                                 easing = safeValueOf(mkf.optString("easing", "LINEAR"), Easing.LINEAR)
@@ -1402,8 +1467,12 @@ data class AutoSaveState(
         private fun deserializeAudioEffect(json: JSONObject): AudioEffect {
             val paramsJson = json.optJSONObject("params")
             val params = buildMap {
-                paramsJson?.keys()?.forEach { key ->
-                    put(key, safeFloat(paramsJson.optDouble(key, 0.0), 0f))
+                val keys = paramsJson?.keys()
+                var count = 0
+                while (keys != null && keys.hasNext() && count < MAX_EFFECT_PARAMS) {
+                    val key = keys.next()
+                    put(boundedText(key, MAX_SHORT_TEXT_CHARS), safeFloat(paramsJson.optDouble(key, 0.0), 0f))
+                    count++
                 }
             }
             return AudioEffect(
@@ -1427,14 +1496,14 @@ data class AutoSaveState(
             val safePositionY = safeFloat(json.optDouble("positionY", 0.85), 0.85f).coerceIn(0f, 1f)
             return Caption(
                 id = json.optString("id", java.util.UUID.randomUUID().toString()),
-                text = json.optString("text", ""),
+                text = boundedText(json.optString("text", ""), MAX_TEXT_VALUE_CHARS),
                 startTimeMs = rawStart,
                 endTimeMs = endTimeMs,
                 style = CaptionStyle(
                     type = safeValueOf(json.optString("styleType", "SUBTITLE_BAR"), CaptionStyleType.SUBTITLE_BAR),
                     fontSize = safeFontSize,
                     positionY = safePositionY,
-                    fontFamily = json.optString("fontFamily", "sans-serif-medium"),
+                    fontFamily = boundedText(json.optString("fontFamily", "sans-serif-medium"), MAX_SHORT_TEXT_CHARS),
                     color = json.optLong("color", 0xFFFFFFFFL),
                     backgroundColor = json.optLong("backgroundColor", 0xCC000000L),
                     highlightColor = json.optLong("highlightColor", 0xFFFFD700L),
@@ -1443,13 +1512,13 @@ data class AutoSaveState(
                     outlineWidth = safeFloat(json.optDouble("outlineWidth", 2.0), 2f).coerceAtLeast(0f),
                     shadow = json.optBoolean("shadow", false)
                 ),
-                words = (0 until wordsArr.length()).mapNotNull { i ->
+                words = (0 until cappedArrayLength(wordsArr, MAX_CAPTION_WORDS, "caption words")).mapNotNull { i ->
                     val w = wordsArr.getJSONObject(i)
                     val wStart = w.optLong("startTimeMs", rawStart).coerceIn(rawStart, endTimeMs)
                     val wEnd = w.optLong("endTimeMs", wStart).coerceAtLeast(wStart)
                     if (wStart >= endTimeMs) return@mapNotNull null
                     CaptionWord(
-                        text = w.optString("text", ""),
+                        text = boundedText(w.optString("text", ""), MAX_SHORT_TEXT_CHARS),
                         startTimeMs = wStart,
                         endTimeMs = wEnd.coerceAtMost(endTimeMs),
                         confidence = safeFloat(w.optDouble("confidence", 1.0), 1f).coerceIn(0f, 1f)
@@ -1466,7 +1535,7 @@ data class AutoSaveState(
         }
 
         private fun deserializeTextOverlays(arr: JSONArray): List<TextOverlay> {
-            return (0 until arr.length()).mapNotNull { i ->
+            return (0 until cappedArrayLength(arr, MAX_TEXT_OVERLAYS, "text overlays")).mapNotNull { i ->
                 try { deserializeTextOverlay(arr.getJSONObject(i)) } catch (e: Exception) {
                     Log.w(TAG, "Failed to deserialize text overlay $i", e); null
                 }
@@ -1474,7 +1543,7 @@ data class AutoSaveState(
         }
 
         private fun deserializeTextOverlay(json: JSONObject): TextOverlay? {
-            val text = json.optString("text", "")
+            val text = boundedText(json.optString("text", ""), MAX_TEXT_VALUE_CHARS)
             if (text.isEmpty()) return null // TextOverlay requires non-empty text
             val startMs = json.optLong("startTimeMs", 0L).coerceAtLeast(0L)
             val rawEndMs = json.optLong("endTimeMs", startMs + 3000L)
@@ -1486,7 +1555,7 @@ data class AutoSaveState(
             return TextOverlay(
                 id = json.optString("id", java.util.UUID.randomUUID().toString()),
                 text = text,
-                fontFamily = json.optString("fontFamily", "sans-serif"),
+                fontFamily = boundedText(json.optString("fontFamily", "sans-serif"), MAX_SHORT_TEXT_CHARS),
                 fontSize = safeFloat(json.optDouble("fontSize", 48.0), 48f).coerceIn(1f, 512f),
                 color = json.optLong("color", 0xFFFFFFFF),
                 backgroundColor = json.optLong("backgroundColor", 0x00000000),
@@ -1516,15 +1585,15 @@ data class AutoSaveState(
                     val tpPointsArr = tp.optJSONArray("points") ?: JSONArray()
                     TextPath(
                         type = safeValueOf(tp.optString("type", "STRAIGHT"), TextPathType.STRAIGHT),
-                        points = (0 until tpPointsArr.length()).map { i ->
+                        points = (0 until cappedArrayLength(tpPointsArr, MAX_MASK_POINTS, "text-path points")).map { i ->
                             deserializeMaskPoint(tpPointsArr.getJSONObject(i))
                         },
                         progress = safeFloat(tp.optDouble("progress", 1.0), 1f).coerceIn(0f, 1f)
                     )
                 },
-                templateId = json.optString("templateId", "").takeIf { it.isNotEmpty() },
+                templateId = boundedText(json.optString("templateId", ""), MAX_SHORT_TEXT_CHARS).takeIf { it.isNotEmpty() },
                 keyframes = json.optJSONArray("keyframes")?.let { kfArr ->
-                    (0 until kfArr.length()).mapNotNull { i ->
+                    (0 until cappedArrayLength(kfArr, MAX_KEYFRAMES_PER_SCOPE, "text-overlay keyframes")).mapNotNull { i ->
                         try { deserializeKeyframe(kfArr.getJSONObject(i)) } catch (e: Exception) {
                             Log.w(TAG, "Failed to deserialize text overlay keyframe $i", e); null
                         }

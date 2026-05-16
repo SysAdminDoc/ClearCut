@@ -463,7 +463,6 @@
     <string name="media_picker_source_files">File picker</string>
     <string name="media_picker_source_audio">Audio files</string>
     <string name="media_picker_source_kept_local">Imports stay available offline</string>
-    <string name="media_picker_camera_permission_required">Camera permission is needed to record video.</string>
     <string name="media_picker_local_copy_failed">NovaCut couldn\'t keep that media available locally. Try choosing it again.</string>
     <string name="media_picker_some_imports_failed">Some media couldn\'t be kept locally. The successful imports were added.</string>
     <string name="media_picker_importing_batch_title">Preparing media</string>
@@ -505,12 +504,15 @@
     <string name="projects_rename">Rename</string>
     <string name="projects_rename_title">Rename Project</string>
     <string name="projects_rename_hint">Project name</string>
+    <string name="projects_rename_helper">Use a short, recognizable name.</string>
+    <string name="projects_rename_required">Project name is required.</string>
     <string name="projects_delete">Delete</string>
     <string name="projects_delete_title">Delete Project</string>
     <string name="projects_delete_message">Delete \"%1$s\"? This cannot be undone.</string>
     <string name="projects_delete_cd">Delete</string>
     <string name="projects_thumbnail_cd">Project thumbnail</string>
     <string name="projects_more_cd">More</string>
+    <string name="projects_card_cd">Open %1$s, %2$s duration, updated %3$s</string>
     <string name="projects_just_now">Just now</string>
     <string name="projects_minutes_ago">%1$dm ago</string>
     <string name="projects_hours_ago">%1$dh ago</string>
@@ -595,6 +597,8 @@
     <string name="template_delete_confirm_title">Delete saved template?</string>
     <string name="template_delete_confirm_body">Delete \"%1$s\" from your saved templates? Projects already created from it stay unchanged, but this template cannot be restored.</string>
     <string name="template_delete_confirm_action">Delete template</string>
+    <string name="template_builtin_card_cd">Use %1$s template, %2$s, %3$s aspect ratio</string>
+    <string name="template_user_card_cd">Use saved template %1$s, %2$s aspect ratio</string>
     <string name="template_delete_cd_format">Delete %1$s template</string>
     <string name="template_share_cd_format">Share %1$s template</string>
 
@@ -1585,10 +1589,9 @@
     <string name="scratchpad_menu_label">Scratchpad Notes</string>
 
     <!-- Recovery dialog -->
-    <string name="recovery_title">Unsaved changes recovered</string>
-    <string name="recovery_message">NovaCut restored this project from the last auto-save. Keep the recovered changes, or discard them and reload the saved version?</string>
-    <string name="recovery_keep">Keep recovered</string>
-    <string name="recovery_discard">Discard</string>
+    <string name="recovery_title">Autosaved edit restored</string>
+    <string name="recovery_message">NovaCut found autosaved project data newer than the last metadata save and loaded it. Continue after confirming the timeline looks right.</string>
+    <string name="recovery_keep">Continue</string>
 
     <!-- KeyframeCurveEditor -->
     <string name="cd_keyframe_presets">Presets</string>

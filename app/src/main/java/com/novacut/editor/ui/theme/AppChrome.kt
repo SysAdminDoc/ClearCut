@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -237,6 +239,57 @@ fun NovaCutMetricPill(
             )
         }
     }
+}
+
+@Composable
+fun NovaCutFilterChip(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    accent: Color = Mocha.Mauve,
+    enabled: Boolean = true,
+    icon: ImageVector? = null
+) {
+    FilterChip(
+        selected = selected,
+        enabled = enabled,
+        onClick = onClick,
+        modifier = modifier.defaultMinSize(minHeight = TouchTarget.minimum),
+        label = {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        },
+        leadingIcon = if (icon != null) {
+            {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        } else {
+            null
+        },
+        shape = RoundedCornerShape(Radius.md),
+        colors = FilterChipDefaults.filterChipColors(
+            containerColor = Mocha.PanelHighest,
+            labelColor = Mocha.Subtext0,
+            selectedContainerColor = accent.copy(alpha = 0.16f),
+            selectedLabelColor = accent,
+            selectedLeadingIconColor = accent
+        ),
+        border = FilterChipDefaults.filterChipBorder(
+            enabled = enabled,
+            selected = selected,
+            borderColor = Mocha.CardStroke,
+            selectedBorderColor = accent.copy(alpha = 0.34f)
+        )
+    )
 }
 
 @Composable

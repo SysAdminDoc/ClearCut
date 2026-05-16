@@ -874,6 +874,10 @@ object EffectShaders {
             com.novacut.editor.model.BlendMode.SOFT_LIGHT -> FRAG_BLEND_SOFT_LIGHT
             com.novacut.editor.model.BlendMode.DIFFERENCE -> FRAG_BLEND_DIFFERENCE
             com.novacut.editor.model.BlendMode.EXCLUSION -> FRAG_BLEND_EXCLUSION
+            com.novacut.editor.model.BlendMode.HUE -> FRAG_BLEND_HUE
+            com.novacut.editor.model.BlendMode.SATURATION_BLEND -> FRAG_BLEND_SATURATION
+            com.novacut.editor.model.BlendMode.COLOR -> FRAG_BLEND_COLOR
+            com.novacut.editor.model.BlendMode.LUMINOSITY -> FRAG_BLEND_LUMINOSITY
             com.novacut.editor.model.BlendMode.ADD -> FRAG_BLEND_ADD
             com.novacut.editor.model.BlendMode.SUBTRACT -> FRAG_BLEND_SUBTRACT
             else -> FRAG_BLEND_NORMAL
@@ -981,9 +985,10 @@ object EffectShaders {
         "  fragColor = texture(uTexSampler, vTexCoord);\n" +
         "  fragColor.a *= uOpacity;\n}"
 
-    // Blend modes use mid-gray (0.5) as the virtual "blend layer" since Media3
-    // single-texture pipeline doesn't support dual-texture compositing.
-    // This gives each mode a distinct, useful visual character.
+    // Single-texture blend fallback: preview and per-clip Media3 effects do not
+    // expose the already-composited destination texture, so these shaders use
+    // virtual reference colors until a programmable multi-input compositor is
+    // available for true source-over-destination blend math.
 
     private const val FRAG_BLEND_MULTIPLY = BH +
         "void main() {\n" +
@@ -1058,6 +1063,67 @@ object EffectShaders {
         "  vec4 c = texture(uTexSampler, vTexCoord);\n" +
         "  vec3 blend = vec3(0.5);\n" +
         "  vec3 result = c.rgb + blend - 2.0 * c.rgb * blend;\n" +
+        "  fragColor = vec4(mix(c.rgb, result, uOpacity), c.a);\n}"
+
+    private const val BLEND_HSL_HELPERS =
+        "vec3 rgb2hslBlend(vec3 c) {\n" +
+        "  float mx = max(c.r, max(c.g, c.b));\n" +
+        "  float mn = min(c.r, min(c.g, c.b));\n" +
+        "  float l = (mx + mn) * 0.5;\n" +
+        "  if (mx == mn) return vec3(0.0, 0.0, l);\n" +
+        "  float d = mx - mn;\n" +
+        "  float s = l > 0.5 ? d / (2.0 - mx - mn) : d / (mx + mn);\n" +
+        "  float h;\n" +
+        "  if (mx == c.r) h = (c.g - c.b) / d + (c.g < c.b ? 6.0 : 0.0);\n" +
+        "  else if (mx == c.g) h = (c.b - c.r) / d + 2.0;\n" +
+        "  else h = (c.r - c.g) / d + 4.0;\n" +
+        "  return vec3(h / 6.0, s, l);\n" +
+        "}\n" +
+        "float hue2rgbBlend(float p, float q, float t) {\n" +
+        "  if (t < 0.0) t += 1.0;\n" +
+        "  if (t > 1.0) t -= 1.0;\n" +
+        "  if (t < 1.0/6.0) return p + (q - p) * 6.0 * t;\n" +
+        "  if (t < 1.0/2.0) return q;\n" +
+        "  if (t < 2.0/3.0) return p + (q - p) * (2.0/3.0 - t) * 6.0;\n" +
+        "  return p;\n" +
+        "}\n" +
+        "vec3 hsl2rgbBlend(vec3 hsl) {\n" +
+        "  if (hsl.y == 0.0) return vec3(hsl.z);\n" +
+        "  float q = hsl.z < 0.5 ? hsl.z * (1.0 + hsl.y) : hsl.z + hsl.y - hsl.z * hsl.y;\n" +
+        "  float p = 2.0 * hsl.z - q;\n" +
+        "  return vec3(hue2rgbBlend(p, q, hsl.x + 1.0/3.0), hue2rgbBlend(p, q, hsl.x), hue2rgbBlend(p, q, hsl.x - 1.0/3.0));\n" +
+        "}\n"
+
+    private const val FRAG_BLEND_HUE = BH + BLEND_HSL_HELPERS +
+        "void main() {\n" +
+        "  vec4 c = texture(uTexSampler, vTexCoord);\n" +
+        "  vec3 baseHsl = rgb2hslBlend(c.rgb);\n" +
+        "  vec3 blendHsl = rgb2hslBlend(vec3(0.85, 0.20, 0.20));\n" +
+        "  vec3 result = hsl2rgbBlend(vec3(blendHsl.x, baseHsl.y, baseHsl.z));\n" +
+        "  fragColor = vec4(mix(c.rgb, result, uOpacity), c.a);\n}"
+
+    private const val FRAG_BLEND_SATURATION = BH + BLEND_HSL_HELPERS +
+        "void main() {\n" +
+        "  vec4 c = texture(uTexSampler, vTexCoord);\n" +
+        "  vec3 baseHsl = rgb2hslBlend(c.rgb);\n" +
+        "  vec3 blendHsl = rgb2hslBlend(vec3(0.85, 0.15, 0.15));\n" +
+        "  vec3 result = hsl2rgbBlend(vec3(baseHsl.x, blendHsl.y, baseHsl.z));\n" +
+        "  fragColor = vec4(mix(c.rgb, result, uOpacity), c.a);\n}"
+
+    private const val FRAG_BLEND_COLOR = BH + BLEND_HSL_HELPERS +
+        "void main() {\n" +
+        "  vec4 c = texture(uTexSampler, vTexCoord);\n" +
+        "  vec3 baseHsl = rgb2hslBlend(c.rgb);\n" +
+        "  vec3 blendHsl = rgb2hslBlend(vec3(0.20, 0.55, 0.85));\n" +
+        "  vec3 result = hsl2rgbBlend(vec3(blendHsl.x, blendHsl.y, baseHsl.z));\n" +
+        "  fragColor = vec4(mix(c.rgb, result, uOpacity), c.a);\n}"
+
+    private const val FRAG_BLEND_LUMINOSITY = BH + BLEND_HSL_HELPERS +
+        "void main() {\n" +
+        "  vec4 c = texture(uTexSampler, vTexCoord);\n" +
+        "  vec3 baseHsl = rgb2hslBlend(c.rgb);\n" +
+        "  vec3 blendHsl = rgb2hslBlend(vec3(0.65));\n" +
+        "  vec3 result = hsl2rgbBlend(vec3(baseHsl.x, baseHsl.y, blendHsl.z));\n" +
         "  fragColor = vec4(mix(c.rgb, result, uOpacity), c.a);\n}"
 
     private const val FRAG_BLEND_ADD = BH +

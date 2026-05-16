@@ -64,6 +64,12 @@ data class TemplateCompatibilityReport(
 }
 
 object TemplateCompatibilityEngine {
+    private const val MAX_TEMPLATE_FEATURES = 256
+    private const val MAX_FEATURE_KEY_CHARS = 120
+    private const val MAX_FEATURE_DISPLAY_NAME_CHARS = 160
+    private const val MAX_VERSION_NAME_CHARS = 40
+    private const val MAX_SLOT_COUNT = 100_000
+
     val supportedFeatureTypes: Set<TemplateFeatureType> =
         TemplateFeatureType.entries.filterNot { it == TemplateFeatureType.UNKNOWN }.toSet()
 
@@ -178,11 +184,15 @@ object TemplateCompatibilityEngine {
         return TemplateCompatibilityMetadata(
             schemaVersion = schemaVersion.coerceAtLeast(1),
             minVersionCode = minVersionCode.coerceAtLeast(1),
-            minVersionName = minVersionName.trim().ifBlank { "3.8.0" },
+            minVersionName = boundedTemplateText(
+                raw = minVersionName,
+                fallback = "3.8.0",
+                maxChars = MAX_VERSION_NAME_CHARS
+            ),
             features = requirements.normalizedRequirements(),
-            slotCount = mediaSlotCount + textSlotCount,
-            mediaSlotCount = mediaSlotCount,
-            textSlotCount = textSlotCount
+            slotCount = (mediaSlotCount + textSlotCount).coerceAtMost(MAX_SLOT_COUNT),
+            mediaSlotCount = mediaSlotCount.coerceAtMost(MAX_SLOT_COUNT),
+            textSlotCount = textSlotCount.coerceAtMost(MAX_SLOT_COUNT)
         )
     }
 
@@ -192,18 +202,23 @@ object TemplateCompatibilityEngine {
     ): TemplateCompatibilityMetadata {
         if (declared == null) return inferred.copy(features = inferred.features.normalizedRequirements())
         val mergedMinVersionCode = maxOf(declared.minVersionCode, inferred.minVersionCode)
+        val minVersionName = if (declared.minVersionCode >= inferred.minVersionCode) {
+            declared.minVersionName
+        } else {
+            inferred.minVersionName
+        }.ifBlank { inferred.minVersionName }
         return TemplateCompatibilityMetadata(
             schemaVersion = maxOf(declared.schemaVersion, inferred.schemaVersion),
             minVersionCode = mergedMinVersionCode,
-            minVersionName = if (declared.minVersionCode >= inferred.minVersionCode) {
-                declared.minVersionName
-            } else {
-                inferred.minVersionName
-            }.ifBlank { inferred.minVersionName },
+            minVersionName = boundedTemplateText(
+                raw = minVersionName,
+                fallback = inferred.minVersionName,
+                maxChars = MAX_VERSION_NAME_CHARS
+            ),
             features = (declared.features + inferred.features).normalizedRequirements(),
-            slotCount = maxOf(declared.slotCount, inferred.slotCount),
-            mediaSlotCount = maxOf(declared.mediaSlotCount, inferred.mediaSlotCount),
-            textSlotCount = maxOf(declared.textSlotCount, inferred.textSlotCount)
+            slotCount = maxOf(declared.slotCount, inferred.slotCount).coerceAtMost(MAX_SLOT_COUNT),
+            mediaSlotCount = maxOf(declared.mediaSlotCount, inferred.mediaSlotCount).coerceAtMost(MAX_SLOT_COUNT),
+            textSlotCount = maxOf(declared.textSlotCount, inferred.textSlotCount).coerceAtMost(MAX_SLOT_COUNT)
         )
     }
 
@@ -273,18 +288,34 @@ object TemplateCompatibilityEngine {
         if (json == null) return null
         val featuresJson = json.optJSONArray("features")
         val features = featuresJson?.let { arr ->
-            (0 until arr.length()).mapNotNull { index ->
+            val parsed = (0 until arr.length().coerceAtMost(MAX_TEMPLATE_FEATURES)).mapNotNull { index ->
                 val featureJson = arr.optJSONObject(index) ?: return@mapNotNull null
-                val rawType = featureJson.optString("type", "")
+                val rawType = boundedTemplateText(
+                    raw = featureJson.optString("type", ""),
+                    fallback = "",
+                    maxChars = MAX_FEATURE_KEY_CHARS
+                )
                 val type = parseFeatureType(rawType)
-                val key = featureJson.optString("key", rawType).trim().ifBlank { type.name }
+                val key = boundedTemplateText(
+                    raw = featureJson.optString("key", rawType),
+                    fallback = type.name,
+                    maxChars = MAX_FEATURE_KEY_CHARS
+                )
                 TemplateFeatureRequirement(
                     type = type,
                     key = key,
-                    displayName = featureJson.optString("displayName", humanize(key)).trim()
-                        .ifBlank { humanize(key) },
+                    displayName = boundedTemplateText(
+                        raw = featureJson.optString("displayName", humanize(key)),
+                        fallback = humanize(key),
+                        maxChars = MAX_FEATURE_DISPLAY_NAME_CHARS
+                    ),
                     required = featureJson.optBoolean("required", true)
                 )
+            }
+            if (arr.length() > MAX_TEMPLATE_FEATURES) {
+                parsed + featureLimitExceededRequirement()
+            } else {
+                parsed
             }
         }.orEmpty()
 
@@ -294,14 +325,18 @@ object TemplateCompatibilityEngine {
                 "minAppVersionCode",
                 json.optInt("minVersionCode", 1)
             ).coerceAtLeast(1),
-            minVersionName = json.optString(
-                "minAppVersionName",
-                json.optString("minVersionName", "3.8.0")
-            ).trim().ifBlank { "3.8.0" },
+            minVersionName = boundedTemplateText(
+                raw = json.optString(
+                    "minAppVersionName",
+                    json.optString("minVersionName", "3.8.0")
+                ),
+                fallback = "3.8.0",
+                maxChars = MAX_VERSION_NAME_CHARS
+            ),
             features = features.normalizedRequirements(),
-            slotCount = json.optInt("slotCount", 0).coerceAtLeast(0),
-            mediaSlotCount = json.optInt("mediaSlotCount", 0).coerceAtLeast(0),
-            textSlotCount = json.optInt("textSlotCount", 0).coerceAtLeast(0)
+            slotCount = json.optInt("slotCount", 0).coerceIn(0, MAX_SLOT_COUNT),
+            mediaSlotCount = json.optInt("mediaSlotCount", 0).coerceIn(0, MAX_SLOT_COUNT),
+            textSlotCount = json.optInt("textSlotCount", 0).coerceIn(0, MAX_SLOT_COUNT)
         )
     }
 
@@ -315,21 +350,54 @@ object TemplateCompatibilityEngine {
 
     private fun List<TemplateFeatureRequirement>.normalizedRequirements(): List<TemplateFeatureRequirement> {
         val byKey = linkedMapOf<String, TemplateFeatureRequirement>()
+        var limitExceeded = false
         forEach { feature ->
-            val key = feature.key.trim().ifBlank { feature.type.name }
+            val key = boundedTemplateText(
+                raw = feature.key,
+                fallback = feature.type.name,
+                maxChars = MAX_FEATURE_KEY_CHARS
+            )
             val normalized = feature.copy(
                 key = key,
-                displayName = feature.displayName.trim().ifBlank { humanize(key) }
+                displayName = boundedTemplateText(
+                    raw = feature.displayName,
+                    fallback = humanize(key),
+                    maxChars = MAX_FEATURE_DISPLAY_NAME_CHARS
+                )
             )
             val mapKey = "${normalized.type.name}:$key"
             val existing = byKey[mapKey]
+            if (existing == null && byKey.size >= MAX_TEMPLATE_FEATURES) {
+                limitExceeded = true
+                return@forEach
+            }
             byKey[mapKey] = if (existing == null) {
                 normalized
             } else {
                 existing.copy(required = existing.required || normalized.required)
             }
         }
+        if (limitExceeded) {
+            byKey["${TemplateFeatureType.UNKNOWN.name}:FEATURE_LIMIT_EXCEEDED"] = featureLimitExceededRequirement()
+        }
         return byKey.values.sortedWith(compareBy({ it.type.name }, { it.key }))
+    }
+
+    private fun featureLimitExceededRequirement(): TemplateFeatureRequirement =
+        TemplateFeatureRequirement(
+            type = TemplateFeatureType.UNKNOWN,
+            key = "FEATURE_LIMIT_EXCEEDED",
+            displayName = "Too many template features",
+            required = true
+        )
+
+    private fun boundedTemplateText(raw: String, fallback: String, maxChars: Int): String {
+        val normalized = raw
+            .map { char -> if (char.isISOControl()) ' ' else char }
+            .joinToString("")
+            .replace(Regex("""\s+"""), " ")
+            .trim()
+        return normalized.ifBlank { fallback }.take(maxChars).trim().ifBlank { fallback.take(maxChars) }
     }
 
     private fun humanize(raw: String): String {

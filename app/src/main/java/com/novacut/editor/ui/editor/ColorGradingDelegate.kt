@@ -2,6 +2,7 @@ package com.novacut.editor.ui.editor
 
 import android.content.Context
 import android.net.Uri
+import com.novacut.editor.engine.copyWithLimit
 import com.novacut.editor.engine.sanitizeFileNamePreservingExtension
 import com.novacut.editor.engine.writeFileAtomically
 import com.novacut.editor.model.ColorGrade
@@ -14,6 +15,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
+
+private const val MAX_LUT_IMPORT_BYTES = 32L * 1024L * 1024L
 
 /**
  * Delegate handling color grading, LUT import, and scope operations.
@@ -86,7 +89,9 @@ class ColorGradingDelegate(
                     val inputStream = appContext.contentResolver.openInputStream(uri)
                         ?: throw IOException("Cannot open LUT file")
                     inputStream.use { input ->
-                        tempFile.outputStream().use { output -> input.copyTo(output) }
+                        tempFile.outputStream().use { output ->
+                            copyWithLimit(input, output, MAX_LUT_IMPORT_BYTES)
+                        }
                     }
                 }
                 withContext(Dispatchers.Main) {
@@ -95,7 +100,12 @@ class ColorGradingDelegate(
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    showToast("Failed to import LUT: ${e.message}")
+                    val message = if (e is IOException && e.message?.contains("byte limit", ignoreCase = true) == true) {
+                        "LUT is too large (32 MB limit)"
+                    } else {
+                        e.message ?: "Unknown error"
+                    }
+                    showToast("Failed to import LUT: $message")
                 }
             }
         }

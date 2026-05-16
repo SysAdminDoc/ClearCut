@@ -180,12 +180,11 @@ fun inferSeverity(message: String): ToastSeverity {
             lower.startsWith("error") || lower.contains(" error") ||
             lower.contains("could not") || lower.contains("couldn't") -> ToastSeverity.Error
         lower.startsWith("no ") || lower.contains("not available") ||
-            lower.contains("select a clip") || lower.contains("first") &&
-            !lower.contains("first run") -> ToastSeverity.Warning
+            lower.contains("select a clip") ||
+            (lower.contains("first") && !lower.contains("first run")) -> ToastSeverity.Warning
         lower.contains("saved") || lower.contains("ready") ||
             lower.contains("complete") || lower.contains("imported") ||
             lower.contains("exported") || lower.contains("applied") -> ToastSeverity.Success
         else -> ToastSeverity.Info
     }
 }
-

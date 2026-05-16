@@ -69,31 +69,21 @@ class DirectPublishEngine @Inject constructor(
             Log.w(TAG, "FileProvider failed for $filePath", e)
             return@withContext Result(null, Method.NONE, "Export is not in a shareable NovaCut location")
         }
-        val intent = buildShareIntent(uri, target, meta)
+        val intent = buildShareIntent(uri, meta)
         if (target.packageName != null && isInstalled(target.packageName)) {
             intent.setPackage(target.packageName)
         }
         Result(intent, Method.SHARE_INTENT, "Opening ${target.displayName}…")
     }
 
-    private fun buildShareIntent(uri: Uri, target: Target, meta: PublishMeta): Intent {
-        val body = buildString {
-            append(meta.title)
-            if (meta.description.isNotBlank()) append("\n\n").append(meta.description)
-            if (meta.chapters.isNotBlank()) append("\n\n").append(meta.chapters)
-            if (meta.tags.isNotEmpty()) {
-                val tags = meta.tags
-                    .map { it.replace(SAFE_HASHTAG_CHARS, "") }
-                    .filter { it.isNotBlank() }
-                    .joinToString(" ") { "#$it" }
-                if (tags.isNotBlank()) append("\n\n").append(tags)
-            }
-        }
+    private fun buildShareIntent(uri: Uri, meta: PublishMeta): Intent {
+        val safeMeta = normalizePublishMeta(meta)
+        val body = buildPublishShareText(safeMeta)
         return Intent(Intent.ACTION_SEND).apply {
             type = "video/mp4"
             putExtra(Intent.EXTRA_STREAM, uri)
-            putExtra(Intent.EXTRA_TITLE, meta.title)
-            putExtra(Intent.EXTRA_SUBJECT, meta.title)
+            putExtra(Intent.EXTRA_TITLE, safeMeta.title)
+            putExtra(Intent.EXTRA_SUBJECT, safeMeta.title)
             putExtra(Intent.EXTRA_TEXT, body)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -107,6 +97,12 @@ class DirectPublishEngine @Inject constructor(
     companion object { private const val TAG = "DirectPublishEngine" }
 }
 
+private const val MAX_SHARE_TITLE_CHARS = 120
+private const val MAX_SHARE_DESCRIPTION_CHARS = 4_000
+private const val MAX_SHARE_CHAPTERS_CHARS = 4_000
+private const val MAX_SHARE_TAGS = 30
+private const val MAX_SHARE_TAG_CHARS = 48
+private const val MAX_SHARE_BODY_CHARS = 8_000
 private val SAFE_HASHTAG_CHARS = Regex("[^A-Za-z0-9_]")
 
 internal fun validatePublishableFile(file: File): String? = when {
@@ -115,4 +111,73 @@ internal fun validatePublishableFile(file: File): String? = when {
     file.length() <= 0L -> "Export file is empty"
     !file.canRead() -> "Export file is not readable"
     else -> null
+}
+
+internal fun buildPublishShareText(meta: DirectPublishEngine.PublishMeta): String {
+    val safeMeta = normalizePublishMeta(meta)
+    return buildString {
+        append(safeMeta.title)
+        if (safeMeta.description.isNotBlank()) append("\n\n").append(safeMeta.description)
+        if (safeMeta.chapters.isNotBlank()) append("\n\n").append(safeMeta.chapters)
+        if (safeMeta.tags.isNotEmpty()) {
+            val tags = safeMeta.tags.joinToString(" ") { "#$it" }
+            if (tags.isNotBlank()) append("\n\n").append(tags)
+        }
+    }.take(MAX_SHARE_BODY_CHARS).trimEnd()
+}
+
+internal fun normalizePublishMeta(
+    meta: DirectPublishEngine.PublishMeta
+): DirectPublishEngine.PublishMeta {
+    return meta.copy(
+        title = normalizeShareText(meta.title, fallback = "NovaCut export", maxChars = MAX_SHARE_TITLE_CHARS),
+        description = normalizeShareText(
+            raw = meta.description,
+            fallback = "",
+            maxChars = MAX_SHARE_DESCRIPTION_CHARS,
+            preserveLineBreaks = true
+        ),
+        chapters = normalizeShareText(
+            raw = meta.chapters,
+            fallback = "",
+            maxChars = MAX_SHARE_CHAPTERS_CHARS,
+            preserveLineBreaks = true
+        ),
+        tags = meta.tags.asSequence()
+            .map { tag -> tag.replace(SAFE_HASHTAG_CHARS, "").take(MAX_SHARE_TAG_CHARS) }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .take(MAX_SHARE_TAGS)
+            .toList()
+    )
+}
+
+private fun normalizeShareText(
+    raw: String,
+    fallback: String,
+    maxChars: Int,
+    preserveLineBreaks: Boolean = false
+): String {
+    val cleaned = raw
+        .replace("\r\n", "\n")
+        .replace('\r', '\n')
+        .map { char ->
+            when {
+                preserveLineBreaks && char == '\n' -> '\n'
+                char.isISOControl() -> ' '
+                else -> char
+            }
+        }
+        .joinToString("")
+    val normalized = if (preserveLineBreaks) {
+        cleaned
+            .replace(Regex("""[ \t]+"""), " ")
+            .replace(Regex("""\n{3,}"""), "\n\n")
+            .trim()
+    } else {
+        cleaned
+            .replace(Regex("""[ \t\n]+"""), " ")
+            .trim()
+    }
+    return normalized.ifBlank { fallback }.take(maxChars).trim().ifBlank { fallback.take(maxChars) }
 }

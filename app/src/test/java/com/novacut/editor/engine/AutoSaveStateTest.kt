@@ -14,6 +14,7 @@ import com.novacut.editor.model.SpeedPoint
 import com.novacut.editor.model.TextOverlay
 import com.novacut.editor.model.Track
 import com.novacut.editor.model.TrackType
+import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -236,5 +237,53 @@ class AutoSaveStateTest {
 
         assertEquals(EffectType.TRACKED_MOSAIC.name, effect.getString("type"))
         assertEquals("tracked-face", effect.getString("targetTrackedObjectId"))
+    }
+
+    @Test
+    fun deserialize_capsPathologicalRecoveredCollections() {
+        val textOverlays = JSONArray().apply {
+            repeat(5_010) { index ->
+                put(JSONObject().apply {
+                    put("id", "text-$index")
+                    put("text", "Title $index")
+                    put("startTimeMs", 0)
+                    put("endTimeMs", 1000)
+                })
+            }
+        }
+        val effects = JSONArray().apply {
+            repeat(300) {
+                put(JSONObject().apply {
+                    put("type", EffectType.BRIGHTNESS.name)
+                    put("params", JSONObject())
+                })
+            }
+        }
+        val clip = JSONObject().apply {
+            put("id", "clip")
+            put("sourceUri", FakeUri.toString())
+            put("sourceDurationMs", 1_000)
+            put("trimStartMs", 0)
+            put("trimEndMs", 1_000)
+            put("effects", effects)
+        }
+        val root = JSONObject().apply {
+            put("version", 1)
+            put("projectId", "project")
+            put("tracks", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("id", "track")
+                    put("type", TrackType.VIDEO.name)
+                    put("index", 0)
+                    put("clips", JSONArray().put(clip))
+                })
+            })
+            put("textOverlays", textOverlays)
+        }
+
+        val state = AutoSaveState.deserialize(root.toString())
+
+        assertEquals(5_000, state.textOverlays.size)
+        assertEquals(256, state.tracks.single().clips.single().effects.size)
     }
 }

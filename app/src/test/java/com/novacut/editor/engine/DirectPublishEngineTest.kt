@@ -1,7 +1,9 @@
 package com.novacut.editor.engine
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 import java.nio.file.Files
@@ -47,5 +49,41 @@ class DirectPublishEngineTest {
         } finally {
             dir.deleteRecursively()
         }
+    }
+
+    @Test
+    fun normalizePublishMeta_boundsIntentExtras() {
+        val normalized = normalizePublishMeta(
+            DirectPublishEngine.PublishMeta(
+                title = "\n\t",
+                description = "d".repeat(10_000),
+                chapters = "c".repeat(10_000),
+                tags = listOf("launch!", "launch!", "tag-with-dashes", "x".repeat(100))
+            )
+        )
+
+        assertEquals("NovaCut export", normalized.title)
+        assertTrue(normalized.description.length <= 4_000)
+        assertTrue(normalized.chapters.length <= 4_000)
+        assertEquals(listOf("launch", "tagwithdashes", "x".repeat(48)), normalized.tags)
+    }
+
+    @Test
+    fun buildPublishShareText_capsBodyAndRemovesUnsafeTags() {
+        val body = buildPublishShareText(
+            DirectPublishEngine.PublishMeta(
+                title = "My Export",
+                description = "d".repeat(7_700),
+                chapters = "00:00 Intro\n00:10 Main",
+                tags = listOf("good_tag", "bad tag!", "---")
+            )
+        )
+
+        assertTrue(body.length <= 8_000)
+        assertTrue(body.startsWith("My Export"))
+        assertTrue(body.contains("00:00 Intro\n00:10 Main"))
+        assertTrue(body.contains("#good_tag"))
+        assertTrue(body.contains("#badtag"))
+        assertFalse(body.contains("#---"))
     }
 }

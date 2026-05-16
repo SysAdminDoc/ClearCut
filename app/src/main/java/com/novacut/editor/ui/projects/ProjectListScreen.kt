@@ -27,8 +27,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -49,6 +50,7 @@ import com.novacut.editor.ui.editor.inferSeverity
 import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.NovaCutChromeIconButton
 import com.novacut.editor.ui.theme.NovaCutDialogIcon
+import com.novacut.editor.ui.theme.NovaCutFilterChip
 import com.novacut.editor.ui.theme.NovaCutHeroCard
 import com.novacut.editor.ui.theme.NovaCutMetricPill
 import com.novacut.editor.ui.theme.NovaCutPrimaryButton
@@ -59,6 +61,8 @@ import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
 import com.novacut.editor.ui.theme.TouchTarget
 import java.util.Locale
+
+private const val PROJECT_RENAME_MAX_CHARS = 80
 
 @Composable
 fun ProjectListScreen(
@@ -402,32 +406,12 @@ private fun ProjectHomeHero(
         if (showSortControls) {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(SortMode.entries.toList()) { mode ->
-                    FilterChip(
+                    NovaCutFilterChip(
                         onClick = { onSortModeChanged(mode) },
-                        label = {
-                            Text(
-                                text = mode.label,
-                                style = MaterialTheme.typography.labelMedium
-                            )
-                        },
-                        leadingIcon = if (sortMode == mode) {
-                            {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        } else null,
+                        text = mode.label,
                         selected = sortMode == mode,
-                        shape = RoundedCornerShape(Radius.sm),
-                        colors = FilterChipDefaults.filterChipColors(
-                            containerColor = Mocha.PanelRaised,
-                            selectedContainerColor = Mocha.Mauve.copy(alpha = 0.16f),
-                            selectedLabelColor = Mocha.Rosewater,
-                            labelColor = Mocha.Subtext0,
-                            selectedLeadingIconColor = Mocha.Rosewater
-                        )
+                        accent = Mocha.Rosewater,
+                        icon = if (sortMode == mode) Icons.Default.Check else null
                     )
                 }
             }
@@ -469,10 +453,9 @@ private fun ProjectOperationCard(
                     shape = RoundedCornerShape(Radius.lg),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Mauve.copy(alpha = 0.22f))
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Sync,
-                        contentDescription = null,
-                        tint = Mocha.Mauve,
+                    CircularProgressIndicator(
+                        color = Mocha.Mauve,
+                        strokeWidth = 2.dp,
                         modifier = Modifier
                             .padding(10.dp)
                             .size(20.dp)
@@ -515,17 +498,12 @@ private fun ProjectFilterChipsRow(
         contentPadding = PaddingValues(horizontal = 0.dp)
     ) {
         items(ProjectFilterMode.entries.toList()) { mode ->
-            FilterChip(
+            NovaCutFilterChip(
                 onClick = { onFilterModeChanged(mode) },
-                label = { Text(mode.label, style = MaterialTheme.typography.labelMedium) },
+                text = mode.label,
                 selected = filterMode == mode,
-                shape = RoundedCornerShape(Radius.sm),
-                colors = FilterChipDefaults.filterChipColors(
-                    containerColor = Mocha.Surface0,
-                    labelColor = Mocha.Subtext0,
-                    selectedContainerColor = Mocha.Mauve.copy(alpha = 0.16f),
-                    selectedLabelColor = Mocha.Mauve
-                )
+                accent = Mocha.Mauve,
+                icon = if (filterMode == mode) Icons.Default.Check else null
             )
         }
     }
@@ -744,6 +722,14 @@ private fun ProjectCard(
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showOverflowMenu by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
+    val projectDuration = formatDuration(project.durationMs)
+    val updatedLabel = formatDate(project.updatedAt)
+    val projectCardDescription = stringResource(
+        R.string.projects_card_cd,
+        project.name,
+        projectDuration,
+        updatedLabel
+    )
 
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
@@ -765,18 +751,27 @@ private fun ProjectCard(
             )
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp)
+                    .fillMaxSize()
                     .clip(RoundedCornerShape(Radius.xl))
                     .background(color)
                     .padding(horizontal = 24.dp),
                 contentAlignment = Alignment.CenterEnd
             ) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = stringResource(R.string.projects_delete_cd),
-                    tint = Mocha.Red
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.projects_delete),
+                        color = Mocha.Red,
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = stringResource(R.string.projects_delete_cd),
+                        tint = Mocha.Red
+                    )
+                }
             }
         },
         enableDismissFromStartToEnd = false
@@ -784,7 +779,11 @@ private fun ProjectCard(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(role = Role.Button, onClick = onClick),
+                .defaultMinSize(minHeight = 124.dp)
+                .clickable(role = Role.Button, onClick = onClick)
+                .semantics {
+                    contentDescription = projectCardDescription
+                },
             colors = CardDefaults.cardColors(containerColor = Mocha.Panel),
             border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
             shape = RoundedCornerShape(Radius.xl)
@@ -827,8 +826,8 @@ private fun ProjectCard(
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             ProjectMetadataChip(text = project.resolution.label, accent = Mocha.Rosewater)
-                            ProjectMetadataChip(text = project.aspectRatio.label, accent = Mocha.Mauve)
-                            ProjectMetadataChip(text = formatDuration(project.durationMs), accent = Mocha.Sapphire)
+                            ProjectMetadataChip(text = "${project.frameRate} fps", accent = Mocha.Mauve)
+                            ProjectMetadataChip(text = projectDuration, accent = Mocha.Sapphire)
                             if (project.templateId != null) {
                                 ProjectMetadataChip(
                                     text = stringResource(R.string.projects_template_badge),
@@ -844,7 +843,7 @@ private fun ProjectCard(
                         }
 
                         Text(
-                            text = stringResource(R.string.projects_updated, formatDate(project.updatedAt)),
+                            text = stringResource(R.string.projects_updated, updatedLabel),
                             color = Mocha.Subtext0,
                             style = MaterialTheme.typography.bodySmall
                         )
@@ -920,6 +919,13 @@ private fun ProjectCard(
                             )
                         }
                     }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = Mocha.Overlay1,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
         }
@@ -976,6 +982,11 @@ private fun ProjectCard(
         var projectName by remember(project.name) { mutableStateOf(project.name) }
         val trimmedProjectName = projectName.trim()
         val canSubmitRename = trimmedProjectName.isNotBlank() && trimmedProjectName != project.name
+        val renameSupportingText = if (trimmedProjectName.isBlank()) {
+            stringResource(R.string.projects_rename_required)
+        } else {
+            stringResource(R.string.projects_rename_helper)
+        }
         AlertDialog(
             onDismissRequest = { showRenameDialog = false },
             icon = {
@@ -994,8 +1005,9 @@ private fun ProjectCard(
             text = {
                 OutlinedTextField(
                     value = projectName,
-                    onValueChange = { projectName = it },
+                    onValueChange = { projectName = it.take(PROJECT_RENAME_MAX_CHARS) },
                     singleLine = true,
+                    isError = trimmedProjectName.isBlank(),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(Radius.lg),
                     placeholder = {
@@ -1004,12 +1016,33 @@ private fun ProjectCard(
                             color = Mocha.Overlay1
                         )
                     },
+                    supportingText = {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = renameSupportingText,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "${projectName.length}/$PROJECT_RENAME_MAX_CHARS",
+                                maxLines = 1
+                            )
+                        }
+                    },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Mocha.Text,
                         unfocusedTextColor = Mocha.Text,
+                        errorTextColor = Mocha.Text,
                         cursorColor = Mocha.Rosewater,
                         focusedBorderColor = Mocha.Mauve,
                         unfocusedBorderColor = Mocha.CardStroke,
+                        errorBorderColor = Mocha.Red,
                         focusedContainerColor = Mocha.PanelRaised,
                         unfocusedContainerColor = Mocha.PanelRaised
                     )
