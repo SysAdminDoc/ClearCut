@@ -38,7 +38,7 @@ These models are *named in the roadmap* but not yet fetched at runtime. They get
 |---|---|---|---|---|
 | A.1 / R6.8 | Moonshine v2 Tiny EN (Sherpa-ONNX) | https://github.com/k2-fsa/sherpa-onnx/releases | ~33 MB | Default English ASR; Sherpa-ONNX target. |
 | A.1 / R6.8 | Whisper Tiny multilingual (Sherpa-ONNX bundle) | https://github.com/k2-fsa/sherpa-onnx/releases | ~100 MB | Default multilingual fallback. |
-| A.1 / R6.8 | Whisper Large V3 Turbo (ONNX) | https://huggingface.co/onnx-community/whisper-large-v3-turbo | ~800 MB (FP16) | Premium-tier multilingual; gated on ≥6 GB RAM + premium-models setting. |
+| A.1 / R6.8 | Whisper Large V3 Turbo (ONNX) | https://huggingface.co/onnx-community/whisper-large-v3-turbo | ~800 MB (FP16) | Premium-tier multilingual; gated on ≥6 GB RAM + premium-models setting (codified as `SherpaAsrEngine.ModelVariant.WHISPER_LARGE_V3_TURBO_MULTILINGUAL` with `requiresPremiumTier = true`, `minimumRamMb = 6_144`). |
 | A.6 | RobustVideoMatting (RVM) | https://github.com/PeterL1n/RobustVideoMatting | ~15 MB | Replaces MediaPipe binary mask for green-screen quality. |
 | A.5 | Real-ESRGAN x4plus | https://github.com/xinntao/Real-ESRGAN | ~17 MB | Upscaling export pass. |
 | A.7 / R6.4 | SAM 2.1 Hiera Tiny ONNX | https://huggingface.co/onnx-community/sam2.1-hiera-tiny-ONNX | ~160 MB model + 96 MB state cache | Premium-tier; ≥6 GB RAM. SAM 3 / SAM 3.1 is a watch item only (R6.4); upstream has no Tiny ONNX export yet. |
