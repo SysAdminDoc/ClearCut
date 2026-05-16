@@ -125,4 +125,67 @@ object SmartRenderEngine {
         val passThroughDurationMs: Long,
         val estimatedSpeedup: Float
     )
+
+    // --- B.5 mixed-segment stitching ---
+
+    /**
+     * A contiguous run of segments that share the same encoding decision.
+     * Stitching a timeline that mixes pass-through and re-encode segments
+     * groups consecutive same-flag clips into runs so each run can be
+     * exported by the right engine (StreamCopy for pass-through,
+     * Transformer / FFmpeg for re-encode) and the outputs concatenated.
+     *
+     * @param startMs Timeline start time of the first segment in the run.
+     * @param endMs Timeline end time of the last segment in the run.
+     * @param needsReEncode Whether this run needs re-encoding.
+     * @param clipIds Ordered list of clip ids in this run.
+     */
+    data class RenderRun(
+        val startMs: Long,
+        val endMs: Long,
+        val needsReEncode: Boolean,
+        val clipIds: List<String>,
+    ) {
+        val durationMs: Long get() = endMs - startMs
+    }
+
+    /**
+     * Group an ordered per-clip [analyzeTimeline] result into contiguous
+     * runs. Two consecutive segments belong to the same run when they share
+     * the [RenderSegment.needsReEncode] flag **and** the previous segment ends
+     * exactly where the next one starts (no timeline gap).
+     *
+     * A timeline gap forces a new run even when the flags match — gaps need
+     * an explicit black-frame fill which today only the re-encode path can
+     * produce, so the gap-bridging step is left to a future bridge pass on
+     * the composer side.
+     *
+     * The B.5 composer step (stitch the run outputs with FFmpeg concat
+     * demuxer) is gated on R6.5 (ffmpeg-kit-16kb activation).
+     */
+    fun planRuns(segments: List<RenderSegment>): List<RenderRun> {
+        if (segments.isEmpty()) return emptyList()
+        val ordered = segments.sortedBy { it.startMs }
+        val runs = mutableListOf<RenderRun>()
+        var runStart = ordered.first().startMs
+        var runEnd = ordered.first().endMs
+        var runFlag = ordered.first().needsReEncode
+        var runClips = mutableListOf(ordered.first().clipId)
+        for (i in 1 until ordered.size) {
+            val seg = ordered[i]
+            val contiguous = seg.startMs == runEnd
+            if (seg.needsReEncode == runFlag && contiguous) {
+                runEnd = seg.endMs
+                runClips += seg.clipId
+            } else {
+                runs += RenderRun(runStart, runEnd, runFlag, runClips.toList())
+                runStart = seg.startMs
+                runEnd = seg.endMs
+                runFlag = seg.needsReEncode
+                runClips = mutableListOf(seg.clipId)
+            }
+        }
+        runs += RenderRun(runStart, runEnd, runFlag, runClips.toList())
+        return runs
+    }
 }
