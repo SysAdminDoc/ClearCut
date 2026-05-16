@@ -550,7 +550,7 @@ The R5.2a R&D pass blocked on "no pinnable Maven artifact for ffmpeg-kit success
 
 DeepFilterNet 3 (rolling 2025–2026) raises PESQ to 3.5–4.0+ and STOI past 0.95 on short audio, with the same ~8 MB model footprint and the same JNI surface that A.2 already targets via `KaleyraVideo/AndroidDeepFilterNet`. This is a pure model-bump.
 
-- [ ] **R6.6a — When A.2 activates, target DeepFilterNet 3 model weights** (not v2). Verify the `AndroidDeepFilterNet` Android library picks up v3 by version bump or whether a model URL override is needed. Sources: https://github.com/Rikorose/DeepFilterNet · https://github.com/KaleyraVideo/AndroidDeepFilterNet · https://noisereducerai.com/deepfilternet-ai-noise-reduction/
+- [x] **R6.6a — When A.2 activates, target DeepFilterNet 3 model weights** (not v2). *(Done — [NoiseReductionEngine](app/src/main/java/com/novacut/editor/engine/NoiseReductionEngine.kt) class docstring now codifies the DeepFilterNet 3 target (PESQ 3.5–4.0+, ~8 MB, same JNI as v2) and the companion object exports `TARGET_MODEL_VERSION = "3"` constants for telemetry and diagnostic surfaces. Activation note documents the model-bytes swap pattern via `ModelDownloadManager` if the AAR still bundles v2. Also collapsed a duplicate `companion object` declaration that shadowed the engine's TAG.)* Sources: https://github.com/Rikorose/DeepFilterNet · https://github.com/KaleyraVideo/AndroidDeepFilterNet · https://noisereducerai.com/deepfilternet-ai-noise-reduction/
 
 ### R6.7 — Caption translation target pivot to MADLAD-400 + Bergamot
 

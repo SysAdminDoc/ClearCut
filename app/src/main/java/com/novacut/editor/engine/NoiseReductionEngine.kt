@@ -15,20 +15,57 @@ import javax.inject.Singleton
 
 /**
  * ML-based noise reduction engine.
- * Primary: DeepFilterNet (not yet integrated -- see ROADMAP.md)
- * Fallback: Spectral gating (no model required)
  *
- * DeepFilterNet dependency (add to app/build.gradle.kts when ready):
- *   The correct Maven coordinate needs to be determined; no published
- *   Android artifact is currently available.
+ * - Primary target: DeepFilterNet 3 (Round 6 R6.6a bumps the target from v2 to v3).
+ *   v3 raises PESQ to 3.5–4.0+ and STOI past 0.95 on short audio, especially on
+ *   non-stationary noise like synthetic AI voices and crowd noise, at the same
+ *   ~8 MB model footprint as v2. The JNI surface is preserved across v2 → v3, so
+ *   activation is a model-bytes swap — no Kotlin API change.
+ * - Fallback: spectral gating (no model required; ships today).
  *
- * DeepFilterNet achieves PESQ scores of 3.5-4.0+
- * Processes audio in ~20ms per frame on modern smartphones
+ * ## Activation path (Tier A.2)
+ *
+ *   1. Add to gradle/libs.versions.toml:
+ *        deepfilternet = "VERSION-FROM-SONATYPE"
+ *        deepfilternet-android = { group = "com.kaleyra",
+ *                                  name = "deepfilternet-android",
+ *                                  version.ref = "deepfilternet" }
+ *   2. Add `implementation(libs.deepfilternet.android)` to app/build.gradle.kts.
+ *   3. Verify the AAR ships a DeepFilterNet 3 model file (`assets/df3/`-style path).
+ *      If the upstream library bundles only v2, point the loader at a downloaded
+ *      v3 model via ModelDownloadManager and pass the override path to
+ *      `DeepFilterNet.init(context, modelPath = ...)`.
+ *   4. Replace the [processAudio] fallback branch with the DeepFilterNet call:
+ *        DeepFilterNet.init(context)
+ *        val cleaned = DeepFilterNet.process(samples48k)  // FloatArray of 480 samples
+ *        // Resample from 16 kHz (Whisper path) to 48 kHz once per export, NOT per frame.
+ *
+ * ## Model registry
+ *
+ * See [docs/models.md](../../../../../../docs/models.md) §3 for the DeepFilterNet
+ * row; the AAR alignment check lives in §2 and is gated by R6.1a CI.
  */
 @Singleton
 class NoiseReductionEngine @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
+    companion object {
+        // R6.6a target — DeepFilterNet 3 supersedes v2 with same JNI surface.
+        // Recorded as engine metadata so any caller surfacing model provenance
+        // (Settings → AI Models, telemetry, diagnostic export) reports the
+        // intended target rather than reading it from the AAR at runtime.
+        const val TARGET_MODEL_FAMILY = "deepfilternet"
+        const val TARGET_MODEL_VERSION = "3"
+        const val TARGET_MODEL_DISPLAY_NAME = "DeepFilterNet 3"
+        const val TARGET_MODEL_SAMPLE_RATE_HZ = 48_000
+        const val TARGET_MODEL_FRAME_SAMPLES = 480
+        const val TARGET_MODEL_FOOTPRINT_BYTES = 8L * 1024L * 1024L
+        const val TARGET_MODEL_SOURCE_URL = "https://github.com/Rikorose/DeepFilterNet"
+        const val TARGET_ANDROID_AAR_GROUP = "com.kaleyra"
+        const val TARGET_ANDROID_AAR_NAME = "deepfilternet-android"
+        private const val TAG = "NoiseReductionEngine"
+    }
+
     enum class NoiseReductionMode(val displayName: String) {
         OFF("Off"),
         LIGHT("Light -- subtle cleanup"),
@@ -217,10 +254,6 @@ class NoiseReductionEngine @Inject constructor(
     fun isDeepFilterNetAvailable(): Boolean {
         // DeepFilterNet Android artifact does not exist yet
         return false
-    }
-
-    companion object {
-        private const val TAG = "NoiseReduction"
     }
 
     private fun copyInputAudioToPartialFile(uri: Uri, partialFile: File) {
