@@ -1,5 +1,6 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.engine.AudioMasteringEngine
 import com.novacut.editor.engine.BeatDetectionEngine
 import com.novacut.editor.engine.LoudnessEngine
 import com.novacut.editor.model.AudioEffect
@@ -20,6 +21,7 @@ class AudioMixerDelegate(
     private val stateFlow: MutableStateFlow<EditorState>,
     private val beatDetectionEngine: BeatDetectionEngine,
     private val loudnessEngine: LoudnessEngine,
+    private val audioMasteringEngine: AudioMasteringEngine,
     private val scope: CoroutineScope,
     private val saveUndoState: (String) -> Unit,
     private val showToast: (String) -> Unit,
@@ -130,6 +132,60 @@ class AudioMixerDelegate(
             })
         }
         saveProject()
+    }
+
+    // --- C.6: Audio mastering presets ---
+    //
+    // One-tap chains tuned for distribution targets (Podcast / Music / Dialogue
+    // / ASMR / Social Loud). See AudioMasteringEngine for the recipe data.
+    // Each apply replaces the track's existing audio effect chain with the
+    // preset's components so users get a deterministic before/after — undo
+    // restores the previous chain.
+    //
+    // The mastering chain's LUFS / true-peak targets are passed forward via the
+    // saveUndoState label so when this preset is paired with the export sheet's
+    // EBU R128 normalization (already shipped), the right target is suggested.
+
+    /** Returns the curated preset catalog (id, displayName, description). */
+    fun getMasteringPresets(): List<AudioMasteringEngine.MasteringChain> =
+        audioMasteringEngine.getPresets()
+
+    /**
+     * Apply a curated mastering chain to the given track. The track's audio
+     * effect chain is replaced by the preset's components in canonical order:
+     *   HighPass → EQ → De-esser → Compressor → Limiter
+     *
+     * @param trackId Target track id.
+     * @param presetId One of the [AudioMasteringEngine] preset ids.
+     * @return true if the preset was applied, false if either the preset id is
+     *   unknown or the track is missing.
+     */
+    fun applyMasteringPreset(trackId: String, presetId: String): Boolean {
+        val preset = audioMasteringEngine.getPreset(presetId) ?: run {
+            showToast("Unknown mastering preset")
+            return false
+        }
+        val targetTrack = stateFlow.value.tracks.firstOrNull { it.id == trackId } ?: run {
+            showToast("Track not found")
+            return false
+        }
+        // Skip if the target is not an audio-capable track. Video tracks have
+        // embedded audio per Composition but mastering chains apply to the
+        // explicit audio mix.
+        if (targetTrack.type != TrackType.AUDIO && targetTrack.type != TrackType.VIDEO) {
+            showToast("Mastering presets apply to audio or video tracks only")
+            return false
+        }
+        saveUndoState("Apply ${preset.displayName}")
+        val chain = audioMasteringEngine.buildEffectChain(preset)
+        stateFlow.update { s ->
+            s.copy(tracks = s.tracks.map { track ->
+                if (track.id == trackId) track.copy(audioEffects = chain) else track
+            })
+        }
+        refreshPreview()
+        saveProject()
+        return true
     }
 
     fun detectBeats() {

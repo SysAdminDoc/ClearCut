@@ -357,6 +357,7 @@ class EditorViewModel @Inject constructor(
     private val noiseReductionEngine: NoiseReductionEngine,
     private val beatDetectionEngine: BeatDetectionEngine,
     private val loudnessEngine: LoudnessEngine,
+    private val audioMasteringEngine: com.novacut.editor.engine.AudioMasteringEngine,
     private val frameInterpolationEngine: FrameInterpolationEngine,
     private val inpaintingEngine: InpaintingEngine,
     private val upscaleEngine: UpscaleEngine,
@@ -410,7 +411,8 @@ class EditorViewModel @Inject constructor(
 
     val audioMixerDelegate = AudioMixerDelegate(
         stateFlow = _state, beatDetectionEngine = beatDetectionEngine,
-        loudnessEngine = loudnessEngine, scope = viewModelScope,
+        loudnessEngine = loudnessEngine, audioMasteringEngine = audioMasteringEngine,
+        scope = viewModelScope,
         saveUndoState = ::saveUndoState, showToast = ::showToast,
         pauseIfPlaying = ::pauseIfPlaying, dismissedPanelState = ::dismissedPanelState,
         refreshPreview = ::updatePreview,

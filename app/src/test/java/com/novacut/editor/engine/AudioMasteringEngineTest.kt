@@ -1,6 +1,8 @@
 package com.novacut.editor.engine
 
+import com.novacut.editor.model.AudioEffectType
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -78,5 +80,99 @@ class AudioMasteringEngineTest {
     @Test
     fun getPreset_unknownId_returnsNull() {
         assertNull(engine.getPreset("nonexistent-preset"))
+    }
+
+    // --- C.6: buildEffectChain converts presets into AudioEffect lists ---
+
+    @Test
+    fun buildEffectChain_podcastVoice_emitsAllStages() {
+        val preset = engine.getPreset("podcast_voice")!!
+        val chain = engine.buildEffectChain(preset)
+        // Order: HighPass → EQ → DeEsser → Compressor → Limiter
+        val types = chain.map { it.type }
+        assertEquals(
+            listOf(
+                AudioEffectType.HIGH_PASS,
+                AudioEffectType.PARAMETRIC_EQ,
+                AudioEffectType.DE_ESSER,
+                AudioEffectType.COMPRESSOR,
+                AudioEffectType.LIMITER
+            ),
+            types
+        )
+    }
+
+    @Test
+    fun buildEffectChain_skipsHighPassWhenAbsent() {
+        // Construct an in-memory preset with no high-pass to exercise the skip.
+        val preset = AudioMasteringEngine.MasteringChain(
+            id = "test_no_hp",
+            displayName = "No HP",
+            description = "Test",
+            highPassHz = null,
+            eqBands = emptyList(),
+            deEsserAmount = 0f
+        )
+        val chain = engine.buildEffectChain(preset)
+        val types = chain.map { it.type }
+        // Compressor + Limiter only when EQ and HP are absent and deEsser is 0.
+        assertEquals(
+            listOf(AudioEffectType.COMPRESSOR, AudioEffectType.LIMITER),
+            types
+        )
+        assertFalse(types.contains(AudioEffectType.HIGH_PASS))
+        assertFalse(types.contains(AudioEffectType.PARAMETRIC_EQ))
+        assertFalse(types.contains(AudioEffectType.DE_ESSER))
+    }
+
+    @Test
+    fun buildEffectChain_eqMaps5SlotsWithZeroFillForUnusedBands() {
+        // Use a preset known to have only 3 EQ bands (Podcast Voice).
+        val preset = engine.getPreset("podcast_voice")!!
+        assertEquals(3, preset.eqBands.size)
+        val chain = engine.buildEffectChain(preset)
+        val eq = chain.first { it.type == AudioEffectType.PARAMETRIC_EQ }
+        // All 5 slots present in the parametric EQ params.
+        for (i in 1..5) {
+            assertNotNull(eq.params["band${i}_freq"])
+            assertNotNull(eq.params["band${i}_gain"])
+            assertNotNull(eq.params["band${i}_q"])
+        }
+        // Unused slots (4 and 5) gain-zero.
+        assertEquals(0f, eq.params["band4_gain"])
+        assertEquals(0f, eq.params["band5_gain"])
+    }
+
+    @Test
+    fun buildEffectChain_deEsserAmountScalesThreshold() {
+        // amount = 0 → threshold = -10 dB. amount = 1 → threshold = -30 dB.
+        val light = AudioMasteringEngine.MasteringChain(
+            id = "t1", displayName = "x", description = "x",
+            highPassHz = null, eqBands = emptyList(),
+            deEsserAmount = 0.5f
+        )
+        val deEsser = engine.buildEffectChain(light)
+            .first { it.type == AudioEffectType.DE_ESSER }
+        // 0.5 → -10 + (-0.5 * 20) = -20 dB
+        assertEquals(-20f, deEsser.params["threshold"])
+    }
+
+    @Test
+    fun buildEffectChain_limiterCeilingTracksTruePeak() {
+        val preset = engine.getPreset("social_loud")!!
+        val limiter = engine.buildEffectChain(preset)
+            .first { it.type == AudioEffectType.LIMITER }
+        assertEquals(preset.truePeakDb, limiter.params["ceiling"])
+    }
+
+    @Test
+    fun buildEffectChain_compressorParamsRoundTripFromPreset() {
+        val preset = engine.getPreset("dialogue_clean")!!
+        val comp = engine.buildEffectChain(preset)
+            .first { it.type == AudioEffectType.COMPRESSOR }
+        assertEquals(preset.compressorThresholdDb, comp.params["threshold"])
+        assertEquals(preset.compressorRatio, comp.params["ratio"])
+        assertEquals(preset.compressorAttackMs, comp.params["attack"])
+        assertEquals(preset.compressorReleaseMs, comp.params["release"])
     }
 }
