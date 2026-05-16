@@ -578,7 +578,7 @@ R4.4 (gyro/lens-aware stabilization) scopes a from-scratch gyro pipeline. The pr
 
 Media3 1.10 (we pull 1.10.1) ships several new Compose modules and module splits that NovaCut should opt into rather than maintain custom equivalents.
 
-- [ ] **R6.10a — Swap custom `LottieOverlayEffect` for `media3-effect-lottie`** module. Reduces NovaCut's surface area; identical behavior.
+- [~] **R6.10a — Swap custom `LottieOverlayEffect` for `media3-effect-lottie`** module. *(In progress — [LottieOverlayEffect](app/src/main/java/com/novacut/editor/engine/LottieOverlayEffect.kt) docstring now records the migration plan and the three feature-parity gaps that must be verified before the swap: time-windowed overlay alpha gating via `OverlaySettings`, Lottie `TextDelegate` text substitution for caption templates, and HDR-aware sampling. NovaCut's custom impl carries all three; the official module's 1.10.x surface needs to be audited before the dep flip.)*
 - [ ] **R6.10b — Evaluate `media3-ui-compose-material3` Player Composable** to replace bespoke `PreviewPanel` controls. Risk: the new Composable's gesture model differs from our trim-aware preview — likely keep custom for now, but document the parity gap.
 - [ ] **R6.10c — Track the `media3-inspector-frame` migration** (the old `FrameExtractor` moved out of `media3-inspector` in 1.10). Audit `extractThumbnail` paths.
 - [ ] **R6.10d — `ProgressSlider` Composable** could replace the timeline ruler's progress indicator. Cosmetic, low-priority. Sources: https://developer.android.com/jetpack/androidx/releases/media3 · https://android-developers.googleblog.com/2026/03/media3-110-is-out.html · https://developer.android.com/media/media3/ui/compose
