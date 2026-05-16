@@ -1,0 +1,77 @@
+# Dependabot config — see ROADMAP.md R5.9a (security and supply chain).
+#
+# Goals:
+#   - Watch core dependencies (Media3, ONNX Runtime, MediaPipe, Hilt, Compose,
+#     Coil, OkHttp, Lottie, Room) for new releases + advisories.
+#   - Watch the GitHub Actions used by .github/workflows/build.yml.
+#   - Open PRs into master so each upgrade goes through normal code review.
+#   - Group ecosystem-wide bumps so we get one PR per ecosystem per week, not
+#     one PR per artifact (which would drown the inbox for a single-maintainer
+#     project).
+#
+# Future R5.9 work tracked separately:
+#   - R5.9b model checksum enforcement at runtime (lives in ModelDownloadManager).
+#   - R5.9c cloud effect call-out sheet (lives in GenerativeVideoPolicy + UI).
+#   - R5.9d cosign signatures on GitHub release artifacts.
+
+version: 2
+updates:
+  # Gradle / Maven dependencies (gradle/libs.versions.toml + AGP plugin)
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "gradle"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    groups:
+      androidx-media3:
+        patterns:
+          - "androidx.media3:*"
+      androidx-compose:
+        patterns:
+          - "androidx.compose:*"
+          - "androidx.compose.*:*"
+      androidx-core:
+        patterns:
+          - "androidx.core:*"
+          - "androidx.activity:*"
+          - "androidx.lifecycle:*"
+          - "androidx.navigation:*"
+          - "androidx.room:*"
+          - "androidx.datastore:*"
+          - "androidx.work:*"
+      hilt:
+        patterns:
+          - "com.google.dagger:hilt-*"
+          - "androidx.hilt:*"
+      ml:
+        patterns:
+          - "com.microsoft.onnxruntime:*"
+          - "com.google.mediapipe:*"
+      kotlin:
+        patterns:
+          - "org.jetbrains.kotlin:*"
+          - "org.jetbrains.kotlinx:*"
+      coil:
+        patterns:
+          - "io.coil-kt:*"
+
+  # GitHub Actions workflow updates
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"
+      include: "scope"

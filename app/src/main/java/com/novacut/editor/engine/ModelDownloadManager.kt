@@ -247,10 +247,32 @@ class ModelDownloadManager @Inject constructor(
          * so a subsequent retry doesn't waste a SHA-256 pass over the same bad
          * bytes on every isValidModelFile() call (this method is hot — called
          * from every downloadFiles() invocation and every Whisper init).
+         *
+         * R5.9b — When [requireChecksum] is true, a null [expectedSha256] is a
+         * **failure**, not a pass-through. Callers that distribute models from
+         * potentially-tampered sources (Hugging Face, GitHub release assets)
+         * should pass `requireChecksum = true` on the first-use verification
+         * call so a missing SHA-256 in the registry blocks the load instead
+         * of silently trusting the bytes.
          */
-        internal fun isValidModelFile(file: File, minimumBytes: Long, expectedSha256: String? = null): Boolean {
+        internal fun isValidModelFile(
+            file: File,
+            minimumBytes: Long,
+            expectedSha256: String? = null,
+            requireChecksum: Boolean = false,
+        ): Boolean {
             if (!file.isFile || file.length() < minimumBytes) return false
-            if (expectedSha256 == null) return true
+            if (expectedSha256 == null) {
+                if (requireChecksum) {
+                    Log.w(
+                        "ModelDownloadManager",
+                        "Checksum verification required but no SHA-256 recorded for ${file.name}; " +
+                            "treating as invalid (R5.9b)"
+                    )
+                    return false
+                }
+                return true
+            }
             val actual = runCatching { sha256Of(file) }.getOrNull() ?: return false
             if (actual == expectedSha256.lowercase()) return true
             Log.w(
@@ -260,6 +282,24 @@ class ModelDownloadManager @Inject constructor(
             runCatching { file.delete() }
             return false
         }
+
+        /**
+         * Explicit first-run verification entry point (R5.9b). Callers invoke
+         * this once per app launch for each model they intend to load, with
+         * `requireChecksum = true` to fail-closed when the registry hasn't
+         * recorded a SHA-256 yet. Returns true iff the file is present,
+         * meets the minimum size, AND matches the recorded SHA-256.
+         */
+        fun verifyChecksumOrDelete(
+            file: File,
+            minimumBytes: Long,
+            expectedSha256: String?,
+        ): Boolean = isValidModelFile(
+            file = file,
+            minimumBytes = minimumBytes,
+            expectedSha256 = expectedSha256,
+            requireChecksum = true,
+        )
 
         internal fun validateDownloadedFile(
             file: File,
