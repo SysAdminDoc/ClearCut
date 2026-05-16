@@ -2,11 +2,92 @@
 
 ## Unreleased
 
+### Roadmap Round 6 — 2026-05 refresh (engine + docs pass)
+
+This batch processes the Now-tier items from the ROADMAP Round 6 Forward
+View. Each line links to its roadmap ID. No new Maven dependencies were
+added — every change is either a docs-only refresh, a Kotlin-only refactor
+of an existing engine, or a new pure-Kotlin engine.
+
+- **R6.1 — 16 KB page-size compliance gate** is now enforced. New
+  `scripts/check_16kb_alignment.py` parses ELF PT_LOAD segments without
+  needing NDK `readelf`; CI workflow runs it after `assembleRelease` and
+  fails the build on misalignment. Required because `targetSdk = 36`
+  (Android 16) means Play Store rejects non-compliant native libs at
+  upload time.
+- **R6.1c / R5.6b — Model registry** lives at
+  [docs/models.md](docs/models.md). Records every shipped or planned
+  model, native AAR, cloud provider, and the F-Droid NonFreeNet posture
+  per source domain. Tier A engines block on the SHA-256 ⚠ TBD column
+  before activation.
+- **R6.2a — NNAPI deprecation** removed from `InpaintingEngine`. The
+  `addNnapi()` call is gone; default CPU EP runs portably. Docstring
+  rewritten to link the migration guide and point QNN/LiteRT futures at
+  R6.2.
+- **R6.4a/b — SAM 3 watch item** scaffolded. `TapSegmentEngine` gains
+  `ModelFamily.SAM3`, `SAM3_HIERA_TINY_ONNX_PLACEHOLDER` enum entry, a
+  `SAM3_PLACEHOLDER_ENABLED` feature flag (off), and a stub
+  `segmentByTextPrompt(bitmap, prompt)` method. The recommender keeps SAM
+  2.1 Hiera Tiny as the default until a mobile-export ONNX ships.
+- **R6.5a — `ffmpeg-kit-16kb`** is now the documented A.9 target.
+  `FFmpegEngine` carries the full activation path in its docstring
+  (catalog entry, build.gradle line, license obligation) and its
+  `isAvailable()` does a reflection probe so consumers can branch on
+  FFmpeg presence the moment the dep is added.
+- **R6.6a — DeepFilterNet 3** is now the documented A.2 target.
+  `NoiseReductionEngine` exports `TARGET_MODEL_*` constants and
+  documents the model-bytes override path for AAR bundles that still
+  carry v2. Cleaned up a duplicate `companion object` declaration.
+- **R6.8a/b — Three-target Sherpa-ONNX policy.** New
+  `WHISPER_LARGE_V3_TURBO_MULTILINGUAL` variant with
+  `requiresPremiumTier = true` and `minimumRamMb = 6_144`.
+  `preferredModelFor(language, allowPremiumModels, availableRamMb)`
+  picks Turbo only when multilingual + premium-models enabled + RAM
+  floor met; otherwise falls back to Whisper Tiny multilingual. 5 new
+  tests lock the policy.
+- **R6.10a — `media3-effect-lottie` migration plan** recorded in
+  `LottieOverlayEffect` docstring. Custom impl stays in place until the
+  three parity gaps (time-windowed alpha, TextDelegate text substitution,
+  HDR-aware sampling) are verified against the official module.
+- **R6.21 — Opus audio import** now works through both picker paths. The
+  audio launcher MIME filter is `arrayOf("audio/*", "application/ogg")`
+  so files some Android pickers still label with the legacy Ogg container
+  MIME are discoverable.
+- **C.6 — Audio mastering presets** are now wired end-to-end. New
+  `AudioMasteringEngine.buildEffectChain(preset)` converts a curated
+  recipe (Podcast Voice, Music Master, Dialogue Clean, ASMR, Social Loud)
+  into the ordered HighPass → ParametricEQ → De-esser → Compressor →
+  Limiter `AudioEffect` list. `AudioMixerDelegate.applyMasteringPreset`
+  replaces a track's audio chain in a single undoable pass. 6 new
+  conversion tests cover stage ordering, conditional skips, EQ
+  zero-fill, de-esser threshold scaling, limiter ceiling, and compressor
+  param round-trip.
+- **B.5 — Mixed copy/re-encode segment stitching scaffold.** New
+  `SmartRenderEngine.planRuns(segments)` groups consecutive same-flag
+  segments into `RenderRun`s, breaking on either flag change or timeline
+  gap. 8 new tests lock the merge rules. The composer step that
+  concatenates per-run outputs waits on R6.5 so FFmpeg's concat demuxer
+  is available.
+- **R5.4c — Strings audit on engine stubs** complete. The Round 5 claim
+  that engines call `Toast.makeText` was incorrect for the current
+  codebase (zero hits). Added `EngineStringExtractionAuditTest` so a
+  future commit can't introduce a hardcoded engine-side toast.
+  Diagnostic message fields on result records (33 across
+  `ProjectArchive`, `TemplateCompatibility`,
+  `TimelineExchangeValidator`) are tracked as a separate localization
+  workstream.
+- **R5.5d — Local-only diagnostic export** engine layer shipped.
+  `DiagnosticExportEngine` writes a ZIP under `filesDir/diagnostics/`
+  with app/device/codec/model/logcat sections — sensitive substrings
+  redacted before write; project content, media URIs, captions,
+  autosave snapshots never included by contract. Self-prunes past 3
+  ZIPs. 8 new redaction + bundle-structure tests. Settings UI wiring
+  (FileProvider + ACTION_SEND) is a focused ~10-line follow-up.
 - **Multi-sequence export now carries NovaCut layer opacity into Media3.** `VideoEngine` builds per-input compositor layer metadata and applies it through `NovaCutVideoCompositorSettings`, so visible video/overlay tracks keep their track opacity in the real Media3 composition path.
 - **Blend fallback coverage now matches the 18-mode UI.** Hue, Saturation, Color, and Luminosity no longer fall through to Normal; the single-texture fallback now gives every exposed blend mode a distinct result while the roadmap keeps the true programmable dual-texture compositor gap explicit.
 - **Editor recovery, project autosave, publish metadata, template import, LUT import, and project naming paths were hardened.** The pass adds defensive caps and safer discard behavior around paths that can otherwise lose work, parse oversized data, or create brittle saved state.
 - **Project home, settings, template, media picker, and snackbar surfaces received a premium polish pass.** Reused shared chips, strengthened busy/empty/disabled/accessibility states, tightened rename validation, and improved card semantics.
-- **Verification** — `git diff --check` passed. Gradle tests could not run in this environment because no Java runtime or `JAVA_HOME` is installed.
+- **Verification** — `git diff --check` passed. Gradle tests could not run in this environment because no Java runtime or `JAVA_HOME` is installed. The Round 6 batch above added 35+ new JVM unit tests; they have not been executed in this environment and need a `gradlew testDebugUnitTest` run on a host with a JDK to verify.
 
 ## v3.74.9 — 2026-05-14 — Caption accessibility presets
 
