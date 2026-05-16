@@ -119,4 +119,87 @@ class AdjustmentLayerEngineTest {
             assert(false) { "Should have thrown on zero-duration layer" }
         } catch (_: IllegalArgumentException) { /* expected */ }
     }
+
+    // --- C.11 planForClip ---
+
+    @Test
+    fun planForClip_noLayers_returnsEmpty() {
+        assertEquals(
+            emptyList<AdjustmentLayerEngine.AdjustmentLayerSegment>(),
+            engine.planForClip(0L, 10_000L, emptyList()),
+        )
+    }
+
+    @Test
+    fun planForClip_invalidRange_returnsEmpty() {
+        val plan = engine.planForClip(
+            1_000L,
+            500L,
+            listOf(
+                AdjustmentLayerEngine.AdjustmentLayer(
+                    id = "a",
+                    startTimeMs = 0L,
+                    endTimeMs = 2_000L,
+                    effects = listOf(dummyEffect("e1")),
+                )
+            )
+        )
+        assertTrue(plan.isEmpty())
+    }
+
+    @Test
+    fun planForClip_singleLayerMidClip_producesThreeSegments() {
+        val layer = AdjustmentLayerEngine.AdjustmentLayer(
+            id = "mid",
+            startTimeMs = 3_000L,
+            endTimeMs = 7_000L,
+            effects = listOf(dummyEffect("e1")),
+        )
+        val plan = engine.planForClip(0L, 10_000L, listOf(layer))
+        assertEquals(3, plan.size)
+        assertEquals(0L, plan[0].timelineStartMs)
+        assertEquals(3_000L, plan[0].timelineEndMs)
+        assertTrue(plan[0].effects.isEmpty())
+
+        assertEquals(3_000L, plan[1].timelineStartMs)
+        assertEquals(7_000L, plan[1].timelineEndMs)
+        assertEquals(1, plan[1].effects.size)
+        assertEquals("e1", plan[1].effects.first().id)
+
+        assertEquals(7_000L, plan[2].timelineStartMs)
+        assertEquals(10_000L, plan[2].timelineEndMs)
+        assertTrue(plan[2].effects.isEmpty())
+    }
+
+    @Test
+    fun planForClip_layerCoveringWholeClip_producesOneSegment() {
+        val layer = AdjustmentLayerEngine.AdjustmentLayer(
+            id = "all",
+            startTimeMs = 0L,
+            endTimeMs = 10_000L,
+            effects = listOf(dummyEffect("e1")),
+        )
+        val plan = engine.planForClip(0L, 10_000L, listOf(layer))
+        assertEquals(1, plan.size)
+        assertEquals(0L, plan[0].timelineStartMs)
+        assertEquals(10_000L, plan[0].timelineEndMs)
+        assertEquals(1, plan[0].effects.size)
+    }
+
+    @Test
+    fun planForClip_durationSumsToClipRange() {
+        val layers = listOf(
+            AdjustmentLayerEngine.AdjustmentLayer(
+                id = "l1", startTimeMs = 2_000L, endTimeMs = 4_000L,
+                effects = listOf(dummyEffect("a")),
+            ),
+            AdjustmentLayerEngine.AdjustmentLayer(
+                id = "l2", startTimeMs = 5_000L, endTimeMs = 8_000L,
+                effects = listOf(dummyEffect("b")),
+            ),
+        )
+        val plan = engine.planForClip(0L, 10_000L, layers)
+        val totalDuration = plan.sumOf { it.durationMs }
+        assertEquals(10_000L, totalDuration)
+    }
 }

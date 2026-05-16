@@ -86,4 +86,61 @@ class AdjustmentLayerEngine @Inject constructor() {
         }
         return boundaries.toList().zipWithNext { a, b -> a until b }
     }
+
+    /**
+     * Build a per-sub-range effect plan for a clip. Combines
+     * [partitionByLayerBoundaries] + [effectsForClip] applied per sub-range
+     * so the export pipeline gets a single "this is the effect chain to
+     * apply between these two timeline times" answer without re-walking
+     * the layer list.
+     *
+     * The returned list is ordered by `range.first`. Returns one entry
+     * when no layers overlap the clip (the whole clip range, empty effect
+     * list).
+     *
+     * EffectBuilder integration sketch:
+     *
+     *     val plan = adjustmentLayerEngine.planForClip(clip, layers)
+     *     for (segment in plan) {
+     *         val combined = clip.effects + segment.effects
+     *         emitEffectChainFor(segment.timelineRange, combined)
+     *     }
+     */
+    fun planForClip(
+        clipStartMs: Long,
+        clipEndMs: Long,
+        layers: List<AdjustmentLayer>,
+    ): List<AdjustmentLayerSegment> {
+        val ranges = partitionByLayerBoundaries(clipStartMs, clipEndMs, layers)
+        if (ranges.isEmpty()) {
+            return emptyList()
+        }
+        return ranges.map { range ->
+            // partitionByLayerBoundaries returns LongRange via `until`, so
+            // last + 1 is the exclusive end. The effects query uses an
+            // inclusive end since we're looking for overlap, which `last+1`
+            // gives us correctly.
+            val segStart = range.first
+            val segEndExclusive = range.last + 1L
+            AdjustmentLayerSegment(
+                timelineStartMs = segStart,
+                timelineEndMs = segEndExclusive,
+                effects = effectsForClip(segStart, segEndExclusive, layers),
+            )
+        }
+    }
+
+    /**
+     * A single export segment for a clip with adjustment-layer effects
+     * applied. Carries the timeline range and the cumulative effect list
+     * (clip-own effects are NOT included — the export caller composes
+     * `clip.effects + segment.effects` per range).
+     */
+    data class AdjustmentLayerSegment(
+        val timelineStartMs: Long,
+        val timelineEndMs: Long,
+        val effects: List<Effect>,
+    ) {
+        val durationMs: Long get() = timelineEndMs - timelineStartMs
+    }
 }
