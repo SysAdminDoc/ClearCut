@@ -12,16 +12,33 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Stub engine -- requires NLLB-200 distilled or MADLAD-400 Q4 ONNX. See ROADMAP.md Tier C.5.
+ * Stub engine for on-device caption translation. See ROADMAP.md Tier C.5
+ * and Round 6 R6.7.
  *
- * Translates existing caption text across 200 languages on-device. Preserves word
- * timing when the target word count is similar to the source; otherwise proportionally
- * redistributes timings so karaoke highlighting stays readable.
+ * Round 6 (R6.7) pivots the recommended target from NLLB-200 to MADLAD-400 +
+ * Mozilla Bergamot:
+ *  - MADLAD-400 3B Q4: ~1.5 GB, 419 languages including long-tail dialects,
+ *    aggressively quantizable for mobile.
+ *  - Mozilla Bergamot models: per-language-pair ~100 MB, Firefox's offline
+ *    translation models; better quality than NLLB on common European pairs.
+ *  - NLLB-200 distilled remains the fallback for languages neither MADLAD
+ *    nor Bergamot covers well.
  *
- * Model options:
- *  - NLLB-200 distilled 600M Q4: ~600 MB, 200 languages, quality balance.
- *  - MADLAD-400 3B Q4: ~1.5 GB, 400 languages, highest quality.
- *  - NLLB-200 distilled 300M Q8: ~350 MB, lower quality, fastest.
+ * Word timings are re-interpolated based on target word count so downstream
+ * karaoke rendering keeps working when the target text expands or contracts
+ * vs the source.
+ *
+ * ## R5.4a — In-editor preview UX
+ *
+ * Beyond the model dependency, the caption-translation editor needs:
+ *  - Side-by-side source/target caption rows so the user can compare and
+ *    spot-fix on the fly.
+ *  - A per-caption "regenerate" action (re-translate one segment without
+ *    touching the rest).
+ *  - A per-language quality chip surfaced from [LanguagePairQuality].
+ *
+ * The data model lives on the engine ([TranslatedSegment.editorState] plus
+ * [LanguagePairQuality]); panel rendering lands in a follow-up Compose commit.
  */
 @Singleton
 class CaptionTranslationEngine @Inject constructor(
@@ -31,7 +48,66 @@ class CaptionTranslationEngine @Inject constructor(
     enum class ModelVariant(val displayName: String, val sizeMb: Int, val languageCount: Int) {
         NLLB_300M("NLLB-200 300M distilled", 350, 200),
         NLLB_600M("NLLB-200 600M distilled", 600, 200),
-        MADLAD_400_3B("MADLAD-400 3B Q4", 1500, 400)
+        MADLAD_400_3B("MADLAD-400 3B Q4", 1500, 419),
+        BERGAMOT_PER_PAIR("Bergamot (per language pair)", 100, 2),
+    }
+
+    /**
+     * R5.4a — Source/target/quality state for a single caption row in the
+     * translation editor. Marks the row as user-edited or pending regenerate
+     * so the panel can show the right affordance.
+     */
+    enum class EditorRowState {
+        TRANSLATED,        // Engine output unedited
+        USER_EDITED,       // User has overridden the engine output
+        REGENERATE_PENDING // User tapped regenerate; engine is recomputing
+    }
+
+    /**
+     * R5.4a — Surfaced quality hint for a (source, target) language pair, so
+     * the panel can show users when they're about to translate into a
+     * known-weak target. Values come from a curated table per model variant;
+     * MADLAD-400 has known-good coverage for European + East Asian pairs,
+     * narrower coverage for African + Pacific languages.
+     */
+    enum class LanguagePairQuality(val displayName: String) {
+        EXCELLENT("Excellent"),
+        GOOD("Good"),
+        FAIR("Fair"),
+        EXPERIMENTAL("Experimental"),
+        UNKNOWN("Unknown"),
+    }
+
+    /**
+     * Curated quality lookup for a (source, target) pair on a given model.
+     * Returns UNKNOWN for unknown pairs. Pure function so the UI can probe
+     * before the model is downloaded.
+     */
+    fun pairQuality(
+        variant: ModelVariant,
+        sourceLang: String,
+        targetLang: String,
+    ): LanguagePairQuality {
+        val src = sourceLang.lowercase()
+        val tgt = targetLang.lowercase()
+        if (src.isBlank() || tgt.isBlank()) return LanguagePairQuality.UNKNOWN
+        if (src == tgt) return LanguagePairQuality.EXCELLENT
+        val srcMacro = src.substringBefore('-')
+        val tgtMacro = tgt.substringBefore('-')
+        val europeanMajor = setOf("en", "es", "fr", "de", "it", "pt", "nl", "ru", "pl")
+        val eastAsianMajor = setOf("zh", "ja", "ko")
+        return when {
+            variant == ModelVariant.BERGAMOT_PER_PAIR &&
+                srcMacro in europeanMajor && tgtMacro in europeanMajor -> LanguagePairQuality.EXCELLENT
+            variant == ModelVariant.MADLAD_400_3B &&
+                srcMacro in europeanMajor && tgtMacro in europeanMajor -> LanguagePairQuality.EXCELLENT
+            variant == ModelVariant.MADLAD_400_3B &&
+                (srcMacro in eastAsianMajor || tgtMacro in eastAsianMajor) -> LanguagePairQuality.GOOD
+            variant == ModelVariant.NLLB_600M &&
+                srcMacro in europeanMajor && tgtMacro in europeanMajor -> LanguagePairQuality.GOOD
+            variant == ModelVariant.NLLB_300M -> LanguagePairQuality.FAIR
+            else -> LanguagePairQuality.EXPERIMENTAL
+        }
     }
 
     data class TranslatedSegment(
@@ -39,7 +115,9 @@ class CaptionTranslationEngine @Inject constructor(
         val targetText: String,
         val startTimeMs: Long,
         val endTimeMs: Long,
-        val words: List<SherpaAsrEngine.WordTimestamp> = emptyList()
+        val words: List<SherpaAsrEngine.WordTimestamp> = emptyList(),
+        /** R5.4a — current editor state for the row. */
+        val editorState: EditorRowState = EditorRowState.TRANSLATED,
     )
 
     private val _modelState = MutableStateFlow(ModelState.NOT_DOWNLOADED)
