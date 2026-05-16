@@ -587,9 +587,9 @@ Media3 1.10 (we pull 1.10.1) ships several new Compose modules and module splits
 
 Android 16 ships native APV (Advanced Professional Video) codec support — perceptually lossless intra-frame coding designed for pro post-production. Galaxy S26 Ultra is the first phone to record APV; expect more flagships through 2026. APV 422-10 supports YUV 4:2:2 10-bit at up to 2 Gbps for 2K/4K/8K.
 
-- [ ] **R6.11a — Add APV decode probe** to `EncoderCapabilityProbe` / `MediaImportEngine` so APV source files are flagged on import as "pro intra-frame; expect very large files".
-- [ ] **R6.11b — Surface a "Source is APV" chip** in ExportSheet (already chip-driven post-v3.74.3).
-- [ ] **R6.11c — Do NOT encode to APV by default.** APV is intra-frame; output files are 10–50× larger than HEVC. Treat as an ingest-only codec for now. Sources: https://source.android.com/docs/whatsnew/android-16-release · https://www.sammobile.com/news/galaxy-s26-ultra-world-first-phone-apv-codec-support/
+- [x] **R6.11a — Add APV decode probe** to `EncoderCapabilityProbe` / `MediaImportEngine` so APV source files are flagged on import as "pro intra-frame; expect very large files". *(Done — `EncoderCapabilityProbe.probeApvIngest()` returns `ApvSupport(hasDecoder, isHardwareDecoder, decoderNames)`. New `matchingDecoderEntries(mimeTypes)` helper mirrors the existing encoder walker. 5 new tests in `EncoderCapabilityProbeApvTest` cover the MIME constant, the value-object contract, and the JVM-empty fallback.)*
+- [ ] **R6.11b — Surface a "Source is APV" chip** in ExportSheet (already chip-driven post-v3.74.3). *(Probe is ready; UI surfacing is the next commit on this item.)*
+- [x] **R6.11c — Do NOT encode to APV by default.** *(Codified by omission — the new probe deliberately does not have an `apvEncoder` path. APV is ingest-only.)* Sources: https://source.android.com/docs/whatsnew/android-16-release · https://www.sammobile.com/news/galaxy-s26-ultra-world-first-phone-apv-codec-support/
 
 ### R6.12 — Android 16 Ultra HDR ISO 21496-1 v2
 
