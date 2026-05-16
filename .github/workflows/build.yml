@@ -35,6 +35,20 @@ jobs:
       - name: Build Release APK
         run: ./gradlew assembleRelease
 
+      - name: 16 KB page-size alignment check (Play Store gate)
+        # Google Play blocks uploads of apps targeting Android 15+ (API 35+) that
+        # bundle native libraries whose ELF LOAD segments are not 16 KB aligned.
+        # NovaCut targets API 36; non-compliance is a hard upload gate.
+        # See docs/models.md §2 and ROADMAP.md R6.1.
+        run: |
+          set -e
+          NATIVE_DIR="app/build/intermediates/merged_native_libs/release/out/lib"
+          if [ -d "$NATIVE_DIR" ]; then
+            python3 scripts/check_16kb_alignment.py "$NATIVE_DIR"
+          else
+            echo "No merged native libs found at $NATIVE_DIR — release build had no bundled .so. Skipping 16 KB check."
+          fi
+
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
