@@ -31,6 +31,14 @@ object EncoderCapabilityProbe {
     private const val TAG = "EncoderCapabilityProbe"
     private const val MIME_DOLBY_VISION = "video/dolby-vision"
 
+    /**
+     * APV (Advanced Professional Video) codec MIME type. Android 16 native;
+     * Galaxy S26 Ultra is the first phone with hardware support. APV is an
+     * intra-frame codec designed for pro post-production with 4:2:2 10-bit
+     * at up to 2 Gbps. NovaCut treats APV as ingest-only — see R6.11.
+     */
+    const val MIME_APV = "video/apv"
+
     enum class HdrExportFormat(val displayName: String) {
         HDR10("HDR10"),
         HDR10_PLUS("HDR10+"),
@@ -258,6 +266,55 @@ object EncoderCapabilityProbe {
             hasHardwareAv1 = hasHardwareAv1,
             hasHardwareVp9 = hasHardwareVp9
         )
+    }
+
+    // --- R6.11 APV ingest probe ---
+
+    data class ApvSupport(
+        /** True iff the device advertises at least one APV decoder. */
+        val hasDecoder: Boolean,
+        /** True iff the decoder is hardware-accelerated (not software fallback). */
+        val isHardwareDecoder: Boolean,
+        /** Decoder codec names for the diagnostic bundle. */
+        val decoderNames: List<String>,
+    ) {
+        val isUsable: Boolean get() = hasDecoder
+    }
+
+    /**
+     * Probe APV (Advanced Professional Video) decoder availability.
+     *
+     * NovaCut treats APV as **ingest-only** (R6.11c): APV is intra-frame
+     * coding designed for pro post-production; encoded files are 10–50×
+     * larger than HEVC equivalents. We surface a "Source is APV — large
+     * file" chip on import when this returns `hasDecoder = true`, and we
+     * never encode to APV by default. Encoder probing is omitted intentionally.
+     */
+    fun probeApvIngest(): ApvSupport {
+        val entries = matchingDecoderEntries(setOf(MIME_APV))
+        if (entries.isEmpty()) {
+            return ApvSupport(hasDecoder = false, isHardwareDecoder = false, decoderNames = emptyList())
+        }
+        val isHardware = entries.any { (info, _) -> info.isHardwareAcceleratedCompat() }
+        val names = entries.map { (info, _) -> info.name }.distinct()
+        return ApvSupport(hasDecoder = true, isHardwareDecoder = isHardware, decoderNames = names)
+    }
+
+    private fun matchingDecoderEntries(mimeTypes: Set<String>): List<Pair<MediaCodecInfo, String>> {
+        return try {
+            MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos
+                .filter { !it.isEncoder }
+                .flatMap { info ->
+                    info.supportedTypes
+                        .filter { supported ->
+                            mimeTypes.any { wanted -> supported.equals(wanted, ignoreCase = true) }
+                        }
+                        .map { supported -> info to supported }
+                }
+        } catch (t: Throwable) {
+            Log.w(TAG, "MediaCodecList decoder lookup failed", t)
+            emptyList()
+        }
     }
 
     private fun matchingEncoderEntries(mimeTypes: Set<String>): List<Pair<MediaCodecInfo, String>> {
