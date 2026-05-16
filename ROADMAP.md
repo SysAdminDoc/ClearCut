@@ -441,7 +441,7 @@ Media3 1.10 (March 2026) ships the multi-sequence/multi-track Composition API, w
 
 ### R5.6 — Distribution and packaging
 - [ ] **R5.6a — Play Asset Delivery for ML model bundles.** Whisper, Moonshine, RVM, RIFE, Real-ESRGAN, MobileSAM, Demucs all together blow past the 200 MB base-AAB. PAD on-demand asset packs, keyed off the existing `ModelDownloadManager`, are the correct vector — keeps F-Droid track buildable while Play install stays small. Source: https://developer.android.com/guide/playcore/asset-delivery
-- [ ] **R5.6b — F-Droid track with NonFreeNet anti-feature audit.** Any model fetched from a non-free CDN (Hugging Face is OK; vendor-locked endpoints are not) triggers `NonFreeNet`. Document each model URL + license + checksum in [docs/models.md](docs/models.md) so reproducible-build maintainers can verify. Source: https://f-droid.org/docs/Anti-Features/
+- [~] **R5.6b — F-Droid track with NonFreeNet anti-feature audit.** Any model fetched from a non-free CDN (Hugging Face is OK; vendor-locked endpoints are not) triggers `NonFreeNet`. Document each model URL + license + checksum in [docs/models.md](docs/models.md) so reproducible-build maintainers can verify. *(In progress — [docs/models.md](docs/models.md) now records every active model and AAR with source URL, license, and `NonFreeNet` posture for known source domains; SHA-256 columns flagged ⚠ TBD must be filled before each Tier A engine activates per R5.9b.)* Source: https://f-droid.org/docs/Anti-Features/
 - [ ] **R5.6c — Reproducible release builds.** F-Droid inclusion requires byte-identical AAB rebuilds. Pin Gradle, AGP, Kotlin, and JDK in `gradle.properties`; commit the lockfile.
 - [ ] **R5.6d — APK split by ABI for OpenCV / NCNN / ONNX.** OpenCV (A.3) is arm64-only at ~40 MB. NCNN (A.4 RIFE) and ONNX Runtime add more. ABI splits + universal-fallback policy on GitHub Releases (arm64 primary, armv7 trimmed, x86_64 emulator-only).
 
@@ -508,7 +508,7 @@ Google Play requires 16 KB page-size alignment for all new apps and updates targ
 
 - [ ] **R6.1a — Audit every bundled `.so` for 16 KB alignment.** Run `objdump -p` / `python check_elf_alignment.py` over `app/build/intermediates/merged_native_libs/release/out/lib/arm64-v8a/*.so` before each release. Add a CI gate.
 - [ ] **R6.1b — Pin NDK r28+ in `gradle.properties`.** Required for any project rebuild path.
-- [ ] **R6.1c — Document the alignment status in [docs/models.md](docs/models.md).** Every Tier A model AAR must record alignment status before it can graduate. Sources: https://developer.android.com/guide/practices/page-sizes · https://source.android.com/docs/core/architecture/16kb-page-size/16kb · https://developer.android.com/google/play
+- [x] **R6.1c — Document the alignment status in [docs/models.md](docs/models.md).** *(Done — initial registry created at [docs/models.md](docs/models.md) with §2 "Native AARs — 16 KB compliance gates" tracking ORT, MediaPipe, ffmpeg-kit-16kb, Sherpa-ONNX, DeepFilterNet, RIFE, OpenCV. R6.1a verification commands documented inline. Every Tier A AAR must record alignment status before it can graduate.)* Sources: https://developer.android.com/guide/practices/page-sizes · https://source.android.com/docs/core/architecture/16kb-page-size/16kb · https://developer.android.com/google/play
 
 ### R6.2 — LiteRT migration / NNAPI deprecation
 
