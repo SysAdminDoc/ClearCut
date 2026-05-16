@@ -136,19 +136,131 @@ class SilenceDetectionEngine @Inject constructor() {
         }.also { Log.d(TAG, "detectFillerWords: ${it.size} fillers proposed") }
     }
 
+    /**
+     * Scan Whisper word timestamps for multi-word filler patterns ("you know",
+     * "i mean", "sort of"). Uses a sliding window over adjacent
+     * [SherpaAsrEngine.WordTimestamp] entries; each match collapses the
+     * full window into a single [CutProposal] whose `matchedText` is the
+     * lowercased joined phrase.
+     */
+    fun detectMultiWordFillers(
+        words: List<SherpaAsrEngine.WordTimestamp>,
+        config: AutoCutConfig = AutoCutConfig(),
+        phrases: Set<String> = DEFAULT_MULTI_WORD_FILLERS,
+    ): List<CutProposal> {
+        if (!config.cutFillerWords || phrases.isEmpty() || words.isEmpty()) return emptyList()
+        val normalizedPhrases = phrases.map { it.lowercase().split(" ").filter { t -> t.isNotEmpty() } }
+        val maxLen = normalizedPhrases.maxOf { it.size }
+        val out = mutableListOf<CutProposal>()
+        val matched = BooleanArray(words.size)
+        var i = 0
+        while (i < words.size) {
+            if (matched[i]) { i++; continue }
+            var hit: List<String>? = null
+            var hitLen = 0
+            for (len in maxLen downTo 2) {
+                if (i + len > words.size) continue
+                val slice = (0 until len).map { offset ->
+                    words[i + offset].word.lowercase().trim { it.isWhitespace() || it in PUNCTUATION }
+                }
+                val match = normalizedPhrases.firstOrNull { it == slice }
+                if (match != null) {
+                    hit = match
+                    hitLen = len
+                    break
+                }
+            }
+            if (hit != null) {
+                val first = words[i]
+                val last = words[i + hitLen - 1]
+                out += CutProposal(
+                    startMs = (first.startTimeMs - config.paddingMs).coerceAtLeast(0L),
+                    endMs = last.endTimeMs + config.paddingMs,
+                    reason = CutProposal.Reason.FILLER_WORD,
+                    matchedText = hit.joinToString(" "),
+                )
+                for (k in 0 until hitLen) matched[i + k] = true
+                i += hitLen
+            } else {
+                i++
+            }
+        }
+        Log.d(TAG, "detectMultiWordFillers: ${out.size} multi-word fillers proposed")
+        return out
+    }
+
+    /**
+     * Merge overlapping or near-adjacent cut proposals into a single deduped
+     * list. Useful when [detectSilences], [detectFillerWords], and
+     * [detectMultiWordFillers] all fire on the same range — the user should
+     * see one combined cut, not three stacked.
+     *
+     * @param mergeGapMs proposals separated by less than this gap are fused
+     *   into a single proposal. Default is the same 80 ms padding the
+     *   AutoCutConfig uses, so cuts that were already conservatively
+     *   over-padded merge cleanly.
+     */
+    fun mergeProposals(
+        proposals: List<CutProposal>,
+        mergeGapMs: Long = 80L,
+    ): List<CutProposal> {
+        require(mergeGapMs >= 0L) { "mergeGapMs must be >= 0: $mergeGapMs" }
+        if (proposals.isEmpty()) return emptyList()
+        val sorted = proposals.sortedBy { it.startMs }
+        val out = mutableListOf<CutProposal>()
+        var current = sorted.first()
+        for (next in sorted.drop(1)) {
+            if (next.startMs - current.endMs <= mergeGapMs) {
+                // Merge — keep the earliest start and latest end; collapse
+                // the reason to SILENCE when mixed (silence has the clearer
+                // UX) and join matched text.
+                val mergedReason = if (current.reason == next.reason)
+                    current.reason
+                else
+                    CutProposal.Reason.SILENCE
+                val mergedText = listOfNotNull(current.matchedText, next.matchedText)
+                    .filter { it.isNotBlank() }
+                    .joinToString(", ")
+                    .ifBlank { null }
+                current = CutProposal(
+                    startMs = current.startMs,
+                    endMs = maxOf(current.endMs, next.endMs),
+                    reason = mergedReason,
+                    matchedText = mergedText,
+                )
+            } else {
+                out += current
+                current = next
+            }
+        }
+        out += current
+        return out
+    }
+
     companion object {
         private const val TAG = "SilenceDetect"
         private const val PUNCTUATION = ".,!?;:-\"'()"
 
         /**
-         * Single-token filler set. Multi-word fillers ("you know", "i mean", "sort of")
-         * are intentionally excluded because Whisper emits one timestamp per whitespace-
-         * separated token -- a multi-word pattern would need a sliding-window matcher
-         * over adjacent [SherpaAsrEngine.WordTimestamp] pairs, which is a follow-up.
+         * Single-token filler set.
          */
         val DEFAULT_FILLERS: Set<String> = setOf(
             "um", "uh", "er", "ah", "hmm", "mhm", "like",
             "basically", "literally", "right", "so", "well", "actually"
+        )
+
+        /**
+         * Multi-word filler phrase set consumed by [detectMultiWordFillers].
+         * All entries must be lowercased and space-separated. Order within
+         * the set doesn't matter — the matcher checks the longest-first.
+         */
+        val DEFAULT_MULTI_WORD_FILLERS: Set<String> = setOf(
+            "you know",
+            "i mean",
+            "sort of",
+            "kind of",
+            "a lot of",
+            "at the end of the day",
         )
     }
 }
