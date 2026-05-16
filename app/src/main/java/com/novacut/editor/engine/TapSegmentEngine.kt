@@ -20,15 +20,36 @@ class TapSegmentEngine @Inject constructor(
         private const val TAG = "TapSegmentEngine"
         const val SAM2_1_SOURCE_URL = "https://github.com/facebookresearch/sam2"
         const val SAM2_1_ONNX_MODEL_ID = "onnx-community/sam2.1-hiera-tiny-ONNX"
+        const val SAM3_SOURCE_URL = "https://github.com/facebookresearch/sam3"
         const val PREMIUM_WORKING_SET_THRESHOLD_BYTES = 200L * 1024L * 1024L
 
         val DEFAULT_ON_DEVICE_MODEL: ModelVariant = ModelVariant.SAM2_1_HIERA_TINY_ONNX
         val FALLBACK_ON_DEVICE_MODEL: ModelVariant = ModelVariant.MOBILE_SAM_ONNX
 
+        /**
+         * R6.4 feature flag — SAM 3 placeholder is opt-in until a mobile-export
+         * ONNX checkpoint ships. Default: off. Flip to true inside
+         * [recommendedModelForDevice] to start recommending SAM 3 on premium
+         * devices when the export exists.
+         */
+        const val SAM3_PLACEHOLDER_ENABLED = false
+
+        /**
+         * Returns the recommended on-device tracked-mask model for the given
+         * device + setting state. SAM 3 is held back via [SAM3_PLACEHOLDER_ENABLED]
+         * regardless of caller flags — the placeholder enum row only exists so the
+         * API contract is forward-compatible.
+         */
         fun recommendedModelForDevice(
             availableRamMb: Int,
             allowPremiumModels: Boolean
         ): ModelVariant {
+            if (SAM3_PLACEHOLDER_ENABLED) {
+                val sam3 = ModelVariant.SAM3_HIERA_TINY_ONNX_PLACEHOLDER
+                if (allowPremiumModels && sam3.canRunOnDevice(availableRamMb)) {
+                    return sam3
+                }
+            }
             val premium = DEFAULT_ON_DEVICE_MODEL
             return if (allowPremiumModels && premium.canRunOnDevice(availableRamMb)) {
                 premium
@@ -40,7 +61,17 @@ class TapSegmentEngine @Inject constructor(
 
     enum class ModelFamily {
         MOBILE_SAM,
-        SAM2_1
+        SAM2_1,
+        /**
+         * Meta SAM 3 / SAM 3.1 (Nov 2025 + Mar 2026). 848M-parameter model with
+         * text-prompted concept segmentation in addition to the point/box prompts
+         * supported by SAM 2.1, plus video object multiplexing in 3.1 (16 objects
+         * per forward pass, doubles video throughput). Currently feasible only on
+         * H100-class GPUs; no mobile-viable ONNX export has shipped as of 2026-05.
+         * Reserved here as a placeholder so the API contract is forward-compatible
+         * — see ROADMAP.md R6.4.
+         */
+        SAM3
     }
 
     enum class ModelVariant(
@@ -68,6 +99,27 @@ class TapSegmentEngine @Inject constructor(
             modelBytes = 160L * 1024L * 1024L,
             stateCacheBytes = 96L * 1024L * 1024L,
             minimumRamMb = 6_144,
+            supportsVideoPropagation = true
+        ),
+
+        /**
+         * Placeholder for SAM 3 / SAM 3.1 (R6.4). Behaviour-disabled today because:
+         *  - There is no Tiny-class ONNX export of SAM 3 / SAM 3.1 as of 2026-05.
+         *  - The full 848M-parameter model targets H100 GPUs, not mobile NPUs.
+         *  - The text-prompt concept-segmentation surface area is the part NovaCut
+         *    most wants; it has no equivalent in SAM 2.1.
+         * Sizes below are placeholder estimates derived from the SAM 2.1 Hiera Tiny
+         * working set. Update both numbers and `canRunOnDevice()` policy when a
+         * mobile-export ships. Until then, `recommendedModelForDevice()` will not
+         * select this variant — see [SAM3_PLACEHOLDER_ENABLED].
+         */
+        SAM3_HIERA_TINY_ONNX_PLACEHOLDER(
+            displayName = "SAM 3 Hiera Tiny (preview)",
+            family = ModelFamily.SAM3,
+            modelPackageName = "sam3-hiera-tiny-onnx-placeholder",
+            modelBytes = 240L * 1024L * 1024L,
+            stateCacheBytes = 128L * 1024L * 1024L,
+            minimumRamMb = 8_192,
             supportsVideoPropagation = true
         );
 
@@ -164,6 +216,38 @@ class TapSegmentEngine @Inject constructor(
         refineWithSam: Boolean = false
     ): TapSegmentResult? = withContext(Dispatchers.Default) {
         Log.d(TAG, "propagateMask: stub — requires explicit SAM 2.1 video model download")
+        null
+    }
+
+    /**
+     * Segment by natural-language concept prompt (R6.4b).
+     *
+     * SAM 3 introduces text-prompted concept segmentation ("dog", "the person
+     * in the red jacket", "the basketball"). NovaCut exposes this API shape now
+     * so consumers and UI can integrate without waiting for the model export.
+     * Today this method:
+     *  - Returns null on the SAM 2.1 path (the default model) because SAM 2.1
+     *    does not accept text prompts.
+     *  - Returns null on the MobileSAM path for the same reason.
+     *  - When a SAM 3 mobile ONNX export ships, the SAM3 implementation will
+     *    parse the prompt and emit a mask without any consumer-side change.
+     *
+     * Callers should treat a null return as "concept-segmentation unavailable
+     * on the current device/model" and fall back to a manual mask draw flow.
+     *
+     * @param bitmap The video frame to segment.
+     * @param textPrompt Natural-language description of the target object.
+     * @return TapSegmentResult or null if concept segmentation is unavailable.
+     */
+    suspend fun segmentByTextPrompt(
+        bitmap: Bitmap,
+        textPrompt: String
+    ): TapSegmentResult? = withContext(Dispatchers.Default) {
+        Log.d(
+            TAG,
+            "segmentByTextPrompt: stub — text prompts require SAM 3 mobile export, " +
+                "not yet available (prompt='${textPrompt.take(40)}')"
+        )
         null
     }
 
