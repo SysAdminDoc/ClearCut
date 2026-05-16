@@ -66,7 +66,48 @@ class CameraCaptureEngine @Inject constructor(
 
     enum class RecordingState { IDLE, PREPARING, RECORDING, PAUSED, STOPPING }
 
-    fun isCameraAvailable(): Boolean = false
+    /**
+     * Reflection probe for the CameraX VideoCapture entry point. Flips
+     * automatically when the camera-video dep is added.
+     */
+    fun isCameraAvailable(): Boolean {
+        cachedAvailability?.let { return it }
+        val available = try {
+            Class.forName("androidx.camera.video.VideoCapture")
+            true
+        } catch (_: ClassNotFoundException) {
+            false
+        } catch (e: Throwable) {
+            Log.w(TAG, "CameraCaptureEngine availability probe threw an unexpected error", e)
+            false
+        }
+        cachedAvailability = available
+        if (!available) Log.d(TAG, "isCameraAvailable: CameraX not on classpath")
+        return available
+    }
+
+    @Volatile private var cachedAvailability: Boolean? = null
+
+    /**
+     * Compute the number of words the teleprompter should keep on-screen at
+     * the configured scroll speed, so the renderer can size the visible
+     * window without re-querying CameraX. Pure helper available today.
+     *
+     * Default visibleSeconds = 6.0 means "show roughly 6 seconds of speech
+     * worth of words" — the prompter should fade out words after they
+     * scroll off the top.
+     */
+    fun teleprompterVisibleWordCount(
+        config: TeleprompterConfig,
+        visibleSeconds: Float = 6f,
+    ): Int {
+        require(visibleSeconds > 0f) { "visibleSeconds must be > 0: $visibleSeconds" }
+        require(config.scrollSpeedWordsPerMin > 0) {
+            "scrollSpeedWordsPerMin must be > 0: ${config.scrollSpeedWordsPerMin}"
+        }
+        val wordsPerSec = config.scrollSpeedWordsPerMin / 60f
+        return (wordsPerSec * visibleSeconds).toInt().coerceAtLeast(1)
+    }
 
     suspend fun startRecording(
         config: CaptureConfig = CaptureConfig(),

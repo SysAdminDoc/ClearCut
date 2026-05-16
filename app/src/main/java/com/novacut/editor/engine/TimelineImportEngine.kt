@@ -46,6 +46,23 @@ class TimelineImportEngine @Inject constructor(
         return Format.values().firstOrNull { name.endsWith(".${it.extension}") }
     }
 
+    /**
+     * Round-trip fidelity hint for a (source NLE, format) pair. Pure
+     * function the import UI can call before parsing to set user
+     * expectations for what's preserved.
+     */
+    fun roundTripFidelity(format: Format): RoundTripFidelity = when (format) {
+        Format.FCPXML -> RoundTripFidelity.GOOD     // Most clip/effect data
+        Format.OTIO -> RoundTripFidelity.EXCELLENT  // Native ASWF interchange
+        Format.EDL -> RoundTripFidelity.LIMITED     // Cut decisions only; effects dropped
+    }
+
+    enum class RoundTripFidelity(val displayName: String, val warningCopy: String) {
+        EXCELLENT("Excellent", "Most timeline data will be preserved."),
+        GOOD("Good", "Clip + effect data preserved; provider-specific metadata may be dropped."),
+        LIMITED("Limited", "Cut decisions only. Effects, transitions, and overlays will not be imported."),
+    }
+
     suspend fun import(
         uri: Uri,
         format: Format? = null,
