@@ -10,13 +10,52 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Stub engine — requires ONNX Runtime or TFLite dependency. See ROADMAP.md Tier 3. */
+/**
+ * Stub engine for AI style transfer. See ROADMAP.md Tier A.11.
+ *
+ * Targets two model families:
+ *  - **AnimeGANv2** for cartoon / anime stylization
+ *    (https://github.com/TachibanaYoshino/AnimeGANv2). ~9 MB per variant.
+ *  - **Fast Neural Style Transfer** (Johnson 2016) for painterly transfers
+ *    (https://github.com/yakhyo/fast-neural-style-transfer). 6-7 MB per style.
+ *
+ * Both run through the ONNX Runtime that already ships with NovaCut. Each
+ * style is an opt-in download via `ModelDownloadManager`; users tap a style
+ * card → "Download ~9 MB?" sheet → model is fetched and the engine is
+ * activated for that style only.
+ *
+ * ## Activation path
+ *
+ *   1. Host each model on a stable URL (or use the upstream Hugging Face
+ *      mirrors); record SHA-256 in [docs/models.md](../../../../../../docs/models.md) §1.
+ *   2. Wire `prepareStyle(StylePreset)` to download via
+ *      `ModelDownloadManager`, with the size cost surfaced to the user
+ *      ahead of the download.
+ *   3. Implement [stylizeBitmap] with `OrtSession.run(...)` — input tensor
+ *      `image` (NCHW, BGR normalized to model-specific mean / std), read
+ *      back the stylized tensor, denormalize.
+ *   4. AnimeGAN expects 256×256 fixed input; tile-and-blend for larger
+ *      frames, identical pattern to InpaintingEngine.
+ *   5. Add a clip-level "Style Transfer" effect entry so the export pipeline
+ *      reuses the same ONNX session across frames in a clip range.
+ *
+ * ## License
+ *
+ * - AnimeGANv2 source: Apache-2.0. **Some pretrained model variants
+ *   carry research-only clauses — audit per variant before pinning.**
+ * - Fast Neural Style Transfer source: MIT. Released style weights are
+ *   typically redistributable but verify per artist.
+ */
 @Singleton
 class StyleTransferEngine @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     companion object {
         private const val TAG = "StyleTransferEngine"
+        const val TARGET_ANIMEGAN_SOURCE_URL = "https://github.com/TachibanaYoshino/AnimeGANv2"
+        const val TARGET_FAST_NST_SOURCE_URL = "https://github.com/yakhyo/fast-neural-style-transfer"
+        const val ANIMEGAN_INPUT_SIZE_PX = 256
+        const val FAST_NST_INPUT_SIZE_PX = 480
     }
 
     /**

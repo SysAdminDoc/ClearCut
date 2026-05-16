@@ -9,13 +9,62 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Stub engine — requires OpenCV Android dependency. See ROADMAP.md Tier 2. */
+/**
+ * Stub engine for video stabilization. See ROADMAP.md Tier A.3 and R4.4 / R6.9.
+ *
+ * Primary target: OpenCV Android (`org.opencv:opencv:4.10.0+`) with the
+ * Lucas-Kanade sparse optical flow + RANSAC + Kalman smoothing pipeline
+ * documented in [research/](../../../../../../research/) — ~5-10 ms per frame
+ * on Snapdragon 8 Gen 2 / Adreno 740.
+ *
+ * Round 6 (R6.9): **prefer Gyroflow sidecar import before reimplementing**
+ * gyro math from scratch. The MediaImportEngine should detect a sibling
+ * `.gyroflow` JSON file on import and apply the resulting per-frame
+ * transforms via MatrixTransformation — that covers ~80% of the creator
+ * value at ~10% of the engineering cost compared to a from-scratch gyro
+ * pipeline. The OpenCV optical-flow path remains the fallback when no gyro
+ * metadata is available.
+ *
+ * ## Activation path (OpenCV)
+ *
+ *   1. Add to gradle/libs.versions.toml:
+ *        opencv = "4.10.0"
+ *        opencv = { group = "org.opencv", name = "opencv", version.ref = "opencv" }
+ *   2. Add `implementation(libs.opencv)` to app/build.gradle.kts.
+ *   3. OpenCV ships arm64-only; ABI-split the release APK to keep the base
+ *      AAB under the 200 MB Play Store ceiling. Universal builds bloat past
+ *      150 MB on their own.
+ *   4. Verify the AAR's `.so` files are 16 KB page-size aligned with
+ *      `scripts/check_16kb_alignment.py` before pinning (R6.1).
+ *   5. Replace [analyzeStability] with `cv::goodFeaturesToTrack` +
+ *      `cv::calcOpticalFlowPyrLK` + `cv::findHomography(RANSAC)` per frame,
+ *      then Kalman-smooth the trajectory and emit warp matrices.
+ *   6. Apply the warp matrices in the export pipeline via
+ *      `Media3 MatrixTransformation` per frame so the GPU does the actual
+ *      crop + rotate, not the OpenCV `warpAffine` (which is CPU-bound and
+ *      would crater export speed).
+ *
+ * ## License
+ *
+ * OpenCV is Apache-2.0; redistributable. The Gyroflow `.gyroflow` JSON
+ * format is open and the sample project files distributed with Gyroflow are
+ * CC0.
+ */
 @Singleton
 class StabilizationEngine @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     companion object {
         private const val TAG = "StabilizationEngine"
+        const val TARGET_OPENCV_VERSION = "4.10.0"
+        const val TARGET_OPENCV_GROUP = "org.opencv"
+        const val TARGET_OPENCV_NAME = "opencv"
+        const val GYROFLOW_PROJECT_FILE_EXTENSION = "gyroflow"
+        const val GYROFLOW_PROJECT_SOURCE_URL = "https://github.com/gyroflow/gyroflow"
+        /** OpenCV ships arm64-only — ABI-split the release APK. */
+        const val OPENCV_REQUIRES_ARM64_ONLY_SPLIT = true
+        /** OpenCV AAR footprint (arm64-v8a). */
+        const val OPENCV_ARM64_AAR_BYTES = 40_000_000L
     }
 
     /**
