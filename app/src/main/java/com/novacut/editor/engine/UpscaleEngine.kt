@@ -10,13 +10,53 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Stub engine — requires Real-ESRGAN ONNX Runtime dependency. See ROADMAP.md Tier 2. */
+/**
+ * Stub engine for video upscaling. See ROADMAP.md Tier A.5.
+ *
+ * Target: Real-ESRGAN x4plus and general-x4v3 via the ONNX Runtime that
+ * already ships with NovaCut. The architecture is identical to
+ * InpaintingEngine — same `OrtEnvironment` / `OrtSession` setup, same
+ * tile-and-blend strategy for inputs larger than the model's expected size.
+ *
+ * ## Activation path
+ *
+ *   1. Host or mirror `realesrgan-x4plus.onnx` (~17 MB) and
+ *      `realesrgan-x4-anime-6b.onnx` (~5 MB) on a stable URL; record the
+ *      SHA-256 in [docs/models.md](../../../../../../docs/models.md) §1
+ *      (required before activation per R5.9b).
+ *   2. Wire model download via `ModelDownloadManager` keyed by the
+ *      [ModelVariant] enum.
+ *   3. Implement [upscaleBitmap] using `OrtSession.run(...)` with input
+ *      tensor `image` (NCHW, normalized to 0..1) and read back the upscaled
+ *      tensor. Tile inputs into 256×256 chunks with 16-pixel overlap to
+ *      avoid `VK_ERROR_OUT_OF_DEVICE_MEMORY` on mid-range Adreno GPUs.
+ *   4. Same EP policy as InpaintingEngine (R6.2): default CPU EP, with
+ *      per-EP probing for QNN / CoreML when the LiteRT migration lands.
+ *   5. Surface model size in MB to the AI Tools panel so users see the
+ *      download cost before tapping.
+ *
+ * ## License
+ *
+ * Real-ESRGAN is BSD-3-Clause for the code; the official x4plus model is
+ * redistributable. AnimeGAN-derived weights have non-commercial clauses —
+ * audit before pinning.
+ */
 @Singleton
 class UpscaleEngine @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     companion object {
         private const val TAG = "UpscaleEngine"
+        const val TARGET_MODEL_FAMILY = "real-esrgan"
+        const val TARGET_X4PLUS_FILENAME = "realesrgan-x4plus.onnx"
+        const val TARGET_X4PLUS_BYTES = 17_000_000L
+        const val TARGET_X4V3_FILENAME = "realesrgan-general-x4v3.onnx"
+        const val TARGET_X4V3_BYTES = 5_000_000L
+        const val TARGET_SOURCE_URL = "https://github.com/xinntao/Real-ESRGAN"
+        /** Tile size in pixels for the tile-and-blend strategy. */
+        const val DEFAULT_TILE_SIZE_PX = 256
+        /** Tile overlap to hide seams. */
+        const val DEFAULT_TILE_OVERLAP_PX = 16
     }
 
     /**

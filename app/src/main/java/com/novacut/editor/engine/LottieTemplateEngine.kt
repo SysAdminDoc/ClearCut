@@ -19,8 +19,8 @@ import kotlin.coroutines.resume
 /**
  * Renders Lottie animations as video overlay frames.
  *
- * Dependency (add to build.gradle.kts):
- *   implementation("com.airbnb.android:lottie-compose:6.+")
+ * Dependency (already in libs.versions.toml):
+ *   implementation("com.airbnb.android:lottie-compose:6.6.2")
  *
  * Usage flow:
  * 1. Load template from assets or file
@@ -29,6 +29,24 @@ import kotlin.coroutines.resume
  *
  * Templates stored in: assets/lottie_templates/
  * Format: .json (Lottie) or .lottie (dotLottie compressed)
+ *
+ * ## R6.16 — dotLottie + state-machine roadmap
+ *
+ * Lottie shipped state machines in late 2025 and dotLottie compressed
+ * containers (10-15x smaller files than equivalent JSON). When
+ * `lottie-compose:7.x` ships with the state-machine API:
+ *
+ *   1. Bump the version pin in gradle/libs.versions.toml.
+ *   2. Add a `loadDotLottie(uri: Uri)` parallel to the existing JSON loader
+ *      that accepts the `.lottie` zip container. The decompressed inner
+ *      structure has the same `LottieComposition` surface, so the rest of
+ *      this engine doesn't change.
+ *   3. Add a `getStateMachineInputs(composition)` accessor that surfaces
+ *      the state machine's boolean / number / trigger inputs so the UI can
+ *      drive them at render time (matches [RiveTemplateEngine.StateMachineInput]).
+ *   4. Re-evaluate Tier A.13 (Rive) — when this lands, Lottie covers the
+ *      *interactive template* use case at near-parity, and Rive becomes
+ *      Under Consideration rather than Next.
  */
 @Singleton
 class LottieTemplateEngine @Inject constructor(
