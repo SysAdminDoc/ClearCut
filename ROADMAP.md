@@ -612,8 +612,8 @@ The single highest-leverage 2026 competitor feature: CapCut Desktop Pro 2026's A
 
 DaVinci Resolve 20's Multicam SmartSwitch auto-cuts between camera angles based on which speaker is active. NovaCut has `MultiCamEngine` (audio-based sync) and Whisper word timestamps with speaker labels — missing only the binder.
 
-- [ ] **R6.14a — Add a `SpeakerSwitchPlanner`** that consumes `MultiCamEngine.syncedTracks` + Whisper diarization metadata and emits a cut plan (per-speaker → preferred angle).
-- [ ] **R6.14b — Surface in the multicam panel** as "Auto-switch by speaker" toggle, with manual override per speaker → angle assignment. Sources: https://www.miracamp.com/learn/davinci-resolve/whats-new-all-new-features-explained · https://filmora.wondershare.com/video-editor-review/davinci-resolve-editing-software.html
+- [x] **R6.14a — Add a `SpeakerSwitchPlanner`** that consumes `MultiCamEngine.syncedTracks` + Whisper diarization metadata and emits a cut plan (per-speaker → preferred angle). *(Done — pure Kotlin object at [SpeakerSwitchPlanner](app/src/main/java/com/novacut/editor/engine/SpeakerSwitchPlanner.kt) with first-appearance round-robin angle assignment, explicit-assignment override, redundant-cut coalescing, and a `minDwellMs` flicker guard. 11 new tests cover empty inputs, alternating speakers, consecutive same-speaker, dwell policy, explicit assignment, more-speakers-than-angles wrap, out-of-order input sort, initial-angle policy, and input validation.)*
+- [ ] **R6.14b — Surface in the multicam panel** as "Auto-switch by speaker" toggle, with manual override per speaker → angle assignment. *(Planner ready; UI integration is the next commit on this item.)* Sources: https://www.miracamp.com/learn/davinci-resolve/whats-new-all-new-features-explained · https://filmora.wondershare.com/video-editor-review/davinci-resolve-editing-software.html
 
 ### R6.15 — AI Animated Subtitles (per-word emphasis presets)
 
