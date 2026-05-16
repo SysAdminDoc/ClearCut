@@ -11,13 +11,52 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Stub engine — requires RVM ONNX Runtime dependency. See ROADMAP.md Tier 2. */
+/**
+ * Stub engine for true alpha-matte video matting. See ROADMAP.md Tier A.6.
+ *
+ * Target: RobustVideoMatting (RVM, https://github.com/PeterL1n/RobustVideoMatting)
+ * via the ONNX Runtime that already ships with NovaCut. Replaces the binary
+ * MediaPipe selfie segmentation mask with a true alpha matte that preserves
+ * hair detail and is temporally coherent across frames (RVM threads a
+ * recurrent state through the per-frame inference, so adjacent outputs don't
+ * flicker the way frame-independent matting does).
+ *
+ * ## Activation path
+ *
+ *   1. Host `rvm_mobilenetv3_fp32.onnx` (~15 MB) or the int8-quantized
+ *      variant (~5 MB) on a stable URL; record the SHA-256 in
+ *      [docs/models.md](../../../../../../docs/models.md) §1.
+ *   2. Wire model download via `ModelDownloadManager`. The mobilenet variant
+ *      is the right default for mobile; the resnet50 variant is too heavy
+ *      for on-device.
+ *   3. Implement [extractAlphaMatte] with the recurrent state pattern: pass
+ *      previous-frame recurrent tensors r1, r2, r3, r4 alongside the current
+ *      frame so the model can de-flicker. Initialise on the first frame with
+ *      zero-shaped tensors.
+ *   4. Default downsample ratio 0.5 for preview, 1.0 for export — same
+ *      pattern as the FrameInterpolationEngine quality enum.
+ *   5. Add a tap-to-refine path that bridges to TapSegmentEngine (R6.4) so
+ *      a user can correct a misclassified region.
+ *
+ * ## License
+ *
+ * RVM code is MIT; the released model weights are redistributable.
+ */
 @Singleton
 class VideoMattingEngine @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     companion object {
         private const val TAG = "VideoMattingEngine"
+        const val TARGET_MODEL_FAMILY = "robust-video-matting"
+        const val TARGET_MOBILENET_FILENAME = "rvm_mobilenetv3_fp32.onnx"
+        const val TARGET_MOBILENET_BYTES = 15_000_000L
+        const val TARGET_MOBILENET_INT8_BYTES = 5_000_000L
+        const val TARGET_SOURCE_URL = "https://github.com/PeterL1n/RobustVideoMatting"
+        /** Preview-mode downsample ratio (faster). */
+        const val PREVIEW_DOWNSAMPLE_RATIO = 0.5f
+        /** Export-mode downsample ratio (full resolution). */
+        const val EXPORT_DOWNSAMPLE_RATIO = 1.0f
     }
 
     /**
