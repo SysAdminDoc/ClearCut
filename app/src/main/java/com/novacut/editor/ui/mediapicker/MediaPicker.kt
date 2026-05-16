@@ -369,7 +369,13 @@ fun MediaPickerSheet(
                 enabled = actionsEnabled,
                 onClick = {
                     pendingMediaType = "audio"
-                    singlePickerLauncher.launch(arrayOf("audio/*"))
+                    // Include application/ogg so Opus files saved with the legacy
+                    // Ogg container MIME (which some Android pickers still report
+                    // as application/ogg rather than audio/ogg or audio/opus) are
+                    // visible in the picker. The resolver-side MIME check above
+                    // already accepts both labels for the same reason.
+                    // See ROADMAP.md R6.21.
+                    singlePickerLauncher.launch(arrayOf("audio/*", "application/ogg"))
                 }
             )
 

@@ -673,7 +673,7 @@ OpenCut (~50.7k stars, v0.3.0 in Apr 2026) is the closest open-source CapCut com
 | Pitch audio controls (#46) | ✅ Pitch shift in AudioEffectsEngine |
 | Audio-video muxing (#37) | ✅ Multi-sequence Media3 Composition (v3.74.1) |
 | Rotate quick buttons (#57) | ✅ Crop panel + transform rotation |
-| Opus audio support (#35) | ⚠️ Via Media3 ExoPlayer; verify import path |
+| Opus audio support (#35) | ✅ Via Media3 ExoPlayer; MediaPicker launcher now accepts `application/ogg` alongside `audio/*` and the resolver MIME check + extension probe both recognise `.opus` (R6.21 verified). |
 | RGB alpha adjustment (#39) | ✅ Color grading + blend modes |
 
 **Takeaway:** NovaCut is *meaningfully ahead* of the only direct OSS Android NLE on every published community ask. The community signal is not "what to add" but "differentiate harder on the polished UX of features you already have." Source: https://github.com/devhyper/open-video-editor/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement
