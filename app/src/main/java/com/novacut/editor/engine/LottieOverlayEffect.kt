@@ -21,6 +21,25 @@ import java.nio.ByteOrder
  * The Lottie composition is rendered to a bitmap, uploaded as a GL texture, and
  * alpha-blended over the input video frame on each drawFrame() call.
  *
+ * ## Future migration to `media3-effect-lottie` (R6.10a)
+ *
+ * Media3 1.10 (which NovaCut already pulls) introduced an official
+ * `androidx.media3:media3-effect-lottie` module that bundles a `LottieOverlay`
+ * effect. Before swapping this custom implementation, verify that the official
+ * module supports:
+ *  - Time-windowed overlays (this class uses `overlayStartUs` + `overlayDurationUs`
+ *    to gate the alpha to zero outside the window). The Media3 effect chain
+ *    typically expects an `OverlaySettings` per frame; check whether per-frame
+ *    alpha control is exposed in 1.10.x.
+ *  - Dynamic text substitution via Lottie `TextDelegate` (this class uses
+ *    `textReplacements: Map<String, String>` for caption / lower-third templates).
+ *    If the official module only renders a static composition, NovaCut must
+ *    either subclass it or keep this engine for text-driven templates.
+ *  - HDR-aware sampling (this class accepts `useHdr` from the GlEffect contract).
+ *
+ * Until those gaps are verified, the swap stays a docs item, not a code change.
+ * Track in ROADMAP.md R6.10a.
+ *
  * @param lottieEngine Engine instance for rendering frames
  * @param composition Pre-loaded Lottie composition
  * @param overlayStartUs Overlay start time in the video timeline (microseconds)
