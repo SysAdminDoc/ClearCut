@@ -4,6 +4,15 @@
 
 ### Autonomous roadmap continuation — 2026-05-17
 
+- **R6.10c — Media3 inspector-frame audit.** Added
+  `FrameExtractionPolicy`, focused source-tree guard tests, and
+  [docs/frame-extraction-media3-inspector.md](docs/frame-extraction-media3-inspector.md).
+  Current cached SDR timeline thumbnails, contact-sheet thumbnails, AI sample
+  frames, and JPEG freeze frames stay on `MediaMetadataRetriever`; future HDR
+  review frames, effect-aware thumbnails, or custom decoder-selection work must
+  use `androidx.media3:media3-inspector-frame` and
+  `androidx.media3.inspector.frame.FrameExtractor`. No unused inspector-frame
+  dependency was added.
 - **R6.10b — Media3 Compose Player evaluation.** Added
   `PreviewPanelMedia3ComposePolicy`, focused JVM tests, and
   [docs/preview-media3-compose.md](docs/preview-media3-compose.md) to record

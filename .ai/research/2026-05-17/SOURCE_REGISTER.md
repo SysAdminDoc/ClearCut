@@ -47,6 +47,10 @@ Every meaningful roadmap claim in this research run should trace to one of these
 | L39 | `app/src/main/java/com/novacut/editor/ui/editor/PreviewPanelMedia3ComposePolicy.kt` | Codified R6.10b adoption policy. |
 | L40 | `app/src/test/java/com/novacut/editor/ui/editor/PreviewPanelMedia3ComposePolicyTest.kt` | Regression tests for the R6.10b decision. |
 | L41 | `docs/preview-media3-compose.md` | Source-backed R6.10b decision note. |
+| L42 | `app/src/main/java/com/novacut/editor/engine/VideoEngine.kt` | Current thumbnail, thumbnail strip, and freeze-frame extraction paths for R6.10c. |
+| L43 | `app/src/main/java/com/novacut/editor/engine/FrameExtractionPolicy.kt` | Codified R6.10c migration policy. |
+| L44 | `app/src/test/java/com/novacut/editor/engine/FrameExtractionPolicyTest.kt` | Regression tests and source-tree import guard for R6.10c. |
+| L45 | `docs/frame-extraction-media3-inspector.md` | Source-backed R6.10c decision note. |
 
 ## Official Platform and Library Sources
 
@@ -82,6 +86,10 @@ Every meaningful roadmap claim in this research run should trace to one of these
 | E28 | Media3 UI Compose package API reference | https://developer.android.com/reference/kotlin/androidx/media3/ui/compose/package-summary | R6.10b evidence for lower-level `ContentFrame` and `PlayerSurface` surfaces. |
 | E29 | Media3 UI Compose Material3 Maven metadata | https://dl.google.com/dl/android/maven2/androidx/media3/media3-ui-compose-material3/maven-metadata.xml | Latest/release evidence for `media3-ui-compose-material3:1.10.1`; lastUpdated `20260512123518`. |
 | E30 | Media3 UI Compose Material3 AAR | https://dl.google.com/dl/android/maven2/androidx/media3/media3-ui-compose-material3/1.10.1/media3-ui-compose-material3-1.10.1.aar | Resolved AAR bytes; SHA-256 `0e0789cef85d948f924c0cec365021a56f6cc63b8c9888cacd05357f83e00112`. |
+| E31 | Media3 Inspector docs | https://developer.android.com/media/media3/inspector | R6.10c evidence for `MetadataRetriever`, `FrameExtractor`, `MediaExtractorCompat`, and platform API replacements. |
+| E32 | Media3 inspector-frame Maven metadata | https://dl.google.com/dl/android/maven2/androidx/media3/media3-inspector-frame/maven-metadata.xml | Latest/release evidence for `media3-inspector-frame:1.10.1`; lastUpdated `20260512123518`. |
+| E33 | Media3 inspector-frame AAR | https://dl.google.com/dl/android/maven2/androidx/media3/media3-inspector-frame/1.10.1/media3-inspector-frame-1.10.1.aar | Resolved AAR bytes; SHA-256 `ded4a5275a5f977afaa3fb4b1b933667629e2526efbfb94b4bcf2b96fc20e2a0`; no native entries. |
+| E34 | Media3 inspector-frame sources JAR | https://dl.google.com/dl/android/maven2/androidx/media3/media3-inspector-frame/1.10.1/media3-inspector-frame-1.10.1-sources.jar | Source inspection for `androidx.media3.inspector.frame.FrameExtractor`, `setEffects`, `setMediaCodecSelector`, `setExtractHdrFrames`, `getFrame`, and `getThumbnail`; SHA-256 `a03b962a242236b87fde0272c5478c2e6b7fc520288d3d58bb0f2e866d827654`. |
 
 ## Open-Source Competitor and Adjacent Sources
 
