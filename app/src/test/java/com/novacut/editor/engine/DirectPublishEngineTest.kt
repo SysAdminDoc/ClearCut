@@ -58,6 +58,7 @@ class DirectPublishEngineTest {
                 title = "\n\t",
                 description = "d".repeat(10_000),
                 chapters = "c".repeat(10_000),
+                aiDisclosureSummary = "a".repeat(2_000),
                 tags = listOf("launch!", "launch!", "tag-with-dashes", "x".repeat(100))
             )
         )
@@ -65,6 +66,7 @@ class DirectPublishEngineTest {
         assertEquals("NovaCut export", normalized.title)
         assertTrue(normalized.description.length <= 4_000)
         assertTrue(normalized.chapters.length <= 4_000)
+        assertTrue(normalized.aiDisclosureSummary.length <= 1_000)
         assertEquals(listOf("launch", "tagwithdashes", "x".repeat(48)), normalized.tags)
     }
 
@@ -75,15 +77,25 @@ class DirectPublishEngineTest {
                 title = "My Export",
                 description = "d".repeat(7_700),
                 chapters = "00:00 Intro\n00:10 Main",
+                aiDisclosureSummary = "AI assistance recorded: 1 × auto edit local (NovaCut Auto Edit).",
                 tags = listOf("good_tag", "bad tag!", "---")
-            )
+            ),
+            target = DirectPublishEngine.Target.YOUTUBE
         )
 
         assertTrue(body.length <= 8_000)
         assertTrue(body.startsWith("My Export"))
+        assertTrue(body.contains("AI disclosure selected: AI assistance recorded"))
         assertTrue(body.contains("00:00 Intro\n00:10 Main"))
         assertTrue(body.contains("#good_tag"))
         assertTrue(body.contains("#badtag"))
         assertFalse(body.contains("#---"))
+    }
+
+    @Test
+    fun onlyYoutubeAndTiktokExposeAiDisclosureControls() {
+        assertTrue(DirectPublishEngine.Target.YOUTUBE.hasAiDisclosureControl)
+        assertTrue(DirectPublishEngine.Target.TIKTOK.hasAiDisclosureControl)
+        assertFalse(DirectPublishEngine.Target.INSTAGRAM.hasAiDisclosureControl)
     }
 }

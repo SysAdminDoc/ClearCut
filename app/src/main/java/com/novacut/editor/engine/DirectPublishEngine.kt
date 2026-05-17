@@ -32,9 +32,13 @@ class DirectPublishEngine @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
 
-    enum class Target(val displayName: String, val packageName: String?) {
-        YOUTUBE("YouTube", "com.google.android.youtube"),
-        TIKTOK("TikTok", "com.zhiliaoapp.musically"),
+    enum class Target(
+        val displayName: String,
+        val packageName: String?,
+        val hasAiDisclosureControl: Boolean = false
+    ) {
+        YOUTUBE("YouTube", "com.google.android.youtube", hasAiDisclosureControl = true),
+        TIKTOK("TikTok", "com.zhiliaoapp.musically", hasAiDisclosureControl = true),
         INSTAGRAM("Instagram Reels", "com.instagram.android"),
         THREADS("Threads", "com.instagram.barcelona"),
         TWITTER_X("X", "com.twitter.android"),
@@ -46,6 +50,7 @@ class DirectPublishEngine @Inject constructor(
         val description: String,
         val tags: List<String>,
         val chapters: String = "",
+        val aiDisclosureSummary: String = "",
         val visibility: Visibility = Visibility.PRIVATE
     )
 
@@ -69,16 +74,16 @@ class DirectPublishEngine @Inject constructor(
             Log.w(TAG, "FileProvider failed for $filePath", e)
             return@withContext Result(null, Method.NONE, "Export is not in a shareable NovaCut location")
         }
-        val intent = buildShareIntent(uri, meta)
+        val intent = buildShareIntent(uri, target, meta)
         if (target.packageName != null && isInstalled(target.packageName)) {
             intent.setPackage(target.packageName)
         }
         Result(intent, Method.SHARE_INTENT, "Opening ${target.displayName}…")
     }
 
-    private fun buildShareIntent(uri: Uri, meta: PublishMeta): Intent {
+    private fun buildShareIntent(uri: Uri, target: Target, meta: PublishMeta): Intent {
         val safeMeta = normalizePublishMeta(meta)
-        val body = buildPublishShareText(safeMeta)
+        val body = buildPublishShareText(safeMeta, target)
         return Intent(Intent.ACTION_SEND).apply {
             type = "video/mp4"
             putExtra(Intent.EXTRA_STREAM, uri)
@@ -100,6 +105,7 @@ class DirectPublishEngine @Inject constructor(
 private const val MAX_SHARE_TITLE_CHARS = 120
 private const val MAX_SHARE_DESCRIPTION_CHARS = 4_000
 private const val MAX_SHARE_CHAPTERS_CHARS = 4_000
+private const val MAX_SHARE_AI_DISCLOSURE_CHARS = 1_000
 private const val MAX_SHARE_TAGS = 30
 private const val MAX_SHARE_TAG_CHARS = 48
 private const val MAX_SHARE_BODY_CHARS = 8_000
@@ -113,11 +119,22 @@ internal fun validatePublishableFile(file: File): String? = when {
     else -> null
 }
 
-internal fun buildPublishShareText(meta: DirectPublishEngine.PublishMeta): String {
+internal fun buildPublishShareText(
+    meta: DirectPublishEngine.PublishMeta,
+    target: DirectPublishEngine.Target? = null
+): String {
     val safeMeta = normalizePublishMeta(meta)
     return buildString {
         append(safeMeta.title)
         if (safeMeta.description.isNotBlank()) append("\n\n").append(safeMeta.description)
+        if (safeMeta.aiDisclosureSummary.isNotBlank()) {
+            val prefix = if (target?.hasAiDisclosureControl == true) {
+                "AI disclosure selected"
+            } else {
+                "AI disclosure"
+            }
+            append("\n\n").append(prefix).append(": ").append(safeMeta.aiDisclosureSummary)
+        }
         if (safeMeta.chapters.isNotBlank()) append("\n\n").append(safeMeta.chapters)
         if (safeMeta.tags.isNotEmpty()) {
             val tags = safeMeta.tags.joinToString(" ") { "#$it" }
@@ -142,6 +159,12 @@ internal fun normalizePublishMeta(
             fallback = "",
             maxChars = MAX_SHARE_CHAPTERS_CHARS,
             preserveLineBreaks = true
+        ),
+        aiDisclosureSummary = normalizeShareText(
+            raw = meta.aiDisclosureSummary,
+            fallback = "",
+            maxChars = MAX_SHARE_AI_DISCLOSURE_CHARS,
+            preserveLineBreaks = false
         ),
         tags = meta.tags.asSequence()
             .map { tag -> tag.replace(SAFE_HASHTAG_CHARS, "").take(MAX_SHARE_TAG_CHARS) }

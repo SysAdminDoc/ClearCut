@@ -2,6 +2,7 @@ package com.novacut.editor.ui.editor
 
 import android.content.Context
 import android.util.Log
+import com.novacut.editor.engine.AiUsageLedger
 import com.novacut.editor.engine.AiThumbnailEngine
 import com.novacut.editor.engine.AudioDescriptionEngine
 import com.novacut.editor.engine.AudioEngine
@@ -400,11 +401,19 @@ class V369Delegate(
     // ---- Direct publish --------------------------------------------------
 
     fun publishLastExport(target: DirectPublishEngine.Target, title: String, description: String) {
-        val path = stateFlow.value.lastExportedFilePath
+        val state = stateFlow.value
+        val path = state.lastExportedFilePath
         if (path == null) { showToast("Export something first"); return }
         jobs += scope.launch {
+            val aiDisclosureSummary = state.aiUsageLedger
+                .takeIf { it.isNotEmpty() }
+                ?.let { AiUsageLedger.summaryLine(it) }
+                .orEmpty()
             val meta = DirectPublishEngine.PublishMeta(
-                title = title, description = description, tags = emptyList()
+                title = title,
+                description = description,
+                tags = emptyList(),
+                aiDisclosureSummary = aiDisclosureSummary
             )
             val result = publish.publish(path, target, meta)
             val intent = result.intent

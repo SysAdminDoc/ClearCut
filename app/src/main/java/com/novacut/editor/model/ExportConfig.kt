@@ -31,6 +31,11 @@ data class ExportConfig(
     val exportAsContactSheet: Boolean = false,
     val contactSheetColumns: Int = 4,
     val watermark: Watermark? = null,
+    // R8.9: when enabled, export writes a local AI-use declaration sidecar
+    // and downstream publish/share surfaces include disclosure copy derived
+    // from the per-project AiUsageLedger.
+    val discloseAiUse: Boolean = false,
+    val writeAiUseSidecar: Boolean = true,
     // Requests HDR preservation for compatible HEVC / AV1 / VP9 exports.
     // VideoEngine maps this to Media3 Composition.HDR_MODE_KEEP_HDR, while
     // EncoderCapabilityProbe and ExportSheet warn when the selected encoder

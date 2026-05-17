@@ -11,6 +11,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.media3.common.Player
 import com.novacut.editor.R
 import com.novacut.editor.ai.AiFeatures
+import com.novacut.editor.engine.AiUsageLedger
 import com.novacut.editor.engine.AudioEngine
 import com.novacut.editor.engine.AutoSaveState
 import com.novacut.editor.engine.ExportState
@@ -229,7 +230,7 @@ data class EditorState(
     val trackedObjects: List<com.novacut.editor.model.TrackedObject> = emptyList(),
     // R8.9 disclosure ledger. Kept in editor state so export/privacy surfaces
     // can default disclosure controls without needing telemetry.
-    val aiUsageLedger: List<com.novacut.editor.engine.AiUsageLedger.Entry> = emptyList(),
+    val aiUsageLedger: List<AiUsageLedger.Entry> = emptyList(),
     // v3.71 Cut Assistant review state. Null until the user opens the panel;
     // mutating per-proposal acceptance does not split clips — the apply step is
     // explicit so undo records a single "Apply Cut Assistant" entry.
@@ -1312,7 +1313,19 @@ class EditorViewModel @Inject constructor(
     fun showExportSheet() {
         pauseIfPlaying()
         videoEngine.resetExportState()
-        _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.EXPORT_SHEET), exportState = ExportState.IDLE, exportProgress = 0f, exportErrorMessage = null) }
+        _state.update { state ->
+            val defaultDisclosure = AiUsageLedger.discloseToggleDefaultOn(state.aiUsageLedger)
+            dismissedPanelState(state).copy(
+                panels = state.panels.closeAll().open(PanelId.EXPORT_SHEET),
+                exportConfig = state.exportConfig.copy(
+                    discloseAiUse = defaultDisclosure,
+                    writeAiUseSidecar = if (defaultDisclosure) true else state.exportConfig.writeAiUseSidecar
+                ),
+                exportState = ExportState.IDLE,
+                exportProgress = 0f,
+                exportErrorMessage = null
+            )
+        }
     }
     fun hideExportSheet() {
         _state.update { s ->
@@ -2051,10 +2064,10 @@ class EditorViewModel @Inject constructor(
         _state.update { it.copy(aiSuggestion = null) }
     }
 
-    fun recordAiUsage(entry: com.novacut.editor.engine.AiUsageLedger.Entry) {
+    fun recordAiUsage(entry: AiUsageLedger.Entry) {
         _state.update { state ->
             state.copy(
-                aiUsageLedger = com.novacut.editor.engine.AiUsageLedger.mergeOverlaps(
+                aiUsageLedger = AiUsageLedger.mergeOverlaps(
                     state.aiUsageLedger + entry
                 )
             )
