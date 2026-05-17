@@ -131,6 +131,7 @@ class CaptionTranslationEngine @Inject constructor(
         when (variant) {
             ModelVariant.NLLB_300M, ModelVariant.NLLB_600M -> NLLB_LANGUAGES
             ModelVariant.MADLAD_400_3B -> MADLAD_LANGUAGES
+            ModelVariant.BERGAMOT_PER_PAIR -> BERGAMOT_LANGUAGES
         }
 
     suspend fun downloadModel(
@@ -174,6 +175,9 @@ class CaptionTranslationEngine @Inject constructor(
         )
         val MADLAD_LANGUAGES = NLLB_LANGUAGES + listOf(
             "co", "la", "eo", "cy", "gd", "ga", "mt", "is", "fo", "lb", "rm"
+        )
+        val BERGAMOT_LANGUAGES = listOf(
+            "en", "es", "fr", "de", "it", "pt", "nl", "ru", "pl"
         )
     }
 }

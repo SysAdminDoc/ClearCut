@@ -62,27 +62,57 @@ object KeyframeBezierGraph {
     /**
      * Evaluate the cubic bezier value at normalized time `t` in 0..1.
      *
-     * Standard cubic bezier formula:
-     *   B(t) = (1-t)^3 * P0 + 3*(1-t)^2*t * P1 + 3*(1-t)*t^2 * P2 + t^3 * P3
+     * For easing, the input `t` is the x-axis time. Cubic bezier curves are
+     * parameterized by an internal curve parameter, so first solve x(u) = t,
+     * then return y(u). This keeps CSS-style presets linear/ease-in/ease-out
+     * compatible with users' expectation that `evaluate(curve, 0.5)` means
+     * "value halfway through the segment", not "raw bezier parameter 0.5".
      *
      * Where P0 = (0, startValue), P3 = (1, endValue), P1 = (c0t, c0v),
      * P2 = (c1t, c1v). Returns the y component (the actual interpolated
-     * value); the x component is parameterized by t and used internally
-     * by the visual editor to know where the handle sits horizontally.
+     * value).
      *
-     * Note: this is the y-axis evaluation. For UI rendering the editor
-     * also needs the x-axis evaluation per t — both are returned by
-     * [evaluatePoint].
+     * For UI rendering with a raw curve parameter, use [evaluatePoint].
      */
     fun evaluate(segment: BezierSegment, t: Float): Float {
         val clamped = t.coerceIn(0f, 1f)
-        val inv = 1f - clamped
+        if (clamped <= 0f) return segment.startValue
+        if (clamped >= 1f) return segment.endValue
+        val curveT = solveCurveParameterForX(segment, clamped)
+        return evaluateY(segment, curveT)
+    }
+
+    private fun solveCurveParameterForX(segment: BezierSegment, x: Float): Float {
+        var lo = 0f
+        var hi = 1f
+        repeat(18) {
+            val mid = (lo + hi) * 0.5f
+            val midX = evaluateX(segment, mid)
+            if (midX < x) {
+                lo = mid
+            } else {
+                hi = mid
+            }
+        }
+        return (lo + hi) * 0.5f
+    }
+
+    private fun evaluateX(segment: BezierSegment, t: Float): Float {
+        val inv = 1f - t
+        val inv2 = inv * inv
+        val t2 = t * t
+        val t3 = t2 * t
+        return 3f * inv2 * t * segment.c0t + 3f * inv * t2 * segment.c1t + t3
+    }
+
+    private fun evaluateY(segment: BezierSegment, t: Float): Float {
+        val inv = 1f - t
         val inv2 = inv * inv
         val inv3 = inv2 * inv
-        val t2 = clamped * clamped
-        val t3 = t2 * clamped
+        val t2 = t * t
+        val t3 = t2 * t
         return inv3 * segment.startValue +
-            3f * inv2 * clamped * segment.c0v +
+            3f * inv2 * t * segment.c0v +
             3f * inv * t2 * segment.c1v +
             t3 * segment.endValue
     }
@@ -101,10 +131,7 @@ object KeyframeBezierGraph {
         val t3 = t2 * clamped
         // P0 = (0, startValue), P1 = (c0t, c0v), P2 = (c1t, c1v), P3 = (1, endValue)
         val x = 3f * inv2 * clamped * segment.c0t + 3f * inv * t2 * segment.c1t + t3
-        val y = inv3 * segment.startValue +
-            3f * inv2 * clamped * segment.c0v +
-            3f * inv * t2 * segment.c1v +
-            t3 * segment.endValue
+        val y = evaluateY(segment, clamped)
         return x to y
     }
 

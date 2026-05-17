@@ -168,7 +168,8 @@ data class Clip(
     val captions: List<Caption> = emptyList(),
     val groupId: String? = null,
     val clipLabel: ClipLabel = ClipLabel.NONE,
-    val sourceColorMetadata: SourceColorMetadata = SourceColorMetadata()
+    val sourceColorMetadata: SourceColorMetadata = SourceColorMetadata(),
+    val name: String? = null,
 ) {
     init {
         require(speed > 0f) { "Clip speed must be positive" }
