@@ -47,11 +47,11 @@
   `window.isNavigationBarContrastEnforced = false` (API 29+ guarded) so
   the 3-button-nav scrim no longer paints over edge-to-edge content. The
   NavHost root modifier moved from `systemBarsPadding()` to
-  `safeDrawingPadding()` so every nav destination handles cutouts + IME
+  `safeDrawingPadding()` so every nav destination handles display cutouts
   alongside system bars without per-screen Scaffold rewrites.
 - **R8.4 — Predictive back verified done by existing pattern.**
   AndroidManifest already declares `android:enableOnBackInvokedCallback`;
-  the single `BackHandler` in `EditorScreen` is gated on dirty-state
+  the single `BackHandler` in `EditorScreen` is gated on transient editor-state
   predicates so the system runs the back-to-home predictive animation
   whenever the editor is idle.
 - **R8.10 — Stylus handwriting verified default-on.** Compose BOM
