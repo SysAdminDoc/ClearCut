@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Notes
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ClosedCaption
@@ -23,6 +24,7 @@ import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.LayersClear
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.ViewModule
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -42,7 +44,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,6 +59,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
+import com.novacut.editor.engine.AiUsageLedger
 import com.novacut.editor.engine.EncoderCapabilityProbe
 import com.novacut.editor.engine.ExportColorConfidenceEngine
 import com.novacut.editor.engine.ExportState
@@ -90,6 +95,7 @@ fun ExportSheet(
     totalDurationMs: Long = 0L,
     smartRenderSummary: SmartRenderEngine.SmartRenderSummary? = null,
     sourceHdrSummary: ExportColorConfidenceEngine.SourceHdrSummary = ExportColorConfidenceEngine.SourceHdrSummary(),
+    aiUsageLedger: List<AiUsageLedger.Entry> = emptyList(),
     onConfigChanged: (ExportConfig) -> Unit,
     onStartExport: () -> Unit,
     onShare: () -> Unit = {},
@@ -99,6 +105,7 @@ fun ExportSheet(
     onExportFcpxml: () -> Unit = {},
     onExportSubtitles: (SubtitleFormat) -> Unit = {},
     onCaptureFrame: () -> Unit = {},
+    onClearAiUsageLedger: () -> Unit = {},
     onClose: () -> Unit
 ) {
     val availableCodecs = remember { ExportConfig.getAvailableCodecs() }
@@ -111,6 +118,17 @@ fun ExportSheet(
     }
     val videoModeEnabled = !config.exportAudioOnly && !config.exportStemsOnly && !config.exportAsGif && !config.captureFrameOnly && !config.exportAsContactSheet
     val audioCodecVisible = !config.captureFrameOnly && !config.exportAsGif && !config.exportAsContactSheet
+    val aiUsageEntries = remember(aiUsageLedger) {
+        AiUsageLedger.mergeOverlaps(aiUsageLedger)
+    }
+    val hasAiUsage = aiUsageEntries.isNotEmpty()
+    val hasDisclosureBearingAiUsage = remember(aiUsageEntries) {
+        AiUsageLedger.aggregateSeverity(aiUsageEntries) != AiUsageLedger.Severity.INTERNAL_ONLY
+    }
+    val aiDisclosureSummary = remember(aiUsageEntries) {
+        AiUsageLedger.summaryLine(aiUsageEntries)
+    }
+    var showClearAiLedgerConfirm by remember { mutableStateOf(false) }
     val codecCanCarryHdr = config.codec != VideoCodec.H264
     val hdrProfileSupport = remember(effectiveConfig.codec) {
         EncoderCapabilityProbe.queryHdrProfiles(effectiveConfig.codec)
@@ -204,6 +222,31 @@ fun ExportSheet(
         config.captureFrameOnly -> Icons.Default.Image
         config.exportAsContactSheet -> Icons.Default.ViewModule
         else -> Icons.Default.FileUpload
+    }
+
+    if (showClearAiLedgerConfirm) {
+        AlertDialog(
+            onDismissRequest = { showClearAiLedgerConfirm = false },
+            title = { Text("Clear AI ledger") },
+            text = {
+                Text("This removes the per-project AI usage record used for disclosure defaults and sidecar export.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onClearAiUsageLedger()
+                        showClearAiLedgerConfirm = false
+                    }
+                ) {
+                    Text("Clear")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearAiLedgerConfirm = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
     }
 
     Column(
@@ -552,6 +595,53 @@ fun ExportSheet(
                 onCheckedChange = { onConfigChanged(config.copy(includeChapterMarkers = it)) },
                 accent = Mocha.Sapphire
             )
+
+            if (videoModeEnabled) {
+                HorizontalDivider(color = Mocha.CardStroke.copy(alpha = 0.6f))
+
+                ExportToggleRow(
+                    icon = Icons.Default.AutoAwesome,
+                    title = "Disclose AI use",
+                    description = if (hasAiUsage) {
+                        aiDisclosureSummary
+                    } else {
+                        "No AI assistance recorded for this project."
+                    },
+                    checked = config.discloseAiUse && hasAiUsage,
+                    enabled = hasAiUsage,
+                    onCheckedChange = { checked ->
+                        onConfigChanged(
+                            config.copy(
+                                discloseAiUse = checked,
+                                writeAiUseSidecar = if (checked) true else config.writeAiUseSidecar
+                            )
+                        )
+                    },
+                    accent = if (hasDisclosureBearingAiUsage) Mocha.Mauve else Mocha.Teal
+                )
+
+                if (config.discloseAiUse && hasAiUsage) {
+                    ExportToggleRow(
+                        icon = Icons.AutoMirrored.Filled.Notes,
+                        title = "Write AI-use sidecar",
+                        description = "Creates a matching .ai-use.json declaration next to the export.",
+                        checked = config.writeAiUseSidecar,
+                        onCheckedChange = {
+                            onConfigChanged(config.copy(writeAiUseSidecar = it))
+                        },
+                        accent = Mocha.Blue
+                    )
+                }
+
+                if (hasAiUsage) {
+                    TextButton(
+                        onClick = { showClearAiLedgerConfirm = true },
+                        modifier = Modifier.align(Alignment.End)
+                    ) {
+                        Text("Clear AI ledger", color = Mocha.Red)
+                    }
+                }
+            }
 
             HorizontalDivider(color = Mocha.CardStroke.copy(alpha = 0.6f))
 

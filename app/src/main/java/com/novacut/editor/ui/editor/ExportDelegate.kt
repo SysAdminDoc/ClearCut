@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import androidx.core.content.FileProvider
+import com.novacut.editor.engine.AiUsageLedger
 import com.novacut.editor.engine.ContactSheetExporter
 import com.novacut.editor.engine.ExportService
 import com.novacut.editor.engine.ExportState
@@ -172,12 +173,14 @@ class ExportDelegate(
             runCatching { outputFile.delete() }
             return false
         }
+        val finalizedFile = finalizeFilenameSize(outputFile)
+        writeAiDisclosureSidecarIfRequested(finalizedFile, config, state)
         stateFlow.update { it.copy(
             exportState = ExportState.COMPLETE,
             exportProgress = 1f,
-            lastExportedFilePath = outputFile.absolutePath
+            lastExportedFilePath = finalizedFile.absolutePath
         ) }
-        showToast("Stream-copy export complete: ${outputFile.name}")
+        showToast("Stream-copy export complete: ${finalizedFile.name}")
         return true
     }
 
@@ -522,6 +525,7 @@ class ExportDelegate(
                         // No-op when the template didn't reference the token,
                         // so existing templates are unaffected.
                         val finalizedFile = finalizeFilenameSize(outputFile)
+                        writeAiDisclosureSidecarIfRequested(finalizedFile, configWithChapters, currentState)
                         stateFlow.update { it.copy(
                             exportState = ExportState.COMPLETE,
                             exportProgress = 1f,
@@ -556,8 +560,51 @@ class ExportDelegate(
         }
     }
 
+    private fun aiDisclosureEntries(
+        config: ExportConfig,
+        state: EditorState
+    ): List<AiUsageLedger.Entry> {
+        if (!config.discloseAiUse) return emptyList()
+        return AiUsageLedger.mergeOverlaps(state.aiUsageLedger)
+    }
+
+    private fun aiDisclosureText(
+        config: ExportConfig,
+        state: EditorState
+    ): String? {
+        val entries = aiDisclosureEntries(config, state)
+        if (entries.isEmpty()) return null
+        return AiUsageLedger.summaryLine(entries)
+    }
+
+    private fun writeAiDisclosureSidecarIfRequested(
+        outputFile: File,
+        config: ExportConfig,
+        state: EditorState
+    ) {
+        if (!config.writeAiUseSidecar) return
+        val entries = aiDisclosureEntries(config, state)
+        if (entries.isEmpty()) return
+        try {
+            val sidecar = File(
+                outputFile.parentFile,
+                "${outputFile.nameWithoutExtension}.ai-use.json"
+            )
+            val declaration = AiUsageLedger.toDisclosureDeclaration(
+                entries = entries,
+                projectName = state.project.name,
+                exportedFileName = outputFile.name,
+                generatedAtEpochMs = System.currentTimeMillis()
+            )
+            writeUtf8TextAtomically(sidecar, declaration.toString(2))
+        } catch (e: Exception) {
+            android.util.Log.w("ExportDelegate", "AI disclosure sidecar write failed", e)
+        }
+    }
+
     fun getShareIntent(): Intent? {
-        val filePath = stateFlow.value.lastExportedFilePath ?: run {
+        val state = stateFlow.value
+        val filePath = state.lastExportedFilePath ?: run {
             showToast("No exported media to share")
             return null
         }
@@ -570,6 +617,9 @@ class ExportDelegate(
         return Intent(Intent.ACTION_SEND).apply {
             type = exportMimeTypeFor(file.name)
             putExtra(Intent.EXTRA_STREAM, uri)
+            aiDisclosureText(state.exportConfig, state)?.let { disclosure ->
+                putExtra(Intent.EXTRA_TEXT, "AI disclosure: $disclosure")
+            }
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
     }

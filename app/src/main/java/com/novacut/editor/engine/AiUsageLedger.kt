@@ -133,12 +133,11 @@ object AiUsageLedger {
 
     /**
      * Whether the export sheet's "Disclose AI use" toggle should default to
-     * on for the given ledger. True for anything above [Severity.INTERNAL_ONLY].
+     * on for the given ledger. R8.9 requires the default for any non-empty
+     * ledger entry so users can consciously turn disclosure off instead of
+     * NovaCut silently hiding low-stakes AI assistance.
      */
-    fun discloseToggleDefaultOn(entries: List<Entry>): Boolean {
-        val severity = aggregateSeverity(entries)
-        return severity != Severity.INTERNAL_ONLY
-    }
+    fun discloseToggleDefaultOn(entries: List<Entry>): Boolean = entries.isNotEmpty()
 
     /**
      * Merge overlapping ranges per `(clipId, effectKind)` so disclosure
@@ -178,8 +177,9 @@ object AiUsageLedger {
      * Sorted by effect-kind name for deterministic output.
      */
     fun summaryLine(entries: List<Entry>): String {
-        if (entries.isEmpty()) return "No AI assistance recorded for this project."
-        val byKind = entries.groupBy { it.effectKind }
+        val merged = mergeOverlaps(entries)
+        if (merged.isEmpty()) return "No AI assistance recorded for this project."
+        val byKind = merged.groupBy { it.effectKind }
             .toSortedMap(compareBy { it.name })
         val parts = byKind.map { (kind, list) ->
             val modelSet = list.map { it.modelName }.toSortedSet()
@@ -206,6 +206,25 @@ object AiUsageLedger {
                     put("recordedAtEpochMs", entry.recordedAtEpochMs)
                 })
             }
+        }
+    }
+
+    fun toDisclosureDeclaration(
+        entries: List<Entry>,
+        projectName: String,
+        exportedFileName: String,
+        generatedAtEpochMs: Long
+    ): JSONObject {
+        val merged = mergeOverlaps(entries)
+        return JSONObject().apply {
+            put("schema", "com.novacut.ai-use.v1")
+            put("projectName", projectName.trim().take(MAX_PROJECT_NAME_CHARS))
+            put("exportedFileName", exportedFileName.trim().take(MAX_FILE_NAME_CHARS))
+            put("generatedAtEpochMs", generatedAtEpochMs)
+            put("aggregateSeverity", aggregateSeverity(merged).name)
+            put("disclosureRecommended", discloseToggleDefaultOn(merged))
+            put("summary", summaryLine(merged))
+            put("entries", toJsonArray(merged))
         }
     }
 
@@ -247,4 +266,6 @@ object AiUsageLedger {
     private const val DEFAULT_MAX_ENTRIES = 2_000
     private const val MAX_ID_CHARS = 128
     private const val MAX_MODEL_NAME_CHARS = 160
+    private const val MAX_PROJECT_NAME_CHARS = 160
+    private const val MAX_FILE_NAME_CHARS = 220
 }

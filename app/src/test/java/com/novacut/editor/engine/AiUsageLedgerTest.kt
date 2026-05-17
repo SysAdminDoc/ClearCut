@@ -26,7 +26,7 @@ class AiUsageLedgerTest {
     }
 
     @Test
-    fun discloseToggleDefaultOn_ignoresInternalOnlyAssistiveEntries() {
+    fun discloseToggleDefaultOn_defaultsOnForAnyLedgerEntry() {
         val internal = listOf(
             entry(
                 kind = AiUsageLedger.EffectKind.CAPTION_TRANSLATION_LOCAL,
@@ -39,7 +39,7 @@ class AiUsageLedgerTest {
         )
 
         assertFalse(AiUsageLedger.discloseToggleDefaultOn(emptyList()))
-        assertFalse(AiUsageLedger.discloseToggleDefaultOn(internal))
+        assertTrue(AiUsageLedger.discloseToggleDefaultOn(internal))
         assertTrue(AiUsageLedger.discloseToggleDefaultOn(recommended))
     }
 
@@ -86,6 +86,28 @@ class AiUsageLedgerTest {
         }
         assertEquals(1, AiUsageLedger.fromJsonArray(malformed).size)
         assertEquals(emptyList<AiUsageLedger.Entry>(), AiUsageLedger.fromJson("not json"))
+    }
+
+    @Test
+    fun disclosureDeclaration_isStableAndIncludesMergedEntries() {
+        val declaration = AiUsageLedger.toDisclosureDeclaration(
+            entries = listOf(
+                entry(kind = AiUsageLedger.EffectKind.AUTO_EDIT_LOCAL, start = 0, end = 500, model = "Auto Edit"),
+                entry(kind = AiUsageLedger.EffectKind.AUTO_EDIT_LOCAL, start = 400, end = 1_000, model = "Auto Edit v2")
+            ),
+            projectName = "Launch cut",
+            exportedFileName = "launch.mp4",
+            generatedAtEpochMs = 123L
+        )
+
+        assertEquals("com.novacut.ai-use.v1", declaration.getString("schema"))
+        assertEquals("Launch cut", declaration.getString("projectName"))
+        assertEquals("launch.mp4", declaration.getString("exportedFileName"))
+        assertEquals(123L, declaration.getLong("generatedAtEpochMs"))
+        assertEquals(AiUsageLedger.Severity.DISCLOSURE_REQUIRED.name, declaration.getString("aggregateSeverity"))
+        assertTrue(declaration.getBoolean("disclosureRecommended"))
+        assertEquals(1, declaration.getJSONArray("entries").length())
+        assertTrue(declaration.getString("summary").contains("auto edit local"))
     }
 
     @Test

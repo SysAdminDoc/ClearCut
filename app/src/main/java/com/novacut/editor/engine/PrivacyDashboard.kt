@@ -28,6 +28,7 @@ object PrivacyDashboard {
         TEMPLATE_LIBRARY("Saved templates / effect packs"),
         DIAGNOSTIC_LOGS("Diagnostic logs (logcat tail, redacted)"),
         CLOUD_GENERATIVE("Cloud generative video calls (consent-gated)"),
+        AI_USAGE_LEDGER("AI usage ledger (per-project disclosure history)"),
         OPT_IN_TELEMETRY("Opt-in usage telemetry (Sentry / Glean)"),
     }
 
@@ -135,6 +136,14 @@ object PrivacyDashboard {
             controls = Controls(canExport = false, canDelete = true, hasOptOut = true),
             collectedBy = listOf("GenerativeVideoPolicy"),
             retentionPolicy = "Per the provider's policy; disclosed in the consent sheet before each call.",
+            collectedByDefault = false,
+        ),
+        DashboardEntry(
+            category = Category.AI_USAGE_LEDGER,
+            location = StorageLocation.DEVICE_INTERNAL,
+            controls = Controls(canExport = true, canDelete = true, hasOptOut = false),
+            collectedBy = listOf("AiUsageLedger", "ProjectAutoSave", "ExportDelegate", "DirectPublishEngine"),
+            retentionPolicy = "Stored only inside the project autosave; users can clear it from the export disclosure review.",
             collectedByDefault = false,
         ),
         DashboardEntry(

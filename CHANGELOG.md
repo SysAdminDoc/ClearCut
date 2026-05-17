@@ -65,8 +65,14 @@
   `DISCLOSURE_RECOMMENDED` / `INTERNAL_ONLY`, merges overlaps, and
   round-trips through a new `AutoSaveState.aiUsageLedger` field
   (capped at 2 000 entries). `EditorViewModel.recordAiUsage` and
-  `clearAiUsageLedger` are the call sites for generative engines and a
-  future Privacy Dashboard row. Pairs with R8.2 / R5.5c.
+  `clearAiUsageLedger` are the call sites for generative engines. The
+  export sheet now defaults "Disclose AI use" on for any non-empty ledger,
+  writes a matching `.ai-use.json` declaration sidecar, and lets users
+  clear the project ledger through a confirmation dialog. Direct publish
+  share metadata includes the ledger summary for YouTube/TikTok-style
+  disclosure targets, and the Privacy Dashboard model now includes a
+  local/exportable/deletable AI ledger row. Remaining embedded media work:
+  C2PA assertions and MP4 `udta` tagging.
 - **R8.5 — ThermalHeadroomPolicy engine.** Pure-Kotlin policy translating
   `(PowerManager ThermalStatus, getThermalHeadroom forecast)` into a
   `ThrottleDecision` (FULL_SPEED / THROTTLE_LIGHT / THROTTLE_HEAVY /

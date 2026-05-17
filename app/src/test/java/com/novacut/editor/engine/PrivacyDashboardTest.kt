@@ -105,6 +105,19 @@ class PrivacyDashboardTest {
     }
 
     @Test
+    fun aiUsageLedgerRowIsLocalProjectScopedAndExportable() {
+        val entry = PrivacyDashboard.entryFor(PrivacyDashboard.Category.AI_USAGE_LEDGER)
+        assertNotNull(entry)
+        assertEquals(PrivacyDashboard.StorageLocation.DEVICE_INTERNAL, entry!!.location)
+        assertTrue(entry.controls.canExport)
+        assertTrue(entry.controls.canDelete)
+        assertFalse(entry.controls.hasOptOut)
+        assertFalse(entry.collectedByDefault)
+        assertTrue(entry.collectedBy.contains("AiUsageLedger"))
+        assertTrue(entry.retentionPolicy.contains("project autosave", ignoreCase = true))
+    }
+
+    @Test
     fun entryFor_unknownReturnsNull() {
         // Sanity: this object's lookup is implemented as firstOrNull, so
         // pasting an enum value not present in entries must return null.

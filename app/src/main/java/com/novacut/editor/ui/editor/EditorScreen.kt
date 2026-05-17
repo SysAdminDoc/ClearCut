@@ -1297,6 +1297,7 @@ fun EditorScreen(
                 totalDurationMs = state.totalDurationMs,
                 smartRenderSummary = exportSmartRenderSummary,
                 sourceHdrSummary = sourceHdrSummary,
+                aiUsageLedger = state.aiUsageLedger,
                 onConfigChanged = viewModel::updateExportConfig,
                 onStartExport = {
                     // Use app-private external dir — works on all Android versions including 11+
@@ -1315,6 +1316,7 @@ fun EditorScreen(
                 onExportFcpxml = viewModel::exportToFcpxml,
                 onCaptureFrame = viewModel::captureFrame,
                 onExportSubtitles = { format -> viewModel.exportSubtitles(format) },
+                onClearAiUsageLedger = viewModel::clearAiUsageLedger,
                 onClose = viewModel::hideExportSheet
             )
         }
