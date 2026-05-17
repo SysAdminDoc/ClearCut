@@ -44,7 +44,8 @@ class AiToolsDelegate(
     private val saveProject: () -> Unit,
     private val videoEngine: VideoEngine,
     private val recalculateDuration: (EditorState) -> EditorState,
-    private val settingsRepo: SettingsRepository
+    private val settingsRepo: SettingsRepository,
+    private val recordAiUsage: (AiUsageLedger.Entry) -> Unit
 ) {
     private var aiJob: Job? = null
 
@@ -240,6 +241,14 @@ class AiToolsDelegate(
 
     fun cancelAiTool() {
         aiJob?.cancel()
+    }
+
+    private fun recordAiUsageForClip(
+        clip: Clip,
+        effectKind: AiUsageLedger.EffectKind,
+        modelName: String
+    ) {
+        recordAiUsage(AiUsageRecordFactory.forClip(clip, effectKind, modelName))
     }
 
     private fun getToolCompatibilityMessage(toolId: String, clip: Clip): String? {
@@ -482,6 +491,11 @@ class AiToolsDelegate(
             saveUndoState("AI remove background")
             val bgEffect = Effect(type = EffectType.BG_REMOVAL, params = mapOf("threshold" to 0.5f))
             updateClipEffect(clip, bgEffect, setOf(EffectType.BG_REMOVAL, EffectType.CHROMA_KEY))
+            recordAiUsageForClip(
+                clip = clip,
+                effectKind = AiUsageLedger.EffectKind.BACKGROUND_REMOVAL_LOCAL,
+                modelName = "MediaPipe Selfie Segmenter"
+            )
             showToast("AI background removal applied (${"%.0f".format(safeConfidence(result.confidence) * 100)}% coverage)")
         } else {
             applyChromaKeyFallback(clip, "removal")
@@ -496,6 +510,11 @@ class AiToolsDelegate(
                 saveUndoState("AI background replace")
                 val bgEffect = Effect(type = EffectType.BG_REMOVAL, params = mapOf("threshold" to 0.5f))
                 updateClipEffect(clip, bgEffect, setOf(EffectType.BG_REMOVAL, EffectType.CHROMA_KEY))
+                recordAiUsageForClip(
+                    clip = clip,
+                    effectKind = AiUsageLedger.EffectKind.BACKGROUND_REMOVAL_LOCAL,
+                    modelName = "MediaPipe Selfie Segmenter"
+                )
                 showToast("Background removed \u2014 add replacement media on track below")
             } else {
                 showToast("Could not detect subject in frame")
@@ -522,6 +541,11 @@ class AiToolsDelegate(
             )
         )
         updateClipEffect(clip, chromaKeyEffect, setOf(EffectType.CHROMA_KEY))
+        recordAiUsageForClip(
+            clip = clip,
+            effectKind = AiUsageLedger.EffectKind.BACKGROUND_REMOVAL_LOCAL,
+            modelName = "NovaCut background analyzer"
+        )
         val bgType = when {
             analysis.isGreenScreen -> "green screen"
             analysis.isBlueScreen -> "blue screen"
@@ -610,6 +634,11 @@ class AiToolsDelegate(
             rebuildPlayerTimeline()
             getSelectedClip()?.let { videoEngine.applyPreviewEffects(it) }
             saveProject()
+            recordAiUsageForClip(
+                clip = clip,
+                effectKind = AiUsageLedger.EffectKind.STYLE_TRANSFER_LOCAL,
+                modelName = "NovaCut style analyzer"
+            )
             showToast("Applied '${style.styleName}' style (${newEffects.size} effects)")
         } catch (e: Exception) {
             showToast("Style transfer error: ${e.message ?: "Unknown"}")
@@ -702,6 +731,11 @@ class AiToolsDelegate(
                 params = mapOf("strength" to safeAiFloat(result.sharpenStrength, 0.5f, 0f, 1f))
             )
             updateClipEffect(clip, sharpenEffect, setOf(EffectType.SHARPEN))
+            recordAiUsageForClip(
+                clip = clip,
+                effectKind = AiUsageLedger.EffectKind.UPSCALING_LOCAL,
+                modelName = "NovaCut upscale assistant"
+            )
             showToast("Upscaled to ${result.targetResolution.label} + sharpening applied")
         } catch (e: Exception) {
             showToast("Upscale error: ${e.message ?: "Unknown"}")
