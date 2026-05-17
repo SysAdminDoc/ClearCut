@@ -4,6 +4,20 @@
 
 ### Autonomous roadmap continuation — 2026-05-17
 
+- **A.2 / R6.6 — DeepFilterNet Android activation.** The default app now
+  pins `io.github.kaleyravideo:android-deepfilternet:0.0.8`; the resolved
+  AAR was inspected from Maven Central, mapped to Git tag `v0.0.8`, and
+  recorded in `docs/models.md` with AAR/model SHA-256 values, Apache-2.0
+  license posture, an arm64-v8a/x86_64 AAR 16 KB preflight, and a final
+  debug APK alignment pass with 32 OK native libs, 40 skipped 32-bit libs,
+  and 0 misaligned libs.
+  `NoiseReductionEngine` now gates native availability off plain JVM,
+  decodes source audio to 48 kHz mono signed 16-bit PCM through
+  `FFmpegEngine`, processes fixed-size direct `ByteBuffer` frames with
+  `NativeDeepFilterNet` on Android, re-encodes cleaned PCM to M4A, and
+  falls back to the old pass-through path if FFmpeg or DeepFilterNet is
+  unavailable. `FFmpegEngine` now exposes URI-safe raw PCM extraction and
+  PCM-to-M4A encode helpers for future audio pipelines.
 - **R7.4 / R6.5 — FFmpeg 16 KB integration.** The default app now pins
   `com.moizhassan.ffmpeg:ffmpeg-kit-16kb:6.1.1` through the version
   catalog and app dependency graph. `FFmpegEngine` is no longer a pure

@@ -42,6 +42,13 @@ Recommendations:
 2. Make the check part of release builds and CI artifacts.
 3. Record native-library page-size evidence in release notes before publishing.
 
+Continuation update (2026-05-17):
+
+- A.2 DeepFilterNet activation uses `io.github.kaleyravideo:android-deepfilternet:0.0.8` from Maven Central rather than the older roadmap coordinates.
+- AAR SHA-256: `6566a208fe476a71b20558f92d93a1c0db49fd93b36fcdaea17a10260189d167`; Maven metadata latest/release is `0.0.8`; GitHub tag `v0.0.8` maps to commit `42ea9b786babf7d67008a81cf25257b4735e4127`.
+- The bundled `deep_filter_mobile_model` is 7,984,565 bytes with SHA-256 `5600b6857117ecc7cf460b8ec4841963bfa6d718921d424d42dea5d3d37a8c32`.
+- Preflight `scripts/check_16kb_alignment.py` over extracted arm64-v8a and x86_64 `libdf.so` reported OK for both; final debug APK verification after integration reported 32 OK native libs, 40 skipped 32-bit libs, and 0 misaligned libs. Repeat the full APK/AAB check after every native dependency change.
+
 ### FFmpeg distribution and license posture
 
 Evidence:

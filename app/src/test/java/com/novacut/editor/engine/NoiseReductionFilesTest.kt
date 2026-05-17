@@ -11,6 +11,17 @@ import java.nio.file.Files
 class NoiseReductionFilesTest {
 
     @Test
+    fun isDeepFilterNetAvailable_returnsFalseOnPlainJvm() {
+        val context = object : android.content.ContextWrapper(null) {}
+        val engine = NoiseReductionEngine(
+            context = context,
+            ffmpegEngine = FFmpegEngine(context)
+        )
+
+        assertFalse(engine.isDeepFilterNetAvailable())
+    }
+
+    @Test
     fun finalizeNoiseReducedAudioFile_promotesReadablePartial() {
         val dir = Files.createTempDirectory("noise-reduced-").toFile()
         try {

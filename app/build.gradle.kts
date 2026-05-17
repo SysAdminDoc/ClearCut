@@ -184,6 +184,9 @@ dependencies {
     // Tier A.9 / R6.5: FFmpeg Kit fork rebuilt for Android 16 KB pages
     implementation(libs.ffmpeg.kit.sixteenkb)
 
+    // Tier A.2 / R6.6: DeepFilterNet Android noise reduction
+    implementation(libs.android.deepfilternet)
+
     // Tier 4: OkHttp (cloud inpainting API)
     implementation(libs.okhttp)
 

@@ -84,6 +84,79 @@ class FFmpegEngine @Inject constructor(
     }
 
     /**
+     * Extract audio from an Android Uri to PCM WAV for processing.
+     */
+    suspend fun extractAudioToWav(
+        inputUri: Uri,
+        outputFile: File,
+        sampleRate: Int = 16000,
+        channels: Int = 1
+    ): Boolean = withContext(Dispatchers.IO) {
+        executeArguments(
+            listOf(
+                "-y",
+                "-i", ffmpegInput(inputUri),
+                "-vn",
+                "-ac", channels.coerceAtLeast(1).toString(),
+                "-ar", sampleRate.coerceAtLeast(1).toString(),
+                "-f", "wav",
+                outputFile.absolutePath
+            )
+        ) == 0
+    }
+
+    /**
+     * Extract audio from an Android Uri to raw signed 16-bit little-endian PCM.
+     */
+    suspend fun extractAudioToPcm16le(
+        inputUri: Uri,
+        outputFile: File,
+        sampleRate: Int,
+        channels: Int = 1,
+        onProgress: (Float) -> Unit = {}
+    ): Boolean = withContext(Dispatchers.IO) {
+        executeArguments(
+            listOf(
+                "-y",
+                "-i", ffmpegInput(inputUri),
+                "-vn",
+                "-ac", channels.coerceAtLeast(1).toString(),
+                "-ar", sampleRate.coerceAtLeast(1).toString(),
+                "-f", "s16le",
+                outputFile.absolutePath
+            ),
+            onProgress = onProgress
+        ) == 0
+    }
+
+    /**
+     * Encode raw signed 16-bit little-endian PCM into an AAC M4A file.
+     */
+    suspend fun encodePcm16leToM4a(
+        inputFile: File,
+        outputFile: File,
+        sampleRate: Int,
+        channels: Int = 1,
+        bitrate: String = "128k",
+        onProgress: (Float) -> Unit = {}
+    ): Boolean = withContext(Dispatchers.IO) {
+        if (!inputFile.isFile || inputFile.length() <= 0L) return@withContext false
+        executeArguments(
+            listOf(
+                "-y",
+                "-f", "s16le",
+                "-ar", sampleRate.coerceAtLeast(1).toString(),
+                "-ac", channels.coerceAtLeast(1).toString(),
+                "-i", inputFile.absolutePath,
+                "-c:a", "aac",
+                "-b:a", bitrate,
+                outputFile.absolutePath
+            ),
+            onProgress = onProgress
+        ) == 0
+    }
+
+    /**
      * Burn ASS/SSA subtitles into video.
      */
     suspend fun burnSubtitles(
