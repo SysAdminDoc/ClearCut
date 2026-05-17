@@ -20,9 +20,9 @@ Every native AAR shipped with NovaCut must be 16 KB page-size aligned. Google Pl
 
 | AAR | Status | Source | 16 KB aligned? | License | Notes |
 |---|---|---|---|---|---|
-| `onnxruntime-android:1.17.0` | Bundled today | Microsoft / Maven Central | ⚠ Verify on next ORT bump — 1.17.x predates the Play gate. ORT 1.18.0+ ships NDK r27+ builds. | MIT | Track NDK version of release binary; bump to ≥1.18.0 when compatibility is verified. |
+| `onnxruntime-android:1.26.0` | Bundled today | Microsoft / Maven Central | ⚠ Re-verify on every ORT bump — current debug APK alignment is checked with `scripts/check_16kb_alignment.py`. | MIT | Bumped in R7.3 to move past the 1.17.x pre-Play-gate native package. |
 | `mediapipe-tasks-vision:0.10.14` | Bundled today | Google / Maven Central | ⚠ Verify — pinned 2024 release; MediaPipe began shipping 16 KB-aligned builds in late 2025. | Apache-2.0 | Vision task bundle includes embedded TFLite runtime. |
-| `lottie-compose:6.6.2` | Bundled today | Airbnb / Maven Central | n/a (pure Kotlin) | Apache-2.0 | See R6.16 for `lottie-compose:7.x` bump (state-machines + dotLottie). |
+| `lottie-compose:6.7.1` | Bundled today | Airbnb / Maven Central | n/a (pure Kotlin) | Apache-2.0 | See R6.16 for `lottie-compose:7.x` bump (state-machines + dotLottie). |
 | `media3-effect-lottie:1.10.x` | Planned (R6.10a) | androidx.media3 / Maven Central | n/a (pure Kotlin) | Apache-2.0 | Replaces internal `LottieOverlayEffect`. |
 | `sherpa-onnx-1.13.2.aar` | Targeted (A.1) | [GitHub release asset](https://github.com/k2-fsa/sherpa-onnx/releases) | ⚠ Verify per AAR release — Sherpa-ONNX 1.12.28+ targets NDK r27. | Apache-2.0 | Distributed via GitHub release assets, not Maven Central. Must be vendored into `app/libs/` or fetched via PAD. |
 | `ffmpeg-kit-16kb:6.1.1` | Pinned target (R6.5a, A.9) | `com.moizhassan.ffmpeg:ffmpeg-kit-16kb:6.1.1` (Maven Central) | ✅ Built with NDK r27d for 16 KB alignment | GPL-3 (Full-GPL build); LGPL-2.1 variant available | NovaCut is MIT-licensed; the FFmpeg license addendum must be shipped with release artifacts. See [LICENSE](../LICENSE). |

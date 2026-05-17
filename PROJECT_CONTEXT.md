@@ -39,7 +39,7 @@ Primary stack:
 - Gradle wrapper 8.9, Android Gradle Plugin 8.7.3, Kotlin 2.1.0.
 - Media3 1.10.1 for playback, effects, export, and transformer flows.
 - Room for metadata, DataStore for preferences, Hilt for dependency injection.
-- ONNX Runtime Android 1.17.0 and MediaPipe Tasks Vision 0.10.14 are present for on-device model paths.
+- ONNX Runtime Android 1.26.0 and MediaPipe Tasks Vision 0.10.14 are present for on-device model paths.
 - WorkManager is available for background jobs.
 
 High-level modules and patterns:
@@ -88,6 +88,7 @@ High-level modules and patterns:
 - Restored `:app:testDebugUnitTest` to a green baseline by letting `AutoSaveState.deserialize()` accept an injectable URI parser for JVM tests while keeping `Uri.parse()` as the production default.
 - Completed R5.5d / R7.1. Settings now exposes the local-only diagnostic ZIP workflow, with busy/success/error state, saved-file summary, FileProvider share action, and diagnostics path scoping in `file_paths.xml`.
 - Completed the active-model slice of R7.2. `docs/models.md` now pins Whisper, MediaPipe selfie segmentation, and LaMa inpainting to exact source locators and SHA-256 values; `ModelDownloadManager.ModelFile(checksumRequired = true)` blocks unpinned active downloads; Settings refreshes model state through checksum verification and renders failures as "Needs attention"; `ModelRegistryDocumentationTest` prevents active registry rows from returning to placeholder hashes or floating source URLs.
+- Completed the AGP-8.7-compatible slice of R7.3. Version catalog updates: Compose BOM 2026.05.00, Dagger Hilt 2.58, AndroidX Hilt 1.3.0, Room 2.7.2, Coroutines 1.11.0, Lifecycle 2.10.0, DataStore 1.2.1, WorkManager 2.11.2, ONNX Runtime 1.26.0, OkHttp 5.3.2, and Lottie Compose 6.7.1. Deferred because of toolchain gates: Dagger Hilt 2.59.x requires AGP 9.0+, Core/Activity/Navigation latest requires AGP 8.9.1+, and Room 2.8.x fails the current Kotlin 2.1.0 / KSP 2.1.0 schema export path.
 
 ## Build and Verification Notes
 
