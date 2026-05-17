@@ -4,6 +4,15 @@
 
 ### Autonomous roadmap continuation — 2026-05-17
 
+- **R7.5 / R6.10a — Media3 Lottie renderer adoption.** The app now
+  depends on `androidx.media3:media3-effect-lottie:1.10.1` and routes
+  eligible export-time animated title overlays through the official Media3
+  `LottieOverlay` renderer via `Media3LottieTextureOverlay`. The adapter
+  keeps NovaCut's existing title semantics: overlay-relative animation time,
+  zero alpha outside the title window, TextDelegate replacements, and
+  full-frame canvas sizing. The legacy `LottieOverlayEffect` shader remains
+  only for HDR exports and title windows longer than the composition duration,
+  where Media3 would otherwise change output behavior.
 - **A.2 / R6.6 — DeepFilterNet Android activation.** The default app now
   pins `io.github.kaleyravideo:android-deepfilternet:0.0.8`; the resolved
   AAR was inspected from Maven Central, mapped to Git tag `v0.0.8`, and

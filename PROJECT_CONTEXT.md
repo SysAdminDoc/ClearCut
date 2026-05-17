@@ -85,7 +85,13 @@ High-level modules and patterns:
    - `NoiseReductionEngine` decodes source audio to 48 kHz mono PCM through `FFmpegEngine`, processes fixed-size direct `ByteBuffer` frames with `NativeDeepFilterNet` on Android, and re-encodes cleaned PCM to M4A. Plain JVM and missing-native flavors return unavailable and keep pass-through behavior.
    - Future work: emulator/device QA with real noisy clips, better SNR reporting from measured audio instead of the current stub profile, and a real file-level spectral-gate fallback if FFmpeg is available but DeepFilterNet fails.
 
-6. Diagnostic export follow-up.
+6. Media3 Lottie adoption follow-through.
+   - R7.5 / R6.10a now pins `androidx.media3:media3-effect-lottie:1.10.1` from Google Maven.
+   - `Media3LottieTextureOverlay` routes eligible non-HDR finite-window title overlays through Media3's official `LottieOverlay` while preserving overlay-relative timing, alpha gating, `TextDelegate` substitution, and full-frame canvas sizing.
+   - `VideoEngine` deliberately keeps the legacy `LottieOverlayEffect` shader for HDR exports and title windows longer than the composition duration because Media3 `OverlayEffect` treats non-text `BitmapOverlay` overlays as Ultra HDR gainmap overlays on HDR input, and the official Lottie overlay loops where NovaCut's shader holds the final frame.
+   - The repo currently has no committed `app/src/main/assets/lottie_templates/` payloads, so future visual QA should add real template fixtures or golden-frame renders before deleting the fallback shader.
+
+7. Diagnostic export follow-up.
    - The Settings diagnostic ZIP workflow is now implemented.
    - Future diagnostics work should focus on emulator/UI validation and any additional redaction tests discovered from real support bundles.
 
@@ -104,6 +110,7 @@ High-level modules and patterns:
 - Advanced R8.5 from pure policy to foreground-service monitoring. `ExportService` now registers `addThermalStatusListener` on Android 10+, polls `getThermalHeadroom(30)` once per second on Android 11+, feeds `ThermalHeadroomPolicy`, adds compact thermal status text to the export progress notification, raises debounced warning notifications, clears thermal state on terminal export/service paths, and cancels only on Android's shutdown-level thermal status. Remaining R8.5 work requires real `VideoEngine` control hooks for encoder throttling/proxy downgrade and resumable pause markers; do not fake throttling by delaying the progress poller.
 - Completed R7.4 / R6.5a / R6.5c. `gradle/libs.versions.toml` and `app/build.gradle.kts` now include `ffmpeg-kit-16kb:6.1.1`; `FFmpegEngine` executes raw commands and structured helper commands through FFmpegKit async sessions, handles SAF content input, cancels sessions with coroutine cancellation, and keeps JVM tests native-free by returning unavailable off Android runtime. `LICENSE` and `docs/models.md` document the GPLv3/source-offer posture discovered from the resolved AAR resources. Remaining R6.5b work is to route specific product features through the now-active engine.
 - Completed A.2 / R6.6b. `gradle/libs.versions.toml` and `app/build.gradle.kts` now include `io.github.kaleyravideo:android-deepfilternet:0.0.8`; `docs/models.md` records the Maven Central AAR, tag commit, AAR SHA-256, bundled `deep_filter_mobile_model` SHA-256, Apache-2.0 posture, and preflight 16 KB status. `NoiseReductionEngine` now loads `NativeDeepFilterNet` only on Android runtime, converts source audio to the required 48 kHz mono PCM through `FFmpegEngine`, processes fixed-size direct frames, re-encodes to M4A, and falls back to pass-through if FFmpeg or DeepFilterNet is unavailable. `FFmpegEngine` gained URI-safe raw PCM extraction and PCM-to-M4A encode helpers for this and future audio pipelines.
+- Completed R7.5 / R6.10a where Media3 preserves output semantics. `gradle/libs.versions.toml` and `app/build.gradle.kts` now include `androidx.media3:media3-effect-lottie:1.10.1`; `Media3LottieTextureOverlay` adapts the official `androidx.media3.effect.lottie.LottieOverlay` renderer for non-HDR finite-window Lottie exports; `VideoEngine` selects that path per overlay and falls back to `LottieOverlayEffect` for HDR or over-long windows. `docs/models.md` records the AAR URL, SHA-256, Apache-2.0 license, and no-native status.
 
 ## Build and Verification Notes
 
