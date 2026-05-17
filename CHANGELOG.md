@@ -59,6 +59,23 @@
   `KeyboardType.Password` declarations across the codebase, so every
   shipping caption / marker / project-rename / AutoEdit text field is
   eligible for system-managed stylus handwriting on Android 14+.
+- **R8.9 — AiUsageLedger engine + autosave persistence.**
+  `AiUsageLedger` records per-`(clipId, effectKind, model, range)` AI
+  usage on a project, classifies it into `DISCLOSURE_REQUIRED` /
+  `DISCLOSURE_RECOMMENDED` / `INTERNAL_ONLY`, merges overlaps, and
+  round-trips through a new `AutoSaveState.aiUsageLedger` field
+  (capped at 2 000 entries). `EditorViewModel.recordAiUsage` and
+  `clearAiUsageLedger` are the call sites for generative engines and a
+  future Privacy Dashboard row. Pairs with R8.2 / R5.5c.
+- **R8.5 — ThermalHeadroomPolicy engine.** Pure-Kotlin policy translating
+  `(PowerManager ThermalStatus, getThermalHeadroom forecast)` into a
+  `ThrottleDecision` (FULL_SPEED / THROTTLE_LIGHT / THROTTLE_HEAVY /
+  PAUSE / CANCEL) with bounded parallel filter passes, proxy-resolution
+  fallback, NaN-headroom recovery, and notification debouncing on
+  action transitions. `shouldOfferOvernightSchedule` gates a "Schedule
+  for overnight" Settings entry once an estimated render crosses 30
+  minutes. Ready for `ExportService` to consume; engine layer fully
+  unit-tested on the JVM.
 - **Verification recovery.** Restored the JVM unit-test baseline by making
   `AutoSaveState.deserialize()` accept an injectable URI parser with Android's
   parser as the production default, so JVM tests can use the repo's `FakeUri`
