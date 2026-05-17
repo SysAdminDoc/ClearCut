@@ -2,17 +2,57 @@
 
 Forward-looking tracker for planned work. Release history lives in [CHANGELOG.md](CHANGELOG.md).
 
-Current version: **v3.74.9** (versionCode 146). Last refresh: **2026-05-16** (Round 6).
+Current version: **v3.74.9** (versionCode 146). Last refresh: **2026-05-17** (Round 7).
 
 Legend: `[ ]` not started · `[~]` in progress · `[x]` done (moved to CHANGELOG).
 
-> **How to read this doc.** Tier A/B/C are the *implementation tables* — every row is a single dependency-bump or limitation fix with a known touch point. Rounds 2–6 are *research deltas* — each captures what changed in the outside world since the prior round and which Tier A/B/C rows it unblocks. The [Forward View](#forward-view--now--next--later--under-consideration--rejected-2026-05) at the end is the synthesis layer: every item from every round classified into Now / Next / Later / Under Consideration / Rejected with one-line justification.
+> **How to read this doc.** Tier A/B/C are the *implementation tables* — every row is a single dependency-bump or limitation fix with a known touch point. Rounds 2–7 are *research deltas* — each captures what changed in the outside world since the prior round and which Tier A/B/C rows it unblocks. The [Forward View](#forward-view--now--next--later--under-consideration--rejected-2026-05) at the end is the synthesis layer: every item from every round classified into Now / Next / Later / Under Consideration / Rejected with one-line justification.
 
 ---
 
+## Round 7 - Deep Research Consolidation (2026-05-17)
+
+Round 7 reconciled the live repository, local memory, project instructions, Maven metadata, official Android/Media3 docs, open-source editors, commercial mobile editors, model repositories, and dependency release streams. Full evidence and source notes live under [.ai/research/2026-05-17](.ai/research/2026-05-17/); canonical project memory now lives in [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md).
+
+### R7.1 - Diagnostic export UI is the fastest trust win
+
+Local evidence: `app/src/main/java/com/novacut/editor/engine/DiagnosticsExportEngine.kt`, `app/src/main/java/com/novacut/editor/viewmodel/SettingsViewModel.kt`, and `app/src/main/java/com/novacut/editor/screen/SettingsScreen.kt` show that the engine-side diagnostic ZIP path exists but is not yet a first-class Settings workflow. Competitor research showed that mature editors lean on export logs, reproducible diagnostics, and support bundles because media failures are device-, codec-, and source-file-specific.
+
+Implementation target: add a visible Settings action that explains the local-only contents, creates the ZIP, exposes share/save affordances, handles busy/error/success states, and redacts media paths by default. This completes [R5.5d](#r55--observability--privacy-preserving-telemetry) without adding telemetry.
+
+### R7.2 - Model registry checksum closure before new model activation
+
+Local evidence: [docs/models.md](docs/models.md) still contains `SHA TBD` rows and model activation gates for Whisper, Moonshine, RVM, RIFE, Real-ESRGAN, SAM, Demucs, DeepFilterNet, and translation packs. The shipped `ModelDownloadManager` and offline/privacy posture are strong, but future PAD/on-demand model work should not proceed with unsigned or unpinned payloads.
+
+Implementation target: finish model SHA-256 pins, add metadata validation tests, document license/PAD/F-Droid track decisions per model, and make failed checksum states visible in the model-management UI before adding additional large model bundles.
+
+### R7.3 - Dependency stabilization train
+
+Maven metadata checked on 2026-05-17 found Media3 Transformer already current at 1.10.1, while Compose BOM, Room, WorkManager, Hilt, ONNX Runtime, OkHttp, and Lottie have newer release trains available. Kotlin and AGP latest metadata points at pre-release lines, so those should be handled as a deliberate toolchain branch rather than a blind bump.
+
+Implementation target: run one dependency train with release-note review, Gradle build/test verification, Android 16/16 KB native checks, and explicit rollback notes. Prioritize libraries that unblock shipped roadmap rows: Room/Work for background project/model jobs, ONNX Runtime for ML engines, Lottie for template parity, and OkHttp only after confirming 5.x API compatibility.
+
+### R7.4 - FFmpeg 16 KB and license decision gate
+
+Local evidence: the roadmap already moved A.9/B.3/B.5 toward `ffmpeg-kit-16kb`, while external evidence shows the original ffmpeg-kit upstream was archived and package distribution changed. This is an architectural and licensing decision, not only a dependency swap.
+
+Implementation target: choose and document the exact Maven coordinate, ABI coverage, GPL/LGPL build flavor posture, Play Store 16 KB evidence, F-Droid implications, and test matrix before wiring the concat demuxer, reverse export, libass burn-in, two-pass loudnorm, and mixed copy/re-encode stitching.
+
+### R7.5 - Media3 Lottie adoption experiment
+
+Media3 1.10.1 is already in tree, and Media3 has a first-party Lottie effect module. The local code still carries custom Lottie overlay/template engines. This is a small, reversible experiment with good cleanup potential.
+
+Implementation target: create a focused spike that renders the current overlapping Lottie cases with `media3-effect-lottie`, compares output/golden frames against the custom path, and either replaces the overlay effect or records the remaining blocker.
+
+### R7.6 - Documentation and instruction drift cleanup
+
+Local evidence: root `CLAUDE.md` and `.claude/CLAUDE.md` are local tool notes and are ignored by Git, but they still contain stale references such as older SDK, Media3, database, and line-count claims. [CROSS-PROJECT-ROADMAP.md](CROSS-PROJECT-ROADMAP.md) is useful as a backlog source but advertises an older current version.
+
+Implementation target: keep tool-specific files intact, but use [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) as the committed source of truth for current version, architecture, build commands, memory reconciliation, and handoff context.
+
 ## Forward View — Now / Next / Later / Under Consideration / Rejected (2026-05)
 
-This is the **prioritized synthesis** across all rounds. Every line maps back to an item ID elsewhere in this file (Tier A.N, B.N, C.N, R4.N, R5.N, R6.N, or CROSS-PROJECT-ROADMAP §N) so traceability is one search away. New IDs introduced in Round 6 are tagged `R6.*`.
+This is the **prioritized synthesis** across all rounds. Every line maps back to an item ID elsewhere in this file (Tier A.N, B.N, C.N, R4.N, R5.N, R6.N, R7.N, or CROSS-PROJECT-ROADMAP §N) so traceability is one search away. New IDs introduced in Round 6 or Round 7 are tagged `R6.*` or `R7.*`.
 
 ### Now — next 1–2 release cycles
 Maximum leverage, builds on shipped foundations, no new model downloads required.
@@ -20,6 +60,11 @@ Maximum leverage, builds on shipped foundations, no new model downloads required
 | ID | Item | Why now |
 |---|---|---|
 | [R6.1](#r61--16-kb-page-size-compliance-play-store-gate) | 16 KB page-size compliance audit | `targetSdk = 36` (Android 16) — Play Store **blocks** non-compliant uploads since 2025-11-01. We bundle ONNX Runtime, MediaPipe; future RIFE/OpenCV/Sherpa-ONNX native deps must be NDK r28+. Compliance is a hard gate. |
+| [R7.1](#r71---diagnostic-export-ui-is-the-fastest-trust-win) | Settings diagnostic ZIP UI | Engine work exists; the missing piece is a visible, local-only Settings flow with redaction, share/save, busy/error/success states, and user trust copy. Completes R5.5d without telemetry. |
+| [R7.2](#r72---model-registry-checksum-closure-before-new-model-activation) | Model registry checksum closure | `docs/models.md` still has `SHA TBD` rows. Do not add large model bundles until hashes, licenses, PAD/F-Droid posture, and validation tests are closed. |
+| [R7.3](#r73---dependency-stabilization-train) | Dependency stabilization train | Media3 is current; Compose BOM, Room, WorkManager, Hilt, ONNX Runtime, Lottie, and OkHttp have newer release trains. Upgrade in one reviewed train with build/test/rollback notes. |
+| [R7.4](#r74---ffmpeg-16-kb-and-license-decision-gate) | FFmpeg 16 KB and license decision gate | Unblocks concat demuxer, reverse export, libass burn-in, loudnorm, and mixed copy/re-encode, but needs explicit GPL/LGPL, F-Droid, ABI, and 16 KB evidence before integration. |
+| [R7.5](#r75---media3-lottie-adoption-experiment) | Media3 Lottie effect spike | Media3 1.10.1 is already in tree. Compare first-party `media3-effect-lottie` against the custom Lottie overlay path and replace only if output parity holds. |
 | [R6.5](#r65--ffmpeg-kit-16kb-supersedes-r52a-block) | Pin `com.moizhassan.ffmpeg:ffmpeg-kit-16kb:6.1.1` for A.9 | Unblocks B.3 (reverse export), libass subtitle burn-in, two-pass loudnorm, sidechain ducking. Maven Central artifact, 16 KB aligned — supersedes R5.2a "no pinnable artifact" block. |
 | [A.2](#tier-a--activate-scaffolded-stubs) | DeepFilterNet 3 activation (model bump) | Already wired with fallback; v3 supersedes v2 with measurably better PESQ on short audio, same ~8 MB footprint, same JNI surface. |
 | [A.10](#tier-a--activate-scaffolded-stubs) | Oboe resampler | Pure correctness fix for 44.1↔48 kHz mixing — current Media3 resample drops samples on long mixes. *(In progress 2026-05: [OboeResamplerEngine](app/src/main/java/com/novacut/editor/engine/OboeResamplerEngine.kt) now ships reflection-based `isAvailable()`, `TARGET_OBOE_VERSION` constants, and a pure-math `estimatedOutputFrames(input, fromHz, toHz)` helper audio mix sizing can use today. Runtime `resample()` still returns null until the Maven coord `com.google.oboe:oboe:1.9.0` is wired. 8 new tests.)* |

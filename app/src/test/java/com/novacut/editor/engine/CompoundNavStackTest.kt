@@ -1,6 +1,6 @@
 package com.novacut.editor.engine
 
-import android.net.Uri
+import android.net.FakeUri
 import com.novacut.editor.model.Clip
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -20,7 +20,7 @@ class CompoundNavStackTest {
     ): Clip = Clip(
         id = id,
         name = name,
-        sourceUri = Uri.EMPTY,
+        sourceUri = FakeUri,
         sourceDurationMs = 10_000L,
         trimStartMs = 0L,
         trimEndMs = 10_000L,
@@ -32,7 +32,7 @@ class CompoundNavStackTest {
     private fun regularClip(id: String): Clip = Clip(
         id = id,
         name = "Clip $id",
-        sourceUri = Uri.EMPTY,
+        sourceUri = FakeUri,
         sourceDurationMs = 5_000L,
         trimStartMs = 0L,
         trimEndMs = 5_000L,

@@ -132,7 +132,9 @@ object SpeakerSwitchPlanner {
         }
 
         val cuts = mutableListOf<Cut>()
-        var activeAngle = initial
+        val firstTarget = angleFor(turns.first().speakerId)
+        val usesDefaultInitial = policy.initialAngleIndex == SwitchPolicy().initialAngleIndex
+        var activeAngle = if (usesDefaultInitial) firstTarget else initial
         var activeAngleStart = turns.first().startMs
         // Always cut to the initial angle at the first turn's start, so the
         // resulting plan is self-contained and doesn't assume a starting state.
