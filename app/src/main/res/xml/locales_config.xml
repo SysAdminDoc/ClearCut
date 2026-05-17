@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Per-app language preferences locale config (R8.7).
+
+    Declaring this resource via android:localeConfig in AndroidManifest
+    lights up NovaCut in Settings -> System -> Languages & Input ->
+    App Languages on Android 13+ devices. The default locale is the
+    system default; users can override per-app from that screen.
+
+    Add a <locale android:name="..."/> entry for every BCP-47 tag a
+    res/values-* resource folder ships translations for. The baseline
+    English UI lives in res/values/strings.xml, so en is the only
+    listed locale today. Future locales (e.g. es, fr, de, pt-BR, ja,
+    zh-Hans, zh-Hant) get appended as their res/values-* folders land.
+-->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="en" />
+</locale-config>
