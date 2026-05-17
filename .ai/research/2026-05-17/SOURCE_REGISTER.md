@@ -42,6 +42,11 @@ Every meaningful roadmap claim in this research run should trace to one of these
 | L34 | `app/src/main/java/com/novacut/editor/engine/SpeakerSwitchPlanner.kt` | Multicam SmartSwitch planner verification fix. |
 | L35 | `app/src/test/java/com/novacut/editor/engine/AdjustmentLayerEngineTest.kt` | Adjustment-layer test-contract fix. |
 | L36 | `app/src/test/java/com/novacut/editor/engine/CompoundNavStackTest.kt` | Compound-nav test fixture fix. |
+| L37 | `app/src/main/java/com/novacut/editor/ui/editor/PreviewPanel.kt` | Local preview UI requirements for R6.10b Media3 Compose evaluation. |
+| L38 | `app/src/main/java/com/novacut/editor/ui/editor/MiniPlayerBar.kt` | Timeline-relative seek contract evidence for R6.10b. |
+| L39 | `app/src/main/java/com/novacut/editor/ui/editor/PreviewPanelMedia3ComposePolicy.kt` | Codified R6.10b adoption policy. |
+| L40 | `app/src/test/java/com/novacut/editor/ui/editor/PreviewPanelMedia3ComposePolicyTest.kt` | Regression tests for the R6.10b decision. |
+| L41 | `docs/preview-media3-compose.md` | Source-backed R6.10b decision note. |
 
 ## Official Platform and Library Sources
 
@@ -71,6 +76,12 @@ Every meaningful roadmap claim in this research run should trace to one of these
 | E22 | Media3 `LottieOverlay.Builder` API reference | https://developer.android.com/reference/androidx/media3/effect/lottie/LottieOverlay.Builder | Builder API evidence for supplied drawable, static settings, and speed. |
 | E23 | Media3 release notes | https://developer.android.com/jetpack/androidx/releases/media3 | Release-note evidence that 1.10.x introduced/moved the Lottie module. |
 | E24 | Media3 effect-lottie AAR | https://dl.google.com/dl/android/maven2/androidx/media3/media3-effect-lottie/1.10.1/media3-effect-lottie-1.10.1.aar | Resolved AAR bytes; SHA-256 `83b26f6f25e785b949263fc52cb7c0fb5f0e371445fa1d7b9a0ed0b71c05e69d`. |
+| E25 | Media3 Compose UI overview | https://developer.android.com/media/media3/ui/compose | R6.10b evidence for `media3-ui-compose` vs `media3-ui-compose-material3`, `ContentFrame`, and `PlayerSurface`. |
+| E26 | Media3 Material3 Compose docs | https://developer.android.com/media/media3/ui/compose-material3 | R6.10b evidence for Material3 `Player`, playback controls, progress, and internal state management. |
+| E27 | Media3 `ProgressSlider` API reference | https://developer.android.com/reference/kotlin/androidx/media3/ui/compose/material3/indicator/ProgressSlider.composable | R6.10b evidence that `ProgressSlider` is player-position based and performs underlying player seek internally. |
+| E28 | Media3 UI Compose package API reference | https://developer.android.com/reference/kotlin/androidx/media3/ui/compose/package-summary | R6.10b evidence for lower-level `ContentFrame` and `PlayerSurface` surfaces. |
+| E29 | Media3 UI Compose Material3 Maven metadata | https://dl.google.com/dl/android/maven2/androidx/media3/media3-ui-compose-material3/maven-metadata.xml | Latest/release evidence for `media3-ui-compose-material3:1.10.1`; lastUpdated `20260512123518`. |
+| E30 | Media3 UI Compose Material3 AAR | https://dl.google.com/dl/android/maven2/androidx/media3/media3-ui-compose-material3/1.10.1/media3-ui-compose-material3-1.10.1.aar | Resolved AAR bytes; SHA-256 `0e0789cef85d948f924c0cec365021a56f6cc63b8c9888cacd05357f83e00112`. |
 
 ## Open-Source Competitor and Adjacent Sources
 

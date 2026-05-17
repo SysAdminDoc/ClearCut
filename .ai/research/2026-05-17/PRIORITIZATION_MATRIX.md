@@ -21,7 +21,7 @@ Scores are 1-5. Higher is better except effort and risk, where higher means hard
 | P0.3 | Model registry checksum/license/PAD closure | 5 | 4 | 5 | 3 | 3 | Prevents unsafe model activation and protects F-Droid/privacy posture. |
 | P0.4 | Dependency stabilization train | 4 | 5 | 4 | 3 | 3 | Several libraries have newer trains; Media3 is already current. |
 | P0.5 | FFmpeg 16 KB/license decision document and spike | 5 | 4 | 4 | 3 | 5 | Unblocks many export features but carries license/native-distribution risk. |
-| P0.6 | Media3 Lottie effect parity spike | 3 | 3 | 4 | 2 | 2 | Small reversible cleanup because Media3 1.10.1 is already present. |
+| P0.6 | Media3 modular UI/effect parity spike | 3 | 3 | 4 | 2 | 2 | Lottie adoption is complete where output parity holds; Player Compose was evaluated and full replacement rejected for 1.10.1 because NovaCut preview needs edited-timeline, gap, still, transform, scope, and custom chrome behavior. |
 | P0.7 | Strings/i18n extraction audit | 3 | 4 | 4 | 2 | 1 | Mechanical quality pass; improves localization and accessibility readiness. |
 
 ## Next - 3-5 Release Cycles
@@ -79,6 +79,6 @@ Scores are 1-5. Higher is better except effort and risk, where higher means hard
 3. Close model registry hashes/licenses/delivery gates.
 4. Run dependency stabilization train with build/test evidence.
 5. Decide and spike FFmpeg 16 KB/license path.
-6. Test Media3 Lottie effect parity.
+6. Completed Media3 Lottie parity adoption and codified the Media3 Compose Player non-adoption decision.
 7. Finish key existing UI integrations: Cut Assistant review, compound clip navigation, keyframe graph, adjustment layers.
 8. Resume model activation only after model governance and evaluation harnesses are in place.
