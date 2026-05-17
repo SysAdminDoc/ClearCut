@@ -54,6 +54,15 @@
   the single `BackHandler` in `EditorScreen` is gated on transient editor-state
   predicates so the system runs the back-to-home predictive animation
   whenever the editor is idle.
+- **R8.8 — Adaptive resizability first pass.** MainActivity now explicitly
+  opts into resizable activity behavior and handles additional
+  smallest-screen/density/ui-mode config changes. A pure
+  `AdaptiveEditorLayoutPolicy` classifies compact / medium / expanded /
+  tabletop pane modes, expanded 840dp+ tablets now promote to NovaCut's
+  existing desktop sidebar layout even without a mouse signal, and the editor
+  gives medium/expanded windows roomier preview/timeline heights. MediaPicker
+  also accepts external drag-and-drop media URIs and imports them through the
+  same local-copy path as picker selections.
 - **R8.10 — Stylus handwriting verified default-on.** Compose BOM
   2026.05.00 pulls `foundation` ≥ 1.7.0; a grep showed zero
   `KeyboardType.Password` declarations across the codebase, so every

@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -14,6 +15,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draganddrop.DragAndDropEvent
+import androidx.compose.ui.draganddrop.DragAndDropTarget
+import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -116,6 +120,52 @@ fun MediaPickerSheet(
                 }
             } finally {
                 operationState = null
+            }
+        }
+    }
+
+    fun importDroppedMedia(uris: List<Uri>) {
+        if (uris.isEmpty() || !actionsEnabled) return
+        coroutineScope.launch {
+            operationState = MediaPickerOperationState(
+                title = context.getString(R.string.media_picker_importing_batch_title),
+                description = context.getString(R.string.media_picker_importing_batch_description)
+            )
+            try {
+                val imported = withContext(Dispatchers.IO) {
+                    sortMediaChronologically(context, uris).mapNotNull { uri ->
+                        val type = resolvePickedMediaType(context, uri, fallbackType = "video")
+                        importUriToManagedMedia(context, uri, type)?.let { localUri -> localUri to type }
+                    }
+                }
+                imported.forEach { (localUri, type) -> onMediaSelected(localUri, type) }
+                if (imported.size < uris.size) {
+                    permissionMessage = if (imported.isEmpty()) {
+                        context.getString(R.string.media_picker_local_copy_failed)
+                    } else {
+                        context.getString(R.string.media_picker_some_imports_failed)
+                    }
+                }
+            } finally {
+                operationState = null
+            }
+        }
+    }
+
+    fun droppedUris(event: DragAndDropEvent): List<Uri> {
+        val clipData = event.toAndroidDragEvent().clipData ?: return emptyList()
+        return (0 until clipData.itemCount).mapNotNull { index ->
+            clipData.getItemAt(index).uri
+        }
+    }
+
+    val mediaDropTarget = remember(actionsEnabled) {
+        object : DragAndDropTarget {
+            override fun onDrop(event: DragAndDropEvent): Boolean {
+                val uris = droppedUris(event)
+                if (uris.isEmpty() || !actionsEnabled) return false
+                importDroppedMedia(uris)
+                return true
             }
         }
     }
@@ -286,7 +336,12 @@ fun MediaPickerSheet(
         icon = Icons.Default.PermMedia,
         accent = Mocha.Blue,
         onClose = onClose,
-        modifier = modifier.heightIn(min = 240.dp, max = 560.dp),
+        modifier = modifier
+            .heightIn(min = 240.dp, max = 560.dp)
+            .dragAndDropTarget(
+                shouldStartDragAndDrop = { event -> actionsEnabled && droppedUris(event).isNotEmpty() },
+                target = mediaDropTarget
+            ),
         scrollable = true
     ) {
         PremiumSnackbarHost(
