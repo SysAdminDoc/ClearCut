@@ -55,6 +55,8 @@ Every meaningful roadmap claim in this research run should trace to one of these
 | L47 | `app/src/main/java/com/novacut/editor/ui/editor/TimelineProgressSliderPolicy.kt` | Codified R6.10d non-adoption policy. |
 | L48 | `app/src/test/java/com/novacut/editor/ui/editor/TimelineProgressSliderPolicyTest.kt` | Regression tests for R6.10d. |
 | L49 | `docs/progress-slider-media3-compose.md` | Source-backed R6.10d decision note. |
+| L50 | `app/src/main/java/com/novacut/editor/engine/ExportColorConfidenceEngine.kt` | R6.11b APV source summary and ExportSheet chip input. |
+| L51 | `app/src/test/java/com/novacut/editor/engine/ExportColorConfidenceEngineTest.kt` | Regression tests for the R6.11b APV chip and distinct-source counting. |
 
 ## Official Platform and Library Sources
 
@@ -94,6 +96,8 @@ Every meaningful roadmap claim in this research run should trace to one of these
 | E32 | Media3 inspector-frame Maven metadata | https://dl.google.com/dl/android/maven2/androidx/media3/media3-inspector-frame/maven-metadata.xml | Latest/release evidence for `media3-inspector-frame:1.10.1`; lastUpdated `20260512123518`. |
 | E33 | Media3 inspector-frame AAR | https://dl.google.com/dl/android/maven2/androidx/media3/media3-inspector-frame/1.10.1/media3-inspector-frame-1.10.1.aar | Resolved AAR bytes; SHA-256 `ded4a5275a5f977afaa3fb4b1b933667629e2526efbfb94b4bcf2b96fc20e2a0`; no native entries. |
 | E34 | Media3 inspector-frame sources JAR | https://dl.google.com/dl/android/maven2/androidx/media3/media3-inspector-frame/1.10.1/media3-inspector-frame-1.10.1-sources.jar | Source inspection for `androidx.media3.inspector.frame.FrameExtractor`, `setEffects`, `setMediaCodecSelector`, `setExtractHdrFrames`, `getFrame`, and `getThumbnail`; SHA-256 `a03b962a242236b87fde0272c5478c2e6b7fc520288d3d58bb0f2e866d827654`. |
+| E35 | Android 16 release notes | https://source.android.com/docs/whatsnew/android-16-release | R6.11 APV codec and R6.12 Ultra HDR v2 platform source. |
+| E36 | SamMobile Galaxy S26 APV report | https://www.sammobile.com/news/galaxy-s26-ultra-world-first-phone-apv-codec-support/ | Non-official market-signal source for first-device APV ingest claim in the roadmap. |
 
 ## Open-Source Competitor and Adjacent Sources
 

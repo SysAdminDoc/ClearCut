@@ -239,3 +239,23 @@ Result:
   `playheadMs / totalDurationMs` state and NovaCut's `onSeek(Long)` callback.
 - R6.10d closes as a tested non-adoption. Revisit only if Media3 exposes an
   externally controlled project-timeline progress component.
+
+## Continuation Research Notes - APV Export Chip R6.11b
+
+Targeted follow-up after R6.10d queried:
+
+- Local `ROADMAP.md` R6.11 checklist and existing APV probe notes.
+- `EncoderCapabilityProbe.MIME_APV` and `EncoderCapabilityProbeApvTest`.
+- `MediaImportEngine.inspectSourceColor()` and `SourceColorMetadata.mimeType`
+  persistence through `ProjectAutoSave`.
+- `ExportColorConfidenceEngine.summarizeSources()` and ExportSheet's existing
+  color-confidence chip row.
+
+Result:
+
+- No new media model field was needed. Imported video clips already persist the
+  inspected track MIME type in `SourceColorMetadata.mimeType`, and APV is pinned
+  to `video/apv` by the existing R6.11a probe.
+- R6.11b closes as a UI surfacing item: `summarizeSources()` counts distinct
+  inspected APV source URIs, and ExportSheet renders the resulting `Source is
+  APV` warning-tone chip through the existing color-confidence outlook.
