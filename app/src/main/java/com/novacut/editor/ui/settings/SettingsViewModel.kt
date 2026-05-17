@@ -3,6 +3,7 @@ package com.novacut.editor.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.novacut.editor.engine.AppSettings
+import com.novacut.editor.engine.DiagnosticExportEngine
 import com.novacut.editor.engine.ModelDownloadManager
 import com.novacut.editor.engine.SettingsRepository
 import com.novacut.editor.engine.segmentation.SegmentationEngine
@@ -32,11 +33,25 @@ data class AiModelStorageUiState(
     val totalBytes: Long get() = whisperBytes + segmentationBytes
 }
 
+data class DiagnosticExportBundleUi(
+    val path: String,
+    val fileName: String,
+    val sizeBytes: Long
+)
+
+data class DiagnosticExportUiState(
+    val isExporting: Boolean = false,
+    val bundle: DiagnosticExportBundleUi? = null,
+    val message: String? = null,
+    val errorMessage: String? = null
+)
+
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val repo: SettingsRepository,
     private val whisperEngine: WhisperEngine,
-    private val segmentationEngine: SegmentationEngine
+    private val segmentationEngine: SegmentationEngine,
+    private val diagnosticExportEngine: DiagnosticExportEngine
 ) : ViewModel() {
 
     val settings: StateFlow<AppSettings> = repo.settings
@@ -47,6 +62,9 @@ class SettingsViewModel @Inject constructor(
 
     private val _aiModelStorage = MutableStateFlow(AiModelStorageUiState())
     val aiModelStorage: StateFlow<AiModelStorageUiState> = _aiModelStorage.asStateFlow()
+
+    private val _diagnosticExport = MutableStateFlow(DiagnosticExportUiState())
+    val diagnosticExport: StateFlow<DiagnosticExportUiState> = _diagnosticExport.asStateFlow()
 
     init {
         refreshAiModelStorage()
@@ -87,6 +105,70 @@ class SettingsViewModel @Inject constructor(
 
     fun dismissAiModelStorageFeedback() {
         _aiModelStorage.update { it.copy(feedbackMessage = null) }
+    }
+
+    fun exportDiagnosticBundle() {
+        if (_diagnosticExport.value.isExporting) return
+        viewModelScope.launch {
+            _diagnosticExport.update {
+                it.copy(isExporting = true, message = null, errorMessage = null)
+            }
+            try {
+                val modelRegistry = withContext(Dispatchers.IO) {
+                    val whisperBytes = whisperEngine.getModelSizeBytes()
+                    val segmentationBytes = segmentationEngine.getModelSizeBytes()
+                    listOf(
+                        DiagnosticExportEngine.ModelSnapshot(
+                            id = "whisper-onnx",
+                            installed = whisperBytes > 0L,
+                            sizeBytes = whisperBytes
+                        ),
+                        DiagnosticExportEngine.ModelSnapshot(
+                            id = "segmentation-mediapipe",
+                            installed = segmentationBytes > 0L,
+                            sizeBytes = segmentationBytes
+                        )
+                    )
+                }
+                val bundle = diagnosticExportEngine.exportDiagnosticBundle(modelRegistry)
+                _diagnosticExport.update {
+                    it.copy(
+                        isExporting = false,
+                        bundle = DiagnosticExportBundleUi(
+                            path = bundle.absolutePath,
+                            fileName = bundle.name,
+                            sizeBytes = bundle.length()
+                        ),
+                        message = "Diagnostic ZIP saved locally. Share it only when you choose.",
+                        errorMessage = null
+                    )
+                }
+            } catch (error: CancellationException) {
+                _diagnosticExport.update { it.copy(isExporting = false) }
+                throw error
+            } catch (error: Exception) {
+                _diagnosticExport.update {
+                    it.copy(
+                        isExporting = false,
+                        errorMessage = "Diagnostic ZIP could not be created. Try again.",
+                        message = null
+                    )
+                }
+            }
+        }
+    }
+
+    fun dismissDiagnosticExportMessage() {
+        _diagnosticExport.update { it.copy(message = null, errorMessage = null) }
+    }
+
+    fun reportDiagnosticShareFailure() {
+        _diagnosticExport.update {
+            it.copy(
+                message = null,
+                errorMessage = "Diagnostic ZIP could not be shared from this device."
+            )
+        }
     }
 
     fun downloadWhisperModel() {

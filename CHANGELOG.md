@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Autonomous roadmap continuation — 2026-05-17
+
+- **R5.5d / R7.1 — Settings diagnostic ZIP workflow.** Settings now exposes
+  a local-only Diagnostic ZIP row that creates the existing
+  `DiagnosticExportEngine` bundle, shows busy / success / error state, stores
+  the ZIP under `filesDir/diagnostics/`, and shares it only through
+  `FileProvider` + `ACTION_SEND` after explicit user action. The share grant
+  is scoped to the diagnostics directory; project files, media, captions,
+  transcripts, and autosave JSON remain excluded by engine design.
+- **Verification recovery.** Restored the JVM unit-test baseline by making
+  `AutoSaveState.deserialize()` accept an injectable URI parser with Android's
+  parser as the production default, so JVM tests can use the repo's `FakeUri`
+  instead of relying on stubbed Android framework behavior.
+
 ### Roadmap Round 6 — 2026-05 refresh (Next / Later tier engine + docs pass)
 
 Second autonomous pass continuing the Round 6 work. All commits land at the

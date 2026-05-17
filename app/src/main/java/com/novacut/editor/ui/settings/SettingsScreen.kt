@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.settings
 
+import android.content.Context
+import android.content.Intent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -15,6 +17,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -26,6 +29,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.core.content.FileProvider
 import com.novacut.editor.NovaCutApp
 import com.novacut.editor.R
 import com.novacut.editor.engine.AppSettings
@@ -45,6 +49,7 @@ import com.novacut.editor.ui.theme.NovaCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
 import kotlinx.coroutines.launch
+import java.io.File
 import kotlin.math.roundToInt
 
 private enum class SettingsAiModelRemovalTarget {
@@ -69,8 +74,10 @@ fun SettingsScreen(
     }
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val aiModelStorage by viewModel.aiModelStorage.collectAsStateWithLifecycle()
+    val diagnosticExport by viewModel.diagnosticExport.collectAsStateWithLifecycle()
     val whisperModelState by viewModel.whisperModelState.collectAsStateWithLifecycle()
     val segmentationModelState by viewModel.segmentationModelState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     val canRemoveWhisperModel = whisperModelState == WhisperModelState.READY && aiModelStorage.whisperBytes > 0L
     val canRemoveSegmentationModel = segmentationModelState == SegmentationModelState.READY && aiModelStorage.segmentationBytes > 0L
     var pendingAiModelRemoval by remember { mutableStateOf<SettingsAiModelRemovalTarget?>(null) }
@@ -95,6 +102,13 @@ fun SettingsScreen(
             SettingsFeedbackBanner(
                 message = message,
                 onDismiss = viewModel::dismissAiModelStorageFeedback
+            )
+        }
+        (diagnosticExport.message ?: diagnosticExport.errorMessage)?.let { message ->
+            SettingsFeedbackBanner(
+                message = message,
+                isError = diagnosticExport.errorMessage != null,
+                onDismiss = viewModel::dismissDiagnosticExportMessage
             )
         }
 
@@ -435,6 +449,24 @@ fun SettingsScreen(
             )
         }
 
+        // Diagnostics
+        SettingsSection(
+            title = stringResource(R.string.settings_diagnostics),
+            description = stringResource(R.string.settings_diagnostics_description)
+        ) {
+            SettingsDiagnosticExportRow(
+                state = diagnosticExport,
+                onExport = viewModel::exportDiagnosticBundle,
+                onShare = { bundle ->
+                    shareDiagnosticBundle(
+                        context = context,
+                        bundle = bundle,
+                        onFailure = viewModel::reportDiagnosticShareFailure
+                    )
+                }
+            )
+        }
+
         // About
         SettingsSection(
             title = stringResource(R.string.settings_about),
@@ -686,23 +718,26 @@ private fun SettingsOverviewStat(
 @Composable
 private fun SettingsFeedbackBanner(
     message: String,
+    isError: Boolean = false,
     onDismiss: () -> Unit
 ) {
+    val accent = if (isError) Mocha.Red else Mocha.Green
+    val icon = if (isError) Icons.Default.Error else Icons.Default.CheckCircle
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = Spacing.lg, vertical = Spacing.xs)
             .semantics { liveRegion = LiveRegionMode.Polite },
-        color = Mocha.Green.copy(alpha = 0.10f),
+        color = accent.copy(alpha = 0.10f),
         shape = RoundedCornerShape(Radius.lg),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Green.copy(alpha = 0.22f))
+        border = androidx.compose.foundation.BorderStroke(1.dp, accent.copy(alpha = 0.22f))
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            SettingsTileIcon(icon = Icons.Default.CheckCircle, accent = Mocha.Green)
+            SettingsTileIcon(icon = icon, accent = accent)
             Text(
                 text = message,
                 color = Mocha.Text,
@@ -717,6 +752,85 @@ private fun SettingsFeedbackBanner(
                     contentDescription = stringResource(R.string.close),
                     tint = Mocha.Subtext0
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsDiagnosticExportRow(
+    state: DiagnosticExportUiState,
+    onExport: () -> Unit,
+    onShare: (DiagnosticExportBundleUi) -> Unit
+) {
+    SettingsTile(
+        icon = Icons.Default.ReportProblem,
+        accent = Mocha.Sapphire,
+        label = stringResource(R.string.settings_diagnostic_export),
+        description = stringResource(R.string.settings_diagnostic_export_description)
+    ) {
+        Column(
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs)
+        ) {
+            when {
+                state.isExporting -> {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            color = Mocha.Sapphire,
+                            strokeWidth = 2.dp
+                        )
+                        SettingsStatusBadge(
+                            text = stringResource(R.string.settings_diagnostic_exporting),
+                            accent = Mocha.Sapphire
+                        )
+                    }
+                }
+                state.bundle != null -> {
+                    SettingsStatusBadge(
+                        text = stringResource(R.string.settings_diagnostic_saved),
+                        accent = Mocha.Green
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string.settings_diagnostic_file_format,
+                            state.bundle.fileName,
+                            formatStorageBytes(state.bundle.sizeBytes)
+                        ),
+                        color = Mocha.Subtext0,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.widthIn(max = 190.dp),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                        NovaCutSecondaryButton(
+                            text = stringResource(R.string.settings_diagnostic_share),
+                            onClick = { onShare(state.bundle) },
+                            icon = Icons.Default.Share,
+                            contentColor = Mocha.Green
+                        )
+                        NovaCutSecondaryButton(
+                            text = stringResource(R.string.settings_diagnostic_rebuild),
+                            onClick = onExport,
+                            icon = Icons.Default.Refresh,
+                            enabled = !state.isExporting,
+                            contentColor = Mocha.Sapphire
+                        )
+                    }
+                }
+                else -> {
+                    NovaCutSecondaryButton(
+                        text = stringResource(R.string.settings_diagnostic_export_action),
+                        onClick = onExport,
+                        icon = Icons.Default.Save,
+                        contentColor = Mocha.Sapphire
+                    )
+                }
             }
         }
     }
@@ -743,6 +857,36 @@ private fun SettingsStorageOverview(
             accent = if (totalBytes > 0L) Mocha.Rosewater else Mocha.Overlay0
         )
     }
+}
+
+private fun shareDiagnosticBundle(
+    context: Context,
+    bundle: DiagnosticExportBundleUi,
+    onFailure: () -> Unit
+) {
+    val file = File(bundle.path)
+    if (!file.isFile) {
+        onFailure()
+        return
+    }
+    runCatching {
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file
+        )
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/zip"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(
+            Intent.createChooser(
+                shareIntent,
+                context.getString(R.string.settings_diagnostic_share_chooser)
+            )
+        )
+    }.onFailure { onFailure() }
 }
 
 @Composable
