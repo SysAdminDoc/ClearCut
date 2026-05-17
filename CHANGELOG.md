@@ -33,6 +33,11 @@
   `res/values-<bcp47>/strings.xml`, then append one `<locale>` entry. NovaCut
   appears in Settings → System → Languages & Input → App Languages the
   moment more than one locale is listed.
+- **R8.6 / R8.13 — Photo Picker + Auto Backup audits closed.** Photo
+  Picker compliance and Auto Backup XML rules were already in place; ROADMAP
+  reframed and README's permission table corrected (NovaCut requests no
+  broad `READ_MEDIA_*` perms — the system Photo Picker grants per-URI
+  access exclusively).
 - **Verification recovery.** Restored the JVM unit-test baseline by making
   `AutoSaveState.deserialize()` accept an injectable URI parser with Android's
   parser as the production default, so JVM tests can use the repo's `FakeUri`
