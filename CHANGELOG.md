@@ -22,10 +22,15 @@
 - **R7.3 — Dependency stabilization train.** The AGP-8.7-compatible catalog
   train now uses Compose BOM 2026.05.00, Dagger Hilt 2.58, AndroidX Hilt
   1.3.0, Room 2.7.2, Coroutines 1.11.0, Lifecycle 2.10.0, DataStore 1.2.1,
-  WorkManager 2.11.2, ONNX Runtime 1.26.0, OkHttp 5.3.2, and Lottie Compose
-  6.7.1. Latest Core / Activity / Navigation are deferred because their AAR
-  metadata requires AGP 8.9.1+, Hilt 2.59.x requires AGP 9.0+, and Room 2.8.x
-  currently fails this repo's Kotlin 2.1.0 / KSP 2.1.0 schema export path.
+  WorkManager 2.11.2, ONNX Runtime 1.26.0, MediaPipe Tasks Vision 0.10.35,
+  OkHttp 5.3.2, and Lottie Compose 6.7.1. Latest Core / Activity /
+  Navigation are deferred because their AAR metadata requires AGP 8.9.1+,
+  Hilt 2.59.x requires AGP 9.0+, and Room 2.8.x currently fails this repo's
+  Kotlin 2.1.0 / KSP 2.1.0 schema export path.
+  The train also moves Hilt Compose imports to the new lifecycle package,
+  removes the deprecated Project Card swipe veto callback, corrects the local
+  ELF alignment checker to match Google's `LOAD ... align 2**14` guidance, and
+  verifies both ELF and APK zip alignment for the debug build.
 - **R8.7 — Per-app language preferences.** AndroidManifest now declares
   `android:localeConfig="@xml/locales_config"` and the new
   `app/src/main/res/xml/locales_config.xml` carries the English baseline.

@@ -16,12 +16,12 @@ Authoritative list of every ML model and native AAR that NovaCut may fetch or bu
 
 ## 2. Native AARs (bundled or planned) — 16 KB compliance gates
 
-Every native AAR shipped with NovaCut must be 16 KB page-size aligned. Google Play **blocks** uploads of non-compliant native libs at `targetSdk = 36` (Android 16) since 2025-11-01. Verify with `python check_elf_alignment.py app/build/intermediates/merged_native_libs/release/out/lib/arm64-v8a/*.so` before each release. See [ROADMAP.md R6.1](../ROADMAP.md#r61--16-kb-page-size-compliance-play-store-gate).
+Every native AAR shipped with NovaCut must be 16 KB page-size aligned. Google Play **blocks** uploads of non-compliant native libs at `targetSdk = 36` (Android 16) since 2025-11-01. Verify ELF segment alignment with `python scripts/check_16kb_alignment.py app/build/outputs/apk/debug/app-debug.apk` and APK packaging with SDK Build Tools `zipalign -c -P 16 -v 4 app/build/outputs/apk/debug/app-debug.apk` before each release. See [ROADMAP.md R6.1](../ROADMAP.md#r61--16-kb-page-size-compliance-play-store-gate).
 
 | AAR | Status | Source | 16 KB aligned? | License | Notes |
 |---|---|---|---|---|---|
-| `onnxruntime-android:1.26.0` | Bundled today | Microsoft / Maven Central | ⚠ Re-verify on every ORT bump — current debug APK alignment is checked with `scripts/check_16kb_alignment.py`. | MIT | Bumped in R7.3 to move past the 1.17.x pre-Play-gate native package. |
-| `mediapipe-tasks-vision:0.10.14` | Bundled today | Google / Maven Central | ⚠ Verify — pinned 2024 release; MediaPipe began shipping 16 KB-aligned builds in late 2025. | Apache-2.0 | Vision task bundle includes embedded TFLite runtime. |
+| `onnxruntime-android:1.26.0` | Bundled today | Microsoft / Maven Central | ✅ Verified 2026-05-17 with `scripts/check_16kb_alignment.py` and `zipalign -P 16` on the debug APK. | MIT | Bumped in R7.3 to move past the 1.17.x pre-Play-gate native package. Re-verify on every ORT bump. |
+| `mediapipe-tasks-vision:0.10.35` | Bundled today | Google / Maven Central | ✅ Verified 2026-05-17 with `scripts/check_16kb_alignment.py` and `zipalign -P 16` on the debug APK. | Apache-2.0 | Upgraded from 0.10.14 because the older `libmediapipe_tasks_vision_jni.so` used 4 KB ELF alignment. Current AAR packages `libmediapipe_tasks_jni.so`. |
 | `lottie-compose:6.7.1` | Bundled today | Airbnb / Maven Central | n/a (pure Kotlin) | Apache-2.0 | See R6.16 for `lottie-compose:7.x` bump (state-machines + dotLottie). |
 | `media3-effect-lottie:1.10.x` | Planned (R6.10a) | androidx.media3 / Maven Central | n/a (pure Kotlin) | Apache-2.0 | Replaces internal `LottieOverlayEffect`. |
 | `sherpa-onnx-1.13.2.aar` | Targeted (A.1) | [GitHub release asset](https://github.com/k2-fsa/sherpa-onnx/releases) | ⚠ Verify per AAR release — Sherpa-ONNX 1.12.28+ targets NDK r27. | Apache-2.0 | Distributed via GitHub release assets, not Maven Central. Must be vendored into `app/libs/` or fetched via PAD. |
