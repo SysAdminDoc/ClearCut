@@ -28,9 +28,9 @@ Done in the autonomous continuation after Round 7: every active §1 row in [docs
 
 ### R7.3 - Dependency stabilization train
 
-Maven metadata checked on 2026-05-17 found Media3 Transformer already current at 1.10.1, while Compose BOM, Room, WorkManager, Hilt, ONNX Runtime, OkHttp, and Lottie have newer release trains available. Kotlin and AGP latest metadata points at pre-release lines, so those should be handled as a deliberate toolchain branch rather than a blind bump.
+Maven metadata checked on 2026-05-17 found Media3 Transformer already current at 1.10.1, while Compose BOM, Room, WorkManager, Hilt, ONNX Runtime, OkHttp, and Lottie had newer release trains available. Kotlin and AGP latest metadata points at pre-release lines, so those should be handled as a deliberate toolchain branch rather than a blind bump.
 
-Implementation target: run one dependency train with release-note review, Gradle build/test verification, Android 16/16 KB native checks, and explicit rollback notes. Prioritize libraries that unblock shipped roadmap rows: Room/Work for background project/model jobs, ONNX Runtime for ML engines, Lottie for template parity, and OkHttp only after confirming 5.x API compatibility.
+Done in the autonomous continuation after R7.2: the AGP-8.7-compatible train now pins Compose BOM 2026.05.00, Dagger Hilt 2.58, AndroidX Hilt 1.3.0, Room 2.7.2, Coroutines 1.11.0, Lifecycle 2.10.0, DataStore 1.2.1, WorkManager 2.11.2, ONNX Runtime 1.26.0, OkHttp 5.3.2, and Lottie Compose 6.7.1. The train deliberately leaves AGP / Kotlin / KSP unchanged and holds Core KTX, Activity Compose, and Navigation Compose at the prior versions because latest stable AndroidX metadata requires AGP 8.9.1+. It also holds Room below 2.8.x because Room 2.8.4 trips the current Kotlin 2.1.0 / KSP 2.1.0 schema serializer path. The Hilt Compose import moved to `androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel`. Verification: `:app:testDebugUnitTest`, `:app:assembleDebug`, and `scripts/check_16kb_alignment.py app/build/outputs/apk/debug/app-debug.apk`.
 
 ### R7.4 - FFmpeg 16 KB and license decision gate
 
@@ -75,7 +75,7 @@ Maximum leverage, builds on shipped foundations, no new model downloads required
 | [R6.1](#r61--16-kb-page-size-compliance-play-store-gate) | 16 KB page-size compliance audit | `targetSdk = 36` (Android 16) — Play Store **blocks** non-compliant uploads since 2025-11-01. We bundle ONNX Runtime, MediaPipe; future RIFE/OpenCV/Sherpa-ONNX native deps must be NDK r28+. Compliance is a hard gate. |
 | [R7.1](#r71---diagnostic-export-ui-is-the-fastest-trust-win) | Settings diagnostic ZIP UI | Done: Settings exposes local save/share, busy/success/error state, FileProvider sharing, and user-visible privacy copy. Completes R5.5d without telemetry. |
 | [R7.2](#r72---model-registry-checksum-closure-before-new-model-activation) | Model registry checksum closure | Done for active models: docs, engine URLs, runtime checksum requirements, Settings error visibility, and JVM registry validation now block unpinned active payloads. Future model rows remain gated before activation. |
-| [R7.3](#r73---dependency-stabilization-train) | Dependency stabilization train | Media3 is current; Compose BOM, Room, WorkManager, Hilt, ONNX Runtime, Lottie, and OkHttp have newer release trains. Upgrade in one reviewed train with build/test/rollback notes. |
+| [R7.3](#r73---dependency-stabilization-train) | Dependency stabilization train | Done for the AGP-8.7-compatible slice: Compose BOM, Hilt, AndroidX Hilt, Room, WorkManager, Lifecycle, DataStore, Coroutines, ONNX Runtime, OkHttp, and Lottie are updated with explicit AGP/Kotlin gates documented. |
 | [R7.4](#r74---ffmpeg-16-kb-and-license-decision-gate) | FFmpeg 16 KB and license decision gate | Unblocks concat demuxer, reverse export, libass burn-in, loudnorm, and mixed copy/re-encode, but needs explicit GPL/LGPL, F-Droid, ABI, and 16 KB evidence before integration. |
 | [R7.5](#r75---media3-lottie-adoption-experiment) | Media3 Lottie effect spike | Media3 1.10.1 is already in tree. Compare first-party `media3-effect-lottie` against the custom Lottie overlay path and replace only if output parity holds. |
 | [R6.5](#r65--ffmpeg-kit-16kb-supersedes-r52a-block) | Pin `com.moizhassan.ffmpeg:ffmpeg-kit-16kb:6.1.1` for A.9 | Unblocks B.3 (reverse export), libass subtitle burn-in, two-pass loudnorm, sidechain ducking. Maven Central artifact, 16 KB aligned — supersedes R5.2a "no pinnable artifact" block. |
@@ -122,7 +122,7 @@ Dependency activations and engine swaps with concrete upstream targets.
 | [R8.2](#r82--c2pa-content-credentials-for-mp4-export) | C2PA Content Credentials on MP4 export | EU AI Act Article 50 effective 2026-08-02. `c2pa-android` AAR signs MP4 via Android Keystore / StrongBox. Sets NovaCut apart from cloud-first editors that cannot do hardware-backed local signing. |
 | [R8.5](#r85--thermal-aware-export-scheduling) | Thermal-aware export scheduling | `PowerManager.getThermalHeadroom(forecastSeconds)` predicts throttling; `addThermalStatusListener` reacts. Cuts long-render shutdowns + lets us queue overnight when headroom is exhausted. |
 | [R8.6](#r86--photo-picker--selected-photos-compliance) | Photo Picker as complementary import path | Google Play "Photo and Video Permissions" policy gates broad `READ_MEDIA_VIDEO/IMAGES` use. NovaCut is a qualified editor and keeps the broad perms, but adds Photo Picker as a per-clip fast-import path + a compatibility-mode-loss recovery flow. |
-| [R8.10](#r810--stylus-handwriting-in-caption-text-fields) | Verify + extend stylus handwriting in caption editor | Compose `foundation` 1.7.0+ ships stylus handwriting default-on for all `TextField`. Compose BOM 2024.12.01 should already cover it — verify, then add `handwritingDetector` on timeline clip body so S Pen→clip launches caption editor at that position. |
+| [R8.10](#r810--stylus-handwriting-in-caption-text-fields) | Verify + extend stylus handwriting in caption editor | Compose `foundation` 1.7.0+ ships stylus handwriting default-on for all `TextField`; the R7.3 train now uses Compose BOM 2026.05.00. Verify, then add `handwritingDetector` on timeline clip body so S Pen→clip launches caption editor at that position. |
 | [R8.13](#r813--auto-backup-for-projects--templates-android-backup-service) | Android Auto Backup for project metadata + templates | D2D Migration carries project JSON, autosave, template library, settings across device transfers when small enough. Pair with `android:fullBackupContent` rules so proxy + thumbnail caches stay excluded. |
 
 ### Later — beyond 5 cycles or speculative
@@ -702,7 +702,7 @@ DaVinci 20's AI Animated Subtitles animates each word as it's spoken. NovaCut sh
 
 Lottie shipped state machines in late 2025 (formerly Rive-exclusive). dotLottie is a compressed container (10–15× smaller binaries) with theming + state-machine support. This narrows the A.13 (Rive interactive templates) gap without needing the Rive Android dep.
 
-- [ ] **R6.16a — Bump `lottie-compose` to 7.x** when it ships dotLottie + state-machine APIs. Today we pin 6.6.2.
+- [ ] **R6.16a — Bump `lottie-compose` to 7.x** when it ships dotLottie + state-machine APIs. Today we pin 6.7.1.
 - [ ] **R6.16b — Add dotLottie import path** to `LottieTemplateEngine` — accept `.lottie` zip in addition to `.json`.
 - [ ] **R6.16c — Re-scope A.13 (Rive):** Lottie state machines may obviate Rive for the *interactive template* use case. Keep A.13 in the table but downgrade to "Under Consideration" until a concrete feature requires Rive's specific renderer. Sources: https://lottiefiles.com/blog/lottie-animations/lottiefiles-or-rive · https://unicornicons.com/learn/rive-vs-lottie · https://www.rivemasterclass.com/blog/rive-vs-lottie
 
@@ -822,9 +822,9 @@ Research date: 2026-05-17. Scope: deltas the same-day Round 7 deep-research pass
 
 ### R8.1 — Material 3 Expressive (Android 16 visual paradigm)
 
-Compose Material3 `1.5.0-alpha19` (2026-05-06) graduated FAB Menu, ToggleButtons, motion scheme, and expressive button APIs out of `@OptIn(ExperimentalMaterial3ExpressiveApi::class)`. M3 Expressive is the visual paradigm Google ships with the Android 16 system UI; the alpha-15 build introduced 35 new shapes + shape morphing + `LoadingIndicator` / `ContainedLoadingIndicator` for waits under 5 s. NovaCut currently pins Compose BOM `2024.12.01`, which predates the expressive API graduation.
+Compose Material3 `1.5.0-alpha19` (2026-05-06) graduated FAB Menu, ToggleButtons, motion scheme, and expressive button APIs out of `@OptIn(ExperimentalMaterial3ExpressiveApi::class)`. M3 Expressive is the visual paradigm Google ships with the Android 16 system UI; the alpha-15 build introduced 35 new shapes + shape morphing + `LoadingIndicator` / `ContainedLoadingIndicator` for waits under 5 s. NovaCut now pins Compose BOM `2026.05.00` after the R7.3 dependency train; the next work is targeted adoption, not a catalog bump.
 
-Implementation target: as part of the R7.3 dependency train, bump Compose BOM to a 2026.x line that pulls Material3 `1.5.0-alpha19+` *and* opt the FX panel grid, the transition picker, and the caption animation gallery into expressive shape morphing. The export progress sheet is a high-leverage swap to `ContainedLoadingIndicator` (it shows for 5-300 s and the current `CircularProgressIndicator` reads as generic). Do not adopt expressive APIs broadly until they're stable.
+Implementation target: opt the FX panel grid, the transition picker, and the caption animation gallery into expressive shape morphing once the needed Material3 APIs are stable enough for production. The export progress sheet is a high-leverage swap to `ContainedLoadingIndicator` (it shows for 5-300 s and the current `CircularProgressIndicator` reads as generic). Do not adopt expressive APIs broadly until they're stable.
 
 - Sources: https://developer.android.com/jetpack/androidx/releases/compose-material3 · https://developer.android.com/develop/ui/compose/designsystems/material3 · https://blog.google/products-and-platforms/platforms/android/material-3-expressive-android-wearos-launch/ · https://m3.material.io/develop/android/jetpack-compose
 
@@ -931,7 +931,7 @@ Implementation target:
 
 ### R8.10 — Stylus handwriting in caption text fields
 
-Compose `androidx.compose.foundation:foundation:1.7.0+` enables stylus handwriting by default on every `TextField` on Android 14+, with a 40 dp vertical / 10 dp horizontal handwriting hit zone around the field. Compose BOM `2024.12.01` already pulls foundation 1.7.x, so for most caption / overlay text edit fields this is **probably already on** — but unverified. The `handwritingDetector` modifier promotes any composable to a handwriting trigger that hands off to a real text field via `handwritingHandler`.
+Compose `androidx.compose.foundation:foundation:1.7.0+` enables stylus handwriting by default on every `TextField` on Android 14+, with a 40 dp vertical / 10 dp horizontal handwriting hit zone around the field. Compose BOM `2026.05.00` keeps this in the dependency surface, so for most caption / overlay text edit fields this is **probably already on** — but unverified. The `handwritingDetector` modifier promotes any composable to a handwriting trigger that hands off to a real text field via `handwritingHandler`.
 
 Implementation target:
 - Verify shipping behavior on a stylus device (or `adb shell setprop debug.input.simulate_stylus_with_touch true`) across the caption editor, text-overlay editor, project-rename dialog, and the marker label inline editor. Document any field that requires `KeyboardType.Password` (none should — verify), since handwriting is disabled for password fields.

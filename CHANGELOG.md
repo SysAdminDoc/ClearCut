@@ -19,6 +19,13 @@
   installed model state before reporting storage, checksum failures render as
   a red "Needs attention" state, and `ModelRegistryDocumentationTest` blocks
   active registry rows with placeholder hashes or floating source URLs.
+- **R7.3 — Dependency stabilization train.** The AGP-8.7-compatible catalog
+  train now uses Compose BOM 2026.05.00, Dagger Hilt 2.58, AndroidX Hilt
+  1.3.0, Room 2.7.2, Coroutines 1.11.0, Lifecycle 2.10.0, DataStore 1.2.1,
+  WorkManager 2.11.2, ONNX Runtime 1.26.0, OkHttp 5.3.2, and Lottie Compose
+  6.7.1. Latest Core / Activity / Navigation are deferred because their AAR
+  metadata requires AGP 8.9.1+, Hilt 2.59.x requires AGP 9.0+, and Room 2.8.x
+  currently fails this repo's Kotlin 2.1.0 / KSP 2.1.0 schema export path.
 - **Verification recovery.** Restored the JVM unit-test baseline by making
   `AutoSaveState.deserialize()` accept an injectable URI parser with Android's
   parser as the production default, so JVM tests can use the repo's `FakeUri`

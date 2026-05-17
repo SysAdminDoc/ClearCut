@@ -42,7 +42,7 @@ import javax.inject.Singleton
  * 3. Leverages Hexagon NPU for optimal performance
  *
  * ### Option B: ONNX Runtime (cross-device, currently active)
- * 1. `implementation("com.microsoft.onnxruntime:onnxruntime-android:1.17.0")` is already in
+ * 1. `implementation("com.microsoft.onnxruntime:onnxruntime-android:1.26.0")` is already in
  *    [gradle/libs.versions.toml](../../../../../../gradle/libs.versions.toml).
  * 2. Load LaMa ONNX model from the cache populated by `ModelDownloadManager`.
  * 3. Run inference via `OrtSession` with execution providers in this order:
@@ -56,7 +56,7 @@ import javax.inject.Singleton
  *
  * ## Dependencies (already present in build.gradle.kts)
  * ```
- * implementation("com.microsoft.onnxruntime:onnxruntime-android:1.17.0")
+ * implementation("com.microsoft.onnxruntime:onnxruntime-android:1.26.0")
  * ```
  *
  * See ROADMAP.md R6.2 (LiteRT migration / NNAPI deprecation surface).

@@ -20,7 +20,7 @@ import kotlin.coroutines.resume
  * Renders Lottie animations as video overlay frames.
  *
  * Dependency (already in libs.versions.toml):
- *   implementation("com.airbnb.android:lottie-compose:6.6.2")
+ *   implementation("com.airbnb.android:lottie-compose:6.7.1")
  *
  * Usage flow:
  * 1. Load template from assets or file

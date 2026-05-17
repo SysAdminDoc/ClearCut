@@ -37,7 +37,7 @@ Legend: ✅ = round-trips · ⚠ = degrades / requires shim · ❌ = not preserv
 | Static text layers | ✅ | ✅ | ⚠ (text is bitmap on import) | ✅ |
 | Dynamic text via TextDelegate (NovaCut caption/template slots) | ✅ (via `LottieOverlayEffect.textReplacements`) | ✅ | ⚠ (Rive text inputs are typed; explicit binding required) | ❌ (no runtime text API) |
 | Theming (color tokens) | ⚠ (manual property substitution) | ✅ (dotLottie color overrides) | ✅ (state-machine color inputs) | ⚠ (manual export step) |
-| State machines / interactive inputs | ⚠ (Lottie 7.x ships state machines per R6.16; NovaCut currently pins 6.6.2) | ✅ (dotLottie state machines, requires 7.x) | ✅ (native; A.13 stub ready) | ❌ |
+| State machines / interactive inputs | ⚠ (Lottie 7.x ships state machines per R6.16; NovaCut currently pins 6.7.1) | ✅ (dotLottie state machines, requires 7.x) | ✅ (native; A.13 stub ready) | ❌ |
 | Vector strokes (line cap, dash) | ✅ | ✅ | ✅ | ✅ |
 | Bitmap layers | ✅ | ✅ | ⚠ (limited) | ⚠ (embed cost) |
 | Audio | ❌ | ❌ | ❌ | ❌ |
