@@ -68,6 +68,13 @@ class VideoEngine @Inject constructor(
         val compositorLayer: NovaCutCompositorLayer
     )
 
+    private data class LottieBackendPlan(
+        val overlay: LottieOverlaySpec,
+        val overlayStartUs: Long,
+        val overlayDurationUs: Long,
+        val decision: LottieOverlayBackendDecision
+    )
+
     private var player: ExoPlayer? = null
     private var playerListener: Player.Listener? = null
     private var transitionListener: Player.Listener? = null
@@ -633,8 +640,22 @@ class VideoEngine @Inject constructor(
             val overlapping = textOverlays.filter { overlay ->
                 overlay.startTimeMs < clipEnd && overlay.endTimeMs > clipStart
             }
-            // Build a combined overlay list: text overlays first, then the
-            // optional brand watermark. Keeping them in one OverlayEffect
+            val overlappingLottie = lottieOverlays.filter { lo ->
+                lo.startTimeMs < clipEnd && lo.endTimeMs > clipStart
+            }
+            val preserveLottieHdr = config.hdr10PlusMetadata && config.codec != VideoCodec.H264
+            val lottieBackendPlans = overlappingLottie.map { lo ->
+                val relStartUs = ((lo.startTimeMs - clipStart).coerceAtLeast(0L)) * 1000L
+                val durationUs = (lo.endTimeMs - lo.startTimeMs).coerceAtLeast(1L) * 1000L
+                val decision = chooseLottieOverlayBackend(
+                    preserveHdr = preserveLottieHdr,
+                    overlayDurationUs = durationUs,
+                    compositionDurationUs = lottieCompositionDurationUs(lo.composition)
+                )
+                LottieBackendPlan(lo, relStartUs, durationUs, decision)
+            }
+            // Build a combined overlay list for text overlays and the optional
+            // brand watermark. Keeping them in one OverlayEffect
             // (vs. two consecutive effects) lets Media3 composite them in a
             // single GL pass, so a project-wide watermark has no extra cost
             // when no text overlays overlap this clip.
@@ -665,19 +686,32 @@ class VideoEngine @Inject constructor(
                 add(OverlayEffect(com.google.common.collect.ImmutableList.copyOf(overlayList)))
             }
 
-            val overlappingLottie = lottieOverlays.filter { lo ->
-                lo.startTimeMs < clipEnd && lo.endTimeMs > clipStart
-            }
-            for (lo in overlappingLottie) {
-                val relStartUs = ((lo.startTimeMs - clipStart).coerceAtLeast(0L)) * 1000L
-                val durationUs = (lo.endTimeMs - lo.startTimeMs).coerceAtLeast(1L) * 1000L
-                add(LottieOverlayEffect(
-                    lottieEngine = lo.engine,
-                    composition = lo.composition,
-                    overlayStartUs = relStartUs,
-                    overlayDurationUs = durationUs,
-                    textReplacements = lo.textReplacements
-                ))
+            for (plan in lottieBackendPlans) {
+                val lo = plan.overlay
+                when (plan.decision.backend) {
+                    LottieOverlayBackend.MEDIA3_LOTTIE -> add(
+                        OverlayEffect(
+                            listOf<TextureOverlay>(
+                                Media3LottieTextureOverlay(
+                                    composition = lo.composition,
+                                    overlayStartUs = plan.overlayStartUs,
+                                    overlayDurationUs = plan.overlayDurationUs,
+                                    textReplacements = lo.textReplacements
+                                )
+                            )
+                        )
+                    )
+                    LottieOverlayBackend.NOVACUT_SHADER -> {
+                        Log.d(TAG, "Export: keeping custom Lottie shader path (${plan.decision.reason})")
+                        add(LottieOverlayEffect(
+                            lottieEngine = lo.engine,
+                            composition = lo.composition,
+                            overlayStartUs = plan.overlayStartUs,
+                            overlayDurationUs = plan.overlayDurationUs,
+                            textReplacements = lo.textReplacements
+                        ))
+                    }
+                }
             }
 
             val adjustmentTracks = tracks.filter { it.type == TrackType.ADJUSTMENT && it.isVisible }
