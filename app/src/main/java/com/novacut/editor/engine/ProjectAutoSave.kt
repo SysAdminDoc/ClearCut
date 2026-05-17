@@ -268,7 +268,10 @@ data class AutoSaveState(
     // v3.71: object-aware editing scaffolding. Tracked objects survive
     // restart so accept/reject decisions about a tracked subject are not
     // re-asked every session even before SAM 2 / MediaPipe trackers ship.
-    val trackedObjects: List<com.novacut.editor.model.TrackedObject> = emptyList()
+    val trackedObjects: List<com.novacut.editor.model.TrackedObject> = emptyList(),
+    // R8.9: per-project AI usage ledger. This drives disclosure defaults
+    // during export and survives restarts without involving telemetry.
+    val aiUsageLedger: List<AiUsageLedger.Entry> = emptyList()
 ) {
     fun serialize(): String {
         val json = JSONObject().apply {
@@ -341,6 +344,9 @@ data class AutoSaveState(
                 put("beatMarkers", JSONArray().apply {
                     beatMarkers.forEach { put(it) }
                 })
+            }
+            if (aiUsageLedger.isNotEmpty()) {
+                put("aiUsageLedger", AiUsageLedger.toJsonArray(aiUsageLedger))
             }
             if (trackedObjects.isNotEmpty()) {
                 put("trackedObjects", JSONArray().apply {
@@ -424,6 +430,7 @@ data class AutoSaveState(
         private const val MAX_DRAWING_PATHS = 2_000
         private const val MAX_DRAWING_POINTS_PER_PATH = 4_096
         private const val MAX_BEAT_MARKERS = 20_000
+        private const val MAX_AI_USAGE_ENTRIES = 2_000
         private const val MAX_TRACKED_OBJECTS = 1_000
         private const val MAX_TRACKED_OBJECT_KEYFRAMES = 10_000
         private const val MAX_TEXT_OVERLAYS = 5_000
@@ -559,6 +566,10 @@ data class AutoSaveState(
                 try { beatMarkersArr.getLong(i) }
                 catch (e: Exception) { Log.w(TAG, "Failed to deserialize beat marker $i", e); null }
             }
+            val aiUsageLedger = AiUsageLedger.fromJsonArray(
+                json.optJSONArray("aiUsageLedger"),
+                maxEntries = MAX_AI_USAGE_ENTRIES
+            )
             val transcriptObj = json.optJSONObject("transcript")
             val transcript: com.novacut.editor.model.Transcript? = transcriptObj?.let { tr ->
                 try {
@@ -671,7 +682,8 @@ data class AutoSaveState(
                 drawingPaths = drawingPaths,
                 beatMarkers = beatMarkers,
                 transcript = transcript,
-                trackedObjects = trackedObjects
+                trackedObjects = trackedObjects,
+                aiUsageLedger = aiUsageLedger
             )
         }
 
