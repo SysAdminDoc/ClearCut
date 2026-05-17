@@ -57,10 +57,11 @@ class SegmentationEngine @Inject constructor(
 
     companion object {
         private const val MODEL_URL =
-            "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite"
+            "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite?generation=1683436453600523"
         private const val MODEL_SHA256 =
             "191ac9529ae506ee0beefa6b2c945a172dab9d07d1e802a290a4e4038226658b"
         private const val MIN_MODEL_BYTES = 32L * 1024L
+        private const val MODEL_ESTIMATED_BYTES = 249_537L
 
         fun estimateModelSizeMB(): Int = 1 // ~256KB
     }
@@ -69,7 +70,24 @@ class SegmentationEngine @Inject constructor(
         return modelFile.exists() && modelFile.length() >= MIN_MODEL_BYTES
     }
 
-    fun isReady(): Boolean = _modelState.value == SegmentationModelState.READY && hasDownloadedModelFile()
+    private fun hasVerifiedModelFile(): Boolean =
+        ModelDownloadManager.verifyChecksumOrDelete(
+            file = modelFile,
+            minimumBytes = MIN_MODEL_BYTES,
+            expectedSha256 = MODEL_SHA256,
+        )
+
+    fun refreshModelState(): SegmentationModelState {
+        val state = when {
+            !hasDownloadedModelFile() -> SegmentationModelState.NOT_DOWNLOADED
+            hasVerifiedModelFile() -> SegmentationModelState.READY
+            else -> SegmentationModelState.ERROR
+        }
+        _modelState.value = state
+        return state
+    }
+
+    fun isReady(): Boolean = _modelState.value == SegmentationModelState.READY && hasVerifiedModelFile()
 
     /**
      * Download the selfie segmenter model (~256KB) from Google's model storage.
@@ -83,7 +101,7 @@ class SegmentationEngine @Inject constructor(
             _downloadProgress.value = 0f
             modelDir.mkdirs()
 
-            if (hasDownloadedModelFile()) {
+            if (hasVerifiedModelFile()) {
                 _modelState.value = SegmentationModelState.READY
                 _downloadProgress.value = 1f
                 onProgress(1f)
@@ -96,9 +114,10 @@ class SegmentationEngine @Inject constructor(
                         url = MODEL_URL,
                         targetFile = modelFile,
                         minimumBytes = MIN_MODEL_BYTES,
-                        estimatedBytes = estimateModelSizeMB() * 1024L * 1024L,
+                        estimatedBytes = MODEL_ESTIMATED_BYTES,
                         displayName = "Selfie segmenter",
-                        sha256 = MODEL_SHA256
+                        sha256 = MODEL_SHA256,
+                        checksumRequired = true
                     )
                 ),
                 connectTimeoutMs = 15_000,
@@ -111,10 +130,15 @@ class SegmentationEngine @Inject constructor(
 
             _downloadProgress.value = 1f
             onProgress(1f)
-            _modelState.value = SegmentationModelState.READY
-            true
+            if (hasVerifiedModelFile()) {
+                _modelState.value = SegmentationModelState.READY
+                true
+            } else {
+                _modelState.value = SegmentationModelState.ERROR
+                false
+            }
         } catch (e: ModelDownloadManager.MeteredNetworkException) {
-            _modelState.value = if (hasDownloadedModelFile()) {
+            _modelState.value = if (hasVerifiedModelFile()) {
                 SegmentationModelState.READY
             } else {
                 SegmentationModelState.NOT_DOWNLOADED
@@ -122,7 +146,7 @@ class SegmentationEngine @Inject constructor(
             _downloadProgress.value = 0f
             throw e
         } catch (e: Exception) {
-            _modelState.value = if (hasDownloadedModelFile()) {
+            _modelState.value = if (hasVerifiedModelFile()) {
                 SegmentationModelState.READY
             } else {
                 SegmentationModelState.ERROR
@@ -233,7 +257,10 @@ class SegmentationEngine @Inject constructor(
     @Synchronized
     private fun getOrCreateSegmenter(): ImageSegmenter? {
         segmenter?.let { return it }
-        if (!modelFile.exists()) return null
+        if (!hasVerifiedModelFile()) {
+            _modelState.value = SegmentationModelState.ERROR
+            return null
+        }
 
         return try {
             val modelBytes = modelFile.readBytes()

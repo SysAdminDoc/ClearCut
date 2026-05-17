@@ -125,7 +125,7 @@
     <string name="ai_whisper_ready">Whisper (speech-to-text)</string>
     <string name="ai_downloading_model">Downloading model\u2026</string>
     <string name="ai_download_failed">Download failed</string>
-    <string name="ai_whisper_size">Whisper model (~75 MB)</string>
+    <string name="ai_whisper_size">Whisper model (~146 MB)</string>
     <string name="ai_whisper_description">Enables real transcription for captions</string>
     <string name="ai_segmentation_ready">BG Removal (AI segmentation)</string>
     <string name="ai_segmentation_size">Selfie segmenter (~256 KB)</string>
@@ -135,7 +135,7 @@
     <string name="ai_model_remove_action">Remove model</string>
     <string name="ai_model_remove_confirm">Remove model</string>
     <string name="ai_remove_whisper_title">Remove Whisper model?</string>
-    <string name="ai_remove_whisper_message">This frees about 75 MB and disables new transcription until you download Whisper again. Existing captions and edits stay in the project.</string>
+    <string name="ai_remove_whisper_message">This frees about 146 MB and disables new transcription until you download Whisper again. Existing captions and edits stay in the project.</string>
     <string name="ai_remove_segmentation_title">Remove segmentation model?</string>
     <string name="ai_remove_segmentation_message">This removes the local background-segmentation file and disables AI matte quality until you download it again. Existing edits stay intact.</string>
     <string name="ai_whisper_removed_toast">Whisper model removed. You can download it again any time.</string>
@@ -243,9 +243,9 @@
     <string name="settings_ai_storage_title">Local AI storage</string>
     <string name="settings_ai_storage_description">Whisper: %1$s · Segmentation: %2$s</string>
     <string name="settings_whisper_model">Whisper (Speech-to-Text)</string>
-    <string name="settings_whisper_size">~100 MB</string>
+    <string name="settings_whisper_size">~146 MB</string>
     <string name="settings_segmentation_model">Segmentation (Background)</string>
-    <string name="settings_segmentation_size">~7 MB</string>
+    <string name="settings_segmentation_size">~256 KB</string>
     <string name="settings_piper_model">Piper TTS Voices</string>
     <string name="settings_piper_size">15–65 MB each</string>
     <string name="settings_piper_system_voice_description">Uses Android system voices today; downloadable local voice packs will appear here when bundled.</string>

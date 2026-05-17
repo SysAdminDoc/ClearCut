@@ -22,9 +22,9 @@ Done in the autonomous continuation after Round 7: Settings now exposes a "Diagn
 
 ### R7.2 - Model registry checksum closure before new model activation
 
-Local evidence: [docs/models.md](docs/models.md) still contains `SHA TBD` rows and model activation gates for Whisper, Moonshine, RVM, RIFE, Real-ESRGAN, SAM, Demucs, DeepFilterNet, and translation packs. The shipped `ModelDownloadManager` and offline/privacy posture are strong, but future PAD/on-demand model work should not proceed with unsigned or unpinned payloads.
+Local evidence before the 2026-05-17 continuation: [docs/models.md](docs/models.md) still contained active `SHA TBD` rows and model activation gates for Whisper, Moonshine, RVM, RIFE, Real-ESRGAN, SAM, Demucs, DeepFilterNet, and translation packs. The shipped `ModelDownloadManager` and offline/privacy posture were strong, but future PAD/on-demand model work should not proceed with unsigned or unpinned payloads.
 
-Implementation target: finish model SHA-256 pins, add metadata validation tests, document license/PAD/F-Droid track decisions per model, and make failed checksum states visible in the model-management UI before adding additional large model bundles.
+Done in the autonomous continuation after Round 7: every active §1 row in [docs/models.md](docs/models.md) now has an exact source locator and SHA-256 pin. Whisper is pinned to Hugging Face revision `2575352d61be1bf7225cf8f8b268a4678025fc58`; MediaPipe selfie segmentation is pinned to GCS generation `1683436453600523`; LaMa moved from the inaccessible `novacut/lama-dilated-onnx` URL to Qualcomm's public Hugging Face export at revision `ab898502c9bd764a50eb2719a309694b43eae658`. `ModelDownloadManager.ModelFile(checksumRequired = true)` now fails closed for active downloads, Whisper / segmentation / inpainting pass the pins into the download path, Settings refreshes model state through checksum verification, failed verification renders as a red "Needs attention" state, and `ModelRegistryDocumentationTest` blocks active rows with placeholder hashes or floating source URLs. Future §3 models remain planning-only until they move into §1 with their own public locator, hash, size, license, PAD/F-Droid posture, and runtime checksum wiring.
 
 ### R7.3 - Dependency stabilization train
 
@@ -74,7 +74,7 @@ Maximum leverage, builds on shipped foundations, no new model downloads required
 |---|---|---|
 | [R6.1](#r61--16-kb-page-size-compliance-play-store-gate) | 16 KB page-size compliance audit | `targetSdk = 36` (Android 16) — Play Store **blocks** non-compliant uploads since 2025-11-01. We bundle ONNX Runtime, MediaPipe; future RIFE/OpenCV/Sherpa-ONNX native deps must be NDK r28+. Compliance is a hard gate. |
 | [R7.1](#r71---diagnostic-export-ui-is-the-fastest-trust-win) | Settings diagnostic ZIP UI | Done: Settings exposes local save/share, busy/success/error state, FileProvider sharing, and user-visible privacy copy. Completes R5.5d without telemetry. |
-| [R7.2](#r72---model-registry-checksum-closure-before-new-model-activation) | Model registry checksum closure | `docs/models.md` still has `SHA TBD` rows. Do not add large model bundles until hashes, licenses, PAD/F-Droid posture, and validation tests are closed. |
+| [R7.2](#r72---model-registry-checksum-closure-before-new-model-activation) | Model registry checksum closure | Done for active models: docs, engine URLs, runtime checksum requirements, Settings error visibility, and JVM registry validation now block unpinned active payloads. Future model rows remain gated before activation. |
 | [R7.3](#r73---dependency-stabilization-train) | Dependency stabilization train | Media3 is current; Compose BOM, Room, WorkManager, Hilt, ONNX Runtime, Lottie, and OkHttp have newer release trains. Upgrade in one reviewed train with build/test/rollback notes. |
 | [R7.4](#r74---ffmpeg-16-kb-and-license-decision-gate) | FFmpeg 16 KB and license decision gate | Unblocks concat demuxer, reverse export, libass burn-in, loudnorm, and mixed copy/re-encode, but needs explicit GPL/LGPL, F-Droid, ABI, and 16 KB evidence before integration. |
 | [R7.5](#r75---media3-lottie-adoption-experiment) | Media3 Lottie effect spike | Media3 1.10.1 is already in tree. Compare first-party `media3-effect-lottie` against the custom Lottie overlay path and replace only if output parity holds. |
@@ -517,7 +517,7 @@ Media3 1.10 (March 2026) ships the multi-sequence/multi-track Composition API, w
 
 ### R5.6 — Distribution and packaging
 - [ ] **R5.6a — Play Asset Delivery for ML model bundles.** Whisper, Moonshine, RVM, RIFE, Real-ESRGAN, MobileSAM, Demucs all together blow past the 200 MB base-AAB. PAD on-demand asset packs, keyed off the existing `ModelDownloadManager`, are the correct vector — keeps F-Droid track buildable while Play install stays small. Source: https://developer.android.com/guide/playcore/asset-delivery
-- [~] **R5.6b — F-Droid track with NonFreeNet anti-feature audit.** Any model fetched from a non-free CDN (Hugging Face is OK; vendor-locked endpoints are not) triggers `NonFreeNet`. Document each model URL + license + checksum in [docs/models.md](docs/models.md) so reproducible-build maintainers can verify. *(In progress — [docs/models.md](docs/models.md) now records every active model and AAR with source URL, license, and `NonFreeNet` posture for known source domains; SHA-256 columns flagged ⚠ TBD must be filled before each Tier A engine activates per R5.9b.)* Source: https://f-droid.org/docs/Anti-Features/
+- [~] **R5.6b — F-Droid track with NonFreeNet anti-feature audit.** Any model fetched from a non-free CDN (Hugging Face is OK; vendor-locked endpoints are not) triggers `NonFreeNet`. Document each model URL + license + checksum in [docs/models.md](docs/models.md) so reproducible-build maintainers can verify. *(In progress — [docs/models.md](docs/models.md) now records every active model and AAR with source URL, license, and `NonFreeNet` posture for known source domains. Active model rows have exact SHA-256 pins and `ModelRegistryDocumentationTest` prevents placeholder hashes from returning. Future §3 model targets must move into §1 with the same metadata before their Tier A engine activates.)* Source: https://f-droid.org/docs/Anti-Features/
 - [ ] **R5.6c — Reproducible release builds.** F-Droid inclusion requires byte-identical AAB rebuilds. Pin Gradle, AGP, Kotlin, and JDK in `gradle.properties`; commit the lockfile.
 - [ ] **R5.6d — APK split by ABI for OpenCV / NCNN / ONNX.** OpenCV (A.3) is arm64-only at ~40 MB. NCNN (A.4 RIFE) and ONNX Runtime add more. ABI splits + universal-fallback policy on GitHub Releases (arm64 primary, armv7 trimmed, x86_64 emulator-only).
 
@@ -534,7 +534,7 @@ Media3 1.10 (March 2026) ships the multi-sequence/multi-track Composition API, w
 
 ### R5.9 — Security and supply chain
 - [x] **R5.9a — Track Media3 + ONNX Runtime CVE feeds.** *(Done — [.github/dependabot.yml](.github/dependabot.yml) watches both Gradle (with grouped PRs for Media3, Compose, AndroidX core, Hilt, ML, Kotlin, Coil) and GitHub Actions. One weekly PR per ecosystem keeps the inbox manageable on a single-maintainer project.)* Source: https://nvd.nist.gov/
-- [x] **R5.9b — Model checksum enforcement at runtime.** *(Done — `ModelDownloadManager.isValidModelFile()` gains a `requireChecksum: Boolean = false` parameter; new public `verifyChecksumOrDelete(file, minimumBytes, expectedSha256)` is the first-run verification entry point. When `requireChecksum = true`, a null SHA-256 is a **failure** (not a silent pass-through) — callers loading distribution-critical models pass true so a missing registry entry blocks the load instead of trusting the bytes. Mismatched files are deleted; missing-hash files are kept on disk so a later SHA-256 fill in docs/models.md validates without a re-download. 4 new tests in `ModelDownloadManagerTest`.)*
+- [x] **R5.9b — Model checksum enforcement at runtime.** *(Done — `ModelDownloadManager.isValidModelFile()` gains a `requireChecksum: Boolean = false` parameter; new public `verifyChecksumOrDelete(file, minimumBytes, expectedSha256)` is the first-run verification entry point, and `ModelDownloadManager.ModelFile(checksumRequired = true)` now makes active download specs fail closed when a SHA-256 is missing. Whisper, MediaPipe segmentation, and LaMa inpainting pass exact hashes through the shared manager. Mismatched files are deleted; missing-hash files are kept on disk in explicit verification calls so a later SHA-256 fill in docs/models.md can validate without a re-download. `ModelDownloadManagerTest` covers the low-level checksum contract; `ModelRegistryDocumentationTest` covers active registry metadata.)*
 - [ ] **R5.9c — Cloud effect call-out sheet.** Any cloud-touching path (C.7 stock, C.4 Wav2Lip cloud variant, R5.2d generative video) shows a one-time "this will leave your device" sheet with the destination, payload size, and an opt-out toggle stored per project.
 - [ ] **R5.9d — Sign release artifacts.** Already done for AAB/APK via Play. Add `cosign` signatures to GitHub Release artifacts so users sideloading the APK can verify provenance. Source: https://docs.sigstore.dev/
 
@@ -813,3 +813,322 @@ OpenCut (~50.7k stars, v0.3.0 in Apr 2026) is the closest open-source CapCut com
 - https://www.androidcentral.com/phones/google-pixel/google-tensor-g5 — Tensor G5 TPU 60% uplift over G4 (Gemini Nano host).
 - https://developer.android.com/jetpack/androidx/releases/compose — Compose runtime + Material 3 release notes (drives R6.10 evaluation).
 - https://docs.gyroflow.xyz/app/getting-started/basic-usage/stabilization — Gyroflow stabilization parameter surface (drives R6.9 sidecar parser scope).
+
+---
+
+## Research Round 8 — 2026-05-17
+
+Research date: 2026-05-17. Scope: deltas the same-day Round 7 deep-research pass did not surface — Android 15/16 mandatory platform behaviors triggered by `targetSdk = 36`, the 2026 regulatory wave around AI-generated content, form-factor maturity (foldables / tablets / desktop windowing), and adjacent-app patterns (Descript). Delta-only: anything already covered in Rounds 2-7 is referenced, not repeated. Items are grouped by tier in the [Forward View](#forward-view--now--next--later--under-consideration--rejected-2026-05) above.
+
+### R8.1 — Material 3 Expressive (Android 16 visual paradigm)
+
+Compose Material3 `1.5.0-alpha19` (2026-05-06) graduated FAB Menu, ToggleButtons, motion scheme, and expressive button APIs out of `@OptIn(ExperimentalMaterial3ExpressiveApi::class)`. M3 Expressive is the visual paradigm Google ships with the Android 16 system UI; the alpha-15 build introduced 35 new shapes + shape morphing + `LoadingIndicator` / `ContainedLoadingIndicator` for waits under 5 s. NovaCut currently pins Compose BOM `2024.12.01`, which predates the expressive API graduation.
+
+Implementation target: as part of the R7.3 dependency train, bump Compose BOM to a 2026.x line that pulls Material3 `1.5.0-alpha19+` *and* opt the FX panel grid, the transition picker, and the caption animation gallery into expressive shape morphing. The export progress sheet is a high-leverage swap to `ContainedLoadingIndicator` (it shows for 5-300 s and the current `CircularProgressIndicator` reads as generic). Do not adopt expressive APIs broadly until they're stable.
+
+- Sources: https://developer.android.com/jetpack/androidx/releases/compose-material3 · https://developer.android.com/develop/ui/compose/designsystems/material3 · https://blog.google/products-and-platforms/platforms/android/material-3-expressive-android-wearos-launch/ · https://m3.material.io/develop/android/jetpack-compose
+
+### R8.2 — C2PA Content Credentials for MP4 export
+
+EU AI Act Article 50 takes full effect 2026-08-02 and requires machine-readable labeling of AI-generated content; C2PA is the most technically mature implementation of what Article 50 requires. Google Pixel 10 (Tensor G5 + Titan M2) shipped C2PA Assurance Level 2 — the highest defined level, only currently possible on Android — for all native camera captures since August 2025. The c2pa-android AAR (Rust core via JNI) supports MP4 video signing with `StrongBoxSigner` / `KeyStoreSigner` / `WebServiceSigner` / direct PEM signing, and the Simple C2PA project (ProofMode) also handles MP4 via the same c2pa-rs core.
+
+Implementation target: new `C2paExportEngine` that, on export completion, optionally writes a signed C2PA manifest into the MP4 sidecar. Manifest assertions: device identity (when available), edit actions (NovaCut version + transformations applied), and an `AI used` flag pulled from `GenerativeVideoPolicy` (R5.2d) usage during the project. Signing modes: (1) device key via Android Keystore (default), (2) StrongBox when available (Pixel 8+), (3) user-supplied PEM. Opt-in toggle in export sheet with a one-time explainer; opt-out preserves the current unsigned export. Pair with R8.9 disclosure UX so AI-touched exports default the toggle on. This is the strongest privacy-preserving trust signal NovaCut can ship — no telemetry, all signing local.
+
+- Sources: https://opensource.contentauthenticity.org/docs/c2pa-android/ · https://proofmode.org/blog/simple-c2pa · https://contentcredentials.org/ · https://security.googleblog.com/2025/09/pixel-android-trusted-images-c2pa-content-credentials.html · https://android.gadgethacks.com/news/google-pixel-10-adds-c2pa-support-to-fight-ai-fakes/ · https://spec.c2pa.org/specifications/specifications/2.4/explainer/Explainer.html
+
+### R8.3 — Android 15/16 edge-to-edge audit (mandatory at `targetSdk = 36`)
+
+Android 15 (`targetSdk = 35`) made edge-to-edge enforced; Android 16 (`targetSdk = 36`) **deprecates and disables** `R.attr#windowOptOutEdgeToEdgeEnforcement` on Android 16 devices. NovaCut runs at `targetSdk = 36` so this is shipping today, not a future change. Symptoms when not handled: bottom toolbar buttons hidden behind the 3-button nav scrim, status-bar overlap on the timeline ruler, display-cutout clipping of trim handles on devices with a left/right cutout.
+
+Implementation target: one focused audit pass over the editor surfaces:
+- Confirm `MainActivity.onCreate` uses `enableEdgeToEdge()` (Compose-friendly) rather than legacy `setDecorFitsSystemWindows`.
+- Wrap every panel root in a Material 3 `Scaffold` (auto-applies insets) or apply `WindowInsets.safeDrawing` / `WindowInsets.systemBarsPadding()`.
+- For the timeline ruler horizontal pan layer, account for `WindowInsets.displayCutout` start/end via `calculateStartPadding(layoutDirection)` so the ruler tick at `t=0` isn't lost under a left-edge cutout.
+- Set `Window.setNavigationBarContrastEnforced(false)` to remove the translucent scrim on 3-button-nav devices in fullscreen preview.
+- Verify ExportSheet, ProjectListScreen, MediaPickerSheet, and the AI Tools hub render correctly under edge-to-edge.
+
+- Sources: https://developer.android.com/about/versions/15/behavior-changes-15 · https://developer.android.com/about/versions/16/behavior-changes-16 · https://medium.com/androiddevelopers/insets-handling-tips-for-android-15s-edge-to-edge-enforcement-872774e8839b · https://developer.android.com/develop/ui/compose/system/insets · https://developer.android.com/codelabs/edge-to-edge
+
+### R8.4 — Predictive back for full-screen editor
+
+For apps targeting Android 16 (API 36) and running on an Android 16 device, predictive back system animations are enabled by default, and `onBackPressed` is **not called** and `KeyEvent.KEYCODE_BACK` is **not dispatched** anymore. NovaCut at `targetSdk = 36` cannot rely on either; any unmigrated callback effectively becomes a silent no-op. Worse, intercepting back with a root-level `BackHandler` in `MainActivity` disables the predictive back-to-home preview animation users expect.
+
+Implementation target:
+- Replace any root-level `BackHandler` / `onBackPressed` callbacks with per-screen `PredictiveBackHandler` / `BackHandler` gated on a `derivedStateOf` "is dirty" flag (unsaved changes, open trim mode, open keyframe graph, etc.). When the flag is false, do not intercept — let the system show the back-to-home preview.
+- For the editor's unsaved-changes confirmation, use `PredictiveBackHandler { progress -> ... }` so the dialog reveals progressively as the user swipes, and roll back if the gesture is cancelled.
+- For close-editor animations, use Navigation Compose `popExitTransition = scaleOut(transformOrigin = ...)` for a polished gesture-driven close (defaults are crossfade only).
+- For analytics on back navigation without disrupting it, register `PRIORITY_SYSTEM_NAVIGATION_OBSERVER` (Android 16+) on `OnBackInvokedCallback`.
+- Material 3 `ModalBottomSheet` and `SearchBar` already integrate predictive back animations once Material3 ≥ 1.3.0 — already true in tree.
+
+- Sources: https://developer.android.com/about/versions/16/behavior-changes-16 · https://developer.android.com/develop/ui/compose/system/predictive-back-setup · https://developer.android.com/develop/ui/compose/system/predictive-back · https://developer.android.com/codelabs/predictive-back · https://medium.com/@snishanthdeveloper/predictive-back-navigation-in-android-15-making-transitions-smoother-with-jetpack-compose-96402d3aa31e
+
+### R8.5 — Thermal-aware export scheduling
+
+`PowerManager.getThermalHeadroom(forecastSeconds)` (API 30+) returns a 0.0-1.0 prediction of how close the SoC is to `THERMAL_STATUS_SEVERE` in N seconds, and `addThermalStatusListener` reacts to actual throttling transitions. The skin-temperature sensor is slow-moving — call once per second, not more. NovaCut today exports without any thermal awareness, so a long 4K render on a hot day either throttles (encoder drops to 30 FPS) or shuts the device down at 78 % progress.
+
+Implementation target: extend `ExportService` (already a foreground service with progress notification) to:
+- Register `addThermalStatusListener` on start, unregister on stop.
+- Poll `getThermalHeadroom(30)` once per second.
+- On listener transition to `THERMAL_STATUS_MODERATE` or headroom > 0.8, pause encoder thread briefly, drop parallel filter passes from N to N-1, optionally downgrade the active proxy tier; surface a "Thermal throttle active" chip in the progress notification and Export panel.
+- On `THERMAL_STATUS_SEVERE` (or headroom > 0.95), pause export, persist progress, write a "resumable" marker, raise a system notification "Render paused — device too hot. Will resume automatically." and resume when status returns to `LIGHT`.
+- For very long projects (estimated > 30 min based on a SmartRender + frame-count probe), add a "Schedule for overnight" Settings option that defers the export to a `WorkManager` task constrained to `BATTERY_NOT_LOW` + `CHARGING` + `IDLE`.
+- Consider `Window.setSustainedPerformanceMode(true)` for the foreground export activity so the OS holds encoder clocks steady rather than boosting + throttling.
+
+- Sources: https://developer.android.com/games/optimize/adpf/thermal · https://developer.android.com/reference/android/os/PowerManager · https://source.android.com/docs/core/power/thermal-mitigation · https://source.android.com/docs/core/power/performance
+
+### R8.6 — Photo Picker / Selected Photos compliance
+
+Android 14 introduced `READ_MEDIA_VISUAL_USER_SELECTED` for partial media access. Google Play's "Photo and Video Permissions" policy restricts broad `READ_MEDIA_IMAGES` / `READ_MEDIA_VIDEO` permissions to apps whose core functionality is broad media access (gallery / editor / file manager) — NovaCut as a video editor qualifies, but the policy review fails apps that hold the broad perms without justification. Android 14 + apps in compatibility mode also lose their previously-selected media when the system kills the app, which is a poor UX.
+
+Implementation target:
+- Add the Photo Picker (`ActivityResultContracts.PickMultipleVisualMedia`) as a complementary fast-import path alongside the existing MediaPicker. Default behavior: tap "Add media" → Photo Picker; long-press or "Show all" → full MediaPicker with broad-permission media browsing.
+- Document and keep the broad `READ_MEDIA_VIDEO/IMAGES/AUDIO` declarations, but justify them in the Play console listing with a one-line "needed for project-level media browsing across all device folders, including external SD card."
+- Add explicit handling for compatibility-mode loss: detect when the user has granted only "Selected" access, persist the URIs the user selected (via `Context.getContentResolver().takePersistableUriPermission`) so they survive background kill, and offer a "Re-grant access" CTA when the URIs become invalid.
+- Add `READ_MEDIA_VISUAL_USER_SELECTED` to the manifest and bundle the request with the existing `READ_MEDIA_VIDEO/IMAGES` request so users see one combined runtime dialog.
+
+- Sources: https://developer.android.com/about/versions/14/changes/partial-photo-video-access · https://developer.android.com/training/data-storage/shared/photo-picker · https://support.google.com/googleplay/android-developer/answer/14115180 · https://andy086912597.medium.com/android-14-photo-picker-change-07bacb963386
+
+### R8.7 — Per-app language preferences (Android 13+)
+
+Android 13 introduced per-app language preferences in the system Settings; Android 14 added (1) automatic `LocaleConfig` generation via AGP 8.1+ from `res/values-*/` folders, (2) `LocaleManager.setOverrideLocaleConfig` for dynamic updates, and (3) the Grammatical Inflection API. NovaCut runs `compileSdk = 36 ≥ 33`, so the automatic feature is available. Even with English-only strings today, enabling auto-`LocaleConfig` lights up the per-app language picker the moment translations land, paying off R5.4 i18n work.
+
+Implementation target:
+- Add `<application android:localeConfig="@xml/locales_config">` to AndroidManifest — OR — opt into AGP-auto: remove any manually-created `locales_config.xml` and let AGP generate it from resources at build time.
+- Default action: auto-generate. The day a Spanish translation lands in `res/values-es/`, the app appears in Settings → System → Languages & Input → App Languages → NovaCut. Zero additional Kotlin.
+- For testing, AGP 8.1+ generated files don't appear in `res/xml/`; verify with `unzip -p app-debug.apk AndroidManifest.xml | aapt2 dump xmltree --file -`.
+- Pair with R5.4d Noto font fallback policy — `LocaleManager.applicationLocales` lets the caption font policy pick the correct script bundle without restarting the activity.
+
+- Sources: https://developer.android.com/guide/topics/resources/app-languages · https://developer.android.com/about/versions/14/features · https://medium.com/@mdupierreux/exploring-android-14-per-app-language-preferences-dynamic-updates-66d88ca4825d · https://phrase.com/blog/posts/android-per-app-language-preferences/
+
+### R8.8 — Android 16 adaptive resizability (tablets / foldables)
+
+Apps targeting API 36 are forced resizable + multi-window-capable on displays with smallest-width ≥ 600 dp; manifest `resizeableActivity`, `android:screenOrientation`, and runtime orientation locks are ignored on those displays. NovaCut targets API 36, so the editor is already exposed to Pixel Tablet, Pixel Fold inner display, Galaxy Z Fold unfolded, and Android 16 desktop windowing (taskbar + multi-monitor). Panel-heavy editor UI will clip or stretch on these form factors without an explicit pass.
+
+Implementation target:
+- Audit `MainActivity` orientation declarations. Decide whether to opt out via `PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY` (preserves portrait lock on phones, accepts that tablets/foldables get the system default) or to fully embrace adaptive layouts. Recommend the latter for an editor — bigger canvas is a feature.
+- Use `androidx.window.WindowSizeClass` to drive layout: `Compact` → current single-pane editor; `Medium` → two-pane (timeline + preview) with collapsed panels; `Expanded` → three-pane (media bin + timeline+preview + tools). Compose `Scaffold` with size-class-aware navigation rail.
+- Handle the foldable posture API (`androidx.window.layout.FoldingFeature`): on a half-folded "tabletop" posture, automatically place preview on the top half and timeline on the bottom half.
+- Add `androidx.window.embedding.ActivityEmbeddingController` to support side-by-side ExportSheet + EditorScreen on Pixel Tablet / desktop windowing.
+- Verify drag-and-drop import works across Android 16 desktop-mode windows (system already supports cross-app drag; NovaCut needs to accept `DragEvent.ACTION_DROP` on the MediaPicker surface).
+- Test with the Pixel Tablet and Pixel Fold series emulators in Android Studio with `targetSdkPreview = "Baklava"`.
+
+- Sources: https://developer.android.com/develop/ui/compose/layouts/adaptive/app-orientation-aspect-ratio-resizability · https://developer.android.com/about/versions/16/behavior-changes-16 · https://developer.android.com/develop/ui/compose/layouts/adaptive/support-multi-window-mode · https://developer.android.com/guide/topics/ui/foldables · https://developer.android.com/codelabs/android-window-manager-dual-screen-foldables · https://www.techtimes.com/articles/310767/20250612/android-16-brings-desktop-mode-tablets-foldables-get-left-behind.htm
+
+### R8.9 — AI-disclosure UX (pairs with C2PA and generative policy)
+
+Three regulatory threads converge in 2026: EU AI Act Article 50 effective 2026-08-02 requires machine-readable labels for AI-generated content; the FTC issued an AI policy statement by 2026-03-11 covering deepfakes / synthetic endorsements / deceptive AI imagery; the bipartisan federal "Protecting Consumers from Deceptive AI Act" was introduced 2026-04-24 directing NIST + FTC to set audio/visual AI-content labeling standards. Platforms have already moved: TikTok requires realistic-AI-content labels; YouTube requires disclosure of AI content that could mislead about real events/people. NovaCut's shipped `GenerativeVideoPolicy` (R5.2d) and planned R6.18 lip-sync touch this directly; A.12 cloud inpainting is borderline.
+
+Implementation target:
+- New `AiUsageLedger` (in-memory + autosave-persisted) records every clip that touched a generative cloud effect, a substantial AI inpainting pass, or AI lip-sync. Ledger entries: effect ID, model name, scope (clip / range), timestamp.
+- Export sheet: "Disclose AI use" toggle. Default **on** when the project has any non-zero ledger entry. When on, write disclosure metadata via three channels:
+  1. C2PA manifest assertion (R8.2) — `c2pa.actions` with `c2pa.ai_generated` or `c2pa.opinion` action for affected ranges.
+  2. ID3v2 / MP4 `udta`-box tag containing a human-readable "Created with AI assistance: <ledger summary>" string for players that don't parse C2PA.
+  3. Optional sidecar `*.json` "AI use declaration" file matching the format the platform-side compliance code can ingest.
+- `DirectPublishEngine`: when uploading to a platform with an AI-content checkbox (TikTok, YouTube), auto-tick the box if the ledger is non-empty; user can untick with a confirmation dialog explaining the platform policy.
+- Privacy Dashboard (R5.5c): add an "AI ledger" row so users can review and clear per-project AI usage.
+
+- Sources: https://www.ftc.gov/industry/technology/artificial-intelligence · https://news.ftcpublications.com/core/regulators-target-deepfake-scams-with-new-ai-disclosure-mandates/ · https://foushee.house.gov/media/press-releases/reps-foushee-beyer-and-moylan-introduce-the-protecting-consumers-from-deceptive-ai-act-to-establish-accountability-and-transparency-standards-for-generative-ai · https://www.darkroomagency.com/observatory/what-brands-need-to-know-about-tiktok-new-rules-2026 · https://koanthic.com/en/ai-content-disclosure-complete-guide-examples-2026/
+
+### R8.10 — Stylus handwriting in caption text fields
+
+Compose `androidx.compose.foundation:foundation:1.7.0+` enables stylus handwriting by default on every `TextField` on Android 14+, with a 40 dp vertical / 10 dp horizontal handwriting hit zone around the field. Compose BOM `2024.12.01` already pulls foundation 1.7.x, so for most caption / overlay text edit fields this is **probably already on** — but unverified. The `handwritingDetector` modifier promotes any composable to a handwriting trigger that hands off to a real text field via `handwritingHandler`.
+
+Implementation target:
+- Verify shipping behavior on a stylus device (or `adb shell setprop debug.input.simulate_stylus_with_touch true`) across the caption editor, text-overlay editor, project-rename dialog, and the marker label inline editor. Document any field that requires `KeyboardType.Password` (none should — verify), since handwriting is disabled for password fields.
+- Apply `handwritingDetector { ... }` to timeline clip body composables so S Pen → clip immediately launches the caption editor at that timecode pre-focused, mirroring the existing `StylusMidiEngine` jog/shuttle pattern.
+- Apply `handwritingDetector` to the search field placeholder in the marker list panel — tap with stylus and start writing instead of needing to focus first.
+- This is mostly verification + ~50 LOC of `handwritingDetector` wiring; no new dependency.
+
+- Sources: https://developer.android.com/develop/ui/compose/touch-input/stylus-input/stylus-input-in-text-fields · https://composables.com/foundation/handwritinghandler · https://developer.android.com/develop/ui/compose/touch-input/stylus-input/advanced-stylus-features · https://www.androidpolice.com/gboard-handwrite-right-text-boxes-stylus/
+
+### R8.11 — Bluetooth LE Audio monitoring for voiceover
+
+The Android Developers BLE Audio recording guide (last updated 2026-02) walks through capturing stereo audio from LE Audio hearables via `AudioManager`. LC3 codec latency is under 40 ms — viable for live monitoring during voiceover recording. Compatible devices: Pixel 8+, Galaxy S23+, Galaxy Z Fold5+, and select Xiaomi/POCO models (Xiaomi 14T/15/15 Ultra, MIX Flip, POCO X6 Pro / F6 Pro / F7 Pro/Ultra). Third-party apps cannot access LE Audio GATT services since Android 13 — that limits *Auracast broadcast* features, but does not affect *headset monitoring* during recording.
+
+Implementation target:
+- In `VoiceoverRecorder` (already shipped), add an LE Audio output device check via `AudioManager.getDevices(GET_DEVICES_OUTPUTS)` filtered to `TYPE_BLE_HEADSET` / `TYPE_BLE_BROADCAST`. When present and selected, route monitoring through LE Audio so the recordist hears the music + their voice in their LE Audio earbuds with sub-40 ms latency.
+- Setting: "Monitor through LE Audio earbuds (when available)" with a one-line capability disclosure "Requires Pixel 8+, Galaxy S23+, or other LE Audio device."
+- For NovaCut as recipient of an Auracast broadcast (group voiceover sessions), document that this requires system-app permission and stays out of scope.
+- Pairs with R6.17 OutputStreamingEngine — when streaming and recording voiceover simultaneously, LE Audio monitoring removes the wired-headphones requirement for stage / classroom workflows.
+
+- Sources: https://developer.android.com/develop/connectivity/bluetooth/ble-audio/audio-recording · https://www.bluetooth.com/auracast/developers/ · https://blog.google/products/android/le-audio-auracast-support/ · https://www.bluetooth.com/learn-about-bluetooth/feature-enhancements/le-audio/resources/
+
+### R8.12 — Spatial audio (Dolby Atmos) export track
+
+Media3 exposes `audio/eac3-joc` (E-AC-3 Joint Object Coding) as the Dolby Atmos MIME for Android. Native device support is gated — Samsung Galaxy flagships have shipped Atmos since S9; OnePlus, Xiaomi, and other premium devices vary. Capability detection via `MediaCodecList.REGULAR_CODECS` is already the pattern in `EncoderCapabilityProbe`. NovaCut today exports stereo / 5.1 only; an Atmos export track is a clear premium-tier differentiator for music-video / podcast-video creators on supported hardware.
+
+Implementation target:
+- Extend `EncoderCapabilityProbe` with `probeSpatialAudioEncoder()` returning `SpatialAudioSupport(hasJocEncoder, hasJocDecoder, encoderName)`.
+- Add an "Spatial Audio (Dolby Atmos / E-AC-3 JOC)" export preset, available only when the probe reports `hasJocEncoder = true`.
+- For source audio that already carries object metadata (rare on mobile), pass through; otherwise upmix from stereo / 5.1 via the Media3 audio path. Document the upmix limitation honestly — true object-aware mixing requires Pro Tools / Logic / Atmos Renderer-class tooling, not NovaCut.
+- Pair with R6.12 (Ultra HDR v2): Atmos + Ultra HDR forms a "Premium A/V Export" preset bundle that targets the same flagship device tier.
+- Decision flag in `GenerativeVideoPolicy`-style policy file: Atmos export remains optional, never default, and never blocks export when unavailable.
+
+- Sources: https://professionalsupport.dolby.com/s/article/Enabling-Dolby-Atmos-in-Android-Mobile-media-apps · https://professional.dolby.com/categories/mobile/dolby-atmos-for-mobile-devices/ · https://developers.meta.com/horizon/documentation/spatial-sdk/spatial-sdk-spatial-audio/
+
+### R8.13 — Auto Backup for projects + templates (Android Backup Service)
+
+Android's Auto Backup (D2D Migration) carries project metadata, autosave files, template library, settings, and the model registry across device transfers up to the per-user backup cap (currently 25 MB per app, expanded via D2D for direct transfers). Media files stay on the user's device. This is a no-cost reliability win that competes directly with cloud-first editors' "I lost my project" problem.
+
+Implementation target:
+- Add `android:fullBackupContent="@xml/backup_rules"` and `android:dataExtractionRules="@xml/data_extraction_rules"` to AndroidManifest.
+- `backup_rules.xml`: include `databases/`, `files/projects/`, `files/templates/`, `files/effect_packs/`, `shared_prefs/`, `files/datastore/`. Exclude `files/proxy/`, `files/thumbnails/`, `files/diagnostics/`, `cache/`, `files/models/` (models re-download via `ModelDownloadManager`).
+- Document in Privacy Dashboard (R5.5c): "Project Auto Backup" row with toggle, retention policy, what's included/excluded.
+- Honor user opt-out in DataStore settings — even when system Auto Backup is on, NovaCut respects an in-app "Disable Auto Backup" toggle by writing a `.nobackup` marker file in the project dir.
+- For projects approaching the 25 MB cap (large autosave snapshots from long projects), surface a "Trim autosave history before backup" suggestion that drops older snapshots while keeping the current state intact.
+- D2D Migration on a new-phone setup will restore the project library transparently; new phone's `ModelDownloadManager` re-fetches activated models as needed.
+
+- Sources: https://developer.android.com/guide/topics/data/autobackup · https://developer.android.com/identity/data/testingbackup · https://developer.android.com/guide/topics/data/d2d-migration
+
+### R8.14 — Descript-style text-edit-driven panel (extension of TextBasedEditEngine)
+
+Descript (2026 pricing: $24-$65/user/month) is the canonical reference for "edit by editing the transcript" — delete a sentence in the transcript and the matching audio/video disappears; rearrange paragraphs and clips reorder; cuts happen at word boundaries from the transcript. NovaCut ships `TextBasedEditEngine` and Whisper word timestamps; what's missing is the full document-style editor panel as the primary editing surface (rather than a side helper).
+
+Implementation target:
+- New `TextDrivenEditorScreen` accessible from the main editor toolbar. Layout: 60% transcript document (editable RichTextField with per-word backgrounds tinted by Whisper confidence), 40% preview pane. Speaker labels as headings (pulled from R6.14 speaker diarization).
+- Delete word → split the underlying clip, drop the deleted range, ripple-close the gap (snap respects timeline magnetic snap settings).
+- Drag-reorder paragraphs → cut + paste the matching ranges in the timeline.
+- Type a new word → insert a TTS A.8 voiceover for the new text at the cursor position (gated on user toggle "Allow TTS insertion in transcript edits" — defaults off so accidental typing doesn't generate audio).
+- All operations route through `EditCommand` (already shipped) so undo/redo works.
+- Warn UX: Descript's known failure mode is accidentally cutting a single word like "not" or "only" from a critical sentence. Show a non-blocking "high-impact word edited" annotation when a deletion removes ≤ 3 words that include a negation, quantifier, or named entity (cheap heuristic on a small dictionary).
+- Pair with Cut Assistant Review (already shipped): proposed cuts surface as document strike-throughs the user accepts/rejects per paragraph.
+
+- Sources: https://www.descript.com/video-editing · https://www.vidmetoo.com/descript-review/ · https://blogrecode.com/descript-review-guide-to-text-based-video-editing/ · https://www.voicetypingtools.com/tools/descript
+
+### R8.15 — Local Network Protection mode (Android 16)
+
+Android 16 Developer Preview 1 added Local Network Protection (LNP): apps cannot reach internal-network hosts unless explicitly authorized. This affects R6.17 OutputStreamingEngine the moment it ships — RTMP / SRT / RIST / WebRTC / RTSP / NDI all target LAN servers in the most common creator workflows (OBS server on the same Wi-Fi, hardware streaming encoder on the local network). Without LNP authorization, the first call returns a quiet failure.
+
+Implementation target:
+- When R6.17 lands the actual streaming library wiring, request the `NEARBY_WIFI_DEVICES` / `ACCESS_LOCAL_NETWORK` permissions appropriately for the target Android version. Surface a one-time consent sheet "NovaCut needs Local Network access to stream to RTMP/SRT servers on your Wi-Fi" with a per-destination granular toggle.
+- For `OutputStreamingEngine.validateDestination(protocol, url)` (already shipped, pure function), add a `RequiresLocalNetwork(url)` discriminator that returns true for RFC1918 / link-local / multicast addresses; UI checks this before showing the consent sheet.
+- Document the permission requirement in [docs/models.md](docs/models.md) (as the "Networks and external services" companion section to the model registry).
+- Outbound streaming to a public RTMP endpoint (Twitch, YouTube Live ingest) is internet-only and not gated by LNP — keep that path working without the LAN permission.
+
+- Sources: https://privacysandbox.google.com/overview/android-release-notes · https://blog.google/security/whats-new-in-android-security-privacy-2026/ · https://www.androidauthority.com/android-16-features-3484159/
+
+### R8.16 — Hot folder / watch folder import
+
+Pure UX win, no new dependencies. SAF `DocumentFile` + `ContentResolver.registerContentObserver` (or `FileObserver` for app-private storage) can watch a user-chosen folder and auto-import new media files as they appear. Useful for OBS-recording workflows (drops MKV/FLV files), external camera workflows (DJI Osmo / GoPro app drops MP4s into a SAF-accessible directory), and screen-recorder→edit handoffs.
+
+Implementation target:
+- New Settings entry: "Watch folder for auto-import" with a SAF folder picker.
+- `WatchFolderObserver` (Hilt-injected, lifecycle-aware): runs as part of the foreground export service when active; otherwise as a WorkManager periodic job (every 15 min minimum per WM constraints).
+- When a new file lands matching the supported MIME allow-list (video, audio, image), import it into a system-managed "Inbox" media bin scoped per project (or a global Inbox if no project is open). User opens the editor → Inbox is prominently displayed in MediaPicker.
+- Respect the SAF persistable URI permission (already used elsewhere in NovaCut for project archives).
+- Optional Settings toggle: "Auto-import drops new clips at the playhead position" for live-edit workflows.
+
+- Sources: https://developer.android.com/training/data-storage/shared/documents-files · https://developer.android.com/reference/android/os/FileObserver · https://developer.android.com/topic/libraries/architecture/workmanager
+
+### R8.17 — Gemma 3 as on-device LLM alternative to R6.3
+
+R6.3 (Gemini Nano via ML Kit GenAI Prompt API) requires Pixel 10 / 12 GB RAM / AICore — a narrow device slice. Gemma 3 Nano (270M) and Gemma 3 1B (released 2025-Q4) are open-weight alternatives that run via the MediaPipe LLM Inference API or llama.cpp on mid-to-high-tier devices without AICore lock-in. Quantized GGUF / ONNX builds fit in 200-700 MB on disk; latency on a Snapdragon 8 Gen 3 is ~30-50 tok/s for the 270M model.
+
+Implementation target (under consideration, not committed):
+- Benchmark Gemma 3 Nano (270M) on a mid-tier device (e.g. Snapdragon 7 Gen 2) against the same prompts used for R6.3 Gemini Nano feature ideas — caption rewrite tone presets, project summary, template pick.
+- Quality threshold: if Gemma 3 Nano produces acceptable results for "Reels Hook" / "Tutorial Voice" / "ASMR Whisper" caption rewrites and 50-word project summaries, prefer it over R6.3 because it works on every device with ≥ 4 GB RAM and ~700 MB free storage. If quality is too poor, keep R6.3 as the Pixel-only path and consider Gemma 3 1B for higher-RAM devices.
+- Distribution via Play Asset Delivery (R5.6a) on Play; explicit download with checksum (R5.9b) on F-Droid.
+- License: Gemma 3 ships under the Gemma Terms of Use (not OSI-approved but permissive for commercial inference). Document under the same `docs/models.md` license column.
+- Pure on-device, no consent sheet needed — same privacy posture as Whisper / LaMa.
+
+- Sources: https://ai.google.dev/gemma · https://huggingface.co/google/gemma-3-270m · https://huggingface.co/google/gemma-3-1b-it · https://ai.google.dev/edge/mediapipe/solutions/genai/llm_inference/android
+
+### R8.18 — Codec/format watch list (AV2, HDR Vivid, in-process codecs)
+
+Three 2026 codec/format developments are tracked for awareness only — no implementation action this round.
+
+**AV2 (AOMedia Video 2)**: AVM v13.0.0 reference software released Q1 2026; first commercial hardware decoder IP (Chips&Media) completed 2026-05-12. The first AV2 silicon is expected ~2026, software decoders ~2027, mobile hardware decoders ~2028, mobile critical mass not before 2030 (gated by Qualcomm/MediaTek/Apple existing VVC investments). Add a placeholder in `EncoderCapabilityProbe` docstring noting AV2 is on the watch list; do not implement until at least one shipping mobile SoC supports it natively.
+
+**HDR Vivid (CUVA, China)**: Huawei Mate 70 Air shipped first phone certification 2025-11; OnePlus Turbo 6 supports; Xiaomi/OPPO/Honor/Samsung joining ecosystem. ITU-R BT.2408 incorporation 2024-11; upgraded to Preliminary Draft New Report 2026-04-08. FFmpeg + DaVinci 18 already support HDR Vivid. When R6.5 (`ffmpeg-kit-16kb`) lands, NovaCut gets HDR Vivid metadata probing for free via the FFmpeg path; extend `MediaImportEngine` with `detectHdrVivid(uri)` returning the CUVA static + dynamic metadata when present. Display side: HDR Vivid → HDR10 / HDR10+ tone-map fallback for non-CUVA displays. Low priority globally; high priority for any CN-market push.
+
+**Android 16 in-process software audio codecs**: Android 16 supports media codecs running in-app rather than in the system codec sandbox, but vendors must rewrite codecs in Rust before they ship. No vendor has done so as of 2026-05. Theoretical performance + battery win — track upstream, no action needed.
+
+- Sources: https://aomedia.org/press%20releases/AOMedia-Announces-Year-End-Launch-of-Next-Generation-Video-Codec-AV2-on-10th-Anniversary/ · https://www.cnx-software.com/2026/02/03/aomedia-av2-video-codec-draft-specification-release-and-a-quick-try-at-the-reference-implementation/ · https://www.edge-ai-vision.com/2026/05/chipsmedia-completes-development-of-next-gen-av2-hw-decoder-ip/ · https://www.hisilicon.com/en/about-us/press/news/cuva-hdr-vivid-commercial-use · https://iphonewired.com/industry/63337/ · https://developer.android.com/about/versions/16
+
+### Round 8 appendix
+
+#### Mandatory-at-`targetSdk=36` platform behaviors
+- https://developer.android.com/about/versions/15/behavior-changes-15 — Android 15 behavior changes (edge-to-edge enforcement).
+- https://developer.android.com/about/versions/16/behavior-changes-16 — Android 16 behavior changes (predictive back default; edge-to-edge opt-out deprecated; adaptive resizability on sw≥600 dp).
+- https://developer.android.com/develop/ui/compose/system/insets — Compose `WindowInsets` API.
+- https://developer.android.com/develop/ui/compose/system/system-bars — System bar protection in Compose.
+- https://developer.android.com/develop/ui/compose/system/predictive-back-setup — Predictive Back setup in Compose.
+- https://developer.android.com/codelabs/predictive-back — Predictive Back codelab.
+- https://medium.com/androiddevelopers/insets-handling-tips-for-android-15s-edge-to-edge-enforcement-872774e8839b — Insets handling tips.
+
+#### 2026 regulatory and provenance wave
+- https://opensource.contentauthenticity.org/docs/c2pa-android/ — Official c2pa-android library (Rust core, MP4 video support, StrongBox signing).
+- https://proofmode.org/blog/simple-c2pa — Simple C2PA project (MP4 + AAC + M4A support).
+- https://contentcredentials.org/ — C2PA Content Credentials hub.
+- https://security.googleblog.com/2025/09/pixel-android-trusted-images-c2pa-content-credentials.html — Pixel 10 hardware-backed C2PA Assurance Level 2.
+- https://www.lumethic.com/en/articles/cameras-with-c2pa-content-credentials — 2026 C2PA-supporting camera list.
+- https://spec.c2pa.org/specifications/specifications/2.4/explainer/Explainer.html — C2PA spec 2.4 explainer.
+- https://www.ftc.gov/industry/technology/artificial-intelligence — FTC AI policy posture.
+- https://foushee.house.gov/media/press-releases/reps-foushee-beyer-and-moylan-introduce-the-protecting-consumers-from-deceptive-ai-act-to-establish-accountability-and-transparency-standards-for-generative-ai — Federal Protecting Consumers From Deceptive AI Act (Apr 2026).
+- https://www.darkroomagency.com/observatory/what-brands-need-to-know-about-tiktok-new-rules-2026 — TikTok 2026 AI-content labeling rules.
+- https://koanthic.com/en/ai-content-disclosure-complete-guide-examples-2026/ — AI content disclosure guide 2026.
+
+#### Material 3 Expressive
+- https://developer.android.com/jetpack/androidx/releases/compose-material3 — Material3 Compose release notes (alpha19 May 2026, FAB Menu / motion scheme / expressive buttons graduated).
+- https://blog.google/products-and-platforms/platforms/android/material-3-expressive-android-wearos-launch/ — M3 Expressive Android + Wear OS launch announcement.
+- https://m3.material.io/develop/android/jetpack-compose — Material Design 3 for Jetpack Compose.
+- https://github.com/meticha/material-3-expressive-catalog — Expressive M3 component catalog.
+
+#### Power, thermal, and long-render reliability
+- https://developer.android.com/games/optimize/adpf/thermal — ADPF Thermal API.
+- https://developer.android.com/reference/android/os/PowerManager — PowerManager (thermal status / headroom / sustained performance).
+- https://source.android.com/docs/core/power/thermal-mitigation — AOSP thermal mitigation framework.
+- https://source.android.com/docs/core/power/performance — Sustained Performance Mode.
+
+#### Media access, photo picker, per-app language
+- https://developer.android.com/about/versions/14/changes/partial-photo-video-access — Android 14 partial media access.
+- https://developer.android.com/training/data-storage/shared/photo-picker — Photo Picker API.
+- https://support.google.com/googleplay/android-developer/answer/14115180 — Google Play Photo and Video Permissions policy.
+- https://developer.android.com/guide/topics/resources/app-languages — Per-app language preferences.
+- https://developer.android.com/about/versions/14/features — Android 14 features overview (auto-LocaleConfig, Grammatical Inflection API, Regional Preferences).
+
+#### Foldables, tablets, desktop windowing
+- https://developer.android.com/develop/ui/compose/layouts/adaptive/app-orientation-aspect-ratio-resizability — Android 16 adaptive resizability.
+- https://developer.android.com/develop/ui/compose/layouts/adaptive/support-multi-window-mode — Multi-window support in Compose.
+- https://developer.android.com/guide/topics/ui/foldables — Foldables guide.
+- https://developer.android.com/codelabs/android-window-manager-dual-screen-foldables — Jetpack WindowManager codelab.
+- https://www.techtimes.com/articles/310767/20250612/android-16-brings-desktop-mode-tablets-foldables-get-left-behind.htm — Android 16 desktop windowing.
+
+#### Input and accessibility
+- https://developer.android.com/develop/ui/compose/touch-input/stylus-input/stylus-input-in-text-fields — Stylus handwriting in Compose TextField.
+- https://composables.com/foundation/handwritinghandler — `handwritingHandler` modifier reference.
+- https://developer.android.com/develop/connectivity/bluetooth/ble-audio/audio-recording — BLE Audio recording API guide (Feb 2026).
+- https://blog.google/products/android/le-audio-auracast-support/ — LE Audio / Auracast device support expansion.
+- https://www.bluetooth.com/auracast/developers/ — Auracast developer resources.
+
+#### Spatial audio / Atmos
+- https://professionalsupport.dolby.com/s/article/Enabling-Dolby-Atmos-in-Android-Mobile-media-apps — Enabling Dolby Atmos in Android mobile apps.
+- https://professional.dolby.com/categories/mobile/dolby-atmos-for-mobile-devices/ — Dolby Atmos for mobile devices.
+
+#### Backup and migration
+- https://developer.android.com/guide/topics/data/autobackup — Android Auto Backup.
+- https://developer.android.com/guide/topics/data/d2d-migration — D2D Migration.
+- https://developer.android.com/identity/data/testingbackup — Testing Auto Backup.
+
+#### Adjacent app pattern (text-driven editing)
+- https://www.descript.com/video-editing — Descript video editor positioning.
+- https://www.vidmetoo.com/descript-review/ — Descript 2026 review (text-edit workflow).
+- https://blogrecode.com/descript-review-guide-to-text-based-video-editing/ — Descript text-edit workflow guide.
+
+#### On-device LLM alternative (Gemma 3)
+- https://ai.google.dev/gemma — Gemma model family overview.
+- https://huggingface.co/google/gemma-3-270m — Gemma 3 270M weights.
+- https://huggingface.co/google/gemma-3-1b-it — Gemma 3 1B-IT weights.
+- https://ai.google.dev/edge/mediapipe/solutions/genai/llm_inference/android — MediaPipe LLM Inference API for Android.
+
+#### Codec / format watch list
+- https://aomedia.org/press%20releases/AOMedia-Announces-Year-End-Launch-of-Next-Generation-Video-Codec-AV2-on-10th-Anniversary/ — AV2 announcement.
+- https://www.cnx-software.com/2026/02/03/aomedia-av2-video-codec-draft-specification-release-and-a-quick-try-at-the-reference-implementation/ — AV2 spec draft release.
+- https://www.edge-ai-vision.com/2026/05/chipsmedia-completes-development-of-next-gen-av2-hw-decoder-ip/ — Chips&Media AV2 decoder IP (May 2026).
+- https://www.hisilicon.com/en/about-us/press/news/cuva-hdr-vivid-commercial-use — HDR Vivid commercial deployment.
+- https://iphonewired.com/industry/63337/ — Huawei Mate 70 Air first HDR Vivid phone.
+
+#### Privacy Sandbox / Local Network Protection
+- https://privacysandbox.google.com/overview/android-release-notes — Privacy Sandbox Android release notes.
+- https://blog.google/security/whats-new-in-android-security-privacy-2026/ — 2026 Android security and privacy updates.
+- https://www.androidauthority.com/android-16-features-3484159/ — Android 16 confirmed features (LNP, Privacy Sandbox).
