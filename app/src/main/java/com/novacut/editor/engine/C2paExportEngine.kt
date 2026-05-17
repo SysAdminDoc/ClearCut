@@ -1,6 +1,8 @@
 package com.novacut.editor.engine
 
 import android.util.Log
+import org.json.JSONArray
+import org.json.JSONObject
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -235,6 +237,45 @@ class C2paExportEngine @Inject constructor() {
             signingMode = signingMode,
             assertions = assertions
         )
+    }
+
+    fun manifestToJson(manifest: C2paManifest): JSONObject {
+        return JSONObject().apply {
+            put("schema", "com.novacut.c2pa-manifest.v1")
+            put("claimGenerator", manifest.claimGenerator)
+            put("claimGeneratorInfoVersion", manifest.claimGeneratorInfoVersion)
+            put("title", manifest.title ?: JSONObject.NULL)
+            put("signingMode", manifest.signingMode.name)
+            put("assertions", JSONArray().apply {
+                manifest.assertions.forEach { assertion ->
+                    put(JSONObject().apply {
+                        put("label", assertion.label)
+                        put("data", toJsonValue(assertion.data))
+                    })
+                }
+            })
+        }
+    }
+
+    private fun toJsonValue(value: Any?): Any {
+        return when (value) {
+            null -> JSONObject.NULL
+            is JSONObject, is JSONArray, is String, is Boolean, is Number -> value
+            is Map<*, *> -> JSONObject().apply {
+                value.entries
+                    .sortedBy { it.key.toString() }
+                    .forEach { (key, nested) ->
+                        put(key.toString(), toJsonValue(nested))
+                    }
+            }
+            is Iterable<*> -> JSONArray().apply {
+                value.forEach { put(toJsonValue(it)) }
+            }
+            is Array<*> -> JSONArray().apply {
+                value.forEach { put(toJsonValue(it)) }
+            }
+            else -> value.toString()
+        }
     }
 
     /**

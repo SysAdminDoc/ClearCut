@@ -32,6 +32,7 @@ import com.novacut.editor.engine.FlashSafetyEngine
 import com.novacut.editor.engine.ColorBlindPreviewEngine
 import com.novacut.editor.engine.AiThumbnailEngine
 import com.novacut.editor.engine.AudioDescriptionEngine
+import com.novacut.editor.engine.C2paExportEngine
 import com.novacut.editor.engine.StylusMidiEngine
 import com.novacut.editor.engine.BeatDetectionEngine
 import com.novacut.editor.engine.cleanupFrameOutputFiles
@@ -385,6 +386,7 @@ class EditorViewModel @Inject constructor(
     private val directPublishEngine: DirectPublishEngine,
     private val flashSafetyEngine: FlashSafetyEngine,
     private val colorBlindEngine: ColorBlindPreviewEngine,
+    private val c2paExportEngine: C2paExportEngine,
     private val aiThumbnailEngine: AiThumbnailEngine,
     private val audioDescriptionEngine: AudioDescriptionEngine,
     private val stylusMidiEngine: StylusMidiEngine,
@@ -428,7 +430,8 @@ class EditorViewModel @Inject constructor(
         scope = viewModelScope, showToast = ::showToast,
         pauseIfPlaying = ::pauseIfPlaying, dismissedPanelState = ::dismissedPanelState,
         showExportSheet = ::showExportSheet,
-        streamCopyEngine = streamCopyEngine
+        streamCopyEngine = streamCopyEngine,
+        c2paExportEngine = c2paExportEngine
     )
 
     val aiToolsDelegate = AiToolsDelegate(

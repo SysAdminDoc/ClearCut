@@ -8,7 +8,9 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import androidx.core.content.FileProvider
+import com.novacut.editor.BuildConfig
 import com.novacut.editor.engine.AiUsageLedger
+import com.novacut.editor.engine.C2paExportEngine
 import com.novacut.editor.engine.ContactSheetExporter
 import com.novacut.editor.engine.ExportService
 import com.novacut.editor.engine.ExportState
@@ -50,7 +52,8 @@ class ExportDelegate(
     private val pauseIfPlaying: () -> Unit,
     private val dismissedPanelState: (EditorState) -> EditorState,
     private val showExportSheet: () -> Unit,
-    private val streamCopyEngine: StreamCopyExportEngine? = null
+    private val streamCopyEngine: StreamCopyExportEngine? = null,
+    private val c2paExportEngine: C2paExportEngine? = null
 ) {
     // --- Export ---
     // Holder for the GIF-style / contact-sheet / any other non-Transformer
@@ -597,9 +600,31 @@ class ExportDelegate(
                 generatedAtEpochMs = System.currentTimeMillis()
             )
             writeUtf8TextAtomically(sidecar, declaration.toString(2))
+            writeC2paManifestSidecar(outputFile, entries, state)
         } catch (e: Exception) {
             android.util.Log.w("ExportDelegate", "AI disclosure sidecar write failed", e)
         }
+    }
+
+    private fun writeC2paManifestSidecar(
+        outputFile: File,
+        entries: List<AiUsageLedger.Entry>,
+        state: EditorState
+    ) {
+        val engine = c2paExportEngine ?: return
+        val sidecar = File(
+            outputFile.parentFile,
+            "${outputFile.nameWithoutExtension}.c2pa-manifest.json"
+        )
+        val generatedAt = System.currentTimeMillis()
+        val manifest = engine.buildManifest(
+            projectTitle = state.project.name,
+            novaCutVersionName = BuildConfig.VERSION_NAME,
+            signingMode = C2paExportEngine.SigningMode.ANDROID_KEYSTORE,
+            ledger = entries,
+            exporterCreationTimeMs = generatedAt
+        )
+        writeUtf8TextAtomically(sidecar, engine.manifestToJson(manifest).toString(2))
     }
 
     fun getShareIntent(): Intent? {

@@ -198,6 +198,36 @@ class C2paExportEngineTest {
     }
 
     @Test
+    fun manifestToJson_serializesAssertionsDeterministically() {
+        val manifest = engine.buildManifest(
+            projectTitle = "Project",
+            novaCutVersionName = "3.74.9",
+            signingMode = C2paExportEngine.SigningMode.ANDROID_KEYSTORE,
+            ledger = listOf(
+                ledgerEntry(kind = AiUsageLedger.EffectKind.AUTO_EDIT_LOCAL, model = "NovaCut Auto Edit")
+            ),
+            exporterCreationTimeMs = 1_700_000_000_000L
+        )
+
+        val json = engine.manifestToJson(manifest)
+        val assertions = json.getJSONArray("assertions")
+        val aiActions = (0 until assertions.length())
+            .map { assertions.getJSONObject(it) }
+            .first { it.getString("label") == "c2pa.actions" }
+            .getJSONObject("data")
+            .getJSONArray("actions")
+
+        assertEquals("com.novacut.c2pa-manifest.v1", json.getString("schema"))
+        assertEquals("NovaCut/3.74.9", json.getString("claimGenerator"))
+        assertEquals(C2paExportEngine.SigningMode.ANDROID_KEYSTORE.name, json.getString("signingMode"))
+        assertEquals("c2pa.edited", aiActions.getJSONObject(0).getString("action"))
+        assertEquals(
+            "compositeWithTrainedAlgorithmicMedia",
+            aiActions.getJSONObject(0).getString("digitalSourceType")
+        )
+    }
+
+    @Test
     fun isAvailable_returnsFalseWhenNoC2paLibraryOnClasspath() {
         assertEquals(false, engine.isAvailable())
     }

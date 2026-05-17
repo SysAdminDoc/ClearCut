@@ -93,6 +93,11 @@
   `AiUsageLedger` entries only after a successful project mutation. Model
   requirement prompts remain non-recording until an AI tool actually changes
   media.
+- **R8.9 / R8.2 — unsigned C2PA manifest sidecar.**
+  `C2paExportEngine` can now serialize its manifest spec to stable JSON, and
+  ExportDelegate writes a sibling `.c2pa-manifest.json` beside AI-disclosed
+  exports. This preserves the machine-readable Content Credentials payload
+  before the native signer AAR is wired.
 - **R8.5 — ThermalHeadroomPolicy engine.** Pure-Kotlin policy translating
   `(PowerManager ThermalStatus, getThermalHeadroom forecast)` into a
   `ThrottleDecision` (FULL_SPEED / THROTTLE_LIGHT / THROTTLE_HEAVY /
