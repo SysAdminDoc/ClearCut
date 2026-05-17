@@ -76,6 +76,19 @@
   for overnight" Settings entry once an estimated render crosses 30
   minutes. Ready for `ExportService` to consume; engine layer fully
   unit-tested on the JVM.
+- **R8.2 — C2paExportEngine scaffold.** New `C2paExportEngine` builds
+  a structured `C2paManifest` (training-mining opt-out, thumbnail
+  claim, `c2pa.created` action, and an AI-actions assertion derived
+  from `AiUsageLedger`) with four `SigningMode`s (ANDROID_KEYSTORE /
+  STRONGBOX / USER_PEM / WEB_SERVICE). `AiUsageLedger.EffectKind` maps
+  to canonical C2PA action labels (`c2pa.created` for cloud generative
+  paths; `c2pa.edited` for substantial local AI edits; `c2pa.opinion`
+  for assistive helpers) and C2PA v2 `digitalSourceType` IRI suffixes
+  (`trainedAlgorithmicMedia` / `compositeWithTrainedAlgorithmicMedia`
+  / `algorithmicMedia` / `minorHumanEdits`). `signAndEmbed` returns
+  `Unavailable` until the c2pa-android AAR is wired. 13 new tests
+  lock the manifest construction, AI-actions mapping, classification
+  filter, and stub fallbacks.
 - **R8.15 — LNP scope classifier for OutputStreamingEngine.**
   `OutputStreamingEngine.classifyNetworkScope(url)` +
   `requiresLocalNetworkPermission(url)` route any RTMP / SRT / RIST /
