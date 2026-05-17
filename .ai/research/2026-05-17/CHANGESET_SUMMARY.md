@@ -74,3 +74,34 @@ native engine:
 - Updated `ROADMAP.md`, `PROJECT_CONTEXT.md`, `CHANGELOG.md`, `LICENSE`, and
   `docs/models.md` with the current dependency, source, license, checksum, and
   verification state.
+
+## Autonomous Continuation Addendum — Media3 Lottie R7.5 / R6.10a
+
+The next Now-table item adopted the official Media3 Lottie renderer where it
+preserves NovaCut output semantics:
+
+- Added `androidx.media3:media3-effect-lottie:1.10.1` to the Gradle catalog and
+  app dependency graph.
+- Verified Google Maven metadata latest/release `1.10.1`, AAR SHA-256
+  `83b26f6f25e785b949263fc52cb7c0fb5f0e371445fa1d7b9a0ed0b71c05e69d`, source
+  JAR SHA-256
+  `5352b09469f485270d44e5bcf264ff30d7bee757049e8c79553bdfe7f7ee6e60`, and
+  Apache-2.0 license posture from official AndroidX/Google Maven sources.
+- Added `Media3LottieTextureOverlay`, which delegates Lottie frame drawing to
+  Media3's `androidx.media3.effect.lottie.LottieOverlay` while keeping
+  overlay-relative timing, alpha gating, TextDelegate substitution, and
+  full-frame canvas sizing.
+- Updated `VideoEngine` to choose the Media3 path for non-HDR finite-window
+  Lottie overlays and retain `LottieOverlayEffect` for HDR exports or title
+  windows longer than the composition duration.
+- Added focused JVM tests for backend selection, timeline alpha gating, and
+  full-frame scale math.
+- Updated `ROADMAP.md`, `PROJECT_CONTEXT.md`, `CHANGELOG.md`, `docs/models.md`,
+  `SOURCE_REGISTER.md`, and `SECURITY_AND_DEPENDENCY_REVIEW.md` with the
+  adoption decision, sources, fallback constraints, and verification notes.
+- Verification after the final layering adjustment:
+  `.\gradlew.bat :app:compileDebugKotlin :app:testDebugUnitTest --tests com.novacut.editor.engine.Media3LottieTextureOverlayTest --no-daemon`,
+  `.\gradlew.bat :app:testDebugUnitTest :app:assembleDebug --no-daemon`,
+  `git diff --check`,
+  `python scripts\check_16kb_alignment.py app\build\outputs\apk\debug\app-debug.apk`,
+  and SDK Build Tools `zipalign -c -P 16 -v 4 app\build\outputs\apk\debug\app-debug.apk`.

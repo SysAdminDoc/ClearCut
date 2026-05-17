@@ -14,7 +14,7 @@ Current versions come from `gradle/libs.versions.toml`. Latest/release metadata 
 | Kotlin | 2.1.0 | Latest metadata points to a 2.4.0 RC line | Do not blind-bump. Keep with KSP/AGP compatibility. |
 | KSP | 2.1.0-1.0.29 | Coupled to Kotlin | Update only with Kotlin. |
 | Compose BOM | 2024.12.01 | Newer 2026.05.00 metadata available | Candidate for dependency train after Compose compiler/Kotlin compatibility review. |
-| Media3 | 1.10.1 | Metadata shows 1.10.1 current | Keep current; use `media3-effect-lottie` spike before custom overlay cleanup. |
+| Media3 | 1.10.1 | Metadata shows 1.10.1 current; `media3-effect-lottie` metadata latest/release is 1.10.1 on Google Maven | Keep current; R7.5 now wires `media3-effect-lottie` for eligible Lottie overlays while retaining custom fallback for HDR/looping edge cases. |
 | Room | 2.6.1 | Newer 2.8.4 metadata available | Candidate for dependency train with migration tests. |
 | WorkManager | 2.10.0 | Newer 2.11.2 metadata available | Candidate for dependency train; relevant to model/background jobs. |
 | Hilt | 2.53.1 | Newer 2.59.2 metadata available | Candidate for dependency train with KSP/Kotlin review. |
@@ -48,6 +48,21 @@ Continuation update (2026-05-17):
 - AAR SHA-256: `6566a208fe476a71b20558f92d93a1c0db49fd93b36fcdaea17a10260189d167`; Maven metadata latest/release is `0.0.8`; GitHub tag `v0.0.8` maps to commit `42ea9b786babf7d67008a81cf25257b4735e4127`.
 - The bundled `deep_filter_mobile_model` is 7,984,565 bytes with SHA-256 `5600b6857117ecc7cf460b8ec4841963bfa6d718921d424d42dea5d3d37a8c32`.
 - Preflight `scripts/check_16kb_alignment.py` over extracted arm64-v8a and x86_64 `libdf.so` reported OK for both; final debug APK verification after integration reported 32 OK native libs, 40 skipped 32-bit libs, and 0 misaligned libs. Repeat the full APK/AAB check after every native dependency change.
+
+### Media3 Lottie module adoption
+
+Evidence:
+
+- AndroidX Media3 release notes list `androidx.media3:media3-effect-lottie:1.10.1` for applying Lottie effects to video frames.
+- Google Maven metadata for `androidx.media3:media3-effect-lottie` reports latest/release `1.10.1`.
+- The resolved 1.10.1 AAR is pure Kotlin/Java with no native libraries; AAR SHA-256 is `83b26f6f25e785b949263fc52cb7c0fb5f0e371445fa1d7b9a0ed0b71c05e69d`.
+- Source inspection of `LottieOverlay` 1.10.1 shows support for a `LottieProvider`, supplied `LottieDrawable`, `StaticOverlaySettings`, playback speed, and per-call `getOverlaySettings(long)`.
+
+Risk and mitigation:
+
+- Under HDR input, Media3 `OverlayEffect` treats non-text `BitmapOverlay` overlays as Ultra HDR and requires gainmaps. NovaCut therefore keeps the existing custom `LottieOverlayEffect` shader for HDR exports.
+- Media3's `LottieOverlay` loops animation progress, while NovaCut's existing renderer holds the final frame for title windows longer than the composition duration. `VideoEngine` keeps the custom shader for over-long windows and uses the official module only where parity holds.
+- No native-library alignment risk is introduced by this module.
 
 ### FFmpeg distribution and license posture
 

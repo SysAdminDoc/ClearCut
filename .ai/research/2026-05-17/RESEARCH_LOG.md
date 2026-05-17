@@ -134,3 +134,29 @@ Remaining useful future research would be implementation-specific rather than br
 - Exact ONNX Runtime Android 1.26 migration notes and native page-size status.
 - Device-level benchmark data for target ML models on midrange Android hardware.
 - Play Asset Delivery and F-Droid split-channel implementation examples.
+
+## Continuation Research Notes - Media3 Lottie R7.5
+
+Targeted follow-up after A.2 queried:
+
+- AndroidX Media3 release notes for `media3-effect-lottie`.
+- Android Developers API reference for `androidx.media3.effect.lottie.LottieOverlay`,
+  `LottieOverlay.Builder`, and `LottieOverlay.LottieProvider`.
+- Google Maven metadata, POM, AAR, and sources for
+  `androidx.media3:media3-effect-lottie:1.10.1`.
+- Local `LottieOverlayEffect`, `LottieTemplateEngine`, `VideoEngine`, and
+  `docs/models.md`.
+
+Result:
+
+- The artifact is published on Google Maven, not Maven Central, with
+  latest/release `1.10.1`.
+- The AAR is pure Kotlin/Java and carries no native 16 KB alignment risk.
+- The official renderer supports supplied `LottieDrawable`, composition provider,
+  static settings, and speed, so NovaCut can preserve text substitution and
+  full-frame sizing through an adapter.
+- The official renderer loops progress and Media3 HDR overlay handling treats
+  non-text bitmaps as Ultra HDR/gainmap overlays, so the custom shader remains a
+  deliberate fallback for HDR exports and over-long title windows.
+  The repo has no committed Lottie template assets, so pixel-golden parity should
+  be added when fixtures exist.

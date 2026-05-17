@@ -66,6 +66,11 @@ Every meaningful roadmap claim in this research run should trace to one of these
 | E17 | ffmpeg-kit upstream archive | https://github.com/arthenica/ffmpeg-kit | FFmpeg distribution risk. |
 | E18 | AndroidDeepFilterNet Maven Central | https://central.sonatype.com/artifact/io.github.kaleyravideo/android-deepfilternet | A.2 runtime coordinate, license, and POM evidence. |
 | E19 | AndroidDeepFilterNet Maven metadata | https://repo.maven.apache.org/maven2/io/github/kaleyravideo/android-deepfilternet/maven-metadata.xml | Latest/release version evidence for A.2 activation. |
+| E20 | Media3 effect-lottie Maven metadata | https://dl.google.com/dl/android/maven2/androidx/media3/media3-effect-lottie/maven-metadata.xml | R7.5 / R6.10a latest/release evidence for `media3-effect-lottie:1.10.1`. |
+| E21 | Media3 `LottieOverlay` API reference | https://developer.android.com/reference/androidx/media3/effect/lottie/LottieOverlay | Official API surface for the adopted Lottie renderer. |
+| E22 | Media3 `LottieOverlay.Builder` API reference | https://developer.android.com/reference/androidx/media3/effect/lottie/LottieOverlay.Builder | Builder API evidence for supplied drawable, static settings, and speed. |
+| E23 | Media3 release notes | https://developer.android.com/jetpack/androidx/releases/media3 | Release-note evidence that 1.10.x introduced/moved the Lottie module. |
+| E24 | Media3 effect-lottie AAR | https://dl.google.com/dl/android/maven2/androidx/media3/media3-effect-lottie/1.10.1/media3-effect-lottie-1.10.1.aar | Resolved AAR bytes; SHA-256 `83b26f6f25e785b949263fc52cb7c0fb5f0e371445fa1d7b9a0ed0b71c05e69d`. |
 
 ## Open-Source Competitor and Adjacent Sources
 
@@ -137,6 +142,7 @@ The exact browser/search result ranking is not stable, so the durable record is 
 
 - Android 16 16 KB native library requirement.
 - AndroidX Media3 1.10.1 Transformer/Lottie effect releases.
+- Media3 `media3-effect-lottie` module metadata and `LottieOverlay` API details.
 - Android NNAPI deprecation and LiteRT migration.
 - ffmpeg-kit archived / Maven distribution / 16 KB forks.
 - CapCut / DaVinci Resolve / PowerDirector / LumaFusion / KineMaster / VN feature and positioning.

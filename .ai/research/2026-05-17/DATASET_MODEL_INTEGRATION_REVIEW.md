@@ -34,6 +34,7 @@ Current gap:
 | Segmentation | SAM 2.1 Hiera Tiny, MediaPipe Image Segmenter | Tap-to-segment roadmap exists | Keep SAM 2.1 as watch/activation target; use MediaPipe where practical for mobile baseline. |
 | Frame interpolation | RIFE / NCNN / Vulkan | Roadmap item exists | Later. Native/Vulkan/device-tier risk is high. |
 | Upscaling | Real-ESRGAN | Roadmap item exists | Later. Large model and performance risk. |
+| Animated title templates | Media3 `media3-effect-lottie`, Airbnb Lottie | R7.5 / R6.10a now uses the official Media3 Lottie renderer for eligible export overlays | Add committed template fixtures or generated golden-frame tests before deleting the custom HDR/looping fallback shader. |
 | Text/prompt assistant | Gemini Nano / ML Kit GenAI Prompt API | Watch item | Keep optional and local-first; no core dependency on device availability. |
 
 ## Integration Candidates
@@ -59,6 +60,7 @@ Current gap:
 | Frame interpolation | Temporal artifact review, dropped-frame count, speed by device tier | RIFE-like features are device-sensitive. |
 | Upscaling | PSNR/SSIM where useful plus visual regression frames | Avoids sharpening artifacts and hallucinated detail. |
 | Export/render | Golden frame diffs, audio duration drift, container metadata | Needed for FFmpeg, Lottie, blend mode, HDR changes. |
+| Lottie overlays | Finite-window title frames, HDR export smoke, over-long title windows | Media3 renderer is active only where parity holds; fallback conditions need visual regression coverage. |
 | Model downloads | Checksum failure, interrupted download, resume, offline state | Makes model management trustworthy. |
 
 ## Packaging and Distribution Notes
@@ -86,7 +88,8 @@ Avoid:
 4. Choose PAD/F-Droid channel rules for each model family.
 5. Add DeepFilterNet real-device evaluation fixtures now that A.2 is wired.
 6. Add ASR evaluation fixtures before expanding from existing transcription paths.
-7. Keep SAM/RIFE/Real-ESRGAN/RVM as later device-tier work.
+7. Add Lottie template/golden-frame fixtures before removing the custom shader fallback.
+8. Keep SAM/RIFE/Real-ESRGAN/RVM as later device-tier work.
 
 ## Why This File Is Not Thin
 
