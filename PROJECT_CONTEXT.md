@@ -13,7 +13,7 @@ Current live version evidence:
 - [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 146`, `versionName = "3.74.9"`.
 - [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.9`.
 - [README.md](README.md) and [ROADMAP.md](ROADMAP.md) both describe the v3.74.x line.
-- Current local `HEAD` during this consolidation was `ece3340` on `master`, 33 commits ahead of `origin/master`.
+- The 2026-05-17 continuation pushes each completed roadmap batch back to `origin/master`; verify `git status --short --branch` before assuming branch sync.
 
 ## Source of Truth
 
@@ -64,9 +64,9 @@ High-level modules and patterns:
    - `targetSdk = 36` makes native dependency alignment a release gate.
    - ONNX Runtime, MediaPipe, and future native libraries need repeatable page-size verification.
 
-2. Model registry closure.
-   - `docs/models.md` still has `SHA TBD` rows and unresolved activation details.
-   - Finish checksums, licenses, PAD/F-Droid posture, and validation tests before adding more large model payloads.
+2. Future model activation gates.
+   - Active model rows in `docs/models.md` now have exact source locators and SHA-256 pins.
+   - Future §3 model targets still need public locators, checksums, licenses, PAD/F-Droid posture, and runtime checksum wiring before moving into active engine paths.
 
 3. Dependency stabilization.
    - Media3 1.10.1 is current.
@@ -87,6 +87,7 @@ High-level modules and patterns:
 
 - Restored `:app:testDebugUnitTest` to a green baseline by letting `AutoSaveState.deserialize()` accept an injectable URI parser for JVM tests while keeping `Uri.parse()` as the production default.
 - Completed R5.5d / R7.1. Settings now exposes the local-only diagnostic ZIP workflow, with busy/success/error state, saved-file summary, FileProvider share action, and diagnostics path scoping in `file_paths.xml`.
+- Completed the active-model slice of R7.2. `docs/models.md` now pins Whisper, MediaPipe selfie segmentation, and LaMa inpainting to exact source locators and SHA-256 values; `ModelDownloadManager.ModelFile(checksumRequired = true)` blocks unpinned active downloads; Settings refreshes model state through checksum verification and renders failures as "Needs attention"; `ModelRegistryDocumentationTest` prevents active registry rows from returning to placeholder hashes or floating source URLs.
 
 ## Build and Verification Notes
 
@@ -107,8 +108,7 @@ Local SDK gotcha:
 
 Git gotchas:
 
-- `master` was already 33 commits ahead of `origin/master` before this research run.
-- Preserve unrelated local work and do not rewrite the ahead history.
+- Preserve unrelated local work and do not rewrite history.
 - `AGENTS.md`, `CLAUDE.md`, and `.claude/` are intentionally ignored local instruction files.
 
 ## External Research Summary

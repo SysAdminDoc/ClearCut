@@ -11,6 +11,14 @@
   `FileProvider` + `ACTION_SEND` after explicit user action. The share grant
   is scoped to the diagnostics directory; project files, media, captions,
   transcripts, and autosave JSON remain excluded by engine design.
+- **R7.2 — Active model checksum closure.** `docs/models.md` now pins the
+  active Whisper ONNX files, MediaPipe selfie segmenter, and LaMa inpainting
+  model to exact source locators and SHA-256 values. Whisper, segmentation,
+  and inpainting downloads pass those hashes through
+  `ModelDownloadManager.ModelFile(checksumRequired = true)`, Settings verifies
+  installed model state before reporting storage, checksum failures render as
+  a red "Needs attention" state, and `ModelRegistryDocumentationTest` blocks
+  active registry rows with placeholder hashes or floating source URLs.
 - **Verification recovery.** Restored the JVM unit-test baseline by making
   `AutoSaveState.deserialize()` accept an injectable URI parser with Android's
   parser as the production default, so JVM tests can use the repo's `FakeUri`

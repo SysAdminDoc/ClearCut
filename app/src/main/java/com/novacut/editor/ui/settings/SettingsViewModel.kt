@@ -92,8 +92,11 @@ class SettingsViewModel @Inject constructor(
 
     fun refreshAiModelStorage() {
         viewModelScope.launch {
-            val whisperBytes = withContext(Dispatchers.IO) { whisperEngine.getModelSizeBytes() }
-            val segmentationBytes = withContext(Dispatchers.IO) { segmentationEngine.getModelSizeBytes() }
+            val (whisperBytes, segmentationBytes) = withContext(Dispatchers.IO) {
+                whisperEngine.refreshModelState()
+                segmentationEngine.refreshModelState()
+                whisperEngine.getModelSizeBytes() to segmentationEngine.getModelSizeBytes()
+            }
             _aiModelStorage.update {
                 it.copy(
                     whisperBytes = whisperBytes,
@@ -176,12 +179,16 @@ class SettingsViewModel @Inject constructor(
             _aiModelStorage.update { it.copy(feedbackMessage = null) }
             val wifiOnly = repo.settings.first().aiModelWifiOnly
             try {
-                whisperEngine.downloadModel(wifiOnly = wifiOnly)
+                val success = whisperEngine.downloadModel(wifiOnly = wifiOnly)
                 val bytes = withContext(Dispatchers.IO) { whisperEngine.getModelSizeBytes() }
                 _aiModelStorage.update {
                     it.copy(
                         whisperBytes = bytes,
-                        feedbackMessage = "Whisper installed. Captions can now use local speech-to-text."
+                        feedbackMessage = if (success) {
+                            "Whisper installed. Captions can now use local speech-to-text."
+                        } else {
+                            "Whisper could not be verified. Retry the download before using local speech-to-text."
+                        }
                     )
                 }
             } catch (error: CancellationException) {
@@ -206,12 +213,16 @@ class SettingsViewModel @Inject constructor(
             _aiModelStorage.update { it.copy(feedbackMessage = null) }
             val wifiOnly = repo.settings.first().aiModelWifiOnly
             try {
-                segmentationEngine.downloadModel(wifiOnly = wifiOnly)
+                val success = segmentationEngine.downloadModel(wifiOnly = wifiOnly)
                 val bytes = withContext(Dispatchers.IO) { segmentationEngine.getModelSizeBytes() }
                 _aiModelStorage.update {
                     it.copy(
                         segmentationBytes = bytes,
-                        feedbackMessage = "Segmentation installed. Background tools can now run locally."
+                        feedbackMessage = if (success) {
+                            "Segmentation installed. Background tools can now run locally."
+                        } else {
+                            "Segmentation could not be verified. Retry the download before using AI matte tools."
+                        }
                     )
                 }
             } catch (error: CancellationException) {

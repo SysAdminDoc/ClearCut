@@ -48,7 +48,7 @@ class WhisperEngine @Inject constructor(
     private val vocabFile = File(modelDir, "vocab.json")
 
     private val _modelState = MutableStateFlow(
-        if (hasDownloadedModelFiles())
+        if (hasMinimumModelFiles())
             WhisperModelState.READY else WhisperModelState.NOT_DOWNLOADED
     )
     val modelState: StateFlow<WhisperModelState> = _modelState.asStateFlow()
@@ -60,10 +60,19 @@ class WhisperEngine @Inject constructor(
     @Volatile private var ortEnv: OrtEnvironment? = null
 
     companion object {
-        private const val BASE_URL = "https://huggingface.co/onnx-community/whisper-tiny.en/resolve/main/onnx"
-        private const val ENCODER_URL = "$BASE_URL/encoder_model.onnx"
-        private const val DECODER_URL = "$BASE_URL/decoder_model.onnx"
-        private const val VOCAB_URL = "https://huggingface.co/onnx-community/whisper-tiny.en/resolve/main/vocab.json"
+        private const val MODEL_REVISION = "2575352d61be1bf7225cf8f8b268a4678025fc58"
+        private const val BASE_URL =
+            "https://huggingface.co/onnx-community/whisper-tiny.en/resolve/$MODEL_REVISION"
+        private const val ONNX_BASE_URL = "$BASE_URL/onnx"
+        private const val ENCODER_URL = "$ONNX_BASE_URL/encoder_model.onnx"
+        private const val DECODER_URL = "$ONNX_BASE_URL/decoder_model.onnx"
+        private const val VOCAB_URL = "$BASE_URL/vocab.json"
+        private const val ENCODER_SHA256 =
+            "8c361b9430a5ef6619ee64b7fe06c725df19f36d508cc8b847064b34a888a3fe"
+        private const val DECODER_SHA256 =
+            "14f1d425a4821feeba77cf93eeeaf812ca816f2e3fec382b4f0fa93d29de710e"
+        private const val VOCAB_SHA256 =
+            "f6bd25a65e4e63ca31360e9fb11c7e4f9a391a78385d640acd814092dd6eee4f"
         private const val MIN_ENCODER_BYTES = 5L * 1024L * 1024L
         private const val MIN_DECODER_BYTES = 5L * 1024L * 1024L
         private const val MIN_VOCAB_BYTES = 4L * 1024L
@@ -81,16 +90,50 @@ class WhisperEngine @Inject constructor(
         private const val ENCODER_HIDDEN = 384 // whisper-tiny hidden size
         private const val ENCODER_SEQ = 1500   // encoder output sequence length
 
-        fun estimateModelSizeMB(): Int = 75 // ~40MB encoder + ~35MB decoder
+        private const val ENCODER_ESTIMATED_BYTES = 32_904_992L
+        private const val DECODER_ESTIMATED_BYTES = 118_395_947L
+        private const val VOCAB_ESTIMATED_BYTES = 999_186L
+        private const val TOTAL_ESTIMATED_BYTES =
+            ENCODER_ESTIMATED_BYTES + DECODER_ESTIMATED_BYTES + VOCAB_ESTIMATED_BYTES
+
+        fun estimateModelSizeMB(): Int = 146
     }
 
-    private fun hasDownloadedModelFiles(): Boolean {
+    private fun hasMinimumModelFiles(): Boolean {
         return encoderFile.exists() && encoderFile.length() >= MIN_ENCODER_BYTES &&
             decoderFile.exists() && decoderFile.length() >= MIN_DECODER_BYTES &&
             vocabFile.exists() && vocabFile.length() >= MIN_VOCAB_BYTES
     }
 
-    fun isReady(): Boolean = _modelState.value == WhisperModelState.READY && hasDownloadedModelFiles()
+    private fun hasVerifiedModelFiles(): Boolean {
+        return ModelDownloadManager.verifyChecksumOrDelete(
+            file = encoderFile,
+            minimumBytes = MIN_ENCODER_BYTES,
+            expectedSha256 = ENCODER_SHA256,
+        ) &&
+            ModelDownloadManager.verifyChecksumOrDelete(
+                file = decoderFile,
+                minimumBytes = MIN_DECODER_BYTES,
+                expectedSha256 = DECODER_SHA256,
+            ) &&
+            ModelDownloadManager.verifyChecksumOrDelete(
+                file = vocabFile,
+                minimumBytes = MIN_VOCAB_BYTES,
+                expectedSha256 = VOCAB_SHA256,
+            )
+    }
+
+    fun refreshModelState(): WhisperModelState {
+        val state = when {
+            !hasMinimumModelFiles() -> WhisperModelState.NOT_DOWNLOADED
+            hasVerifiedModelFiles() -> WhisperModelState.READY
+            else -> WhisperModelState.ERROR
+        }
+        _modelState.value = state
+        return state
+    }
+
+    fun isReady(): Boolean = _modelState.value == WhisperModelState.READY && hasMinimumModelFiles()
 
     /**
      * Download Whisper tiny.en ONNX model files from HuggingFace.
@@ -109,28 +152,34 @@ class WhisperEngine @Inject constructor(
                     url = ENCODER_URL,
                     targetFile = encoderFile,
                     minimumBytes = MIN_ENCODER_BYTES,
-                    estimatedBytes = 40L * 1024L * 1024L,
-                    displayName = "Whisper encoder"
+                    estimatedBytes = ENCODER_ESTIMATED_BYTES,
+                    displayName = "Whisper encoder",
+                    sha256 = ENCODER_SHA256,
+                    checksumRequired = true
                 ),
                 ModelDownloadManager.ModelFile(
                     url = DECODER_URL,
                     targetFile = decoderFile,
                     minimumBytes = MIN_DECODER_BYTES,
-                    estimatedBytes = 35L * 1024L * 1024L,
-                    displayName = "Whisper decoder"
+                    estimatedBytes = DECODER_ESTIMATED_BYTES,
+                    displayName = "Whisper decoder",
+                    sha256 = DECODER_SHA256,
+                    checksumRequired = true
                 ),
                 ModelDownloadManager.ModelFile(
                     url = VOCAB_URL,
                     targetFile = vocabFile,
                     minimumBytes = MIN_VOCAB_BYTES,
-                    estimatedBytes = 512L * 1024L,
-                    displayName = "Whisper vocabulary"
+                    estimatedBytes = VOCAB_ESTIMATED_BYTES,
+                    displayName = "Whisper vocabulary",
+                    sha256 = VOCAB_SHA256,
+                    checksumRequired = true
                 )
             )
 
             modelDownloadManager.downloadFiles(
                 files = files,
-                totalEstimateBytes = estimateModelSizeMB() * 1024L * 1024L,
+                totalEstimateBytes = TOTAL_ESTIMATED_BYTES,
                 connectTimeoutMs = 30_000,
                 readTimeoutMs = 60_000,
                 wifiOnly = wifiOnly
@@ -141,10 +190,15 @@ class WhisperEngine @Inject constructor(
 
             _downloadProgress.value = 1f
             onProgress(1f)
-            _modelState.value = WhisperModelState.READY
-            true
+            if (hasVerifiedModelFiles()) {
+                _modelState.value = WhisperModelState.READY
+                true
+            } else {
+                _modelState.value = WhisperModelState.ERROR
+                false
+            }
         } catch (e: ModelDownloadManager.MeteredNetworkException) {
-            _modelState.value = if (hasDownloadedModelFiles()) {
+            _modelState.value = if (hasVerifiedModelFiles()) {
                 WhisperModelState.READY
             } else {
                 WhisperModelState.NOT_DOWNLOADED
@@ -152,7 +206,7 @@ class WhisperEngine @Inject constructor(
             _downloadProgress.value = 0f
             throw e
         } catch (e: Exception) {
-            _modelState.value = if (hasDownloadedModelFiles()) {
+            _modelState.value = if (hasVerifiedModelFiles()) {
                 WhisperModelState.READY
             } else {
                 WhisperModelState.ERROR
@@ -171,6 +225,10 @@ class WhisperEngine @Inject constructor(
         onProgress: (Float) -> Unit = {}
     ): List<WhisperSegment> = withContext(Dispatchers.IO) {
         if (!isReady()) return@withContext emptyList()
+        if (!hasVerifiedModelFiles()) {
+            _modelState.value = WhisperModelState.ERROR
+            return@withContext emptyList()
+        }
 
         onProgress(0.05f)
 
