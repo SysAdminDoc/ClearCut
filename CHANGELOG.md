@@ -4,6 +4,14 @@
 
 ### Autonomous roadmap continuation — 2026-05-17
 
+- **R6.10d — Media3 ProgressSlider evaluation.** Added
+  `TimelineProgressSliderPolicy`, focused JVM tests, and
+  [docs/progress-slider-media3-compose.md](docs/progress-slider-media3-compose.md).
+  The custom timeline ruler stays because it is an edited-project ruler with
+  zoom, scroll-window, marker, snap, clip-hit-target, and scrub lifecycle
+  behavior. `MiniPlayerBar` keeps its standard Material3 `Slider` because it is
+  externally controlled by `playheadMs / totalDurationMs` and delegates to
+  NovaCut's `onSeek(Long)` callback.
 - **R6.10c — Media3 inspector-frame audit.** Added
   `FrameExtractionPolicy`, focused source-tree guard tests, and
   [docs/frame-extraction-media3-inspector.md](docs/frame-extraction-media3-inspector.md).
