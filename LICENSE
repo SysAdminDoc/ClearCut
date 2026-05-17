@@ -35,3 +35,13 @@ The Android package includes FFmpegKit's upstream license resources under
 `res/raw/license*.txt` and `res/raw/source.txt`. Keep those resources in any
 redistributed build, and provide source access or a written source offer for
 the FFmpegKit / FFmpeg components according to those bundled terms.
+
+Third-party DeepFilterNet notice
+--------------------------------
+
+NovaCut may bundle `io.github.kaleyravideo:android-deepfilternet:0.0.8`
+for on-device audio noise reduction. The Kaleyra Android AAR is licensed
+under Apache License 2.0 and is built on the upstream DeepFilterNet project,
+whose code and model weights are available under MIT or Apache License 2.0
+at the user's option. Keep the relevant Apache/MIT notices with redistributed
+builds that include the DeepFilterNet native library and bundled model.

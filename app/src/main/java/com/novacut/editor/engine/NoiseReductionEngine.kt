@@ -3,15 +3,23 @@ package com.novacut.editor.engine
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import com.kaleyra.noise_filter.DeepFilterNet
+import com.rikorose.deepfilternet.NativeDeepFilterNet
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import java.io.File
+import java.io.InputStream
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.resume
 
 /**
  * ML-based noise reduction engine.
@@ -25,20 +33,13 @@ import javax.inject.Singleton
  *
  * ## Activation path (Tier A.2)
  *
- *   1. Add to gradle/libs.versions.toml:
- *        deepfilternet = "VERSION-FROM-SONATYPE"
- *        deepfilternet-android = { group = "com.kaleyra",
- *                                  name = "deepfilternet-android",
- *                                  version.ref = "deepfilternet" }
- *   2. Add `implementation(libs.deepfilternet.android)` to app/build.gradle.kts.
- *   3. Verify the AAR ships a DeepFilterNet 3 model file (`assets/df3/`-style path).
- *      If the upstream library bundles only v2, point the loader at a downloaded
- *      v3 model via ModelDownloadManager and pass the override path to
- *      `DeepFilterNet.init(context, modelPath = ...)`.
- *   4. Replace the [processAudio] fallback branch with the DeepFilterNet call:
- *        DeepFilterNet.init(context)
- *        val cleaned = DeepFilterNet.process(samples48k)  // FloatArray of 480 samples
- *        // Resample from 16 kHz (Whisper path) to 48 kHz once per export, NOT per frame.
+ * NovaCut pins `io.github.kaleyravideo:android-deepfilternet:0.0.8`, whose
+ * bundled-model AAR ships an ~8 MB `deep_filter_mobile_model`, `libdf.so`
+ * for Android ABIs, and the `NativeDeepFilterNet` JNI surface. `processAudio`
+ * decodes source audio once to 48 kHz mono signed 16-bit PCM via [FFmpegEngine],
+ * processes fixed-size DeepFilterNet frames, then re-encodes the cleaned PCM to
+ * M4A. If FFmpeg or the native DeepFilterNet runtime is unavailable, the method
+ * keeps the old pass-through behavior rather than failing the edit.
  *
  * ## Model registry
  *
@@ -47,7 +48,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class NoiseReductionEngine @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val ffmpegEngine: FFmpegEngine
 ) {
     companion object {
         // R6.6a target — DeepFilterNet 3 supersedes v2 with same JNI surface.
@@ -61,8 +63,14 @@ class NoiseReductionEngine @Inject constructor(
         const val TARGET_MODEL_FRAME_SAMPLES = 480
         const val TARGET_MODEL_FOOTPRINT_BYTES = 8L * 1024L * 1024L
         const val TARGET_MODEL_SOURCE_URL = "https://github.com/Rikorose/DeepFilterNet"
-        const val TARGET_ANDROID_AAR_GROUP = "com.kaleyra"
-        const val TARGET_ANDROID_AAR_NAME = "deepfilternet-android"
+        const val TARGET_ANDROID_AAR_GROUP = "io.github.kaleyravideo"
+        const val TARGET_ANDROID_AAR_NAME = "android-deepfilternet"
+        const val TARGET_ANDROID_AAR_VERSION = "0.0.8"
+        const val TARGET_ANDROID_AAR_SHA256 =
+            "6566a208fe476a71b20558f92d93a1c0db49fd93b36fcdaea17a10260189d167"
+        private const val DEEPFILTERNET_CLASS_NAME = "com.rikorose.deepfilternet.NativeDeepFilterNet"
+        private const val DEEPFILTERNET_INTERFACE_NAME = "com.kaleyra.noise_filter.DeepFilterNet"
+        private const val DEEPFILTERNET_LOAD_TIMEOUT_MS = 15_000L
         private const val TAG = "NoiseReductionEngine"
     }
 
@@ -160,9 +168,27 @@ class NoiseReductionEngine @Inject constructor(
         val noiseProfile = analyzeNoise(uri)
         Log.i(TAG, "Processing with mode=$mode, attenuation=${attenuationDb}dB")
 
-        // DeepFilterNet is not available -- no published Android artifact exists yet.
+        if (mode != NoiseReductionMode.SPECTRAL_GATE && isDeepFilterNetAvailable() && ffmpegEngine.isAvailable()) {
+            runCatching {
+                processWithDeepFilterNet(
+                    uri = uri,
+                    partialFile = partialFile,
+                    outputFile = outputFile,
+                    attenuationDb = attenuationDb,
+                    noiseProfile = noiseProfile,
+                    onProgress = onProgress
+                )
+            }.onSuccess { result ->
+                return@withContext result
+            }.onFailure { error ->
+                cleanupNoiseReductionFiles(partialFile, outputFile)
+                Log.w(TAG, "DeepFilterNet processing failed; falling back to pass-through: ${error.message}", error)
+            }
+        } else {
+            Log.d(TAG, "DeepFilterNet or FFmpeg unavailable -- copying input as pass-through")
+        }
+
         // Fallback: copy input to output as pass-through so the user gets their audio back.
-        Log.d(TAG, "DeepFilterNet not available -- copying input as pass-through")
         val finalizedFile = try {
             copyInputAudioToPartialFile(uri, partialFile)
             finalizeNoiseReducedAudioFile(partialFile, outputFile)
@@ -249,11 +275,171 @@ class NoiseReductionEngine @Inject constructor(
 
     /**
      * Check if DeepFilterNet ML library is available at runtime.
-     * Currently always returns false -- no published Android artifact exists.
+     *
+     * Plain JVM unit tests intentionally return false because the AAR's native
+     * `libdf.so` is Android-only. Android release flavors can still exclude the
+     * dependency; the reflection probe lets callers keep graceful fallback.
      */
     fun isDeepFilterNetAvailable(): Boolean {
-        // DeepFilterNet Android artifact does not exist yet
-        return false
+        if (cachedDeepFilterNetAvailability != null) return cachedDeepFilterNetAvailability == true
+        if (!isAndroidRuntime()) {
+            cachedDeepFilterNetAvailability = false
+            return false
+        }
+        val loader = context.classLoader ?: NoiseReductionEngine::class.java.classLoader
+        val available = try {
+            Class.forName(DEEPFILTERNET_CLASS_NAME, false, loader)
+            Class.forName(DEEPFILTERNET_INTERFACE_NAME, false, loader)
+            true
+        } catch (_: ClassNotFoundException) {
+            false
+        } catch (e: Throwable) {
+            Log.w(TAG, "DeepFilterNet availability probe threw an unexpected error", e)
+            false
+        }
+        cachedDeepFilterNetAvailability = available
+        return available
+    }
+
+    @Volatile private var cachedDeepFilterNetAvailability: Boolean? = null
+
+    private suspend fun processWithDeepFilterNet(
+        uri: Uri,
+        partialFile: File,
+        outputFile: File,
+        attenuationDb: Float,
+        noiseProfile: NoiseProfile,
+        onProgress: (Float) -> Unit
+    ): NoiseReductionResult {
+        val workDir = partialFile.parentFile ?: context.cacheDir
+        workDir.mkdirs()
+        val sourcePcm = File.createTempFile("novacut-nr-source-", ".pcm", workDir)
+        val cleanedPcm = File.createTempFile("novacut-nr-clean-", ".pcm", workDir)
+        var deepFilterNet: DeepFilterNet? = null
+        try {
+            val extracted = ffmpegEngine.extractAudioToPcm16le(
+                inputUri = uri,
+                outputFile = sourcePcm,
+                sampleRate = TARGET_MODEL_SAMPLE_RATE_HZ,
+                channels = 1
+            ) { progress ->
+                reportProgress(onProgress, progress * 0.15f)
+            }
+            if (!extracted) {
+                throw IllegalStateException("Could not decode source audio to 48 kHz PCM")
+            }
+
+            deepFilterNet = loadDeepFilterNet()
+            deepFilterNet.setAttenuationLimit(attenuationDb)
+
+            val averageSnr = filterPcmWithDeepFilterNet(
+                inputFile = sourcePcm,
+                outputFile = cleanedPcm,
+                deepFilterNet = deepFilterNet
+            ) { progress ->
+                reportProgress(onProgress, 0.15f + progress * 0.70f)
+            }
+
+            val encoded = ffmpegEngine.encodePcm16leToM4a(
+                inputFile = cleanedPcm,
+                outputFile = partialFile,
+                sampleRate = TARGET_MODEL_SAMPLE_RATE_HZ,
+                channels = 1
+            ) { progress ->
+                reportProgress(onProgress, 0.85f + progress * 0.14f)
+            }
+            if (!encoded) {
+                throw IllegalStateException("Could not encode cleaned PCM to M4A")
+            }
+
+            val finalizedFile = finalizeNoiseReducedAudioFile(partialFile, outputFile)
+                ?: throw IllegalStateException("Noise reduction failed: output file is missing or empty")
+            reportProgress(onProgress, 1f)
+            return NoiseReductionResult(
+                outputFile = finalizedFile,
+                originalSnrDb = noiseProfile.estimatedSnrDb,
+                processedSnrDb = averageSnr ?: noiseProfile.estimatedSnrDb,
+                noiseProfile = noiseProfile
+            )
+        } finally {
+            runCatching { deepFilterNet?.release() }
+            sourcePcm.delete()
+            cleanedPcm.delete()
+        }
+    }
+
+    private suspend fun loadDeepFilterNet(): DeepFilterNet = withTimeout(DEEPFILTERNET_LOAD_TIMEOUT_MS) {
+        val nativeDeepFilterNet = NativeDeepFilterNet(context.applicationContext)
+        suspendCancellableCoroutine { continuation ->
+            continuation.invokeOnCancellation { nativeDeepFilterNet.release() }
+            nativeDeepFilterNet.onModelLoaded { deepFilterNet ->
+                if (continuation.isActive) continuation.resume(deepFilterNet)
+            }
+        }
+    }
+
+    private suspend fun filterPcmWithDeepFilterNet(
+        inputFile: File,
+        outputFile: File,
+        deepFilterNet: DeepFilterNet,
+        onProgress: (Float) -> Unit
+    ): Float? {
+        val frameLengthBytes = deepFilterNet.frameLength.toInt()
+        if (frameLengthBytes <= 0) {
+            throw IllegalStateException("DeepFilterNet frame length is unavailable")
+        }
+
+        val totalBytes = inputFile.length().coerceAtLeast(1L)
+        val frameBytes = ByteArray(frameLengthBytes)
+        val frameBuffer = ByteBuffer.allocateDirect(frameLengthBytes).order(ByteOrder.LITTLE_ENDIAN)
+        var processedBytes = 0L
+        var snrSum = 0.0
+        var snrCount = 0
+
+        withContext(Dispatchers.IO) {
+            inputFile.inputStream().buffered().use { input ->
+                outputFile.outputStream().buffered().use { output ->
+                    while (true) {
+                        ensureActive()
+                        val bytesRead = readPcmFrame(input, frameBytes)
+                        if (bytesRead <= 0) break
+                        if (bytesRead < frameLengthBytes) {
+                            frameBytes.fill(0, fromIndex = bytesRead, toIndex = frameLengthBytes)
+                        }
+
+                        frameBuffer.clear()
+                        frameBuffer.put(frameBytes, 0, frameLengthBytes)
+                        frameBuffer.flip()
+                        val snr = deepFilterNet.processFrame(frameBuffer)
+                        if (snr.isFinite() && snr > 0f) {
+                            snrSum += snr.toDouble()
+                            snrCount += 1
+                        }
+                        frameBuffer.rewind()
+                        frameBuffer.get(frameBytes, 0, frameLengthBytes)
+                        output.write(frameBytes, 0, bytesRead)
+
+                        processedBytes += bytesRead.toLong()
+                        reportProgress(onProgress, processedBytes.toFloat() / totalBytes.toFloat())
+                    }
+                }
+            }
+        }
+
+        if (!outputFile.isFile || outputFile.length() <= 0L) {
+            throw IllegalStateException("DeepFilterNet produced empty PCM output")
+        }
+        return if (snrCount > 0) (snrSum / snrCount).toFloat() else null
+    }
+
+    private fun readPcmFrame(input: InputStream, target: ByteArray): Int {
+        var total = 0
+        while (total < target.size) {
+            val read = input.read(target, total, target.size - total)
+            if (read <= 0) break
+            total += read
+        }
+        return total
     }
 
     private fun copyInputAudioToPartialFile(uri: Uri, partialFile: File) {
@@ -272,6 +458,12 @@ class NoiseReductionEngine @Inject constructor(
     private fun reportProgress(onProgress: (Float) -> Unit, value: Float) {
         runCatching { onProgress(value) }
             .onFailure { Log.w(TAG, "Noise reduction progress callback failed", it) }
+    }
+
+    private fun isAndroidRuntime(): Boolean {
+        return System.getProperty("java.vm.name")
+            .orEmpty()
+            .contains("dalvik", ignoreCase = true)
     }
 }
 

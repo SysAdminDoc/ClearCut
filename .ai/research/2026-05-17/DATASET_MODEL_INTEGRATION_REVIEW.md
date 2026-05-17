@@ -28,7 +28,7 @@ Current gap:
 |---|---|---|---|
 | ASR / transcription | Moonshine, Whisper, Sherpa-ONNX, whisper.cpp references | ASR/caption roadmap and model policy exist | Add WER/speed/device-tier evaluation before expanding model options. |
 | Caption translation | MADLAD-400, Bergamot-style mobile translation | Caption translation data model exists | Treat as P1 after model registry closure and phrase-level evaluation fixtures. |
-| Noise reduction | DeepFilterNet 3, AndroidDeepFilterNet reference | Noise reduction engine/stub path exists | Good P1 activation once native/model integrity is verified. |
+| Noise reduction | DeepFilterNet 3, AndroidDeepFilterNet reference | A.2 activation now pins `io.github.kaleyravideo:android-deepfilternet:0.0.8`; `NoiseReductionEngine` has an Android-only native path and pass-through fallback | Next work is real-device audio QA, PESQ/STOI or proxy fixtures, and improved SNR/profile reporting. |
 | Stem separation | Demucs | Roadmap recognizes high complexity | Defer until audio pre/post pipeline and package size budget are clear. |
 | Matting | Robust Video Matting | Model roadmap exists | Defer until PAD and evaluation harness. |
 | Segmentation | SAM 2.1 Hiera Tiny, MediaPipe Image Segmenter | Tap-to-segment roadmap exists | Keep SAM 2.1 as watch/activation target; use MediaPipe where practical for mobile baseline. |
@@ -84,7 +84,7 @@ Avoid:
 2. Add model registry contract tests.
 3. Add model download failure/retry UI states.
 4. Choose PAD/F-Droid channel rules for each model family.
-5. Activate DeepFilterNet 3 only after the above is complete.
+5. Add DeepFilterNet real-device evaluation fixtures now that A.2 is wired.
 6. Add ASR evaluation fixtures before expanding from existing transcription paths.
 7. Keep SAM/RIFE/Real-ESRGAN/RVM as later device-tier work.
 

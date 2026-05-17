@@ -51,3 +51,26 @@ This file is ignored and intentionally not committed.
 ## Commit
 
 This file is part of the final local commit for the 2026-05-17 research pass.
+
+## Autonomous Continuation Addendum — DeepFilterNet A.2
+
+After the research pass, the roadmap continuation activated the next Now-table
+native engine:
+
+- Added `io.github.kaleyravideo:android-deepfilternet:0.0.8` to the Gradle
+  catalog and app dependency graph.
+- Verified Maven metadata, tag `v0.0.8` / commit
+  `42ea9b786babf7d67008a81cf25257b4735e4127`, AAR SHA-256
+  `6566a208fe476a71b20558f92d93a1c0db49fd93b36fcdaea17a10260189d167`,
+  bundled model SHA-256
+  `5600b6857117ecc7cf460b8ec4841963bfa6d718921d424d42dea5d3d37a8c32`,
+  Apache-2.0 license posture, 16 KB preflight for arm64-v8a/x86_64
+  `libdf.so`, and final debug APK alignment with 32 OK native libs, 40 skipped
+  32-bit libs, and 0 misaligned libs.
+- Updated `NoiseReductionEngine` to decode source audio through `FFmpegEngine`
+  to 48 kHz mono PCM, process frames with `NativeDeepFilterNet` on Android,
+  re-encode cleaned PCM to M4A, and retain pass-through fallback when native
+  dependencies are unavailable.
+- Updated `ROADMAP.md`, `PROJECT_CONTEXT.md`, `CHANGELOG.md`, `LICENSE`, and
+  `docs/models.md` with the current dependency, source, license, checksum, and
+  verification state.

@@ -64,6 +64,8 @@ Every meaningful roadmap claim in this research run should trace to one of these
 | E15 | OkHttp Maven metadata | https://repo1.maven.org/maven2/com/squareup/okhttp3/okhttp/maven-metadata.xml | OkHttp update opportunity and major-version caution. |
 | E16 | Lottie Compose Maven metadata | https://repo1.maven.org/maven2/com/airbnb/android/lottie-compose/maven-metadata.xml | Lottie update opportunity. |
 | E17 | ffmpeg-kit upstream archive | https://github.com/arthenica/ffmpeg-kit | FFmpeg distribution risk. |
+| E18 | AndroidDeepFilterNet Maven Central | https://central.sonatype.com/artifact/io.github.kaleyravideo/android-deepfilternet | A.2 runtime coordinate, license, and POM evidence. |
+| E19 | AndroidDeepFilterNet Maven metadata | https://repo.maven.apache.org/maven2/io/github/kaleyravideo/android-deepfilternet/maven-metadata.xml | Latest/release version evidence for A.2 activation. |
 
 ## Open-Source Competitor and Adjacent Sources
 
@@ -117,6 +119,8 @@ GitHub metadata fetched during the run:
 | M05 | Picovoice open-source translation overview | https://picovoice.ai/blog/open-source-translation/ | MADLAD/Bergamot-style mobile translation comparison. |
 | M06 | RTranslator NLnet page | https://nlnet.nl/project/RTranslator/ | Mobile/offline translation integration signal. |
 | M07 | MediaPipe Tasks Vision | https://ai.google.dev/edge/mediapipe/solutions/vision/image_segmenter/android | Segmentation integration reference. |
+| M08 | AndroidDeepFilterNet v0.0.8 source tag | https://api.github.com/repos/KaleyraVideo/AndroidDeepFilterNet/tags | Tag-to-commit evidence for resolved Maven artifact. |
+| M09 | Kaleyra DeepFilterNet mobile optimization notes | https://github.com/KaleyraVideo/DeepFilterNet/blob/main/models/deepfilternet_model_optimization.md | Evidence that the bundled mobile path targets optimized DeepFilterNet3 behavior on Android devices. |
 
 GitHub metadata fetched during the run:
 
