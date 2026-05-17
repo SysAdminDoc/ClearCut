@@ -284,6 +284,13 @@ class VideoEngine @Inject constructor(
         }
     }
 
+    /**
+     * Cached SDR thumbnail path.
+     *
+     * R6.10c keeps this on MediaMetadataRetriever per [FrameExtractionPolicy].
+     * Migrate to media3-inspector-frame only for HDR/effect-aware thumbnails or
+     * custom decoder selection.
+     */
     fun extractThumbnail(uri: Uri, timeUs: Long, width: Int = 160, height: Int = 90): Bitmap? {
         val key = "${uri}_${timeUs}_${width}x${height}"
         thumbnailCache.get(key)?.let { return it }
@@ -1361,6 +1368,13 @@ class VideoEngine @Inject constructor(
         }
     }
 
+    /**
+     * JPEG freeze-frame export path.
+     *
+     * Current output is SDR JPEG, so MediaMetadataRetriever is still adequate.
+     * Future HDR still export should use [FrameExtractionPolicy] and Media3's
+     * `androidx.media3.inspector.frame.FrameExtractor`.
+     */
     fun extractFrameToFile(uri: Uri, timeMs: Long): File? {
         val retriever = MediaMetadataRetriever()
         return try {

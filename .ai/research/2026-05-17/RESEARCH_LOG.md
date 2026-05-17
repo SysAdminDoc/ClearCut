@@ -188,3 +188,33 @@ Result:
 - R6.10b is therefore closed as a documented non-adoption for full `Player`
   replacement. Future targeted adoption can revisit lower-level `ContentFrame`,
   `PlayerSurface`, or individual playback buttons with focused preview tests.
+
+## Continuation Research Notes - Media3 Inspector Frame R6.10c
+
+Targeted follow-up after R6.10b queried:
+
+- Android Developers Media3 Inspector docs.
+- AndroidX Media3 release notes for the 1.10 module/import split.
+- Google Maven metadata, AAR bytes, and sources JAR for
+  `androidx.media3:media3-inspector-frame:1.10.1`.
+- Local `VideoEngine.extractThumbnail`, `extractThumbnailStrip`,
+  `extractFrameToFile`, and callers.
+- Local source tree for old `FrameExtractor` and `ExperimentalFrameExtractor`
+  imports.
+
+Result:
+
+- `media3-inspector-frame` latest/release is `1.10.1` as of Google Maven
+  metadata lastUpdated `20260512123518`; the AAR SHA-256 is
+  `ded4a5275a5f977afaa3fb4b1b933667629e2526efbfb94b4bcf2b96fc20e2a0`, and
+  the AAR has no native library entries.
+- Source inspection confirms the new package path is
+  `androidx.media3.inspector.frame.FrameExtractor`, with `setEffects`,
+  `setMediaCodecSelector`, `setExtractHdrFrames`, `getFrame`, and
+  `getThumbnail`.
+- NovaCut has no current Media3 `FrameExtractor` imports and no inspector-frame
+  dependency, so there is no broken migration to repair.
+- R6.10c closes as a policy/audit item: current small cached SDR thumbnails and
+  JPEG freeze frames stay on `MediaMetadataRetriever`; future HDR/effect-aware
+  or custom-decoder frame extraction should use the split inspector-frame
+  module.

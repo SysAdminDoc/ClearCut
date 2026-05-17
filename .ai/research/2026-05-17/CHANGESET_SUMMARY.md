@@ -128,3 +128,30 @@ The next R6.10 item was closed as a documented non-adoption:
   `git diff --check`,
   `python scripts\check_16kb_alignment.py app\build\outputs\apk\debug\app-debug.apk`,
   and SDK Build Tools `zipalign -c -P 16 -v 4 app\build\outputs\apk\debug\app-debug.apk`.
+
+## Autonomous Continuation Addendum — Media3 Inspector Frame R6.10c
+
+The next R6.10 item was closed as a migration audit:
+
+- Audited local thumbnail/freeze-frame paths. `VideoEngine.extractThumbnail`,
+  `extractThumbnailStrip`, and `extractFrameToFile` use
+  `MediaMetadataRetriever`; there are no current Media3 `FrameExtractor` imports
+  and no inspector-frame dependencies.
+- Verified official Media3 Inspector docs and release notes: 1.10 uses the split
+  `androidx.media3:media3-inspector-frame` artifact and the
+  `androidx.media3.inspector.frame.FrameExtractor` import path.
+- Verified Google Maven metadata latest/release `1.10.1`, lastUpdated
+  `20260512123518`; AAR SHA-256
+  `ded4a5275a5f977afaa3fb4b1b933667629e2526efbfb94b4bcf2b96fc20e2a0`; sources
+  JAR SHA-256 `a03b962a242236b87fde0272c5478c2e6b7fc520288d3d58bb0f2e866d827654`;
+  no native entries in the AAR.
+- Added `FrameExtractionPolicy`, focused JVM tests, and
+  `docs/frame-extraction-media3-inspector.md`. Current cached SDR thumbnails and
+  JPEG freeze frames stay on `MediaMetadataRetriever`; future HDR/effect-aware
+  or custom-decoder frame extraction should migrate to `media3-inspector-frame`.
+- Verification:
+  `.\gradlew.bat :app:testDebugUnitTest --tests com.novacut.editor.engine.FrameExtractionPolicyTest --no-daemon`,
+  `.\gradlew.bat :app:testDebugUnitTest :app:assembleDebug --no-daemon`,
+  `git diff --check`,
+  `python scripts\check_16kb_alignment.py app\build\outputs\apk\debug\app-debug.apk`,
+  and SDK Build Tools `zipalign -c -P 16 -v 4 app\build\outputs\apk\debug\app-debug.apk`.

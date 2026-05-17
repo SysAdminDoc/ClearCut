@@ -49,6 +49,7 @@ Current gap:
 | Gyroflow sidecar/project import | Strong stabilization capability without full reimplementation | File format and sensor sync complexity | Prefer import/reference path before custom gyro engine. |
 | FFmpeg 16 KB package | Unlocks export features | License, native compliance, fork trust | P0/P1 decision gate. |
 | Media3 Compose Material3 player widgets | Could reduce bespoke playback UI | Full `Player` / `ProgressSlider` path is player-timeline based and does not cover editor gap/still/transform/scope states | R6.10b keeps custom `PreviewPanel`; revisit only targeted `ContentFrame`, `PlayerSurface`, or individual button adoption. |
+| Media3 inspector-frame | HDR/effect-aware frame extraction, thumbnails, and future still export | Unneeded dependency for current small SDR thumbnail strips; must use new split module/import path | R6.10c keeps current cached thumbnails on `MediaMetadataRetriever`; migrate only HDR/effect/custom-decoder paths. |
 
 ## Evaluation Harness Opportunities
 

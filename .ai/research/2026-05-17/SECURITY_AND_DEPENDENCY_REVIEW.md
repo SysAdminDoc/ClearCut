@@ -80,6 +80,22 @@ Risk and mitigation:
 - `ProgressSlider` should not replace timeline seeking until Media3 exposes externally controlled progress without an internal `Player.seekTo` call.
 - No dependency was added in R6.10b. The decision is codified in `PreviewPanelMedia3ComposePolicy` and `docs/preview-media3-compose.md`; revisit targeted `ContentFrame`, `PlayerSurface`, or individual button adoption only behind focused UI tests.
 
+### Media3 inspector-frame migration audit
+
+Evidence:
+
+- AndroidX Media3 release notes say users should depend on the new `:media3-inspector-frame` module and update imports to `androidx.media3.inspector.frame.FrameExtractor`.
+- Media3 Inspector docs present `FrameExtractor` as the frame/thumbnail replacement for platform `MediaMetadataRetriever`.
+- Google Maven metadata for `androidx.media3:media3-inspector-frame` reports latest/release `1.10.1`; the resolved AAR is 24,988 bytes with SHA-256 `ded4a5275a5f977afaa3fb4b1b933667629e2526efbfb94b4bcf2b96fc20e2a0` and no native entries.
+- Source inspection of `FrameExtractor` 1.10.1 shows support for effects, custom `MediaCodecSelector`, HDR frame extraction, `getFrame`, and `getThumbnail`.
+- Local `VideoEngine.extractThumbnail`, `extractThumbnailStrip`, and `extractFrameToFile` still use `MediaMetadataRetriever`; no `FrameExtractor` imports or inspector dependencies exist.
+
+Risk and mitigation:
+
+- No unused dependency should be added for the current small SDR thumbnail/cache workload.
+- HDR/effect-aware frame previews and custom decoder selection should use `media3-inspector-frame` rather than platform retriever APIs.
+- `FrameExtractionPolicyTest` guards against deprecated Media3 import paths and accidental unused dependency wiring.
+
 ### FFmpeg distribution and license posture
 
 Evidence:
