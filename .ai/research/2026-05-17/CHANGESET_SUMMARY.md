@@ -155,3 +155,23 @@ The next R6.10 item was closed as a migration audit:
   `git diff --check`,
   `python scripts\check_16kb_alignment.py app\build\outputs\apk\debug\app-debug.apk`,
   and SDK Build Tools `zipalign -c -P 16 -v 4 app\build\outputs\apk\debug\app-debug.apk`.
+
+## Autonomous Continuation Addendum — Media3 ProgressSlider R6.10d
+
+The final R6.10 item was closed as a tested non-adoption:
+
+- Audited `Timeline`, `TimelineOverviewBar`, and `MiniPlayerBar` against the
+  official Media3 Material3 `ProgressSlider` surface.
+- Added `TimelineProgressSliderPolicy`, focused JVM tests, and
+  `docs/progress-slider-media3-compose.md`.
+- Kept the custom timeline ruler because it depends on edited project time,
+  zoom/scroll-window mapping, markers, snapping, clip hit targets, and scrub
+  lifecycle callbacks.
+- Kept `MiniPlayerBar`'s standard Material3 `Slider` because it is externally
+  controlled by `playheadMs / totalDurationMs` and calls NovaCut's `onSeek(Long)`.
+- Verification:
+  `.\gradlew.bat :app:testDebugUnitTest --tests com.novacut.editor.ui.editor.TimelineProgressSliderPolicyTest --no-daemon`,
+  `.\gradlew.bat :app:testDebugUnitTest :app:assembleDebug --no-daemon`,
+  `git diff --check`,
+  `python scripts\check_16kb_alignment.py app\build\outputs\apk\debug\app-debug.apk`,
+  and SDK Build Tools `zipalign -c -P 16 -v 4 app\build\outputs\apk\debug\app-debug.apk`.
