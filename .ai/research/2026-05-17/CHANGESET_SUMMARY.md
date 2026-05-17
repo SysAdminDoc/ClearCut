@@ -105,3 +105,26 @@ preserves NovaCut output semantics:
   `git diff --check`,
   `python scripts\check_16kb_alignment.py app\build\outputs\apk\debug\app-debug.apk`,
   and SDK Build Tools `zipalign -c -P 16 -v 4 app\build\outputs\apk\debug\app-debug.apk`.
+
+## Autonomous Continuation Addendum — Media3 Compose Player R6.10b
+
+The next R6.10 item was closed as a documented non-adoption:
+
+- Evaluated `androidx.media3:media3-ui-compose-material3:1.10.1` against
+  NovaCut's actual preview contract.
+- Verified Google Maven metadata latest/release `1.10.1`, lastUpdated
+  `20260512123518`, and resolved AAR SHA-256
+  `0e0789cef85d948f924c0cec365021a56f6cc63b8c9888cacd05357f83e00112`.
+- Added `PreviewPanelMedia3ComposePolicy` and focused JVM tests to codify that
+  full `Player` replacement is unsafe while `ProgressSlider` remains
+  player-timeline based and performs `Player.seekTo` internally.
+- Added `docs/preview-media3-compose.md` and updated `ROADMAP.md`,
+  `PROJECT_CONTEXT.md`, `CHANGELOG.md`, `SOURCE_REGISTER.md`,
+  `RESEARCH_LOG.md`, `SECURITY_AND_DEPENDENCY_REVIEW.md`, and
+  `DATASET_MODEL_INTEGRATION_REVIEW.md`.
+- Verification:
+  `.\gradlew.bat :app:testDebugUnitTest --tests com.novacut.editor.ui.editor.PreviewPanelMedia3ComposePolicyTest --no-daemon`,
+  `.\gradlew.bat :app:testDebugUnitTest :app:assembleDebug --no-daemon`,
+  `git diff --check`,
+  `python scripts\check_16kb_alignment.py app\build\outputs\apk\debug\app-debug.apk`,
+  and SDK Build Tools `zipalign -c -P 16 -v 4 app\build\outputs\apk\debug\app-debug.apk`.

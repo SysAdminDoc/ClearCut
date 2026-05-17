@@ -48,6 +48,7 @@ Current gap:
 | OpenTimelineIO/FCPXML | Pro interoperability | Parser fidelity and project mapping complexity | Good P1/P2 after export pipeline stabilizes. |
 | Gyroflow sidecar/project import | Strong stabilization capability without full reimplementation | File format and sensor sync complexity | Prefer import/reference path before custom gyro engine. |
 | FFmpeg 16 KB package | Unlocks export features | License, native compliance, fork trust | P0/P1 decision gate. |
+| Media3 Compose Material3 player widgets | Could reduce bespoke playback UI | Full `Player` / `ProgressSlider` path is player-timeline based and does not cover editor gap/still/transform/scope states | R6.10b keeps custom `PreviewPanel`; revisit only targeted `ContentFrame`, `PlayerSurface`, or individual button adoption. |
 
 ## Evaluation Harness Opportunities
 

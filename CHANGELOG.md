@@ -4,6 +4,16 @@
 
 ### Autonomous roadmap continuation — 2026-05-17
 
+- **R6.10b — Media3 Compose Player evaluation.** Added
+  `PreviewPanelMedia3ComposePolicy`, focused JVM tests, and
+  [docs/preview-media3-compose.md](docs/preview-media3-compose.md) to record
+  why NovaCut should keep its custom `PreviewPanel` for Media3 1.10.1. The
+  Material3 `Player` / `ProgressSlider` path is player-timeline based and
+  performs native seeks internally; NovaCut's editor preview still needs
+  edited-timeline seeking, gap recovery, still-image fallback, transform
+  gestures, scopes, and custom Mocha chrome. Targeted `ContentFrame` /
+  playback-button adoption remains a future revisit, but no dependency was
+  added.
 - **R7.5 / R6.10a — Media3 Lottie renderer adoption.** The app now
   depends on `androidx.media3:media3-effect-lottie:1.10.1` and routes
   eligible export-time animated title overlays through the official Media3

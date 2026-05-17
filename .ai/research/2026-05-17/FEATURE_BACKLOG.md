@@ -21,7 +21,8 @@ This is the raw harvested backlog before final prioritization. It intentionally 
 | Reverse export | Roadmap B.3 and FFmpeg requirement | Export engine and UI affordance |
 | libass subtitle burn-in | FFmpeg unlock; caption roadmap | Caption export/burn-in engine |
 | Two-pass loudnorm | FFmpeg unlock; audio mastering roadmap | Audio export/mix pipeline |
-| `media3-effect-lottie` parity spike | Media3 1.10.1 already present | Lottie overlay/template engines, golden frame tests |
+| `media3-effect-lottie` parity spike | Media3 1.10.1 already present; R6.10a now routes eligible overlays through the official renderer | Lottie overlay/template golden frame tests before deleting the fallback shader |
+| `media3-ui-compose-material3` Player evaluation | Media3 1.10.1 offers Material3 player widgets, but R6.10b found full replacement would lose NovaCut preview semantics | Revisit only targeted `ContentFrame`, `PlayerSurface`, or playback-button adoption |
 | Dual-texture programmable blend modes | Current single-texture fallback lacks exact pro blend math | Media3/custom GL compositor path |
 | Ultra HDR/gainmap export path | Android 16 HDR roadmap items | Export settings, HDR ingest/export tests |
 | APV ingest watch item | Android 16 professional codec trend | Media import capability detection |

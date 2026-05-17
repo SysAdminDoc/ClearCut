@@ -64,6 +64,22 @@ Risk and mitigation:
 - Media3's `LottieOverlay` loops animation progress, while NovaCut's existing renderer holds the final frame for title windows longer than the composition duration. `VideoEngine` keeps the custom shader for over-long windows and uses the official module only where parity holds.
 - No native-library alignment risk is introduced by this module.
 
+### Media3 Compose Material3 Player evaluation
+
+Evidence:
+
+- Android Developers documents `media3-ui-compose-material3` as providing a Material3 `Player`, playback buttons, `ProgressSlider`, and position/duration text, with internal state management.
+- Android Developers documents lower-level `media3-ui-compose` primitives `ContentFrame` and `PlayerSurface`.
+- The `ProgressSlider` API reference says the slider displays player progress and performs the underlying player seek internally before the finish callback.
+- Google Maven metadata for `androidx.media3:media3-ui-compose-material3` reports latest/release `1.10.1`; the resolved AAR is 280,813 bytes with SHA-256 `0e0789cef85d948f924c0cec365021a56f6cc63b8c9888cacd05357f83e00112`.
+- Local `PreviewPanel` requirements include edited-timeline seeking, gap recovery, still-image fallback, transform gesture callbacks, scopes, and custom chrome.
+
+Risk and mitigation:
+
+- Full `Player` replacement would regress NovaCut's trim-aware preview contract because Media3's Material3 controls are player-timeline widgets.
+- `ProgressSlider` should not replace timeline seeking until Media3 exposes externally controlled progress without an internal `Player.seekTo` call.
+- No dependency was added in R6.10b. The decision is codified in `PreviewPanelMedia3ComposePolicy` and `docs/preview-media3-compose.md`; revisit targeted `ContentFrame`, `PlayerSurface`, or individual button adoption only behind focused UI tests.
+
 ### FFmpeg distribution and license posture
 
 Evidence:

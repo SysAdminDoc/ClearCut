@@ -160,3 +160,31 @@ Result:
   deliberate fallback for HDR exports and over-long title windows.
   The repo has no committed Lottie template assets, so pixel-golden parity should
   be added when fixtures exist.
+
+## Continuation Research Notes - Media3 Compose Player R6.10b
+
+Targeted follow-up after R6.10a queried:
+
+- Android Developers Media3 Compose UI overview.
+- Android Developers Media3 Material3 Compose guide.
+- Android Developers `ProgressSlider` API reference.
+- Android Developers `androidx.media3.ui.compose` package summary.
+- Google Maven metadata and AAR bytes for
+  `androidx.media3:media3-ui-compose-material3:1.10.1`.
+- Local `PreviewPanel`, `MiniPlayerBar`, and editor call sites.
+
+Result:
+
+- `media3-ui-compose-material3` latest/release is `1.10.1` as of Google Maven
+  metadata lastUpdated `20260512123518`; the AAR SHA-256 is
+  `0e0789cef85d948f924c0cec365021a56f6cc63b8c9888cacd05357f83e00112`.
+- The module is useful for ordinary playback surfaces and controls, but its
+  Material3 `Player` / `ProgressSlider` path is player-timeline based.
+- `ProgressSlider` performs the underlying player seek internally before its
+  finish callback, which conflicts with NovaCut's edited-timeline seek and gap
+  recovery path.
+- The local preview is not just playback chrome: it owns gap recovery,
+  still-image fallback, transform gestures, scopes, and Mocha editor chrome.
+- R6.10b is therefore closed as a documented non-adoption for full `Player`
+  replacement. Future targeted adoption can revisit lower-level `ContentFrame`,
+  `PlayerSurface`, or individual playback buttons with focused preview tests.
