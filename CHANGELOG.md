@@ -26,6 +26,13 @@
   6.7.1. Latest Core / Activity / Navigation are deferred because their AAR
   metadata requires AGP 8.9.1+, Hilt 2.59.x requires AGP 9.0+, and Room 2.8.x
   currently fails this repo's Kotlin 2.1.0 / KSP 2.1.0 schema export path.
+- **R8.7 — Per-app language preferences.** AndroidManifest now declares
+  `android:localeConfig="@xml/locales_config"` and the new
+  `app/src/main/res/xml/locales_config.xml` carries the English baseline.
+  Adding a new locale is now a two-line change: drop the translated
+  `res/values-<bcp47>/strings.xml`, then append one `<locale>` entry. NovaCut
+  appears in Settings → System → Languages & Input → App Languages the
+  moment more than one locale is listed.
 - **Verification recovery.** Restored the JVM unit-test baseline by making
   `AutoSaveState.deserialize()` accept an injectable URI parser with Android's
   parser as the production default, so JVM tests can use the repo's `FakeUri`
