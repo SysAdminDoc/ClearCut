@@ -69,9 +69,12 @@ class InpaintingEngine @Inject constructor(
     companion object {
         private const val TAG = "InpaintingEngine"
         private const val MODEL_FILENAME = "lama_dilated.onnx"
-        private const val MODEL_SIZE_BYTES = 174_000_000L // ~174MB
+        private const val MODEL_SIZE_BYTES = 182_781_794L // ~174 MiB
         private const val MODEL_INPUT_SIZE = 512
-        private const val MODEL_URL = "https://huggingface.co/novacut/lama-dilated-onnx/resolve/main/lama_dilated.onnx"
+        private const val MODEL_URL =
+            "https://huggingface.co/qualcomm/LaMa-Dilated/resolve/ab898502c9bd764a50eb2719a309694b43eae658/LaMa-Dilated.onnx"
+        private const val MODEL_SHA256 =
+            "6f9e1d401eb67a63fb1be6c0cf3283d800bf4c20656028f96b044fedc382d762"
     }
 
     /**
@@ -110,6 +113,15 @@ class InpaintingEngine @Inject constructor(
         return modelFile.exists() && modelFile.length() > MODEL_SIZE_BYTES / 2
     }
 
+    private fun isVerifiedModelReady(): Boolean {
+        val modelFile = File(context.filesDir, "models/inpainting/$MODEL_FILENAME")
+        return ModelDownloadManager.verifyChecksumOrDelete(
+            file = modelFile,
+            minimumBytes = MODEL_SIZE_BYTES / 2,
+            expectedSha256 = MODEL_SHA256,
+        )
+    }
+
     /**
      * Download the LaMa-Dilated ONNX model to device storage.
      * Warning: This model is ~174MB. Ensure sufficient storage and show download progress.
@@ -130,7 +142,9 @@ class InpaintingEngine @Inject constructor(
                         targetFile = outputFile,
                         minimumBytes = MODEL_SIZE_BYTES / 2,
                         estimatedBytes = MODEL_SIZE_BYTES,
-                        displayName = "LaMa inpainting model"
+                        displayName = "LaMa inpainting model",
+                        sha256 = MODEL_SHA256,
+                        checksumRequired = true
                     )
                 ),
                 totalEstimateBytes = MODEL_SIZE_BYTES,
@@ -140,7 +154,7 @@ class InpaintingEngine @Inject constructor(
             )
             Log.d(TAG, "LaMa model downloaded: ${outputFile.length()} bytes")
             onProgress(1f)
-            true
+            isVerifiedModelReady()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to download LaMa model", e)
             false
@@ -180,7 +194,7 @@ class InpaintingEngine @Inject constructor(
         val startTime = System.currentTimeMillis()
         Log.d(TAG, "Inpainting frame: ${bitmap.width}x${bitmap.height}")
 
-        if (!isModelReady()) {
+        if (!isVerifiedModelReady()) {
             Log.w(TAG, "LaMa model not downloaded")
             return@withContext null
         }
@@ -286,7 +300,7 @@ class InpaintingEngine @Inject constructor(
         val startTime = System.currentTimeMillis()
         Log.d(TAG, "Inpainting video: ${maskFrames.size} masked frames")
 
-        if (!isModelReady()) {
+        if (!isVerifiedModelReady()) {
             Log.w(TAG, "LaMa model not downloaded")
             return@withContext null
         }

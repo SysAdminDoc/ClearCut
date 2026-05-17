@@ -32,7 +32,11 @@ class ModelDownloadManager @Inject constructor(
         // Optional lowercase hex SHA-256 of the expected file. When set, the
         // download is verified before being moved into place — a length-only
         // check is not enough for model assets we re-use across releases.
-        val sha256: String? = null
+        val sha256: String? = null,
+        // Fail closed when an engine marks its model as activation-critical.
+        // Future registries may still stage exploratory downloads without a
+        // hash, but active model paths must opt into this guard.
+        val checksumRequired: Boolean = false
     )
 
     data class DownloadResult(
@@ -60,7 +64,14 @@ class ModelDownloadManager @Inject constructor(
         validateRequests(files)
         ensureStorageAvailable(files)
 
-        val needsNetwork = files.any { !isValidModelFile(it.targetFile, it.minimumBytes, it.sha256) }
+        val needsNetwork = files.any {
+            !isValidModelFile(
+                file = it.targetFile,
+                minimumBytes = it.minimumBytes,
+                expectedSha256 = it.sha256,
+                requireChecksum = it.checksumRequired,
+            )
+        }
         if (needsNetwork && wifiOnly && isMeteredNetwork()) {
             throw MeteredNetworkException(
                 "Wi-Fi-only is enabled and the active network is metered or unavailable"
@@ -76,7 +87,13 @@ class ModelDownloadManager @Inject constructor(
         files.forEach { request ->
             coroutineContext.ensureActive()
             val estimatedBytes = request.estimatedBytes.coerceAtLeast(request.minimumBytes)
-            if (isValidModelFile(request.targetFile, request.minimumBytes, request.sha256)) {
+            if (isValidModelFile(
+                    file = request.targetFile,
+                    minimumBytes = request.minimumBytes,
+                    expectedSha256 = request.sha256,
+                    requireChecksum = request.checksumRequired,
+                )
+            ) {
                 completedEstimateBytes += estimatedBytes
                 reusedBytes += request.targetFile.length()
                 filesReady++
@@ -332,6 +349,9 @@ class ModelDownloadManager @Inject constructor(
                         "SHA-256 must be 64 hex characters: ${request.displayName}"
                     }
                 }
+                require(!request.checksumRequired || request.sha256 != null) {
+                    "Checksum is required but missing for ${request.displayName}"
+                }
                 val canonicalTarget = request.targetFile.absoluteFile.canonicalPath
                 require(targets.add(canonicalTarget)) {
                     "Duplicate model target: ${request.targetFile.absolutePath}"
@@ -341,7 +361,14 @@ class ModelDownloadManager @Inject constructor(
 
         private fun ensureStorageAvailable(files: List<ModelFile>) {
             val neededBytes = files
-                .filterNot { isValidModelFile(it.targetFile, it.minimumBytes, it.sha256) }
+                .filterNot {
+                    isValidModelFile(
+                        file = it.targetFile,
+                        minimumBytes = it.minimumBytes,
+                        expectedSha256 = it.sha256,
+                        requireChecksum = it.checksumRequired,
+                    )
+                }
                 .sumOf { it.estimatedBytes.coerceAtLeast(it.minimumBytes).coerceAtLeast(1L) }
             if (neededBytes <= 0L) return
 
