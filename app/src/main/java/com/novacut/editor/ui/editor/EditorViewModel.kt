@@ -227,6 +227,9 @@ data class EditorState(
     // the timeline can light up tracked-subject lanes the moment a tracker
     // populates them; persistence flows through AutoSaveState.trackedObjects.
     val trackedObjects: List<com.novacut.editor.model.TrackedObject> = emptyList(),
+    // R8.9 disclosure ledger. Kept in editor state so export/privacy surfaces
+    // can default disclosure controls without needing telemetry.
+    val aiUsageLedger: List<com.novacut.editor.engine.AiUsageLedger.Entry> = emptyList(),
     // v3.71 Cut Assistant review state. Null until the user opens the panel;
     // mutating per-proposal acceptance does not split clips — the apply step is
     // explicit so undo records a single "Apply Cut Assistant" entry.
@@ -631,6 +634,7 @@ class EditorViewModel @Inject constructor(
                         beatMarkers = recovery.beatMarkers,
                         v369 = it.v369.copy(transcript = recovery.transcript ?: it.v369.transcript),
                         trackedObjects = recovery.trackedObjects.ifEmpty { it.trackedObjects },
+                        aiUsageLedger = recovery.aiUsageLedger,
                         totalDurationMs = recovery.tracks.maxOfOrNull { t ->
                             t.clips.maxOfOrNull { c -> c.timelineEndMs } ?: 0L
                         } ?: 0L,
@@ -1579,7 +1583,8 @@ class EditorViewModel @Inject constructor(
                     timelineMarkers = recovery.timelineMarkers,
                     drawingPaths = recovery.drawingPaths,
                     playheadMs = recovery.playheadMs,
-                    chapterMarkers = recovery.chapterMarkers
+                    chapterMarkers = recovery.chapterMarkers,
+                    aiUsageLedger = recovery.aiUsageLedger
                 )
             }
             _playheadMs.value = recovery.playheadMs
@@ -2045,6 +2050,23 @@ class EditorViewModel @Inject constructor(
     fun dismissAiSuggestion() {
         _state.update { it.copy(aiSuggestion = null) }
     }
+
+    fun recordAiUsage(entry: com.novacut.editor.engine.AiUsageLedger.Entry) {
+        _state.update { state ->
+            state.copy(
+                aiUsageLedger = com.novacut.editor.engine.AiUsageLedger.mergeOverlaps(
+                    state.aiUsageLedger + entry
+                )
+            )
+        }
+        saveProject()
+    }
+
+    fun clearAiUsageLedger() {
+        _state.update { it.copy(aiUsageLedger = emptyList()) }
+        saveProject()
+    }
+
     private fun generateAiSuggestion(clipId: String?) {
         if (clipId == null) {
             _state.update { it.copy(aiSuggestion = null) }
@@ -3982,7 +4004,8 @@ class EditorViewModel @Inject constructor(
             drawingPaths = state.drawingPaths,
             beatMarkers = state.beatMarkers,
             transcript = state.v369.transcript,
-            trackedObjects = state.trackedObjects
+            trackedObjects = state.trackedObjects,
+            aiUsageLedger = state.aiUsageLedger
         )
     }
 
