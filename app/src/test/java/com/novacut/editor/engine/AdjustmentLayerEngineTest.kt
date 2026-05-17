@@ -123,9 +123,15 @@ class AdjustmentLayerEngineTest {
     // --- C.11 planForClip ---
 
     @Test
-    fun planForClip_noLayers_returnsEmpty() {
+    fun planForClip_noLayers_returnsWholeClipSegment() {
         assertEquals(
-            emptyList<AdjustmentLayerEngine.AdjustmentLayerSegment>(),
+            listOf(
+                AdjustmentLayerEngine.AdjustmentLayerSegment(
+                    timelineStartMs = 0L,
+                    timelineEndMs = 10_000L,
+                    effects = emptyList(),
+                )
+            ),
             engine.planForClip(0L, 10_000L, emptyList()),
         )
     }
