@@ -51,6 +51,10 @@ Every meaningful roadmap claim in this research run should trace to one of these
 | L43 | `app/src/main/java/com/novacut/editor/engine/FrameExtractionPolicy.kt` | Codified R6.10c migration policy. |
 | L44 | `app/src/test/java/com/novacut/editor/engine/FrameExtractionPolicyTest.kt` | Regression tests and source-tree import guard for R6.10c. |
 | L45 | `docs/frame-extraction-media3-inspector.md` | Source-backed R6.10c decision note. |
+| L46 | `app/src/main/java/com/novacut/editor/ui/editor/Timeline.kt` | Timeline ruler requirements for R6.10d ProgressSlider evaluation. |
+| L47 | `app/src/main/java/com/novacut/editor/ui/editor/TimelineProgressSliderPolicy.kt` | Codified R6.10d non-adoption policy. |
+| L48 | `app/src/test/java/com/novacut/editor/ui/editor/TimelineProgressSliderPolicyTest.kt` | Regression tests for R6.10d. |
+| L49 | `docs/progress-slider-media3-compose.md` | Source-backed R6.10d decision note. |
 
 ## Official Platform and Library Sources
 
@@ -82,7 +86,7 @@ Every meaningful roadmap claim in this research run should trace to one of these
 | E24 | Media3 effect-lottie AAR | https://dl.google.com/dl/android/maven2/androidx/media3/media3-effect-lottie/1.10.1/media3-effect-lottie-1.10.1.aar | Resolved AAR bytes; SHA-256 `83b26f6f25e785b949263fc52cb7c0fb5f0e371445fa1d7b9a0ed0b71c05e69d`. |
 | E25 | Media3 Compose UI overview | https://developer.android.com/media/media3/ui/compose | R6.10b evidence for `media3-ui-compose` vs `media3-ui-compose-material3`, `ContentFrame`, and `PlayerSurface`. |
 | E26 | Media3 Material3 Compose docs | https://developer.android.com/media/media3/ui/compose-material3 | R6.10b evidence for Material3 `Player`, playback controls, progress, and internal state management. |
-| E27 | Media3 `ProgressSlider` API reference | https://developer.android.com/reference/kotlin/androidx/media3/ui/compose/material3/indicator/ProgressSlider.composable | R6.10b evidence that `ProgressSlider` is player-position based and performs underlying player seek internally. |
+| E27 | Media3 `ProgressSlider` API reference | https://developer.android.com/reference/kotlin/androidx/media3/ui/compose/material3/indicator/ProgressSlider.composable | R6.10b/R6.10d evidence that `ProgressSlider` is player-position based and performs underlying player seek internally. |
 | E28 | Media3 UI Compose package API reference | https://developer.android.com/reference/kotlin/androidx/media3/ui/compose/package-summary | R6.10b evidence for lower-level `ContentFrame` and `PlayerSurface` surfaces. |
 | E29 | Media3 UI Compose Material3 Maven metadata | https://dl.google.com/dl/android/maven2/androidx/media3/media3-ui-compose-material3/maven-metadata.xml | Latest/release evidence for `media3-ui-compose-material3:1.10.1`; lastUpdated `20260512123518`. |
 | E30 | Media3 UI Compose Material3 AAR | https://dl.google.com/dl/android/maven2/androidx/media3/media3-ui-compose-material3/1.10.1/media3-ui-compose-material3-1.10.1.aar | Resolved AAR bytes; SHA-256 `0e0789cef85d948f924c0cec365021a56f6cc63b8c9888cacd05357f83e00112`. |

@@ -96,6 +96,20 @@ Risk and mitigation:
 - HDR/effect-aware frame previews and custom decoder selection should use `media3-inspector-frame` rather than platform retriever APIs.
 - `FrameExtractionPolicyTest` guards against deprecated Media3 import paths and accidental unused dependency wiring.
 
+### Media3 ProgressSlider evaluation
+
+Evidence:
+
+- Android Developers documents `ProgressSlider` as a Media3 player progress component.
+- The API reference shows the underlying player seek is performed internally before the finish callback.
+- Local `Timeline` requires project-time mapping, scroll/zoom windows, markers, snap targets, clip hit targets, and scrub lifecycle callbacks.
+- Local `MiniPlayerBar` already uses an externally controlled Material3 `Slider` and routes all seek requests through NovaCut's callback.
+
+Risk and mitigation:
+
+- Replacing the timeline ruler or mini-player with Media3 `ProgressSlider` would bypass NovaCut's edited-timeline seek contract.
+- `TimelineProgressSliderPolicyTest` pins the decision and leaves a future adoption path only for externally controlled progress components.
+
 ### FFmpeg distribution and license posture
 
 Evidence:

@@ -218,3 +218,24 @@ Result:
   JPEG freeze frames stay on `MediaMetadataRetriever`; future HDR/effect-aware
   or custom-decoder frame extraction should use the split inspector-frame
   module.
+
+## Continuation Research Notes - Media3 ProgressSlider R6.10d
+
+Targeted follow-up after R6.10c queried:
+
+- Android Developers `ProgressSlider` API reference.
+- Android Developers Media3 Material3 Compose guide.
+- Local `Timeline`, `TimelineOverviewBar`, `MiniPlayerBar`, and
+  `PreviewPanelMedia3ComposePolicy` code.
+
+Result:
+
+- `ProgressSlider` remains a player-position control and performs player seek
+  internally before its finish callback.
+- NovaCut's timeline ruler is not a cosmetic progress bar; it maps edited
+  project time through scroll offset, zoom, markers, snap targets, clip hit
+  areas, and scrub lifecycle callbacks.
+- `MiniPlayerBar` already uses a standard Material3 `Slider` with external
+  `playheadMs / totalDurationMs` state and NovaCut's `onSeek(Long)` callback.
+- R6.10d closes as a tested non-adoption. Revisit only if Media3 exposes an
+  externally controlled project-timeline progress component.
