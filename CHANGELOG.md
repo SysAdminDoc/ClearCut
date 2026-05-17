@@ -105,8 +105,17 @@
   fallback, NaN-headroom recovery, and notification debouncing on
   action transitions. `shouldOfferOvernightSchedule` gates a "Schedule
   for overnight" Settings entry once an estimated render crosses 30
-  minutes. Ready for `ExportService` to consume; engine layer fully
-  unit-tested on the JVM.
+  minutes. Engine layer fully unit-tested on the JVM.
+- **R8.5 — ExportService thermal monitor.** The foreground export service
+  now registers `addThermalStatusListener` on Android 10+, polls
+  `getThermalHeadroom(30)` once per second on Android 11+, and feeds the
+  combined status + forecast signal into `ThermalHeadroomPolicy`. The
+  progress notification shows compact thermal state text, separate
+  debounced warnings fire on light/heavy/pause/stop transitions, thermal
+  state is cleared on cancel/complete/error/destroy, and the service only
+  hard-cancels when Android reports shutdown-level thermal pressure.
+  Remaining R8.5 work is real `VideoEngine` throttling/proxy downgrade and
+  resumable pause markers once Media3 export control hooks exist.
 - **R8.2 — C2paExportEngine scaffold.** New `C2paExportEngine` builds
   a structured `C2paManifest` (training-mining opt-out, thumbnail
   claim, `c2pa.created` action, and an AI-actions assertion derived

@@ -1627,8 +1627,21 @@
     <string name="notif_export_failed_title">Export Failed</string>
     <string name="notif_export_title">Exporting Video</string>
     <string name="notif_export_progress">%1$d%% complete</string>
+    <string name="notif_export_progress_with_thermal">%1$s - %2$s</string>
     <string name="notif_export_cancel">Cancel</string>
     <string name="notif_export_failed_default">Export failed</string>
+    <string name="notif_export_thermal_progress_light">thermal watch</string>
+    <string name="notif_export_thermal_progress_heavy">thermal warning</string>
+    <string name="notif_export_thermal_progress_pause">too hot</string>
+    <string name="notif_export_thermal_progress_stop">stopping</string>
+    <string name="notif_export_thermal_light_title">Thermal watch active</string>
+    <string name="notif_export_thermal_light_text">Device temperature is rising. NovaCut is monitoring the export and will warn before reliability drops.</string>
+    <string name="notif_export_thermal_heavy_title">Thermal warning active</string>
+    <string name="notif_export_thermal_heavy_text">Device temperature is high. Keep the device plugged in and allow it to cool while export continues.</string>
+    <string name="notif_export_thermal_pause_title">Device too hot for reliable export</string>
+    <string name="notif_export_thermal_pause_text">Android reports critical thermal pressure. NovaCut is keeping the export visible and will stop it if the device reaches shutdown risk.</string>
+    <string name="notif_export_thermal_stop_title">Export stopped for device safety</string>
+    <string name="notif_export_thermal_stop_text">Android reported shutdown-level thermal pressure, so NovaCut cancelled the export.</string>
 
     <!-- SmartReframePanel -->
     <string name="cd_smart_reframe_close">Close smart reframe</string>
