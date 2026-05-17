@@ -233,7 +233,10 @@ added; ~90 new JVM unit tests across the batch.
   the default tracked-mask target until an ONNX-export Tiny variant ships.
 - **R6.11 — APV codec ingest probe.** `EncoderCapabilityProbe.probeApvIngest()`
   returns `ApvSupport` with `hasDecoder` / `isHardwareDecoder` / `decoderNames`.
-  No encoder path by design (R6.11c — APV is ingest-only). 5 new tests.
+  `ExportColorConfidenceEngine` now feeds a `Source is APV` chip into ExportSheet
+  when imported source metadata records `video/apv`; no encoder path by design
+  (R6.11c — APV is ingest-only). 7 tests cover the probe and export-summary
+  contracts.
 - **R6.14a — Multicam SmartSwitch planner.** Pure-Kotlin `SpeakerSwitchPlanner`
   with first-appearance round-robin angle assignment, explicit-assignment
   override, redundant-cut coalescing, and a `minDwellMs` flicker guard.

@@ -175,3 +175,23 @@ The final R6.10 item was closed as a tested non-adoption:
   `git diff --check`,
   `python scripts\check_16kb_alignment.py app\build\outputs\apk\debug\app-debug.apk`,
   and SDK Build Tools `zipalign -c -P 16 -v 4 app\build\outputs\apk\debug\app-debug.apk`.
+
+## Autonomous Continuation Addendum — APV Export Chip R6.11b
+
+The next R6.11 item was implemented against the existing source-metadata and
+chip infrastructure:
+
+- Extended `ExportColorConfidenceEngine.SourceHdrSummary` with
+  `apvSourceCount` and `hasApvSource`.
+- `summarizeSources()` now counts distinct inspected source URIs with
+  persisted MIME type `video/apv`.
+- ExportSheet surfaces the result through its existing color-confidence outlook
+  as a `Source is APV` chip with large-source-file warning detail.
+- Added focused JVM coverage for the chip contract and APV source
+  de-duplication.
+- Verification:
+  `.\gradlew.bat :app:testDebugUnitTest --tests com.novacut.editor.engine.ExportColorConfidenceEngineTest --no-daemon`,
+  `.\gradlew.bat :app:testDebugUnitTest :app:assembleDebug --no-daemon`,
+  `git diff --check`,
+  `python scripts\check_16kb_alignment.py app\build\outputs\apk\debug\app-debug.apk`,
+  and SDK Build Tools `zipalign -c -P 16 -v 4 app\build\outputs\apk\debug\app-debug.apk`.

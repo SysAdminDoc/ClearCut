@@ -28,9 +28,11 @@ object ExportColorConfidenceEngine {
     data class SourceHdrSummary(
         val supportedFormats: Set<String> = emptySet(),
         val inspectedSourceCount: Int = 0,
-        val totalSourceCount: Int = 0
+        val totalSourceCount: Int = 0,
+        val apvSourceCount: Int = 0
     ) {
         val hasHdrSource: Boolean get() = supportedFormats.isNotEmpty()
+        val hasApvSource: Boolean get() = apvSourceCount > 0
         val hasUltraHdrGainMap: Boolean
             get() = supportedFormats.any { it.equals("Ultra HDR gain map", ignoreCase = true) }
         val isFullyInspected: Boolean
@@ -171,11 +173,15 @@ object ExportColorConfidenceEngine {
         val formats = inspected
             .flatMap { clip -> clip.sourceColorMetadata.hdrFormats.map { it.displayName } }
             .toSet()
+        val apvSourceCount = inspected.count { clip ->
+            clip.sourceColorMetadata.mimeType.isApvMimeType()
+        }
 
         return SourceHdrSummary(
             supportedFormats = formats,
             inspectedSourceCount = inspected.size,
-            totalSourceCount = clips.size
+            totalSourceCount = clips.size,
+            apvSourceCount = apvSourceCount
         )
     }
 
@@ -183,6 +189,13 @@ object ExportColorConfidenceEngine {
         sourceSummary: SourceHdrSummary,
         chips: MutableList<Chip>
     ) {
+        if (sourceSummary.hasApvSource) {
+            chips += Chip(
+                label = "Source is APV",
+                detail = "APV pro intra-frame media was detected; expect very large source files.",
+                tone = Tone.WARNING
+            )
+        }
         if (sourceSummary.hasUltraHdrGainMap) {
             chips += Chip(
                 label = "Ultra HDR source",
@@ -212,6 +225,9 @@ object ExportColorConfidenceEngine {
 
     private fun SourceHdrSummary.formatList(): String =
         supportedFormats.sorted().joinToString(", ").ifBlank { "HDR" }
+
+    private fun String?.isApvMimeType(): Boolean =
+        this?.equals(EncoderCapabilityProbe.MIME_APV, ignoreCase = true) == true
 
     private fun VideoCodec.canCarryHdr(): Boolean = this != VideoCodec.H264
 }
