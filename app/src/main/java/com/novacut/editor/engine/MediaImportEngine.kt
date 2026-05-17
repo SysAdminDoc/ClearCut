@@ -19,6 +19,8 @@ import kotlin.math.max
 
 private const val MEDIA_IMPORT_ENGINE_TAG = "MediaImportEngine"
 private const val ULTRA_HDR_DECODE_MAX_SIDE = 1024
+private const val GAINMAP_DIRECTION_SDR_TO_HDR = 0
+private const val GAINMAP_DIRECTION_HDR_TO_SDR = 1
 
 @Singleton
 class MediaImportEngine @Inject constructor(
@@ -35,7 +37,7 @@ class MediaImportEngine @Inject constructor(
 
     private fun inspectImage(uri: Uri, mimeType: String?): SourceColorMetadata {
         val formats = buildSet {
-            if (hasUltraHdrGainMap(uri)) add(SourceHdrFormat.ULTRA_HDR_GAIN_MAP)
+            inspectUltraHdrGainMapFormat(uri)?.let { add(it) }
         }
         return SourceColorMetadata(
             mimeType = mimeType,
@@ -75,8 +77,8 @@ class MediaImportEngine @Inject constructor(
         }
     }
 
-    private fun hasUltraHdrGainMap(uri: Uri): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return false
+    private fun inspectUltraHdrGainMapFormat(uri: Uri): SourceHdrFormat? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return null
         return try {
             val source = ImageDecoder.createSource(context.contentResolver, uri)
             val bitmap = ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
@@ -87,13 +89,22 @@ class MediaImportEngine @Inject constructor(
                 }
             }
             try {
-                bitmap.hasGainmap()
+                if (!bitmap.hasGainmap()) {
+                    null
+                } else {
+                    val direction = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
+                        bitmap.gainmap?.gainmapDirection
+                    } else {
+                        null
+                    }
+                    classifyGainMapFormat(Build.VERSION.SDK_INT, direction)
+                }
             } finally {
                 bitmap.recycle()
             }
         } catch (t: Throwable) {
             Log.w(MEDIA_IMPORT_ENGINE_TAG, "Unable to inspect Ultra HDR gain map for $uri", t)
-            false
+            null
         }
     }
 
@@ -184,6 +195,21 @@ class MediaImportEngine @Inject constructor(
             }
 
             return formats
+        }
+
+        internal fun classifyGainMapFormat(
+            sdkInt: Int,
+            gainmapDirection: Int?
+        ): SourceHdrFormat {
+            return when {
+                sdkInt >= Build.VERSION_CODES.BAKLAVA &&
+                    gainmapDirection == GAINMAP_DIRECTION_HDR_TO_SDR ->
+                    SourceHdrFormat.ULTRA_HDR_HDR_BASE_GAIN_MAP
+                sdkInt >= Build.VERSION_CODES.BAKLAVA &&
+                    gainmapDirection == GAINMAP_DIRECTION_SDR_TO_HDR ->
+                    SourceHdrFormat.ULTRA_HDR_GAIN_MAP
+                else -> SourceHdrFormat.ULTRA_HDR_GAIN_MAP
+            }
         }
 
         private fun MediaFormat.getOptionalInt(key: String): Int? {

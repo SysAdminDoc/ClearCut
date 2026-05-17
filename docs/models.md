@@ -32,6 +32,21 @@ Every native AAR shipped with NovaCut must be 16 KB page-size aligned. Google Pl
 | OpenCV Android `:opencv:4.10.0+` | Planned (A.3) | opencv.org | ⚠ Verify per release | Apache-2.0 | arm64-only; ~40 MB. Must ABI-split to avoid Play 200 MB base ceiling. |
 | `com.google.oboe:oboe:1.9.0` | Planned (A.10) | Maven Central | ⚠ Verify on first integration — arm64 native blob ~700 KB | Apache-2.0 | High-quality sinc resampler for 44.1↔48 kHz mixing. Scaffold + reflection probe + output-frame estimator land 2026-05; runtime path waits for the dep wiring. |
 
+### Still-image HDR metadata tracked outside model downloads
+
+Ultra HDR and ISO 21496-1 gain-map metadata are media-format capabilities, not
+ML models, but they affect export confidence and source compatibility. Android
+14 introduced `Bitmap.hasGainmap()` for Ultra HDR detection; Android 15 can
+encode/decode ISO 21496-1 metadata for JPEG `Bitmap` objects; Android 16 adds
+`Gainmap.getGainmapDirection()` so apps can distinguish the legacy SDR-base +
+HDR-gainmap direction from the HDR-base + SDR-gainmap direction.
+
+| Variant | Android evidence | NovaCut status |
+|---|---|---|
+| Ultra HDR v1 / SDR base + HDR gain map | `Gainmap.GAINMAP_DIRECTION_SDR_TO_HDR` means applying the gainmap to an SDR base produces HDR. Older Android 14/15 gainmap images are treated as this direction when the direction API is unavailable. | `MediaImportEngine` records `SourceHdrFormat.ULTRA_HDR_GAIN_MAP`; ExportSheet shows the Ultra HDR source chip through color confidence. |
+| ISO 21496-1 v2-style HDR base + SDR gain map | Android 16 `Gainmap.GAINMAP_DIRECTION_HDR_TO_SDR` means the base image is HDR and applying the gainmap produces SDR. | R6.12a records `SourceHdrFormat.ULTRA_HDR_HDR_BASE_GAIN_MAP` during import and persists it through autosave via the existing `hdrFormats` list. |
+| HEIC/JPEG still-frame export with gain map | Android's Ultra HDR format guidance says apps that encode/decode JPEG files with gain maps should support both Ultra HDR v1 and ISO 21496-1 metadata and prefer ISO metadata when both are present. | R6.12b remains open. Frame capture currently exports ordinary stills; gain-map HEIC/JPEG writing needs a dedicated encode path and device/API tests. |
+
 ## 3. Targeted future models (Round 5 / 6 plans)
 
 These models are *named in the roadmap* but not yet fetched at runtime. They get their own row in §1 when they ship.

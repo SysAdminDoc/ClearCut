@@ -237,6 +237,10 @@ added; ~90 new JVM unit tests across the batch.
   when imported source metadata records `video/apv`; no encoder path by design
   (R6.11c — APV is ingest-only). 7 tests cover the probe and export-summary
   contracts.
+- **R6.12a/c — Ultra HDR gain-map direction.** `MediaImportEngine` now
+  distinguishes Android 16 HDR-base + SDR-gainmap still images from the older
+  SDR-base + HDR-gainmap path, persists the new source format through existing
+  `hdrFormats`, and `docs/models.md` records the ISO 21496-1 distinction.
 - **R6.14a — Multicam SmartSwitch planner.** Pure-Kotlin `SpeakerSwitchPlanner`
   with first-appearance round-robin angle assignment, explicit-assignment
   override, redundant-cut coalescing, and a `minDwellMs` flicker guard.

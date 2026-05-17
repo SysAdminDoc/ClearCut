@@ -678,9 +678,9 @@ Android 16 ships native APV (Advanced Professional Video) codec support — perc
 
 v3.74.3 shipped Ultra HDR gain-map ingest using `Bitmap.hasGainmap()` on Android 14+. Android 16 implements additional ISO 21496-1 draft v2 parameters: HDR base + SDR gainmap (inverse of v1), per-colorspace gainmap math, HEIC encoding with gainmap.
 
-- [ ] **R6.12a — Detect HDR-base + SDR-gainmap variants** in `MediaImportEngine`. Today we assume v1 (SDR base + HDR gainmap).
+- [x] **R6.12a — Detect HDR-base + SDR-gainmap variants** in `MediaImportEngine`. *(Done — Android 16 `Gainmap.getGainmapDirection()` now maps `HDR_TO_SDR` sources to `SourceHdrFormat.ULTRA_HDR_HDR_BASE_GAIN_MAP`, while Android 14/15 or `SDR_TO_HDR` sources keep the existing `ULTRA_HDR_GAIN_MAP` classification. ExportSheet's Ultra HDR chip now includes the detected format list.)*
 - [ ] **R6.12b — HEIC + gainmap encoding** for still-frame export. Pairs with frame-capture export already shipped.
-- [ ] **R6.12c — Update [docs/models.md](docs/models.md)** with the ISO 21496-1 v1 vs v2 distinction. Sources: https://source.android.com/docs/whatsnew/android-16-release · https://developer.android.com/media/grow/ultra-hdr
+- [x] **R6.12c — Update [docs/models.md](docs/models.md)** with the ISO 21496-1 v1 vs v2 distinction. *(Done — [docs/models.md](docs/models.md) now records SDR-base + HDR-gainmap, HDR-base + SDR-gainmap, and the still-open gain-map still-frame export path.)* Sources: https://source.android.com/docs/whatsnew/android-16-release · https://developer.android.com/media/grow/ultra-hdr · https://developer.android.com/reference/android/graphics/Gainmap
 
 ### R6.13 — AI Auto-Edit (text prompt → draft cut)
 

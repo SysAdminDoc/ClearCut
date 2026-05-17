@@ -1,6 +1,7 @@
 package com.novacut.editor.engine
 
 import android.media.MediaFormat
+import android.os.Build
 import com.novacut.editor.model.SourceHdrFormat
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -49,5 +50,35 @@ class MediaImportEngineTest {
 
         assertTrue(SourceHdrFormat.DOLBY_VISION in formats)
         assertTrue(SourceHdrFormat.HDR10 !in formats)
+    }
+
+    @Test
+    fun classifyPreAndroid16GainMapAsSdrBaseUltraHdr() {
+        val format = MediaImportEngine.classifyGainMapFormat(
+            sdkInt = Build.VERSION_CODES.VANILLA_ICE_CREAM,
+            gainmapDirection = 1
+        )
+
+        assertEquals(SourceHdrFormat.ULTRA_HDR_GAIN_MAP, format)
+    }
+
+    @Test
+    fun classifyAndroid16HdrBaseGainMapDirection() {
+        val format = MediaImportEngine.classifyGainMapFormat(
+            sdkInt = Build.VERSION_CODES.BAKLAVA,
+            gainmapDirection = 1
+        )
+
+        assertEquals(SourceHdrFormat.ULTRA_HDR_HDR_BASE_GAIN_MAP, format)
+    }
+
+    @Test
+    fun classifyAndroid16SdrBaseGainMapDirection() {
+        val format = MediaImportEngine.classifyGainMapFormat(
+            sdkInt = Build.VERSION_CODES.BAKLAVA,
+            gainmapDirection = 0
+        )
+
+        assertEquals(SourceHdrFormat.ULTRA_HDR_GAIN_MAP, format)
     }
 }

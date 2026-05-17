@@ -195,3 +195,24 @@ chip infrastructure:
   `git diff --check`,
   `python scripts\check_16kb_alignment.py app\build\outputs\apk\debug\app-debug.apk`,
   and SDK Build Tools `zipalign -c -P 16 -v 4 app\build\outputs\apk\debug\app-debug.apk`.
+
+## Autonomous Continuation Addendum — Ultra HDR Gainmap Direction R6.12a/c
+
+R6.12a and its documentation companion R6.12c were batched:
+
+- Added `SourceHdrFormat.ULTRA_HDR_HDR_BASE_GAIN_MAP` and updated
+  `hasUltraHdrGainMap` to include both Ultra HDR gainmap variants.
+- `MediaImportEngine` now inspects `Bitmap.gainmap.gainmapDirection` on Android
+  16+ and classifies `HDR_TO_SDR` as the HDR-base + SDR-gainmap variant.
+- Android 14/15 gainmaps and Android 16 `SDR_TO_HDR` gainmaps keep the existing
+  `ULTRA_HDR_GAIN_MAP` classification.
+- ExportSheet's Ultra HDR chip detail now includes the detected source format
+  list, so the new variant is visible to users.
+- `docs/models.md`, `ROADMAP.md`, `PROJECT_CONTEXT.md`, and research logs were
+  updated with the ISO 21496-1 distinction and the remaining R6.12b encode gap.
+- Verification:
+  `.\gradlew.bat :app:testDebugUnitTest --tests com.novacut.editor.engine.MediaImportEngineTest --tests com.novacut.editor.engine.ExportColorConfidenceEngineTest --no-daemon`,
+  `.\gradlew.bat :app:testDebugUnitTest :app:assembleDebug --no-daemon`,
+  `git diff --check`,
+  `python scripts\check_16kb_alignment.py app\build\outputs\apk\debug\app-debug.apk`,
+  and SDK Build Tools `zipalign -c -P 16 -v 4 app\build\outputs\apk\debug\app-debug.apk`.

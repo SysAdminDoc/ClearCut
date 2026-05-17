@@ -7,6 +7,7 @@ import com.novacut.editor.model.Clip
 import com.novacut.editor.model.ExportConfig
 import com.novacut.editor.model.Resolution
 import com.novacut.editor.model.SourceColorMetadata
+import com.novacut.editor.model.SourceHdrFormat
 import com.novacut.editor.model.Track
 import com.novacut.editor.model.TrackType
 import com.novacut.editor.model.VideoCodec
@@ -47,6 +48,27 @@ class ExportColorConfidenceEngineTest {
         assertFalse(report.hasWarnings)
         assertTrue(report.chips.any { it.label == "Ultra HDR source" })
         assertTrue(report.chips.any { it.detail.contains("Preserve HDR Metadata") })
+    }
+
+    @Test
+    fun hdrBaseGainMapSourceStillReportsUltraHdrSource() {
+        val report = ExportColorConfidenceEngine.analyze(
+            config = ExportConfig(codec = VideoCodec.HEVC, hdr10PlusMetadata = false),
+            width = 1920,
+            height = 1080,
+            hdrSupport = ExportColorConfidenceEngine.HdrEncodeSupport(),
+            sourceSummary = ExportColorConfidenceEngine.SourceHdrSummary(
+                supportedFormats = setOf(SourceHdrFormat.ULTRA_HDR_HDR_BASE_GAIN_MAP.displayName),
+                inspectedSourceCount = 1,
+                totalSourceCount = 1
+            )
+        )
+
+        assertFalse(report.hasWarnings)
+        assertTrue(report.chips.any { chip ->
+            chip.label == "Ultra HDR source" &&
+                chip.detail.contains(SourceHdrFormat.ULTRA_HDR_HDR_BASE_GAIN_MAP.displayName)
+        })
     }
 
     @Test

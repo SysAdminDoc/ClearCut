@@ -26,7 +26,7 @@ This is the raw harvested backlog before final prioritization. It intentionally 
 | `media3-inspector-frame` migration gate | Media3 1.10 split frame extraction into a new module/import path; R6.10c found no current broken imports | Use for future HDR/effect-aware thumbnails or custom decoder frame extraction |
 | Media3 `ProgressSlider` replacement | R6.10d found player-position/internal-seek behavior conflicts with edited-timeline controls | Revisit only if Media3 exposes externally controlled project-timeline progress |
 | Dual-texture programmable blend modes | Current single-texture fallback lacks exact pro blend math | Media3/custom GL compositor path |
-| Ultra HDR/gainmap export path | Android 16 HDR roadmap items | Export settings, HDR ingest/export tests |
+| Ultra HDR/gainmap export path | R6.12a source direction detection is complete; R6.12b still needs gain-map still-frame encoding | HEIC/JPEG still export, HDR ingest/export tests |
 | APV ingest watch item | Android 16 professional codec trend; R6.11b source chip is complete | Future APV decode/device QA beyond the current `video/apv` import flag |
 
 ## Diagnostics, Trust, and Recovery

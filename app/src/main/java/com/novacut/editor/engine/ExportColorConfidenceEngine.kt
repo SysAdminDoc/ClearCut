@@ -34,7 +34,10 @@ object ExportColorConfidenceEngine {
         val hasHdrSource: Boolean get() = supportedFormats.isNotEmpty()
         val hasApvSource: Boolean get() = apvSourceCount > 0
         val hasUltraHdrGainMap: Boolean
-            get() = supportedFormats.any { it.equals("Ultra HDR gain map", ignoreCase = true) }
+            get() = supportedFormats.any { format ->
+                format.contains("Ultra HDR", ignoreCase = true) &&
+                    format.contains("gain map", ignoreCase = true)
+            }
         val isFullyInspected: Boolean
             get() = totalSourceCount > 0 && inspectedSourceCount >= totalSourceCount
     }
@@ -199,7 +202,7 @@ object ExportColorConfidenceEngine {
         if (sourceSummary.hasUltraHdrGainMap) {
             chips += Chip(
                 label = "Ultra HDR source",
-                detail = "Gain-map HDR was detected during import.",
+                detail = "Detected ${sourceSummary.formatList()} during import.",
                 tone = Tone.GOOD
             )
         } else if (sourceSummary.hasHdrSource) {

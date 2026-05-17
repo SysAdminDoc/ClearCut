@@ -60,7 +60,7 @@ Scores are 1-5. Higher is better except effort and risk, where higher means hard
 | Cloud-only generative video/lip-sync | Keep behind explicit provider consent and privacy policy. Do not make it core editor behavior. |
 | OpenCut-style web/desktop stack ideas | Watch product/UX patterns, not architecture. NovaCut should remain Android-native. |
 | Gyroflow integration | Prefer sidecar/project import and algorithm reference before full native gyro implementation. |
-| APV / Ultra HDR v2 | APV source chip is complete; continue tracking real-device APV decode QA and Ultra HDR v2. |
+| APV / Ultra HDR v2 | APV source chip and Ultra HDR gainmap direction detection are complete; continue tracking real-device APV decode QA and gain-map still export. |
 
 ## Rejected or Hold
 

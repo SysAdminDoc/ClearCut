@@ -99,7 +99,8 @@ enum class SourceHdrFormat(val displayName: String) {
     HDR10_PLUS("HDR10+"),
     HLG("HLG"),
     DOLBY_VISION("Dolby Vision"),
-    ULTRA_HDR_GAIN_MAP("Ultra HDR gain map")
+    ULTRA_HDR_GAIN_MAP("Ultra HDR gain map"),
+    ULTRA_HDR_HDR_BASE_GAIN_MAP("Ultra HDR HDR-base gain map")
 }
 
 @Immutable
@@ -112,7 +113,9 @@ data class SourceColorMetadata(
 ) {
     val isInspected: Boolean get() = inspectedAtMs > 0L
     val hasHdr: Boolean get() = hdrFormats.isNotEmpty()
-    val hasUltraHdrGainMap: Boolean get() = SourceHdrFormat.ULTRA_HDR_GAIN_MAP in hdrFormats
+    val hasUltraHdrGainMap: Boolean
+        get() = SourceHdrFormat.ULTRA_HDR_GAIN_MAP in hdrFormats ||
+            SourceHdrFormat.ULTRA_HDR_HDR_BASE_GAIN_MAP in hdrFormats
 }
 
 private const val MIN_PLAYBACK_SPEED = 0.01f

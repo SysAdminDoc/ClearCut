@@ -259,3 +259,26 @@ Result:
 - R6.11b closes as a UI surfacing item: `summarizeSources()` counts distinct
   inspected APV source URIs, and ExportSheet renders the resulting `Source is
   APV` warning-tone chip through the existing color-confidence outlook.
+
+## Continuation Research Notes - Ultra HDR Gainmap Direction R6.12a/c
+
+Targeted follow-up after R6.11b queried:
+
+- Android Developers `android.graphics.Gainmap` API reference.
+- Android Ultra HDR image format / ISO 21496-1 compatibility guidance.
+- AOSP Android 16 release notes for HDR media improvements.
+- Local `MediaImportEngine`, `SourceHdrFormat`, autosave persistence, and
+  ExportSheet color-confidence source chips.
+
+Result:
+
+- Android 16 exposes `Gainmap.getGainmapDirection()` with
+  `GAINMAP_DIRECTION_SDR_TO_HDR` and `GAINMAP_DIRECTION_HDR_TO_SDR`. The latter
+  is the roadmap's HDR-base + SDR-gainmap variant.
+- NovaCut did not need a new autosave schema field: adding
+  `SourceHdrFormat.ULTRA_HDR_HDR_BASE_GAIN_MAP` keeps the direction in the
+  existing persisted `hdrFormats` array, while older autosaves continue to load
+  through the existing unknown-format guard.
+- R6.12a and R6.12c close together. R6.12b remains open because writing HEIC or
+  JPEG still-frame gain maps requires a real encode path and device/API tests,
+  not only source metadata.

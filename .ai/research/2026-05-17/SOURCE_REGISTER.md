@@ -57,6 +57,10 @@ Every meaningful roadmap claim in this research run should trace to one of these
 | L49 | `docs/progress-slider-media3-compose.md` | Source-backed R6.10d decision note. |
 | L50 | `app/src/main/java/com/novacut/editor/engine/ExportColorConfidenceEngine.kt` | R6.11b APV source summary and ExportSheet chip input. |
 | L51 | `app/src/test/java/com/novacut/editor/engine/ExportColorConfidenceEngineTest.kt` | Regression tests for the R6.11b APV chip and distinct-source counting. |
+| L52 | `app/src/main/java/com/novacut/editor/engine/MediaImportEngine.kt` | R6.12a Android 16 gainmap direction classification. |
+| L53 | `app/src/main/java/com/novacut/editor/model/Project.kt` | R6.12a persisted source HDR format enum. |
+| L54 | `app/src/test/java/com/novacut/editor/engine/MediaImportEngineTest.kt` | Regression tests for R6.12a gainmap direction classification. |
+| L55 | `docs/models.md` | R6.12c ISO 21496-1 v1/v2 distinction note. |
 
 ## Official Platform and Library Sources
 
@@ -98,6 +102,8 @@ Every meaningful roadmap claim in this research run should trace to one of these
 | E34 | Media3 inspector-frame sources JAR | https://dl.google.com/dl/android/maven2/androidx/media3/media3-inspector-frame/1.10.1/media3-inspector-frame-1.10.1-sources.jar | Source inspection for `androidx.media3.inspector.frame.FrameExtractor`, `setEffects`, `setMediaCodecSelector`, `setExtractHdrFrames`, `getFrame`, and `getThumbnail`; SHA-256 `a03b962a242236b87fde0272c5478c2e6b7fc520288d3d58bb0f2e866d827654`. |
 | E35 | Android 16 release notes | https://source.android.com/docs/whatsnew/android-16-release | R6.11 APV codec and R6.12 Ultra HDR v2 platform source. |
 | E36 | SamMobile Galaxy S26 APV report | https://www.sammobile.com/news/galaxy-s26-ultra-world-first-phone-apv-codec-support/ | Non-official market-signal source for first-device APV ingest claim in the roadmap. |
+| E37 | Android `Gainmap` API reference | https://developer.android.com/reference/android/graphics/Gainmap | R6.12a `GAINMAP_DIRECTION_SDR_TO_HDR`, `GAINMAP_DIRECTION_HDR_TO_SDR`, and Android 16 `getGainmapDirection()` source. |
+| E38 | Android Ultra HDR image format guidance | https://developer.android.com/media/platform/hdr-image-format | R6.12c ISO 21496-1 compatibility and encode/decode guidance. |
 
 ## Open-Source Competitor and Adjacent Sources
 
