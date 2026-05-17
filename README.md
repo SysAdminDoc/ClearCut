@@ -346,9 +346,6 @@ Key external dependencies currently in `build.gradle.kts`:
 
 | Permission | Purpose |
 |------------|---------|
-| `READ_MEDIA_VIDEO/AUDIO/IMAGES` | Access media files (API 33+) |
-| `READ_EXTERNAL_STORAGE` | Legacy media access (API < 33) |
-| `WRITE_EXTERNAL_STORAGE` | Save exports (API < 29) |
 | `RECORD_AUDIO` | Voiceover recording |
 | `FOREGROUND_SERVICE` | Background export processing |
 | `FOREGROUND_SERVICE_MEDIA_PROCESSING` | Android 14+ foreground export classification |
@@ -356,6 +353,8 @@ Key external dependencies currently in `build.gradle.kts`:
 | `INTERNET` | Model downloads (Whisper), cloud inpainting API |
 | `ACCESS_NETWORK_STATE` | Respect Wi-Fi-only model download settings |
 | `VIBRATE` | Haptic feedback |
+
+Media access uses the system Photo Picker (`ActivityResultContracts.PickVisualMedia`) and `ACTION_OPEN_DOCUMENT` exclusively — NovaCut requests **no** broad `READ_MEDIA_VIDEO` / `READ_MEDIA_IMAGES` / `READ_MEDIA_AUDIO` / `READ_EXTERNAL_STORAGE` / `WRITE_EXTERNAL_STORAGE` permissions, so the per-URI grant model survives background kill without the Android 14 Selected Photos compatibility-mode loss.
 
 ## Known Limitations
 - Multi-sequence export now honors track opacity through Media3 compositor settings, and all 18 fallback blend modes render distinctly; true source-over-destination blend math still needs a custom programmable compositor because Media3's public settings only expose alpha/transform
