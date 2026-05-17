@@ -281,6 +281,7 @@ fun SettingsScreen(
                     stateLabel = whisperModelState.displayLabel(),
                     storageLabel = modelStorageLabel(aiModelStorage.whisperBytes, stringResource(R.string.settings_whisper_size)),
                     canRemove = canRemoveWhisperModel,
+                    isError = whisperModelState == WhisperModelState.ERROR,
                     isBusy = aiModelStorage.isRemovingWhisper || whisperModelState == WhisperModelState.DOWNLOADING,
                     actionLabel = if (canRemoveWhisperModel) {
                         stringResource(R.string.remove)
@@ -306,6 +307,7 @@ fun SettingsScreen(
                     stateLabel = segmentationModelState.displayLabel(),
                     storageLabel = modelStorageLabel(aiModelStorage.segmentationBytes, stringResource(R.string.settings_segmentation_size)),
                     canRemove = canRemoveSegmentationModel,
+                    isError = segmentationModelState == SegmentationModelState.ERROR,
                     isBusy = aiModelStorage.isRemovingSegmentation || segmentationModelState == SegmentationModelState.DOWNLOADING,
                     actionLabel = if (canRemoveSegmentationModel) {
                         stringResource(R.string.remove)
@@ -898,6 +900,7 @@ private fun SettingsAiModelRow(
     stateLabel: String,
     storageLabel: String,
     canRemove: Boolean,
+    isError: Boolean,
     isBusy: Boolean,
     actionLabel: String,
     actionIcon: ImageVector,
@@ -928,6 +931,7 @@ private fun SettingsAiModelRow(
                     text = stateLabel,
                     accent = when {
                         canRemove -> Mocha.Green
+                        isError -> Mocha.Red
                         isBusy -> Mocha.Sapphire
                         else -> Mocha.Overlay1
                     }

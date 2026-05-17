@@ -2,7 +2,7 @@
 
 Authoritative list of every ML model and native AAR that NovaCut may fetch or bundle. Pairs with the [ModelDownloadManager](../app/src/main/java/com/novacut/editor/engine/ModelDownloadManager.kt) and is the single reference for F-Droid `NonFreeNet` audits, license review, reproducible build verification, and 16 KB page-size compliance tracking.
 
-**Last refresh:** 2026-05-16 · See [ROADMAP.md](../ROADMAP.md) Round 5 §R5.6, §R5.9 and Round 6 §R6.1, §R6.2, §R6.6, §R6.8 for the policy that gates each entry.
+**Last refresh:** 2026-05-17 · See [ROADMAP.md](../ROADMAP.md) Round 5 §R5.6, §R5.9 and Round 6 §R6.1, §R6.2, §R6.6, §R6.8 for the policy that gates each entry.
 
 ---
 
@@ -10,9 +10,9 @@ Authoritative list of every ML model and native AAR that NovaCut may fetch or bu
 
 | ID | File | Source URL | SHA-256 pinned | Size | License | NDK aligned for 16 KB? | Used by |
 |---|---|---|---|---|---|---|---|
-| `whisper.tiny.en.onnx` | `model.onnx`, `vocab.json` | `https://huggingface.co/onnx-community/whisper-tiny.en/resolve/main/onnx` + `/vocab.json` | ⚠ TBD — record SHA-256 in `ModelDownloadManager.FileSpec` on next bump | ~75 MB | MIT (model: Apache-2.0 by OpenAI) | n/a (pure ONNX, no native) | [`WhisperEngine.kt`](../app/src/main/java/com/novacut/editor/engine/whisper/WhisperEngine.kt) |
-| `selfie_segmenter.tflite` | `selfie_segmenter.tflite` | `https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite` | `191ac9529ae506ee0beefa6b2c945a172dab9d07d1e802a290a4e4038226658b` | ~256 KB | Apache-2.0 (Google MediaPipe) | n/a (TFLite via MediaPipe AAR; AAR alignment tracked below) | [`SegmentationEngine.kt`](../app/src/main/java/com/novacut/editor/engine/segmentation/SegmentationEngine.kt) |
-| `lama_dilated.onnx` | `lama_dilated.onnx` | `https://huggingface.co/novacut/lama-dilated-onnx/resolve/main/lama_dilated.onnx` (mirror of [advimman/lama](https://github.com/advimman/lama)) | ⚠ TBD — required before A.12 cloud variant ships | ~174 MB | Apache-2.0 | n/a (ONNX) | [`InpaintingEngine.kt`](../app/src/main/java/com/novacut/editor/engine/InpaintingEngine.kt) |
+| `whisper.tiny.en.onnx` | `encoder_model.onnx`, `decoder_model.onnx`, `vocab.json` | `https://huggingface.co/onnx-community/whisper-tiny.en/resolve/2575352d61be1bf7225cf8f8b268a4678025fc58/onnx/...` + `/vocab.json` | `encoder_model.onnx`: `8c361b9430a5ef6619ee64b7fe06c725df19f36d508cc8b847064b34a888a3fe`; `decoder_model.onnx`: `14f1d425a4821feeba77cf93eeeaf812ca816f2e3fec382b4f0fa93d29de710e`; `vocab.json`: `f6bd25a65e4e63ca31360e9fb11c7e4f9a391a78385d640acd814092dd6eee4f` | 145.2 MiB total (32,904,992 + 118,395,947 + 999,186 bytes) | MIT (model: Apache-2.0 by OpenAI) | n/a (pure ONNX, no native) | [`WhisperEngine.kt`](../app/src/main/java/com/novacut/editor/engine/whisper/WhisperEngine.kt) |
+| `selfie_segmenter.tflite` | `selfie_segmenter.tflite` | `https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite?generation=1683436453600523` | `191ac9529ae506ee0beefa6b2c945a172dab9d07d1e802a290a4e4038226658b` | 249,537 bytes (~244 KiB) | Apache-2.0 (Google MediaPipe) | n/a (TFLite via MediaPipe AAR; AAR alignment tracked below) | [`SegmentationEngine.kt`](../app/src/main/java/com/novacut/editor/engine/segmentation/SegmentationEngine.kt) |
+| `lama_dilated.onnx` | `lama_dilated.onnx` | `https://huggingface.co/qualcomm/LaMa-Dilated/resolve/ab898502c9bd764a50eb2719a309694b43eae658/LaMa-Dilated.onnx` (Qualcomm AI Hub export of [advimman/lama](https://github.com/advimman/lama)) | `6f9e1d401eb67a63fb1be6c0cf3283d800bf4c20656028f96b044fedc382d762` | 182,781,794 bytes (~174.3 MiB) | Original implementation Apache-2.0; Qualcomm HF metadata: `other` — review NOTICE before release | n/a (ONNX) | [`InpaintingEngine.kt`](../app/src/main/java/com/novacut/editor/engine/InpaintingEngine.kt) |
 
 ## 2. Native AARs (bundled or planned) — 16 KB compliance gates
 
@@ -83,5 +83,6 @@ For reproducibility (R5.6c), every entry above with a download URL must also rec
 - **Approximate size** for the user disclosure sheet (column 5)
 - **License** for the LICENSE/NOTICE shipping requirement (column 6)
 
-Rows currently marked `⚠ TBD` for SHA-256 are blocking-but-not-shipping items: the engine downloads them at runtime today without a checksum pin, which violates R5.9b ("Model checksum enforcement at runtime"). Each row must record the SHA-256 before its corresponding Tier A engine activates.
+As of the 2026-05-17 R7.2 pass, every §1 active model row has an exact source locator and SHA-256 pin that is also wired through `ModelDownloadManager.ModelFile(checksumRequired = true)`. `app/src/test/java/com/novacut/editor/engine/ModelRegistryDocumentationTest.kt` fails the JVM test suite if §1 reintroduces `TBD` checksum placeholders or malformed SHA-256 values.
 
+Future rows in §3 remain planning targets only. They must move into §1 with a public source locator, exact SHA-256, size disclosure, license posture, PAD/F-Droid decision, and runtime checksum wiring before any corresponding Tier A engine activates.
