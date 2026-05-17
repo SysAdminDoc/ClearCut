@@ -59,6 +59,7 @@ import com.novacut.editor.model.ClipLabel
 import androidx.compose.ui.graphics.Color
 import com.novacut.editor.ui.export.BatchExportPanel
 import com.novacut.editor.ui.export.ExportSheet
+import com.novacut.editor.ui.export.ExportSheetPresentation
 import com.novacut.editor.ui.mediapicker.MediaPickerSheet
 import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.NovaCutDialogIcon
@@ -542,6 +543,13 @@ fun EditorScreen(
         isClipMode -> 284.dp
         else -> 330.dp
     }
+    val useEmbeddedExportPane = state.panels.isOpen(PanelId.EXPORT_SHEET) &&
+        adaptiveLayoutDecision.preferEmbeddedExportPane
+    val embeddedExportPaneWidth = when {
+        configuration.screenWidthDp >= 1280 -> 500.dp
+        configuration.screenWidthDp >= 1120 -> 460.dp
+        else -> 420.dp
+    }
 
     val allClips by remember(state.tracks) {
         derivedStateOf { state.tracks.flatMap { it.clips } }
@@ -725,7 +733,10 @@ fun EditorScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(start = desktopSidebarWidth)
+                .padding(
+                    start = desktopSidebarWidth,
+                    end = if (useEmbeddedExportPane) embeddedExportPaneWidth else 0.dp
+                )
                 .then(if (isTutorialOpen) Modifier.clearAndSetSemantics { } else Modifier)
         ) {
             // Top bar (Home / Undo / Redo / Delete / More / Export)
@@ -1295,10 +1306,7 @@ fun EditorScreen(
         }
 
         // Export sheet
-        BottomSheetSlot(
-            visible = state.panels.isOpen(PanelId.EXPORT_SHEET),
-            modifier = Modifier.align(Alignment.BottomCenter)
-        ) {
+        val exportPanelContent: @Composable () -> Unit = {
             val exportSmartRenderSummary = remember(state.tracks, state.exportConfig, state.textOverlays) {
                 SmartRenderEngine.getSummary(
                     SmartRenderEngine.analyzeTimeline(
@@ -1322,6 +1330,11 @@ fun EditorScreen(
                 smartRenderSummary = exportSmartRenderSummary,
                 sourceHdrSummary = sourceHdrSummary,
                 aiUsageLedger = state.aiUsageLedger,
+                presentation = if (useEmbeddedExportPane) {
+                    ExportSheetPresentation.EMBEDDED_PANE
+                } else {
+                    ExportSheetPresentation.BOTTOM_SHEET
+                },
                 onConfigChanged = viewModel::updateExportConfig,
                 onStartExport = {
                     // Use app-private external dir — works on all Android versions including 11+
@@ -1343,6 +1356,25 @@ fun EditorScreen(
                 onClearAiUsageLedger = viewModel::clearAiUsageLedger,
                 onClose = viewModel::hideExportSheet
             )
+        }
+        if (useEmbeddedExportPane) {
+            SidePanelSlot(
+                visible = state.panels.isOpen(PanelId.EXPORT_SHEET),
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .fillMaxHeight()
+                    .width(embeddedExportPaneWidth)
+                    .zIndex(8f)
+            ) {
+                exportPanelContent()
+            }
+        } else {
+            BottomSheetSlot(
+                visible = state.panels.isOpen(PanelId.EXPORT_SHEET),
+                modifier = Modifier.align(Alignment.BottomCenter)
+            ) {
+                exportPanelContent()
+            }
         }
 
         // Audio panel
@@ -2303,7 +2335,10 @@ fun EditorScreen(
             onCancel = viewModel::cancelExport,
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = 56.dp, end = 8.dp)
+                .padding(
+                    top = 56.dp,
+                    end = if (useEmbeddedExportPane) embeddedExportPaneWidth + 8.dp else 8.dp
+                )
         )
 
         // First Run Tutorial

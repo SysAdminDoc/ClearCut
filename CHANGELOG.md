@@ -64,7 +64,10 @@
   also accepts external drag-and-drop media URIs and imports them through the
   same local-copy path as picker selections. AndroidX WindowManager now feeds
   half-open horizontal `FoldingFeature` posture into the editor so tabletop
-  sizing is driven by real foldable state.
+  sizing is driven by real foldable state. The manifest opts into
+  activity-embedding split readiness, and 1000dp+ three-pane windows render
+  ExportSheet as an embedded side pane so export controls no longer cover the
+  editor on tablet/desktop-class windows.
 - **R8.10 — Stylus handwriting verified default-on.** Compose BOM
   2026.05.00 pulls `foundation` ≥ 1.7.0; a grep showed zero
   `KeyboardType.Password` declarations across the codebase, so every
