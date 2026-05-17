@@ -456,13 +456,16 @@ data class AutoSaveState(
             return put(name, (if (value.isFinite()) value else fallback).toDouble())
         }
 
-        fun deserialize(raw: String): AutoSaveState {
+        fun deserialize(
+            raw: String,
+            uriParser: (String) -> Uri? = { Uri.parse(it) },
+        ): AutoSaveState {
             val json = JSONObject(raw)
             val fileVersion = json.optInt("version", 0)
             if (fileVersion > FORMAT_VERSION) {
                 Log.w(TAG, "Auto-save written by newer format ($fileVersion > $FORMAT_VERSION); attempting best-effort load")
             }
-            val tracks = deserializeTracks(json.optJSONArray("tracks") ?: JSONArray())
+            val tracks = deserializeTracks(json.optJSONArray("tracks") ?: JSONArray(), uriParser)
             // Clean up orphaned linkedClipId references, and break any self-reference —
             // a clip linked to itself would produce an infinite loop in any traversal
             // that follows the chain (e.g. slip-link propagation, group moves).
@@ -491,10 +494,10 @@ data class AutoSaveState(
                     val io = imageOverlaysArr.getJSONObject(i)
                     val srcUri = io.optString("sourceUri", "")
                     if (srcUri.isEmpty()) return@mapNotNull null
-                    val parsedUri = try { android.net.Uri.parse(srcUri) } catch (e: Exception) {
+                    val parsedUri = try { uriParser(srcUri) } catch (e: Exception) {
                         Log.w(TAG, "Skipping image overlay with malformed URI: $srcUri", e)
                         return@mapNotNull null
-                    }
+                    } ?: return@mapNotNull null
                     // Coerce time range BEFORE constructing so a corrupt save with
                     // startTimeMs >= endTimeMs doesn't trip the ImageOverlay require()
                     // block and silently drop the overlay (data loss on recovery).
@@ -1081,13 +1084,16 @@ data class AutoSaveState(
 
         // --- Deserialization ---
 
-        private fun deserializeTracks(arr: JSONArray): List<Track> {
+        private fun deserializeTracks(
+            arr: JSONArray,
+            uriParser: (String) -> Uri?,
+        ): List<Track> {
             if (arr.length() > MAX_TRACKS) {
                 Log.w(TAG, "Auto-save contains ${arr.length()} tracks; loading first $MAX_TRACKS")
             }
             return (0 until arr.length().coerceAtMost(MAX_TRACKS)).mapNotNull { i ->
                 try {
-                    deserializeTrack(arr.getJSONObject(i))
+                    deserializeTrack(arr.getJSONObject(i), uriParser)
                 } catch (e: Exception) {
                     Log.w(TAG, "Failed to deserialize track $i", e)
                     null
@@ -1095,7 +1101,10 @@ data class AutoSaveState(
             }
         }
 
-        private fun deserializeTrack(json: JSONObject): Track {
+        private fun deserializeTrack(
+            json: JSONObject,
+            uriParser: (String) -> Uri?,
+        ): Track {
             val clipsArr = json.optJSONArray("clips") ?: JSONArray()
             val audioFxArr = json.optJSONArray("audioEffects") ?: JSONArray()
             if (clipsArr.length() > MAX_CLIPS_PER_TRACK) {
@@ -1118,7 +1127,7 @@ data class AutoSaveState(
                 trackHeight = json.optInt("trackHeight", 64).coerceIn(32, 240),
                 isCollapsed = json.optBoolean("isCollapsed", false),
                 clips = (0 until clipsArr.length().coerceAtMost(MAX_CLIPS_PER_TRACK)).mapNotNull { i ->
-                    try { deserializeClip(clipsArr.getJSONObject(i)) } catch (e: Exception) {
+                    try { deserializeClip(clipsArr.getJSONObject(i), uriParser) } catch (e: Exception) {
                         Log.w(TAG, "Failed to deserialize clip $i", e); null
                     }
                 },
@@ -1128,7 +1137,11 @@ data class AutoSaveState(
             )
         }
 
-        private fun deserializeClip(json: JSONObject, depth: Int = 0): Clip? {
+        private fun deserializeClip(
+            json: JSONObject,
+            uriParser: (String) -> Uri?,
+            depth: Int = 0,
+        ): Clip? {
             if (depth > MAX_COMPOUND_CLIP_DEPTH) {
                 Log.w(TAG, "Skipping compound clip beyond depth $MAX_COMPOUND_CLIP_DEPTH")
                 return null
@@ -1143,10 +1156,10 @@ data class AutoSaveState(
                 Log.w(TAG, "Skipping clip ${json.optString("id", "?")} with empty sourceUri")
                 return null
             }
-            val parsedSourceUri = try { Uri.parse(sourceUriStr) } catch (e: Exception) {
+            val parsedSourceUri = try { uriParser(sourceUriStr) } catch (e: Exception) {
                 Log.w(TAG, "Skipping clip with malformed sourceUri: $sourceUriStr", e)
                 return null
-            }
+            } ?: return null
             val sourceDurationMs = json.optLong("sourceDurationMs", 0L)
             if (sourceDurationMs <= 0L) {
                 Log.w(TAG, "Skipping clip ${json.optString("id", "?")} with non-positive sourceDurationMs=$sourceDurationMs")
@@ -1163,7 +1176,7 @@ data class AutoSaveState(
             val fadeInMs = rawFadeIn.coerceAtMost(clipDurationMs)
             val fadeOutMs = rawFadeOut.coerceAtMost((clipDurationMs - fadeInMs).coerceAtLeast(0L))
             val proxyUri = json.optString("proxyUri", "").takeIf { it.isNotEmpty() }?.let { uriStr ->
-                try { Uri.parse(uriStr) } catch (e: Exception) {
+                try { uriParser(uriStr) } catch (e: Exception) {
                     Log.w(TAG, "Discarding malformed proxyUri: $uriStr", e); null
                 }
             }
@@ -1197,7 +1210,7 @@ data class AutoSaveState(
                         return@let emptyList()
                     }
                     (0 until cappedArrayLength(arr, MAX_COMPOUND_CLIPS_PER_CLIP, "compound clips")).mapNotNull { i ->
-                        try { deserializeClip(arr.getJSONObject(i), depth + 1) } catch (e: Exception) { Log.w(TAG, "Failed to deserialize compound clip $i", e); null }
+                        try { deserializeClip(arr.getJSONObject(i), uriParser, depth + 1) } catch (e: Exception) { Log.w(TAG, "Failed to deserialize compound clip $i", e); null }
                     }
                 } ?: emptyList(),
                 linkedClipId = json.optString("linkedClipId", "").takeIf { it.isNotEmpty() },

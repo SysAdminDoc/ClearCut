@@ -281,7 +281,7 @@ class AutoSaveStateTest {
             put("textOverlays", textOverlays)
         }
 
-        val state = AutoSaveState.deserialize(root.toString())
+        val state = AutoSaveState.deserialize(root.toString(), uriParser = { FakeUri })
 
         assertEquals(5_000, state.textOverlays.size)
         assertEquals(256, state.tracks.single().clips.single().effects.size)

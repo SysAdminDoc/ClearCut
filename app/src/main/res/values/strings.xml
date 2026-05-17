@@ -264,6 +264,17 @@
     <string name="settings_reset_tutorial">Reset First-Run Tutorial</string>
     <string name="settings_reset_tutorial_row_description">Show the guided editor walkthrough the next time NovaCut opens.</string>
     <string name="settings_reset_tutorial_action">Reset tutorial</string>
+    <string name="settings_diagnostics">Diagnostics</string>
+    <string name="settings_diagnostics_description">Create a local support bundle only when you choose to share one.</string>
+    <string name="settings_diagnostic_export">Diagnostic ZIP</string>
+    <string name="settings_diagnostic_export_description">Saves app, device, codec, model, and redacted log details. Project files, media, captions, and transcripts are never included.</string>
+    <string name="settings_diagnostic_export_action">Save ZIP</string>
+    <string name="settings_diagnostic_exporting">Saving</string>
+    <string name="settings_diagnostic_saved">Saved locally</string>
+    <string name="settings_diagnostic_file_format">%1$s · %2$s</string>
+    <string name="settings_diagnostic_share">Share</string>
+    <string name="settings_diagnostic_rebuild">Rebuild</string>
+    <string name="settings_diagnostic_share_chooser">Share diagnostic ZIP</string>
     <string name="settings_about">About</string>
     <string name="settings_about_description">Build and engine details for troubleshooting and support.</string>
     <string name="settings_version">Version</string>

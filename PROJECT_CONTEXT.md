@@ -1,6 +1,6 @@
 # NovaCut Project Context
 
-Last consolidated: 2026-05-17.
+Last consolidated: 2026-05-17. Last implementation update: 2026-05-17.
 
 This file is the committed project memory for future work. It reconciles the live repository, local instruction files, prior memory, current roadmap, and the deep research run in [.ai/research/2026-05-17](.ai/research/2026-05-17/).
 
@@ -64,22 +64,29 @@ High-level modules and patterns:
    - `targetSdk = 36` makes native dependency alignment a release gate.
    - ONNX Runtime, MediaPipe, and future native libraries need repeatable page-size verification.
 
-2. Diagnostic export UX.
-   - Engine-level diagnostic export exists, but Settings needs a polished local-only flow.
-   - This is the fastest trust/recovery improvement because media export failures are device- and source-specific.
-
-3. Model registry closure.
+2. Model registry closure.
    - `docs/models.md` still has `SHA TBD` rows and unresolved activation details.
    - Finish checksums, licenses, PAD/F-Droid posture, and validation tests before adding more large model payloads.
 
-4. Dependency stabilization.
+3. Dependency stabilization.
    - Media3 1.10.1 is current.
    - Compose BOM, Room, WorkManager, Hilt, ONNX Runtime, OkHttp, and Lottie have newer lines available.
    - Kotlin and AGP latest metadata points at pre-release lines and should be handled intentionally.
 
-5. FFmpeg 16 KB and license decision.
+4. FFmpeg 16 KB and license decision.
    - A future FFmpeg path unlocks concat demuxer, reverse export, libass subtitle burn-in, loudnorm, and mixed copy/re-encode.
    - The decision must document GPL/LGPL flavor, F-Droid implications, ABI coverage, and Play Store 16 KB evidence.
+
+5. Diagnostic export follow-up.
+   - The Settings diagnostic ZIP workflow is now implemented.
+   - Future diagnostics work should focus on emulator/UI validation and any additional redaction tests discovered from real support bundles.
+
+## Recent Implementation Notes
+
+2026-05-17 autonomous continuation:
+
+- Restored `:app:testDebugUnitTest` to a green baseline by letting `AutoSaveState.deserialize()` accept an injectable URI parser for JVM tests while keeping `Uri.parse()` as the production default.
+- Completed R5.5d / R7.1. Settings now exposes the local-only diagnostic ZIP workflow, with busy/success/error state, saved-file summary, FileProvider share action, and diagnostics path scoping in `file_paths.xml`.
 
 ## Build and Verification Notes
 

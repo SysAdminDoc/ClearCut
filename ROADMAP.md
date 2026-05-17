@@ -2,7 +2,7 @@
 
 Forward-looking tracker for planned work. Release history lives in [CHANGELOG.md](CHANGELOG.md).
 
-Current version: **v3.74.9** (versionCode 146). Last refresh: **2026-05-17** (Round 7).
+Current version: **v3.74.9** (versionCode 146). Last refresh: **2026-05-17** (Round 8).
 
 Legend: `[ ]` not started · `[~]` in progress · `[x]` done (moved to CHANGELOG).
 
@@ -16,9 +16,9 @@ Round 7 reconciled the live repository, local memory, project instructions, Mave
 
 ### R7.1 - Diagnostic export UI is the fastest trust win
 
-Local evidence: `app/src/main/java/com/novacut/editor/engine/DiagnosticsExportEngine.kt`, `app/src/main/java/com/novacut/editor/viewmodel/SettingsViewModel.kt`, and `app/src/main/java/com/novacut/editor/screen/SettingsScreen.kt` show that the engine-side diagnostic ZIP path exists but is not yet a first-class Settings workflow. Competitor research showed that mature editors lean on export logs, reproducible diagnostics, and support bundles because media failures are device-, codec-, and source-file-specific.
+Local evidence: `app/src/main/java/com/novacut/editor/engine/DiagnosticExportEngine.kt`, `app/src/main/java/com/novacut/editor/ui/settings/SettingsViewModel.kt`, and `app/src/main/java/com/novacut/editor/ui/settings/SettingsScreen.kt` show that the diagnostic ZIP path is now a first-class Settings workflow. Competitor research showed that mature editors lean on export logs, reproducible diagnostics, and support bundles because media failures are device-, codec-, and source-file-specific.
 
-Implementation target: add a visible Settings action that explains the local-only contents, creates the ZIP, exposes share/save affordances, handles busy/error/success states, and redacts media paths by default. This completes [R5.5d](#r55--observability--privacy-preserving-telemetry) without adding telemetry.
+Done in the autonomous continuation after Round 7: Settings now exposes a "Diagnostic ZIP" row that explains the local-only bundle, creates the ZIP through `DiagnosticExportEngine`, stores it under `filesDir/diagnostics/`, shows busy/success/error states, and shares through `FileProvider` + `ACTION_SEND`. `file_paths.xml` grants only the diagnostics directory, and the engine keeps project files, media, captions, transcripts, and autosave JSON out of the bundle. This completes [R5.5d](#r55--observability--privacy-preserving-telemetry) without adding telemetry.
 
 ### R7.2 - Model registry checksum closure before new model activation
 
@@ -50,6 +50,19 @@ Local evidence: root `CLAUDE.md` and `.claude/CLAUDE.md` are local tool notes an
 
 Implementation target: keep tool-specific files intact, but use [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) as the committed source of truth for current version, architecture, build commands, memory reconciliation, and handoff context.
 
+## Round 8 — Platform Deltas & Compliance Wave (2026-05-17)
+
+Round 8 follows the same-day Round 7 consolidation. Round 7 closed release-readiness gates that were already implied by the live repo (16 KB, model registry, dependency train, FFmpeg, Lottie spike). Round 8 extends with **platform deltas Round 7 didn't surface** — Android 15/16 mandatory behaviors that ship the moment we keep `targetSdk = 36`, plus genuinely new 2026 capabilities (M3 Expressive, C2PA, FTC/EU disclosure law, predictive back), plus form-factor and adjacent-app deltas. Every item is delta-only — anything already covered in Rounds 2-7 is referenced, not repeated.
+
+Detailed R8.N entries with evidence and implementation targets live in [§Research Round 8](#research-round-8--2026-05-17). The Forward View immediately below has been updated to integrate the Now/Next/Later items from this round.
+
+### Round 8 themes
+- **Mandatory at `targetSdk = 36`** — edge-to-edge cannot opt out, predictive back is default-on, adaptive resizability applies on sw≥600dp. These are not "should do" — they ship the next time we re-publish.
+- **2026 regulatory wave** — EU AI Act Article 50 effective 2026-08-02, FTC AI policy statement March 2026, federal "Protecting Consumers from Deceptive AI Act" April 2026. Three of NovaCut's roadmap items (R5.2d generative video, R6.18 lip-sync, A.12 cloud inpainting) become disclosure-bearing once they ship.
+- **Provenance over telemetry** — C2PA Content Credentials are the strongest privacy-preserving trust signal NovaCut can ship. Pixel 10 already does it at Assurance Level 2; the c2pa-android library makes MP4 signing a one-engine integration. Pairs cleanly with `GenerativeVideoPolicy`.
+- **Long-render reliability** — `ThermalManagerService.getThermalHeadroom(forecastSeconds)` is the single most under-used Android API for an editor. Throttling export when the SoC is hot turns "device shuts down at 78%" complaints into "render took 4 minutes longer."
+- **Form-factor maturity** — Android 16 forces resizable+multi-window on sw≥600dp. NovaCut's panel-heavy editor needs an explicit large-screen pass before it lands on Pixel Fold / Pixel Tablet / Galaxy Z Fold / unfolded inner displays without UI clipping.
+
 ## Forward View — Now / Next / Later / Under Consideration / Rejected (2026-05)
 
 This is the **prioritized synthesis** across all rounds. Every line maps back to an item ID elsewhere in this file (Tier A.N, B.N, C.N, R4.N, R5.N, R6.N, R7.N, or CROSS-PROJECT-ROADMAP §N) so traceability is one search away. New IDs introduced in Round 6 or Round 7 are tagged `R6.*` or `R7.*`.
@@ -60,7 +73,7 @@ Maximum leverage, builds on shipped foundations, no new model downloads required
 | ID | Item | Why now |
 |---|---|---|
 | [R6.1](#r61--16-kb-page-size-compliance-play-store-gate) | 16 KB page-size compliance audit | `targetSdk = 36` (Android 16) — Play Store **blocks** non-compliant uploads since 2025-11-01. We bundle ONNX Runtime, MediaPipe; future RIFE/OpenCV/Sherpa-ONNX native deps must be NDK r28+. Compliance is a hard gate. |
-| [R7.1](#r71---diagnostic-export-ui-is-the-fastest-trust-win) | Settings diagnostic ZIP UI | Engine work exists; the missing piece is a visible, local-only Settings flow with redaction, share/save, busy/error/success states, and user trust copy. Completes R5.5d without telemetry. |
+| [R7.1](#r71---diagnostic-export-ui-is-the-fastest-trust-win) | Settings diagnostic ZIP UI | Done: Settings exposes local save/share, busy/success/error state, FileProvider sharing, and user-visible privacy copy. Completes R5.5d without telemetry. |
 | [R7.2](#r72---model-registry-checksum-closure-before-new-model-activation) | Model registry checksum closure | `docs/models.md` still has `SHA TBD` rows. Do not add large model bundles until hashes, licenses, PAD/F-Droid posture, and validation tests are closed. |
 | [R7.3](#r73---dependency-stabilization-train) | Dependency stabilization train | Media3 is current; Compose BOM, Room, WorkManager, Hilt, ONNX Runtime, Lottie, and OkHttp have newer release trains. Upgrade in one reviewed train with build/test/rollback notes. |
 | [R7.4](#r74---ffmpeg-16-kb-and-license-decision-gate) | FFmpeg 16 KB and license decision gate | Unblocks concat demuxer, reverse export, libass burn-in, loudnorm, and mixed copy/re-encode, but needs explicit GPL/LGPL, F-Droid, ABI, and 16 KB evidence before integration. |
@@ -73,8 +86,14 @@ Maximum leverage, builds on shipped foundations, no new model downloads required
 | [R6.10](#r610--media3-110-modular-ui-adoption) | Adopt `media3-effect-lottie` module | Removes custom LottieOverlayEffect overlap; one-line dep swap; shipped in Media3 1.10 we already pull. |
 | [R5.3d](#r53--accessibility-coverage-gap) | Closed audio description audio track export | SDH text already ships. Pair with system TTS (already wired) for the audio side; muxed AD track via Media3. |
 | [R5.4c](#r54--internationalization--localization) | Strings extraction audit | One-time `lint` pass to catch hardcoded `Log.d` / `Toast` literals in engine stubs (`UpscaleEngine`, `StyleTransferEngine`, etc.). Pure mechanical work. |
-| [R5.5d](#r55--observability--privacy-preserving-telemetry) | Local-only diagnostic export ZIP | No telemetry pipe to add. Single screen, single button. Strict on-device guarantee. Lowers issue triage cost immediately. |
+| [R5.5d](#r55--observability--privacy-preserving-telemetry) | Local-only diagnostic export ZIP | Done: Settings can save a redacted diagnostic ZIP and share it only through explicit user action. |
 | [C.6](#audio--speech) | Audio mastering presets (one-tap chains) | Composes A.2 + EBU R128 (both shipped). Pure UI/preset work. High user value, zero new deps. |
+| [R8.3](#r83--android-1516-edge-to-edge-audit-mandatory-at-targetsdk--36) | Android 15/16 edge-to-edge audit | `targetSdk = 36` makes edge-to-edge mandatory and `windowOptOutEdgeToEdgeEnforcement` deprecated on Android 16. Audit every panel against `WindowInsets.safeDrawing` and `WindowInsets.displayCutout` before next release. |
+| [R8.4](#r84--predictive-back-for-full-screen-editor) | Predictive back for editor + per-screen back stack | `onBackPressed` no longer dispatched at `targetSdk = 36`. Editor exits with unsaved changes must use `PredictiveBackHandler` gated on dirty state, not root-level `BackHandler`. |
+| [R8.7](#r87--per-app-language-preferences-android-13) | Enable auto-`LocaleConfig` (per-app language) | Mechanical: AGP 8.1+ generates `locales_config.xml` from resource folders. Even with English-only strings today, this lights up the system per-app language picker the moment additional locales land. |
+| [R8.8](#r88--android-16-adaptive-resizability-tablets--foldables) | Adaptive resizability audit for sw≥600dp | `targetSdk = 36` overrides orientation/aspect/resizable manifest attributes on sw≥600dp. Editor must survive Pixel Fold inner display, Pixel Tablet, Galaxy Z Fold unfolded, and desktop windowing without panel clipping. |
+| [R8.9](#r89--ai-disclosure-ux-pairs-with-c2pa-and-generative-policy) | AI-generated content disclosure UX | EU AI Act Article 50 effective 2026-08-02; FTC AI policy statement March 2026; YouTube/TikTok already require labels. Auto-add disclosure manifest for any R5.2d / R6.18 / A.12 cloud touch; surface "Disclose AI use" export toggle. |
+| [R8.15](#r815--local-network-protection-mode-android-16) | LNP permission surface for live streaming | Android 16's Local Network Protection restricts LAN access unless authorized. Pre-emptively document and request the permission for R6.17 OutputStreamingEngine before it ships, so first-launch isn't a silent network failure. |
 
 ### Next — 3–5 release cycles
 Dependency activations and engine swaps with concrete upstream targets.
@@ -99,6 +118,12 @@ Dependency activations and engine swaps with concrete upstream targets.
 | [C.12](#timeline--composition) | Keyframe graph editor (visual bezier UI) | `KeyframeEngine` already supports 12 easings; this is purely UI work in `KeyframeCurveEditor`. *(In progress 2026-05: [KeyframeBezierGraph](app/src/main/java/com/novacut/editor/engine/KeyframeBezierGraph.kt) ships the per-segment bezier data model and cubic-bezier evaluator; `presets` map covers all 12 `Easing` entries with canonical CSS/Material control points; `rescale(seg, startValue, endValue)` denormalizes a unit preset for the runtime. 14 new tests. Compose panel follows in a UI commit.)* |
 | [C.13](#timeline--composition) | Compound clip / nested-sequence editor UX | Model exists; missing the "open sub-timeline" gesture and exit flow. *(In progress 2026-05: [CompoundNavStack](app/src/main/java/com/novacut/editor/engine/CompoundNavStack.kt) ships the navigation state — push / pop / reset / breadcrumb / depth + cycle detection + MAX_DEPTH cap + autosave round-trip via `toSerializedIds()` / `restore(clips)`. 11 new tests. The "open sub-timeline" gesture and exit chip in EditorScreen are the next two commits on this item.)* |
 | [R6.16](#r616--lottie-state-machines--dotlottie-interactive-templates) | Lottie state machines / dotLottie | Closes parity with Rive for A.13 with no new SDK; dotLottie reduces bundle size. |
+| [R8.1](#r81--material-3-expressive-android-16-visual-paradigm) | Material 3 Expressive opt-in (M3 1.5.0-alpha19) | Android 16's visual paradigm. Compose Material3 1.5.0-alpha19 (2026-05-06) graduated FAB Menu, ToggleButtons, motion scheme, expressive buttons out of experimental. Caption / transition picker / FX panel chrome are the highest-leverage adoption surfaces. |
+| [R8.2](#r82--c2pa-content-credentials-for-mp4-export) | C2PA Content Credentials on MP4 export | EU AI Act Article 50 effective 2026-08-02. `c2pa-android` AAR signs MP4 via Android Keystore / StrongBox. Sets NovaCut apart from cloud-first editors that cannot do hardware-backed local signing. |
+| [R8.5](#r85--thermal-aware-export-scheduling) | Thermal-aware export scheduling | `PowerManager.getThermalHeadroom(forecastSeconds)` predicts throttling; `addThermalStatusListener` reacts. Cuts long-render shutdowns + lets us queue overnight when headroom is exhausted. |
+| [R8.6](#r86--photo-picker--selected-photos-compliance) | Photo Picker as complementary import path | Google Play "Photo and Video Permissions" policy gates broad `READ_MEDIA_VIDEO/IMAGES` use. NovaCut is a qualified editor and keeps the broad perms, but adds Photo Picker as a per-clip fast-import path + a compatibility-mode-loss recovery flow. |
+| [R8.10](#r810--stylus-handwriting-in-caption-text-fields) | Verify + extend stylus handwriting in caption editor | Compose `foundation` 1.7.0+ ships stylus handwriting default-on for all `TextField`. Compose BOM 2024.12.01 should already cover it — verify, then add `handwritingDetector` on timeline clip body so S Pen→clip launches caption editor at that position. |
+| [R8.13](#r813--auto-backup-for-projects--templates-android-backup-service) | Android Auto Backup for project metadata + templates | D2D Migration carries project JSON, autosave, template library, settings across device transfers when small enough. Pair with `android:fullBackupContent` rules so proxy + thumbnail caches stay excluded. |
 
 ### Later — beyond 5 cycles or speculative
 Larger surface area, premium device tiers, or platform-dependent.
@@ -122,6 +147,11 @@ Larger surface area, premium device tiers, or platform-dependent.
 - **[R4.6](#capability-bets-to-add-to-the-product-roadmap)** — Live Studio full scene/source graph.
 - **[R4.7](#capability-bets-to-add-to-the-product-roadmap)** — Advanced compositor graph (Natron / Blender VSE inspiration).
 - **[R6.19](#r619--libplacebo-as-reference-for-hdr-tone-mapping)** — `libplacebo` as architectural *reference* for HDR tone mapping. Don't embed (Vulkan-only, desktop-first); borrow shader/algo design.
+- **[R8.11](#r811--bluetooth-le-audio-monitoring-for-voiceover)** — Bluetooth LE Audio monitoring for voiceover recording. `<40 ms` LC3 latency removes wired-monitor requirement on Pixel 8+/Galaxy S23+/select Xiaomi-POCO. Gated by AudioManager BLE Audio recording guide (Feb 2026 docs).
+- **[R8.12](#r812--spatial-audio-dolby-atmos-export-track)** — Spatial audio (Dolby Atmos / E-AC-3 JOC) export track. `audio/eac3-joc` MIME via Media3; capability probe extension; "Spatial Audio" export preset. Premium-device gated.
+- **[R8.14](#r814--descript-style-text-edit-driven-panel-extension-of-textbasededitengine)** — Descript-style text-edit-driven editor as a full panel. Existing `TextBasedEditEngine` is the base; extend with transcript-as-source-of-truth UI where delete/rearrange in text maps to timeline cuts. Pairs with Cut Assistant Review.
+- **[R8.16](#r816--hot-folderwatch-folder-import)** — Hot folder / watch folder import. SAF `DocumentFile` observers; new clips auto-added to a system media bin from a user-chosen directory; useful for OBS/ScreenRecorder/external-camera workflows.
+- **[R8.18](#r818--codecformat-watch-list-av2-hdr-vivid-in-process-codecs)** — Codec/format watch list (AV2, HDR Vivid / CUVA, Android 16 in-process software audio codecs). All three are tracking-only; mobile-relevant deployment is 2027+.
 - **CROSS-PROJECT §2.5, §3.1, §3.2, §3.3, §6.5, §6.6/§7.5, §7.4, §8.4, §8.5** — every Cross-Project Tier 2/3 item that isn't a Now/Next clear win. See [CROSS-PROJECT-ROADMAP.md](CROSS-PROJECT-ROADMAP.md).
 
 ### Under Consideration — explicit "decide later"
@@ -135,6 +165,7 @@ Larger surface area, premium device tiers, or platform-dependent.
 | [CROSS §7.8](CROSS-PROJECT-ROADMAP.md) | Preset marketplace scaffold | Depends on §2.1 unified preset library landing first. |
 | [CROSS §7.9](CROSS-PROJECT-ROADMAP.md) | AI edit-coach | Heuristic v1 is feasible now; LLM-grade upgrade should pair with R6.3 (Gemini Nano). |
 | [R5.7b](#r57--plugin-ecosystem) | OpenFX-style read-only effect descriptor | Useful only if C.14 (NLE round-trip import) lands and round-trip-preserves effect intent. |
+| [R8.17](#r817--gemma-3-as-on-device-llm-alternative-to-r63) | Gemma 3 Nano / Tiny as on-device LLM alternative to R6.3 | Removes the Pixel 10 / AICore gate. Open-license quantized weights via MediaPipe LLM Inference API or llama.cpp; useful for caption rewrite, project summary, template pick. Decision blocked on benchmarking against R6.3 quality + on-device latency budget for mid-tier devices. |
 
 ### Rejected — explicit "no"
 | Item | Why |
@@ -482,7 +513,7 @@ Media3 1.10 (March 2026) ships the multi-sequence/multi-track Composition API, w
 - [ ] **R5.5a — Opt-in crash reporting via Sentry-Android.** Strict opt-in dialog at first run, settings toggle, redaction of all media URIs and project paths from breadcrumbs. Initialize the SDK only when the user opts in. Source: https://docs.sentry.io/platforms/android/
 - [ ] **R5.5b — Aggregate-only usage metrics via Mozilla Glean or a Divvi-Up-style aggregator.** Goal: know which engines actually get used so future stub-activation work targets the most-used features. No raw events, no identifiers. Sources: https://mozilla.github.io/glean/book/language-bindings/android/index.html · https://divviup.org/blog/horizontal-tella/
 - [~] **R5.5c — Privacy dashboard.** *(In progress — data model shipped at [PrivacyDashboard](app/src/main/java/com/novacut/editor/engine/PrivacyDashboard.kt). Single source of truth for every category NovaCut collects: project content, media metadata, ML models, app preferences, template library, diagnostic logs, cloud generative video, opt-in telemetry. Each entry records storage location, controls (export/delete/opt-out), collecting engines, retention policy, and default-collection state. 10 invariant tests lock the contract: every category has a delete action, cloud/telemetry rows are never on by default, entries match the Category enum 1:1. Compose dashboard panel rendering follows in a UI commit; the data layer is ready to consume.)*
-- [~] **R5.5d — Local-only diagnostic export.** A "Save diagnostic ZIP" action in settings (logcat tail, project header, model registry, Media3 capabilities snapshot) so users can attach to a GitHub issue without us shipping any telemetry pipe. *(In progress — engine layer shipped via [DiagnosticExportEngine](app/src/main/java/com/novacut/editor/engine/DiagnosticExportEngine.kt). Writes a ZIP under `filesDir/diagnostics/` with 6 entries: app-info, device-info, media-codecs (MediaCodecList.REGULAR_CODECS summary), model-registry (id + install state + size, no file contents), logcat-tail (last 200 lines, redacted), and manifest. Sensitive substrings — content://, file://, /storage/, /data/data/, URLs with query strings, email addresses — are scrubbed before write. Project JSON, media URIs, autosave snapshots, captions/transcripts are **never included** by design. Self-prunes past 3 ZIPs. 8 tests in `DiagnosticExportEngineTest` cover the redaction filter and the bundle structure contract. Remaining work: ~10-line Settings UI wiring to invoke `exportDiagnosticBundle(...)` and route the file through `FileProvider` + `ACTION_SEND` (sketch in the engine docstring).)*
+- [x] **R5.5d — Local-only diagnostic export.** A "Save diagnostic ZIP" action in settings (logcat tail, project header, model registry, Media3 capabilities snapshot) so users can attach to a GitHub issue without us shipping any telemetry pipe. *(Done — engine layer ships via [DiagnosticExportEngine](app/src/main/java/com/novacut/editor/engine/DiagnosticExportEngine.kt), and Settings now exposes the flow through [SettingsViewModel](app/src/main/java/com/novacut/editor/ui/settings/SettingsViewModel.kt) + [SettingsScreen](app/src/main/java/com/novacut/editor/ui/settings/SettingsScreen.kt). Writes a ZIP under `filesDir/diagnostics/` with 6 entries: app-info, device-info, media-codecs (MediaCodecList.REGULAR_CODECS summary), model-registry (id + install state + size, no file contents), logcat-tail (last 200 lines, redacted), and manifest. Sensitive substrings — content://, file://, /storage/, /data/data/, URLs with query strings, email addresses — are scrubbed before write. Project JSON, media URIs, autosave snapshots, captions/transcripts are **never included** by design. Self-prunes past 3 ZIPs. `file_paths.xml` grants FileProvider access only to `filesDir/diagnostics/`, and the UI shows local save/share plus busy, success, and error states. 8 tests in `DiagnosticExportEngineTest` cover the redaction filter and the bundle structure contract.)*
 
 ### R5.6 — Distribution and packaging
 - [ ] **R5.6a — Play Asset Delivery for ML model bundles.** Whisper, Moonshine, RVM, RIFE, Real-ESRGAN, MobileSAM, Demucs all together blow past the 200 MB base-AAB. PAD on-demand asset packs, keyed off the existing `ModelDownloadManager`, are the correct vector — keeps F-Droid track buildable while Play install stays small. Source: https://developer.android.com/guide/playcore/asset-delivery
@@ -782,4 +813,3 @@ OpenCut (~50.7k stars, v0.3.0 in Apr 2026) is the closest open-source CapCut com
 - https://www.androidcentral.com/phones/google-pixel/google-tensor-g5 — Tensor G5 TPU 60% uplift over G4 (Gemini Nano host).
 - https://developer.android.com/jetpack/androidx/releases/compose — Compose runtime + Material 3 release notes (drives R6.10 evaluation).
 - https://docs.gyroflow.xyz/app/getting-started/basic-usage/stabilization — Gyroflow stabilization parameter surface (drives R6.9 sidecar parser scope).
-
