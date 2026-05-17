@@ -1,7 +1,14 @@
 package com.novacut.editor.engine
 
+import android.net.FakeUri
+import android.net.SecondFakeUri
+import android.net.Uri
+import com.novacut.editor.model.Clip
 import com.novacut.editor.model.ExportConfig
 import com.novacut.editor.model.Resolution
+import com.novacut.editor.model.SourceColorMetadata
+import com.novacut.editor.model.Track
+import com.novacut.editor.model.TrackType
 import com.novacut.editor.model.VideoCodec
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -40,6 +47,51 @@ class ExportColorConfidenceEngineTest {
         assertFalse(report.hasWarnings)
         assertTrue(report.chips.any { it.label == "Ultra HDR source" })
         assertTrue(report.chips.any { it.detail.contains("Preserve HDR Metadata") })
+    }
+
+    @Test
+    fun sdrExportReportsApvSourceChipWithoutWarningList() {
+        val report = ExportColorConfidenceEngine.analyze(
+            config = ExportConfig(codec = VideoCodec.HEVC, hdr10PlusMetadata = false),
+            width = 1920,
+            height = 1080,
+            hdrSupport = ExportColorConfidenceEngine.HdrEncodeSupport(),
+            sourceSummary = ExportColorConfidenceEngine.SourceHdrSummary(
+                inspectedSourceCount = 1,
+                totalSourceCount = 1,
+                apvSourceCount = 1
+            )
+        )
+
+        assertFalse(report.hasWarnings)
+        assertTrue(report.chips.any { chip ->
+            chip.label == "Source is APV" &&
+                chip.detail.contains("very large source files") &&
+                chip.tone == ExportColorConfidenceEngine.Tone.WARNING
+        })
+    }
+
+    @Test
+    fun summarizeSourcesCountsDistinctApvSources() {
+        val summary = ExportColorConfidenceEngine.summarizeSources(
+            listOf(
+                Track(
+                    id = "video-1",
+                    type = TrackType.VIDEO,
+                    index = 0,
+                    clips = listOf(
+                        clipWithMime(FakeUri, EncoderCapabilityProbe.MIME_APV),
+                        clipWithMime(FakeUri, EncoderCapabilityProbe.MIME_APV),
+                        clipWithMime(SecondFakeUri, "video/hevc")
+                    )
+                )
+            )
+        )
+
+        assertEquals(2, summary.inspectedSourceCount)
+        assertEquals(2, summary.totalSourceCount)
+        assertEquals(1, summary.apvSourceCount)
+        assertTrue(summary.hasApvSource)
     }
 
     @Test
@@ -126,5 +178,18 @@ class ExportColorConfidenceEngineTest {
         assertTrue(report.hasWarnings)
         assertTrue(report.warnings.any { it.contains("up to 1920x1080") })
         assertTrue(report.warnings.any { it.contains("bitrate is advertised up to 40 Mbps") })
+    }
+
+    private fun clipWithMime(uri: Uri, mimeType: String): Clip {
+        return Clip(
+            id = uri.toString(),
+            sourceUri = uri,
+            sourceDurationMs = 1_000L,
+            timelineStartMs = 0L,
+            sourceColorMetadata = SourceColorMetadata(
+                mimeType = mimeType,
+                inspectedAtMs = 1L
+            )
+        )
     }
 }

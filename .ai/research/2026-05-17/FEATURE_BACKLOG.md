@@ -27,7 +27,7 @@ This is the raw harvested backlog before final prioritization. It intentionally 
 | Media3 `ProgressSlider` replacement | R6.10d found player-position/internal-seek behavior conflicts with edited-timeline controls | Revisit only if Media3 exposes externally controlled project-timeline progress |
 | Dual-texture programmable blend modes | Current single-texture fallback lacks exact pro blend math | Media3/custom GL compositor path |
 | Ultra HDR/gainmap export path | Android 16 HDR roadmap items | Export settings, HDR ingest/export tests |
-| APV ingest watch item | Android 16 professional codec trend | Media import capability detection |
+| APV ingest watch item | Android 16 professional codec trend; R6.11b source chip is complete | Future APV decode/device QA beyond the current `video/apv` import flag |
 
 ## Diagnostics, Trust, and Recovery
 
