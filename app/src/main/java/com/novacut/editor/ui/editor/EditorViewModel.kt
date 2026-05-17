@@ -444,7 +444,8 @@ class EditorViewModel @Inject constructor(
         rebuildPlayerTimeline = ::rebuildPlayerTimeline, saveProject = ::saveProject,
         videoEngine = videoEngine,
         recalculateDuration = ::recalculateDuration,
-        settingsRepo = settingsRepo
+        settingsRepo = settingsRepo,
+        recordAiUsage = ::recordAiUsage
     )
 
     val clipEditingDelegate = ClipEditingDelegate(
@@ -2281,11 +2282,24 @@ class EditorViewModel @Inject constructor(
                             timelineStartMs = seg.timelineStartMs
                         )
                     }
+                    val recordedAt = System.currentTimeMillis()
+                    val aiUsageEntries = newClips.map { newClip ->
+                        AiUsageRecordFactory.forClip(
+                            clip = newClip,
+                            effectKind = AiUsageLedger.EffectKind.AUTO_EDIT_LOCAL,
+                            modelName = "NovaCut Auto Edit",
+                            recordedAtEpochMs = recordedAt
+                        )
+                    }
                     _state.update { s ->
                         val videoTrack = s.tracks.first { it.type == TrackType.VIDEO }
-                        s.copy(tracks = s.tracks.map { track ->
-                            if (track.id == videoTrack.id) track.copy(clips = newClips) else track
-                        }, isAutoEditing = false)
+                        s.copy(
+                            tracks = s.tracks.map { track ->
+                                if (track.id == videoTrack.id) track.copy(clips = newClips) else track
+                            },
+                            isAutoEditing = false,
+                            aiUsageLedger = AiUsageLedger.mergeOverlaps(s.aiUsageLedger + aiUsageEntries)
+                        )
                     }
                     rebuildTimeline()
                     saveProject()
@@ -2321,7 +2335,13 @@ class EditorViewModel @Inject constructor(
                 val durationMs = videoEngine.getVideoDuration(uri).takeIf { it > 0 } ?: 3000L
                 saveUndoState("Add TTS voice")
                 // Helper now performs rebuildPlayerTimeline() + saveProject() internally.
-                addClipToTrack(uri, durationMs, TrackType.AUDIO)
+                addClipToTrack(
+                    uri = uri,
+                    durationMs = durationMs,
+                    trackType = TrackType.AUDIO,
+                    aiUsageKind = AiUsageLedger.EffectKind.TTS_LOCAL,
+                    aiUsageModelName = "Android TextToSpeech ${style.name.lowercase()}"
+                )
                 showToast("Voice added to audio track")
                 hideTts()
             } else {
@@ -2506,7 +2526,13 @@ class EditorViewModel @Inject constructor(
     }
 
     // Helper: add clip to a track by type (used by TTS / voiceover).
-    private fun addClipToTrack(uri: android.net.Uri, durationMs: Long, trackType: TrackType) {
+    private fun addClipToTrack(
+        uri: android.net.Uri,
+        durationMs: Long,
+        trackType: TrackType,
+        aiUsageKind: AiUsageLedger.EffectKind? = null,
+        aiUsageModelName: String? = null
+    ) {
         // Refuse degenerate inputs that would otherwise violate Clip's `trimEndMs <= sourceDurationMs`
         // invariant the moment the user touched the new clip (e.g., a TTS file reporting 0 ms).
         if (durationMs <= 0L) {
@@ -2531,9 +2557,22 @@ class EditorViewModel @Inject constructor(
             } else {
                 s.tracks + track
             }
-            s.copy(tracks = baseTracks.map { t ->
-                if (t.id == track.id) t.copy(clips = t.clips + clip) else t
-            })
+            s.copy(
+                tracks = baseTracks.map { t ->
+                    if (t.id == track.id) t.copy(clips = t.clips + clip) else t
+                },
+                aiUsageLedger = if (aiUsageKind != null) {
+                    AiUsageLedger.mergeOverlaps(
+                        s.aiUsageLedger + AiUsageRecordFactory.forClip(
+                            clip = clip,
+                            effectKind = aiUsageKind,
+                            modelName = aiUsageModelName.orEmpty()
+                        )
+                    )
+                } else {
+                    s.aiUsageLedger
+                }
+            )
         }
         // Rebuild the preview so the new TTS / voiceover clip is audible immediately, and
         // persist so an app crash or quick background-then-kill doesn't lose the clip

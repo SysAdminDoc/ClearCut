@@ -87,6 +87,12 @@
   disclosure targets, and the Privacy Dashboard model now includes a
   local/exportable/deletable AI ledger row. Remaining embedded media work:
   C2PA assertions and MP4 `udta` tagging.
+- **R8.9 — active AI tools now write disclosure ledger records.**
+  Background removal/replacement, background-analysis fallback, style
+  transfer, upscale assist, Auto Edit, and synthesized TTS audio now append
+  `AiUsageLedger` entries only after a successful project mutation. Model
+  requirement prompts remain non-recording until an AI tool actually changes
+  media.
 - **R8.5 — ThermalHeadroomPolicy engine.** Pure-Kotlin policy translating
   `(PowerManager ThermalStatus, getThermalHeadroom forecast)` into a
   `ThrottleDecision` (FULL_SPEED / THROTTLE_LIGHT / THROTTLE_HEAVY /
