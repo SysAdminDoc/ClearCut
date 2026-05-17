@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 check_16kb_alignment.py — Verify every native library in a built NovaCut
-APK or AAB has its LOAD segments aligned to 16 KB (0x4000) boundaries.
+APK or AAB declares 16 KB (0x4000) or larger LOAD-segment alignment.
 
 Why: Google Play blocks uploads of apps targeting Android 15+ (API 35+)
 that bundle native libraries whose ELF LOAD segments are not 16 KB aligned.
@@ -22,6 +22,9 @@ Notes:
   use 16 KB pages). armeabi-v7a and x86 are 4 KB only and are skipped.
 - Pure Python: no NDK readelf required. Parses the ELF program header
   directly. Works on Windows, macOS, and Linux CI runners.
+- Mirrors Google's guidance to check that every LOAD segment reports an
+  alignment value of at least 2**14. Nonzero virtual addresses are valid when
+  p_offset and p_vaddr stay congruent modulo p_align.
 - Inspired by the Google sample at
   https://developer.android.com/guide/practices/page-sizes#test
 """
@@ -46,6 +49,12 @@ class LoadSegment(NamedTuple):
     offset: int
     vaddr: int
     align: int
+
+
+class AlignmentFailure(NamedTuple):
+    display: str
+    segment: LoadSegment
+    reason: str
 
 
 def _read_elf_load_segments(data: bytes) -> Iterator[LoadSegment]:
@@ -128,7 +137,7 @@ def _iter_native_libs(target: Path) -> Iterator[tuple[str, bytes]]:
 
 
 def check(target: Path) -> int:
-    misaligned: list[tuple[str, LoadSegment]] = []
+    misaligned: list[AlignmentFailure] = []
     skipped: list[str] = []
     ok_count = 0
 
@@ -142,8 +151,23 @@ def check(target: Path) -> int:
             skipped.append(f"{display} (no ELF LOAD segments — skipped)")
             continue
         for seg in segments:
-            if seg.align < REQUIRED_ALIGNMENT or (seg.vaddr % REQUIRED_ALIGNMENT) != 0:
-                misaligned.append((display, seg))
+            if seg.align < REQUIRED_ALIGNMENT:
+                misaligned.append(
+                    AlignmentFailure(
+                        display,
+                        seg,
+                        f"LOAD segment alignment is below 0x{REQUIRED_ALIGNMENT:x}",
+                    )
+                )
+                break
+            if seg.align > 0 and ((seg.vaddr - seg.offset) % seg.align) != 0:
+                misaligned.append(
+                    AlignmentFailure(
+                        display,
+                        seg,
+                        "p_offset and p_vaddr are not congruent modulo p_align",
+                    )
+                )
                 break
         else:
             ok_count += 1
@@ -159,11 +183,11 @@ def check(target: Path) -> int:
     if misaligned:
         print()
         print("MISALIGNED LIBRARIES — Play Store will reject this AAB/APK:")
-        for display, seg in misaligned:
+        for display, seg, reason in misaligned:
             print(
                 f"  - {display}: PT_LOAD at offset=0x{seg.offset:x} "
                 f"vaddr=0x{seg.vaddr:x} align=0x{seg.align:x} "
-                f"(required >= 0x{REQUIRED_ALIGNMENT:x})"
+                f"(required >= 0x{REQUIRED_ALIGNMENT:x}; {reason})"
             )
         return 1
 

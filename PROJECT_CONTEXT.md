@@ -39,7 +39,7 @@ Primary stack:
 - Gradle wrapper 8.9, Android Gradle Plugin 8.7.3, Kotlin 2.1.0.
 - Media3 1.10.1 for playback, effects, export, and transformer flows.
 - Room for metadata, DataStore for preferences, Hilt for dependency injection.
-- ONNX Runtime Android 1.26.0 and MediaPipe Tasks Vision 0.10.14 are present for on-device model paths.
+- ONNX Runtime Android 1.26.0 and MediaPipe Tasks Vision 0.10.35 are present for on-device model paths.
 - WorkManager is available for background jobs.
 
 High-level modules and patterns:
@@ -62,7 +62,7 @@ High-level modules and patterns:
 
 1. 16 KB native library compliance and Android 16 release readiness.
    - `targetSdk = 36` makes native dependency alignment a release gate.
-   - ONNX Runtime, MediaPipe, and future native libraries need repeatable page-size verification.
+   - ONNX Runtime and MediaPipe now pass the local ELF + APK zip-alignment gates; future native libraries still need repeatable verification before activation.
 
 2. Future model activation gates.
    - Active model rows in `docs/models.md` now have exact source locators and SHA-256 pins.
@@ -70,8 +70,8 @@ High-level modules and patterns:
 
 3. Dependency stabilization.
    - Media3 1.10.1 is current.
-   - Compose BOM, Room, WorkManager, Hilt, ONNX Runtime, OkHttp, and Lottie have newer lines available.
-   - Kotlin and AGP latest metadata points at pre-release lines and should be handled intentionally.
+   - The AGP-8.7-compatible train is current through Compose BOM 2026.05.00, Hilt 2.58, AndroidX Hilt 1.3.0, Room 2.7.2, WorkManager 2.11.2, Lifecycle 2.10.0, DataStore 1.2.1, Coroutines 1.11.0, ONNX Runtime 1.26.0, MediaPipe 0.10.35, OkHttp 5.3.2, and Lottie Compose 6.7.1.
+   - Kotlin, AGP, Core KTX, Activity Compose, Navigation Compose, Hilt 2.59.x, and Room 2.8.x need a deliberate toolchain branch rather than a blind catalog bump.
 
 4. FFmpeg 16 KB and license decision.
    - A future FFmpeg path unlocks concat demuxer, reverse export, libass subtitle burn-in, loudnorm, and mixed copy/re-encode.
@@ -88,7 +88,7 @@ High-level modules and patterns:
 - Restored `:app:testDebugUnitTest` to a green baseline by letting `AutoSaveState.deserialize()` accept an injectable URI parser for JVM tests while keeping `Uri.parse()` as the production default.
 - Completed R5.5d / R7.1. Settings now exposes the local-only diagnostic ZIP workflow, with busy/success/error state, saved-file summary, FileProvider share action, and diagnostics path scoping in `file_paths.xml`.
 - Completed the active-model slice of R7.2. `docs/models.md` now pins Whisper, MediaPipe selfie segmentation, and LaMa inpainting to exact source locators and SHA-256 values; `ModelDownloadManager.ModelFile(checksumRequired = true)` blocks unpinned active downloads; Settings refreshes model state through checksum verification and renders failures as "Needs attention"; `ModelRegistryDocumentationTest` prevents active registry rows from returning to placeholder hashes or floating source URLs.
-- Completed the AGP-8.7-compatible slice of R7.3. Version catalog updates: Compose BOM 2026.05.00, Dagger Hilt 2.58, AndroidX Hilt 1.3.0, Room 2.7.2, Coroutines 1.11.0, Lifecycle 2.10.0, DataStore 1.2.1, WorkManager 2.11.2, ONNX Runtime 1.26.0, OkHttp 5.3.2, and Lottie Compose 6.7.1. Deferred because of toolchain gates: Dagger Hilt 2.59.x requires AGP 9.0+, Core/Activity/Navigation latest requires AGP 8.9.1+, and Room 2.8.x fails the current Kotlin 2.1.0 / KSP 2.1.0 schema export path.
+- Completed the AGP-8.7-compatible slice of R7.3. Version catalog updates: Compose BOM 2026.05.00, Dagger Hilt 2.58, AndroidX Hilt 1.3.0, Room 2.7.2, Coroutines 1.11.0, Lifecycle 2.10.0, DataStore 1.2.1, WorkManager 2.11.2, ONNX Runtime 1.26.0, MediaPipe Tasks Vision 0.10.35, OkHttp 5.3.2, and Lottie Compose 6.7.1. Deferred because of toolchain gates: Dagger Hilt 2.59.x requires AGP 9.0+, Core/Activity/Navigation latest requires AGP 8.9.1+, and Room 2.8.x fails the current Kotlin 2.1.0 / KSP 2.1.0 schema export path. The Hilt Compose import moved to `androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel`, Project Card swipe-to-delete no longer uses the deprecated `confirmValueChange` veto callback, and the 16 KB checker now follows Google's `LOAD ... align 2**14` criterion.
 
 ## Build and Verification Notes
 
@@ -99,6 +99,8 @@ $env:JAVA_HOME = "C:\Program Files\Android\openjdk\jdk-21.0.8"
 .\gradlew.bat --version
 .\gradlew.bat :app:testDebugUnitTest --no-daemon
 .\gradlew.bat :app:assembleDebug --no-daemon
+python scripts\check_16kb_alignment.py app\build\outputs\apk\debug\app-debug.apk
+& 'C:\Users\--\AppData\Local\Android\Sdk\build-tools\36.0.0\zipalign.exe' -c -P 16 -v 4 app\build\outputs\apk\debug\app-debug.apk
 ```
 
 Local SDK gotcha:
