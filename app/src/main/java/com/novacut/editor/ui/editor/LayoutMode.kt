@@ -38,7 +38,12 @@ fun rememberLayoutMode(
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
     return remember(configuration, oneHandedUserPref, desktopOverride) {
-        resolveLayoutMode(context, configuration, oneHandedUserPref, desktopOverride)
+        val adaptiveDecision = AdaptiveEditorLayoutPolicy.decide(
+            widthDp = configuration.screenWidthDp,
+            heightDp = configuration.screenHeightDp,
+            desktopLike = detectDesktop(context, configuration)
+        )
+        resolveLayoutMode(context, configuration, oneHandedUserPref, desktopOverride, adaptiveDecision)
     }
 }
 
@@ -51,12 +56,17 @@ fun resolveLayoutMode(
     context: Context,
     configuration: Configuration,
     oneHandedUserPref: Boolean,
-    desktopOverride: DesktopOverride
+    desktopOverride: DesktopOverride,
+    adaptiveDecision: AdaptiveEditorLayoutPolicy.Decision = AdaptiveEditorLayoutPolicy.decide(
+        widthDp = configuration.screenWidthDp,
+        heightDp = configuration.screenHeightDp,
+        desktopLike = detectDesktop(context, configuration)
+    )
 ): LayoutMode {
     val isDesktopLike = when (desktopOverride) {
         DesktopOverride.FORCE_ON -> true
         DesktopOverride.FORCE_OFF -> false
-        DesktopOverride.AUTO -> detectDesktop(context, configuration)
+        DesktopOverride.AUTO -> adaptiveDecision.useSidebar
     }
     if (isDesktopLike) return LayoutMode.DESKTOP
     if (oneHandedUserPref && configuration.screenWidthDp < 600) return LayoutMode.ONE_HANDED

@@ -498,21 +498,39 @@ fun EditorScreen(
     val isTutorialOpen = state.panels.isOpen(PanelId.TUTORIAL)
     val hasClipSelection = state.selectedClipIds.isNotEmpty()
     val isClipMode = state.selectedClipId != null
-    val screenHeightDp = LocalConfiguration.current.screenHeightDp
-    val isCompactEditorHeight = screenHeightDp < 820
+    val configuration = LocalConfiguration.current
+    val adaptiveLayoutDecision = remember(
+        configuration.screenWidthDp,
+        configuration.screenHeightDp,
+        layoutMode
+    ) {
+        AdaptiveEditorLayoutPolicy.decide(
+            widthDp = configuration.screenWidthDp,
+            heightDp = configuration.screenHeightDp,
+            desktopLike = layoutMode == LayoutMode.DESKTOP
+        )
+    }
+    val screenHeightDp = configuration.screenHeightDp
+    val isCompactEditorHeight = adaptiveLayoutDecision.compactTimeline || screenHeightDp < 820
     val selectedPreviewHeight = when {
         !isClipMode -> 0.dp
+        adaptiveLayoutDecision.paneMode == AdaptiveEditorLayoutPolicy.PaneMode.THREE_PANE -> 300.dp
+        adaptiveLayoutDecision.paneMode == AdaptiveEditorLayoutPolicy.PaneMode.TWO_PANE -> 280.dp
         isToolPanelExpanded -> 154.dp
         isCompactEditorHeight -> 224.dp
         else -> 252.dp
     }
     val timelineMinHeight = when {
+        adaptiveLayoutDecision.paneMode == AdaptiveEditorLayoutPolicy.PaneMode.THREE_PANE -> 280.dp
+        adaptiveLayoutDecision.paneMode == AdaptiveEditorLayoutPolicy.PaneMode.TWO_PANE -> 252.dp
         isClipMode && isToolPanelExpanded -> 184.dp
         isClipMode && isCompactEditorHeight -> 204.dp
         isClipMode -> 224.dp
         else -> 240.dp
     }
     val timelineMaxHeight = when {
+        adaptiveLayoutDecision.paneMode == AdaptiveEditorLayoutPolicy.PaneMode.THREE_PANE -> 420.dp
+        adaptiveLayoutDecision.paneMode == AdaptiveEditorLayoutPolicy.PaneMode.TWO_PANE -> 360.dp
         isClipMode && isToolPanelExpanded -> 208.dp
         isClipMode && isCompactEditorHeight -> 248.dp
         isClipMode -> 284.dp
