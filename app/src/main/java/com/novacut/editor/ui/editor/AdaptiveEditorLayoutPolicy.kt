@@ -4,8 +4,8 @@ package com.novacut.editor.ui.editor
  * R8.8 adaptive layout policy for Android 16 forced-resizable screens.
  *
  * Kept Android-free so tablet/foldable breakpoints are unit-testable without
- * Compose or WindowManager. Platform posture detection can feed [isTabletop]
- * later; the policy already reserves the resulting layout mode.
+ * Compose or WindowManager. Platform posture detection feeds [isTabletop]
+ * from WindowManager at the activity boundary.
  */
 object AdaptiveEditorLayoutPolicy {
     enum class WidthClass { COMPACT, MEDIUM, EXPANDED }
@@ -18,6 +18,7 @@ object AdaptiveEditorLayoutPolicy {
         val paneMode: PaneMode,
         val useSidebar: Boolean,
         val compactTimeline: Boolean,
+        val preferEmbeddedExportPane: Boolean,
     )
 
     fun widthClass(widthDp: Int): WidthClass = when {
@@ -51,7 +52,8 @@ object AdaptiveEditorLayoutPolicy {
             heightClass = height,
             paneMode = paneMode,
             useSidebar = paneMode == PaneMode.THREE_PANE,
-            compactTimeline = height == HeightClass.COMPACT || width == WidthClass.COMPACT
+            compactTimeline = height == HeightClass.COMPACT || width == WidthClass.COMPACT,
+            preferEmbeddedExportPane = paneMode == PaneMode.THREE_PANE && widthDp >= 1000 && height != HeightClass.COMPACT
         )
     }
 }

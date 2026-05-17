@@ -82,6 +82,11 @@ import com.novacut.editor.ui.theme.NovaCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
 
+enum class ExportSheetPresentation {
+    BOTTOM_SHEET,
+    EMBEDDED_PANE
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ExportSheet(
@@ -96,6 +101,7 @@ fun ExportSheet(
     smartRenderSummary: SmartRenderEngine.SmartRenderSummary? = null,
     sourceHdrSummary: ExportColorConfidenceEngine.SourceHdrSummary = ExportColorConfidenceEngine.SourceHdrSummary(),
     aiUsageLedger: List<AiUsageLedger.Entry> = emptyList(),
+    presentation: ExportSheetPresentation = ExportSheetPresentation.BOTTOM_SHEET,
     onConfigChanged: (ExportConfig) -> Unit,
     onStartExport: () -> Unit,
     onShare: () -> Unit = {},
@@ -223,6 +229,10 @@ fun ExportSheet(
         config.exportAsContactSheet -> Icons.Default.ViewModule
         else -> Icons.Default.FileUpload
     }
+    val containerShape = when (presentation) {
+        ExportSheetPresentation.BOTTOM_SHEET -> RoundedCornerShape(topStart = Radius.xxl, topEnd = Radius.xxl)
+        ExportSheetPresentation.EMBEDDED_PANE -> RoundedCornerShape(topStart = Radius.xxl, bottomStart = Radius.xxl)
+    }
 
     if (showClearAiLedgerConfirm) {
         AlertDialog(
@@ -252,19 +262,21 @@ fun ExportSheet(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(Mocha.Panel, RoundedCornerShape(topStart = Radius.xxl, topEnd = Radius.xxl))
+            .background(Mocha.Panel, containerShape)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = Spacing.lg, vertical = 14.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .align(Alignment.CenterHorizontally)
-                .width(36.dp)
-                .height(3.dp)
-                .background(Mocha.Surface2.copy(alpha = 0.55f), RoundedCornerShape(Radius.sm))
-        )
+        if (presentation == ExportSheetPresentation.BOTTOM_SHEET) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .width(36.dp)
+                    .height(3.dp)
+                    .background(Mocha.Surface2.copy(alpha = 0.55f), RoundedCornerShape(Radius.sm))
+            )
 
-        Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(14.dp))
+        }
 
         Row(
             modifier = Modifier.fillMaxWidth(),

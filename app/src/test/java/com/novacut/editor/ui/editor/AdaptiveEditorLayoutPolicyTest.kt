@@ -50,4 +50,23 @@ class AdaptiveEditorLayoutPolicyTest {
         assertTrue(decision.useSidebar)
         assertFalse(decision.compactTimeline)
     }
+
+    @Test
+    fun embeddedExportPaneOnlyAppearsOnRoomyThreePaneLayouts() {
+        assertFalse(
+            AdaptiveEditorLayoutPolicy.decide(widthDp = 411, heightDp = 891).preferEmbeddedExportPane
+        )
+        assertFalse(
+            AdaptiveEditorLayoutPolicy.decide(widthDp = 700, heightDp = 840).preferEmbeddedExportPane
+        )
+        assertFalse(
+            AdaptiveEditorLayoutPolicy.decide(widthDp = 900, heightDp = 460).preferEmbeddedExportPane
+        )
+        assertFalse(
+            AdaptiveEditorLayoutPolicy.decide(widthDp = 900, heightDp = 900).preferEmbeddedExportPane
+        )
+        assertTrue(
+            AdaptiveEditorLayoutPolicy.decide(widthDp = 1100, heightDp = 900).preferEmbeddedExportPane
+        )
+    }
 }

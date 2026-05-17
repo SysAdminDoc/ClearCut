@@ -20,14 +20,14 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.window.layout.FoldingFeature
+import androidx.window.layout.WindowInfoTracker
 import com.novacut.editor.ui.editor.EditorScreen
 import com.novacut.editor.ui.editor.LocalTabletopPosture
 import com.novacut.editor.ui.projects.ProjectListScreen
 import com.novacut.editor.ui.settings.SettingsScreen
 import com.novacut.editor.ui.theme.NovaCutTheme
 import dagger.hilt.android.AndroidEntryPoint
-import androidx.window.layout.FoldingFeature
-import androidx.window.layout.WindowInfoTracker
 import kotlinx.coroutines.flow.collect
 
 @AndroidEntryPoint
