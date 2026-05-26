@@ -2,6 +2,60 @@
 
 ## Unreleased
 
+### Autonomous roadmap continuation — 2026-05-25 (Loop 3)
+
+Five-batch follow-up loop. Picks up after Loop 2 with the UI-integration
+half of the engine-layer data contracts shipped in Loops 1 and 2. Mix of
+in-place wiring (BidiFormatter wrap, dynamic shortcut push) and
+standalone composables (AI requirement sheet, AI-use confidence row,
+Cut Assistant filter chips) so each consumer panel can adopt them with
+a single drop-in call site. All commits local on master only.
+
+- **Batch 17 — RTL bidi wrap.** `StrokedTextBitmapOverlay.drawBitmap` and
+  `ExportTextOverlay.getText` now wrap captions with
+  `BidiFormatter.getInstance().unicodeWrap(text)` when
+  `BidiTextPolicy.needsBidiWrap(text)` reports a strong RTL character is
+  present. ASCII captions skip the wrap; Arabic / Hebrew / Persian /
+  Urdu / Yiddish captions get correct paragraph direction + alignment
+  via the injected U+200E / U+200F marks. Commit `4c49d9e`.
+- **Batch 18 — Dynamic launcher shortcuts.** `ProjectListViewModel.init`
+  now subscribes to `allProjects` and calls
+  `ShortcutManagerCompat.setDynamicShortcuts(appContext, list)` whenever
+  the project list changes. Mapping from `ProjectShortcutPlanner.DynamicShortcut`
+  to `ShortcutInfoCompat` lives in a `toShortcutInfoCompat(ctx)`
+  extension. Launcher rejections (some OEM forks throw on excess
+  shortcuts) are caught and logged so the affordance is best-effort.
+  Reuses `R.mipmap.ic_launcher` icon. Commit `f842fc0`.
+- **Batch 19 — AiModelRequirementSheet composable.** New `AlertDialog`-shaped
+  bottom sheet in `ui/editor/AiModelRequirementSheet.kt` consuming
+  `AiToolRequirements.ToolRequirement`. Availability-aware title + icon +
+  accent: Verified/Green for READY, Download/Sky for
+  MODEL_DOWNLOAD_REQUIRED, CloudOff/Peach for DEPENDENCY_MISSING,
+  Cloud/Yellow for CLOUD_OPT_IN. Renders model name + license + size + on-
+  device-vs-cloud meta rows. Consent checkbox gates the primary CTA when
+  `requiresOptInConsent` (cloud + voice clone). Dismiss-only when
+  `DEPENDENCY_MISSING` with secondary "Review AI models". New strings:
+  `ai_requirement_title_*` / `body_*` / `runtime_*` / actions. Commit
+  `4cf9a71`.
+- **Batch 20 — ExportSheet AI-use confidence row composable.** New
+  `ui/export/AiUseConfidenceRow.kt` consumes
+  `AiUsageLedger.summarizeForChips(entries)`. FlowRow of severity-coloured
+  chips: Peach for `DISCLOSURE_REQUIRED`, Sky for `DISCLOSURE_RECOMMENDED`,
+  Green for `INTERNAL_ONLY`. Each chip shows the bucket label + count +
+  total range via `Chip.describe()`. Empty state when the project ledger
+  is empty. Tap forwards through `onChipClick` so the detail panel can
+  expand per-clip in a follow-up. New strings: `export_ai_use_*` +
+  `export_ai_use_severity_*`. Commit `cea5b8c`.
+- **Batch 21 — CutAssistantFilterChips composable.** New
+  `ui/editor/CutAssistantFilterChips.kt` consumes
+  `SilenceDetectionEngine.ProposalCategory`. FlowRow of toggle chips
+  with per-bucket counts derived from `groupByCategory(proposals)`;
+  zero-count categories are hidden; "All" chip is a convenience toggle.
+  Caller owns the `enabled` state via standard `mutableStateOf<Set<...>>`.
+  Drop into `CutAssistantReviewPanel` and route the filter through
+  `SilenceDetectionEngine.filterByCategory(proposals, enabled)`. New
+  strings: `cut_filter_*`. Commit `9164d64`.
+
 ### Autonomous roadmap continuation — 2026-05-25 (Loop 2)
 
 Four-batch follow-up loop. Picks up after the first 2026-05-25 loop with
