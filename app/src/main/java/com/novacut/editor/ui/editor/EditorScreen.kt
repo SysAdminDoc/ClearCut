@@ -1152,7 +1152,13 @@ fun EditorScreen(
                         "smart_reframe" -> viewModel.showSmartReframe()
                         "caption_styles" -> viewModel.showCaptionStyleGallery()
                         "speed_presets" -> viewModel.showSpeedPresets()
-                        "filler_removal" -> viewModel.showFillerRemoval()
+                        // Highest-Value #6 — filler removal redirects to the
+                        // unified Cut Assistant Review panel. The chip-row
+                        // filter inside that panel already separates silence
+                        // / single-word filler / multi-word filler buckets,
+                        // so the standalone FillerRemovalPanel becomes
+                        // redundant.
+                        "filler_removal" -> viewModel.proposeCutsForReview()
                         "tts" -> viewModel.showTts()
                         "stickers" -> viewModel.showStickerPicker()
                         "noise_reduction" -> viewModel.showNoiseReduction()
@@ -2148,7 +2154,11 @@ fun EditorScreen(
             )
         }
 
-        // Filler Removal
+        // Filler Removal (legacy — kept in tree until BottomSheetSlot is
+        // dropped; the `filler_removal` tool ID now opens Cut Assistant
+        // Review instead, so this slot only fires for callers we haven't
+        // migrated yet).
+        @Suppress("DEPRECATION")
         BottomSheetSlot(
             visible = state.panels.isOpen(PanelId.FILLER_REMOVAL),
             modifier = Modifier.align(Alignment.BottomCenter)

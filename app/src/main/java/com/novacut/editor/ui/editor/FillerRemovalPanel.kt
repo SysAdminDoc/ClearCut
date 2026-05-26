@@ -38,6 +38,26 @@ import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.ui.theme.Mocha
 
+/**
+ * Legacy filler-removal panel. **Pending deletion.**
+ *
+ * Highest-Value #6 / 2026-05-25 Loop 3 promoted `CutAssistantReviewPanel`
+ * to the single review surface; its chip-row filter (Silence /
+ * Single-word filler / Multi-word filler) supersedes the standalone
+ * Analyze + Apply flow this panel exposes. The "filler_removal" tool
+ * action in EditorScreen now opens Cut Assistant Review instead.
+ *
+ * Kept in tree until the corresponding `PanelId.FILLER_REMOVAL`
+ * BottomSheetSlot is removed; that follow-up also drops
+ * `viewModel.showFillerRemoval` / `hideFillerRemoval` /
+ * `analyzeFillers` / `applyFillerRemoval` / `state.fillerRegions` /
+ * `state.isAnalyzingFillers` from `EditorViewModel`.
+ */
+@Deprecated(
+    "Use CutAssistantReviewPanel — see RESEARCH_FEATURE_PLAN_2026-05-25 Highest-Value #6.",
+    ReplaceWith("CutAssistantReviewPanel(/* review = … */)"),
+    DeprecationLevel.WARNING,
+)
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun FillerRemovalPanel(
