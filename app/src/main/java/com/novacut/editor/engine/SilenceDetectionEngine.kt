@@ -237,6 +237,78 @@ class SilenceDetectionEngine @Inject constructor() {
         return out
     }
 
+    // --- Batch-11 / Highest-Value #6: unified Cut Assistant filter chips ---
+
+    /**
+     * Bucket label used by the unified Cut Assistant review panel's chip row.
+     * Splits the two-Reason source into three user-facing buckets so the
+     * panel can offer "Silence", "'Um / Uh' (single word)", and
+     * "'You know / I mean' (multi-word)" as independent filters. The "Other"
+     * bucket is reserved for future engines (sentence-boundary cleanup,
+     * dead-air visual cuts, etc.) that don't fit the two existing reasons.
+     */
+    enum class ProposalCategory {
+        SILENCE,
+        SINGLE_WORD_FILLER,
+        MULTI_WORD_FILLER,
+        OTHER,
+    }
+
+    /**
+     * Classify a single proposal into its [ProposalCategory] bucket.
+     *
+     * The split between SINGLE_WORD_FILLER and MULTI_WORD_FILLER is decided
+     * by inspecting the proposal's `matchedText` — multi-word fillers carry
+     * a space-separated phrase ("you know"); single-word fillers carry a
+     * single token. Falls back to OTHER when the reason is FILLER_WORD but
+     * no matched text is present, so the chip-row data stays well-formed
+     * even for proposals from future detectors.
+     */
+    fun categorize(proposal: CutProposal): ProposalCategory = when (proposal.reason) {
+        CutProposal.Reason.SILENCE -> ProposalCategory.SILENCE
+        CutProposal.Reason.FILLER_WORD -> {
+            val matched = proposal.matchedText?.trim().orEmpty()
+            when {
+                matched.isEmpty() -> ProposalCategory.OTHER
+                matched.contains(' ') -> ProposalCategory.MULTI_WORD_FILLER
+                else -> ProposalCategory.SINGLE_WORD_FILLER
+            }
+        }
+    }
+
+    /**
+     * Filter a proposal list down to only the categories the user has
+     * enabled via chip toggles. Stable order is preserved — the input list's
+     * ordering is what the panel renders.
+     *
+     * Empty [enabled] returns an empty list (the panel renders nothing when
+     * no chip is on). Passing `ProposalCategory.entries.toSet()` is the
+     * identity filter (all chips on, full list returned).
+     */
+    fun filterByCategory(
+        proposals: List<CutProposal>,
+        enabled: Set<ProposalCategory>,
+    ): List<CutProposal> {
+        if (enabled.isEmpty()) return emptyList()
+        if (enabled.size == ProposalCategory.entries.size) return proposals
+        return proposals.filter { categorize(it) in enabled }
+    }
+
+    /**
+     * Group a proposal list by category, preserving the input order within
+     * each bucket. Convenient for chip counts ("Silence (12) / 'Um/Uh' (4) /
+     * 'You know' (2)") and for the proposal-row section headers.
+     */
+    fun groupByCategory(
+        proposals: List<CutProposal>,
+    ): Map<ProposalCategory, List<CutProposal>> {
+        val out = linkedMapOf<ProposalCategory, MutableList<CutProposal>>()
+        for (proposal in proposals) {
+            out.getOrPut(categorize(proposal)) { mutableListOf() }.add(proposal)
+        }
+        return out
+    }
+
     companion object {
         private const val TAG = "SilenceDetect"
         private const val PUNCTUATION = ".,!?;:-\"'()"
