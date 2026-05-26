@@ -163,6 +163,15 @@ data class EditorState(
     // dispatch paths flip over one at a time. When non-null the
     // `AiModelRequirementSheet` composable renders in EditorScreen.
     val aiModelRequirement: com.novacut.editor.engine.AiToolRequirements.ToolRequirement? = null,
+    // R5.4a — caption-translation editor surface. Populated by
+    // EditorViewModel.refreshCaptionTranslation(); the panel
+    // (CaptionTranslationPanel) consumes these fields directly.
+    val captionTranslationRows: List<com.novacut.editor.engine.CaptionTranslationEngine.EditorRow> = emptyList(),
+    val captionTranslationSourceLang: String = "en",
+    val captionTranslationTargetLang: String? = null,
+    val captionTranslationQuality: com.novacut.editor.engine.CaptionTranslationEngine.LanguagePairQuality? = null,
+    val captionTranslationVariant: com.novacut.editor.engine.CaptionTranslationEngine.ModelVariant =
+        com.novacut.editor.engine.CaptionTranslationEngine.ModelVariant.NLLB_600M,
     val aiProcessingTool: String? = null,
     val lastExportedFilePath: String? = null,
     val copiedEffects: List<Effect> = emptyList(),
@@ -395,6 +404,7 @@ class EditorViewModel @Inject constructor(
     private val aiThumbnailEngine: AiThumbnailEngine,
     private val audioDescriptionEngine: AudioDescriptionEngine,
     private val stylusMidiEngine: StylusMidiEngine,
+    private val captionTranslationEngine: com.novacut.editor.engine.CaptionTranslationEngine,
     @ApplicationContext private val appContext: Context,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -4244,6 +4254,105 @@ class EditorViewModel @Inject constructor(
 
     fun dismissAiModelRequirement() {
         _state.update { it.copy(aiModelRequirement = null) }
+    }
+
+    // --- R5.4a Caption translation orchestrator ---
+    //
+    // The panel reads `state.captionTranslationRows` / `*TargetLang` /
+    // `*Quality` and routes user actions back through these methods. The
+    // network-bound `engine.translate(...)` call is invoked through
+    // `runCaptionTranslation()` which the host fires when the user picks
+    // a target language. Until the model dep lands the engine returns the
+    // source text unchanged — the editor surface still works because all
+    // four state-mutation helpers are pure.
+
+    fun setCaptionTranslationTarget(targetLang: String) {
+        val variant = _state.value.captionTranslationVariant
+        val source = _state.value.captionTranslationSourceLang
+        val quality = captionTranslationEngine.pairQuality(variant, source, targetLang)
+        _state.update {
+            it.copy(
+                captionTranslationTargetLang = targetLang,
+                captionTranslationQuality = quality,
+            )
+        }
+    }
+
+    /**
+     * Replace a translated caption row's target text with the user's edit
+     * and flip its state to USER_EDITED. Pure pass-through to the engine
+     * helper so the panel doesn't have to import engine types.
+     */
+    fun applyCaptionTranslationEdit(rowIndex: Int, newTargetText: String) {
+        val rows = _state.value.captionTranslationRows
+        val updatedSegments = captionTranslationEngine.applyUserEdit(
+            segments = rows.map { it.segment },
+            index = rowIndex,
+            newTargetText = newTargetText,
+        )
+        _state.update { state ->
+            state.copy(
+                captionTranslationRows = updatedSegments.mapIndexed { i, seg ->
+                    com.novacut.editor.engine.CaptionTranslationEngine.EditorRow(
+                        index = i,
+                        segment = seg,
+                        quality = rows.getOrNull(i)?.quality
+                            ?: state.captionTranslationQuality
+                            ?: com.novacut.editor.engine.CaptionTranslationEngine.LanguagePairQuality.UNKNOWN,
+                    )
+                },
+            )
+        }
+    }
+
+    /**
+     * Mark a row REGENERATE_PENDING so the panel shows the spinner.
+     * Callers that have an actual translation backend should follow this
+     * with `completeCaptionTranslationRegenerate(index, newText)` once the
+     * background work finishes; today the stub `translate()` returns the
+     * source text so callers wire a self-completing loop.
+     */
+    fun regenerateCaptionTranslation(rowIndex: Int) {
+        val rows = _state.value.captionTranslationRows
+        val updated = captionTranslationEngine.markRegeneratePending(
+            segments = rows.map { it.segment },
+            index = rowIndex,
+        )
+        _state.update { state ->
+            state.copy(
+                captionTranslationRows = updated.mapIndexed { i, seg ->
+                    com.novacut.editor.engine.CaptionTranslationEngine.EditorRow(
+                        index = i,
+                        segment = seg,
+                        quality = rows.getOrNull(i)?.quality
+                            ?: state.captionTranslationQuality
+                            ?: com.novacut.editor.engine.CaptionTranslationEngine.LanguagePairQuality.UNKNOWN,
+                    )
+                },
+            )
+        }
+    }
+
+    fun completeCaptionTranslationRegenerate(rowIndex: Int, newTargetText: String) {
+        val rows = _state.value.captionTranslationRows
+        val updated = captionTranslationEngine.completeRegenerate(
+            segments = rows.map { it.segment },
+            index = rowIndex,
+            newTargetText = newTargetText,
+        )
+        _state.update { state ->
+            state.copy(
+                captionTranslationRows = updated.mapIndexed { i, seg ->
+                    com.novacut.editor.engine.CaptionTranslationEngine.EditorRow(
+                        index = i,
+                        segment = seg,
+                        quality = rows.getOrNull(i)?.quality
+                            ?: state.captionTranslationQuality
+                            ?: com.novacut.editor.engine.CaptionTranslationEngine.LanguagePairQuality.UNKNOWN,
+                    )
+                },
+            )
+        }
     }
 
     fun dismissBackupImportFeedback() {
