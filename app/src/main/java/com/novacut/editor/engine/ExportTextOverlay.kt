@@ -1,6 +1,7 @@
 package com.novacut.editor.engine
 
 import android.graphics.Typeface
+import android.text.BidiFormatter
 import android.text.Layout
 import android.text.SpannableString
 import android.text.Spanned
@@ -39,13 +40,21 @@ internal class ExportTextOverlay(
         computeAnimationState(timeMs)
 
         val fullText = overlay.text
-        val displayText = if (overlay.animationIn == TextAnimation.TYPEWRITER) {
+        val rawDisplay = if (overlay.animationIn == TextAnimation.TYPEWRITER) {
             val elapsed = timeMs - relStartMs
             val charCount = ((elapsed.toFloat() / animDurationMs) * fullText.length)
                 .toInt().coerceIn(0, fullText.length)
             fullText.substring(0, charCount)
         } else {
             fullText
+        }
+        // R5.4b — apply Unicode bidi reordering for any caption that carries
+        // an RTL strong character; pure-ASCII captions skip the wrap so the
+        // common path stays allocation-free.
+        val displayText = if (BidiTextPolicy.needsBidiWrap(rawDisplay)) {
+            BidiFormatter.getInstance().unicodeWrap(rawDisplay)
+        } else {
+            rawDisplay
         }
         val text = SpannableString(displayText)
         if (displayText.isNotEmpty()) {

@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.Typeface
+import android.text.BidiFormatter
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.BitmapOverlay
 import com.novacut.editor.model.TextAlignment
@@ -122,7 +123,16 @@ internal class StrokedTextBitmapOverlay(
         )
     }
 
-    private fun drawBitmap(text: String): Bitmap {
+    private fun drawBitmap(rawText: String): Bitmap {
+        // R5.4b — apply Unicode bidi reordering before Canvas.drawText for
+        // any caption that carries an RTL strong character. Pure ASCII /
+        // Latin captions skip the wrap (and its U+200E / U+200F mark
+        // insertion) to keep the common path allocation-free.
+        val text = if (BidiTextPolicy.needsBidiWrap(rawText)) {
+            BidiFormatter.getInstance().unicodeWrap(rawText)
+        } else {
+            rawText
+        }
         val paintFill = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
             color = applyAlpha(overlay.color.toInt(), currentAlpha)
             textSize = overlay.fontSize
