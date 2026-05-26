@@ -6,6 +6,11 @@ import android.net.Uri
 import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.FileProvider
+import androidx.core.content.pm.ShortcutInfoCompat
+import androidx.core.content.pm.ShortcutManagerCompat
+import androidx.core.graphics.drawable.IconCompat
+import com.novacut.editor.MainActivity
+import com.novacut.editor.engine.ProjectShortcutPlanner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.novacut.editor.R
@@ -67,6 +72,7 @@ class ProjectListViewModel @Inject constructor(
 ) : ViewModel() {
     private companion object {
         private const val MAX_PROJECT_NAME_CHARS = 80
+        private const val TAG = "ProjectListViewModel"
     }
 
     private val _searchQuery = MutableStateFlow("")
@@ -134,6 +140,62 @@ class ProjectListViewModel @Inject constructor(
 
     init {
         refreshUserTemplates()
+        // Push dynamic launcher shortcuts whenever the project list changes so
+        // long-pressing the launcher icon surfaces "Resume recovered draft"
+        // and "Open <last-project-name>" in sync with reality. Driven by the
+        // pure ProjectShortcutPlanner — this view-model only owns the I/O.
+        viewModelScope.launch {
+            allProjects.collect { projects ->
+                refreshDynamicShortcuts(projects)
+            }
+        }
+    }
+
+    /**
+     * Compute and push the dynamic launcher shortcut list. Side-effect only —
+     * `ProjectShortcutPlanner.planDynamic(state)` is the pure decision; this
+     * function does the Android-side mapping to `ShortcutInfoCompat` + the
+     * platform call.
+     */
+    private suspend fun refreshDynamicShortcuts(projects: List<Project>) {
+        val last = projects.maxByOrNull { it.updatedAt }
+        val hasRecovery = last?.id?.let { autoSave.hasRecoveryData(it) } ?: false
+        val state = ProjectShortcutPlanner.State(
+            lastProjectId = last?.id,
+            lastProjectName = last?.name,
+            hasRecoveryForLast = hasRecovery,
+        )
+        val planned = ProjectShortcutPlanner.planDynamic(state)
+        val shortcuts = planned.map { it.toShortcutInfoCompat(appContext) }
+        try {
+            ShortcutManagerCompat.setDynamicShortcuts(appContext, shortcuts)
+        } catch (e: Exception) {
+            // Some launchers (OEM forks) reject excess shortcuts or refuse
+            // updates from a backgrounded process. The shortcut list is a
+            // pure affordance — losing it is never worth a crash.
+            Log.w(TAG, "Failed to set dynamic shortcuts (${planned.size} entries)", e)
+        }
+    }
+
+    private fun ProjectShortcutPlanner.DynamicShortcut.toShortcutInfoCompat(
+        ctx: Context,
+    ): ShortcutInfoCompat {
+        val intent = Intent(action).apply {
+            // Launch the existing MainActivity entry point. The action string
+            // is the routing key handleIncomingIntent reads.
+            setClassName(ctx, MainActivity::class.java.name)
+            for ((key, value) in extras) putExtra(key, value)
+        }
+        return ShortcutInfoCompat.Builder(ctx, shortcutId)
+            .setShortLabel(shortLabel)
+            .setLongLabel(longLabel)
+            .setRank(rank)
+            .setIntent(intent)
+            // Reuse the launcher mipmap so a dedicated raster isn't required
+            // up-front. The Resume / Open distinction is in the label, not
+            // the icon, which is the most accessible default.
+            .setIcon(IconCompat.createWithResource(ctx, R.mipmap.ic_launcher))
+            .build()
     }
 
     fun setSearchQuery(query: String) {
