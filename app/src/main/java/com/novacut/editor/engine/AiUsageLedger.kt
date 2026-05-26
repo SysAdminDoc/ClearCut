@@ -209,6 +209,87 @@ object AiUsageLedger {
         }
     }
 
+    /**
+     * Pre-export chip-row data for the ExportSheet "AI use" confidence row.
+     *
+     * Buckets entries by [EffectKind], computes count + total range duration +
+     * default severity per bucket, and returns a stable-ordered list:
+     * 1. Severity descending (`DISCLOSURE_REQUIRED` first so the visual stack
+     *    leads with the strongest disclosure signal).
+     * 2. Then effect-kind name ascending so the order is reproducible across
+     *    builds and tests.
+     *
+     * Pure data — no Compose, no string resources, no Android. The UI layer
+     * maps [Chip.effectKind] to a localized label and [Chip.severity] to a
+     * colour token. The data here is enough to drive the chip row, the
+     * expanded per-clip detail list, and an at-a-glance count badge.
+     *
+     * `mergeOverlaps` is applied first so a re-applied effect on the same
+     * clip range counts once.
+     */
+    fun summarizeForChips(entries: List<Entry>): List<Chip> {
+        val merged = mergeOverlaps(entries)
+        if (merged.isEmpty()) return emptyList()
+        val buckets = merged.groupBy { it.effectKind }
+        return buckets.map { (kind, list) ->
+            val totalDurationMs = list.sumOf { it.rangeDurationMs }
+            val clipCount = list.map { it.clipId }.distinct().size
+            val severity = defaultSeverity(kind)
+            Chip(
+                effectKind = kind,
+                severity = severity,
+                entryCount = list.size,
+                clipCount = clipCount,
+                totalRangeMs = totalDurationMs,
+                modelNames = list.map { it.modelName }.toSortedSet().toList(),
+            )
+        }.sortedWith(
+            compareByDescending<Chip> { severityRank(it.severity) }
+                .thenBy { it.effectKind.name }
+        )
+    }
+
+    /**
+     * Compact chip-row entry. One per effect-kind bucket after merge.
+     *
+     * @property effectKind Source bucket.
+     * @property severity Default disclosure severity for the bucket.
+     * @property entryCount Merged entry count for this bucket.
+     * @property clipCount Distinct clip IDs touched by this bucket.
+     * @property totalRangeMs Sum of merged range durations across the bucket.
+     * @property modelNames Distinct model names involved, sorted for stability.
+     */
+    data class Chip(
+        val effectKind: EffectKind,
+        val severity: Severity,
+        val entryCount: Int,
+        val clipCount: Int,
+        val totalRangeMs: Long,
+        val modelNames: List<String>,
+    ) {
+        /**
+         * Effect-kind label suitable for an English chip body.
+         * Lowercased + underscores stripped — caller wraps in any title-case
+         * convention they want.
+         */
+        val effectKindLabel: String
+            get() = effectKind.name.lowercase().replace('_', ' ')
+
+        /** Human-readable bucket total (e.g. "4 clips · 12.3s") for chip detail rows. */
+        fun describe(): String {
+            val secs = totalRangeMs / 1000.0
+            val secsLabel = if (secs >= 60.0) {
+                val m = (secs / 60).toInt()
+                val s = (secs % 60).toInt()
+                "${m}m ${s}s"
+            } else {
+                "%.1fs".format(secs)
+            }
+            val clipsLabel = if (clipCount == 1) "1 clip" else "$clipCount clips"
+            return "$clipsLabel · $secsLabel"
+        }
+    }
+
     fun toDisclosureDeclaration(
         entries: List<Entry>,
         projectName: String,
