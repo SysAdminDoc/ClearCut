@@ -1882,6 +1882,20 @@ fun EditorScreen(
             )
         }
 
+        // Next-generation AI requirement sheet (Highest-Value #10). Renders
+        // alongside the legacy `aiRequirementPrompt` AlertDialog during the
+        // dispatch-path migration; only one is ever active at a time because
+        // each tool dispatch picks exactly one of the two surfaces.
+        state.aiModelRequirement?.let { req ->
+            AiModelRequirementSheet(
+                requirement = req,
+                onDismiss = viewModel::dismissAiModelRequirement,
+                onDownload = { viewModel.dismissAiModelRequirement(); viewModel.showAiToolsPanel() },
+                onRun = { viewModel.dismissAiModelRequirement() },
+                onReviewModels = { viewModel.dismissAiModelRequirement(); viewModel.showAiToolsPanel() },
+            )
+        }
+
         state.aiRequirementPrompt?.let { prompt ->
             AlertDialog(
                 onDismissRequest = viewModel::dismissAiRequirementPrompt,

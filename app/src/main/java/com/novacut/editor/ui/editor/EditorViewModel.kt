@@ -158,6 +158,11 @@ data class EditorState(
     // banner is pending or after the user interacts with it.
     val bulkUndoPrompt: BulkUndoPrompt? = null,
     val aiRequirementPrompt: AiRequirementPrompt? = null,
+    // Next-generation pre-flight sheet (Highest-Value #10). Coexists with the
+    // legacy `aiRequirementPrompt` AlertDialog during the migration; tool
+    // dispatch paths flip over one at a time. When non-null the
+    // `AiModelRequirementSheet` composable renders in EditorScreen.
+    val aiModelRequirement: com.novacut.editor.engine.AiToolRequirements.ToolRequirement? = null,
     val aiProcessingTool: String? = null,
     val lastExportedFilePath: String? = null,
     val copiedEffects: List<Effect> = emptyList(),
@@ -4222,6 +4227,23 @@ class EditorViewModel @Inject constructor(
                 it
             }
         }
+    }
+
+    /**
+     * Show the next-generation AI requirement sheet (Highest-Value #10).
+     * Look up the [com.novacut.editor.engine.AiToolRequirements] entry for
+     * [toolId] and surface it through `state.aiModelRequirement`. The
+     * `AiModelRequirementSheet` Composable in EditorScreen renders the
+     * result. Silently no-ops when no registry entry exists — the legacy
+     * `aiRequirementPrompt` path remains the fallback during migration.
+     */
+    fun showAiModelRequirement(toolId: String) {
+        val req = com.novacut.editor.engine.AiToolRequirements.requirementFor(toolId) ?: return
+        _state.update { it.copy(aiModelRequirement = req) }
+    }
+
+    fun dismissAiModelRequirement() {
+        _state.update { it.copy(aiModelRequirement = null) }
     }
 
     fun dismissBackupImportFeedback() {
