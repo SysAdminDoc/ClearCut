@@ -22,13 +22,18 @@ keystore.properties
 hs_err_pid*.log
 replay_pid*.log
 
-# Private docs — keep local only
+# Private docs — keep local only.
+# NOTE: ROADMAP.md, CHANGELOG.md, and CODEX_CHANGELOG.md are tracked in git as
+# the public source of truth. They are intentionally NOT listed here.
+# Anything below this comment is local working-tree only.
 CLAUDE.md
-CODEX_CHANGELOG.md
 .claude/
 RESEARCH.md
-ROADMAP.md
-HostShield-Research-Report.md
-research/
 ROADMAP-COMPLETED.md
 qa/
+
+# Cross-project pollution — HostShield is a separate app whose research drafts
+# sometimes end up in this working tree. Block them at the .gitignore layer and
+# also lock with TrackedFilesAuditTest so they can never enter the tracked set.
+HostShield-Research-Report.md
+research/
