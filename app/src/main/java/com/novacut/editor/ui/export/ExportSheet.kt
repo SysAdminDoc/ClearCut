@@ -986,6 +986,15 @@ fun ExportSheet(
             if (videoModeEnabled) {
                 ColorConfidenceOutlook(report = colorConfidenceReport)
                 DeviceTierOutlook(hint = deviceTierHint)
+                // Highest-Value #2 — pre-export AI provenance preview. Renders
+                // the AiUsageLedger summary as severity-coloured chips
+                // alongside the existing color/HDR confidence row. Empty
+                // ledger renders a single "No AI assistance recorded" line.
+                AiUseConfidenceRow(
+                    chips = remember(aiUsageEntries) {
+                        AiUsageLedger.summarizeForChips(aiUsageEntries)
+                    },
+                )
             }
             if (estimatedSize != null && videoModeEnabled) {
                 Text(
