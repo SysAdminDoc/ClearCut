@@ -130,6 +130,46 @@ class CompoundNavStack {
         }
     }
 
+    /**
+     * Non-throwing variant of the [push] preconditions. UI affordances (the
+     * Open action on the radial menu, the long-press gesture on a clip)
+     * should consult this to grey themselves out instead of optimistically
+     * pushing and catching the exception.
+     */
+    fun canPush(clip: Clip): Boolean {
+        if (!clip.isCompound) return false
+        if (stack.any { it.parentClipId == clip.id }) return false
+        if (stack.size > MAX_DEPTH) return false
+        return true
+    }
+
+    /**
+     * Human-readable breadcrumb path suitable for a single-line chip above
+     * the timeline ruler (e.g. "Project ▸ Title Sequence ▸ Inner").
+     *
+     * @param rootLabel label for the implicit root level (typically the
+     *   localized "Project" string from `strings.xml`).
+     * @param separator visual separator between levels.
+     * @param fallbackParentName when a compound clip has a null `name`, this
+     *   value is substituted (a numbered placeholder is the usual choice,
+     *   but it's localizable so the caller owns the phrasing).
+     */
+    fun formatBreadcrumb(
+        rootLabel: String = "Project",
+        separator: String = " ▸ ",
+        fallbackParentName: (depth: Int) -> String = { "Group $it" },
+    ): String {
+        if (isAtRoot) return rootLabel
+        val parts = breadcrumb.mapIndexed { index, level ->
+            when {
+                level.isRoot -> rootLabel
+                !level.parentClipName.isNullOrBlank() -> level.parentClipName
+                else -> fallbackParentName(index)
+            }
+        }
+        return parts.joinToString(separator)
+    }
+
     companion object {
         /**
          * Defensive cap to prevent runaway recursion in malformed projects.
