@@ -169,4 +169,79 @@ object PrivacyDashboard {
      */
     fun cloudOrTelemetryCategories(): List<DashboardEntry> =
         entries.filter { it.location == StorageLocation.CLOUD_ON_DEMAND }
+
+    // --- Display-layer helpers (Batch 15) ---
+    //
+    // The Compose panel orders rows by risk so the user reads the most
+    // disclosure-bearing entries first (cloud paths > opt-in collection >
+    // device-only enabled-by-default > device-only opt-in). These helpers
+    // give the panel a stable contract without rewriting the entries list.
+
+    /**
+     * Coarse-grained section the dashboard renders. Cloud/telemetry sit at
+     * the top with prominent opt-out chips; on-device collected-by-default
+     * comes next; on-device opt-in (the user already turned this on at some
+     * point) renders last.
+     */
+    enum class Section(val displayName: String) {
+        CLOUD_AND_TELEMETRY("Cloud & telemetry"),
+        ON_DEVICE_COLLECTED("Stored on this device"),
+        ON_DEVICE_OPT_IN("Opt-in features (off by default)"),
+    }
+
+    /**
+     * Classify an entry into its display section.
+     */
+    fun sectionFor(entry: DashboardEntry): Section = when {
+        entry.location == StorageLocation.CLOUD_ON_DEMAND -> Section.CLOUD_AND_TELEMETRY
+        entry.collectedByDefault -> Section.ON_DEVICE_COLLECTED
+        else -> Section.ON_DEVICE_OPT_IN
+    }
+
+    /**
+     * Return the dashboard entries already sorted for display: cloud first,
+     * then collected-by-default, then opt-in. Within a section the original
+     * [Category]-enum order is preserved so the panel rendering is stable.
+     */
+    fun sortForDisplay(): List<DashboardEntry> {
+        val rank = mapOf(
+            Section.CLOUD_AND_TELEMETRY to 0,
+            Section.ON_DEVICE_COLLECTED to 1,
+            Section.ON_DEVICE_OPT_IN to 2,
+        )
+        return entries.withIndex()
+            .sortedWith(
+                compareBy<IndexedValue<DashboardEntry>> { rank[sectionFor(it.value)] }
+                    .thenBy { it.index }
+            )
+            .map { it.value }
+    }
+
+    /**
+     * Group the dashboard entries by [Section] for direct rendering as
+     * Compose sections. The returned map's iteration order matches
+     * [sortForDisplay] — cloud first, then collected-by-default, then
+     * opt-in. Empty sections are omitted entirely so the panel doesn't
+     * render an empty header.
+     */
+    fun groupForDisplay(): Map<Section, List<DashboardEntry>> {
+        val out = linkedMapOf<Section, MutableList<DashboardEntry>>()
+        for (entry in sortForDisplay()) {
+            out.getOrPut(sectionFor(entry)) { mutableListOf() }.add(entry)
+        }
+        return out
+    }
+
+    /**
+     * Short summary of what the user can do with an entry, suitable for a
+     * single-line caption. The wording is intentionally action-oriented —
+     * users want to know "what can I do here" not "what is this category".
+     */
+    fun controlSummary(entry: DashboardEntry): String {
+        val parts = mutableListOf<String>()
+        if (entry.controls.canExport) parts += "Export"
+        if (entry.controls.canDelete) parts += "Delete"
+        if (entry.controls.hasOptOut) parts += "Opt out"
+        return if (parts.isEmpty()) "Read-only" else parts.joinToString(" · ")
+    }
 }
