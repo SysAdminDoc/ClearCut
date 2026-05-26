@@ -622,12 +622,23 @@ fun EditorScreen(
         }
     }
 
-    BackHandler(enabled = hasOpenPanel || state.currentTool != EditorTool.NONE || hasClipSelection || isClipMode) {
+    BackHandler(
+        enabled = hasOpenPanel ||
+            state.currentTool != EditorTool.NONE ||
+            hasClipSelection ||
+            isClipMode ||
+            state.compoundNavDepth > 0,
+    ) {
         when {
             hasOpenPanel -> viewModel.dismissAllPanels()
             state.currentTool != EditorTool.NONE -> viewModel.setTool(EditorTool.NONE)
             state.selectedClipIds.size > 1 -> viewModel.clearMultiSelect()
             state.selectedClipId != null -> viewModel.selectClip(null)
+            // Tier C.13 — predictive back pops one compound nesting level
+            // when no other in-context action consumes the gesture. Root
+            // (depth 0) falls through to the system back-to-home animation
+            // because the BackHandler's `enabled` predicate stops gating it.
+            state.compoundNavDepth > 0 -> viewModel.exitCompoundLevel()
         }
     }
 

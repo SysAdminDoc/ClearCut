@@ -172,6 +172,11 @@ data class EditorState(
     val captionTranslationQuality: com.novacut.editor.engine.CaptionTranslationEngine.LanguagePairQuality? = null,
     val captionTranslationVariant: com.novacut.editor.engine.CaptionTranslationEngine.ModelVariant =
         com.novacut.editor.engine.CaptionTranslationEngine.ModelVariant.NLLB_600M,
+    // Tier C.13 — compound clip navigation depth. The actual stack lives on
+    // EditorViewModel as a mutable companion; this state field is the
+    // immutable signal the UI (BackHandler, breadcrumb chip) reads. 0 == root.
+    val compoundNavDepth: Int = 0,
+    val compoundBreadcrumbText: String = "",
     val aiProcessingTool: String? = null,
     val lastExportedFilePath: String? = null,
     val copiedEffects: List<Effect> = emptyList(),
@@ -4329,6 +4334,46 @@ class EditorViewModel @Inject constructor(
                             ?: com.novacut.editor.engine.CaptionTranslationEngine.LanguagePairQuality.UNKNOWN,
                     )
                 },
+            )
+        }
+    }
+
+    // --- Tier C.13 compound navigation orchestrator ---
+    //
+    // Live nav stack is held here as a mutable companion. The immutable
+    // EditorState carries the depth + breadcrumb-text signals the UI reads
+    // (BackHandler predicate + CompoundNavBreadcrumb chip). Timeline gesture
+    // wiring still needs to call `openCompoundClip(clipId)` when a compound
+    // clip is long-pressed — that's the remaining `Timeline.kt` work.
+
+    private val compoundNavStack = com.novacut.editor.engine.CompoundNavStack()
+
+    fun openCompoundClip(clipId: String): Boolean {
+        val state = _state.value
+        val clip = state.tracks
+            .flatMap { it.clips }
+            .firstOrNull { it.id == clipId } ?: return false
+        if (!compoundNavStack.canPush(clip)) return false
+        compoundNavStack.push(clip)
+        publishCompoundNavState()
+        return true
+    }
+
+    fun exitCompoundLevel() {
+        if (compoundNavStack.isAtRoot) return
+        compoundNavStack.pop()
+        publishCompoundNavState()
+    }
+
+    private fun publishCompoundNavState() {
+        val text = compoundNavStack.formatBreadcrumb(
+            rootLabel = appContext.getString(R.string.compound_breadcrumb_root),
+            separator = " " + appContext.getString(R.string.compound_breadcrumb_separator) + " ",
+        )
+        _state.update {
+            it.copy(
+                compoundNavDepth = compoundNavStack.depth,
+                compoundBreadcrumbText = text,
             )
         }
     }
