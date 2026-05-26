@@ -2,6 +2,93 @@
 
 ## Unreleased
 
+### Autonomous roadmap continuation — 2026-05-25
+
+Twelve-batch loop. Engine layer for every Highest-Value item in
+`RESEARCH_FEATURE_PLAN_2026-05-25.md` Phase 1-3 plus the Forward View "Now"
+tier. Compose UI integrations are deferred to a focused panel-only commit.
+All commits local on master only — origin/master is parallel-history,
+do not push from this VM (see [[novacut-local-remote-divergence]]).
+
+- **Batch 0 — Roadmap consolidation.** New "Active Work — 2026-05-25" section
+  at the top of `ROADMAP.md` pulls forward Phase 1-3 items as a single
+  checklist; items move here on completion. `RESEARCH_FEATURE_PLAN_2026-05-25.md`
+  committed as supporting evidence. Commit `f5621a7`.
+- **Batch 1 — CI + repo hygiene.** `.github/workflows/build.yml` now fires on
+  push/PR to master (was tag-only); concurrency group cancels stale runs.
+  `.gitignore` no longer claims `ROADMAP.md` / `CHANGELOG.md` /
+  `CODEX_CHANGELOG.md` are private (they are tracked); HostShield + `research/`
+  stay gitignored with a cross-project-pollution comment. New
+  `TrackedFilesAuditTest` runs `git ls-files` and fails the build if forbidden
+  prefixes appear or if canonical planning docs go missing. Commit `80bc6a7`.
+- **Batch 2 — Autosave schema gate.** `serialize()` writes both `version` and
+  `schemaVersion = FORMAT_VERSION`. New `AutoSaveState.peekSchemaVersion(raw)`
+  pure helper. New `ProjectAutoSave.LoadOutcome` sealed class
+  (`Loaded`/`FutureSchema`/`Corrupt`/`NotFound`) +
+  `loadRecoveryDataWithOutcome(projectId)` orchestrator refuses to fall
+  through to corrupt-recovery backup when either main or backup is from a
+  newer schema. Existing `loadRecoveryData` keeps its `AutoSaveState?`
+  contract. 7 new tests. Commit `a2c4221`.
+- **Batch 3 — MediaRelinkProbe.** New singleton with `UriOpener` seam so the
+  pure decision helper `check(clipId, uri, opener)` is JVM-testable.
+  Resolves to `RelinkState.OK / MISSING / UNKNOWN`. `probeClips(tracks)`
+  recurses compound clips. Decision rules: positive length → OK; -1 (Photo
+  Picker / SAF "unknown length") → OK; 0 → MISSING; null descriptor →
+  MISSING; thrown SecurityException/IOException → MISSING with truncated
+  reason; unsupported scheme → UNKNOWN. 10 new tests. Clip model unchanged.
+  Commit `93222e5`.
+- **Batch 4 — AI ledger chip summary.** `AiUsageLedger.summarizeForChips(entries)`
+  returns stable-ordered `List<Chip>` (severity descending, then effect-kind
+  alphabetical) with bucketed entry count / clip count / total range / distinct
+  model names. `Chip.describe()` + `Chip.effectKindLabel` for formatted body
+  text. 8 new tests. Drives the planned ExportSheet third confidence row.
+  Commit `7f34f25`.
+- **Batch 5 — Photo Picker for stickers.** EditorScreen launches
+  `PickVisualMedia(ImageOnly)` directly for the sticker-import path, skipping
+  the full MediaPicker tab sheet. Plugin file imports keep `OpenDocument`.
+  Commit `d0c1ae0`.
+- **Batch 6 — App Shortcuts + extended share intents.** New
+  `res/xml/shortcuts.xml` registers static "New Project" + "Recent" shortcuts;
+  manifest wires `<meta-data android:name="android.app.shortcuts">` + adds
+  `image/*` and `audio/*` `ACTION_VIEW` filters (content:// only, with
+  rejection enforced in `handleViewIntent`). MainActivity gains
+  `ACTION_NEW_PROJECT` / `ACTION_OPEN_RECENT` constants. Commit `fcb5e3e`.
+- **Batch 7 — Diagnostic timeline-shape.** New
+  `DiagnosticExportEngine.TimelineShape` carries counts only
+  (`trackCount`, `totalDurationMs`, `perTrackClipCount`, `perEffectTypeCount`,
+  `perTransitionTypeCount`). `exportDiagnosticBundle(..., timelineShape: TimelineShape?)`
+  adds `timeline-shape.json` only when caller passes a non-null shape.
+  Hand-rolled JSON writer escapes `\`, `"`, control chars. 6 new tests lock
+  the "no clip names / URIs / captions" invariant by injecting secrets and
+  asserting absence. Commit `95c1235`.
+- **Batch 8 — AI tool requirements registry.** New `AiToolRequirements` with
+  16-tool registry. `requirementFor(toolId)` returns
+  `ToolRequirement(modelDisplayName, estimatedBytes, license, sourceUrl,
+  runtimeLocation, availability, requiresOptInConsent)`. 8 tests lock
+  invariants: every tool has an entry, cloud tools always require consent
+  and are never READY, on-device tools have non-zero estimates, at least
+  one tool is READY. Commit `59a76a1`.
+- **Batch 9 — Compound nav UI helpers.** `CompoundNavStack.canPush(clip)`
+  non-throwing predicate (cycle / depth / non-compound). `formatBreadcrumb(...)`
+  returns single-line breadcrumb string with configurable separator + root
+  label + blank-name fallback. 7 new tests. Commit `565f34d`.
+- **Batch 10 — Caption translation editor rows.** `CaptionTranslationEngine`
+  gains `EditorRow(index, segment, quality)` view model + four immutable
+  list operations: `buildEditorRows()`, `applyUserEdit()`,
+  `markRegeneratePending()`, `completeRegenerate()`. 7 new tests. Commit
+  `540001d`.
+- **Batch 11 — Cut Assistant chip buckets.** `SilenceDetectionEngine.ProposalCategory
+  { SILENCE / SINGLE_WORD_FILLER / MULTI_WORD_FILLER / OTHER }` +
+  `categorize(proposal)` + `filterByCategory(proposals, enabled)` (identity-
+  filter optimization) + `groupByCategory(proposals)` (insertion-order
+  preserving). 8 new tests. Commit `3b476f2`.
+- **Batch 12 — ProjectColorPolicy.** Two enums
+  (`WorkingColorSpace { SDR_BT709, HDR10_BT2020_PQ, HDR_HLG, ACES_AP1 }` +
+  `DisplayTransform { NONE, BT2390_TONEMAP, HABLE_TONEMAP }`). Pure
+  `coherence()` decision table + `deliversHdr` predicate. Lives separate
+  from Room-backed `Project` so adoption doesn't force schema migration.
+  7 new tests. Commit `cb2eaa4`.
+
 ### Autonomous roadmap continuation — 2026-05-17
 
 - **R6.10d — Media3 ProgressSlider evaluation.** Added
