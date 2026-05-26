@@ -500,6 +500,33 @@ data class AutoSaveState(
 
     companion object {
         const val FORMAT_VERSION = 1
+        private const val MAX_TRANSCRIPT_WORDS = 20_000
+        private const val MAX_TRACKS = 64
+        private const val MAX_CLIPS_PER_TRACK = 2_000
+        private const val MAX_AUDIO_EFFECTS_PER_SCOPE = 128
+        private const val MAX_COMPOUND_CLIP_DEPTH = 8
+        private const val MAX_COMPOUND_CLIPS_PER_CLIP = 256
+        private const val MAX_CLIP_EFFECTS = 256
+        private const val MAX_EFFECT_PARAMS = 256
+        private const val MAX_KEYFRAMES_PER_SCOPE = 2_000
+        private const val MAX_MASKS_PER_CLIP = 256
+        private const val MAX_MASK_POINTS = 512
+        private const val MAX_CAPTIONS_PER_CLIP = 5_000
+        private const val MAX_CAPTION_WORDS = 512
+        private const val MAX_MOTION_TRACK_POINTS = 10_000
+        private const val MAX_PROJECT_MARKERS = 5_000
+        private const val MAX_IMAGE_OVERLAYS = 2_000
+        private const val MAX_DRAWING_PATHS = 2_000
+        private const val MAX_DRAWING_POINTS_PER_PATH = 4_096
+        private const val MAX_BEAT_MARKERS = 20_000
+        private const val MAX_AI_USAGE_ENTRIES = 2_000
+        private const val MAX_TRACKED_OBJECTS = 1_000
+        private const val MAX_TRACKED_OBJECT_KEYFRAMES = 10_000
+        private const val MAX_TEXT_OVERLAYS = 5_000
+        private const val MAX_TEXT_VALUE_CHARS = 4_000
+        private const val MAX_SHORT_TEXT_CHARS = 256
+        private const val MAX_NOTES_CHARS = 2_000
+        private const val MAX_CURVE_POINTS = 256
 
         /**
          * Cheap top-level inspection of an autosave JSON's schema version
