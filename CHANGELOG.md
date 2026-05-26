@@ -2,6 +2,60 @@
 
 ## Unreleased
 
+### Autonomous roadmap continuation — 2026-05-25 (Loop 5)
+
+Five-batch follow-up loop. Picks up after Loop 4 with adoption wire-ups
+for every standalone composable shipped in Loops 3/4: PrivacyDashboardPanel
+slot in Settings, AiModelRequirementSheet as a parallel surface, filler
+removal re-route to Cut Assistant Review, caption translation
+EditorViewModel orchestrator, and the compound nav back gate. All commits
+local on master only.
+
+- **Batch 29 — PrivacyDashboardPanel adopted in Settings.** New
+  "Privacy" `SettingsSection` with an `Open privacy dashboard`
+  `SettingsActionRow`. Tap opens a `Dialog` + `Surface` modal hosting
+  `PrivacyDashboardPanel`. State hoisted via
+  `var showPrivacyDashboard by remember { mutableStateOf(false) }`. New
+  strings `settings_privacy_section_*` / `settings_privacy_open_*` /
+  `settings_privacy_close`. Commit `6a534d5`.
+- **Batch 30 — AiModelRequirementSheet wired.** Added
+  `aiModelRequirement: ToolRequirement?` to `EditorState`; new
+  `showAiModelRequirement(toolId)` looks up the registry and surfaces
+  the sheet, `dismissAiModelRequirement()` clears. `EditorScreen`
+  renders the composable next to the legacy `aiRequirementPrompt`
+  AlertDialog so the two surfaces coexist during the per-tool
+  dispatch migration. Commit `f277cad`.
+- **Batch 31 — FillerRemoval re-routed to Cut Assistant Review.** The
+  `"filler_removal"` tool action in `EditorScreen` now opens
+  `viewModel.proposeCutsForReview()` — the unified
+  `CutAssistantReviewPanel` with its chip-row filter supersedes the
+  standalone analyse + apply flow. `FillerRemovalPanel` Composable
+  marked `@Deprecated` with a `ReplaceWith(CutAssistantReviewPanel)`
+  hint; remaining `BottomSheetSlot(PanelId.FILLER_REMOVAL)` call site
+  marked `@Suppress("DEPRECATION")` so the build stays clean. Final
+  panel deletion + ViewModel state cleanup pending. Commit `494f478`.
+- **Batch 32 — Caption translation EditorViewModel surface.** Added
+  five EditorState fields (`captionTranslationRows`,
+  `captionTranslationSourceLang`, `captionTranslationTargetLang`,
+  `captionTranslationQuality`, `captionTranslationVariant`) and four
+  orchestrator methods (`setCaptionTranslationTarget(target)`,
+  `applyCaptionTranslationEdit(idx, text)`,
+  `regenerateCaptionTranslation(idx)`,
+  `completeCaptionTranslationRegenerate(idx, text)`).
+  `CaptionTranslationEngine` injected as a Hilt constructor dep. The
+  `CaptionTranslationPanel` composable can now be dropped into the
+  Captions sub-tab — only the EditorScreen call site is left. Commit
+  `356934a`.
+- **Batch 33 — Compound nav orchestrator + predictive-back gate.**
+  Live `CompoundNavStack` instance held on `EditorViewModel`;
+  immutable `compoundNavDepth: Int` + `compoundBreadcrumbText: String`
+  state fields surfaced. New `openCompoundClip(clipId)` /
+  `exitCompoundLevel()` methods. `EditorScreen`'s existing
+  `BackHandler` now gates on `compoundNavDepth > 0` and pops one
+  nesting level after every higher-priority dismissal branch
+  exhausts. `Timeline.kt` gesture wiring is the only remaining piece.
+  Commit `1e879af`.
+
 ### Autonomous roadmap continuation — 2026-05-25 (Loop 4)
 
 Five-batch follow-up loop. Picks up after Loop 3 with two remaining

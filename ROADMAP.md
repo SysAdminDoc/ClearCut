@@ -77,16 +77,31 @@ Single source of truth for the in-flight batch. Pulled forward from [RESEARCH_FE
 ### Batch 27 — Compound nav breadcrumb
 - [x] **`CompoundNavBreadcrumb` composable** — new `ui/editor/CompoundNavBreadcrumb.kt` consumes `CompoundNavStack.formatBreadcrumb(...)`. Hidden at root depth; tap-anywhere-to-exit (leading back arrow + full path label). Mauve accent matches the editor's compound clip badge convention. Predictive-back integration is the remaining wiring step at the EditorScreen level — gate the existing `BackHandler` on `stack.depth > 0`.
 
+### Batch 29 — PrivacyDashboardPanel adopted in Settings
+- [x] **Settings → Privacy section** — new `SettingsActionRow` "Open privacy dashboard" opens the `PrivacyDashboardPanel` inside a `Dialog`/`Surface` modal. `showPrivacyDashboard` state hoisted at the SettingsScreen level. Engine helpers (`groupForDisplay` / `controlSummary`) are pure so the panel re-renders without any view-model state. New strings: `settings_privacy_section_*` / `settings_privacy_open_*` / `settings_privacy_close`.
+
+### Batch 30 — AiModelRequirementSheet wired as parallel surface
+- [x] **New `EditorState.aiModelRequirement` field + EditorScreen rendering** — `showAiModelRequirement(toolId)` looks up the registry and surfaces the sheet; `dismissAiModelRequirement()` clears. The composable renders right next to the legacy `aiRequirementPrompt` AlertDialog so both surfaces coexist during the per-tool dispatch migration. `AiToolsDelegate` `applyXxx` methods can flip over individually by calling `showAiModelRequirement(toolId)` instead of `showAiRequirementPrompt(...)`.
+
+### Batch 31 — FillerRemovalPanel re-routed (deletion pending)
+- [x] **`"filler_removal"` tool action now opens `proposeCutsForReview()`** — Highest-Value #6 unification complete on the dispatch side. The legacy `FillerRemovalPanel` Composable is `@Deprecated` with a `ReplaceWith` pointing at `CutAssistantReviewPanel`; one `@Suppress("DEPRECATION")` site retained for the lingering `BottomSheetSlot(PanelId.FILLER_REMOVAL)` so the build stays clean. Final deletion (drop the slot + remove `viewModel.{show,hide}FillerRemoval` / `analyzeFillers` / `applyFillerRemoval` / `state.fillerRegions` / `state.isAnalyzingFillers`) is one focused IDE pass.
+
+### Batch 32 — Caption translation EditorViewModel surface
+- [x] **EditorState fields + orchestrator methods shipped** — `captionTranslationRows` / `captionTranslationSourceLang` / `captionTranslationTargetLang` / `captionTranslationQuality` / `captionTranslationVariant` plumbed onto `EditorState`; `setCaptionTranslationTarget(target)`, `applyCaptionTranslationEdit(idx, text)`, `regenerateCaptionTranslation(idx)`, `completeCaptionTranslationRegenerate(idx, text)` orchestrators on `EditorViewModel` directly pipe to `CaptionTranslationEngine.{applyUserEdit, markRegeneratePending, completeRegenerate}`. `CaptionTranslationEngine` injected as a Hilt constructor dep. The `CaptionTranslationPanel` from Loop 4 can now be dropped into a Captions sub-tab — `EditorScreen` is the one remaining call site.
+
+### Batch 33 — Compound nav orchestrator + predictive-back gate
+- [x] **`EditorViewModel.openCompoundClip(clipId)` / `exitCompoundLevel()`** — live `CompoundNavStack` instance held on the view-model; immutable `compoundNavDepth` + `compoundBreadcrumbText` state fields surfaced for UI. `EditorScreen`'s existing `BackHandler` predicate now also gates on `compoundNavDepth > 0`; the `when {}` branches pop one nesting level after every higher-priority dismissal exhausts. `Timeline.kt` long-press → `openCompoundClip(clipId)` gesture wire-up is the only remaining piece; the breadcrumb chip composable (Loop 4) renders against `compoundBreadcrumbText`.
+
 ### Defer to a later pull
 - **Tier A.10 Oboe resampler activation** — needs dep wire + 16 KB AAR verify; pair with audio mixer regression suite.
 - **Adjustment-layer track surface (Tier C.11 UI)** — needs Room schema v7 + autosave compat; M complexity.
 - **Keyframe bezier graph panel (Tier C.12 UI)** — needs touch-handle UX pass; M complexity.
-- **Compound nav gesture wiring** — RadialActionMenu "Open compound" entry + EditorViewModel `openCompoundClip(clipId)` orchestrator + predictive-back gate (breadcrumb composable now ready to render). Needs Timeline.kt (127 KB) edit; deserves a focused IDE pass.
-- **Caption translation panel host wiring** — `EditorViewModel` needs `captionTranslationState` + `applyTranslationEdit(idx, text)` / `regenerateTranslation(idx)` so the panel can be dropped into the existing Captions tab. Engine + composable are both ready.
-- **`PrivacyDashboardPanel` adoption in Settings** — add a Settings row → opens the new panel. One call site in `SettingsScreen.kt`.
+- **Compound nav Timeline gesture** — Timeline.kt long-press → `RadialActionMenu` "Open compound" entry → `viewModel.openCompoundClip(clipId)`. Needs Timeline.kt (127 KB) edit; deserves a focused IDE pass. Predictive-back and breadcrumb already in place.
+- **Caption translation panel call site** — `EditorScreen` Captions sub-tab opens `CaptionTranslationPanel(...)` reading from `state.captionTranslation*` and dispatching to the new orchestrator methods. One Compose composable invocation.
 - **B.5 mixed-render orchestrator** — `VideoEngine.exportMixed(plan)` that consumes `MixedRenderComposer.CompositionPlan` and calls `StreamCopyExportEngine` / Transformer / `FFmpegEngine.concat()` per run. Needs Android-runtime verification of FFmpeg concat path.
-- **`AiModelRequirementSheet` adoption** — replace the existing model-gate toast surface in `AiToolsDelegate`'s `runAiTool` path with a sheet call site that consumes `AiToolRequirements.requirementFor(toolId)`.
-- **`FillerRemovalPanel` deletion + re-route** — `AiToolsDelegate`'s filler-removal action should now open `CutAssistantReviewPanel` with `enabled = { SINGLE_WORD_FILLER, MULTI_WORD_FILLER }` pre-selected. Filler panel becomes deletable once routes migrate.
+- **`AiModelRequirementSheet` per-tool adoption** — `AiToolsDelegate.applyXxx` paths flip over from `showAiRequirementPrompt(...)` to `showAiModelRequirement(toolId)` one at a time; legacy AlertDialog stays as fallback for any tool that lacks a registry entry.
+- **`FillerRemovalPanel` final deletion** — drop `PanelId.FILLER_REMOVAL` slot, `viewModel.show/hideFillerRemoval`, `analyzeFillers` / `applyFillerRemoval`, `state.fillerRegions`, `state.isAnalyzingFillers`. Routes already migrated.
+- **CaptionTranslationEngine `translate(...)` activation** — engine still stub-returns the source text; needs MADLAD-400 or Bergamot model wire + the existing `setCaptionTranslationTarget` to schedule the background translate call.
 
 ---
 
