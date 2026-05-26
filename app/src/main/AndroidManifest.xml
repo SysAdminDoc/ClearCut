@@ -49,6 +49,30 @@
                     android:scheme="content"
                     android:mimeType="video/*" />
             </intent-filter>
+            <!-- Image share target: bring a sticker / overlay candidate in
+                 from another app. `content://` only so a malicious third
+                 party can't hand us a `file://` path outside our sandbox. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data
+                    android:scheme="content"
+                    android:mimeType="image/*" />
+            </intent-filter>
+            <!-- Audio share target: drop music / SFX / voiceover from another
+                 app onto the audio track. Same `content://` only policy. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data
+                    android:scheme="content"
+                    android:mimeType="audio/*" />
+            </intent-filter>
+            <!-- App Shortcuts for the launcher long-press menu (Highest-Value
+                 #11). Resource shipped at res/xml/shortcuts.xml. -->
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
 
         <service

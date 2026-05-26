@@ -1155,6 +1155,12 @@
     <!-- Keyboard shortcuts -->
     <string name="keyboard_shortcuts">Keyboard Shortcuts</string>
 
+    <!-- App Shortcuts (launcher long-press menu) -->
+    <string name="shortcut_new_project_short">New Project</string>
+    <string name="shortcut_new_project_long">Start a fresh edit</string>
+    <string name="shortcut_recent_short">Recent</string>
+    <string name="shortcut_recent_long">Open the projects gallery</string>
+
     <!-- AudioMixerPanel -->
     <string name="panel_audio_mixer_title">Audio Mixer</string>
     <string name="panel_audio_mixer_no_effects">No effects</string>
