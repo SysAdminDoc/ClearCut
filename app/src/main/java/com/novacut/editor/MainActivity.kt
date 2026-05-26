@@ -118,21 +118,46 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleIncomingIntent(intent: Intent?) {
-        if (intent?.action == Intent.ACTION_VIEW && intent.data != null) {
-            val uri = intent.data ?: return
-            // Only accept content:// URIs — file:// is a security risk from other apps
-            if (uri.scheme != "content") return
-            // Verify the URI is actually readable before accepting it
-            try {
-                val mimeType = contentResolver.getType(uri)?.lowercase() ?: return
-                if (!mimeType.startsWith("video/")) return
-                contentResolver.openAssetFileDescriptor(uri, "r")?.use { descriptor ->
-                    if (descriptor.length == 0L) return
-                } ?: return
-                pendingVideoUri = uri
-            } catch (_: Exception) {
-                // Ignore unreadable or malicious URIs
+        if (intent == null) return
+        when (intent.action) {
+            Intent.ACTION_VIEW -> handleViewIntent(intent)
+            ACTION_NEW_PROJECT, ACTION_OPEN_RECENT -> {
+                // Both App Shortcuts land on the Projects gallery. The gallery
+                // surfaces "New Project" + recent list; no extra plumbing
+                // required today. Future enhancement: ACTION_NEW_PROJECT could
+                // pre-open the Template sheet — left as a follow-up so the
+                // shortcut shape is stable for users who pin it.
             }
         }
+    }
+
+    private fun handleViewIntent(intent: Intent) {
+        val uri = intent.data ?: return
+        // Only accept content:// URIs — file:// is a security risk from other apps
+        if (uri.scheme != "content") return
+        try {
+            val mimeType = contentResolver.getType(uri)?.lowercase() ?: return
+            if (!ACCEPTED_VIEW_MIME_PREFIXES.any { mimeType.startsWith(it) }) return
+            contentResolver.openAssetFileDescriptor(uri, "r")?.use { descriptor ->
+                if (descriptor.length == 0L) return
+            } ?: return
+            // For now every accepted ACTION_VIEW URI lands on the projects
+            // gallery via `pendingVideoUri` — the field name is historical
+            // (video was the only accepted type until image/audio share
+            // intents were added). The gallery's pending-import handler is
+            // mime-aware and will route the URI to the correct destination
+            // (project import for video, "add to current project" for
+            // image/audio) once that follow-up ships.
+            pendingVideoUri = uri
+        } catch (_: Exception) {
+            // Ignore unreadable or malicious URIs
+        }
+    }
+
+    companion object {
+        const val ACTION_NEW_PROJECT = "com.novacut.editor.action.NEW_PROJECT"
+        const val ACTION_OPEN_RECENT = "com.novacut.editor.action.OPEN_RECENT"
+
+        private val ACCEPTED_VIEW_MIME_PREFIXES = listOf("video/", "image/", "audio/")
     }
 }
