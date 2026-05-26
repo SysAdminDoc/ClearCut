@@ -2,9 +2,63 @@
 
 Forward-looking tracker for planned work. Release history lives in [CHANGELOG.md](CHANGELOG.md).
 
-Current version: **v3.74.9** (versionCode 146). Last refresh: **2026-05-17** (Round 8).
+Current version: **v3.74.9** (versionCode 146). Last refresh: **2026-05-25** (autonomous loop pull).
 
 Legend: `[ ]` not started · `[~]` in progress · `[x]` done (moved to CHANGELOG).
+
+---
+
+## Active Work — 2026-05-25 Autonomous Loop
+
+Single source of truth for the in-flight batch. Pulled forward from [RESEARCH_FEATURE_PLAN_2026-05-25.md](RESEARCH_FEATURE_PLAN_2026-05-25.md) Phase 1–3 and the [Forward View](#forward-view--now--next--later--under-consideration--rejected-2026-05) "Now" tier. Items move to [CHANGELOG.md](CHANGELOG.md) on completion.
+
+### Batch 1 — Infrastructure & repo hygiene
+- [ ] **CI on push/PR** — `.github/workflows/build.yml` currently fires only on `workflow_dispatch` / `tags/v*`; the ~146 commits between `v3.73.2` and `v3.74.9` were CI-unverified. Add `push: branches: [master]` and `pull_request:`.
+- [ ] **`.gitignore` truth + tracked-files audit** — `.gitignore` lists `ROADMAP.md` / `CHANGELOG.md` / `CODEX_CHANGELOG.md` as private but git tracks all three. Decide canonical answer (keep ROADMAP/CHANGELOG tracked, drop CODEX_CHANGELOG from .gitignore if tracked) and lock with a JVM unit test that fails if `^HostShield|^research/` ever appears in tracked files.
+
+### Batch 2 — Data safety
+- [ ] **Autosave schema version field** — Add top-level `"schemaVersion": N` to every autosave JSON. Loader refuses files with a higher schema than the running app, surfaces a "Project needs newer NovaCut" dialog instead of crashing on unknown fields. JVM test covers older (forward-compat), current, and future schema fixtures.
+
+### Batch 3 — Missing-media relink probe (engine layer)
+- [ ] **`Clip.relinkState` field + `ProjectAutoSave` URI accessibility probe** — On editor open, probe each clip's `sourceUri` with `openAssetFileDescriptor`; tag dangling clips. Pure data-model + probe helper today; Timeline hatch UI follows in a later pass.
+
+### Batch 4 — Pre-export AI provenance preview
+- [ ] **ExportSheet third confidence row "AI use"** — Render one chip per (effectKind × disclosure level) from `AiUsageLedger`; tap expands per-clip detail. Engine already exists.
+
+### Batch 5 — Photo Picker for sticker import
+- [ ] **`StickerPickerPanel` image-import contract swap** — Replace `ACTION_OPEN_DOCUMENT` image route with `ActivityResultContracts.PickVisualMedia`. Keep `OpenDocument` only for `.ncfx` / `.ncstyle` / `.ncfxd` plugin files.
+
+### Batch 6 — App Shortcuts + extended share intents
+- [ ] **App Shortcuts (`res/xml/shortcuts.xml`)** — "New project", "Open last project", "Resume recovered draft". Last-project URI read from DataStore.
+- [ ] **`AndroidManifest.xml` image/* and audio/* `ACTION_VIEW` filters** — Mirror the existing `video/*` filter; route to Projects gallery with destination-project sheet; reject `file://`.
+
+### Batch 7 — Diagnostic ZIP timeline-shape opt-in
+- [ ] **`DiagnosticExportEngine.includeTimelineShape` flag** — When on, ZIP includes `timeline-shape.json` with `{trackCount, totalDurationMs, perTrackClipCount, perEffectTypeCount, perTransitionTypeCount}`. Tests assert zero match on clip names / URIs / captions even with the flag on.
+
+### Batch 8 — Pre-flight model-availability sheet
+- [ ] **`AiModelRequirementSheet` composable** — Single bottom sheet wired into every model-gated tool tile in `AiToolsPanel`. Shows model name + size + license + Wi-Fi-only setting + Cancel/Download. Re-uses existing `ModelDownloadManager`.
+
+### Batch 9 — Compound clip open/exit gesture (Tier C.13 UI)
+- [ ] **Long-press compound clip → open children timeline** — Engine `CompoundNavStack` already shipped (push/pop/breadcrumb/depth cap, autosave round-trip via `toSerializedIds()`). Wire `RadialActionMenu` "Open" entry + breadcrumb chip composable + predictive-back gate on `stack.depth > 0`.
+
+### Batch 10 — Caption translation editor row UI (Tier R5.4a UI)
+- [ ] **`CaptionEditorPanel` per-row source + target rendering** — Engine `CaptionTranslationEngine` already exposes `EditorRowState` and `LanguagePairQuality`. Add language chip + two-up rows + per-row "Regenerate" + Experimental badge.
+
+### Batch 11 — Cut Assistant + Filler Removal merge
+- [ ] **Promote `CutAssistantReviewPanel` to single review surface** — Filter chips (Silence / Single-word filler / Multi-word filler / All), one apply → one undo entry. Delete `FillerRemovalPanel` once routes are migrated.
+
+### Batch 12 — Project-wide working colour space + display transform
+- [ ] **`Project.workingColorSpace` + `Project.displayTransform` data model** — Pure data fields; `ExportColorConfidenceEngine` uses them to emit higher-value warnings for (source × working × display) mismatch. No GL change yet.
+
+### Defer to a later pull
+- Tier B.5 mixed copy/re-encode composer — depends on FFmpeg concat path + per-range badges in ExportSheet; M complexity, deserves its own loop.
+- Tier A.10 Oboe resampler activation — needs dep wire + 16 KB AAR verify; pair with audio mixer regression suite.
+- Adjustment-layer track surface (Tier C.11 UI) — needs Room schema v7 + autosave compat; M complexity.
+- Keyframe bezier graph panel (Tier C.12 UI) — needs touch-handle UX pass; M complexity.
+- RTL bidi text in overlays — needs golden-text test harness; M complexity.
+- Privacy Dashboard panel (R5.5c UI) — gated on Settings UX review.
+
+---
 
 > **How to read this doc.** Tier A/B/C are the *implementation tables* — every row is a single dependency-bump or limitation fix with a known touch point. Rounds 2–7 are *research deltas* — each captures what changed in the outside world since the prior round and which Tier A/B/C rows it unblocks. The [Forward View](#forward-view--now--next--later--under-consideration--rejected-2026-05) at the end is the synthesis layer: every item from every round classified into Now / Next / Later / Under Consideration / Rejected with one-line justification.
 
