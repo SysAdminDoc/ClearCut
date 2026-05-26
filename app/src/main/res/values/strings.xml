@@ -58,6 +58,12 @@
     <string name="export_color_confidence_title">Color / HDR confidence</string>
     <string name="export_color_confidence_description">NovaCut checks the chosen codec, metadata intent, and advertised device limits before export.</string>
 
+    <!-- Compound nav breadcrumb (Tier C.13 UI) -->
+    <string name="compound_breadcrumb_root">Project</string>
+    <string name="compound_breadcrumb_separator">▸</string>
+    <string name="compound_breadcrumb_fallback_format">Group %1$d</string>
+    <string name="compound_breadcrumb_exit_cd">Exit compound clip</string>
+
     <!-- Privacy Dashboard panel (R5.5c UI) -->
     <string name="privacy_dashboard_title">Privacy</string>
     <string name="privacy_dashboard_subtitle">What NovaCut collects, where it lives, and how to control it.</string>
