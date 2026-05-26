@@ -58,6 +58,28 @@
     <string name="export_color_confidence_title">Color / HDR confidence</string>
     <string name="export_color_confidence_description">NovaCut checks the chosen codec, metadata intent, and advertised device limits before export.</string>
 
+    <!-- Privacy Dashboard panel (R5.5c UI) -->
+    <string name="privacy_dashboard_title">Privacy</string>
+    <string name="privacy_dashboard_subtitle">What NovaCut collects, where it lives, and how to control it.</string>
+    <string name="privacy_dashboard_section_cloud">Cloud and telemetry</string>
+    <string name="privacy_dashboard_section_on_device">Stored on this device</string>
+    <string name="privacy_dashboard_section_opt_in">Opt-in features (off by default)</string>
+    <string name="privacy_dashboard_storage_label">Storage</string>
+    <string name="privacy_dashboard_retention_label">Retention</string>
+    <string name="privacy_dashboard_collected_by_label">Collected by</string>
+    <string name="privacy_dashboard_controls_label">You can</string>
+
+    <!-- Caption translation panel (R5.4a UI) -->
+    <string name="caption_translation_title">Caption Translation</string>
+    <string name="caption_translation_subtitle">Translate captions to a target language. Edit any row inline.</string>
+    <string name="caption_translation_no_target">Pick a target language to begin.</string>
+    <string name="caption_translation_quality_chip_format">Quality · %1$s</string>
+    <string name="caption_translation_regenerate">Regenerate</string>
+    <string name="caption_translation_status_translated">Translated</string>
+    <string name="caption_translation_status_edited">Edited</string>
+    <string name="caption_translation_status_pending">Regenerating…</string>
+    <string name="caption_translation_target_placeholder">Translated caption</string>
+
     <!-- Cut Assistant unified filter chips (Highest-Value #6: Cut Assistant + Filler Removal merge) -->
     <string name="cut_filter_all">All</string>
     <string name="cut_filter_silence">Silence</string>
