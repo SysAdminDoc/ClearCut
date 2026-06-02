@@ -25,6 +25,17 @@ in a full-codebase review. Unit suite: 581 passing.
   transcript (these were captured in the snapshot but dropped on restore).
 - **Mask edits** (`updateMask` / `updateMaskPoint` / freehand) are now persisted
   on mask-editor close; geometry changes were lost on restart.
+- **Caption edits** — `updateCaption` now saves an undo state and persists; caption
+  text/timing/style changes were applied in-memory only and lost on restart.
+
+### UI correctness
+- **Caption editor** — the edit target is re-resolved against the current clip's
+  caption list, so switching clips with the panel open no longer leaves it bound
+  to a stale caption (Save/Delete silently no-op'd before).
+- **Color curve** — `evaluateCurveSmooth` guards duplicate-x points; a zero span
+  divided to NaN and blanked the curve render.
+- **Settings** — `setAutoSaveInterval` coerces to the 15–300s range instead of
+  trusting the caller.
 
 ### Crashes / races
 - **Timeline trim** — guarded two `coerceIn` calls in `trimClipOnTrack` that

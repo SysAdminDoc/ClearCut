@@ -23,6 +23,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -61,6 +62,13 @@ fun CaptionEditorPanel(
 ) {
     var editingCaption by remember { mutableStateOf<Caption?>(null) }
     var selectedStyleType by remember { mutableStateOf(CaptionStyleType.SUBTITLE_BAR) }
+    // This panel survives clip switches (it lives in a keyless BottomSheetSlot), so the
+    // edit target can outlive its clip. Re-resolve it against the current caption list
+    // each time that list changes — keeps the form bound to the live object and clears
+    // it when the caption no longer exists (e.g. after switching clips).
+    LaunchedEffect(captions) {
+        editingCaption = editingCaption?.let { e -> captions.find { it.id == e.id } }
+    }
     val activeCaptionCount = captions.count { playheadMs in it.startTimeMs..it.endTimeMs }
     val isCompactLayout = LocalConfiguration.current.screenWidthDp < 430
     val captionStylesSectionDescription = stringResource(R.string.cd_caption_styles_section)

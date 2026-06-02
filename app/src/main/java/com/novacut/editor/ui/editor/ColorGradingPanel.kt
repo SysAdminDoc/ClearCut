@@ -533,7 +533,11 @@ private fun evaluateCurveSmooth(points: List<CurvePoint>, x: Float): Float {
 
     for (i in 0 until sorted.size - 1) {
         if (x >= sorted[i].x && x <= sorted[i + 1].x) {
-            val t = (x - sorted[i].x) / (sorted[i + 1].x - sorted[i].x)
+            // Guard duplicate-x points (added points have no min-spacing, and legacy
+            // saves can carry them): a zero span divides to NaN and blanks the curve.
+            val span = sorted[i + 1].x - sorted[i].x
+            if (span <= 0f) return sorted[i].y
+            val t = (x - sorted[i].x) / span
             // Smooth hermite interpolation
             val t2 = t * t
             val t3 = t2 * t
