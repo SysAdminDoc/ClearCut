@@ -1587,9 +1587,11 @@ class EditorViewModel @Inject constructor(
     }
 
     fun updateCaption(caption: Caption) {
+        saveUndoState("Edit caption")
         updateSelectedClip { clip ->
             clip.copy(captions = clip.captions.map { if (it.id == caption.id) caption else it })
         }
+        saveProject()
     }
 
     fun removeCaption(captionId: String) {

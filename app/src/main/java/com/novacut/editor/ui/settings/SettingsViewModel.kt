@@ -74,7 +74,7 @@ class SettingsViewModel @Inject constructor(
     fun setFrameRate(v: Int) = viewModelScope.launch { repo.updateFrameRate(v) }
     fun setAspectRatio(v: AspectRatio) = viewModelScope.launch { repo.updateAspectRatio(v) }
     fun setAutoSave(v: Boolean) = viewModelScope.launch { repo.updateAutoSave(v) }
-    fun setAutoSaveInterval(v: Int) = viewModelScope.launch { repo.updateAutoSaveInterval(v) }
+    fun setAutoSaveInterval(v: Int) = viewModelScope.launch { repo.updateAutoSaveInterval(v.coerceIn(15, 300)) }
     fun setProxyResolution(v: ProxyResolution) = viewModelScope.launch { repo.updateProxyResolution(v) }
     fun setDefaultCodec(codec: String) = viewModelScope.launch { repo.updateDefaultCodec(codec) }
     fun setProxyEnabled(enabled: Boolean) = viewModelScope.launch { repo.updateProxyEnabled(enabled) }
