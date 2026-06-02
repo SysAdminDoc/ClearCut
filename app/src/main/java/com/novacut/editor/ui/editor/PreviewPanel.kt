@@ -92,9 +92,6 @@ fun PreviewPanel(
             .padding(horizontal = 10.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        var transformStarted by remember { mutableStateOf(false) }
-        LaunchedEffect(selectedClipId, currentTimelineClip?.id) { transformStarted = false }
-
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -135,8 +132,14 @@ fun PreviewPanel(
                                 if (canTransformPreview) Modifier.pointerInput(selectedClipId) {
                                     awaitEachGesture {
                                         awaitFirstDown(requireUnconsumed = false)
+                                        // Track start with a gesture-LOCAL flag so the
+                                        // begin/end bracket always pairs. A shared,
+                                        // selection-keyed flag could be reset mid-gesture
+                                        // (selection change during the drag), making this
+                                        // `finally` skip onPreviewTransformEnded() — leaving
+                                        // an orphaned undo state and an unsaved edit.
+                                        var startedHere = false
                                         try {
-                                            var active = false
                                             do {
                                                 val event = awaitPointerEvent()
                                                 val canceled = event.changes.any { it.isConsumed }
@@ -146,12 +149,9 @@ fun PreviewPanel(
                                                 val panChange = event.calculatePan()
                                                 if (zoomChange != 1f || rotationChange != 0f ||
                                                     panChange != Offset.Zero) {
-                                                    if (!active) {
-                                                        active = true
-                                                        if (!transformStarted) {
-                                                            transformStarted = true
-                                                            onPreviewTransformStarted()
-                                                        }
+                                                    if (!startedHere) {
+                                                        startedHere = true
+                                                        onPreviewTransformStarted()
                                                     }
                                                     onPreviewTransformChanged(
                                                         panChange.x, panChange.y,
@@ -161,10 +161,7 @@ fun PreviewPanel(
                                                 }
                                             } while (event.changes.any { it.pressed })
                                         } finally {
-                                            if (transformStarted) {
-                                                transformStarted = false
-                                                onPreviewTransformEnded()
-                                            }
+                                            if (startedHere) onPreviewTransformEnded()
                                         }
                                     }
                                 } else Modifier

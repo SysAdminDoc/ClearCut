@@ -36,6 +36,9 @@ in a full-codebase review. Unit suite: 581 passing.
   divided to NaN and blanked the curve render.
 - **Settings** — `setAutoSaveInterval` coerces to the 15–300s range instead of
   trusting the caller.
+- **Preview transform gesture** — the begin/end bracket is tracked per-gesture so
+  a selection change mid-drag can no longer skip `endTransformChange()`, which had
+  left an orphaned undo state and an unsaved transform.
 
 ### Crashes / races
 - **Timeline trim** — guarded two `coerceIn` calls in `trimClipOnTrack` that
