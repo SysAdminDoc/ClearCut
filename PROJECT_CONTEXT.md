@@ -10,8 +10,8 @@ NovaCut is an Android video editor under package `com.novacut.editor`. The repo 
 
 Current live version evidence:
 
-- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 161`, `versionName = "3.74.24"`.
-- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.24`.
+- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 162`, `versionName = "3.74.25"`.
+- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.25`.
 - [README.md](README.md) and [ROADMAP.md](ROADMAP.md) both describe the v3.74.x line.
 - The 2026-05-17 continuation pushes each completed roadmap batch back to `origin/master`; verify `git status --short --branch` before assuming branch sync.
 
@@ -358,8 +358,26 @@ High-level modules and patterns:
   compound entry.
 - Verification: `:app:compileDebugKotlin :app:testDebugUnitTest --tests
   com.novacut.editor.ui.editor.EditorDomainStateTest` passed.
-- Next roadmap item: P1 Editor state storage migration for panel and caption
-  slices.
+- Next roadmap item after this batch was P1 Editor state storage migration for
+  panel and caption slices.
+
+2026-06-04 caption editor state storage migration continuation:
+
+- Completed the caption slice of P1 editor state storage migration in v3.74.25.
+  `EditorState` now stores caption translation state in
+  `caption: EditorCaptionState` instead of flat constructor properties.
+- Added read-only compatibility accessors for existing UI reads:
+  `captionTranslationRows`, `captionTranslationSourceLang`,
+  `captionTranslationTargetLang`, `captionTranslationQuality`, and
+  `captionTranslationVariant`.
+- Converted caption translation target, rows, edit, regenerate, and
+  complete-regenerate mutation paths to write through `copyCaption` / nested
+  `caption.copy(...)`.
+- Verification: `:app:compileDebugKotlin :app:testDebugUnitTest --tests
+  com.novacut.editor.ui.editor.EditorDomainStateTest`, full debug-unit/debug
+  APK/release APK/androidTest Gradle matrix, release metadata, signature,
+  zipalign, and APK-based 16 KB gates passed.
+- Next roadmap item: P1 Editor state storage migration for panel slice.
 
 2026-05-17 autonomous continuation:
 

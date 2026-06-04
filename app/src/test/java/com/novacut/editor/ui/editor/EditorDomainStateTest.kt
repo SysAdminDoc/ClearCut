@@ -65,9 +65,11 @@ class EditorDomainStateTest {
             panels = PanelVisibility(openPanels = setOf(PanelId.AI_TOOLS)),
             selectedEffectId = "effect-1",
             editingTextOverlayId = "text-1",
-            captionTranslationSourceLang = "en",
-            captionTranslationTargetLang = "es",
-            captionTranslationQuality = CaptionTranslationEngine.LanguagePairQuality.GOOD,
+            caption = EditorCaptionState(
+                sourceLang = "en",
+                targetLang = "es",
+                quality = CaptionTranslationEngine.LanguagePairQuality.GOOD
+            ),
             compound = EditorCompoundState(
                 depth = 2,
                 breadcrumbText = "Root > Compound"

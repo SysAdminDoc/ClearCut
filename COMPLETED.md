@@ -7,7 +7,7 @@ Last consolidated: 2026-06-04.
 
 ## Current Delivered Baseline
 
-- Current version: v3.74.24 (`versionCode` 161).
+- Current version: v3.74.25 (`versionCode` 162).
 - Multi-track Android NLE with project gallery, editor, timeline, preview,
   effects, transitions, text, captions, audio, export, settings, templates,
   project archive/import, and diagnostic bundle surfaces.
@@ -98,6 +98,10 @@ Last consolidated: 2026-06-04.
 - Compound editor-state storage migration shipped in v3.74.24: compound
   navigation depth and breadcrumb text now live in `EditorCompoundState`, with
   compatibility accessors preserving existing reads.
+- Caption editor-state storage migration shipped in v3.74.25: caption
+  translation rows, source/target language, pair quality, and model variant now
+  live in `EditorCaptionState`, with compatibility accessors preserving
+  existing reads.
 
 ## Preserved Historical Detail
 

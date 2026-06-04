@@ -205,15 +205,7 @@ data class EditorState(
     // banner is pending or after the user interacts with it.
     val bulkUndoPrompt: BulkUndoPrompt? = null,
     val ai: EditorAiState = EditorAiState(),
-    // R5.4a — caption-translation editor surface. Populated by
-    // EditorViewModel.runCaptionTranslation(); the panel
-    // (CaptionTranslationPanel) consumes these fields directly.
-    val captionTranslationRows: List<com.novacut.editor.engine.CaptionTranslationEngine.EditorRow> = emptyList(),
-    val captionTranslationSourceLang: String = "en",
-    val captionTranslationTargetLang: String? = null,
-    val captionTranslationQuality: com.novacut.editor.engine.CaptionTranslationEngine.LanguagePairQuality? = null,
-    val captionTranslationVariant: com.novacut.editor.engine.CaptionTranslationEngine.ModelVariant =
-        com.novacut.editor.engine.CaptionTranslationEngine.ModelVariant.NLLB_600M,
+    val caption: EditorCaptionState = EditorCaptionState(),
     val compound: EditorCompoundState = EditorCompoundState(),
     val copiedEffects: List<Effect> = emptyList(),
     val isRecordingVoiceover: Boolean = false,
@@ -293,6 +285,14 @@ data class EditorState(
     val mediaRelinkReports: Map<String, MediaRelinkProbe.ClipRelinkReport> get() = media.relinkReports
     val compoundNavDepth: Int get() = compound.depth
     val compoundBreadcrumbText: String get() = compound.breadcrumbText
+    val captionTranslationRows: List<com.novacut.editor.engine.CaptionTranslationEngine.EditorRow>
+        get() = caption.translationRows
+    val captionTranslationSourceLang: String get() = caption.sourceLang
+    val captionTranslationTargetLang: String? get() = caption.targetLang
+    val captionTranslationQuality: com.novacut.editor.engine.CaptionTranslationEngine.LanguagePairQuality?
+        get() = caption.quality
+    val captionTranslationVariant: com.novacut.editor.engine.CaptionTranslationEngine.ModelVariant
+        get() = caption.variant
 }
 
 /**
@@ -4396,7 +4396,7 @@ class EditorViewModel @Inject constructor(
         val segments = captionsToTranslationSegments(clip?.captions ?: emptyList())
         if (segments.isEmpty()) {
             captionTranslationJob?.cancel()
-            _state.update { it.copy(captionTranslationRows = emptyList()) }
+            _state.update { it.copyCaption { caption -> caption.copy(translationRows = emptyList()) } }
             return
         }
 
@@ -4419,10 +4419,12 @@ class EditorViewModel @Inject constructor(
                 if (current.captionTranslationTargetLang != targetLang) {
                     current
                 } else {
-                    current.copy(
-                        captionTranslationRows = rows,
-                        captionTranslationQuality = rows.firstOrNull()?.quality ?: current.captionTranslationQuality,
-                    )
+                    current.copyCaption { caption ->
+                        caption.copy(
+                            translationRows = rows,
+                            quality = rows.firstOrNull()?.quality ?: current.captionTranslationQuality,
+                        )
+                    }
                 }
             }
         }
@@ -4433,10 +4435,12 @@ class EditorViewModel @Inject constructor(
         val source = _state.value.captionTranslationSourceLang
         val quality = captionTranslationEngine.pairQuality(variant, source, targetLang)
         _state.update {
-            it.copy(
-                captionTranslationTargetLang = targetLang,
-                captionTranslationQuality = quality,
-            )
+            it.copyCaption { caption ->
+                caption.copy(
+                    targetLang = targetLang,
+                    quality = quality,
+                )
+            }
         }
     }
 
@@ -4453,17 +4457,19 @@ class EditorViewModel @Inject constructor(
             newTargetText = newTargetText,
         )
         _state.update { state ->
-            state.copy(
-                captionTranslationRows = updatedSegments.mapIndexed { i, seg ->
-                    com.novacut.editor.engine.CaptionTranslationEngine.EditorRow(
-                        index = i,
-                        segment = seg,
-                        quality = rows.getOrNull(i)?.quality
-                            ?: state.captionTranslationQuality
-                            ?: com.novacut.editor.engine.CaptionTranslationEngine.LanguagePairQuality.UNKNOWN,
-                    )
-                },
-            )
+            state.copyCaption { caption ->
+                caption.copy(
+                    translationRows = updatedSegments.mapIndexed { i, seg ->
+                        com.novacut.editor.engine.CaptionTranslationEngine.EditorRow(
+                            index = i,
+                            segment = seg,
+                            quality = rows.getOrNull(i)?.quality
+                                ?: state.captionTranslationQuality
+                                ?: com.novacut.editor.engine.CaptionTranslationEngine.LanguagePairQuality.UNKNOWN,
+                        )
+                    },
+                )
+            }
         }
     }
 
@@ -4484,17 +4490,19 @@ class EditorViewModel @Inject constructor(
             index = rowIndex,
         )
         _state.update { state ->
-            state.copy(
-                captionTranslationRows = updated.mapIndexed { i, seg ->
-                    com.novacut.editor.engine.CaptionTranslationEngine.EditorRow(
-                        index = i,
-                        segment = seg,
-                        quality = rows.getOrNull(i)?.quality
-                            ?: state.captionTranslationQuality
-                            ?: com.novacut.editor.engine.CaptionTranslationEngine.LanguagePairQuality.UNKNOWN,
-                    )
-                },
-            )
+            state.copyCaption { caption ->
+                caption.copy(
+                    translationRows = updated.mapIndexed { i, seg ->
+                        com.novacut.editor.engine.CaptionTranslationEngine.EditorRow(
+                            index = i,
+                            segment = seg,
+                            quality = rows.getOrNull(i)?.quality
+                                ?: state.captionTranslationQuality
+                                ?: com.novacut.editor.engine.CaptionTranslationEngine.LanguagePairQuality.UNKNOWN,
+                        )
+                    },
+                )
+            }
         }
         viewModelScope.launch {
             val translated = captionTranslationEngine.translate(
@@ -4561,17 +4569,19 @@ class EditorViewModel @Inject constructor(
             newTargetText = newTargetText,
         )
         _state.update { state ->
-            state.copy(
-                captionTranslationRows = updated.mapIndexed { i, seg ->
-                    com.novacut.editor.engine.CaptionTranslationEngine.EditorRow(
-                        index = i,
-                        segment = seg,
-                        quality = rows.getOrNull(i)?.quality
-                            ?: state.captionTranslationQuality
-                            ?: com.novacut.editor.engine.CaptionTranslationEngine.LanguagePairQuality.UNKNOWN,
-                    )
-                },
-            )
+            state.copyCaption { caption ->
+                caption.copy(
+                    translationRows = updated.mapIndexed { i, seg ->
+                        com.novacut.editor.engine.CaptionTranslationEngine.EditorRow(
+                            index = i,
+                            segment = seg,
+                            quality = rows.getOrNull(i)?.quality
+                                ?: state.captionTranslationQuality
+                                ?: com.novacut.editor.engine.CaptionTranslationEngine.LanguagePairQuality.UNKNOWN,
+                        )
+                    },
+                )
+            }
         }
     }
 

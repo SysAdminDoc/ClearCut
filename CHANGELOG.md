@@ -1,5 +1,27 @@
 # Changelog
 
+## v3.74.25 — 2026-06-04
+
+### Caption editor-state storage migration
+- Moved caption translation editor storage into `EditorCaptionState`,
+  including translation rows, source language, target language, pair quality,
+  and model variant.
+- Kept read-only `EditorState` compatibility accessors so existing caption
+  translation panel and editor UI reads remain stable.
+- Converted caption translation target, row update, edit, regenerate, and
+  complete-regenerate mutation paths to update `state.caption` through
+  `copyCaption` / nested `caption.copy(...)`.
+- Updated `EditorDomainStateTest` to construct the stored caption slice
+  directly.
+- Bumped runtime metadata to `versionName 3.74.25` / `versionCode 162`.
+- Verification: `git diff --check`, `scripts/verify_release_artifacts.py`,
+  APK-based 16 KB checks for debug/release, `apksigner verify` for
+  debug/release, `zipalign -c -P 16 -v 4` for debug/release/androidTest,
+  `:app:compileDebugKotlin :app:testDebugUnitTest --tests
+  com.novacut.editor.ui.editor.EditorDomainStateTest`, and
+  `:app:testDebugUnitTest :app:assembleDebug :app:assembleRelease
+  :app:assembleDebugAndroidTest` passed.
+
 ## v3.74.24 — 2026-06-04
 
 ### Compound editor-state storage migration

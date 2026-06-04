@@ -40,11 +40,11 @@ data class EditorPanelState(
 }
 
 data class EditorCaptionState(
-    val translationRows: List<CaptionTranslationEngine.EditorRow>,
-    val sourceLang: String,
-    val targetLang: String?,
-    val quality: CaptionTranslationEngine.LanguagePairQuality?,
-    val variant: CaptionTranslationEngine.ModelVariant
+    val translationRows: List<CaptionTranslationEngine.EditorRow> = emptyList(),
+    val sourceLang: String = "en",
+    val targetLang: String? = null,
+    val quality: CaptionTranslationEngine.LanguagePairQuality? = null,
+    val variant: CaptionTranslationEngine.ModelVariant = CaptionTranslationEngine.ModelVariant.NLLB_600M
 ) : EditorDomainState {
     override val kind: EditorDomainState.Kind = EditorDomainState.Kind.CAPTION
 }
@@ -121,13 +121,7 @@ val EditorState.domainStates: EditorDomainStates
             selectedEffectId = selectedEffectId,
             editingTextOverlayId = editingTextOverlayId
         ),
-        caption = EditorCaptionState(
-            translationRows = captionTranslationRows,
-            sourceLang = captionTranslationSourceLang,
-            targetLang = captionTranslationTargetLang,
-            quality = captionTranslationQuality,
-            variant = captionTranslationVariant
-        ),
+        caption = caption,
         compound = compound,
         export = export,
         ai = ai,
@@ -145,3 +139,6 @@ inline fun EditorState.copyMedia(transform: (EditorMediaState) -> EditorMediaSta
 
 inline fun EditorState.copyCompound(transform: (EditorCompoundState) -> EditorCompoundState): EditorState =
     copy(compound = transform(compound))
+
+inline fun EditorState.copyCaption(transform: (EditorCaptionState) -> EditorCaptionState): EditorState =
+    copy(caption = transform(caption))
