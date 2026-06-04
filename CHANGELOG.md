@@ -1,5 +1,28 @@
 # Changelog
 
+## v3.74.35 — 2026-06-04
+
+### Backup and device-transfer policy split
+- Split Android 12+ data extraction policy so cloud backup keeps bulky managed
+  imports out of quota while device-to-device transfer includes
+  `filesDir/media/imports`.
+- Added `disableIfNoEncryptionCapabilities="true"` to cloud backup because
+  autosave, generated voiceover, TTS, cleaned, and stabilized media can be
+  sensitive.
+- Kept legacy `full-backup-content` excluding managed imports because that
+  format cannot separate cloud backup from device transfer.
+- Added parser-based JVM coverage for legacy full backup, cloud backup, and
+  device-transfer classification of managed imports, generated media, and
+  partial-write artifacts.
+- Bumped runtime metadata to `versionName 3.74.35` / `versionCode 172`.
+- Verification: `git diff --check`, `scripts/verify_release_artifacts.py`,
+  APK-based 16 KB checks for debug/release, `apksigner verify` for
+  debug/release, `zipalign -c -P 16 -v 4` for debug/release/androidTest,
+  focused `:app:testDebugUnitTest --tests
+  com.novacut.editor.engine.BackupPolicyRulesTest`, `:app:testDebugUnitTest`,
+  `:app:assembleDebug`, `:app:assembleRelease`, and
+  `:app:assembleDebugAndroidTest` passed.
+
 ## v3.74.34 — 2026-06-04
 
 ### Android 13 export notification permission path

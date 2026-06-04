@@ -7,7 +7,7 @@ Last consolidated: 2026-06-04.
 
 ## Current Delivered Baseline
 
-- Current version: v3.74.34 (`versionCode` 171).
+- Current version: v3.74.35 (`versionCode` 172).
 - Multi-track Android NLE with project gallery, editor, timeline, preview,
   effects, transitions, text, captions, audio, export, settings, templates,
   project archive/import, and diagnostic bundle surfaces.
@@ -135,6 +135,10 @@ Last consolidated: 2026-06-04.
   33+, remembers handled prompt state, and keeps in-app progress/cancel controls
   as the fallback when notifications stay off. Settings also shows current
   notification delivery status and links to Android notification settings.
+- Backup/device-transfer policy split shipped in v3.74.35: Android 12+
+  data-extraction rules exclude `media/imports` from cloud backup, include it
+  for device-to-device transfer, keep partial writes excluded, and require cloud
+  backup encryption capability.
 
 ## Preserved Historical Detail
 

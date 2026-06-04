@@ -10,8 +10,8 @@ NovaCut is an Android video editor under package `com.novacut.editor`. The repo 
 
 Current live version evidence:
 
-- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 171`, `versionName = "3.74.34"`.
-- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.34`.
+- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 172`, `versionName = "3.74.35"`.
+- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.35`.
 - [README.md](README.md) and [ROADMAP.md](ROADMAP.md) both describe the v3.74.x line.
 - The 2026-05-17 continuation pushes each completed roadmap batch back to `origin/master`; verify `git status --short --branch` before assuming branch sync.
 
@@ -539,8 +539,33 @@ High-level modules and patterns:
   `:app:assembleDebugAndroidTest` passed.
 - Device QA follow-up: run the roadmap's Android 13+ ADB permission-state
   allow/deny/swipe-away recipe on an emulator/device.
-- Next roadmap item: P1 backup/device-transfer policy for managed media imports
-  from the Cycle 2 researcher queue.
+- Followed by the Cycle 2 P1 backup/device-transfer policy for managed media
+  imports in v3.74.35.
+
+2026-06-04 backup/device-transfer policy continuation:
+
+- Closed the Cycle 2 P1 managed-media backup item in v3.74.35 by splitting
+  Android 12+ `data_extraction_rules.xml`: cloud backup excludes
+  `media/imports`, device transfer includes it, and both keep partial import
+  copies excluded.
+- Added `disableIfNoEncryptionCapabilities="true"` to cloud backup because
+  autosave and generated media artifacts can include sensitive edit context.
+- Kept legacy `backup_rules.xml` excluding managed imports because
+  `full-backup-content` cannot split cloud backup from device transfer.
+- Added `BackupPolicyRulesTest` coverage for legacy, cloud, and device-transfer
+  classification of managed imports, generated media directories, and partial
+  files.
+- Verification: `git diff --check`, `scripts/verify_release_artifacts.py`,
+  APK-based 16 KB checks for debug/release, `apksigner verify` for
+  debug/release, `zipalign -c -P 16 -v 4` for debug/release/androidTest,
+  focused `:app:testDebugUnitTest --tests
+  com.novacut.editor.engine.BackupPolicyRulesTest`, `:app:testDebugUnitTest`,
+  `:app:assembleDebug`, `:app:assembleRelease`, and
+  `:app:assembleDebugAndroidTest` passed.
+- Device QA follow-up: run an emulator/device `bmgr` backup/restore or direct
+  transfer smoke with a project containing an imported local clip.
+- Next roadmap item: P2 Baseline Profile and Macrobenchmark coverage from the
+  Cycle 3 researcher queue.
 
 2026-05-17 autonomous continuation:
 

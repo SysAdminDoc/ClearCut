@@ -8,7 +8,7 @@ Active roadmap for forward-looking work. Shipped work is summarized in
 [RESEARCH_REPORT.md](RESEARCH_REPORT.md), and detailed historical plans are
 archived under [docs/archive](docs/archive/).
 
-Current version: **v3.74.34** (`versionCode` 171). Last consolidated:
+Current version: **v3.74.35** (`versionCode` 172). Last consolidated:
 2026-06-04.
 
 > Last researched: Cycle 4 - 2026-06-04.
@@ -68,6 +68,8 @@ closed the Cycle 2 P0 Android 15 media-processing timeout item by wiring
 v3.74.34 closed the Cycle 2 Android 13 export notification permission item by
 requesting `POST_NOTIFICATIONS` from the editor before first background export
 and keeping an in-app progress fallback when notifications stay off.
+v3.74.35 closed the managed-media backup policy split by excluding imports from
+cloud backup while including them in Android 12+ device transfer.
 
 ## Current State
 
@@ -154,6 +156,9 @@ and keeping an in-app progress fallback when notifications stay off.
 - v3.74.34 adds a contextual Android 13+ export notification permission path
   before the first background export, remembers handled prompt state, and keeps
   export progress/cancel controls available in-app when notifications are off.
+- v3.74.35 splits Android 12+ backup policy so `media/imports` stays out of
+  cloud backup quota but is included in device-to-device transfer; partial
+  import and generated-media writes remain excluded.
 
 ## Source Archives
 
@@ -520,7 +525,7 @@ slip-slide findings above.
 
 #### Data Safety
 
-- [ ] 🔬🤖 P1 — Split backup and device-transfer policy for managed media imports
+- [x] ✅🔬🤖 P1 — Split backup and device-transfer policy for managed media imports
   - Why: NovaCut copies picked media into `filesDir/media/imports`, but the
     current backup rules use include-whitelists that omit this directory. That
     avoids large cloud backups, but a device-transfer restore can resurrect
@@ -549,6 +554,13 @@ slip-slide findings above.
     backup/restore or `bmgr` smoke with a project containing an imported local
     clip and confirm the restored project either plays or produces an actionable
     relink report.
+  - Implemented in v3.74.35: `data_extraction_rules.xml` now excludes
+    `media/imports` from encrypted cloud backup, includes it for Android 12+
+    device transfer, and excludes managed-import partials. Legacy
+    `backup_rules.xml` documents and preserves cloud-safe exclusion because it
+    cannot split transfer modes. `BackupPolicyRulesTest` locks managed imports,
+    generated media, and partial-file classification. Emulator `bmgr` or direct
+    transfer validation remains the device QA follow-up.
   - Complexity: M
 
 #### Quick Wins (Cycle 2)

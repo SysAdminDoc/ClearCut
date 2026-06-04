@@ -54,6 +54,11 @@ Last refreshed: 2026-06-04.
   directions: include-whitelists exclude all unspecified files, cloud backup has
   a 25 MB quota, and Android 12+ permits different `<cloud-backup>` and
   `<device-transfer>` rules.
+- [Implemented v3.74.35] Android 12+ data extraction rules now keep
+  `media/imports` out of cloud backup, include it for device-to-device transfer,
+  exclude partial import copies in both modes, and require cloud backup
+  encryption capability. Legacy full-backup rules remain cloud-safe because they
+  cannot split transfer modes.
 - [Promoted] These findings were added to `ROADMAP.md` under
   `Researcher Queue (Cycle 2 - 2026-06-04)` as P0/P1 implementation-ready items
   with Android official-doc links, local file evidence, acceptance criteria, and
