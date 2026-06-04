@@ -6,6 +6,34 @@ roadmaps are archived under [docs/archive/roadmap](docs/archive/roadmap/).
 
 Last refreshed: 2026-06-04.
 
+## 2026-06-04 Cycle 19 SDH and Audio Description Export Refresh
+
+- [Verified] `V369FeaturesPanel` exposes a card titled "SDH + Audio
+  Description" with subtitle "Bracketed non-speech tags + AD track stub
+  (YAMNet planned)" and body copy that says it requires a transcript plus an
+  export pass. There is no button or state path from that card into the
+  delegate today, and grep finds no tests for `AudioDescriptionEngine`.
+- [Verified] `AudioDescriptionEngine` can merge supplied non-speech events into
+  captions as bracketed labels and can infer a generic `[music]` event from
+  long transcript gaps. It validates manually-authored audio-description lines
+  by dropping lines that collide with spoken word timestamps, but it does not
+  generate visual-scene descriptions, synthesize narration audio, add a second
+  audio track, duck program audio, export caption tracks, or mark any output as
+  SDH/AD-ready.
+- [Verified] Current W3C time-based media guidance distinguishes captions for
+  prerecorded audio from audio description for prerecorded video. Captions
+  cover audio information, including non-speech audio needed to understand the
+  media, while WCAG 2.2 AA audio description requires synchronized spoken
+  descriptions of important visual information in video. TensorFlow's current
+  YAMNet docs describe a sound-classification model that predicts 521 audio
+  event classes, which can support SDH event tagging but cannot supply visual
+  descriptions.
+- [Promoted] Added a P2 roadmap item to split SDH and audio description into
+  honest, exportable contracts: SDH can start with reviewed non-speech event
+  tags and caption export, while true AD requires user-authored or reviewed
+  visual narration, TTS/audio-track rendering, mix/ducking, and explicit export
+  validation before the UI claims the video has audio description.
+
 ## 2026-06-04 Cycle 18 Original-Media Metadata Privacy Refresh
 
 - [Verified] NovaCut's local import path copies provider-supplied media bytes

@@ -11,7 +11,7 @@ archived under [docs/archive](docs/archive/).
 Current version: **v3.74.44** (`versionCode` 181). Last consolidated:
 2026-06-04.
 
-> Last researched: Cycle 18 - 2026-06-04.
+> Last researched: Cycle 19 - 2026-06-04.
 
 ## ▶ Implementer Instructions (for the build machine)
 
@@ -1669,3 +1669,83 @@ minimal, and testable.
   https://developer.android.com/reference/android/provider/MediaStore#setRequireOriginal(android.net.Uri)
 - AndroidX ExifInterface:
   https://developer.android.com/reference/androidx/exifinterface/media/ExifInterface
+
+### Researcher Queue (Cycle 19 - 2026-06-04)
+
+Focus: separate SDH caption support from true audio-description delivery and
+make both exportable before the UI presents them as accessibility outputs.
+
+#### Media Accessibility Outputs
+
+- [ ] 🔬🤖 P2 — Split SDH captions from verified audio-description tracks
+  - Why: NovaCut surfaces "SDH + Audio Description" as a feature card, but the
+    current code only has a heuristic SDH/event-tag helper and an audio-line
+    collision validator. SDH captions and audio description solve different
+    accessibility needs and have different export requirements. Users should
+    not see or deliver a video as "audio described" unless NovaCut actually
+    creates a synchronized narration track, mixes it safely with the program
+    audio, and verifies it is included in the selected output.
+  - Evidence: `V369FeaturesPanel` shows a "SDH + Audio Description" card with
+    subtitle "Bracketed non-speech tags + AD track stub (YAMNet planned)" and
+    no action button. `AudioDescriptionEngine.mergeSdh(...)` appends bracketed
+    captions for supplied events only when no speech caption spans the event,
+    `classify(...)` infers generic `music` events from long transcript gaps,
+    and `validate(...)` returns manually-authored AD lines that do not collide
+    with word timestamps. Grep finds no `AudioDescriptionEngine` tests, no
+    YAMNet dependency/model gate, no visual-scene description generator, no TTS
+    render path for AD lines, no second audio-track insertion, no sidechain
+    ducking against narration, and no export/caption flag that marks outputs as
+    SDH or audio described.
+  - Current-source check: WCAG 2.2 time-based media criteria distinguish
+    prerecorded captions from prerecorded audio description:
+    https://www.w3.org/TR/WCAG22/#time-based-media
+    W3C's captions guidance says captions are provided for prerecorded audio
+    content in synchronized media:
+    https://www.w3.org/WAI/WCAG22/Understanding/captions-prerecorded.html
+    W3C's audio-description guidance says AA conformance requires synchronized
+    spoken descriptions of important visual information in prerecorded video:
+    https://www.w3.org/WAI/WCAG22/Understanding/audio-description-prerecorded.html
+    W3C's visual-description guidance explains that description covers actions,
+    characters, scene changes, and on-screen text that matter to understanding:
+    https://www.w3.org/WAI/media/av/description/
+    TensorFlow's YAMNet docs describe sound-event classification across 521
+    AudioSet classes, which can assist SDH event tagging but does not describe
+    visual content:
+    https://www.tensorflow.org/hub/tutorials/yamnet?hl=en
+  - Touches: `V369FeaturesPanel` copy/actions, `AudioDescriptionEngine`
+    capability model, transcript/non-speech-event review UI, optional YAMNet
+    model requirement gate, caption export config for SDH labels, AD script
+    editor, TTS rendering through `TtsEngine`, audio mixer sidechain ducking,
+    multi-track export packaging, direct-publish/share copy, AI usage ledger if
+    generated labels/narration are AI-assisted, and JVM/Compose/export tests.
+  - Acceptance: the UI labels the current state as "SDH event tags" or
+    "accessibility track draft" until exportable outputs exist. SDH generation
+    requires a transcript, exposes inferred non-speech tags for user review,
+    writes those tags into selected caption outputs, and distinguishes reviewed
+    SDH captions from unreviewed guesses. Audio description requires a script or
+    reviewed generated visual descriptions, validates that narration fits
+    dialogue gaps or offers extended-audio/reflow options, renders narration via
+    a selected voice, ducks program audio where appropriate, includes the AD
+    track in exports that support it, and refuses to claim AD availability when
+    any prerequisite is missing.
+  - Verify: add JVM tests for SDH event merging, transcript-gap classification,
+    reviewed/unreviewed event state, AD collision validation, narration-fit
+    policy, and export capability labels. Add fake TTS/audio-mixer tests for
+    AD-line rendering, ducking ranges, and missing voice/model failure states.
+    Add Compose tests that the feature card no longer implies completed AD, SDH
+    review state is visible, and export UI marks SDH/AD only when the output
+    contract is satisfied.
+  - Complexity: L
+
+#### Appendix — Cycle 19 Sources
+
+- WCAG 2.2 time-based media:
+  https://www.w3.org/TR/WCAG22/#time-based-media
+- W3C captions guidance:
+  https://www.w3.org/WAI/WCAG22/Understanding/captions-prerecorded.html
+- W3C audio-description guidance:
+  https://www.w3.org/WAI/WCAG22/Understanding/audio-description-prerecorded.html
+- W3C description of visual information:
+  https://www.w3.org/WAI/media/av/description/
+- TensorFlow YAMNet:
+  https://www.tensorflow.org/hub/tutorials/yamnet?hl=en
