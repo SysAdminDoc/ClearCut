@@ -415,7 +415,7 @@ checked against `app/src/main`, `.github/workflows/build.yml`, and the manifest.
     bidi rendering.
   - Complexity: M
 
-- [ ] P1 — Wire slip/slide editing to timeline gestures (or scope it down)
+- [x] ✅ P1 — Wire slip/slide editing to timeline gestures (or scope it down)
   - Why: `slipClip()`/`slideClip()` exist in the engine but have no gesture call
     sites, so the "pro" slip/slide edit is unreachable — a core mobile-NLE
     table-stakes gap versus KineMaster/PowerDirector.
@@ -429,6 +429,11 @@ checked against `app/src/main`, `.github/workflows/build.yml`, and the manifest.
     in/out behavior plus undo.
   - Complexity: M
   - Note: overlaps the "Timeline magnetic snapping and command-pattern undo"
+  - Implemented in v3.74.37: `Timeline` resolves trim/slip/slide drag zones,
+    dispatches slip/slide body drags, and keeps keyboard/accessibility nudges on
+    slip in trim mode and slide otherwise. `EditorScreen` wires those callbacks
+    to `EditorViewModel`, whose begin/end edit hooks save undo state, suppress
+    per-drag player rebuilds, and persist once the gesture completes.
     Engine Candidate's gesture work; sequence after that lands to avoid churn.
 
 ### Documentation & Polish
