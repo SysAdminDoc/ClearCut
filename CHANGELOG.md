@@ -1,5 +1,21 @@
 # Changelog
 
+## v3.74.39 — 2026-06-04
+
+### CI instrumentation smoke gate
+- Added a dedicated `instrumentation-smoke` GitHub Actions job that boots a
+  hosted Android emulator and runs the existing `NovaCutSmokeTest` through
+  `connectedDebugAndroidTest`.
+- Filtered the instrumentation run to
+  `com.novacut.editor.NovaCutSmokeTest` so the gate covers project gallery,
+  blank editor open, media picker, export sheet, Settings, and privacy dashboard
+  surfaces without accidentally expanding to unrelated future androidTests.
+- Disabled emulator animations for stability and kept the job separate from APK
+  packaging/signature/16 KB checks so smoke-test failures are isolated in CI.
+- Bumped runtime metadata to `versionName 3.74.39` / `versionCode 176`.
+- Verification: `git diff --check` passed. APK assemble and emulator execution
+  were not run locally for this batch.
+
 ## v3.74.38 — 2026-06-04
 
 ### Model activation gate honesty

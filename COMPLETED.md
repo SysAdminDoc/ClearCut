@@ -7,7 +7,7 @@ Last consolidated: 2026-06-04.
 
 ## Current Delivered Baseline
 
-- Current version: v3.74.38 (`versionCode` 175).
+- Current version: v3.74.39 (`versionCode` 176).
 - Multi-track Android NLE with project gallery, editor, timeline, preview,
   effects, transitions, text, captions, audio, export, settings, templates,
   project archive/import, and diagnostic bundle surfaces.
@@ -151,6 +151,10 @@ Last consolidated: 2026-06-04.
   delivery, F-Droid, runtime-checksum, and active model-registry metadata;
   planned unpinned models stay dependency-missing; and `docs/models.md` has a
   tested gate matrix covering every registered AI tool.
+- Instrumentation smoke CI shipped in v3.74.39: GitHub Actions now runs
+  `NovaCutSmokeTest` on a hosted emulator via `connectedDebugAndroidTest`,
+  gating the project gallery, blank editor, media picker, export, Settings, and
+  privacy dashboard launch path.
 
 ## Preserved Historical Detail
 

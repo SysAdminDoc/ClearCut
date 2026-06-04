@@ -8,7 +8,7 @@ Active roadmap for forward-looking work. Shipped work is summarized in
 [RESEARCH_REPORT.md](RESEARCH_REPORT.md), and detailed historical plans are
 archived under [docs/archive](docs/archive/).
 
-Current version: **v3.74.38** (`versionCode` 175). Last consolidated:
+Current version: **v3.74.39** (`versionCode` 176). Last consolidated:
 2026-06-04.
 
 > Last researched: Cycle 11 - 2026-06-04.
@@ -82,6 +82,9 @@ v3.74.38 closed the model activation gate lane by adding tested delivery,
 F-Droid, active-registry, and runtime-checksum metadata to every AI tool
 requirement and refreshing `docs/models.md` with a gate matrix that blocks
 planned unpinned models from presenting as downloadable.
+v3.74.39 closed the instrumentation smoke CI item by adding a dedicated GitHub
+Actions emulator job that runs `NovaCutSmokeTest` through
+`connectedDebugAndroidTest`.
 
 ## Current State
 
@@ -185,6 +188,10 @@ planned unpinned models from presenting as downloadable.
   posture, and runtime checksum behavior. Planned AnimeGAN/Fast NST,
   Real-ESRGAN, and SAM/MobileSAM tools now stay dependency-missing until exact
   bytes and runtime loaders are pinned.
+- v3.74.39 adds a dedicated `instrumentation-smoke` GitHub Actions job that
+  boots a hosted Android emulator and runs `NovaCutSmokeTest` through
+  `connectedDebugAndroidTest`, covering project gallery, blank editor, media
+  picker, export sheet, Settings, and privacy dashboard launch surfaces.
 
 ## Source Archives
 
@@ -371,7 +378,7 @@ checked against `app/src/main`, `.github/workflows/build.yml`, and the manifest.
 
 ### Quality & Friction
 
-- [ ] P1 — Execute the instrumentation smoke suite on an emulator in CI
+- [x] ✅ P1 — Execute the instrumentation smoke suite on an emulator in CI
   - Why: The v3.74.11 Compose smoke harness is compiled and packaged but never
     run, so a green pipeline does not prove the app even launches — launch/a11y
     regressions pass CI silently.
@@ -386,6 +393,10 @@ checked against `app/src/main`, `.github/workflows/build.yml`, and the manifest.
   - Verify: confirm the new CI job runs the instrumentation tests green and fails
     when a smoke test is deliberately broken.
   - Complexity: M
+  - Implemented in v3.74.39: `.github/workflows/build.yml` now has a separate
+    `instrumentation-smoke` job using `reactivecircus/android-emulator-runner@v2`
+    on API 35 Google APIs x86_64, with animations disabled, running only
+    `com.novacut.editor.NovaCutSmokeTest` via `connectedDebugAndroidTest`.
 
 - [ ] P1 — Ship at least one fully translated locale
   - Why: The localization scaffold is complete (~1900 externalized strings, RTL
