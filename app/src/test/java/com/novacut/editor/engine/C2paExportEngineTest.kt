@@ -31,7 +31,7 @@ class C2paExportEngineTest {
     )
 
     @Test
-    fun buildManifest_alwaysEmitsTrainingMiningOptOutAndThumbnailAndCreated() {
+    fun buildManifest_alwaysEmitsCawgTrainingMiningOptOutAndThumbnailAndCreated() {
         val m = engine.buildManifest(
             projectTitle = "My Project",
             novaCutVersionName = "3.74.9",
@@ -40,11 +40,33 @@ class C2paExportEngineTest {
             exporterCreationTimeMs = 1_700_000_000_000L
         )
         val labels = m.assertions.map { it.label }
-        assertTrue("c2pa.training-mining" in labels)
+        assertTrue("cawg.training-mining" in labels)
         assertTrue("c2pa.thumbnail.claim.jpeg" in labels)
         assertTrue("c2pa.actions.created" in labels)
         // No AI actions assertion when ledger empty.
         assertFalse("c2pa.actions" in labels)
+    }
+
+    @Test
+    fun buildManifest_trainingMiningUsesCurrentCawgEntriesMap() {
+        val m = engine.buildManifest(
+            projectTitle = "My Project",
+            novaCutVersionName = "3.74.9",
+            signingMode = C2paExportEngine.SigningMode.ANDROID_KEYSTORE,
+            ledger = emptyList(),
+            exporterCreationTimeMs = 1_700_000_000_000L
+        )
+        val assertion = m.assertions.first { it.label == "cawg.training-mining" }
+        @Suppress("UNCHECKED_CAST")
+        val entries = assertion.data["entries"] as Map<String, Map<String, String>>
+
+        assertEquals(setOf(
+            "cawg.ai_generative_training",
+            "cawg.ai_inference",
+            "cawg.ai_training",
+            "cawg.data_mining"
+        ), entries.keys)
+        assertTrue(entries.values.all { it["use"] == "notAllowed" })
     }
 
     @Test
@@ -198,7 +220,7 @@ class C2paExportEngineTest {
     }
 
     @Test
-    fun manifestToJson_serializesAssertionsDeterministically() {
+    fun manifestDefinitionToJson_serializesC2paBuilderDefinition() {
         val manifest = engine.buildManifest(
             projectTitle = "Project",
             novaCutVersionName = "3.74.9",
@@ -209,7 +231,7 @@ class C2paExportEngineTest {
             exporterCreationTimeMs = 1_700_000_000_000L
         )
 
-        val json = engine.manifestToJson(manifest)
+        val json = engine.manifestDefinitionToJson(manifest)
         val assertions = json.getJSONArray("assertions")
         val aiActions = (0 until assertions.length())
             .map { assertions.getJSONObject(it) }
@@ -217,14 +239,121 @@ class C2paExportEngineTest {
             .getJSONObject("data")
             .getJSONArray("actions")
 
-        assertEquals("com.novacut.c2pa-manifest.v1", json.getString("schema"))
-        assertEquals("NovaCut/3.74.9", json.getString("claimGenerator"))
-        assertEquals(C2paExportEngine.SigningMode.ANDROID_KEYSTORE.name, json.getString("signingMode"))
+        assertEquals("NovaCut/3.74.9", json.getString("claim_generator"))
+        assertEquals("NovaCut", json.getJSONArray("claim_generator_info").getJSONObject(0).getString("name"))
+        assertEquals("3.74.9", json.getJSONArray("claim_generator_info").getJSONObject(0).getString("version"))
+        assertEquals("Project", json.getString("title"))
         assertEquals("c2pa.edited", aiActions.getJSONObject(0).getString("action"))
         assertEquals(
             "compositeWithTrainedAlgorithmicMedia",
             aiActions.getJSONObject(0).getString("digitalSourceType")
         )
+    }
+
+    @Test
+    fun manifestDefinitionToJson_omitsRedactedTitle() {
+        val manifest = engine.buildManifest(
+            projectTitle = null,
+            novaCutVersionName = "3.74.9",
+            signingMode = C2paExportEngine.SigningMode.ANDROID_KEYSTORE,
+            ledger = emptyList(),
+            exporterCreationTimeMs = 1_700_000_000_000L
+        )
+
+        assertFalse(engine.manifestDefinitionToJson(manifest).has("title"))
+    }
+
+    @Test
+    fun draftSidecarToJson_marksUnsignedDraftNotVerifiable() {
+        val manifest = engine.buildManifest(
+            projectTitle = "Project",
+            novaCutVersionName = "3.74.9",
+            signingMode = C2paExportEngine.SigningMode.ANDROID_KEYSTORE,
+            ledger = emptyList(),
+            exporterCreationTimeMs = 1_700_000_000_000L
+        )
+        val json = engine.draftSidecarToJson(
+            manifest = manifest,
+            availability = C2paExportEngine.SigningAvailability(
+                status = C2paExportEngine.AvailabilityStatus.LIBRARY_UNAVAILABLE,
+                canSignEmbeddedManifest = false,
+                message = "Unavailable"
+            ),
+            exportedFileName = "project.mp4"
+        )
+
+        assertEquals("com.novacut.c2pa-draft-manifest.v2", json.getString("schema"))
+        assertEquals("2.4", json.getString("c2paSpecification"))
+        assertEquals("video/mp4", json.getString("format"))
+        assertFalse(json.getBoolean("embeddedManifestStore"))
+        assertFalse(json.getBoolean("hardBinding"))
+        assertFalse(json.getBoolean("isVerifiableContentCredential"))
+        assertEquals("project.mp4", json.getString("exportedFileName"))
+        assertEquals("NovaCut/3.74.9", json.getJSONObject("manifestDefinition").getString("claim_generator"))
+    }
+
+    @Test
+    fun signingAvailability_requiresLibraryBeforeSignerState() {
+        val availability = engine.signingAvailability(
+            signingMode = C2paExportEngine.SigningMode.ANDROID_KEYSTORE,
+            libraryAvailable = false,
+            keystoreKeyAvailable = true,
+            certificateChainAvailable = true
+        )
+
+        assertEquals(C2paExportEngine.AvailabilityStatus.LIBRARY_UNAVAILABLE, availability.status)
+        assertFalse(availability.canSignEmbeddedManifest)
+        assertTrue(availability.canWriteDraftSidecar)
+    }
+
+    @Test
+    fun signingAvailability_requiresCertificateEnrollmentForDeviceKeys() {
+        val availability = engine.signingAvailability(
+            signingMode = C2paExportEngine.SigningMode.STRONGBOX,
+            libraryAvailable = true,
+            keystoreKeyAvailable = true,
+            certificateChainAvailable = false
+        )
+
+        assertEquals(
+            C2paExportEngine.AvailabilityStatus.CERTIFICATE_ENROLLMENT_REQUIRED,
+            availability.status
+        )
+        assertFalse(availability.canSignEmbeddedManifest)
+    }
+
+    @Test
+    fun signingAvailability_acceptsReadyUserPemCredentials() {
+        val availability = engine.signingAvailability(
+            signingMode = C2paExportEngine.SigningMode.USER_PEM,
+            libraryAvailable = true,
+            certificateChainAvailable = true,
+            userPrivateKeyAvailable = true
+        )
+
+        assertEquals(C2paExportEngine.AvailabilityStatus.READY, availability.status)
+        assertTrue(availability.canSignEmbeddedManifest)
+    }
+
+    @Test
+    fun signingAvailability_requiresRemoteConsentAfterSignerConfigured() {
+        val needsConsent = engine.signingAvailability(
+            signingMode = C2paExportEngine.SigningMode.WEB_SERVICE,
+            libraryAvailable = true,
+            remoteSignerConfigured = true,
+            remoteConsentGranted = false
+        )
+        val ready = engine.signingAvailability(
+            signingMode = C2paExportEngine.SigningMode.WEB_SERVICE,
+            libraryAvailable = true,
+            remoteSignerConfigured = true,
+            remoteConsentGranted = true
+        )
+
+        assertEquals(C2paExportEngine.AvailabilityStatus.REMOTE_CONSENT_REQUIRED, needsConsent.status)
+        assertFalse(needsConsent.canSignEmbeddedManifest)
+        assertEquals(C2paExportEngine.AvailabilityStatus.READY, ready.status)
+        assertTrue(ready.canSignEmbeddedManifest)
     }
 
     @Test

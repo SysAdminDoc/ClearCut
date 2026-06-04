@@ -1,0 +1,4 @@
+- C2PA draft manifest and signer gate
+- Migrated NovaCut's C2PA training/data-mining assertion from the old c2pa.training-mining labels to current CAWG 1.1 cawg.training-mining entries.
+- Added manifestDefinitionToJson(...) for the C2PA builder-shaped manifest definition with claim_generator, claim_generator_info, current CAWG labels, redacted-title handling, and AI-ledger action mapping.
+- Added SigningAvailability decisions for missing C2PA libraries, missing Android Keystore/StrongBox cer...

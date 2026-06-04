@@ -648,7 +648,9 @@ fun ExportSheet(
                     ExportToggleRow(
                         icon = Icons.AutoMirrored.Filled.Notes,
                         title = "Write AI-use sidecar",
-                        description = "Creates a matching .ai-use.json declaration next to the export.",
+                        description = "Creates .ai-use.json and an unsigned " +
+                            ".c2pa-draft-manifest.json; signed Content " +
+                            "Credentials need a configured signer.",
                         checked = config.writeAiUseSidecar,
                         onCheckedChange = {
                             onConfigChanged(config.copy(writeAiUseSidecar = it))

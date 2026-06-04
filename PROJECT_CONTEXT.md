@@ -10,8 +10,8 @@ NovaCut is an Android video editor under package `com.novacut.editor`. The repo 
 
 Current live version evidence:
 
-- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 190`, `versionName = "3.74.53"`.
-- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.53`.
+- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 191`, `versionName = "3.74.54"`.
+- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.54`.
 - [README.md](README.md) and [ROADMAP.md](ROADMAP.md) both describe the v3.74.x line.
 - The 2026-05-17 continuation pushes each completed roadmap batch back to `origin/master`; verify `git status --short --branch` before assuming branch sync.
 
@@ -196,6 +196,29 @@ High-level modules and patterns:
    - Verification passed: focused JVM policy/engine/diagnostic coverage,
      `:app:testDebugUnitTest`, `:app:assembleDebug`, `:app:assembleRelease`,
      `:app:assembleDebugAndroidTest`, `scripts/verify_release_artifacts.py`,
+     `scripts/validate_play_listing_assets.py`,
+     `scripts/sync_fastlane_changelogs.py --check`, and `git diff --check`.
+
+15. C2PA draft manifest and signer gate.
+   - Partial Cycle 13 prerequisite completed in v3.74.54. `C2paExportEngine`
+     now emits current CAWG `cawg.training-mining` entries and C2PA
+     builder-shaped manifest JSON with `claim_generator`,
+     `claim_generator_info`, redacted-title omission, and AI-ledger
+     `c2pa.actions` mapping.
+   - Signer availability is explicit for missing C2PA libraries, Android
+     Keystore/StrongBox certificate enrollment, user PEM material, remote
+     signer configuration, and per-export remote consent. `ExportDelegate`
+     writes `.c2pa-draft-manifest.json` with unsigned/not-verifiable status
+     instead of the older ambiguous `.c2pa-manifest.json` sidecar.
+   - Remaining Cycle 13 work is the real signed embedded MP4 path: pin and
+     verify the C2PA Android AAR or equivalent, add certificate enrollment and
+     credential storage, implement signing/embedding, validate the BMFF hard
+     binding with a C2PA reader, prove tamper failure, and rerun native 16 KB
+     release gates.
+   - Verification passed: focused JVM `C2paExportEngineTest` and
+     `PrivacyDashboardTest`, `:app:testDebugUnitTest`, `:app:assembleDebug`,
+     `:app:assembleRelease`, `:app:assembleDebugAndroidTest`,
+     `scripts/verify_release_artifacts.py`,
      `scripts/validate_play_listing_assets.py`,
      `scripts/sync_fastlane_changelogs.py --check`, and `git diff --check`.
 

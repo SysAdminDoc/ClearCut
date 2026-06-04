@@ -7,7 +7,7 @@ Last consolidated: 2026-06-04.
 
 ## Current Delivered Baseline
 
-- Current version: v3.74.53 (`versionCode` 190).
+- Current version: v3.74.54 (`versionCode` 191).
 - Multi-track Android NLE with project gallery, editor, timeline, preview,
   effects, transitions, text, captions, audio, export, settings, templates,
   project archive/import, and diagnostic bundle surfaces.
@@ -86,6 +86,11 @@ Last consolidated: 2026-06-04.
   `NEARBY_WIFI_DEVICES` or Android 17 `ACCESS_LOCAL_NETWORK` while public
   internet streaming remains ungated, and diagnostics can include redacted
   permission-state snapshots.
+- C2PA draft manifest and signer gate shipped in v3.74.54: draft manifests now
+  use current CAWG `cawg.training-mining` entries, expose C2PA-builder-shaped
+  manifest JSON, write `.c2pa-draft-manifest.json` with unsigned/not-verifiable
+  status, and explain missing library/certificate/PEM/remote-consent states
+  before any embedded MP4 Content Credentials claim is made.
 - UI test harness bootstrap shipped in v3.74.11: shared Compose test tags,
   androidTest dependencies, and a smoke test covering project list,
   blank-project editor open, media picker, export sheet, Settings, and privacy
