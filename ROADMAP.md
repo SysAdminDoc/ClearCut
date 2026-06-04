@@ -8,7 +8,7 @@ Active roadmap for forward-looking work. Shipped work is summarized in
 [RESEARCH_REPORT.md](RESEARCH_REPORT.md), and detailed historical plans are
 archived under [docs/archive](docs/archive/).
 
-Current version: **v3.74.13** (`versionCode` 150). Last consolidated:
+Current version: **v3.74.14** (`versionCode` 151). Last consolidated:
 2026-06-04.
 
 ## Current State
@@ -32,6 +32,9 @@ Current version: **v3.74.13** (`versionCode` 150). Last consolidated:
 - v3.74.13 makes the schema-aware recovery outcome loader the default editor
   open path and blocks autosave overwrites when recovery data is corrupt or
   written by a newer schema.
+- v3.74.14 runs `MediaRelinkProbe` after project open, opens Media Manager
+  when missing or unverified sources are found, and feeds probe status into
+  focused relink cards.
 
 ## Source Archives
 
@@ -44,7 +47,6 @@ Current version: **v3.74.13** (`versionCode` 150). Last consolidated:
 
 | Priority | Work | Exit criteria |
 |---|---|---|
-| P0 | Media relink editor integration | `MediaRelinkProbe` reports missing/unknown media when a project opens and gives users a focused relink path before edit/export. |
 | P0 | Compound clip gesture closure | Timeline long-press/radial action opens compound clips through `EditorViewModel.openCompoundClip`, with the existing breadcrumb and predictive-back gate active. |
 | P0 | Caption translation panel call site | The Captions sub-tab hosts `CaptionTranslationPanel` and dispatches edits/regeneration through the existing ViewModel surface. |
 | P0 | Mixed-render export orchestrator | `VideoEngine.exportMixed(plan)` consumes `MixedRenderComposer` plans and routes stream-copy, Transformer, and FFmpeg concat paths with Android-runtime verification. |

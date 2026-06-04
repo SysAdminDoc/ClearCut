@@ -7,7 +7,7 @@ Last consolidated: 2026-06-04.
 
 ## Current Delivered Baseline
 
-- Current version: v3.74.13 (`versionCode` 150).
+- Current version: v3.74.14 (`versionCode` 151).
 - Multi-track Android NLE with project gallery, editor, timeline, preview,
   effects, transitions, text, captions, audio, export, settings, templates,
   project archive/import, and diagnostic bundle surfaces.
@@ -51,6 +51,10 @@ Last consolidated: 2026-06-04.
   `loadRecoveryDataWithOutcome`, resume shortcuts can flag expected recovery
   opens, corrupt/future-schema autosaves surface warnings, and autosave writes
   stay blocked until recovery data is safe to overwrite.
+- Media relink editor integration shipped in v3.74.14: project-open scans run
+  `MediaRelinkProbe`, missing/unverified source problems auto-open Media
+  Manager, and Media Manager cards consume the probe report before users edit
+  or export.
 
 ## Preserved Historical Detail
 

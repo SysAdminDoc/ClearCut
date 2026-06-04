@@ -2020,6 +2020,7 @@ fun EditorScreen(
         ) {
             MediaManagerPanel(
                 tracks = state.tracks,
+                relinkReports = state.mediaRelinkReports,
                 onJumpToClip = viewModel::jumpToClip,
                 onRelinkMedia = { uri ->
                     pendingRelinkUri = uri
