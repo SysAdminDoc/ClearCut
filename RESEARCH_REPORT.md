@@ -6,6 +6,32 @@ roadmaps are archived under [docs/archive/roadmap](docs/archive/roadmap/).
 
 Last refreshed: 2026-06-04.
 
+## 2026-06-04 Cycle 7 Appearance & Accessibility Refresh
+
+- [Verified] `Theme.kt` defines one hard-coded Catppuccin Mocha
+  `darkColorScheme`, and `NovaCutTheme` always applies it. Grep found no light
+  scheme, high-contrast scheme, system-theme branch, or Settings appearance
+  preference, even though the standing build-machine handoff now asks each UX
+  audit to walk light, dark, and high-contrast states.
+- [Verified] The app has a Compose smoke test and Compose UI test dependency,
+  but no `ui-test-junit4-accessibility` dependency and no
+  `enableAccessibilityChecks()` / `tryPerformAccessibilityChecks()` call in
+  `NovaCutSmokeTest.kt`. Android's current Compose accessibility testing docs
+  recommend enabling those checks because they can catch contrast, small touch
+  target, and traversal-order problems during UI test actions.
+- [Verified] A local contrast sanity check showed primary text tokens are strong
+  (`Text` on `Midnight` 13.59:1; `Subtext0` on `PanelHighest` 6.41:1), but
+  lower-emphasis tokens are unsafe if used as semantic text/non-text indicators
+  (`Overlay0` on `PanelHighest` 2.92:1; `CardStrokeStrong` on `Panel` 1.81:1).
+  Android color-contrast guidance points to 4.5:1 for small text, 3:1 for large
+  text, and recommends high-contrast themes or user color choice for primary
+  content.
+- [Promoted] Added a P2 roadmap item for an appearance-mode and contrast
+  regression gate: document System/Dark/Light-or-dark-only/High-Contrast policy,
+  add a high-contrast color path for editor surfaces, wire Compose accessibility
+  checks into the smoke flow, and require screenshots plus TalkBack/contrast
+  verification before closing the broad accessibility audit lane.
+
 ## 2026-06-04 Cycle 6 Incoming Media Refresh
 
 - [Verified] The manifest exposes video/image/audio `ACTION_VIEW` filters and

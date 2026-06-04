@@ -11,7 +11,7 @@ archived under [docs/archive](docs/archive/).
 Current version: **v3.74.35** (`versionCode` 172). Last consolidated:
 2026-06-04.
 
-> Last researched: Cycle 6 - 2026-06-04.
+> Last researched: Cycle 7 - 2026-06-04.
 
 ## ▶ Implementer Instructions (for the build machine)
 
@@ -35,9 +35,10 @@ build machine should:
    headings. Never force-push.
 
 Current direction: finish timeline decomposition, keep model-gate honesty
-current, and close release/platform trust gaps before another broad feature
-sweep. Use JDK 21 for Gradle work, keep the release gate concrete, and avoid
-routine alpha Android Gradle Plugin bumps. Ownership tags: `🤖` means
+current, close release/platform trust gaps, and make accessibility appearance
+variants testable before another broad feature sweep. Use JDK 21 for Gradle
+work, keep the release gate concrete, and avoid routine alpha Android Gradle
+Plugin bumps. Ownership tags: `🤖` means
 implementer-actionable, `🔧` means user/external/manual gated, `🔬` means
 researcher-added this cycle, and `✅` means implemented/closed by the build lane.
 
@@ -775,3 +776,62 @@ Focus: incoming media handoff from other apps, without changing the existing
   https://developer.android.com/training/sharing/receive
 - Android sending simple data and multiple content URIs:
   https://developer.android.com/training/sharing/send
+
+### Researcher Queue (Cycle 7 - 2026-06-04)
+
+Focus: turning the standing light/dark/high-contrast UX audit requirement into
+an executable appearance and accessibility regression gate for the Compose app.
+
+#### Accessibility & Visual Trust
+
+- [ ] 🔬🤖 P2 — Add appearance-mode and contrast regression gates
+  - Why: NovaCut's process now requires every UX audit to cover light, dark, and
+    high-contrast states, but the app has only one hard-coded Catppuccin Mocha
+    dark `ColorScheme`. Core text colors pass a spot contrast check, but lower
+    emphasis tokens used for overlays, strokes, and secondary UI can fall below
+    WCAG/Android non-text guidance when reused as semantic indicators, and there
+    is no automated Compose accessibility check to catch regressions.
+  - Evidence: `Theme.kt` defines a single `NovaCutColorScheme = darkColorScheme`
+    and `NovaCutTheme` always applies it; grep finds no light/high-contrast
+    scheme branch or theme setting. `app/build.gradle.kts` includes Compose UI
+    test dependencies but not `ui-test-junit4-accessibility`, and
+    `NovaCutSmokeTest.kt` does not call `enableAccessibilityChecks()` or
+    `tryPerformAccessibilityChecks()`. A local token sanity check measured
+    `Overlay0` on `PanelHighest` at 2.92:1 and `CardStrokeStrong` on `Panel` at
+    1.81:1, so those colors should not be treated as sufficient text or
+    non-text state indicators without a high-contrast policy. Android's Compose
+    accessibility testing docs recommend `ui-test-junit4-accessibility` plus
+    `enableAccessibilityChecks()` for checks including color contrast, touch
+    target size, and traversal order:
+    https://developer.android.com/develop/ui/compose/accessibility/testing
+  - Touches: `ui/theme/Theme.kt`, appearance settings/DataStore, theme preview
+    or screenshot fixtures for gallery/editor/export/Settings, the Compose smoke
+    harness, and any components that currently encode state through low-contrast
+    strokes or color-only accents.
+  - Acceptance: NovaCut exposes a documented appearance policy (System/Dark plus
+    either Light or explicit dark-only rationale, and High Contrast); high
+    contrast replaces low-emphasis strokes/chips with AA-safe text and 3:1+
+    non-text indicators; the smoke flow can run accessibility checks from root
+    on gallery, editor empty state, media picker, export sheet, Settings, and
+    privacy dashboard; suppressions are narrowly documented with follow-up
+    tickets, not broad disables.
+  - Verify: run the Compose accessibility smoke on an emulator with normal and
+    high-contrast appearance, capture before/after screenshots for the main
+    surfaces, manually sample text/icon/stroke contrast against WCAG ratios, and
+    perform one TalkBack traversal of the editor timeline and export sheet.
+  - Complexity: M
+
+#### Appendix — Cycle 7 Sources
+
+- Android Compose accessibility testing:
+  https://developer.android.com/develop/ui/compose/accessibility/testing
+- Android Espresso accessibility checking:
+  https://developer.android.com/training/testing/espresso/accessibility-checking
+- Android color contrast guidance:
+  https://support.google.com/accessibility/android/answer/7158390?hl=en
+- Jetpack Compose Material 3 theming:
+  https://developer.android.com/develop/ui/compose/designsystems/material3
+- Android dark theme guidance:
+  https://developer.android.com/develop/ui/views/theming/darktheme
+- WCAG 2.2 contrast and mobile accessibility criteria:
+  https://www.w3.org/TR/WCAG22/
