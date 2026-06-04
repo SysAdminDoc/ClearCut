@@ -21,7 +21,8 @@
             android:action="com.novacut.editor.action.NEW_PROJECT"
             android:targetPackage="com.novacut.editor"
             android:targetClass="com.novacut.editor.MainActivity" />
-        <categories android:name="android.shortcut.conversation" />
+        <!-- Not a conversation shortcut — removed android.shortcut.conversation -->
+
     </shortcut>
 
     <shortcut

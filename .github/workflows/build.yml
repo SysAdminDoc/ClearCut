@@ -118,7 +118,6 @@ jobs:
           gh release create "${{ github.ref_name }}" \
             --title "NovaCut ${{ github.ref_name }}" \
             --generate-notes \
-            app/build/outputs/apk/debug/*.apk \
             app/build/outputs/apk/release/*.apk
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

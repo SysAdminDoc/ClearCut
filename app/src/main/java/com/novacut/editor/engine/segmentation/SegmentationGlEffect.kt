@@ -227,12 +227,17 @@ private class SegmentationShaderProgram(
     }
 
     private fun setupGl() {
-        // Main segmentation shader
+        // Force both programs to use the same attribute locations so the shared
+        // VAO works correctly regardless of how the driver assigns indices.
         val vs = compile(GLES30.GL_VERTEX_SHADER, VERT)
+
+        // Main segmentation shader
         val fs = compile(GLES30.GL_FRAGMENT_SHADER, FRAG_SEGMENTATION)
         glProgram = GLES30.glCreateProgram()
         GLES30.glAttachShader(glProgram, vs)
         GLES30.glAttachShader(glProgram, fs)
+        GLES30.glBindAttribLocation(glProgram, 0, "aPosition")
+        GLES30.glBindAttribLocation(glProgram, 1, "aTexCoord")
         GLES30.glLinkProgram(glProgram)
         GLES30.glDeleteShader(fs)
         val s = IntArray(1)
@@ -249,6 +254,8 @@ private class SegmentationShaderProgram(
         copyProgram = GLES30.glCreateProgram()
         GLES30.glAttachShader(copyProgram, vs)
         GLES30.glAttachShader(copyProgram, copyFs)
+        GLES30.glBindAttribLocation(copyProgram, 0, "aPosition")
+        GLES30.glBindAttribLocation(copyProgram, 1, "aTexCoord")
         GLES30.glLinkProgram(copyProgram)
         GLES30.glDeleteShader(vs)
         GLES30.glDeleteShader(copyFs)
@@ -268,19 +275,11 @@ private class SegmentationShaderProgram(
         GLES30.glBindVertexArray(vao)
         GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, vbo)
         GLES30.glBufferData(GLES30.GL_ARRAY_BUFFER, quad.size * 4, buf, GLES30.GL_STATIC_DRAW)
-        // Guard against -1 locations — see LutEngine.kt for full rationale. This is the
-        // same pattern: some drivers corrupt GL state when attrib -1 is enabled, which
-        // visually manifests as the segmented frame rendering black during export.
-        val p = GLES30.glGetAttribLocation(glProgram, "aPosition")
-        if (p >= 0) {
-            GLES30.glEnableVertexAttribArray(p)
-            GLES30.glVertexAttribPointer(p, 2, GLES30.GL_FLOAT, false, 16, 0)
-        }
-        val t = GLES30.glGetAttribLocation(glProgram, "aTexCoord")
-        if (t >= 0) {
-            GLES30.glEnableVertexAttribArray(t)
-            GLES30.glVertexAttribPointer(t, 2, GLES30.GL_FLOAT, false, 16, 8)
-        }
+        // Use the fixed attribute locations bound before linking (0 = aPosition, 1 = aTexCoord).
+        GLES30.glEnableVertexAttribArray(0)
+        GLES30.glVertexAttribPointer(0, 2, GLES30.GL_FLOAT, false, 16, 0)
+        GLES30.glEnableVertexAttribArray(1)
+        GLES30.glVertexAttribPointer(1, 2, GLES30.GL_FLOAT, false, 16, 8)
         GLES30.glBindVertexArray(0)
         GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, 0)
 

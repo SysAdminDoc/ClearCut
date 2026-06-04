@@ -462,52 +462,52 @@ class InpaintingEngine @Inject constructor(
             mask
         }
 
-        val srcPixels = IntArray(width * height)
-        val maskPixels = IntArray(width * height)
-        bitmap.getPixels(srcPixels, 0, width, 0, 0, width, height)
-        scaledMask.getPixels(maskPixels, 0, width, 0, 0, width, height)
+        try {
+            val srcPixels = IntArray(width * height)
+            val maskPixels = IntArray(width * height)
+            bitmap.getPixels(srcPixels, 0, width, 0, 0, width, height)
+            scaledMask.getPixels(maskPixels, 0, width, 0, 0, width, height)
 
-        val outPixels = srcPixels.copyOf()
-        val isMasked = BooleanArray(width * height) { Color.red(maskPixels[it]) > 127 }
+            val outPixels = srcPixels.copyOf()
+            val isMasked = BooleanArray(width * height) { Color.red(maskPixels[it]) > 127 }
 
-        // Simple iterative averaging: sweep multiple passes to propagate fill inward
-        val maxPasses = maxOf(width, height)
-        val tempPixels = outPixels.copyOf()
-        for (pass in 0 until minOf(maxPasses, 50)) {
-            var changed = false
-            for (y in 0 until height) {
-                for (x in 0 until width) {
-                    val idx = y * width + x
-                    if (!isMasked[idx]) continue
+            val maxPasses = maxOf(width, height)
+            val tempPixels = outPixels.copyOf()
+            for (pass in 0 until minOf(maxPasses, 50)) {
+                var changed = false
+                for (y in 0 until height) {
+                    for (x in 0 until width) {
+                        val idx = y * width + x
+                        if (!isMasked[idx]) continue
 
-                    var rSum = 0; var gSum = 0; var bSum = 0; var count = 0
-                    // Sample 4-connected neighbors
-                    for ((dx, dy) in arrayOf(-1 to 0, 1 to 0, 0 to -1, 0 to 1)) {
-                        val nx = x + dx; val ny = y + dy
-                        if (nx in 0 until width && ny in 0 until height) {
-                            val nIdx = ny * width + nx
-                            if (!isMasked[nIdx] || pass > 0) {
-                                rSum += Color.red(outPixels[nIdx])
-                                gSum += Color.green(outPixels[nIdx])
-                                bSum += Color.blue(outPixels[nIdx])
-                                count++
+                        var rSum = 0; var gSum = 0; var bSum = 0; var count = 0
+                        for ((dx, dy) in arrayOf(-1 to 0, 1 to 0, 0 to -1, 0 to 1)) {
+                            val nx = x + dx; val ny = y + dy
+                            if (nx in 0 until width && ny in 0 until height) {
+                                val nIdx = ny * width + nx
+                                if (!isMasked[nIdx] || pass > 0) {
+                                    rSum += Color.red(outPixels[nIdx])
+                                    gSum += Color.green(outPixels[nIdx])
+                                    bSum += Color.blue(outPixels[nIdx])
+                                    count++
+                                }
                             }
                         }
-                    }
-                    if (count > 0) {
-                        tempPixels[idx] = Color.argb(255, rSum / count, gSum / count, bSum / count)
-                        changed = true
+                        if (count > 0) {
+                            tempPixels[idx] = Color.argb(255, rSum / count, gSum / count, bSum / count)
+                            changed = true
+                        }
                     }
                 }
+                System.arraycopy(tempPixels, 0, outPixels, 0, outPixels.size)
+                if (!changed) break
             }
-            System.arraycopy(tempPixels, 0, outPixels, 0, outPixels.size)
-            if (!changed) break
+
+            val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            result.setPixels(outPixels, 0, width, 0, 0, width, height)
+            return result
+        } finally {
+            if (scaledMask !== mask) scaledMask.recycle()
         }
-
-        if (scaledMask !== mask) scaledMask.recycle()
-
-        val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        result.setPixels(outPixels, 0, width, 0, 0, width, height)
-        return result
     }
 }

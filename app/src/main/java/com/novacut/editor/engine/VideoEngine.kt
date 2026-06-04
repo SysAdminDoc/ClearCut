@@ -1030,7 +1030,7 @@ class VideoEngine @Inject constructor(
         val builder = MediaItem.Builder().setUri(mediaUri)
         return if (isImageUri(mediaUri)) {
             builder
-                .setImageDurationMs(clip.durationMs.coerceAtLeast(DEFAULT_STILL_IMAGE_DURATION_MS))
+                .setImageDurationMs(clip.durationMs.coerceAtLeast(1L))
                 .build()
         } else {
             builder

@@ -63,13 +63,25 @@ class LoudnessEngine @Inject constructor(
     ): LoudnessMeasurement = withContext(Dispatchers.Default) {
         onProgress(0.1f)
 
-        val sampleRate = 48000
-        val waveform = withContext(Dispatchers.IO) {
-            audioEngine.extractWaveform(uri, sampleRate)
-        }
+        // Decode actual PCM — extractWaveform returns an RMS envelope, not PCM
+        // samples, which would make the K-weighting and block-loudness math meaningless.
+        val pcm = withContext(Dispatchers.IO) { audioEngine.decodeToPCM(uri) }
         onProgress(0.3f)
 
-        if (waveform.isEmpty()) return@withContext LoudnessMeasurement(-70f, -70f, -70f, -70f, 0f)
+        if (pcm.isEmpty()) return@withContext LoudnessMeasurement(-70f, -70f, -70f, -70f, 0f)
+
+        val sampleRate = 48000
+        // Convert to mono float [-1, 1] for loudness analysis
+        val channels = 2
+        val frameCount = pcm.size / channels
+        val waveform = FloatArray(frameCount) { i ->
+            var sum = 0f
+            for (ch in 0 until channels) {
+                val idx = i * channels + ch
+                if (idx < pcm.size) sum += pcm[idx].toFloat() / 32768f
+            }
+            sum / channels
+        }
 
         // Apply K-weighting (simplified: high-shelf boost + high-pass)
         val kWeighted = applyKWeighting(waveform, sampleRate)

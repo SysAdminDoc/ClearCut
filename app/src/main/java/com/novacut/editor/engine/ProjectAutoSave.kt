@@ -908,6 +908,7 @@ data class AutoSaveState(
                         clip.captions.forEach { put(serializeCaption(it)) }
                     })
                 }
+                clip.name?.let { put("name", it) }
                 clip.proxyUri?.let { put("proxyUri", it.toString()) }
                 clip.motionTrackingData?.let { mtd ->
                     put("motionTrackingData", JSONObject().apply {
@@ -1365,6 +1366,7 @@ data class AutoSaveState(
                 captions = (0 until cappedArrayLength(captionsArr, MAX_CAPTIONS_PER_CLIP, "clip captions")).mapNotNull { i ->
                     try { deserializeCaption(captionsArr.getJSONObject(i)) } catch (e: Exception) { Log.w(TAG, "Failed to deserialize caption $i", e); null }
                 },
+                name = json.optString("name", "").takeIf { it.isNotEmpty() },
                 proxyUri = proxyUri,
                 motionTrackingData = json.optJSONObject("motionTrackingData")?.let { mtd ->
                     val tpArr = mtd.optJSONArray("trackPoints") ?: JSONArray()

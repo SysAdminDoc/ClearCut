@@ -543,8 +543,14 @@ class WhisperEngine @Inject constructor(
                     var outIdx = decoder.dequeueOutputBuffer(bufferInfo, 10000)
                     while (outIdx >= 0) {
                         val outBuf = decoder.getOutputBuffer(outIdx)
-                        if (outBuf != null && bufferInfo.size > 0) {
-                            val shortBuf = outBuf.order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
+                        if (outBuf != null && bufferInfo.size > 1) {
+                            val buf = outBuf.duplicate()
+                            val start = bufferInfo.offset.coerceIn(0, buf.capacity())
+                            val rawEnd = (bufferInfo.offset + bufferInfo.size).coerceIn(start, buf.capacity())
+                            val end = rawEnd - ((rawEnd - start) % 2)
+                            buf.position(start)
+                            buf.limit(end)
+                            val shortBuf = buf.slice().order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
                             val samples = ShortArray(shortBuf.remaining())
                             shortBuf.get(samples)
                             // Mix to mono

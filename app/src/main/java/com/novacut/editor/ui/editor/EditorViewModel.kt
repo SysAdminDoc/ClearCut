@@ -1088,8 +1088,11 @@ class EditorViewModel @Inject constructor(
         _state.update { s ->
             s.copy(tracks = s.tracks.map { track ->
                 track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == selectedId) clip.copy(effects = freshEffects)
-                    else clip
+                    if (clip.id == selectedId) {
+                        val existingTypes = clip.effects.map { it.type }.toSet()
+                        val newEffects = freshEffects.filter { it.type !in existingTypes }
+                        clip.copy(effects = clip.effects + newEffects)
+                    } else clip
                 })
             })
         }
@@ -4093,7 +4096,7 @@ class EditorViewModel @Inject constructor(
                 chapterMarkers = action.chapterMarkers,
                 drawingPaths = action.drawingPaths,
                 undoStack = undoStack.dropLast(1),
-                redoStack = it.redoStack + currentAction
+                redoStack = (it.redoStack + currentAction).takeLast(50)
             ))
             val clipExists = it.selectedClipId != null &&
                 restored.tracks.any { t -> t.clips.any { c -> c.id == it.selectedClipId } }

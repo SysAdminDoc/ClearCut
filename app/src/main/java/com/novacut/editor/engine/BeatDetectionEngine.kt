@@ -58,15 +58,28 @@ class BeatDetectionEngine @Inject constructor(
     ): BeatAnalysis = withContext(Dispatchers.Default) {
         onProgress(0.1f)
 
-        // Extract waveform at 22050Hz mono for faster processing
-        val waveform = withContext(Dispatchers.IO) {
-            audioEngine.extractWaveform(uri, 22050)
-        }
+        // Decode actual PCM and convert to mono float for spectral analysis.
+        // Previous code called extractWaveform() which returns an RMS envelope,
+        // not PCM samples — rendering the FFT/spectral-flux pipeline meaningless.
+        val pcm = withContext(Dispatchers.IO) { audioEngine.decodeToPCM(uri) }
         onProgress(0.3f)
 
-        if (waveform.isEmpty()) return@withContext BeatAnalysis(emptyList(), 0f)
+        if (pcm.isEmpty()) return@withContext BeatAnalysis(emptyList(), 0f)
 
-        val sampleRate = 22050
+        // Downmix to mono float normalized to [-1, 1].
+        // MediaCodec typically decodes to 44100 Hz stereo; we keep the native
+        // rate and adjust hopSize/timestampMs accordingly.
+        val sampleRate = 44100
+        val channels = 2
+        val frameCount = pcm.size / channels
+        val waveform = FloatArray(frameCount) { i ->
+            var sum = 0f
+            for (ch in 0 until channels) {
+                val idx = i * channels + ch
+                if (idx < pcm.size) sum += pcm[idx].toFloat() / 32768f
+            }
+            sum / channels
+        }
         val hopSize = 512
         val windowSize = 1024
 

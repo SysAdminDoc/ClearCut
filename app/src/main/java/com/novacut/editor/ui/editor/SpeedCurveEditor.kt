@@ -35,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -441,31 +442,33 @@ private fun SpeedCurveCanvas(
     var dragPointIndex by remember { mutableIntStateOf(-1) }
     val maxSpeed = 8f
     val minSpeed = 0.1f
+    val currentCurve by rememberUpdatedState(curve)
+    val currentOnCurveChanged by rememberUpdatedState(onCurveChanged)
 
     androidx.compose.foundation.Canvas(
         modifier = modifier
-            .pointerInput(curve) {
+            .pointerInput(Unit) {
                 detectTapGestures(
                     onDoubleTap = { offset ->
                         val position = (offset.x / size.width).coerceIn(0.02f, 0.98f)
                         val speed = (minSpeed + (1f - offset.y / size.height) * (maxSpeed - minSpeed))
                             .coerceIn(minSpeed, maxSpeed)
-                        val newPoints = curve.points.toMutableList()
+                        val newPoints = currentCurve.points.toMutableList()
                         newPoints.add(SpeedPoint(position, speed))
                         newPoints.sortBy { it.position }
-                        onCurveChanged(SpeedCurve(newPoints))
+                        currentOnCurveChanged(SpeedCurve(newPoints))
                     }
                 )
             }
-            .pointerInput(curve) {
+            .pointerInput(Unit) {
                 detectDragGestures(
                     onDragStart = { offset ->
                         val hitRadius = 30f
                         var bestIdx = -1
                         var bestDist = hitRadius * hitRadius
-                        for (i in curve.points.indices) {
-                            val px = curve.points[i].position * size.width
-                            val py = (1f - (curve.points[i].speed - minSpeed) / (maxSpeed - minSpeed)) * size.height
+                        for (i in currentCurve.points.indices) {
+                            val px = currentCurve.points[i].position * size.width
+                            val py = (1f - (currentCurve.points[i].speed - minSpeed) / (maxSpeed - minSpeed)) * size.height
                             val dx = offset.x - px
                             val dy = offset.y - py
                             val dist = dx * dx + dy * dy
@@ -477,14 +480,14 @@ private fun SpeedCurveCanvas(
                         dragPointIndex = bestIdx
                     },
                     onDrag = { change, _ ->
-                        if (dragPointIndex in curve.points.indices) {
+                        if (dragPointIndex in currentCurve.points.indices) {
                             val requestedPosition = (change.position.x / size.width).coerceIn(0f, 1f)
-                            val position = clampSpeedPointPosition(curve.points, dragPointIndex, requestedPosition)
+                            val position = clampSpeedPointPosition(currentCurve.points, dragPointIndex, requestedPosition)
                             val speed = (minSpeed + (1f - change.position.y / size.height) * (maxSpeed - minSpeed))
                                 .coerceIn(minSpeed, maxSpeed)
-                            val newPoints = curve.points.toMutableList()
+                            val newPoints = currentCurve.points.toMutableList()
                             newPoints[dragPointIndex] = newPoints[dragPointIndex].copy(position = position, speed = speed)
-                            onCurveChanged(SpeedCurve(newPoints))
+                            currentOnCurveChanged(SpeedCurve(newPoints))
                         }
                     },
                     onDragEnd = { dragPointIndex = -1 }
