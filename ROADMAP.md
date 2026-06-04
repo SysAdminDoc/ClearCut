@@ -11,7 +11,7 @@ archived under [docs/archive](docs/archive/).
 Current version: **v3.74.44** (`versionCode` 181). Last consolidated:
 2026-06-04.
 
-> Last researched: Cycle 14 - 2026-06-04.
+> Last researched: Cycle 15 - 2026-06-04.
 
 ## ▶ Implementer Instructions (for the build machine)
 
@@ -1375,3 +1375,76 @@ handoff from real API-backed direct publishing.
   https://developers.google.com/youtube/v3/guides/using_resumable_upload_protocol
 - TikTok Content Posting API — Direct Post:
   https://developers.tiktok.com/doc/content-posting-api-reference-direct-post
+
+### Researcher Queue (Cycle 15 - 2026-06-04)
+
+Focus: make device capture honest about the current external camera-app handoff
+and prepare a separate, permission-correct CameraX recorder lane.
+
+#### Media Capture & Camera Permissions
+
+- [ ] 🔬🤖 P2 — Split external camera capture from future in-app CameraX recording
+  - Why: Add Media currently presents "Capture on Device" as "Record a clip
+    without leaving NovaCut" and says camera permission is requested when
+    recording starts. In reality the app uses `ActivityResultContracts.CaptureVideo`
+    to launch a system camera activity with a FileProvider destination and does
+    not declare or request NovaCut's own `CAMERA` permission. That is a valid
+    privacy-preserving fallback, but it should be labeled as an external camera
+    handoff. The planned in-app CameraX/teleprompter recorder needs a separate
+    capability gate, permission path, and device/no-camera fallback.
+  - Evidence: `MediaPickerSheet` stores `cameraVideoFile` under
+    `pendingCameraCaptureDir(context)`, launches `CaptureVideo()`, then imports
+    the result through `finalizePendingCameraCapture(...)`. `AndroidManifest.xml`
+    declares only `uses-feature android.hardware.camera required=false`; grep
+    finds no `android.permission.CAMERA`, `Manifest.permission.CAMERA`, CameraX
+    dependency, or camera-permission launcher. `CameraCaptureEngine` still says
+    it is a CameraX/teleprompter stub, probes for `androidx.camera.video.VideoCapture`,
+    and returns `false` from `startRecording(...)`.
+  - Current-source check: Android's camera docs describe invoking an existing
+    camera app by intent as the quick way to take pictures or videos without
+    direct camera-object work:
+    https://developer.android.com/media/camera/camera-deprecated/camera-api
+    Android 11 behavior changes say only pre-installed system camera apps can
+    respond to `android.media.action.VIDEO_CAPTURE` unless the app targets a
+    specific package/component:
+    https://developer.android.com/about/versions/11/behavior-changes-11
+    Manifest `uses-feature` docs recommend `android:required="false"` when a
+    camera feature is optional so Google Play does not filter out devices:
+    https://developer.android.com/guide/topics/manifest/uses-feature-element
+    CameraX VideoCapture is the separate in-app capture architecture:
+    https://developer.android.com/media/camera/camerax/video-capture
+  - Touches: Add Media capture strings, `MediaPickerSheet` capture action/error
+    handling, camera-intent availability checks, stale capture cleanup,
+    `CameraCaptureEngine` capability model, optional CameraX dependency plan,
+    manifest permission/feature policy, runtime `CAMERA` and audio permission
+    flows for true in-app recording, teleprompter UI copy, diagnostics for
+    failed capture handoff without source paths, and focused JVM/Compose tests.
+  - Acceptance: today's fallback is labeled as "Open camera app" or equivalent,
+    explains that NovaCut receives only the returned clip, does not claim an
+    in-app recorder or camera permission prompt, and shows an actionable message
+    when no system camera handler is available or capture returns an empty file.
+    The `uses-feature required=false` declaration remains so editor-only users
+    are not filtered from devices without a camera. A future in-app recorder
+    appears only when CameraX is on the classpath and a camera is available,
+    requests `CAMERA` only at record time, coordinates microphone permission
+    separately for audio/voiceover, supports cancel/cleanup, and falls back to
+    the external camera handoff when any prerequisite is missing.
+  - Verify: add JVM tests for pending capture path validation, empty-file
+    cleanup, no-source-path diagnostics, and capability mapping between
+    external intent vs CameraX. Add Compose tests for copy/state differences
+    across external-only, no-camera-handler, denied CameraX permission, and
+    CameraX-available states. Add an emulator/device smoke test for Android 11+
+    camera-intent behavior and a manifest test that `CAMERA` is absent until the
+    in-app CameraX recorder is actually enabled.
+  - Complexity: M
+
+#### Appendix — Cycle 15 Sources
+
+- Android camera intent / camera app capture docs:
+  https://developer.android.com/media/camera/camera-deprecated/camera-api
+- Android 11 camera intent behavior changes:
+  https://developer.android.com/about/versions/11/behavior-changes-11
+- Android manifest `uses-feature`:
+  https://developer.android.com/guide/topics/manifest/uses-feature-element
+- CameraX VideoCapture:
+  https://developer.android.com/media/camera/camerax/video-capture

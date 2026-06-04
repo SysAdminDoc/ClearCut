@@ -6,6 +6,36 @@ roadmaps are archived under [docs/archive/roadmap](docs/archive/roadmap/).
 
 Last refreshed: 2026-06-04.
 
+## 2026-06-04 Cycle 15 Camera Capture Handoff Refresh
+
+- [Verified] The active Add Media panel uses
+  `ActivityResultContracts.CaptureVideo()` with a FileProvider URI under
+  `cacheDir/camera-captures`, then moves successful captures into managed media
+  through `finalizePendingCameraCapture(...)`. NovaCut declares
+  `uses-feature android.hardware.camera required=false`, but grep finds no
+  `android.permission.CAMERA`, `Manifest.permission.CAMERA`, CameraX dependency,
+  or runtime camera permission launcher in `app/src/main`.
+- [Verified] User-facing copy overstates the implemented path:
+  `media_picker_capture_description` says "Record a clip without leaving
+  NovaCut" and "Camera permission is only requested when you start recording",
+  while the actual flow opens another camera activity and does not request
+  NovaCut's own camera permission. `CameraCaptureEngine` still documents the
+  intended in-app CameraX/teleprompter recorder but is a reflection-gated stub
+  whose `startRecording(...)` returns false.
+- [Verified] Android's current camera docs describe using an intent as the quick
+  way to let an existing camera app capture photos or videos without direct
+  camera-object work. Android 11 behavior changes restrict
+  `ACTION_VIDEO_CAPTURE` responders to pre-installed system camera apps unless a
+  specific third-party package/component is targeted. The manifest
+  `uses-feature` docs say `required=false` prevents unnecessary Play filtering
+  when camera hardware is optional, and CameraX VideoCapture docs cover the
+  separate path for an in-app recorder that binds camera use cases.
+- [Promoted] Added a P2 roadmap item to split today's external camera handoff
+  from the future in-app CameraX recorder: correct the copy and permission
+  expectations, add no-camera/no-handler error states, keep captured temp-file
+  cleanup, and gate any true in-app recording path on CameraX dependencies,
+  runtime camera permission, preview/audio policy, and UI tests.
+
 ## 2026-06-04 Cycle 14 Direct Publish Handoff Refresh
 
 - [Verified] `DirectPublishEngine` is honest in code comments that "today only
