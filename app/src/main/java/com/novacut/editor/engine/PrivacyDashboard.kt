@@ -27,6 +27,7 @@ object PrivacyDashboard {
         APP_PREFERENCES("App preferences (theme, export defaults)"),
         TEMPLATE_LIBRARY("Saved templates / effect packs"),
         DIAGNOSTIC_LOGS("Diagnostic logs (logcat tail, redacted)"),
+        CRASH_RECORDS("Crash records (fatal exception breadcrumbs)"),
         CLOUD_GENERATIVE("Cloud generative video calls (consent-gated)"),
         AI_USAGE_LEDGER("AI usage ledger (per-project disclosure history)"),
         OPT_IN_TELEMETRY("Opt-in usage telemetry (Sentry / Glean)"),
@@ -129,6 +130,14 @@ object PrivacyDashboard {
             collectedBy = listOf("DiagnosticExportEngine"),
             retentionPolicy = "Generated only when the user taps Export diagnostic ZIP; capped to the 3 most recent ZIPs in filesDir/diagnostics.",
             collectedByDefault = false,
+        ),
+        DashboardEntry(
+            category = Category.CRASH_RECORDS,
+            location = StorageLocation.DEVICE_INTERNAL,
+            controls = Controls(canExport = true, canDelete = true, hasOptOut = false),
+            collectedBy = listOf("CrashRecordStore", "DiagnosticExportEngine"),
+            retentionPolicy = "Fatal-crash breadcrumbs are stored locally under filesDir/diagnostics/crashes, capped to the 8 most recent records, and included only in user-triggered diagnostic ZIP exports.",
+            collectedByDefault = true,
         ),
         DashboardEntry(
             category = Category.CLOUD_GENERATIVE,

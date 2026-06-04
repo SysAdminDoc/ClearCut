@@ -30,6 +30,8 @@ import javax.inject.Singleton
  *                           "AV1 export fails on my device" tickets fast
  *  - `model-registry.txt` — names + install state of every model registered
  *                           with [ModelDownloadManager] (no file contents)
+ *  - `crash-records.json` — optional bounded fatal-crash records captured by
+ *                           [CrashRecordStore], when any exist
  *  - `logcat-tail.txt`    — last 200 logcat lines from the current process,
  *                           with PII / URI patterns redacted before write
  *  - `manifest.txt`       — ordered file list with sizes
@@ -43,8 +45,9 @@ import javax.inject.Singleton
  *
  * Integration sketch (Settings screen, ~10 lines):
  *
- *     val ze = DiagnosticExportEngine(ctx)
- *     val zip = ze.exportDiagnosticBundle(modelRegistry = downloadManager.snapshot())
+ *     val zip = diagnosticExportEngine.exportDiagnosticBundle(
+ *         modelRegistry = downloadManager.snapshot()
+ *     )
  *     val uri = FileProvider.getUriForFile(ctx, "${BuildConfig.APPLICATION_ID}.fileprovider", zip)
  *     ctx.startActivity(Intent.createChooser(
  *         Intent(Intent.ACTION_SEND)
@@ -57,6 +60,7 @@ import javax.inject.Singleton
 @Singleton
 class DiagnosticExportEngine @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val crashRecordStore: CrashRecordStore,
 ) {
 
     /** Snapshot summary of a single model from [ModelDownloadManager]. */
@@ -195,6 +199,9 @@ class DiagnosticExportEngine @Inject constructor(
         entries["model-registry.txt"] = buildModelRegistry(modelRegistry).toByteArray(Charsets.UTF_8)
         if (timelineShape != null) {
             entries["timeline-shape.json"] = timelineShape.toJsonString().toByteArray(Charsets.UTF_8)
+        }
+        crashRecordStore.buildDiagnosticJson()?.let { crashRecordsJson ->
+            entries[CrashRecordStore.CRASH_BUNDLE_ENTRY] = crashRecordsJson.toByteArray(Charsets.UTF_8)
         }
         entries["logcat-tail.txt"] = buildLogcatTail().toByteArray(Charsets.UTF_8)
         entries["manifest.txt"] = buildManifest(entries).toByteArray(Charsets.UTF_8)

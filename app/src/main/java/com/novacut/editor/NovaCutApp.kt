@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.novacut.editor.BuildConfig
+import com.novacut.editor.engine.CrashRecordStore
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
@@ -30,6 +31,7 @@ class NovaCutApp : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        CrashRecordStore(this).installGlobalHandler(VERSION)
         createNotificationChannels()
     }
 

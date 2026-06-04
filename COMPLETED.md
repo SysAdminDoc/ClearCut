@@ -7,7 +7,7 @@ Last consolidated: 2026-06-04.
 
 ## Current Delivered Baseline
 
-- Current version: v3.74.35 (`versionCode` 172).
+- Current version: v3.74.36 (`versionCode` 173).
 - Multi-track Android NLE with project gallery, editor, timeline, preview,
   effects, transitions, text, captions, audio, export, settings, templates,
   project archive/import, and diagnostic bundle surfaces.
@@ -139,6 +139,10 @@ Last consolidated: 2026-06-04.
   data-extraction rules exclude `media/imports` from cloud backup, include it
   for device-to-device transfer, keep partial writes excluded, and require cloud
   backup encryption capability.
+- Fatal-crash capture shipped in v3.74.36: app startup now installs a global
+  uncaught-exception handler, writes bounded redacted crash records under
+  `filesDir/diagnostics/crashes`, chains to the previous platform handler, and
+  includes `crash-records.json` only in user-triggered diagnostic ZIP exports.
 
 ## Preserved Historical Detail
 

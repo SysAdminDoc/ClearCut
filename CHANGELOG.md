@@ -1,5 +1,27 @@
 # Changelog
 
+## v3.74.36 — 2026-06-04
+
+### Fatal-crash diagnostic breadcrumbs
+- Added `CrashRecordStore`, a local-only fatal-crash recorder that writes
+  bounded JSON records under `filesDir/diagnostics/crashes`.
+- Installed the recorder from `NovaCutApp.onCreate()` as the global
+  uncaught-exception handler while chaining to the previous platform handler so
+  normal Android crash handling still runs.
+- Kept crash records privacy-safe by omitting raw throwable messages, recording
+  only message presence plus SHA-256 fingerprints, limiting cause/stack depth,
+  and reusing the existing diagnostic redaction filter for thread/frame text.
+- Included crash records as optional `crash-records.json` entries in
+  user-triggered diagnostic ZIP exports.
+- Updated the Privacy Dashboard data model to disclose local crash breadcrumbs
+  as on-device diagnostic data capped to the eight most recent records.
+- Bumped runtime metadata to `versionName 3.74.36` / `versionCode 173`.
+- Verification: `git diff --check`, blocked-term scan, and focused
+  `:app:testDebugUnitTest --tests
+  com.novacut.editor.engine.CrashRecordStoreTest --tests
+  com.novacut.editor.engine.PrivacyDashboardTest` passed. APK assemble was not
+  run for this batch.
+
 ## v3.74.35 — 2026-06-04
 
 ### Backup and device-transfer policy split
