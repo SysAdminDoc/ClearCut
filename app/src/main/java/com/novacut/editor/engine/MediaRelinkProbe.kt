@@ -5,6 +5,7 @@ import android.content.res.AssetFileDescriptor
 import android.net.Uri
 import android.util.Log
 import com.novacut.editor.model.Clip
+import com.novacut.editor.model.ImageOverlay
 import com.novacut.editor.model.Track
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -138,6 +139,12 @@ class MediaRelinkProbe @Inject constructor(
         }
     }
 
+    fun checkImageOverlay(
+        overlayId: String,
+        uri: String?,
+        opener: UriOpener,
+    ): ClipRelinkReport = check(overlayId, uri, opener)
+
     /**
      * Production probe. Runs the URI-accessibility check on Dispatchers.IO
      * for every clip referenced by the tracks. Returns a map keyed by clip ID
@@ -154,6 +161,14 @@ class MediaRelinkProbe @Inject constructor(
             val out = mutableMapOf<String, ClipRelinkReport>()
             tracks.forEach { track -> probeTrack(track.clips, opener, out) }
             out
+        }
+
+    suspend fun probeImageOverlays(imageOverlays: List<ImageOverlay>): Map<String, ClipRelinkReport> =
+        withContext(Dispatchers.IO) {
+            val opener = androidOpener()
+            imageOverlays.associate { overlay ->
+                overlay.id to checkImageOverlay(overlay.id, overlay.sourceUri.toString(), opener)
+            }
         }
 
     private fun probeTrack(

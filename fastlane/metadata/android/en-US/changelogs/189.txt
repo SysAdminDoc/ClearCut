@@ -1,0 +1,4 @@
+- Durable image overlay compositor
+- Added OverlayAssetStore so bundled shelf stickers render to app-owned PNG files and gallery image stickers copy into filesDir/media/overlays before project state is mutated.
+- Rejected GIF overlay insertion with explicit user-facing copy until NovaCut has a bounded animated overlay path, avoiding broken still-frame imports.
+- Added ExportImageOverlay and threaded imageOverlays through VideoEngine, ExportDelegate, and mixed-render eligibility so full Trans...

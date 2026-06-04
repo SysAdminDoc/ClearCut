@@ -62,14 +62,14 @@ class EngineStringExtractionAuditTest {
             .filter { it.isFile && it.extension == "kt" }
             .count()
         // 2026-05-16: 102 engine .kt files.
-        // 2026-06-04: 131 after the memory-trim policy/registry/breadcrumb
-        // infrastructure. Bump intentionally when adding new engines so the
+        // 2026-06-04: 137 after the durable image-overlay asset/export path.
+        // Bump intentionally when adding new engines so the
         // docs/models.md registry and the ROADMAP stay in sync. This assertion
         // is a checkpoint, not a hard cap.
         assertTrue(
             "Engine file count drifted from the audit baseline (was 102, now $count). " +
                 "If you added an engine, update docs/models.md and bump this number.",
-            count in 95..135
+            count in 95..140
         )
     }
 

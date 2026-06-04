@@ -21,7 +21,7 @@ package com.novacut.editor.engine
 object PrivacyDashboard {
 
     enum class Category(val displayName: String) {
-        PROJECT_CONTENT("Project content (clips, timelines, captions)"),
+        PROJECT_CONTENT("Project content (clips, overlays, timelines, captions)"),
         MEDIA_METADATA("Media metadata (durations, codecs, dimensions)"),
         ML_MODELS("Downloaded ML models (Whisper, MediaPipe)"),
         APP_PREFERENCES("App preferences (theme, export defaults)"),
@@ -89,8 +89,8 @@ object PrivacyDashboard {
             category = Category.PROJECT_CONTENT,
             location = StorageLocation.DEVICE_INTERNAL,
             controls = Controls(canExport = true, canDelete = true, hasOptOut = false),
-            collectedBy = listOf("ProjectAutoSave", "ProjectDatabase", "ProjectArchive"),
-            retentionPolicy = "Kept until the project is deleted from the project list.",
+            collectedBy = listOf("ProjectAutoSave", "ProjectDatabase", "ProjectArchive", "OverlayAssetStore"),
+            retentionPolicy = "Kept until the project/media copy is deleted or app storage is cleared.",
             collectedByDefault = true,
         ),
         DashboardEntry(

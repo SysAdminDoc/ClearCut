@@ -8,7 +8,7 @@ Active roadmap for forward-looking work. Shipped work is summarized in
 [RESEARCH_REPORT.md](RESEARCH_REPORT.md), and detailed historical plans are
 archived under [docs/archive](docs/archive/).
 
-Current version: **v3.74.51** (`versionCode` 188). Last consolidated:
+Current version: **v3.74.52** (`versionCode` 189). Last consolidated:
 2026-06-04.
 
 > Last researched: Cycle 22 - 2026-06-04.
@@ -115,6 +115,11 @@ Preferences DataStore delegate with a `PreferenceDataStoreFactory`
 `ReplaceFileCorruptionHandler`, adding redacted bounded settings-reset reports,
 showing a one-shot Settings notice after recovery, and exporting reset reports
 through user-triggered diagnostic ZIPs when present.
+v3.74.52 closed the Cycle 11 overlay-fidelity gate by importing shelf/gallery
+stickers into app-owned overlay assets before project mutation, rejecting GIFs
+with explicit copy until animation is supported, rendering active image
+overlays in preview, burning them into Media3 Transformer exports with matching
+center-offset geometry, and adding overlay-source relink diagnostics.
 
 ## Current State
 
@@ -271,6 +276,11 @@ through user-triggered diagnostic ZIPs when present.
   `ReplaceFileCorruptionHandler`, readable invalid keys fall back per setting,
   Settings shows a dismissible recovery notice, and diagnostic ZIPs can include
   redacted `settings-reset-report.jsonl` records.
+- v3.74.52 adds durable image/sticker overlays: bundled sticker shelf URIs and
+  gallery images copy to app-private overlay files before state mutation,
+  active overlays render in preview and Transformer exports with matching
+  timing/geometry, GIF overlays are rejected explicitly until animation is
+  supported, and overlay sources participate in relink diagnostics.
 
 ## Source Archives
 
@@ -296,6 +306,7 @@ through user-triggered diagnostic ZIPs when present.
 | ✅ P2 | Appearance and contrast gates | Implemented in v3.74.48: persisted System/Dark/High Contrast Dark selection, high-contrast shared chrome tokens, Compose accessibility smoke checks, `docs/appearance-policy.md`, and JVM contrast guardrails for text, non-text, chips, and low-emphasis token misuse. |
 | ✅ P2 | Non-media document import router | Implemented in v3.74.49: content-only plugin/LUT/archive/timeline documents now classify through `IncomingDocumentIntentParser`, manifest filters stay specific without `*/*`, Projects shows a preview/report, and loaders validate templates, effect packs, LUTs, OpenFX descriptors, archives, and timeline-import stub status before mutation. |
 | ✅ P2 | Process-death diagnostic history | Implemented in v3.74.50: Android 11+ `ApplicationExitInfo` records are captured through `ProcessExitRecorder`, de-duped by timestamp/reason/PID, redacted/truncated, exposed in Privacy Dashboard copy, and included in diagnostic ZIPs as `process-exit-history.json` with an unsupported marker on older devices. |
+| ✅ P1 | Durable image/sticker overlay compositor | Implemented in v3.74.52: `OverlayAssetStore` imports bundled/gallery stickers into app-owned overlay files before project mutation, `PreviewPanel` renders active image overlays, Media3 Transformer exports burn them with matching geometry, GIF overlays reject with explicit copy, and `MediaRelinkProbe` reports missing overlay sources. |
 | P3 | Caption translation engine activation | Replace source-text echo behavior with a real local model path such as MADLAD-400 or Bergamot only after model gates are complete. |
 | P3 | Advanced engine activations | Activate Oboe resampling, adjustment layers, keyframe graph UI, and remaining AI engines only when dependencies, APK size, 16 KB compliance, and device QA are clear. |
 
@@ -1218,7 +1229,7 @@ preview/export, using app-owned assets instead of fragile raw picker URIs.
 
 #### Creator Workflow & Export Fidelity
 
-- [ ] 🔬🤖 P1 — Add durable image/sticker overlay compositor and asset store
+- [x] ✅ 🔬🤖 P1 — Add durable image/sticker overlay compositor and asset store
   - Why: NovaCut advertises sticker/GIF/image overlays and exposes a sticker
     picker, custom image picker, autosave persistence, undo snapshots, archive
     packing, and stream-copy disqualification for `imageOverlays`, but the
@@ -1270,6 +1281,21 @@ preview/export, using app-owned assets instead of fragile raw picker URIs.
     restart, plus a watermark restart test proving `takePersistableUriPermission`
     or local-copy behavior survives reboot/app-stop conditions.
   - Complexity: L
+  - Status: implemented in v3.74.52. `OverlayAssetStore` resolves bundled
+    sticker shelf URIs into app-owned PNG files and copies gallery image
+    stickers into `filesDir/media/overlays` before `OverlayDelegate` mutates
+    project state. GIF imports are rejected with explicit copy until animated
+    overlays have a bounded implementation. `PreviewPanel` renders active
+    image overlays over clip media, `ExportImageOverlay` burns them into
+    Media3 Transformer exports with the same center-offset geometry and active
+    time range, and `MediaRelinkProbe` now reports overlay-source accessibility.
+    Focused JVM tests cover bundled URI parsing, GIF rejection, export timing
+    and geometry helpers, missing overlay-source classification, and privacy
+    dashboard disclosure. Autosave/archive schema stayed unchanged because
+    overlay URIs were already serialized and packed; this pass makes the saved
+    URIs durable before they enter that existing path. Compose and golden-pixel
+    instrumentation remain follow-up validation once a device/emulator is
+    available.
 
 #### Appendix — Cycle 11 Sources
 

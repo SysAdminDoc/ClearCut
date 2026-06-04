@@ -24,7 +24,7 @@ with the manifest permission list.
 
 | Dashboard category | Play data type | Collected by default | Shared by NovaCut | Required or optional | Purpose and retention |
 |---|---|---:|---:|---|---|
-| Project content | User content: photos/videos/audio, app activity within projects | Yes | No, except user-directed export/share | Required for editing | Stored locally until project deletion. |
+| Project content | User content: photos/videos/audio/sticker images, app activity within projects | Yes | No, except user-directed export/share | Required for editing | Stored locally until project/media-copy deletion or app storage clear; sticker/image overlays selected from the picker are copied to app-private overlay storage before project mutation. |
 | Media metadata | App activity and file metadata such as codec, duration, dimensions | Yes | No | Required for editing/import | Stored locally with the project and removed when clips/projects are removed. |
 | Downloaded ML models | App info/performance metadata about model install state | No | No | Optional | Kept until the user removes the model from Settings. Model files are not diagnostic payloads. |
 | App preferences | App activity/preferences | Yes | No | Required for app settings | Kept until app data is cleared or the app is uninstalled. |

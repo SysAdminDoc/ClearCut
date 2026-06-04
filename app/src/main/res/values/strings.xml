@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.74.51</string>
+    <string name="app_version">v3.74.52</string>
 
     <!-- Common -->
     <string name="close">Close</string>
@@ -1507,6 +1507,8 @@
     <string name="cd_multicam_selected">Selected angle</string>
     <string name="cd_preview_empty">Video library</string>
     <string name="cd_preview_still_image">Still image preview</string>
+    <string name="cd_preview_image_overlay">Image overlay preview</string>
+    <string name="cd_preview_image_overlay_missing">Image overlay source missing</string>
     <string name="projects_empty_title">No projects yet</string>
     <string name="projects_empty_subtitle">Tap the + button to create your first video project.</string>
     <string name="project_create_failed">NovaCut couldn\'t create that project right now. Check available storage and try again.</string>

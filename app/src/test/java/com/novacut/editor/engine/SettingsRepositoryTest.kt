@@ -86,7 +86,7 @@ class SettingsRepositoryTest {
 
     @Test
     fun validUpdatesSurviveRecoveredStore() = runBlocking {
-        val settingsFile = temp.newFile("novacut_settings_valid.preferences_pb")
+        val settingsFile = temp.root.resolve("novacut_settings_valid.preferences_pb")
         val reportStore = SettingsResetReportStore.forFile(temp.newFile("settings-reset-valid.jsonl"))
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         try {

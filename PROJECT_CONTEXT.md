@@ -10,8 +10,8 @@ NovaCut is an Android video editor under package `com.novacut.editor`. The repo 
 
 Current live version evidence:
 
-- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 187`, `versionName = "3.74.50"`.
-- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.50`.
+- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 189`, `versionName = "3.74.52"`.
+- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.52`.
 - [README.md](README.md) and [ROADMAP.md](ROADMAP.md) both describe the v3.74.x line.
 - The 2026-05-17 continuation pushes each completed roadmap batch back to `origin/master`; verify `git status --short --branch` before assuming branch sync.
 
@@ -167,6 +167,19 @@ High-level modules and patterns:
      `filesDir/diagnostics/process-exit-history.json`, redacts descriptions and
      trace excerpts, and includes the JSON only in user-triggered diagnostic
      ZIP exports.
+
+13. Durable image/sticker overlays.
+   - Completed in v3.74.52. `OverlayAssetStore` imports bundled sticker shelf
+     URIs and gallery image stickers into app-private `filesDir/media/overlays`
+     files before `OverlayDelegate` mutates project state.
+   - `PreviewPanel` renders active image overlays over media, and
+     `ExportImageOverlay` burns still stickers/images into Media3 Transformer
+     exports with matching center-offset position, width-fraction scale,
+     rotation, opacity, and active time range.
+   - GIF overlays are rejected with explicit copy until animated overlay
+     support is implemented. `MediaRelinkProbe` now reports overlay-source
+     accessibility, and Privacy Dashboard project-content disclosure lists
+     `OverlayAssetStore`.
 
 ## Recent Implementation Notes
 

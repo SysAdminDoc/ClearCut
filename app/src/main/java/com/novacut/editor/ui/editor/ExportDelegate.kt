@@ -613,6 +613,7 @@ class ExportDelegate(
                         config = configWithChapters,
                         outputFile = outputFile,
                         textOverlays = textOverlays,
+                        imageOverlays = currentState.imageOverlays,
                         trackedObjects = currentState.trackedObjects,
                         onProgress = { progress ->
                             updateExport { it.copy(progress = progress) }
@@ -628,6 +629,7 @@ class ExportDelegate(
                     config = configWithChapters,
                     outputFile = outputFile,
                     textOverlays = textOverlays,
+                    imageOverlays = currentState.imageOverlays,
                     trackedObjects = currentState.trackedObjects,
                     onProgress = { progress ->
                         updateExport { it.copy(progress = progress) }

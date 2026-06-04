@@ -115,6 +115,16 @@ class MediaRelinkProbeTest {
         assertTrue("reason was ${r.reason?.length}", (r.reason?.length ?: 0) <= 120)
     }
 
+    @Test
+    fun checkImageOverlay_usesOverlayIdAndClassifiesMissingSources() {
+        val r = probe.checkImageOverlay("overlay-1", "file:///missing/sticker.png") { _ ->
+            throw java.io.FileNotFoundException("sticker.png")
+        }
+        assertEquals("overlay-1", r.clipId)
+        assertEquals(MediaRelinkProbe.RelinkState.MISSING, r.state)
+        assertTrue(r.userMessage.startsWith("Source missing"))
+    }
+
     private fun failingOpener(): MediaRelinkProbe.UriOpener =
         MediaRelinkProbe.UriOpener { _ ->
             error("opener must not be invoked for this case")

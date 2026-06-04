@@ -373,6 +373,7 @@ class VideoEngine @Inject constructor(
         config: ExportConfig,
         outputFile: File,
         textOverlays: List<com.novacut.editor.model.TextOverlay> = emptyList(),
+        imageOverlays: List<ImageOverlay> = emptyList(),
         lottieOverlays: List<LottieOverlaySpec> = emptyList(),
         trackedObjects: List<TrackedObject> = emptyList(),
         onProgress: (Float) -> Unit = {},
@@ -396,6 +397,7 @@ class VideoEngine @Inject constructor(
                 tracks = tracks,
                 config = config,
                 textOverlays = textOverlays,
+                imageOverlays = imageOverlays,
                 lottieOverlays = lottieOverlays,
                 trackedObjects = trackedObjects
             )
@@ -428,6 +430,7 @@ class VideoEngine @Inject constructor(
         config: ExportConfig,
         outputFile: File,
         textOverlays: List<com.novacut.editor.model.TextOverlay> = emptyList(),
+        imageOverlays: List<ImageOverlay> = emptyList(),
         lottieOverlays: List<LottieOverlaySpec> = emptyList(),
         trackedObjects: List<TrackedObject> = emptyList(),
         onProgress: (Float) -> Unit = {},
@@ -435,7 +438,9 @@ class VideoEngine @Inject constructor(
         onError: (Exception) -> Unit = {}
     ): Boolean {
         if (plan.benefit != MixedRenderComposer.Benefit.Mixed || !plan.needsConcat) return false
-        if (textOverlays.isNotEmpty() || lottieOverlays.isNotEmpty() || trackedObjects.any { it.isEnabled }) {
+        if (textOverlays.isNotEmpty() || imageOverlays.isNotEmpty() ||
+            lottieOverlays.isNotEmpty() || trackedObjects.any { it.isEnabled }
+        ) {
             Log.d(TAG, "Mixed export skipped: overlays or tracked objects require whole-timeline Transformer")
             return false
         }
@@ -522,6 +527,7 @@ class VideoEngine @Inject constructor(
                             tracks = runTracks,
                             config = config,
                             textOverlays = emptyList(),
+                            imageOverlays = emptyList(),
                             lottieOverlays = emptyList(),
                             trackedObjects = emptyList()
                         )
@@ -639,6 +645,7 @@ class VideoEngine @Inject constructor(
         tracks: List<Track>,
         config: ExportConfig,
         textOverlays: List<com.novacut.editor.model.TextOverlay>,
+        imageOverlays: List<ImageOverlay>,
         lottieOverlays: List<LottieOverlaySpec>,
         trackedObjects: List<TrackedObject>
     ): TransformerExportPlan {
@@ -660,6 +667,7 @@ class VideoEngine @Inject constructor(
                 track.clips.maxOfOrNull { clip -> clip.timelineEndMs } ?: 0L
             } ?: 0L,
             textOverlays.maxOfOrNull { it.endTimeMs } ?: 0L,
+            imageOverlays.maxOfOrNull { it.endTimeMs } ?: 0L,
             lottieOverlays.maxOfOrNull { it.endTimeMs } ?: 0L
         )
         val reversedCount = visibleVideoTracks.sumOf { track -> track.clips.count { it.isReversed } }
@@ -675,6 +683,7 @@ class VideoEngine @Inject constructor(
             targetW = targetW,
             targetH = targetH,
             textOverlays = textOverlays,
+            imageOverlays = imageOverlays,
             lottieOverlays = lottieOverlays,
             trackedObjects = trackedObjects
         )
@@ -729,6 +738,7 @@ class VideoEngine @Inject constructor(
         targetW: Int,
         targetH: Int,
         textOverlays: List<com.novacut.editor.model.TextOverlay>,
+        imageOverlays: List<ImageOverlay>,
         lottieOverlays: List<LottieOverlaySpec>,
         trackedObjects: List<TrackedObject>
     ): List<VisualTrackSequence> {
@@ -753,6 +763,7 @@ class VideoEngine @Inject constructor(
                     targetW = targetW,
                     targetH = targetH,
                     textOverlays = textOverlays,
+                    imageOverlays = imageOverlays,
                     lottieOverlays = lottieOverlays,
                     trackedObjects = trackedObjects
                 ),
@@ -779,6 +790,7 @@ class VideoEngine @Inject constructor(
         targetW: Int,
         targetH: Int,
         textOverlays: List<com.novacut.editor.model.TextOverlay>,
+        imageOverlays: List<ImageOverlay>,
         lottieOverlays: List<LottieOverlaySpec>,
         trackedObjects: List<TrackedObject>
     ): EditedMediaItemSequence {
@@ -812,6 +824,7 @@ class VideoEngine @Inject constructor(
                             targetW = targetW,
                             targetH = targetH,
                             textOverlays = textOverlays,
+                            imageOverlays = imageOverlays,
                             lottieOverlays = lottieOverlays,
                             trackedObjects = trackedObjects,
                             nextClipTransition = nextTransition
@@ -835,6 +848,7 @@ class VideoEngine @Inject constructor(
         targetW: Int,
         targetH: Int,
         textOverlays: List<com.novacut.editor.model.TextOverlay>,
+        imageOverlays: List<ImageOverlay>,
         lottieOverlays: List<LottieOverlaySpec>,
         trackedObjects: List<TrackedObject>,
         nextClipTransition: Transition? = null
@@ -898,6 +912,9 @@ class VideoEngine @Inject constructor(
             val overlapping = textOverlays.filter { overlay ->
                 overlay.startTimeMs < clipEnd && overlay.endTimeMs > clipStart
             }
+            val overlappingImages = imageOverlays.filter { overlay ->
+                overlay.startTimeMs < clipEnd && overlay.endTimeMs > clipStart
+            }
             val overlappingLottie = lottieOverlays.filter { lo ->
                 lo.startTimeMs < clipEnd && lo.endTimeMs > clipStart
             }
@@ -912,11 +929,11 @@ class VideoEngine @Inject constructor(
                 )
                 LottieBackendPlan(lo, relStartUs, durationUs, decision)
             }
-            // Build a combined overlay list for text overlays and the optional
+            // Build a combined overlay list for text/image overlays and the optional
             // brand watermark. Keeping them in one OverlayEffect
             // (vs. two consecutive effects) lets Media3 composite them in a
             // single GL pass, so a project-wide watermark has no extra cost
-            // when no text overlays overlap this clip.
+            // when no timeline overlays overlap this clip.
             val overlayList = buildList<TextureOverlay> {
                 overlapping.forEach { overlay ->
                     val relStart = (overlay.startTimeMs - clipStart).coerceAtLeast(0L)
@@ -931,6 +948,17 @@ class VideoEngine @Inject constructor(
                     } else {
                         add(ExportTextOverlay(overlay, relStart, relEnd))
                     }
+                }
+                overlappingImages.forEach { overlay ->
+                    val relStart = (overlay.startTimeMs - clipStart).coerceAtLeast(0L)
+                    val relEnd = (overlay.endTimeMs - clipStart).coerceAtMost(clip.durationMs)
+                    ExportImageOverlay.create(
+                        context = context,
+                        overlay = overlay,
+                        relStartMs = relStart,
+                        relEndMs = relEnd,
+                        outputFrameWidth = targetW,
+                    )?.let { add(it) }
                 }
                 config.watermark?.let { watermark ->
                     ExportWatermarkOverlay.create(

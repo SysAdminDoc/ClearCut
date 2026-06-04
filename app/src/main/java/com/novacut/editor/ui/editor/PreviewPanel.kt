@@ -23,9 +23,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -39,6 +41,7 @@ import com.novacut.editor.R
 import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.model.AspectRatio
 import com.novacut.editor.model.Clip
+import com.novacut.editor.model.ImageOverlay
 import com.novacut.editor.ui.theme.Mocha
 
 @androidx.annotation.OptIn(UnstableApi::class)
@@ -59,6 +62,7 @@ fun PreviewPanel(
     selectedClipId: String? = null,
     currentTimelineClip: Clip? = null,
     nextTimelineClip: Clip? = null,
+    imageOverlays: List<ImageOverlay> = emptyList(),
     jumpToContentMs: Long? = null,
     onJumpToContent: (Long) -> Unit = {},
     onPreviewTransformStarted: () -> Unit = {},
@@ -74,6 +78,11 @@ fun PreviewPanel(
     val canTransformPreview = selectedClipId != null && currentTimelineClip?.id == selectedClipId
     val showGapState = totalDurationMs > 0L && currentTimelineClip == null && !isPlaying
     val showGapPlaybackFrame = totalDurationMs > 0L && currentTimelineClip == null && isPlaying
+    val activeImageOverlays = remember(imageOverlays, playheadMs) {
+        imageOverlays.filter { overlay ->
+            playheadMs >= overlay.startTimeMs && playheadMs <= overlay.endTimeMs
+        }
+    }
 
     // Both gradients are static — colors don't change with state. Hoist them into `remember`
     // so we don't allocate new Brush + List instances on every recomposition (PreviewPanel
@@ -237,6 +246,16 @@ fun PreviewPanel(
                             }
                         }
 
+                        if (!showGapState && !showGapPlaybackFrame) {
+                            activeImageOverlays.forEach { overlay ->
+                                PreviewImageOverlay(
+                                    overlay = overlay,
+                                    frameWidth = frameWidth,
+                                    frameHeight = frameHeight,
+                                )
+                            }
+                        }
+
                         if (!showGapState) {
                             Surface(
                                 color = Mocha.Midnight.copy(alpha = 0.72f),
@@ -374,7 +393,11 @@ fun PreviewPanel(
                     ) {
                         Icon(
                             if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = if (isPlaying) stringResource(R.string.preview_pause) else stringResource(R.string.preview_play),
+                            contentDescription = if (isPlaying) {
+                                stringResource(R.string.preview_pause)
+                            } else {
+                                stringResource(R.string.preview_play)
+                            },
                             tint = Mocha.Midnight,
                             modifier = Modifier.size(24.dp)
                         )
@@ -383,6 +406,61 @@ fun PreviewPanel(
             }
         }
     }
+}
+
+@Composable
+private fun BoxScope.PreviewImageOverlay(
+    overlay: ImageOverlay,
+    frameWidth: androidx.compose.ui.unit.Dp,
+    frameHeight: androidx.compose.ui.unit.Dp,
+) {
+    val safeScale = overlay.scale.takeIf { it.isFinite() }?.coerceIn(0.01f, 2f) ?: 0.3f
+    val width = frameWidth * safeScale
+    val density = LocalDensity.current
+    val frameWidthPx = with(density) { frameWidth.toPx() }
+    val frameHeightPx = with(density) { frameHeight.toPx() }
+    SubcomposeAsyncImage(
+        model = overlay.sourceUri,
+        contentDescription = stringResource(R.string.cd_preview_image_overlay),
+        contentScale = ContentScale.Fit,
+        modifier = Modifier
+            .align(Alignment.Center)
+            .width(width)
+            .heightIn(max = frameHeight)
+            .graphicsLayer {
+                translationX = overlay.positionX.takeIf { it.isFinite() }?.coerceIn(-5f, 5f)
+                    ?.let { it * frameWidthPx / 2f } ?: 0f
+                translationY = overlay.positionY.takeIf { it.isFinite() }?.coerceIn(-5f, 5f)
+                    ?.let { it * frameHeightPx / 2f } ?: 0f
+                rotationZ = overlay.rotation.takeIf { it.isFinite() } ?: 0f
+                alpha = overlay.opacity.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 1f
+            },
+        loading = {
+            Box(Modifier.size(32.dp), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(22.dp),
+                    color = Mocha.Mauve,
+                    strokeWidth = 2.dp,
+                )
+            }
+        },
+        error = {
+            Surface(
+                color = Mocha.Midnight.copy(alpha = 0.72f),
+                shape = RoundedCornerShape(10.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke),
+            ) {
+                Icon(
+                    Icons.Default.BrokenImage,
+                    contentDescription = stringResource(R.string.cd_preview_image_overlay_missing),
+                    tint = Mocha.Rosewater,
+                    modifier = Modifier
+                        .padding(10.dp)
+                        .size(22.dp),
+                )
+            }
+        },
+    )
 }
 
 @Composable

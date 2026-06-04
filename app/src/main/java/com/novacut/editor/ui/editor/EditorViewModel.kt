@@ -54,6 +54,8 @@ import com.novacut.editor.engine.ProxyWorkflowEngine
 import com.novacut.editor.engine.MultiCamEngine
 import com.novacut.editor.engine.MediaImportEngine
 import com.novacut.editor.engine.MediaRelinkProbe
+import com.novacut.editor.engine.OverlayAssetImportResult
+import com.novacut.editor.engine.OverlayAssetStore
 import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.engine.VoiceoverRecorderEngine
 import com.novacut.editor.engine.TemplateManager
@@ -429,6 +431,7 @@ class EditorViewModel @Inject constructor(
     private val multiCamEngine: MultiCamEngine,
     private val mediaImportEngine: MediaImportEngine,
     private val mediaRelinkProbe: MediaRelinkProbe,
+    private val overlayAssetStore: OverlayAssetStore,
     // v3.69 engines (15-feature wave)
     private val textBasedEditEngine: TextBasedEditEngine,
     private val autoChapterEngine: AutoChapterEngine,
@@ -1127,7 +1130,19 @@ class EditorViewModel @Inject constructor(
     fun addTextOverlay(text: TextOverlay) = overlayDelegate.addTextOverlay(text)
     fun updateTextOverlay(textOverlay: TextOverlay) = overlayDelegate.updateTextOverlay(textOverlay)
     fun removeTextOverlay(id: String) = overlayDelegate.removeTextOverlay(id)
-    fun addImageOverlay(uri: Uri, type: ImageOverlayType = ImageOverlayType.STICKER) = overlayDelegate.addImageOverlay(uri, type)
+    fun addImageOverlay(uri: Uri, type: ImageOverlayType = ImageOverlayType.STICKER) {
+        viewModelScope.launch {
+            when (val result = overlayAssetStore.importImageOverlay(uri, type)) {
+                is OverlayAssetImportResult.Imported -> {
+                    overlayDelegate.addImageOverlay(result.uri, result.type)
+                    refreshMediaRelinkReports(openPanelOnProblems = false)
+                }
+                is OverlayAssetImportResult.Rejected -> {
+                    showToast(result.userMessage, ToastSeverity.Warning)
+                }
+            }
+        }
+    }
     fun updateImageOverlay(id: String, positionX: Float? = null, positionY: Float? = null, scale: Float? = null, rotation: Float? = null, opacity: Float? = null) = overlayDelegate.updateImageOverlay(id, positionX, positionY, scale, rotation, opacity)
     fun removeImageOverlay(id: String) = overlayDelegate.removeImageOverlay(id)
     fun addTimelineMarker(label: String = "", color: MarkerColor = MarkerColor.BLUE) = overlayDelegate.addTimelineMarker(label, color)
@@ -3250,7 +3265,8 @@ class EditorViewModel @Inject constructor(
 
     private fun refreshMediaRelinkReports(openPanelOnProblems: Boolean) {
         val tracks = _state.value.tracks
-        if (tracks.flatMap { it.clips }.isEmpty()) {
+        val imageOverlays = _state.value.imageOverlays
+        if (tracks.flatMap { it.clips }.isEmpty() && imageOverlays.isEmpty()) {
             mediaRelinkProbeJob?.cancel()
             _state.update { it.copyMedia { media -> media.copy(relinkReports = emptyMap()) } }
             return
@@ -3258,7 +3274,7 @@ class EditorViewModel @Inject constructor(
 
         mediaRelinkProbeJob?.cancel()
         mediaRelinkProbeJob = viewModelScope.launch {
-            val reports = mediaRelinkProbe.probeClips(tracks)
+            val reports = mediaRelinkProbe.probeClips(tracks) + mediaRelinkProbe.probeImageOverlays(imageOverlays)
             val missingCount = reports.values.count { it.state == MediaRelinkProbe.RelinkState.MISSING }
             val unknownCount = reports.values.count { it.state == MediaRelinkProbe.RelinkState.UNKNOWN }
             _state.update { state ->

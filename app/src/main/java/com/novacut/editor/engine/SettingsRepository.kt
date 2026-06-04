@@ -145,6 +145,9 @@ internal fun createNovaCutSettingsDataStore(
     PreferenceDataStoreFactory.create(
         corruptionHandler = ReplaceFileCorruptionHandler {
             resetReportStore.recordCorruptionReset(it)
+            runCatching { produceFile().delete() }.onFailure { deleteError ->
+                Log.w("SettingsRepository", "Could not remove corrupt settings file before reset", deleteError)
+            }
             emptyPreferences()
         },
         scope = scope,

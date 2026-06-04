@@ -7,7 +7,7 @@ Last consolidated: 2026-06-04.
 
 ## Current Delivered Baseline
 
-- Current version: v3.74.51 (`versionCode` 188).
+- Current version: v3.74.52 (`versionCode` 189).
 - Multi-track Android NLE with project gallery, editor, timeline, preview,
   effects, transitions, text, captions, audio, export, settings, templates,
   project archive/import, and diagnostic bundle surfaces.
@@ -75,6 +75,12 @@ Last consolidated: 2026-06-04.
   uses a `ReplaceFileCorruptionHandler` to restore unreadable settings to
   defaults, shows a one-shot Settings notice, and writes redacted bounded reset
   reports into diagnostic ZIPs when present.
+- Durable image/sticker overlay compositing shipped in v3.74.52: bundled
+  sticker shelf URIs and gallery sticker images now import to app-private
+  overlay files before project mutation, active overlays render in preview,
+  Media3 Transformer exports burn them with matching timing/geometry, GIF
+  overlays reject explicitly until animation is supported, and missing overlay
+  sources participate in relink diagnostics.
 - UI test harness bootstrap shipped in v3.74.11: shared Compose test tags,
   androidTest dependencies, and a smoke test covering project list,
   blank-project editor open, media picker, export sheet, Settings, and privacy

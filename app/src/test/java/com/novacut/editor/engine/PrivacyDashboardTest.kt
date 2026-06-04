@@ -131,6 +131,14 @@ class PrivacyDashboardTest {
     }
 
     @Test
+    fun projectContentRowDisclosesOverlayAssetCopies() {
+        val entry = PrivacyDashboard.entryFor(PrivacyDashboard.Category.PROJECT_CONTENT)
+        assertNotNull(entry)
+        assertTrue(entry!!.collectedBy.contains("OverlayAssetStore"))
+        assertTrue(entry.category.displayName.contains("overlays", ignoreCase = true))
+    }
+
+    @Test
     fun entryFor_unknownReturnsNull() {
         // Sanity: this object's lookup is implemented as firstOrNull, so
         // pasting an enum value not present in entries must return null.

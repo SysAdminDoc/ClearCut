@@ -1,5 +1,36 @@
 # Changelog
 
+## v3.74.52 — 2026-06-04
+
+### Durable image overlay compositor
+- Added `OverlayAssetStore` so bundled shelf stickers render to app-owned PNG
+  files and gallery image stickers copy into `filesDir/media/overlays` before
+  project state is mutated.
+- Rejected GIF overlay insertion with explicit user-facing copy until NovaCut
+  has a bounded animated overlay path, avoiding broken still-frame imports.
+- Added `ExportImageOverlay` and threaded `imageOverlays` through
+  `VideoEngine`, `ExportDelegate`, and mixed-render eligibility so full
+  Transformer exports burn static stickers/images at the same active timeline
+  window and center-offset geometry as preview.
+- Rendered active image overlays in `PreviewPanel` above clip media and below
+  preview chrome, including missing-source fallback semantics.
+- Extended `MediaRelinkProbe` and Privacy Dashboard disclosure so overlay
+  asset copies and missing overlay sources are visible to diagnostics.
+
+### Settings recovery hardening
+- Removed unreadable settings files inside the DataStore corruption handler
+  before replacement defaults are written, covering platforms where atomic
+  rename cannot replace an existing corrupt preferences file.
+
+### Release metadata
+- Bumped runtime metadata to `versionName 3.74.52` / `versionCode 189`.
+- Verification: focused JVM coverage for `OverlayAssetStoreTest`,
+  `ExportImageOverlayTest`, `MediaRelinkProbeTest`, and
+  `PrivacyDashboardTest` passed; the full Gradle gate
+  (`:app:testDebugUnitTest`, `:app:assembleDebug`, `:app:assembleRelease`,
+  `:app:assembleDebugAndroidTest`), release-artifact verification, Play
+  listing validation, Fastlane changelog sync, and `git diff --check` passed.
+
 ## v3.74.51 — 2026-06-04
 
 ### Settings corruption recovery
