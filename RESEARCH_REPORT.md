@@ -6,6 +6,32 @@ roadmaps are archived under [docs/archive/roadmap](docs/archive/roadmap/).
 
 Last refreshed: 2026-06-04.
 
+## 2026-06-04 Cycle 10 DataStore Settings Recovery Refresh
+
+- [Verified] `SettingsRepository` creates the `novacut_settings` Preferences
+  DataStore with the `preferencesDataStore` delegate and catches only
+  `IOException` from `context.dataStore.data`, emitting `emptyPreferences()` for
+  that case and rethrowing other failures. Its mapper already clamps or
+  defaults readable-but-invalid settings, including enum values, ranges, and the
+  bounded AcoustID string, but that protection runs only after DataStore can
+  read the preferences file.
+- [Verified] Grep found no `CorruptionException`, `ReplaceFileCorruptionHandler`,
+  `PreferenceDataStoreFactory`, or settings-reset report. `SettingsViewModel`
+  exposes `AppSettings()` as the initial state, so a non-IO DataStore failure
+  could leave the UI on defaults without explaining whether persisted settings
+  were reset, ignored, or unavailable.
+- [Verified] `PrivacyDashboard` documents settings/preferences as local
+  DataStore data with export/delete controls, while `DiagnosticExportEngine`
+  has no settings-reset artifact. Android's official DataStore guide says
+  unreadable corrupted data is surfaced as `CorruptionException` from the data
+  flow unless a `corruptionHandler` replaces it, and the
+  `ReplaceFileCorruptionHandler` API is the documented replacement hook.
+- [Promoted] Added a P2 roadmap item for Preferences DataStore corruption
+  recovery: install a handler that replaces a corrupted store with defaults,
+  record a bounded reset reason/timestamp outside the corrupted store, show a
+  one-time Settings notice, include a redacted diagnostic ZIP entry, and verify
+  corrupted-file recovery without leaking AcoustID/API or proxy secrets.
+
 ## 2026-06-04 Cycle 9 Process-Exit Diagnostics Refresh
 
 - [Verified] Grep found no `ApplicationExitInfo`,

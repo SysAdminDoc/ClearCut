@@ -11,7 +11,7 @@ archived under [docs/archive](docs/archive/).
 Current version: **v3.74.35** (`versionCode` 172). Last consolidated:
 2026-06-04.
 
-> Last researched: Cycle 9 - 2026-06-04.
+> Last researched: Cycle 10 - 2026-06-04.
 
 ## ▶ Implementer Instructions (for the build machine)
 
@@ -969,3 +969,60 @@ app's Java uncaught-exception handler.
   https://developer.android.com/topic/performance/vitals/anr
 - Android vitals low-memory-killer guidance:
   https://developer.android.com/topic/performance/vitals/lmk
+
+### Researcher Queue (Cycle 10 - 2026-06-04)
+
+Focus: settings persistence recovery for Preferences DataStore file-level
+corruption without weakening the existing per-key defaulting and validation.
+
+#### Persistence & Diagnostics
+
+- [ ] 🔬🤖 P2 — Add Preferences DataStore corruption recovery and settings-reset report
+  - Why: NovaCut persists export defaults, autosave interval, proxy mode,
+    model-download Wi-Fi policy, one-handed/desktop preferences, and the
+    AcoustID key in `novacut_settings`. `SettingsRepository` validates individual
+    values after a readable preferences file is emitted, but file-level
+    DataStore corruption can still fail before mapping. Android's DataStore docs
+    say corrupted data is surfaced as `CorruptionException` from the `data` flow
+    unless a `corruptionHandler` replaces it, so NovaCut should recover to known
+    defaults and make the reset visible in diagnostics instead of silently
+    staying on the `SettingsViewModel` initial `AppSettings()`.
+  - Evidence: `SettingsRepository` creates `novacut_settings` with the
+    `preferencesDataStore` delegate, catches only `IOException` from
+    `context.dataStore.data`, emits `emptyPreferences()` for that IO case, and
+    otherwise rethrows. The mapper clamps or defaults unknown enum/out-of-range
+    keys and bounds the AcoustID string, which protects readable settings but
+    not a corrupted preferences file. Grep found no `CorruptionException`,
+    `ReplaceFileCorruptionHandler`, `PreferenceDataStoreFactory`, or
+    settings-reset report. `SettingsViewModel.settings` starts with
+    `AppSettings()` and `PrivacyDashboard` documents settings/preferences as
+    local DataStore data with export/delete controls, but neither exposes a
+    "settings were reset" diagnostic state. Android's official DataStore guide
+    documents `corruptionHandler` as the supported way to replace corrupted data
+    with defaults:
+    https://developer.android.com/topic/libraries/architecture/datastore#corruption
+  - Touches: a `PreferenceDataStoreFactory` or delegate setup with
+    `ReplaceFileCorruptionHandler { emptyPreferences() }`, a small
+    settings-reset reporter that does not depend on the corrupted store itself,
+    `SettingsRepository`, `SettingsViewModel`, `PrivacyDashboard` copy,
+    `DiagnosticExportEngine`, strings, and focused DataStore corruption tests.
+  - Acceptance: a corrupted `novacut_settings` file is detected, replaced with
+    defaults, and followed by successful reads and writes. The user sees one
+    non-blocking Settings notice, diagnostics include a redacted reset
+    reason/timestamp, and no AcoustID/API secret or proxy credential is written
+    to the diagnostic ZIP. Valid but unknown enum or out-of-range values still
+    fall back per key without wiping the whole store.
+  - Verify: add a temp-file DataStore test that writes invalid preference bytes,
+    asserts defaults are emitted, performs an update after reset, and checks the
+    reset report. Add mapper tests proving readable-but-invalid enum/range keys
+    still default per key. Add a diagnostic ZIP/privacy-dashboard test that
+    includes the reset timestamp/reason while excluding stored secrets, plus an
+    emulator smoke restart after corrupting `novacut_settings.preferences_pb`.
+  - Complexity: M
+
+#### Appendix — Cycle 10 Sources
+
+- Android DataStore file-corruption handling:
+  https://developer.android.com/topic/libraries/architecture/datastore#corruption
+- Android `ReplaceFileCorruptionHandler` API:
+  https://developer.android.com/reference/kotlin/androidx/datastore/core/handlers/ReplaceFileCorruptionHandler
