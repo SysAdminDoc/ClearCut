@@ -10,8 +10,8 @@ NovaCut is an Android video editor under package `com.novacut.editor`. The repo 
 
 Current live version evidence:
 
-- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 184`, `versionName = "3.74.47"`.
-- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.47`.
+- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 185`, `versionName = "3.74.48"`.
+- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.48`.
 - [README.md](README.md) and [ROADMAP.md](ROADMAP.md) both describe the v3.74.x line.
 - The 2026-05-17 continuation pushes each completed roadmap batch back to `origin/master`; verify `git status --short --branch` before assuming branch sync.
 
@@ -143,6 +143,13 @@ High-level modules and patterns:
      `scripts/validate_play_listing_assets.py` after release metadata
      verification.
 
+10. Appearance and contrast gates.
+   - Completed in v3.74.48. Settings persists System/Dark/High Contrast Dark,
+     `NovaCutTheme` applies the selected mode at the root, shared chrome uses
+     high-contrast semantic tokens, `docs/appearance-policy.md` documents the
+     dark-only System rationale, and Compose smoke tests enable root
+     accessibility checks.
+
 ## Recent Implementation Notes
 
 2026-06-04 autonomous continuation:
@@ -222,6 +229,21 @@ High-level modules and patterns:
   release-gate validation; GitHub Actions runs the validator after
   `scripts/verify_release_artifacts.py`.
 - Verification passed: `python scripts\validate_play_listing_assets.py`.
+
+2026-06-04 appearance-gate continuation:
+
+- Completed the Cycle 7 appearance-mode and contrast regression gate in
+  v3.74.48. Added `AppearanceMode` persistence, a Settings appearance row,
+  root theme selection, high-contrast Material/shared chrome tokens, and
+  `docs/appearance-policy.md`.
+- Added `androidx.compose.ui:ui-test-junit4-accessibility` and enabled root
+  accessibility checks in `NovaCutSmokeTest` for the smoke surfaces.
+- Added `NovaCutAppearancePolicyTest` for System-to-Dark resolution, WCAG AA
+  text contrast, 3:1 non-text indicators, selected-chip readability, and
+  low-emphasis-token guardrails.
+- Verification passed: `:app:testDebugUnitTest --tests
+  com.novacut.editor.ui.theme.NovaCutAppearancePolicyTest
+  :app:compileDebugAndroidTestKotlin`.
 
 2026-06-04 recovery-open continuation:
 
@@ -631,7 +653,8 @@ High-level modules and patterns:
   `:app:assembleDebugAndroidTest` passed.
 - Device QA follow-up: run an emulator/device `bmgr` backup/restore or direct
   transfer smoke with a project containing an imported local clip.
-- Next roadmap item: Cycle 7 P2 appearance-mode and contrast regression gates.
+- Next roadmap item: Cycle 8 P2 non-media document import router for plugins
+  and interchange files.
 
 2026-05-17 autonomous continuation:
 

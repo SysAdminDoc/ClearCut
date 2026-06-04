@@ -42,9 +42,10 @@ fun NovaCutScreenBackground(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit
 ) {
+    val colors = LocalNovaCutColors.current
     Box(
         modifier = modifier
-            .background(Mocha.Midnight)
+            .background(colors.background)
     ) {
         Box(
             modifier = Modifier
@@ -52,9 +53,9 @@ fun NovaCutScreenBackground(
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Mocha.Midnight,
-                            Mocha.Panel.copy(alpha = 0.98f),
-                            Mocha.Midnight
+                            colors.background,
+                            colors.backgroundMid.copy(alpha = 0.98f),
+                            colors.background
                         )
                     )
                 )
@@ -65,10 +66,10 @@ fun NovaCutScreenBackground(
                 .background(
                     Brush.verticalGradient(
                         colorStops = arrayOf(
-                            0f to Mocha.Rosewater.copy(alpha = 0.055f),
+                            0f to Mocha.Rosewater.copy(alpha = if (colors.highContrast) 0.12f else 0.055f),
                             0.18f to Color.Transparent,
                             0.76f to Color.Transparent,
-                            1f to Mocha.Teal.copy(alpha = 0.045f)
+                            1f to Mocha.Teal.copy(alpha = if (colors.highContrast) 0.10f else 0.045f)
                         )
                     )
                 )
@@ -79,9 +80,9 @@ fun NovaCutScreenBackground(
                 .background(
                     Brush.horizontalGradient(
                         colorStops = arrayOf(
-                            0f to Mocha.Mantle.copy(alpha = 0.32f),
+                            0f to colors.panelRaised.copy(alpha = 0.32f),
                             0.5f to Color.Transparent,
-                            1f to Mocha.Mantle.copy(alpha = 0.26f)
+                            1f to colors.panelRaised.copy(alpha = 0.26f)
                         )
                     )
                 )
@@ -98,20 +99,21 @@ fun NovaCutHeroCard(
     contentPadding: PaddingValues = PaddingValues(horizontal = Spacing.xl, vertical = Spacing.xl),
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val colors = LocalNovaCutColors.current
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = Mocha.Panel,
+        color = colors.panel,
         shape = shape,
-        border = BorderStroke(1.dp, Mocha.CardStrokeStrong.copy(alpha = 0.72f))
+        border = BorderStroke(1.dp, if (colors.highContrast) colors.cardStrokeStrong else colors.cardStrokeStrong.copy(alpha = 0.72f))
     ) {
         Box(
             modifier = Modifier.background(
                 Brush.verticalGradient(
                     colorStops = arrayOf(
                         0f to accent.copy(alpha = 0.075f),
-                        0.2f to Mocha.PanelHighest.copy(alpha = 0.92f),
-                        0.68f to Mocha.Panel.copy(alpha = 0.98f),
-                        1f to Mocha.Mantle.copy(alpha = 0.98f)
+                        0.2f to colors.panelHighest.copy(alpha = 0.92f),
+                        0.68f to colors.panel.copy(alpha = 0.98f),
+                        1f to colors.panelRaised.copy(alpha = 0.98f)
                     )
                 )
             )
@@ -133,6 +135,7 @@ fun NovaCutPrimaryButton(
     icon: ImageVector? = null,
     enabled: Boolean = true
 ) {
+    val colors = LocalNovaCutColors.current
     Button(
         onClick = onClick,
         enabled = enabled,
@@ -141,7 +144,7 @@ fun NovaCutPrimaryButton(
             containerColor = Mocha.Rosewater,
             contentColor = Mocha.Midnight,
             disabledContainerColor = Mocha.Surface1.copy(alpha = 0.5f),
-            disabledContentColor = Mocha.Subtext0
+            disabledContentColor = colors.disabledText
         ),
         contentPadding = PaddingValues(horizontal = Spacing.lg, vertical = Spacing.sm),
         modifier = modifier.defaultMinSize(minHeight = TouchTarget.minimum)
@@ -172,16 +175,17 @@ fun NovaCutSecondaryButton(
     contentColor: Color = Mocha.Text,
     enabled: Boolean = true
 ) {
+    val colors = LocalNovaCutColors.current
     OutlinedButton(
         onClick = onClick,
         enabled = enabled,
         shape = RoundedCornerShape(Radius.lg),
-        border = BorderStroke(1.dp, Mocha.CardStrokeStrong),
+        border = BorderStroke(1.dp, colors.cardStrokeStrong),
         colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = Mocha.PanelHighest.copy(alpha = 0.42f),
+            containerColor = colors.panelHighest.copy(alpha = if (colors.highContrast) 0.88f else 0.42f),
             contentColor = contentColor,
             disabledContainerColor = Mocha.Surface1.copy(alpha = 0.28f),
-            disabledContentColor = Mocha.Subtext0
+            disabledContentColor = colors.disabledText
         ),
         contentPadding = PaddingValues(horizontal = Spacing.lg, vertical = Spacing.sm),
         modifier = modifier.defaultMinSize(minHeight = TouchTarget.minimum)
@@ -190,7 +194,7 @@ fun NovaCutSecondaryButton(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (enabled) contentColor else Mocha.Subtext0,
+                tint = if (enabled) contentColor else colors.disabledText,
                 modifier = Modifier.size(18.dp)
             )
             androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(Spacing.sm))
@@ -211,11 +215,12 @@ fun NovaCutMetricPill(
     modifier: Modifier = Modifier,
     icon: ImageVector? = null
 ) {
+    val colors = LocalNovaCutColors.current
     Surface(
         modifier = modifier,
-        color = accent.copy(alpha = 0.12f),
+        color = accent.copy(alpha = if (colors.highContrast) 0.26f else 0.12f),
         shape = RoundedCornerShape(Radius.sm),
-        border = BorderStroke(1.dp, accent.copy(alpha = 0.2f))
+        border = BorderStroke(1.dp, accent.copy(alpha = if (colors.highContrast) 0.95f else 0.2f))
     ) {
         Row(
             modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm),
@@ -251,6 +256,7 @@ fun NovaCutFilterChip(
     enabled: Boolean = true,
     icon: ImageVector? = null
 ) {
+    val colors = LocalNovaCutColors.current
     FilterChip(
         selected = selected,
         enabled = enabled,
@@ -277,17 +283,17 @@ fun NovaCutFilterChip(
         },
         shape = RoundedCornerShape(Radius.md),
         colors = FilterChipDefaults.filterChipColors(
-            containerColor = Mocha.PanelHighest,
-            labelColor = Mocha.Subtext0,
-            selectedContainerColor = accent.copy(alpha = 0.16f),
-            selectedLabelColor = accent,
-            selectedLeadingIconColor = accent
+            containerColor = colors.panelHighest,
+            labelColor = colors.subtext,
+            selectedContainerColor = if (colors.highContrast) accent else accent.copy(alpha = 0.16f),
+            selectedLabelColor = if (colors.highContrast) Mocha.Crust else accent,
+            selectedLeadingIconColor = if (colors.highContrast) Mocha.Crust else accent
         ),
         border = FilterChipDefaults.filterChipBorder(
             enabled = enabled,
             selected = selected,
-            borderColor = Mocha.CardStroke,
-            selectedBorderColor = accent.copy(alpha = 0.34f)
+            borderColor = colors.cardStroke,
+            selectedBorderColor = if (colors.highContrast) colors.cardStrokeStrong else accent.copy(alpha = 0.34f)
         )
     )
 }
@@ -304,11 +310,12 @@ fun NovaCutChromeIconButton(
     shape: Shape = RoundedCornerShape(Radius.lg),
     size: Dp = TouchTarget.minimum
 ) {
+    val colors = LocalNovaCutColors.current
     Surface(
         modifier = modifier,
         color = containerColor,
         shape = shape,
-        border = BorderStroke(1.dp, borderColor)
+        border = BorderStroke(1.dp, if (colors.highContrast && borderColor == Mocha.CardStroke) colors.cardStrokeStrong else borderColor)
     ) {
         IconButton(
             onClick = onClick,
@@ -330,11 +337,12 @@ fun NovaCutDialogIcon(
     accent: Color,
     modifier: Modifier = Modifier
 ) {
+    val colors = LocalNovaCutColors.current
     Surface(
         modifier = modifier,
-        color = accent.copy(alpha = 0.14f),
+        color = accent.copy(alpha = if (colors.highContrast) 0.26f else 0.14f),
         shape = RoundedCornerShape(Radius.lg),
-        border = BorderStroke(1.dp, accent.copy(alpha = 0.24f))
+        border = BorderStroke(1.dp, accent.copy(alpha = if (colors.highContrast) 0.95f else 0.24f))
     ) {
         Icon(
             imageVector = icon,
@@ -354,6 +362,7 @@ fun NovaCutSectionHeader(
     description: String? = null,
     trailing: @Composable RowScope.() -> Unit = {}
 ) {
+    val colors = LocalNovaCutColors.current
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
@@ -365,7 +374,7 @@ fun NovaCutSectionHeader(
         ) {
             Text(
                 text = title,
-                color = Mocha.Text,
+                color = colors.text,
                 style = MaterialTheme.typography.titleLarge,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
@@ -373,7 +382,7 @@ fun NovaCutSectionHeader(
             if (!description.isNullOrBlank()) {
                 Text(
                     text = description,
-                    color = Mocha.Subtext0,
+                    color = colors.subtext,
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis

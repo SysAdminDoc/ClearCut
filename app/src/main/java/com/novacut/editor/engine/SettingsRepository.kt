@@ -45,10 +45,17 @@ data class AppSettings(
     // v3.69: optional AcoustID API key for content-ID lookup. Empty = use the
     // local hash-only path (see ContentIdEngine).
     val acoustIdApiKey: String = "",
-    val includeDiagnosticTimelineShape: Boolean = false
+    val includeDiagnosticTimelineShape: Boolean = false,
+    val appearanceMode: AppearanceMode = AppearanceMode.SYSTEM,
 )
 
 enum class DesktopOverride { AUTO, FORCE_ON, FORCE_OFF }
+
+enum class AppearanceMode {
+    SYSTEM,
+    DARK,
+    HIGH_CONTRAST_DARK,
+}
 
 @Singleton
 class SettingsRepository @Inject constructor(
@@ -80,6 +87,7 @@ class SettingsRepository @Inject constructor(
         val DESKTOP_OVERRIDE = stringPreferencesKey("desktop_override")
         val ACOUSTID_KEY = stringPreferencesKey("acoustid_api_key")
         val INCLUDE_DIAGNOSTIC_TIMELINE_SHAPE = booleanPreferencesKey("include_diagnostic_timeline_shape")
+        val APPEARANCE_MODE = stringPreferencesKey("appearance_mode")
     }
 
     private val data: Flow<Preferences> = context.dataStore.data
@@ -129,7 +137,10 @@ class SettingsRepository @Inject constructor(
                     runCatching { DesktopOverride.valueOf(it) }.getOrNull()
                 } ?: DesktopOverride.AUTO,
                 acoustIdApiKey = prefs[Keys.ACOUSTID_KEY] ?: "",
-                includeDiagnosticTimelineShape = prefs[Keys.INCLUDE_DIAGNOSTIC_TIMELINE_SHAPE] ?: false
+                includeDiagnosticTimelineShape = prefs[Keys.INCLUDE_DIAGNOSTIC_TIMELINE_SHAPE] ?: false,
+                appearanceMode = prefs[Keys.APPEARANCE_MODE]?.let {
+                    runCatching { AppearanceMode.valueOf(it) }.getOrNull()
+                } ?: AppearanceMode.SYSTEM,
             )
         }
 
@@ -261,6 +272,10 @@ class SettingsRepository @Inject constructor(
 
     suspend fun updateIncludeDiagnosticTimelineShape(value: Boolean) {
         context.dataStore.edit { it[Keys.INCLUDE_DIAGNOSTIC_TIMELINE_SHAPE] = value }
+    }
+
+    suspend fun updateAppearanceMode(value: AppearanceMode) {
+        context.dataStore.edit { it[Keys.APPEARANCE_MODE] = value.name }
     }
 
     suspend fun updateOneHandedMode(value: Boolean) {

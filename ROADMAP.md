@@ -8,7 +8,7 @@ Active roadmap for forward-looking work. Shipped work is summarized in
 [RESEARCH_REPORT.md](RESEARCH_REPORT.md), and detailed historical plans are
 archived under [docs/archive](docs/archive/).
 
-Current version: **v3.74.47** (`versionCode` 184). Last consolidated:
+Current version: **v3.74.48** (`versionCode` 185). Last consolidated:
 2026-06-04.
 
 > Last researched: Cycle 22 - 2026-06-04.
@@ -97,6 +97,10 @@ v3.74.47 closed the Cycle 5 distribution-trust gate by adding deterministic
 Fastlane Play listing images, SVG sources, alt-text inventory, privacy policy
 source/link, Data safety worksheet, and a CI validator for listing assets and
 disclosure coverage.
+v3.74.48 closed the Cycle 7 appearance gate by adding persisted
+System/Dark/High Contrast Dark selection, high-contrast shared chrome tokens,
+Compose accessibility smoke hooks, contrast policy tests, and a documented
+dark-only System rationale until a light canvas has full visual QA.
 
 ## Current State
 
@@ -235,6 +239,11 @@ disclosure coverage.
   feature graphic, phone/tablet screenshots, SVG sources, inventory alt text,
   privacy policy URL, Data safety worksheet, and a CI validator for dimensions,
   screenshot counts, text bounds, and manifest-permission disclosure coverage.
+- v3.74.48 adds appearance-mode and contrast regression gates: Settings exposes
+  System/Dark/High Contrast Dark, the root theme persists the selected mode,
+  shared chrome consumes high-contrast semantic tokens, Compose smoke tests run
+  accessibility checks from root, and `NovaCutAppearancePolicyTest` locks text,
+  non-text, chip, and low-emphasis-token contrast floors.
 
 ## Source Archives
 
@@ -257,6 +266,7 @@ disclosure coverage.
 | ✅ P2 | Baseline Profile and macrobenchmarks | Implemented in v3.74.45: `:baselineprofile` generates the release Baseline Profile, ProfileInstaller ships it in the APK, and managed Pixel 6 API 36 macrobenchmarks report default/profiled cold startup, profiled warm startup, and blank-editor timeline scrub frame timing. |
 | ✅ P2 | Memory trim policy | Implemented in v3.74.46: `NovaCutApp.onTrimMemory` dispatches OS memory-pressure levels through a tested policy, active media engines register cache trim callbacks, proxy trimming skips in-flight renders, and diagnostic ZIPs include bounded redacted memory-trim breadcrumbs when present. |
 | ✅ P2 | Play listing release gate | Implemented in v3.74.47: Fastlane metadata now includes deterministic Play icon, feature graphic, phone/tablet screenshots, SVG sources, alt-text inventory, privacy policy URL, Data safety worksheet, and a CI validator for listing/disclosure readiness. |
+| ✅ P2 | Appearance and contrast gates | Implemented in v3.74.48: persisted System/Dark/High Contrast Dark selection, high-contrast shared chrome tokens, Compose accessibility smoke checks, `docs/appearance-policy.md`, and JVM contrast guardrails for text, non-text, chips, and low-emphasis token misuse. |
 | P3 | Caption translation engine activation | Replace source-text echo behavior with a real local model path such as MADLAD-400 or Bergamot only after model gates are complete. |
 | P3 | Advanced engine activations | Activate Oboe resampling, adjustment layers, keyframe graph UI, and remaining AI engines only when dependencies, APK size, 16 KB compliance, and device QA are clear. |
 
@@ -910,7 +920,7 @@ an executable appearance and accessibility regression gate for the Compose app.
 
 #### Accessibility & Visual Trust
 
-- [ ] 🔬🤖 P2 — Add appearance-mode and contrast regression gates
+- [x] ✅ 🔬🤖 P2 — Add appearance-mode and contrast regression gates
   - Why: NovaCut's process now requires every UX audit to cover light, dark, and
     high-contrast states, but the app has only one hard-coded Catppuccin Mocha
     dark `ColorScheme`. Core text colors pass a spot contrast check, but lower
@@ -945,6 +955,14 @@ an executable appearance and accessibility regression gate for the Compose app.
     high-contrast appearance, capture before/after screenshots for the main
     surfaces, manually sample text/icon/stroke contrast against WCAG ratios, and
     perform one TalkBack traversal of the editor timeline and export sheet.
+  - Status: implemented in v3.74.48. Settings persists
+    `AppearanceMode.SYSTEM`, `DARK`, or `HIGH_CONTRAST_DARK`; `NovaCutTheme`
+    resolves System to the documented dark editing canvas until a light palette
+    has full screenshot QA; shared chrome consumes high-contrast semantic
+    tokens through `LocalNovaCutColors`; `NovaCutSmokeTest` enables Compose
+    accessibility checks and calls root checks on the main smoke surfaces; and
+    `NovaCutAppearancePolicyTest` locks WCAG AA text contrast, 3:1 non-text
+    indicators, selected-chip readability, and low-emphasis token guardrails.
   - Complexity: M
 
 #### Appendix — Cycle 7 Sources
