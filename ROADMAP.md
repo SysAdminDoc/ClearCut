@@ -8,7 +8,7 @@ Active roadmap for forward-looking work. Shipped work is summarized in
 [RESEARCH_REPORT.md](RESEARCH_REPORT.md), and detailed historical plans are
 archived under [docs/archive](docs/archive/).
 
-Current version: **v3.74.12** (`versionCode` 149). Last consolidated:
+Current version: **v3.74.13** (`versionCode` 150). Last consolidated:
 2026-06-04.
 
 ## Current State
@@ -29,6 +29,9 @@ Current version: **v3.74.12** (`versionCode` 149). Last consolidated:
 - v3.74.12 reactivates release-pipeline checks for unit tests, debug/release
   APKs, instrumentation APK packaging, release metadata, signatures, APK zip
   alignment, and 16 KB native-library compliance.
+- v3.74.13 makes the schema-aware recovery outcome loader the default editor
+  open path and blocks autosave overwrites when recovery data is corrupt or
+  written by a newer schema.
 
 ## Source Archives
 
@@ -41,7 +44,6 @@ Current version: **v3.74.12** (`versionCode` 149). Last consolidated:
 
 | Priority | Work | Exit criteria |
 |---|---|---|
-| P0 | Recovery open path | `loadRecoveryDataWithOutcome` becomes the default project-open path, with future-schema/corrupt/not-found outcomes surfaced to the user without data loss. |
 | P0 | Media relink editor integration | `MediaRelinkProbe` reports missing/unknown media when a project opens and gives users a focused relink path before edit/export. |
 | P0 | Compound clip gesture closure | Timeline long-press/radial action opens compound clips through `EditorViewModel.openCompoundClip`, with the existing breadcrumb and predictive-back gate active. |
 | P0 | Caption translation panel call site | The Captions sub-tab hosts `CaptionTranslationPanel` and dispatches edits/regeneration through the existing ViewModel surface. |

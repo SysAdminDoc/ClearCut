@@ -20,8 +20,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import androidx.window.layout.FoldingFeature
 import androidx.window.layout.WindowInfoTracker
+import com.novacut.editor.engine.ProjectShortcutPlanner
 import com.novacut.editor.ui.editor.EditorScreen
 import com.novacut.editor.ui.editor.LocalTabletopPosture
 import com.novacut.editor.ui.projects.ProjectListScreen
@@ -34,6 +37,7 @@ import kotlinx.coroutines.flow.collect
 class MainActivity : ComponentActivity() {
 
     private var pendingVideoUri by mutableStateOf<Uri?>(null)
+    private var pendingEditorOpen by mutableStateOf<PendingEditorOpen?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -79,6 +83,17 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                LaunchedEffect(pendingEditorOpen, currentRoute) {
+                    val pending = pendingEditorOpen ?: return@LaunchedEffect
+                    if (currentRoute == null) return@LaunchedEffect
+                    navController.navigate(
+                        "editor/${Uri.encode(pending.projectId)}?expectRecovery=${pending.expectRecovery}"
+                    ) {
+                        launchSingleTop = true
+                    }
+                    pendingEditorOpen = null
+                }
+
                 CompositionLocalProvider(LocalTabletopPosture provides isTabletopPosture) {
                     NavHost(
                         navController = navController,
@@ -88,7 +103,7 @@ class MainActivity : ComponentActivity() {
                         composable("projects") {
                             ProjectListScreen(
                                 onProjectSelected = { projectId ->
-                                    navController.navigate("editor/$projectId")
+                                    navController.navigate("editor/${Uri.encode(projectId)}?expectRecovery=false")
                                 },
                                 onSettings = { navController.navigate("settings") },
                                 pendingImportUri = pendingVideoUri,
@@ -100,7 +115,15 @@ class MainActivity : ComponentActivity() {
                                 onBack = { navController.popBackStack() }
                             )
                         }
-                        composable("editor/{projectId}") {
+                        composable(
+                            route = "editor/{projectId}?expectRecovery={expectRecovery}",
+                            arguments = listOf(
+                                navArgument("expectRecovery") {
+                                    type = NavType.BoolType
+                                    defaultValue = false
+                                }
+                            )
+                        ) {
                             EditorScreen(
                                 onBack = { navController.popBackStack() }
                             )
@@ -128,7 +151,20 @@ class MainActivity : ComponentActivity() {
                 // pre-open the Template sheet — left as a follow-up so the
                 // shortcut shape is stable for users who pin it.
             }
+            ProjectShortcutPlanner.ACTION_RESUME_RECOVERED -> {
+                pendingEditorOpen = pendingShortcutOpen(intent, expectRecovery = true)
+            }
+            ProjectShortcutPlanner.ACTION_OPEN_LAST_PROJECT -> {
+                pendingEditorOpen = pendingShortcutOpen(intent, expectRecovery = false)
+            }
         }
+    }
+
+    private fun pendingShortcutOpen(intent: Intent, expectRecovery: Boolean): PendingEditorOpen? {
+        val projectId = intent.getStringExtra(ProjectShortcutPlanner.EXTRA_PROJECT_ID)
+            ?.takeIf { it.isNotBlank() }
+            ?: return null
+        return PendingEditorOpen(projectId = projectId, expectRecovery = expectRecovery)
     }
 
     private fun handleViewIntent(intent: Intent) {
@@ -161,3 +197,8 @@ class MainActivity : ComponentActivity() {
         private val ACCEPTED_VIEW_MIME_PREFIXES = listOf("video/", "image/", "audio/")
     }
 }
+
+private data class PendingEditorOpen(
+    val projectId: String,
+    val expectRecovery: Boolean,
+)

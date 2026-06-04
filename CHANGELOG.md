@@ -1,5 +1,26 @@
 # Changelog
 
+## v3.74.13 — 2026-06-04
+
+### Recovery open path
+- Routed dynamic Resume/Open shortcuts directly into the editor with an
+  `expectRecovery` navigation flag so stale resume shortcuts can surface a
+  missing-recovery warning without warning on normal project opens.
+- Switched editor startup from the legacy nullable autosave loader to
+  `loadRecoveryDataWithOutcome`, preserving the existing successful recovery
+  restore/dialog behavior while distinguishing loaded, future-schema, corrupt,
+  and not-found outcomes.
+- Future-schema and corrupt autosave outcomes now show explicit error toasts
+  and block both timed autosave and manual `saveProject()` autosave writes, so
+  unreadable or newer-schema recovery files are left untouched instead of being
+  overwritten by the opened project state.
+- Added unit coverage for recovery outcome feedback and autosave-blocking
+  decisions.
+- Bumped runtime metadata to `versionName 3.74.13` / `versionCode 150`.
+- Verification: `:app:testDebugUnitTest --tests
+  com.novacut.editor.ui.editor.RecoveryDialogTest :app:compileDebugKotlin`
+  passed.
+
 ## v3.74.12 — 2026-06-04
 
 ### Release pipeline reactivation

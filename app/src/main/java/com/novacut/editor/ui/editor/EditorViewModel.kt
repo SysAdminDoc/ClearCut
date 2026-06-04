@@ -12,6 +12,7 @@ import androidx.media3.common.Player
 import com.novacut.editor.R
 import com.novacut.editor.ai.AiFeatures
 import com.novacut.editor.engine.AiUsageLedger
+import com.novacut.editor.engine.AppSettings
 import com.novacut.editor.engine.AudioEngine
 import com.novacut.editor.engine.AutoSaveState
 import com.novacut.editor.engine.ExportState
@@ -95,6 +96,39 @@ internal fun shouldShowRecoveryDialog(
 ): Boolean {
     if (!hasRecoveredContent) return false
     return recoveryTimestampMs > projectUpdatedAtMs + RECOVERY_DIALOG_NEWER_THAN_PROJECT_MS
+}
+
+internal data class RecoveryOpenFeedback(
+    val message: String,
+    val severity: ToastSeverity,
+)
+
+internal fun recoveryOpenFeedbackFor(
+    outcome: ProjectAutoSave.LoadOutcome,
+    expectedRecovery: Boolean
+): RecoveryOpenFeedback? = when (outcome) {
+    is ProjectAutoSave.LoadOutcome.Loaded -> null
+    is ProjectAutoSave.LoadOutcome.FutureSchema -> RecoveryOpenFeedback(
+        message = "Autosave was made by a newer NovaCut version. It was left untouched to avoid losing edits.",
+        severity = ToastSeverity.Error,
+    )
+    is ProjectAutoSave.LoadOutcome.Corrupt -> RecoveryOpenFeedback(
+        message = "Autosave could not be read. The file was left untouched so you can retry recovery later.",
+        severity = ToastSeverity.Error,
+    )
+    ProjectAutoSave.LoadOutcome.NotFound -> if (expectedRecovery) {
+        RecoveryOpenFeedback(
+            message = "No autosaved recovery data was found. Opening the saved project instead.",
+            severity = ToastSeverity.Warning,
+        )
+    } else {
+        null
+    }
+}
+
+internal fun shouldBlockAutoSaveForRecoveryOutcome(outcome: ProjectAutoSave.LoadOutcome): Boolean {
+    return outcome is ProjectAutoSave.LoadOutcome.FutureSchema ||
+        outcome is ProjectAutoSave.LoadOutcome.Corrupt
 }
 
 enum class PanelId {
@@ -415,6 +449,12 @@ class EditorViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val projectId: String? = savedStateHandle["projectId"]
+    private val expectRecovery: Boolean = savedStateHandle["expectRecovery"] ?: false
+    private var recoveryOpenComplete = false
+    private var autoSaveBlockedByRecovery = false
+    private var latestSettings: AppSettings? = null
+    private var lastAutoSaveRunning: Boolean? = null
+    private var lastAutoSaveIntervalSec: Int? = null
 
     private val _state = MutableStateFlow(EditorState())
     val state: StateFlow<EditorState> = _state.asStateFlow()
@@ -636,50 +676,11 @@ class EditorViewModel @Inject constructor(
                 }
             }
 
-            // Restore auto-save AFTER Room load to avoid race condition
-            val recovery = autoSave.loadRecoveryData(autoSaveId)
-            if (recovery != null) {
-                val hadContent = recovery.tracks.any { it.clips.isNotEmpty() } ||
-                    recovery.textOverlays.isNotEmpty() ||
-                    recovery.imageOverlays.isNotEmpty()
-                val showRecoveryDialog = shouldShowRecoveryDialog(
-                    projectUpdatedAtMs = _state.value.project.updatedAt,
-                    recoveryTimestampMs = recovery.timestamp,
-                    hasRecoveredContent = hadContent
-                )
-                _state.update {
-                    it.copy(
-                        tracks = recovery.tracks.ifEmpty { it.tracks },
-                        textOverlays = recovery.textOverlays,
-                        imageOverlays = recovery.imageOverlays,
-                        timelineMarkers = recovery.timelineMarkers,
-                        drawingPaths = recovery.drawingPaths,
-                        playheadMs = recovery.playheadMs,
-                        chapterMarkers = recovery.chapterMarkers,
-                        beatMarkers = recovery.beatMarkers,
-                        v369 = it.v369.copy(transcript = recovery.transcript ?: it.v369.transcript),
-                        trackedObjects = recovery.trackedObjects.ifEmpty { it.trackedObjects },
-                        aiUsageLedger = recovery.aiUsageLedger,
-                        totalDurationMs = recovery.tracks.maxOfOrNull { t ->
-                            t.clips.maxOfOrNull { c -> c.timelineEndMs } ?: 0L
-                        } ?: 0L,
-                        // Surface a dialog only when the autosave is materially newer than
-                        // the project metadata. Auto-save is also the normal full-state
-                        // persistence path, so routine opens should stay quiet.
-                        panels = if (showRecoveryDialog) it.panels.open(PanelId.RECOVERY_DIALOG) else it.panels
-                    )
-                }
-                _playheadMs.value = recovery.playheadMs
-                if (recovery.tracks.flatMap { it.clips }.isNotEmpty()) {
-                    rebuildPlayerTimeline()
-                }
-                preloadVisibleWaveforms(_state.value)
-                // Restored content may have arrived AFTER the timeline laid out with
-                // zero clips. In that race the first setTimelineWidth call saw an
-                // empty project and skipped the fit. Fire now so the user opens a
-                // restored project to the whole timeline framed, not a tiny window.
-                requestInitialFitIfNeeded()
-            }
+            // Restore auto-save AFTER Room load to avoid race condition.
+            // Use the schema-aware outcome path so corrupt/future files are
+            // surfaced and preserved instead of being silently treated as
+            // missing and overwritten by the next autosave tick.
+            handleRecoveryOpenOutcome(autoSave.loadRecoveryDataWithOutcome(autoSaveId))
         }
 
         viewModelScope.launch {
@@ -776,8 +777,6 @@ class EditorViewModel @Inject constructor(
 
         // Apply user settings (export defaults + auto-save)
         var appliedDefaults = false
-        var lastAutoSaveEnabled: Boolean? = null
-        var lastAutoSaveInterval: Int? = null
         viewModelScope.launch {
             settingsRepo.settings.collect { settings ->
                 // Apply default export config from settings once on first load
@@ -807,30 +806,10 @@ class EditorViewModel @Inject constructor(
                     _desktopOverride.value = settings.desktopModeOverride
                 }
 
-                // Only restart auto-save when auto-save settings actually change
-                val enabledChanged = settings.autoSaveEnabled != lastAutoSaveEnabled
-                val intervalChanged = settings.autoSaveIntervalSec != lastAutoSaveInterval
-                if (enabledChanged || intervalChanged) {
-                    lastAutoSaveEnabled = settings.autoSaveEnabled
-                    lastAutoSaveInterval = settings.autoSaveIntervalSec
-                    if (settings.autoSaveEnabled) {
-                        autoSave.startAutoSave(
-                            projectId ?: _state.value.project.id,
-                            intervalMs = settings.autoSaveIntervalSec * 1000L
-                        ) {
-                            showSaveIndicator(com.novacut.editor.model.SaveIndicatorState.SAVING)
-                            val s = _state.value
-                            val state = buildAutoSaveState(s)
-                            viewModelScope.launch {
-                                delay(500)
-                                showSaveIndicator(com.novacut.editor.model.SaveIndicatorState.SAVED)
-                            }
-                            state
-                        }
-                    } else {
-                        autoSave.stop()
-                    }
-                }
+                // Only start autosave after the schema-aware recovery open path
+                // has completed. Future-schema/corrupt recovery files block
+                // writes so the preserved autosave is not overwritten.
+                applyAutoSaveSettings(settings)
 
                 // Sync snap settings
                 _snapToBeat.value = settings.snapToBeat
@@ -845,6 +824,93 @@ class EditorViewModel @Inject constructor(
                     cancelWaveformLoads()
                 }
             }
+        }
+    }
+
+    private fun handleRecoveryOpenOutcome(outcome: ProjectAutoSave.LoadOutcome) {
+        if (outcome is ProjectAutoSave.LoadOutcome.Loaded) {
+            restoreLoadedRecovery(outcome.state)
+        }
+        autoSaveBlockedByRecovery = shouldBlockAutoSaveForRecoveryOutcome(outcome)
+        recoveryOpenComplete = true
+        recoveryOpenFeedbackFor(outcome, expectRecovery)?.let { feedback ->
+            showToast(feedback.message, feedback.severity)
+        }
+        applyAutoSaveSettings()
+    }
+
+    private fun restoreLoadedRecovery(recovery: AutoSaveState) {
+        val hadContent = recovery.tracks.any { it.clips.isNotEmpty() } ||
+            recovery.textOverlays.isNotEmpty() ||
+            recovery.imageOverlays.isNotEmpty()
+        val showRecoveryDialog = shouldShowRecoveryDialog(
+            projectUpdatedAtMs = _state.value.project.updatedAt,
+            recoveryTimestampMs = recovery.timestamp,
+            hasRecoveredContent = hadContent
+        )
+        _state.update {
+            it.copy(
+                tracks = recovery.tracks.ifEmpty { it.tracks },
+                textOverlays = recovery.textOverlays,
+                imageOverlays = recovery.imageOverlays,
+                timelineMarkers = recovery.timelineMarkers,
+                drawingPaths = recovery.drawingPaths,
+                playheadMs = recovery.playheadMs,
+                chapterMarkers = recovery.chapterMarkers,
+                beatMarkers = recovery.beatMarkers,
+                v369 = it.v369.copy(transcript = recovery.transcript ?: it.v369.transcript),
+                trackedObjects = recovery.trackedObjects.ifEmpty { it.trackedObjects },
+                aiUsageLedger = recovery.aiUsageLedger,
+                totalDurationMs = recovery.tracks.maxOfOrNull { t ->
+                    t.clips.maxOfOrNull { c -> c.timelineEndMs } ?: 0L
+                } ?: 0L,
+                // Surface a dialog only when the autosave is materially newer
+                // than the project metadata. Auto-save is also the normal
+                // full-state persistence path, so routine opens stay quiet.
+                panels = if (showRecoveryDialog) it.panels.open(PanelId.RECOVERY_DIALOG) else it.panels
+            )
+        }
+        _playheadMs.value = recovery.playheadMs
+        if (recovery.tracks.flatMap { it.clips }.isNotEmpty()) {
+            rebuildPlayerTimeline()
+        }
+        preloadVisibleWaveforms(_state.value)
+        // Restored content may have arrived AFTER the timeline laid out with
+        // zero clips. In that race the first setTimelineWidth call saw an
+        // empty project and skipped the fit. Fire now so the user opens a
+        // restored project to the whole timeline framed, not a tiny window.
+        requestInitialFitIfNeeded()
+    }
+
+    private fun applyAutoSaveSettings(settings: AppSettings? = latestSettings) {
+        val current = settings ?: return
+        latestSettings = current
+        val shouldRun = recoveryOpenComplete &&
+            !autoSaveBlockedByRecovery &&
+            current.autoSaveEnabled
+        val intervalSec = if (shouldRun) current.autoSaveIntervalSec else null
+        if (lastAutoSaveRunning == shouldRun && lastAutoSaveIntervalSec == intervalSec) {
+            return
+        }
+
+        lastAutoSaveRunning = shouldRun
+        lastAutoSaveIntervalSec = intervalSec
+        if (shouldRun) {
+            autoSave.startAutoSave(
+                projectId ?: _state.value.project.id,
+                intervalMs = current.autoSaveIntervalSec * 1000L
+            ) {
+                showSaveIndicator(com.novacut.editor.model.SaveIndicatorState.SAVING)
+                val s = _state.value
+                val state = buildAutoSaveState(s)
+                viewModelScope.launch {
+                    delay(500)
+                    showSaveIndicator(com.novacut.editor.model.SaveIndicatorState.SAVED)
+                }
+                state
+            }
+        } else {
+            autoSave.stop()
         }
     }
 
@@ -4130,7 +4196,9 @@ class EditorViewModel @Inject constructor(
             _state.update { it.copy(project = project) }
 
             // Persist track/clip data immediately (don't wait for auto-save timer)
-            autoSave.saveNow(project.id, buildAutoSaveState(s, project.id))
+            if (recoveryOpenComplete && !autoSaveBlockedByRecovery) {
+                autoSave.saveNow(project.id, buildAutoSaveState(s, project.id))
+            }
         }
     }
 

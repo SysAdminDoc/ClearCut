@@ -10,8 +10,8 @@ NovaCut is an Android video editor under package `com.novacut.editor`. The repo 
 
 Current live version evidence:
 
-- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 149`, `versionName = "3.74.12"`.
-- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.12`.
+- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 150`, `versionName = "3.74.13"`.
+- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.13`.
 - [README.md](README.md) and [ROADMAP.md](ROADMAP.md) both describe the v3.74.x line.
 - The 2026-05-17 continuation pushes each completed roadmap batch back to `origin/master`; verify `git status --short --branch` before assuming branch sync.
 
@@ -64,6 +64,9 @@ High-level modules and patterns:
 - The release workflow now packages debug, release, and instrumentation APKs,
   verifies version/changelog/artifact metadata, checks APK signatures and ZIP
   alignment, and runs APK-based 16 KB native-library checks.
+- Editor project opens now use the schema-aware recovery outcome loader and
+  preserve corrupt or newer-schema autosaves by blocking subsequent autosave
+  writes until the recovery file is safe to replace.
 - The privacy posture is coherent: local-first by default, opt-in cloud paths, explicit model downloads, and F-Droid awareness.
 - Cross-editor interoperability is already a first-class goal through FCPXML/OTIO/EDL-style planning.
 
@@ -135,6 +138,20 @@ High-level modules and patterns:
 - `NullSafeMutableLiveData` is disabled in the Android lint block because the
   androidx.lifecycle detector crashes under the current Kotlin 2.1 / AGP 8.7
   lint stack and NovaCut has no `LiveData`/`MutableLiveData` call sites for it.
+
+2026-06-04 recovery-open continuation:
+
+- Completed the P0 Recovery open path in v3.74.13. `MainActivity` now routes
+  dynamic Resume/Open shortcuts into the editor route with `expectRecovery`,
+  and `EditorViewModel` reads that flag from `SavedStateHandle`.
+- Editor startup now calls `ProjectAutoSave.loadRecoveryDataWithOutcome`.
+  Loaded autosaves preserve the prior state-restore/dialog behavior; expected
+  missing recovery shows a warning only for recovery-intent opens; future-schema
+  and corrupt files show error toasts.
+- Future-schema/corrupt recovery outcomes block timed autosave and the manual
+  autosave write inside `saveProject()`, preserving the on-disk recovery file
+  instead of overwriting it with the Room/opened project state.
+- `RecoveryDialogTest` covers recovery feedback and autosave-blocking decisions.
 - Next roadmap item: P0 Release pipeline reactivation.
 
 2026-05-17 autonomous continuation:
