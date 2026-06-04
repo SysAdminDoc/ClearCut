@@ -11,7 +11,7 @@ archived under [docs/archive](docs/archive/).
 Current version: **v3.74.35** (`versionCode` 172). Last consolidated:
 2026-06-04.
 
-> Last researched: Cycle 8 - 2026-06-04.
+> Last researched: Cycle 9 - 2026-06-04.
 
 ## ▶ Implementer Instructions (for the build machine)
 
@@ -905,3 +905,67 @@ unsafe catch-all receiver.
   https://otio-core-documentation.readthedocs.io/en/latest/tutorials/architecture.html
 - Apple Final Cut Pro XML transfer guide:
   https://support.apple.com/guide/final-cut-pro/use-xml-to-transfer-projects-verdbd66ae/mac
+
+### Researcher Queue (Cycle 9 - 2026-06-04)
+
+Focus: postmortem diagnostics for process deaths that do not pass through the
+app's Java uncaught-exception handler.
+
+#### Reliability & Diagnostics
+
+- [ ] 🔬🤖 P2 — Add `ApplicationExitInfo` process-death capture to diagnostic ZIP
+  - Why: The Cycle 1 crash handler item closes Java uncaught-exception capture,
+    but it cannot fully explain ANRs, low-memory kills, native crashes, OS
+    signals, freezer kills, initialization failures, or other process deaths
+    that happen outside a normal exception chain. Android 11+ exposes recent
+    process-death records through `ActivityManager.getHistoricalProcessExitReasons()`;
+    NovaCut should fold those local records into the same user-initiated
+    diagnostic ZIP so creator support can distinguish "export crashed" from
+    "foreground export was low-memory killed" or "main thread ANR".
+  - Evidence: grep across `app/src/main` finds no `ApplicationExitInfo`,
+    `getHistoricalProcessExitReasons`, `REASON_ANR`, `REASON_LOW_MEMORY`, or
+    process-exit recorder. `NovaCutApp.VERSION` already notes crash reports as a
+    consumer, but `NovaCutApp.onCreate()` only creates notification channels.
+    `DiagnosticExportEngine` writes `app-info.txt`, `device-info.txt`,
+    `media-codecs.txt`, `model-registry.txt`, optional `timeline-shape.json`,
+    `logcat-tail.txt`, and `manifest.txt`, with no previous-exit history entry.
+    `PrivacyDashboard` documents diagnostic logs as user-exported, local-only
+    data capped under `filesDir/diagnostics`, so the process-exit record needs
+    the same retention and opt-in export boundary. Android's Android 11 feature
+    docs say the process-exit API reports whether recent terminations were ANR,
+    memory, crash, or other reasons:
+    https://developer.android.com/about/versions/11/features#app-process-exit-reasons
+  - Touches: a small `ProcessExitRecorder`/store behind an `ActivityManager`
+    adapter, `NovaCutApp.onCreate()` startup ingestion on API 30+,
+    `DiagnosticExportEngine` entry such as `process-exit-history.json`,
+    `PrivacyDashboard` copy, redaction helpers for descriptions/traces, and
+    focused JVM/instrumentation tests.
+  - Acceptance: on API 30+ NovaCut records the latest bounded set of unique
+    exit records once per process start, de-duped by timestamp/reason/pid,
+    including reason, status, process name, timestamp, importance, PSS/RSS, and
+    a redacted/truncated ANR trace excerpt when `getTraceInputStream()` is
+    available. The data remains local, is included only in user-triggered
+    diagnostic ZIP exports, omits project names/media URIs/captions, and clearly
+    marks unsupported pre-API-30 devices. The existing uncaught-exception handler
+    item remains responsible for active Java crash capture; this item covers
+    postmortem OS records.
+  - Verify: add JVM tests around a fake `ActivityManager` adapter covering
+    crash, native crash, ANR trace, low-memory/signal fallback, duplicate
+    records, redaction, and ZIP inclusion; add an API 30+ instrumentation smoke
+    that launches after `adb shell am crash <package>` or a debug-only ANR test
+    hook and confirms the diagnostic ZIP contains the expected exit reason
+    without raw user paths.
+  - Complexity: M
+
+#### Appendix — Cycle 9 Sources
+
+- Android 11 app process exit reasons:
+  https://developer.android.com/about/versions/11/features#app-process-exit-reasons
+- Android `ApplicationExitInfo` API:
+  https://developer.android.com/reference/android/app/ApplicationExitInfo
+- Android `ActivityManager.getHistoricalProcessExitReasons` API:
+  https://developer.android.com/reference/android/app/ActivityManager#getHistoricalProcessExitReasons(java.lang.String,%20int,%20int)
+- Android vitals ANR guidance:
+  https://developer.android.com/topic/performance/vitals/anr
+- Android vitals low-memory-killer guidance:
+  https://developer.android.com/topic/performance/vitals/lmk

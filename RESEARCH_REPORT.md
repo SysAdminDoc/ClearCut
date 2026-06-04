@@ -6,6 +6,31 @@ roadmaps are archived under [docs/archive/roadmap](docs/archive/roadmap/).
 
 Last refreshed: 2026-06-04.
 
+## 2026-06-04 Cycle 9 Process-Exit Diagnostics Refresh
+
+- [Verified] Grep found no `ApplicationExitInfo`,
+  `getHistoricalProcessExitReasons`, `REASON_ANR`, `REASON_LOW_MEMORY`, or
+  process-exit recorder in `app/src/main`. That means the existing diagnostics
+  plan can capture active Java crashes only after the Cycle 1 uncaught-exception
+  item lands, but it still lacks postmortem OS records for ANR, LMK, native
+  crash, signal, freezer, initialization-failure, or resource-kill cases.
+- [Verified] `NovaCutApp.VERSION` already calls out crash reports as a consumer
+  of the build version, but `NovaCutApp.onCreate()` currently only creates the
+  export notification channel. `DiagnosticExportEngine` writes app/device/codecs,
+  model registry, optional timeline shape, logcat tail, and manifest entries,
+  but no `process-exit-history` artifact.
+- [Verified] Android 11+ exposes recent process-death records through
+  `ActivityManager.getHistoricalProcessExitReasons()` returning
+  `ApplicationExitInfo`; the API includes reason, status, process name,
+  timestamp, memory sizes, and an ANR trace stream when available. Android
+  vitals treats user-perceived ANRs and LMKs as release-health signals, with
+  LMKs looking like crashes to users and bypassing normal lifecycle saving.
+- [Promoted] Added a P2 roadmap item for `ApplicationExitInfo` capture in the
+  local diagnostic ZIP: API 30+ startup ingestion, de-duplication, redacted ANR
+  trace excerpts, pre-API-30 unsupported marking, privacy-dashboard retention
+  copy, and JVM/instrumentation verification. This complements, rather than
+  replaces, the existing uncaught-exception handler item.
+
 ## 2026-06-04 Cycle 8 Plugin/Interchange Import Refresh
 
 - [Verified] NovaCut's docs and README expose several non-media file formats:
