@@ -1,0 +1,98 @@
+package com.novacut.editor.ui.editor
+
+import com.novacut.editor.engine.AiToolRequirements
+import com.novacut.editor.engine.CaptionTranslationEngine
+import com.novacut.editor.engine.ExportState
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class EditorDomainStateTest {
+
+    @Test
+    fun domainStatesEnumerateEveryTopLevelEditorDomain() {
+        val kinds = EditorState().domainStates.asList().map { it.kind }.toSet()
+
+        assertEquals(
+            setOf(
+                EditorDomainState.Kind.PANEL,
+                EditorDomainState.Kind.CAPTION,
+                EditorDomainState.Kind.COMPOUND,
+                EditorDomainState.Kind.EXPORT,
+                EditorDomainState.Kind.AI,
+                EditorDomainState.Kind.MEDIA
+            ),
+            kinds
+        )
+    }
+
+    @Test
+    fun domainProjectionCarriesRepresentativeStateFromEachDomain() {
+        val requirement = AiToolRequirements.requirementFor("video_upscale")
+        val prompt = AiRequirementPrompt(
+            title = "Model required",
+            body = "Download before running",
+            modelName = "Real-ESRGAN",
+            estimatedSize = "17 MB",
+            actionLabel = "Review"
+        )
+        val suggestion = AiSuggestion(
+            id = "s1",
+            message = "Clean this audio",
+            actionId = "denoise"
+        )
+        val state = EditorState(
+            panels = PanelVisibility(openPanels = setOf(PanelId.AI_TOOLS)),
+            selectedEffectId = "effect-1",
+            editingTextOverlayId = "text-1",
+            captionTranslationSourceLang = "en",
+            captionTranslationTargetLang = "es",
+            captionTranslationQuality = CaptionTranslationEngine.LanguagePairQuality.GOOD,
+            compoundNavDepth = 2,
+            compoundBreadcrumbText = "Root > Compound",
+            exportProgress = 0.42f,
+            exportState = ExportState.EXPORTING,
+            lastExportedFilePath = "C:/exports/final.mp4",
+            exportErrorMessage = "blocked",
+            exportStartTime = 1234L,
+            aiRequirementPrompt = prompt,
+            aiModelRequirement = requirement,
+            aiProcessingTool = "video_upscale",
+            aiSuggestion = suggestion,
+            isReframing = true,
+            isAutoEditing = true,
+            isSynthesizingTts = true,
+            isTtsAvailable = true,
+            isAnalyzingNoise = true,
+            noiseAnalysisResult = "Noise profile ready"
+        )
+
+        val domains = state.domainStates
+
+        assertTrue(domains.panel.panels.isOpen(PanelId.AI_TOOLS))
+        assertEquals("effect-1", domains.panel.selectedEffectId)
+        assertEquals("text-1", domains.panel.editingTextOverlayId)
+        assertEquals("en", domains.caption.sourceLang)
+        assertEquals("es", domains.caption.targetLang)
+        assertEquals(CaptionTranslationEngine.LanguagePairQuality.GOOD, domains.caption.quality)
+        assertEquals(2, domains.compound.depth)
+        assertEquals("Root > Compound", domains.compound.breadcrumbText)
+        assertEquals(0.42f, domains.export.progress, 0.0001f)
+        assertEquals(ExportState.EXPORTING, domains.export.state)
+        assertEquals("C:/exports/final.mp4", domains.export.lastExportedFilePath)
+        assertEquals("blocked", domains.export.errorMessage)
+        assertEquals(1234L, domains.export.startTime)
+        assertSame(prompt, domains.ai.requirementPrompt)
+        assertSame(requirement, domains.ai.modelRequirement)
+        assertEquals("video_upscale", domains.ai.processingTool)
+        assertSame(suggestion, domains.ai.suggestion)
+        assertTrue(domains.ai.isReframing)
+        assertTrue(domains.ai.isAutoEditing)
+        assertTrue(domains.ai.isSynthesizingTts)
+        assertTrue(domains.ai.isTtsAvailable)
+        assertTrue(domains.ai.isAnalyzingNoise)
+        assertEquals("Noise profile ready", domains.ai.noiseAnalysisResult)
+        assertTrue(domains.media.relinkReports.isEmpty())
+    }
+}

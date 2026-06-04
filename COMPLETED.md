@@ -7,7 +7,7 @@ Last consolidated: 2026-06-04.
 
 ## Current Delivered Baseline
 
-- Current version: v3.74.19 (`versionCode` 156).
+- Current version: v3.74.20 (`versionCode` 157).
 - Multi-track Android NLE with project gallery, editor, timeline, preview,
   effects, transitions, text, captions, audio, export, settings, templates,
   project archive/import, and diagnostic bundle surfaces.
@@ -79,6 +79,10 @@ Last consolidated: 2026-06-04.
   before processing starts, accepted ready sheets dispatch through a bypass
   run path, and the legacy `aiRequirementPrompt` is reserved for tool IDs
   without `AiToolRequirements` registry entries.
+- Editor domain-state projection shipped in v3.74.20: `EditorState` now has a
+  sealed `EditorDomainState` projection that groups panel, caption, compound,
+  export, AI, and media state into tested slices before storage/copy call sites
+  migrate onto those domains.
 
 ## Preserved Historical Detail
 

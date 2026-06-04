@@ -10,8 +10,8 @@ NovaCut is an Android video editor under package `com.novacut.editor`. The repo 
 
 Current live version evidence:
 
-- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 156`, `versionName = "3.74.19"`.
-- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.19`.
+- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 157`, `versionName = "3.74.20"`.
+- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.20`.
 - [README.md](README.md) and [ROADMAP.md](ROADMAP.md) both describe the v3.74.x line.
 - The 2026-05-17 continuation pushes each completed roadmap batch back to `origin/master`; verify `git status --short --branch` before assuming branch sync.
 
@@ -268,7 +268,23 @@ High-level modules and patterns:
   `AiToolRequirementsTest` locks the active model-aware IDs.
 - Verification: `:app:compileDebugKotlin :app:testDebugUnitTest --tests
   com.novacut.editor.engine.AiToolRequirementsTest` passed.
-- Next roadmap item: P1 Editor state decomposition.
+- Next roadmap item after this batch was P1 Editor state decomposition.
+
+2026-06-04 editor state decomposition continuation:
+
+- Completed the first P1 editor state decomposition batch in v3.74.20 by
+  adding `EditorDomainState` plus typed panel, caption, compound, export, AI,
+  and media slices under `EditorDomainStates`.
+- Added the `EditorState.domainStates` projection so existing state storage and
+  `copy(...)` call sites remain stable while downstream hosts can adopt typed
+  slices incrementally.
+- Added `EditorDomainStateTest` to lock the six-domain enumeration and verify
+  representative fields from each domain are projected without drift.
+- The active roadmap item was narrowed to storage migration: move constructor
+  fields and `copy(...)` call sites onto the new slices domain by domain.
+- Verification: `:app:compileDebugKotlin :app:testDebugUnitTest --tests
+  com.novacut.editor.ui.editor.EditorDomainStateTest` passed.
+- Next roadmap item: P1 Editor state storage migration.
 
 2026-05-17 autonomous continuation:
 

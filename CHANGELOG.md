@@ -1,5 +1,25 @@
 # Changelog
 
+## v3.74.20 — 2026-06-04
+
+### Editor domain-state projection
+- Added a sealed `EditorDomainState` projection layer with dedicated panel,
+  caption, compound, export, AI, and media slices.
+- Added `EditorState.domainStates` so hosts can adopt typed domain slices while
+  existing constructor storage and `copy(...)` call sites migrate incrementally.
+- Added `EditorDomainStateTest` to lock the six-domain enumeration and verify
+  representative field ownership across the projection.
+- Narrowed the active roadmap item to the next storage migration pass for the
+  new domain slices.
+- Bumped runtime metadata to `versionName 3.74.20` / `versionCode 157`.
+- Verification: `git diff --check`, `scripts/verify_release_artifacts.py`,
+  APK-based 16 KB checks for debug/release, `apksigner verify` for
+  debug/release, `zipalign -c -P 16 -v 4` for debug/release/androidTest,
+  `:app:compileDebugKotlin :app:testDebugUnitTest --tests
+  com.novacut.editor.ui.editor.EditorDomainStateTest`, and
+  `:app:testDebugUnitTest :app:assembleDebug :app:assembleRelease
+  :app:assembleDebugAndroidTest` passed.
+
 ## v3.74.19 — 2026-06-04
 
 ### Per-tool AI requirement adoption

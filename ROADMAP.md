@@ -8,7 +8,7 @@ Active roadmap for forward-looking work. Shipped work is summarized in
 [RESEARCH_REPORT.md](RESEARCH_REPORT.md), and detailed historical plans are
 archived under [docs/archive](docs/archive/).
 
-Current version: **v3.74.19** (`versionCode` 156). Last consolidated:
+Current version: **v3.74.20** (`versionCode` 157). Last consolidated:
 2026-06-04.
 
 ## Current State
@@ -53,6 +53,9 @@ Current version: **v3.74.19** (`versionCode` 156). Last consolidated:
   `AiModelRequirementSheet`, aligns registry IDs with live editor tool IDs,
   and keeps the legacy requirement prompt only as a fallback for non-registry
   tool IDs.
+- v3.74.20 adds the first editor state decomposition layer: a sealed
+  `EditorDomainState` projection for panel, caption, compound, export, AI, and
+  media slices with JVM tests locking representative field ownership.
 
 ## Source Archives
 
@@ -65,7 +68,7 @@ Current version: **v3.74.19** (`versionCode` 156). Last consolidated:
 
 | Priority | Work | Exit criteria |
 |---|---|---|
-| P1 | Editor state decomposition | Split `EditorState` into domain sealed substates so caption, compound, export, AI, media, and panel state can evolve independently. |
+| P1 | Editor state storage migration | Move `EditorState` constructor storage and `copy(...)` call sites onto the new panel, caption, compound, export, AI, and media domain slices without regressing existing editor surfaces. |
 | P1 | EditorScreen panel router decomposition | Replace the large monolithic panel routing surface with smaller host components that own only their local state and callbacks. |
 | P1 | Timeline refactor | Reduce `Timeline.kt` risk by extracting gesture handling, clip layout, overlays, and accessibility actions into focused files with tests where practical. |
 | P1 | Model activation gates | For every active AI/model dependency, keep source locator, SHA-256, license posture, delivery mode, F-Droid posture, and runtime checksum behavior current in `docs/models.md`. |
