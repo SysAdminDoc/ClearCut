@@ -11,7 +11,7 @@ archived under [docs/archive](docs/archive/).
 Current version: **v3.74.34** (`versionCode` 171). Last consolidated:
 2026-06-04.
 
-> Last researched: Cycle 3 - 2026-06-04.
+> Last researched: Cycle 4 - 2026-06-04.
 
 ## ▶ Implementer Instructions (for the build machine)
 
@@ -611,3 +611,47 @@ release-artifact gates without duplicating the timeline decomposition lane.
   https://developer.android.com/topic/performance/baselineprofiles/create-baselineprofile
 - Android Macrobenchmark overview:
   https://developer.android.com/topic/performance/benchmarking/macrobenchmark-overview
+
+### Researcher Queue (Cycle 4 - 2026-06-04)
+
+Focus: memory-pressure behavior for long editing sessions and large imported
+projects.
+
+#### Reliability & Performance
+
+- [ ] 🔬🤖 P2 — Add app-level memory trim policy for editor caches
+  - Why: NovaCut opts into `android:largeHeap`, keeps a bitmap thumbnail LRU sized
+    from `Runtime.maxMemory() / 8`, keeps waveform and generated-media caches, and
+    exposes a user-facing thumbnail-cache size setting. Existing OOM cleanup fixes
+    individual error paths, but the app does not voluntarily trim caches when the
+    OS reports UI-hidden/background/moderate/critical memory pressure.
+  - Evidence: `AndroidManifest.xml` sets `android:largeHeap="true"`;
+    `VideoEngine.kt` owns `thumbnailCache` and `clearThumbnailCache()`;
+    `AudioEngine.kt` owns `waveformCache` and `clearWaveformCache()`; grep for
+    `onTrimMemory`, `ComponentCallbacks2`, and `TRIM_MEMORY` returns no app-level
+    memory-pressure handler. Android's memory guidance recommends using
+    `onTrimMemory()` to reduce memory usage when lifecycle or memory events make
+    trimming useful, and the `<application>` docs state most apps should reduce
+    memory usage rather than relying on `largeHeap`:
+    https://developer.android.com/topic/performance/memory and
+    https://developer.android.com/guide/topics/manifest/application-element#largeHeap
+  - Touches: `NovaCutApp`, cache-owning engines (`VideoEngine`, `AudioEngine`,
+    proxy/model/generated-media caches where applicable), Settings cache-size
+    semantics, and focused policy tests.
+  - Acceptance: an app-level trim dispatcher maps `TRIM_MEMORY_UI_HIDDEN`,
+    `RUNNING_LOW`, `RUNNING_CRITICAL`, `BACKGROUND`, and `COMPLETE` into explicit
+    cache actions; visible editing preserves enough preview state for continuity,
+    while background/critical states evict thumbnail/waveform/proxy scratch caches
+    and log a redacted diagnostic breadcrumb.
+  - Verify: unit-test the trim-level policy, call `adb shell am send-trim-memory
+    com.novacut.editor MODERATE` / `CRITICAL` on a debug build, confirm caches
+    evict without crashing or cancelling active export, and repeat while returning
+    from background to a project with thumbnails/waveforms.
+  - Complexity: M
+
+#### Appendix — Cycle 4 Sources
+
+- Android memory management and `onTrimMemory()`:
+  https://developer.android.com/topic/performance/memory
+- Android `<application>` `largeHeap` guidance:
+  https://developer.android.com/guide/topics/manifest/application-element#largeHeap

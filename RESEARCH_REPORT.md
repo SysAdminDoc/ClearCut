@@ -6,6 +6,20 @@ roadmaps are archived under [docs/archive/roadmap](docs/archive/roadmap/).
 
 Last refreshed: 2026-06-04.
 
+## 2026-06-04 Cycle 4 Memory Pressure Refresh
+
+- [Verified] NovaCut declares `android:largeHeap="true"` and owns multiple
+  memory-sensitive caches (`VideoEngine.thumbnailCache`,
+  `AudioEngine.waveformCache`, generated media/proxy caches, and the Settings
+  thumbnail-cache preference), but grep found no `onTrimMemory`,
+  `ComponentCallbacks2`, or `TRIM_MEMORY` handler. Android memory guidance
+  recommends using `onTrimMemory()` to voluntarily reduce memory use, and the
+  `<application>` docs warn that most apps should reduce memory use rather than
+  depending on `largeHeap`.
+- [Promoted] Added a P2 roadmap item for an app-level memory trim dispatcher that
+  maps UI-hidden/background/moderate/critical trim levels to cache eviction and
+  diagnostic breadcrumbs without disrupting active exports or visible editing.
+
 ## 2026-06-04 Cycle 3 Performance Verification Refresh
 
 - [Verified] NovaCut has project-gallery/editor smoke coverage and release APK
