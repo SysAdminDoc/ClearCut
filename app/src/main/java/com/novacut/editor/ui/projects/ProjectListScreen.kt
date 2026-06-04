@@ -42,6 +42,7 @@ import coil.compose.AsyncImage
 import coil.decode.VideoFrameDecoder
 import coil.request.ImageRequest
 import com.novacut.editor.R
+import com.novacut.editor.engine.IncomingMediaItem
 import com.novacut.editor.model.Project
 import com.novacut.editor.model.ProjectFilterMode
 import com.novacut.editor.model.SortMode
@@ -70,7 +71,7 @@ private const val PROJECT_RENAME_MAX_CHARS = 80
 fun ProjectListScreen(
     onProjectSelected: (String) -> Unit,
     onSettings: () -> Unit = {},
-    pendingImportUri: android.net.Uri? = null,
+    pendingImportItems: List<IncomingMediaItem> = emptyList(),
     onPendingImportHandled: () -> Unit = {},
     viewModel: ProjectListViewModel = hiltViewModel()
 ) {
@@ -93,11 +94,11 @@ fun ProjectListScreen(
         }
     }
 
-    // Handle incoming video from external intent (ACTION_VIEW)
-    LaunchedEffect(pendingImportUri) {
-        if (pendingImportUri != null) {
+    LaunchedEffect(pendingImportItems) {
+        if (pendingImportItems.isNotEmpty()) {
+            val items = pendingImportItems
             onPendingImportHandled()
-            viewModel.createProjectFromImport(pendingImportUri) { projectId ->
+            viewModel.createProjectFromImports(items) { projectId ->
                 onProjectSelected(projectId)
             }
         }

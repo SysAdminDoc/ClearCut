@@ -15,6 +15,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.novacut.editor.R
 import com.novacut.editor.engine.AutoSaveState
+import com.novacut.editor.engine.IncomingMediaItem
+import com.novacut.editor.engine.IncomingMediaKind
 import com.novacut.editor.engine.ProjectAutoSave
 import com.novacut.editor.engine.TemplateImportFailure
 import com.novacut.editor.engine.TemplateImportResult
@@ -34,6 +36,7 @@ import com.novacut.editor.model.Project
 import com.novacut.editor.model.Resolution
 import com.novacut.editor.model.ProjectFilterMode
 import com.novacut.editor.model.SortMode
+import com.novacut.editor.model.SourceColorMetadata
 import com.novacut.editor.model.Track
 import com.novacut.editor.model.TrackType
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -511,68 +514,54 @@ class ProjectListViewModel @Inject constructor(
     }
 
     fun createProjectFromImport(videoUri: Uri, onCreated: (String) -> Unit) {
+        createProjectFromImports(
+            listOf(IncomingMediaItem(uri = videoUri, kind = IncomingMediaKind.VIDEO)),
+            onCreated = onCreated
+        )
+    }
+
+    fun createProjectFromImports(items: List<IncomingMediaItem>, onCreated: (String) -> Unit) {
+        val incomingItems = items.ifEmpty { return }
         viewModelScope.launch {
             val operation = beginOperation(
-                title = appContext.getString(R.string.projects_operation_video_import_title),
-                description = appContext.getString(R.string.projects_operation_video_import_body)
+                title = appContext.getString(R.string.projects_operation_media_import_title),
+                description = appContext.getString(R.string.projects_operation_media_import_body)
             )
-            var copiedForImport = false
-            var importedUri: Uri? = null
+            val copiedManagedUris = mutableListOf<Uri>()
             try {
-                importedUri = withContext(Dispatchers.IO) {
-                    importUriToManagedMedia(appContext, videoUri, "video")
+                val imported = withContext(Dispatchers.IO) {
+                    importIncomingMediaItems(incomingItems, copiedManagedUris)
                 }
-                val managedUri = importedUri
-                if (managedUri == null) {
-                    showToast(appContext.getString(R.string.project_import_copy_failed))
+                if (imported.isEmpty()) {
+                    showToast(appContext.getString(R.string.project_import_invalid_media))
                     return@launch
                 }
-                copiedForImport = managedUri.toString() != videoUri.toString()
-                val importCheck = withContext(Dispatchers.IO) {
-                    val readable = runCatching {
-                        appContext.contentResolver.openAssetFileDescriptor(managedUri, "r")?.use { true } ?: false
-                    }.getOrDefault(managedUri.scheme == "file")
-                    readable to videoEngine.hasVisualTrack(managedUri)
-                }
-                if (!importCheck.first || !importCheck.second) {
-                    if (copiedForImport) {
-                        deleteManagedMediaUri(appContext, managedUri)
-                    }
-                    showToast(appContext.getString(R.string.project_import_invalid_video))
-                    return@launch
-                }
-                val durationMs = withContext(Dispatchers.IO) {
-                    videoEngine.getVideoDuration(managedUri).takeIf { it > 0 } ?: 3_000L
-                }
-                val sourceColorMetadata = withContext(Dispatchers.IO) {
-                    mediaImportEngine.inspectSourceColor(managedUri)
-                }
-                val fileName = resolveMediaDisplayName(appContext, videoUri)
+
+                val fileName = resolveMediaDisplayName(appContext, incomingItems.first().uri)
                     ?.substringBeforeLast('.')
                     ?.let(::normalizeProjectName)
                     ?: appContext.getString(R.string.project_imported_default_name)
+                val visualClips = imported.filter { it.trackType == TrackType.VIDEO }
+                val audioClips = imported.filter { it.trackType == TrackType.AUDIO }
+                val importedTracks = buildTracks(listOf(TrackType.VIDEO, TrackType.AUDIO)).map { track ->
+                    when (track.type) {
+                        TrackType.VIDEO -> track.copy(clips = visualClips.map { it.clip })
+                        TrackType.AUDIO -> track.copy(clips = audioClips.map { it.clip })
+                        else -> track
+                    }
+                }
+                val durationMs = importedTracks.maxOfOrNull { track ->
+                    track.clips.maxOfOrNull { it.timelineEndMs } ?: 0L
+                } ?: 0L
 
                 val project = Project(
                     name = fileName,
                     durationMs = durationMs,
-                    thumbnailUri = managedUri.toString()
+                    thumbnailUri = visualClips.firstOrNull { it.kind == IncomingMediaKind.VIDEO }
+                        ?.clip
+                        ?.sourceUri
+                        ?.toString()
                 )
-
-                val clip = Clip(
-                    sourceUri = managedUri,
-                    sourceDurationMs = durationMs,
-                    timelineStartMs = 0L,
-                    trimStartMs = 0L,
-                    trimEndMs = durationMs,
-                    sourceColorMetadata = sourceColorMetadata
-                )
-                val importedTracks = buildTracks(listOf(TrackType.VIDEO, TrackType.AUDIO)).map { track ->
-                    if (track.type == TrackType.VIDEO && track.index == 0) {
-                        track.copy(clips = listOf(clip))
-                    } else {
-                        track
-                    }
-                }
 
                 val created = withContext(Dispatchers.IO) {
                     createProjectWithInitialState(
@@ -585,22 +574,94 @@ class ProjectListViewModel @Inject constructor(
                     )
                 }
                 if (created) {
+                    if (imported.size < incomingItems.size) {
+                        showToast(
+                            appContext.getString(
+                                R.string.project_import_partial_success,
+                                imported.size,
+                                incomingItems.size
+                            )
+                        )
+                    }
                     onCreated(project.id)
                 } else {
-                    if (copiedForImport) {
-                        deleteManagedMediaUri(appContext, managedUri)
-                    }
+                    copiedManagedUris.forEach { deleteManagedMediaUri(appContext, it) }
                     showToast(appContext.getString(R.string.project_create_failed))
                 }
             } catch (e: Exception) {
-                Log.w("ProjectListVM", "Video import failed", e)
-                if (copiedForImport) {
-                    importedUri?.let { deleteManagedMediaUri(appContext, it) }
-                }
-                showToast(appContext.getString(R.string.project_import_invalid_video))
+                Log.w("ProjectListVM", "Incoming media import failed", e)
+                copiedManagedUris.forEach { deleteManagedMediaUri(appContext, it) }
+                showToast(appContext.getString(R.string.project_import_invalid_media))
             } finally {
                 endOperation(operation)
             }
+        }
+    }
+
+    private data class ImportedIncomingMedia(
+        val kind: IncomingMediaKind,
+        val trackType: TrackType,
+        val clip: Clip
+    )
+
+    private fun importIncomingMediaItems(
+        incomingItems: List<IncomingMediaItem>,
+        copiedManagedUris: MutableList<Uri>
+    ): List<ImportedIncomingMedia> {
+        var nextVisualStartMs = 0L
+        var nextAudioStartMs = 0L
+        return incomingItems.mapNotNull { item ->
+            val managedUri = importUriToManagedMedia(appContext, item.uri, item.kind.mediaType)
+                ?: return@mapNotNull null
+            if (managedUri.toString() != item.uri.toString()) {
+                copiedManagedUris += managedUri
+            }
+
+            val readable = runCatching {
+                appContext.contentResolver.openAssetFileDescriptor(managedUri, "r")?.use { true } ?: false
+            }.getOrDefault(managedUri.scheme == "file")
+            if (!readable) {
+                deleteManagedMediaUri(appContext, managedUri)
+                copiedManagedUris.remove(managedUri)
+                return@mapNotNull null
+            }
+
+            val hasRequiredTrack = when (item.kind) {
+                IncomingMediaKind.VIDEO, IncomingMediaKind.IMAGE -> videoEngine.hasVisualTrack(managedUri)
+                IncomingMediaKind.AUDIO -> videoEngine.hasAudioTrack(managedUri)
+            }
+            if (!hasRequiredTrack) {
+                deleteManagedMediaUri(appContext, managedUri)
+                copiedManagedUris.remove(managedUri)
+                return@mapNotNull null
+            }
+
+            val durationMs = videoEngine.getMediaDuration(managedUri).takeIf { it > 0L } ?: run {
+                deleteManagedMediaUri(appContext, managedUri)
+                copiedManagedUris.remove(managedUri)
+                return@mapNotNull null
+            }
+            val trackType = if (item.kind == IncomingMediaKind.AUDIO) TrackType.AUDIO else TrackType.VIDEO
+            val timelineStartMs = if (trackType == TrackType.AUDIO) nextAudioStartMs else nextVisualStartMs
+            val sourceColorMetadata = if (trackType == TrackType.VIDEO) {
+                mediaImportEngine.inspectSourceColor(managedUri)
+            } else {
+                SourceColorMetadata()
+            }
+            val clip = Clip(
+                sourceUri = managedUri,
+                sourceDurationMs = durationMs,
+                timelineStartMs = timelineStartMs,
+                trimStartMs = 0L,
+                trimEndMs = durationMs,
+                sourceColorMetadata = sourceColorMetadata
+            )
+            if (trackType == TrackType.AUDIO) {
+                nextAudioStartMs = clip.timelineEndMs
+            } else {
+                nextVisualStartMs = clip.timelineEndMs
+            }
+            ImportedIncomingMedia(kind = item.kind, trackType = trackType, clip = clip)
         }
     }
 

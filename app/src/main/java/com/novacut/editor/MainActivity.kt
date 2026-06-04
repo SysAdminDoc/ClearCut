@@ -24,6 +24,8 @@ import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import androidx.window.layout.FoldingFeature
 import androidx.window.layout.WindowInfoTracker
+import com.novacut.editor.engine.IncomingMediaIntentParser
+import com.novacut.editor.engine.IncomingMediaItem
 import com.novacut.editor.engine.ProjectShortcutPlanner
 import com.novacut.editor.ui.editor.EditorScreen
 import com.novacut.editor.ui.editor.LocalTabletopPosture
@@ -36,7 +38,7 @@ import kotlinx.coroutines.flow.collect
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    private var pendingVideoUri by mutableStateOf<Uri?>(null)
+    private var pendingIncomingMedia by mutableStateOf<List<IncomingMediaItem>>(emptyList())
     private var pendingEditorOpen by mutableStateOf<PendingEditorOpen?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -74,8 +76,8 @@ class MainActivity : ComponentActivity() {
                         }
                 }
 
-                LaunchedEffect(pendingVideoUri, currentRoute) {
-                    if (pendingVideoUri != null && currentRoute != null && currentRoute != "projects") {
+                LaunchedEffect(pendingIncomingMedia, currentRoute) {
+                    if (pendingIncomingMedia.isNotEmpty() && currentRoute != null && currentRoute != "projects") {
                         navController.navigate("projects") {
                             launchSingleTop = true
                             popUpTo("projects") { inclusive = false }
@@ -106,8 +108,8 @@ class MainActivity : ComponentActivity() {
                                     navController.navigate("editor/${Uri.encode(projectId)}?expectRecovery=false")
                                 },
                                 onSettings = { navController.navigate("settings") },
-                                pendingImportUri = pendingVideoUri,
-                                onPendingImportHandled = { pendingVideoUri = null }
+                                pendingImportItems = pendingIncomingMedia,
+                                onPendingImportHandled = { pendingIncomingMedia = emptyList() }
                             )
                         }
                         composable("settings") {
@@ -143,7 +145,7 @@ class MainActivity : ComponentActivity() {
     private fun handleIncomingIntent(intent: Intent?) {
         if (intent == null) return
         when (intent.action) {
-            Intent.ACTION_VIEW -> handleViewIntent(intent)
+            Intent.ACTION_VIEW, Intent.ACTION_SEND, Intent.ACTION_SEND_MULTIPLE -> handleIncomingMediaIntent(intent)
             ACTION_NEW_PROJECT, ACTION_OPEN_RECENT -> {
                 // Both App Shortcuts land on the Projects gallery. The gallery
                 // surfaces "New Project" + recent list; no extra plumbing
@@ -167,34 +169,27 @@ class MainActivity : ComponentActivity() {
         return PendingEditorOpen(projectId = projectId, expectRecovery = expectRecovery)
     }
 
-    private fun handleViewIntent(intent: Intent) {
-        val uri = intent.data ?: return
-        // Only accept content:// URIs — file:// is a security risk from other apps
-        if (uri.scheme != "content") return
-        try {
-            val mimeType = contentResolver.getType(uri)?.lowercase() ?: return
-            if (!ACCEPTED_VIEW_MIME_PREFIXES.any { mimeType.startsWith(it) }) return
-            contentResolver.openAssetFileDescriptor(uri, "r")?.use { descriptor ->
-                if (descriptor.length == 0L) return
-            } ?: return
-            // For now every accepted ACTION_VIEW URI lands on the projects
-            // gallery via `pendingVideoUri` — the field name is historical
-            // (video was the only accepted type until image/audio share
-            // intents were added). The gallery's pending-import handler is
-            // mime-aware and will route the URI to the correct destination
-            // (project import for video, "add to current project" for
-            // image/audio) once that follow-up ships.
-            pendingVideoUri = uri
-        } catch (_: Exception) {
-            // Ignore unreadable or malicious URIs
+    private fun handleIncomingMediaIntent(intent: Intent) {
+        val parsed = IncomingMediaIntentParser.parse(intent) { uri ->
+            runCatching { contentResolver.getType(uri) }.getOrNull()
+        }
+        if (parsed.isEmpty()) return
+
+        val readableItems = parsed.filter { item ->
+            runCatching {
+                contentResolver.openAssetFileDescriptor(item.uri, "r")?.use { descriptor ->
+                    descriptor.length != 0L
+                } ?: false
+            }.getOrDefault(false)
+        }
+        if (readableItems.isNotEmpty()) {
+            pendingIncomingMedia = readableItems
         }
     }
 
     companion object {
         const val ACTION_NEW_PROJECT = "com.novacut.editor.action.NEW_PROJECT"
         const val ACTION_OPEN_RECENT = "com.novacut.editor.action.OPEN_RECENT"
-
-        private val ACCEPTED_VIEW_MIME_PREFIXES = listOf("video/", "image/", "audio/")
     }
 }
 

@@ -1,5 +1,27 @@
 # Changelog
 
+## v3.74.40 — 2026-06-04
+
+### Sharesheet incoming media routing
+- Added `ACTION_SEND` and `ACTION_SEND_MULTIPLE` manifest targets for shared
+  video, image, and audio content.
+- Added a centralized incoming-media parser that accepts `ACTION_VIEW`, single
+  shares, and multi-item shares, keeps only `content://` URIs, preserves sender
+  order, drops duplicate stream/clipData entries, and requires read grants for
+  Sharesheet send actions.
+- Replaced the single pending video URI handoff with ordered pending media
+  items and broadened project creation so shared video/image items seed the
+  visual track while shared audio seeds the audio track.
+- Added generic media import copy/validation copy and partial-import feedback
+  for mixed Sharesheet batches.
+- Added JVM coverage for parser action/type/grant behavior and a manifest XML
+  guard that keeps Sharesheet send filters resolvable for binary shares.
+- Bumped runtime metadata to `versionName 3.74.40` / `versionCode 177`.
+- Verification: focused `:app:testDebugUnitTest --tests
+  com.novacut.editor.engine.IncomingMediaIntentParserTest --tests
+  com.novacut.editor.IncomingMediaManifestTest` and `git diff --check` passed.
+  APK assemble and emulator adb share validation were not run for this batch.
+
 ## v3.74.39 — 2026-06-04
 
 ### CI instrumentation smoke gate

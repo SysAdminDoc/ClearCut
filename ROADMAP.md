@@ -8,7 +8,7 @@ Active roadmap for forward-looking work. Shipped work is summarized in
 [RESEARCH_REPORT.md](RESEARCH_REPORT.md), and detailed historical plans are
 archived under [docs/archive](docs/archive/).
 
-Current version: **v3.74.39** (`versionCode` 176). Last consolidated:
+Current version: **v3.74.40** (`versionCode` 177). Last consolidated:
 2026-06-04.
 
 > Last researched: Cycle 12 - 2026-06-04.
@@ -778,7 +778,7 @@ Focus: incoming media handoff from other apps, without changing the existing
 
 #### Import & Interop
 
-- [ ] 🔬🤖 P1 — Add Sharesheet-compatible incoming media routing
+- [x] 🔬🤖 P1 — Add Sharesheet-compatible incoming media routing
   - Why: NovaCut's manifest comments describe video/image/audio handoff from
     other apps, but the exported activity is not registered for Android
     Sharesheet `ACTION_SEND` or `ACTION_SEND_MULTIPLE`. Users sharing a clip,
@@ -814,6 +814,14 @@ Focus: incoming media handoff from other apps, without changing the existing
     resolution test; then run device or emulator adb shares against `video/*`,
     `image/*`, `audio/*`, and multiple `EXTRA_STREAM` URIs to confirm routing and
     user-facing copy.
+  - Completed: v3.74.40 added Sharesheet `ACTION_SEND` and
+    `ACTION_SEND_MULTIPLE` filters for video, image, and audio, centralized
+    incoming-media intent parsing with `content://` and read-grant enforcement
+    for send actions, routed pending imports as ordered media items, and creates
+    a new project from shared video/image/audio clips while preserving visual
+    and audio ordering on their respective tracks. Focused JVM coverage locks
+    parser behavior and manifest send filters; emulator adb share validation is
+    still covered by the CI/device follow-up lanes.
   - Complexity: M
 
 #### Appendix — Cycle 6 Sources

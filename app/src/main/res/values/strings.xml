@@ -618,6 +618,8 @@
     <string name="projects_operation_duplicate_body">Copying \"%1$s\" with its saved edit state.</string>
     <string name="projects_operation_video_import_title">Importing video</string>
     <string name="projects_operation_video_import_body">Copying, validating, and opening the source as a new edit.</string>
+    <string name="projects_operation_media_import_title">Importing media</string>
+    <string name="projects_operation_media_import_body">Copying shared files into local project media.</string>
     <string name="projects_operation_template_import_title">Importing template</string>
     <string name="projects_operation_template_import_body">Checking compatibility and adding the file to saved templates.</string>
     <string name="projects_operation_template_share_title">Preparing template</string>
@@ -628,6 +630,8 @@
     <string name="projects_operation_template_delete_body">Removing the saved setup while keeping your projects intact.</string>
     <string name="project_duplicate_success">Project duplicated</string>
     <string name="project_import_invalid_video">NovaCut couldn\'t import that video. Choose a readable video file and try again.</string>
+    <string name="project_import_invalid_media">NovaCut couldn\'t import that shared media. Choose readable video, image, or audio files and try again.</string>
+    <string name="project_import_partial_success">Imported %1$d of %2$d shared files.</string>
     <string name="project_imported_default_name">Imported</string>
     <string name="project_template_import_success">Imported template: %1$s</string>
     <string name="project_template_import_failed">Template import failed</string>
@@ -1493,7 +1497,7 @@
     <string name="project_duplicate_failed">NovaCut couldn\'t duplicate that project right now.</string>
     <string name="project_delete_success">Deleted project: %1$s</string>
     <string name="project_delete_failed">NovaCut couldn\'t delete that project right now.</string>
-    <string name="project_import_copy_failed">NovaCut couldn\'t copy that video into local storage.</string>
+    <string name="project_import_copy_failed">NovaCut couldn\'t copy that media into local storage.</string>
     <string name="cd_smart_reframe">Smart reframe</string>
     <string name="cd_clip_thumbnail">Clip thumbnail</string>
     <string name="cd_tts_preview">Preview speech</string>
