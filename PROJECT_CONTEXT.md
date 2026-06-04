@@ -10,8 +10,8 @@ NovaCut is an Android video editor under package `com.novacut.editor`. The repo 
 
 Current live version evidence:
 
-- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 153`, `versionName = "3.74.16"`.
-- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.16`.
+- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 154`, `versionName = "3.74.17"`.
+- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.17`.
 - [README.md](README.md) and [ROADMAP.md](ROADMAP.md) both describe the v3.74.x line.
 - The 2026-05-17 continuation pushes each completed roadmap batch back to `origin/master`; verify `git status --short --branch` before assuming branch sync.
 
@@ -77,6 +77,10 @@ High-level modules and patterns:
 - Caption translation is now reachable from the Captions panel: selecting a
   target language builds translation rows from the selected clip's captions,
   and row edits/regeneration route through `EditorViewModel`.
+- Mixed-render export is now reachable behind conservative runtime gates:
+  eligible `MixedRenderComposer` plans pass stream-copy runs through
+  `StreamCopyExportEngine`, render modified runs through Media3 Transformer,
+  and stitch run outputs through `FFmpegEngine.concat`.
 - The privacy posture is coherent: local-first by default, opt-in cloud paths, explicit model downloads, and F-Droid awareness.
 - Cross-editor interoperability is already a first-class goal through FCPXML/OTIO/EDL-style planning.
 
@@ -206,7 +210,25 @@ High-level modules and patterns:
   self-completes through the same stub engine, so the panel's regenerate action
   does not leave rows permanently pending while real model activation is still
   gated.
-- Next roadmap item: P0 Mixed-render export orchestrator.
+- Next roadmap item after this batch was P0 Mixed-render export orchestrator.
+
+2026-06-04 mixed-render continuation:
+
+- Completed the P0 Mixed-render export orchestrator in v3.74.17.
+  `MixedRenderExportPlanner` now gates mixed rendering to the safe envelope
+  that can preserve edits: one visible video track, no separate audio,
+  overlay, or adjustment tracks, no export-side overlays/sidecars, and no
+  target-size bitrate request.
+- `VideoEngine.exportMixed(plan)` consumes `MixedRenderComposer` plans, preflights
+  each stream-copy run with `StreamCopyExportEngine.analyze`, writes
+  pass-through runs through stream-copy, writes re-encode runs through the
+  existing Media3 Transformer composition path, and stitches run outputs with
+  `FFmpegEngine.concat` when FFmpeg is available on Android runtime.
+- `ExportDelegate` now tries the mixed-render path after the pure stream-copy
+  shortcut and before the whole-timeline Transformer fallback, while sharing the
+  existing notes, subtitle, AI-disclosure, C2PA, state, and toast finalization
+  path.
+- Next roadmap item: P1 FillerRemovalPanel final deletion.
 
 2026-05-17 autonomous continuation:
 

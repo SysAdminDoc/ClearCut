@@ -1,5 +1,27 @@
 # Changelog
 
+## v3.74.17 — 2026-06-04
+
+### Mixed-render export orchestrator
+- Added `MixedRenderExportPlanner` to keep mixed rendering behind conservative
+  export-shape gates and to expose tested run slicing for Android execution.
+- Added `VideoEngine.exportMixed(plan)` so eligible mixed plans write
+  pass-through runs through `StreamCopyExportEngine`, render modified runs
+  through the existing Media3 Transformer composition path, and stitch run
+  outputs with `FFmpegEngine.concat`.
+- Updated Transformer polling so per-run renders can complete without briefly
+  marking the entire export complete between mixed-render steps.
+- `ExportDelegate` now attempts mixed rendering after the pure stream-copy
+  shortcut and before whole-timeline Transformer fallback while sharing the
+  existing video-export finalization path.
+- Added JVM coverage for mixed-render planner gates and run slicing.
+- Bumped runtime metadata to `versionName 3.74.17` / `versionCode 154`.
+- Verification: `git diff --check`, `scripts/verify_release_artifacts.py`,
+  APK-based 16 KB checks for debug/release, `apksigner verify` for
+  debug/release, `zipalign -c -P 16 -v 4` for debug/release/androidTest, and
+  `:app:testDebugUnitTest :app:assembleDebug :app:assembleRelease
+  :app:assembleDebugAndroidTest` passed.
+
 ## v3.74.16 — 2026-06-04
 
 ### Caption translation panel call site

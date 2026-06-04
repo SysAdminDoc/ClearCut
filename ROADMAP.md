@@ -8,7 +8,7 @@ Active roadmap for forward-looking work. Shipped work is summarized in
 [RESEARCH_REPORT.md](RESEARCH_REPORT.md), and detailed historical plans are
 archived under [docs/archive](docs/archive/).
 
-Current version: **v3.74.16** (`versionCode` 153). Last consolidated:
+Current version: **v3.74.17** (`versionCode` 154). Last consolidated:
 2026-06-04.
 
 ## Current State
@@ -41,6 +41,10 @@ Current version: **v3.74.16** (`versionCode` 153). Last consolidated:
 - v3.74.16 hosts `CaptionTranslationPanel` inside the Captions panel, builds
   rows from selected-clip captions on target-language selection, and dispatches
   edits/regeneration through the ViewModel translation surface.
+- v3.74.17 adds the mixed-render export orchestrator: eligible mixed plans now
+  route pass-through runs through stream-copy, re-encode runs through Media3
+  Transformer, and final stitching through FFmpeg concat with release-gated
+  fallback to whole-timeline Transformer.
 
 ## Source Archives
 
@@ -53,7 +57,6 @@ Current version: **v3.74.16** (`versionCode` 153). Last consolidated:
 
 | Priority | Work | Exit criteria |
 |---|---|---|
-| P0 | Mixed-render export orchestrator | `VideoEngine.exportMixed(plan)` consumes `MixedRenderComposer` plans and routes stream-copy, Transformer, and FFmpeg concat paths with Android-runtime verification. |
 | P1 | FillerRemovalPanel final deletion | Remove the deprecated panel slot, old ViewModel methods, stale state fields, and remaining suppression after the Cut Assistant route is fully adopted. |
 | P1 | Per-tool AI requirement adoption | Migrate each AI tool path from the legacy `aiRequirementPrompt` to `AiModelRequirementSheet`, keeping a fallback only for tools without registry entries. |
 | P1 | Editor state decomposition | Split `EditorState` into domain sealed substates so caption, compound, export, AI, media, and panel state can evolve independently. |

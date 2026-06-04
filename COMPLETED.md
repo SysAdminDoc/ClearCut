@@ -7,7 +7,7 @@ Last consolidated: 2026-06-04.
 
 ## Current Delivered Baseline
 
-- Current version: v3.74.16 (`versionCode` 153).
+- Current version: v3.74.17 (`versionCode` 154).
 - Multi-track Android NLE with project gallery, editor, timeline, preview,
   effects, transitions, text, captions, audio, export, settings, templates,
   project archive/import, and diagnostic bundle surfaces.
@@ -64,6 +64,11 @@ Last consolidated: 2026-06-04.
   now hosts `CaptionTranslationPanel`, selected-clip captions are converted into
   translation rows when a target language is selected, and edit/regenerate
   actions dispatch through the ViewModel translation surface.
+- Mixed-render export orchestrator shipped in v3.74.17: `VideoEngine.exportMixed`
+  consumes `MixedRenderComposer` plans, stream-copy preflights pass-through
+  runs, renders modified runs through Transformer, and stitches successful run
+  outputs with FFmpeg concat before falling back to whole-timeline Transformer
+  when the safe mixed-render envelope is not met.
 
 ## Preserved Historical Detail
 

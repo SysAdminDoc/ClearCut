@@ -40,7 +40,9 @@ private const val DEFAULT_STILL_IMAGE_DURATION_MS = 3_000L
 @androidx.annotation.OptIn(UnstableApi::class)
 class VideoEngine @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val segmentationEngine: SegmentationEngine
+    private val segmentationEngine: SegmentationEngine,
+    private val streamCopyEngine: StreamCopyExportEngine,
+    private val ffmpegEngine: FFmpegEngine
 ) {
     private data class MediaCharacteristics(
         val isStillImage: Boolean,
@@ -73,6 +75,11 @@ class VideoEngine @Inject constructor(
         val overlayStartUs: Long,
         val overlayDurationUs: Long,
         val decision: LottieOverlayBackendDecision
+    )
+
+    private data class TransformerExportPlan(
+        val composition: Composition,
+        val mimeType: String
     )
 
     private var player: ExoPlayer? = null
@@ -375,87 +382,23 @@ class VideoEngine @Inject constructor(
         _exportErrorMessage.value = null
 
         try {
-            val visibleVideoTracks = tracks
-                .sortedBy { it.index }
-                .filter {
-                    (it.type == TrackType.VIDEO || it.type == TrackType.OVERLAY) &&
-                        it.isVisible &&
-                        it.clips.any { clip -> clip.durationMs > 0L }
-                }
-            if (visibleVideoTracks.isEmpty()) {
-                throw IllegalStateException("No video clips to export")
-            }
-            val soloTrackIds = tracks.filter { it.isSolo }.map { it.id }.toSet()
-            val (targetW, targetH) = config.resolution.forAspect(config.aspectRatio)
-
-            val totalTimelineDurationMs = maxOf(
-                tracks.maxOfOrNull { track ->
-                    track.clips.maxOfOrNull { clip -> clip.timelineEndMs } ?: 0L
-                } ?: 0L,
-                textOverlays.maxOfOrNull { it.endTimeMs } ?: 0L,
-                lottieOverlays.maxOfOrNull { it.endTimeMs } ?: 0L
-            )
-            // Diagnostic: Media3 Transformer doesn't natively support reverse playback. Any
-            // clip flagged isReversed exports forward — log so users / logs can surface this
-            // limitation when the visible result doesn't match expectations.
-            val reversedCount = visibleVideoTracks.sumOf { track -> track.clips.count { it.isReversed } }
-            if (reversedCount > 0) {
-                Log.w(TAG, "Export: $reversedCount reversed clip(s) will render forward (Transformer limitation)")
-            }
-            val visualTrackSequences = buildVideoSequences(
-                visibleVideoTracks = visibleVideoTracks,
-                soloTrackIds = soloTrackIds,
+            val transformerPlan = buildTransformerExportPlan(
                 tracks = tracks,
-                totalTimelineDurationMs = totalTimelineDurationMs,
                 config = config,
-                targetW = targetW,
-                targetH = targetH,
                 textOverlays = textOverlays,
                 lottieOverlays = lottieOverlays,
                 trackedObjects = trackedObjects
             )
-            val unsupportedTrackBlendModes = visualTrackSequences
-                .count { it.compositorLayer.blendMode != BlendMode.NORMAL }
-            if (unsupportedTrackBlendModes > 0) {
-                Log.w(
-                    TAG,
-                    "Export: $unsupportedTrackBlendModes track blend mode(s) render with normal alpha " +
-                        "because Media3's public compositor settings expose alpha/transform only"
-                )
-            }
 
-            val audioSequences = buildAudioSequences(tracks, soloTrackIds)
-            val allSequences = buildList {
-                visualTrackSequences.forEach { add(it.sequence) }
-                addAll(audioSequences)
-            }
-            val hasEmbeddedVisualAudio = visualTrackSequences.any { it.hasEmbeddedAudio }
-
-            // Preserve HDR through the encoder chain only when the caller
-            // opted in AND the codec can carry HDR. H.264 has no HDR profile;
-            // HEVC, AV1 and VP9 do.
-            val preserveHdr = config.hdr10PlusMetadata && config.codec != VideoCodec.H264
-            val composition = buildComposition(
-                allSequences,
-                audioSequences.isNotEmpty(),
-                hasEmbeddedVisualAudio,
-                targetWidth = targetW,
-                targetHeight = targetH,
-                hasMultipleVideoSequences = visualTrackSequences.size > 1,
-                preserveHdr = preserveHdr,
-                compositorLayers = visualTrackSequences.map { it.compositorLayer }
+            startTransformerWithPolling(
+                composition = transformerPlan.composition,
+                mimeType = transformerPlan.mimeType,
+                config = config,
+                outputFile = outputFile,
+                onProgress = onProgress,
+                onComplete = onComplete,
+                onError = onError
             )
-
-            val mimeType = if (config.transparentBackground) {
-                MimeTypes.VIDEO_VP9
-            } else when (config.codec) {
-                VideoCodec.HEVC -> MimeTypes.VIDEO_H265
-                VideoCodec.H264 -> MimeTypes.VIDEO_H264
-                VideoCodec.AV1 -> MimeTypes.VIDEO_AV1
-                VideoCodec.VP9 -> MimeTypes.VIDEO_VP9
-            }
-
-            startTransformerWithPolling(composition, mimeType, config, outputFile, onProgress, onComplete, onError)
         } catch (e: Exception) {
             Log.e(TAG, "Export setup failed", e)
             _exportErrorMessage.value = e.message ?: "Export setup failed"
@@ -466,6 +409,304 @@ class VideoEngine @Inject constructor(
             outputFile.delete()
             onError(e)
         }
+    }
+
+    @androidx.annotation.OptIn(UnstableApi::class)
+    suspend fun exportMixed(
+        plan: MixedRenderComposer.CompositionPlan,
+        tracks: List<Track>,
+        config: ExportConfig,
+        outputFile: File,
+        textOverlays: List<com.novacut.editor.model.TextOverlay> = emptyList(),
+        lottieOverlays: List<LottieOverlaySpec> = emptyList(),
+        trackedObjects: List<TrackedObject> = emptyList(),
+        onProgress: (Float) -> Unit = {},
+        onComplete: () -> Unit = {},
+        onError: (Exception) -> Unit = {}
+    ): Boolean {
+        if (plan.benefit != MixedRenderComposer.Benefit.Mixed || !plan.needsConcat) return false
+        if (textOverlays.isNotEmpty() || lottieOverlays.isNotEmpty() || trackedObjects.any { it.isEnabled }) {
+            Log.d(TAG, "Mixed export skipped: overlays or tracked objects require whole-timeline Transformer")
+            return false
+        }
+        if (!ffmpegEngine.isAvailable()) {
+            Log.d(TAG, "Mixed export skipped: FFmpeg concat unavailable")
+            return false
+        }
+
+        preflightMixedStreamCopyRuns(plan, tracks)?.let { reason ->
+            Log.d(TAG, "Mixed export skipped: $reason")
+            return false
+        }
+
+        synchronized(this) {
+            if (_exportState.value == ExportState.EXPORTING) {
+                Log.w(TAG, "Export already in progress")
+                return true
+            }
+            _exportState.value = ExportState.EXPORTING
+            activeExportOutputFile = outputFile
+        }
+        _exportProgress.value = 0f
+        _exportErrorMessage.value = null
+
+        val parentDir = outputFile.parentFile ?: context.cacheDir
+        val tempDir = File(
+            parentDir,
+            ".novacut-mixed-${MixedRenderComposer.sanitiseStem(outputFile.nameWithoutExtension)}-" +
+                System.currentTimeMillis()
+        )
+        val runWeightSum = plan.runs.sumOf { it.run.durationMs.coerceAtLeast(1L) }
+        val concatWeight = (runWeightSum / 20L).coerceAtLeast(1L)
+        val totalWeight = (runWeightSum + concatWeight).coerceAtLeast(1L)
+        var completedWeight = 0L
+
+        fun publishMixedProgress(baseWeight: Long, stepWeight: Long, progress: Float) {
+            val mixedProgress = (
+                baseWeight.toDouble() + stepWeight.toDouble() * progress.coerceIn(0f, 1f)
+            ) / totalWeight.toDouble()
+            val clamped = mixedProgress.toFloat().coerceIn(0f, 0.99f)
+            _exportProgress.value = clamped
+            onProgress(clamped)
+        }
+
+        return try {
+            withContext(Dispatchers.IO) { tempDir.mkdirs() }
+            val outputsByName = mutableMapOf<String, File>()
+
+            for (execution in plan.runs.sortedBy { it.index }) {
+                ensureMixedExportActive("mixed run ${execution.index}")
+                val stepWeight = execution.run.durationMs.coerceAtLeast(1L)
+                val runOutput = File(tempDir, execution.outputFileName)
+                when (execution.engine) {
+                    MixedRenderComposer.Engine.STREAM_COPY -> {
+                        val runTracks = MixedRenderExportPlanner.sliceTracksForRun(
+                            tracks = tracks,
+                            run = execution.run,
+                            normaliseTimelineStart = false
+                        )
+                        val eligibility = streamCopyEngine.analyze(runTracks, hasEffectsOrOverlays = false)
+                        if (!eligibility.eligible) {
+                            throw IllegalStateException(
+                                "Mixed stream-copy run ${execution.index} is not eligible: ${eligibility.reason}"
+                            )
+                        }
+                        val ok = streamCopyEngine.execute(
+                            e = eligibility,
+                            outputPath = runOutput.absolutePath,
+                            onProgress = { progress ->
+                                publishMixedProgress(completedWeight, stepWeight, progress)
+                            }
+                        )
+                        if (!ok) {
+                            throw IllegalStateException("Mixed stream-copy run ${execution.index} failed")
+                        }
+                    }
+                    MixedRenderComposer.Engine.TRANSFORMER -> {
+                        val runTracks = MixedRenderExportPlanner.sliceTracksForRun(
+                            tracks = tracks,
+                            run = execution.run,
+                            normaliseTimelineStart = true
+                        )
+                        val transformerPlan = buildTransformerExportPlan(
+                            tracks = runTracks,
+                            config = config,
+                            textOverlays = emptyList(),
+                            lottieOverlays = emptyList(),
+                            trackedObjects = emptyList()
+                        )
+                        var segmentError: Exception? = null
+                        startTransformerWithPolling(
+                            composition = transformerPlan.composition,
+                            mimeType = transformerPlan.mimeType,
+                            config = config,
+                            outputFile = runOutput,
+                            onProgress = { progress ->
+                                publishMixedProgress(completedWeight, stepWeight, progress)
+                            },
+                            onComplete = {
+                                publishMixedProgress(completedWeight, stepWeight, 1f)
+                            },
+                            onError = { error -> segmentError = error },
+                            markCompleteOnFinish = false
+                        )
+                        segmentError?.let { throw it }
+                    }
+                }
+                ensureNonEmptyExportOutput(runOutput, "Mixed run ${execution.index}")
+                outputsByName[execution.outputFileName] = runOutput
+                completedWeight += stepWeight
+                publishMixedProgress(completedWeight, 1L, 0f)
+            }
+
+            ensureMixedExportActive("mixed concat")
+            val concat = plan.concat ?: return false
+            val concatInputs = concat.inputs.map { name ->
+                outputsByName[name] ?: throw IllegalStateException("Mixed concat input missing: $name")
+            }
+            activeExportOutputFile = outputFile
+            val concatOk = ffmpegEngine.concat(
+                inputFiles = concatInputs,
+                outputFile = outputFile,
+                onProgress = { progress ->
+                    publishMixedProgress(completedWeight, concatWeight, progress)
+                }
+            )
+            if (!concatOk) {
+                throw IllegalStateException("Mixed FFmpeg concat failed")
+            }
+            ensureNonEmptyExportOutput(outputFile, "Mixed concat")
+
+            _exportState.value = ExportState.COMPLETE
+            _exportProgress.value = 1f
+            activeExportOutputFile = null
+            onProgress(1f)
+            onComplete()
+            true
+        } catch (e: CancellationException) {
+            Log.d(TAG, "Mixed export cancelled", e)
+            if (_exportState.value == ExportState.EXPORTING) {
+                _exportState.value = ExportState.CANCELLED
+            }
+            _exportProgress.value = 0f
+            activeTransformer = null
+            activeExportOutputFile = null
+            runCatching { outputFile.delete() }
+            throw e
+        } catch (e: Exception) {
+            Log.e(TAG, "Mixed export failed", e)
+            _exportErrorMessage.value = e.message ?: "Mixed export failed"
+            _exportState.value = ExportState.ERROR
+            _exportProgress.value = 0f
+            activeTransformer = null
+            activeExportOutputFile = null
+            runCatching { outputFile.delete() }
+            onError(e)
+            true
+        } finally {
+            runCatching { tempDir.deleteRecursively() }
+        }
+    }
+
+    private fun preflightMixedStreamCopyRuns(
+        plan: MixedRenderComposer.CompositionPlan,
+        tracks: List<Track>
+    ): String? {
+        for (execution in plan.runs) {
+            if (execution.engine != MixedRenderComposer.Engine.STREAM_COPY) continue
+            val runTracks = MixedRenderExportPlanner.sliceTracksForRun(
+                tracks = tracks,
+                run = execution.run,
+                normaliseTimelineStart = false
+            )
+            val eligibility = streamCopyEngine.analyze(runTracks, hasEffectsOrOverlays = false)
+            if (!eligibility.eligible) {
+                return "stream-copy run ${execution.index} is not eligible: ${eligibility.reason}"
+            }
+        }
+        return null
+    }
+
+    private fun ensureMixedExportActive(step: String) {
+        when (_exportState.value) {
+            ExportState.EXPORTING -> Unit
+            ExportState.CANCELLED -> throw CancellationException("Mixed export cancelled during $step")
+            ExportState.ERROR -> throw IllegalStateException(
+                _exportErrorMessage.value ?: "Mixed export failed during $step"
+            )
+            else -> throw CancellationException("Mixed export stopped during $step")
+        }
+    }
+
+    private fun ensureNonEmptyExportOutput(outputFile: File, label: String) {
+        if (!outputFile.exists() || outputFile.length() <= 0L) {
+            throw IllegalStateException("$label produced an empty output file")
+        }
+    }
+
+    @androidx.annotation.OptIn(UnstableApi::class)
+    private fun buildTransformerExportPlan(
+        tracks: List<Track>,
+        config: ExportConfig,
+        textOverlays: List<com.novacut.editor.model.TextOverlay>,
+        lottieOverlays: List<LottieOverlaySpec>,
+        trackedObjects: List<TrackedObject>
+    ): TransformerExportPlan {
+        val visibleVideoTracks = tracks
+            .sortedBy { it.index }
+            .filter {
+                (it.type == TrackType.VIDEO || it.type == TrackType.OVERLAY) &&
+                    it.isVisible &&
+                    it.clips.any { clip -> clip.durationMs > 0L }
+            }
+        if (visibleVideoTracks.isEmpty()) {
+            throw IllegalStateException("No video clips to export")
+        }
+        val soloTrackIds = tracks.filter { it.isSolo }.map { it.id }.toSet()
+        val (targetW, targetH) = config.resolution.forAspect(config.aspectRatio)
+
+        val totalTimelineDurationMs = maxOf(
+            tracks.maxOfOrNull { track ->
+                track.clips.maxOfOrNull { clip -> clip.timelineEndMs } ?: 0L
+            } ?: 0L,
+            textOverlays.maxOfOrNull { it.endTimeMs } ?: 0L,
+            lottieOverlays.maxOfOrNull { it.endTimeMs } ?: 0L
+        )
+        val reversedCount = visibleVideoTracks.sumOf { track -> track.clips.count { it.isReversed } }
+        if (reversedCount > 0) {
+            Log.w(TAG, "Export: $reversedCount reversed clip(s) will render forward (Transformer limitation)")
+        }
+        val visualTrackSequences = buildVideoSequences(
+            visibleVideoTracks = visibleVideoTracks,
+            soloTrackIds = soloTrackIds,
+            tracks = tracks,
+            totalTimelineDurationMs = totalTimelineDurationMs,
+            config = config,
+            targetW = targetW,
+            targetH = targetH,
+            textOverlays = textOverlays,
+            lottieOverlays = lottieOverlays,
+            trackedObjects = trackedObjects
+        )
+        val unsupportedTrackBlendModes = visualTrackSequences
+            .count { it.compositorLayer.blendMode != BlendMode.NORMAL }
+        if (unsupportedTrackBlendModes > 0) {
+            Log.w(
+                TAG,
+                "Export: $unsupportedTrackBlendModes track blend mode(s) render with normal alpha " +
+                    "because Media3's public compositor settings expose alpha/transform only"
+            )
+        }
+
+        val audioSequences = buildAudioSequences(tracks, soloTrackIds)
+        val allSequences = buildList {
+            visualTrackSequences.forEach { add(it.sequence) }
+            addAll(audioSequences)
+        }
+        val hasEmbeddedVisualAudio = visualTrackSequences.any { it.hasEmbeddedAudio }
+
+        val preserveHdr = config.hdr10PlusMetadata && config.codec != VideoCodec.H264
+        val composition = buildComposition(
+            allSequences,
+            audioSequences.isNotEmpty(),
+            hasEmbeddedVisualAudio,
+            targetWidth = targetW,
+            targetHeight = targetH,
+            hasMultipleVideoSequences = visualTrackSequences.size > 1,
+            preserveHdr = preserveHdr,
+            compositorLayers = visualTrackSequences.map { it.compositorLayer }
+        )
+
+        val mimeType = if (config.transparentBackground) {
+            MimeTypes.VIDEO_VP9
+        } else when (config.codec) {
+            VideoCodec.HEVC -> MimeTypes.VIDEO_H265
+            VideoCodec.H264 -> MimeTypes.VIDEO_H264
+            VideoCodec.AV1 -> MimeTypes.VIDEO_AV1
+            VideoCodec.VP9 -> MimeTypes.VIDEO_VP9
+        }
+
+        return TransformerExportPlan(composition, mimeType)
     }
 
     @androidx.annotation.OptIn(UnstableApi::class)
@@ -1100,9 +1341,11 @@ class VideoEngine @Inject constructor(
         outputFile: File,
         onProgress: (Float) -> Unit,
         onComplete: () -> Unit,
-        onError: (Exception) -> Unit
+        onError: (Exception) -> Unit,
+        markCompleteOnFinish: Boolean = true
     ) {
         withContext(Dispatchers.Main) {
+            var terminalReached = false
             val transformer = Transformer.Builder(context)
                 .setVideoMimeType(mimeType)
                 .setAudioMimeType(MimeTypes.AUDIO_AAC)
@@ -1140,9 +1383,12 @@ class VideoEngine @Inject constructor(
                         onError(IllegalStateException("Empty output file"))
                         return
                     }
-                    _exportState.value = ExportState.COMPLETE
-                    _exportProgress.value = 1f
-                    activeExportOutputFile = null
+                    terminalReached = true
+                    if (markCompleteOnFinish) {
+                        _exportState.value = ExportState.COMPLETE
+                        _exportProgress.value = 1f
+                        activeExportOutputFile = null
+                    }
                     onComplete()
                 }
 
@@ -1159,6 +1405,7 @@ class VideoEngine @Inject constructor(
                     _exportProgress.value = 0f
                     activeExportOutputFile = null
                     outputFile.delete()
+                    terminalReached = true
                     onError(exportException)
                 }
             }
@@ -1170,7 +1417,7 @@ class VideoEngine @Inject constructor(
             val holder = ProgressHolder()
             var pollCount = 0
             val maxPolls = 2400 // 10 minutes at 250ms intervals
-            while (_exportState.value == ExportState.EXPORTING && pollCount++ < maxPolls) {
+            while (_exportState.value == ExportState.EXPORTING && !terminalReached && pollCount++ < maxPolls) {
                 val state = transformer.getProgress(holder)
                 if (state == Transformer.PROGRESS_STATE_AVAILABLE) {
                     _exportProgress.value = holder.progress / 100f
@@ -1178,7 +1425,7 @@ class VideoEngine @Inject constructor(
                 }
                 delay(250)
             }
-            if (pollCount >= maxPolls && _exportState.value == ExportState.EXPORTING) {
+            if (pollCount >= maxPolls && _exportState.value == ExportState.EXPORTING && !terminalReached) {
                 Log.w(TAG, "Export progress polling timeout after 10 minutes")
                 transformer.cancel()
                 _exportErrorMessage.value = "Export timed out after 10 minutes"
@@ -1186,6 +1433,7 @@ class VideoEngine @Inject constructor(
                 _exportProgress.value = 0f
                 activeExportOutputFile = null
                 outputFile.delete()
+                terminalReached = true
                 onError(Exception("Export timed out"))
             }
             activeTransformer = null

@@ -14,6 +14,7 @@ import com.novacut.editor.engine.C2paExportEngine
 import com.novacut.editor.engine.ContactSheetExporter
 import com.novacut.editor.engine.ExportService
 import com.novacut.editor.engine.ExportState
+import com.novacut.editor.engine.MixedRenderExportPlanner
 import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.engine.StreamCopyExportEngine
 import com.novacut.editor.engine.VideoEngine
@@ -186,6 +187,22 @@ class ExportDelegate(
         showToast("Stream-copy export complete: ${finalizedFile.name}")
         return true
     }
+
+    private fun buildMixedRenderPlan(
+        tracks: List<com.novacut.editor.model.Track>,
+        config: ExportConfig,
+        textOverlays: List<com.novacut.editor.model.TextOverlay>,
+        state: EditorState,
+        outputFile: File
+    ) = MixedRenderExportPlanner.buildPlan(
+        tracks = tracks,
+        config = config,
+        finalOutputName = outputFile.name,
+        projectStem = outputFile.nameWithoutExtension,
+        textOverlays = textOverlays,
+        hasImageOverlays = state.imageOverlays.isNotEmpty(),
+        hasTrackedObjects = state.trackedObjects.any { it.isEnabled },
+    )
 
     private fun finalizeFilenameSize(outputFile: File): File {
         if (!outputFile.name.contains("{sizeMB}")) return outputFile
@@ -444,6 +461,82 @@ class ExportDelegate(
                 preferredOutputName = preferredOutputName ?: currentState.project.name
             )
 
+            fun handleVideoExportComplete() {
+                // If the project carries scratchpad notes, drop them next to the render
+                // as a `.txt` sidecar. Runs on IO to avoid blocking the Transformer
+                // callback thread; failure is logged but doesn't taint the export.
+                val notes = currentState.project.notes
+                if (notes.isNotBlank()) {
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            val sidecar = File(
+                                outputFile.parentFile,
+                                "${outputFile.nameWithoutExtension}.notes.txt"
+                            )
+                            writeUtf8TextAtomically(sidecar, notes)
+                        } catch (e: Exception) {
+                            android.util.Log.w("ExportDelegate", "Scratchpad sidecar write failed", e)
+                        }
+                    }
+                }
+                // Subtitle sidecar. Written next to the video with a matching
+                // basename so the pair travels together through `saveToGallery`
+                // (image-collection fallback path) and share intents. Sequential
+                // with the state → COMPLETE transition: we block on the write
+                // before the UI gets Share/Save-to-Gallery buttons, so a user
+                // tapping Share can't race a half-written .srt. Runs on IO with
+                // runBlocking only because the Transformer callback lands on the
+                // Main thread where `launch`/`await` would defer past the
+                // state update.
+                val subtitleFormat = configWithChapters.subtitleFormat
+                if (subtitleFormat != null) {
+                    try {
+                        val captions = tracks
+                            .flatMap { t -> t.clips }
+                            .flatMap { clip ->
+                                clip.captions.map { c ->
+                                    c.copy(
+                                        startTimeMs = c.startTimeMs + clip.timelineStartMs,
+                                        endTimeMs = c.endTimeMs + clip.timelineStartMs
+                                    )
+                                }
+                            }
+                        if (captions.isNotEmpty()) {
+                            val sidecar = File(
+                                outputFile.parentFile,
+                                "${outputFile.nameWithoutExtension}.${subtitleFormat.extension}"
+                            )
+                            com.novacut.editor.engine.SubtitleExporter.export(
+                                captions, subtitleFormat, sidecar
+                            )
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.w("ExportDelegate", "Subtitle sidecar write failed", e)
+                    }
+                }
+                // Finalize the `{sizeMB}` filename token (if used) by
+                // renaming the output to include the actual MB count.
+                // No-op when the template didn't reference the token,
+                // so existing templates are unaffected.
+                val finalizedFile = finalizeFilenameSize(outputFile)
+                writeAiDisclosureSidecarIfRequested(finalizedFile, configWithChapters, currentState)
+                stateFlow.update { it.copy(
+                    exportState = ExportState.COMPLETE,
+                    exportProgress = 1f,
+                    lastExportedFilePath = finalizedFile.absolutePath
+                ) }
+                showToast("Export complete: ${finalizedFile.name}")
+            }
+
+            fun handleVideoExportError(e: Exception) {
+                outputFile.delete()
+                stateFlow.update { it.copy(
+                    exportState = ExportState.ERROR,
+                    exportErrorMessage = e.message ?: "Unknown error",
+                    lastExportedFilePath = null
+                ) }
+            }
+
             try {
                 // v3.69 stream-copy fast-path. Only runs when the caller opted
                 // in via `allowStreamCopy` AND the timeline is a single
@@ -466,6 +559,29 @@ class ExportDelegate(
                     putExtra(ExportService.EXTRA_OUTPUT_PATH, outputFile.absolutePath)
                 }
                 appContext.startForegroundService(serviceIntent)
+                val mixedPlan = buildMixedRenderPlan(
+                    tracks = tracks,
+                    config = configWithChapters,
+                    textOverlays = textOverlays,
+                    state = currentState,
+                    outputFile = outputFile
+                )
+                if (mixedPlan != null && videoEngine.exportMixed(
+                        plan = mixedPlan,
+                        tracks = tracks,
+                        config = configWithChapters,
+                        outputFile = outputFile,
+                        textOverlays = textOverlays,
+                        trackedObjects = currentState.trackedObjects,
+                        onProgress = { progress ->
+                            stateFlow.update { it.copy(exportProgress = progress) }
+                        },
+                        onComplete = ::handleVideoExportComplete,
+                        onError = ::handleVideoExportError
+                    )
+                ) {
+                    return@launch
+                }
                 videoEngine.export(
                     tracks = tracks,
                     config = configWithChapters,
@@ -475,80 +591,8 @@ class ExportDelegate(
                     onProgress = { progress ->
                         stateFlow.update { it.copy(exportProgress = progress) }
                     },
-                    onComplete = {
-                        // If the project carries scratchpad notes, drop them next to the render
-                        // as a `.txt` sidecar. Runs on IO to avoid blocking the Transformer
-                        // callback thread; failure is logged but doesn't taint the export.
-                        val notes = currentState.project.notes
-                        if (notes.isNotBlank()) {
-                            scope.launch(Dispatchers.IO) {
-                                try {
-                                    val sidecar = File(
-                                        outputFile.parentFile,
-                                        "${outputFile.nameWithoutExtension}.notes.txt"
-                                    )
-                                    writeUtf8TextAtomically(sidecar, notes)
-                                } catch (e: Exception) {
-                                    android.util.Log.w("ExportDelegate", "Scratchpad sidecar write failed", e)
-                                }
-                            }
-                        }
-                        // Subtitle sidecar. Written next to the video with a matching
-                        // basename so the pair travels together through `saveToGallery`
-                        // (image-collection fallback path) and share intents. Sequential
-                        // with the state → COMPLETE transition: we block on the write
-                        // before the UI gets Share/Save-to-Gallery buttons, so a user
-                        // tapping Share can't race a half-written .srt. Runs on IO with
-                        // runBlocking only because the Transformer callback lands on the
-                        // Main thread where `launch`/`await` would defer past the
-                        // state update.
-                        val subtitleFormat = configWithChapters.subtitleFormat
-                        if (subtitleFormat != null) {
-                            try {
-                                val captions = tracks
-                                    .flatMap { t -> t.clips }
-                                    .flatMap { clip ->
-                                        clip.captions.map { c ->
-                                            c.copy(
-                                                startTimeMs = c.startTimeMs + clip.timelineStartMs,
-                                                endTimeMs = c.endTimeMs + clip.timelineStartMs
-                                            )
-                                        }
-                                    }
-                                if (captions.isNotEmpty()) {
-                                    val sidecar = File(
-                                        outputFile.parentFile,
-                                        "${outputFile.nameWithoutExtension}.${subtitleFormat.extension}"
-                                    )
-                                    com.novacut.editor.engine.SubtitleExporter.export(
-                                        captions, subtitleFormat, sidecar
-                                    )
-                                }
-                            } catch (e: Exception) {
-                                android.util.Log.w("ExportDelegate", "Subtitle sidecar write failed", e)
-                            }
-                        }
-                        // Finalize the `{sizeMB}` filename token (if used) by
-                        // renaming the output to include the actual MB count.
-                        // No-op when the template didn't reference the token,
-                        // so existing templates are unaffected.
-                        val finalizedFile = finalizeFilenameSize(outputFile)
-                        writeAiDisclosureSidecarIfRequested(finalizedFile, configWithChapters, currentState)
-                        stateFlow.update { it.copy(
-                            exportState = ExportState.COMPLETE,
-                            exportProgress = 1f,
-                            lastExportedFilePath = finalizedFile.absolutePath
-                        ) }
-                        showToast("Export complete: ${finalizedFile.name}")
-                    },
-                    onError = { e ->
-                        outputFile.delete()
-                        stateFlow.update { it.copy(
-                            exportState = ExportState.ERROR,
-                            exportErrorMessage = e.message ?: "Unknown error",
-                            lastExportedFilePath = null
-                        ) }
-                    }
+                    onComplete = ::handleVideoExportComplete,
+                    onError = ::handleVideoExportError
                 )
             } catch (e: kotlinx.coroutines.CancellationException) {
                 // The user actively cancelled — do not surface as ERROR.
