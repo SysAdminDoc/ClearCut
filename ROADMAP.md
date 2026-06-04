@@ -11,7 +11,7 @@ archived under [docs/archive](docs/archive/).
 Current version: **v3.74.44** (`versionCode` 181). Last consolidated:
 2026-06-04.
 
-> Last researched: Cycle 13 - 2026-06-04.
+> Last researched: Cycle 14 - 2026-06-04.
 
 ## ▶ Implementer Instructions (for the build machine)
 
@@ -1299,3 +1299,79 @@ a verifiable C2PA Content Credentials export path.
   https://spec.c2pa.org/specifications/specifications/2.4/specs/C2PA_Specification.html
 - CAWG Training and Data Mining Assertion 1.1:
   https://cawg.io/training-and-data-mining/1.1/
+
+### Researcher Queue (Cycle 14 - 2026-06-04)
+
+Focus: make NovaCut's platform-publish surface distinguish an Android share
+handoff from real API-backed direct publishing.
+
+#### Platform Publishing & Share Handoff
+
+- [ ] 🔬🤖 P2 — Split Direct Publish into honest share handoff and gated API upload
+  - Why: the current panel is titled "Direct Publish" and offers YouTube,
+    TikTok, Instagram, Threads, X, and LinkedIn chips, but the implementation
+    only opens a platform-targeted `ACTION_SEND` intent. That can hand the MP4
+    and suggested text to another app, but it cannot guarantee a post was
+    created, set visibility, preserve metadata, apply platform AI-disclosure
+    toggles, schedule, resume upload, or report processing failures. Users need
+    a clear "Open in platform" handoff today and an explicitly gated API upload
+    path only when the platform prerequisites are real.
+  - Evidence: `DirectPublishEngine.publish(...)` validates a local file, obtains
+    a FileProvider URI, builds an `Intent.ACTION_SEND` with title/text/stream,
+    optionally pins the target package if installed, and always returns
+    `Result(..., Method.SHARE_INTENT, "Opening ...")`. There is no OAuth token
+    storage, upload session, API client, SDK dependency, progress/cancel state,
+    status polling, or `Method.API_UPLOAD` code path. `V369Delegate` immediately
+    calls `startActivity(intent)` and only catches activity-launch failure. The
+    tests cover share-body normalization and target AI-disclosure flags, not
+    actual platform publishing.
+  - Current-source check: Android's sharing docs say `ACTION_SEND` sends data to
+    another app and recommend the Android Sharesheet for consistent sharing:
+    https://developer.android.com/training/sharing/send
+    YouTube `videos.insert` is an authorized media-upload API, requires an
+    upload scope, and notes that
+    uploads from unverified API projects are restricted to private visibility:
+    https://developers.google.com/youtube/v3/docs/videos/insert
+    YouTube's resumable-upload guide recommends resumable uploads for large
+    files, unstable networks, and mobile-originated uploads:
+    https://developers.google.com/youtube/v3/guides/using_resumable_upload_protocol
+    TikTok Direct Post requires creator-info query, post initialization,
+    exporting the video to TikTok servers, explicit consent, and audit before
+    unaudited clients can post beyond private mode:
+    https://developers.tiktok.com/doc/content-posting-api-reference-direct-post
+  - Touches: `V369FeaturesPanel` copy/title/chips, `DirectPublishEngine.Result`
+    semantics, share-intent chooser/targeting policy, `V369Delegate` toast and
+    status handling, platform-specific capability model, YouTube/TikTok upload
+    adapters if enabled, encrypted OAuth/token storage, privacy-dashboard
+    disclosure of platform uploads, AI-disclosure handoff copy, progress/cancel
+    UI, diagnostic export of publish attempts without secrets, and JVM/UI tests.
+  - Acceptance: when only the share fallback is available, the UI says "Open in
+    YouTube/TikTok/..." or "Share export", uses the Android Sharesheet or a
+    clearly targeted resolver, and reports only that the target app was opened.
+    It never claims NovaCut published the video, set visibility, scheduled it,
+    or toggled platform AI-disclosure controls; instead it includes a concise
+    reminder in the handoff text when the AI ledger has disclosure-bearing
+    entries. When API upload is enabled for a platform, it requires explicit
+    OAuth/user consent, stores refresh credentials encrypted, supports
+    resumable upload with progress/cancel/retry, honors private/audit
+    restrictions, maps metadata and disclosure controls only where the platform
+    API exposes them, and records a redacted status history.
+  - Verify: add JVM tests for share-vs-upload capability labels, no-credential
+    fallback, AI-disclosure handoff text, title/body bounds, and no-secret
+    diagnostics. Add fake YouTube/TikTok uploader tests for OAuth missing,
+    unaudited/private-only, resumable interruption/resume, cancellation, and
+    upload-status polling. Add Compose tests that prove the share-only panel no
+    longer reads as a successful publish flow and API-upload controls appear
+    only when the capability model says they are available.
+  - Complexity: L
+
+#### Appendix — Cycle 14 Sources
+
+- Android Sharesheet / sending simple data:
+  https://developer.android.com/training/sharing/send
+- YouTube Data API `videos.insert`:
+  https://developers.google.com/youtube/v3/docs/videos/insert
+- YouTube resumable upload protocol:
+  https://developers.google.com/youtube/v3/guides/using_resumable_upload_protocol
+- TikTok Content Posting API — Direct Post:
+  https://developers.tiktok.com/doc/content-posting-api-reference-direct-post

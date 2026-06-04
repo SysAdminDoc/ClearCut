@@ -6,6 +6,36 @@ roadmaps are archived under [docs/archive/roadmap](docs/archive/roadmap/).
 
 Last refreshed: 2026-06-04.
 
+## 2026-06-04 Cycle 14 Direct Publish Handoff Refresh
+
+- [Verified] `DirectPublishEngine` is honest in code comments that "today only
+  the share-intent fallback is wired", and the implementation always builds an
+  `ACTION_SEND` intent with `FLAG_GRANT_READ_URI_PERMISSION`. It validates the
+  exported file, normalizes title/description/chapters/tags/AI disclosure text,
+  optionally targets an installed package, and returns `Method.SHARE_INTENT`;
+  there is no OAuth token path, resumable upload client, platform SDK, publish
+  status polling, or API-upload result path in `app/src/main`.
+- [Verified] The visible surface still reads as "Direct Publish" and offers
+  platform chips for YouTube, TikTok, Instagram, Threads, X, and LinkedIn.
+  `V369Delegate.publishLastExport(...)` immediately starts the returned intent
+  and shows no distinction between "opened the target app" and "posted
+  successfully". The JVM tests cover file validation, share-body bounding, and
+  which targets claim AI disclosure controls, not platform upload behavior.
+- [Verified] Android's current sharing docs frame `ACTION_SEND` as sending data
+  to another app and recommend the Android Sharesheet for sharing outside the
+  app. Actual platform publishing has stricter flows: YouTube `videos.insert`
+  requires authorized media upload and unverified API projects are restricted to
+  private uploads; YouTube's resumable-upload guide recommends resumable upload
+  for large files and mobile/unstable networks. TikTok Direct Post requires
+  creator-info query, post initialization, exporting the video to TikTok
+  servers, explicit user consent, and an audit to lift private-only restrictions
+  for unaudited clients.
+- [Promoted] Added a P2 roadmap item to split "share handoff" from real direct
+  API publishing: rename/gate the current intent path, stop implying AI
+  disclosure controls were set by NovaCut, add completion/status honesty, and
+  keep YouTube/TikTok API upload adapters behind explicit OAuth, audit,
+  encrypted-token, progress, cancellation, and consent requirements.
+
 ## 2026-06-04 Cycle 13 C2PA Export Provenance Refresh
 
 - [Verified] NovaCut already tells users the export sheet will declare AI use in
