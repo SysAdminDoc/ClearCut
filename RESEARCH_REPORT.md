@@ -6,6 +6,24 @@ roadmaps are archived under [docs/archive/roadmap](docs/archive/roadmap/).
 
 Last refreshed: 2026-06-04.
 
+## 2026-06-04 Cycle 6 Incoming Media Refresh
+
+- [Verified] The manifest exposes video/image/audio `ACTION_VIEW` filters and
+  comments label image/audio entries as share targets, but grep found no
+  `ACTION_SEND` or `ACTION_SEND_MULTIPLE` receiver. Android's current receiving
+  guide says Sharesheet delivery uses those send actions and `EXTRA_STREAM`
+  payloads for binary content.
+- [Verified] `MainActivity` handles only a single `ACTION_VIEW` `intent.data`
+  URI and stores it in historical `pendingVideoUri` state. The gallery then
+  calls `ProjectListViewModel.createProjectFromImport(...)`, which imports the
+  URI as `"video"` and rejects sources without a visual track, so image/audio
+  handoff is not yet routed to overlay/audio import despite the manifest
+  comments.
+- [Promoted] Added a P1 roadmap item for Sharesheet-compatible incoming media:
+  manifest send filters, a pure intent parser, media-type-aware routing for
+  video/image/audio and multi-item shares, `content://` grant validation, and
+  parser plus device/emulator verification.
+
 ## 2026-06-04 Cycle 5 Distribution Metadata Refresh
 
 - [Verified] The Fastlane metadata tree contains only the English title,

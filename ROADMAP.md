@@ -11,7 +11,7 @@ archived under [docs/archive](docs/archive/).
 Current version: **v3.74.35** (`versionCode` 172). Last consolidated:
 2026-06-04.
 
-> Last researched: Cycle 5 - 2026-06-04.
+> Last researched: Cycle 6 - 2026-06-04.
 
 ## ▶ Implementer Instructions (for the build machine)
 
@@ -723,3 +723,55 @@ history item.
   https://support.google.com/googleplay/android-developer/answer/10787469?hl=en
 - Fastlane supply metadata image and screenshot structure:
   https://docs.fastlane.tools/actions/supply/
+
+### Researcher Queue (Cycle 6 - 2026-06-04)
+
+Focus: incoming media handoff from other apps, without changing the existing
+`content://`-only safety posture.
+
+#### Import & Interop
+
+- [ ] 🔬🤖 P1 — Add Sharesheet-compatible incoming media routing
+  - Why: NovaCut's manifest comments describe video/image/audio handoff from
+    other apps, but the exported activity is not registered for Android
+    Sharesheet `ACTION_SEND` or `ACTION_SEND_MULTIPLE`. Users sharing a clip,
+    image, or audio file from Photos, Files, or another editor can miss NovaCut
+    as a target, and image/audio entries that do arrive through `ACTION_VIEW`
+    still fall into a video-only project creation path.
+  - Evidence: `AndroidManifest.xml` has three media `ACTION_VIEW` filters
+    (`video/*`, `image/*`, `audio/*`) and comments naming image/audio share
+    targets, but grep finds no manifest receiver for `ACTION_SEND` or
+    `ACTION_SEND_MULTIPLE`. `MainActivity.handleIncomingIntent()` handles only
+    `Intent.ACTION_VIEW`, reads a single `intent.data` URI, and stores it in the
+    historical `pendingVideoUri` state. `ProjectListScreen` forwards that value
+    to `ProjectListViewModel.createProjectFromImport(...)`, which calls
+    `importUriToManagedMedia(..., "video")` and rejects sources that do not have
+    a visual track. Android's current sharing docs say apps receive Sharesheet
+    data by adding `ACTION_SEND` / `ACTION_SEND_MULTIPLE` intent filters and
+    reading `EXTRA_STREAM` for single or multiple binary items:
+    https://developer.android.com/training/sharing/receive
+  - Touches: manifest media send filters, a pure incoming-media parser for
+    `ACTION_VIEW`/`ACTION_SEND`/`ACTION_SEND_MULTIPLE`, `MainActivity` pending
+    import state, project-gallery and editor routing for video/image/audio,
+    copy/validation reuse in `LocalMediaImport`, strings, and focused parser/UI
+    tests.
+  - Acceptance: NovaCut appears in Android Sharesheet for single video, image,
+    and audio shares plus multiple selected media files; video shares can create
+    a new project, image/audio shares either attach to the current project or
+    open a clear project-selection/add-media flow, multiple shares preserve
+    order where the sender supplies it, and every accepted URI remains
+    `content://` with read permission handling and MIME/size validation.
+  - Verify: add JVM tests for an `IncomingMediaIntentParser` covering
+    `ACTION_VIEW`, single `ACTION_SEND`, multi-item `ACTION_SEND_MULTIPLE`,
+    malformed MIME, missing grants, and mixed media; add a manifest/intent
+    resolution test; then run device or emulator adb shares against `video/*`,
+    `image/*`, `audio/*`, and multiple `EXTRA_STREAM` URIs to confirm routing and
+    user-facing copy.
+  - Complexity: M
+
+#### Appendix — Cycle 6 Sources
+
+- Android receiving simple data from other apps:
+  https://developer.android.com/training/sharing/receive
+- Android sending simple data and multiple content URIs:
+  https://developer.android.com/training/sharing/send
