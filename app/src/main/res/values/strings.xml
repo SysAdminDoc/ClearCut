@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.74.13</string>
+    <string name="app_version">v3.74.14</string>
 
     <!-- Common -->
     <string name="close">Close</string>
@@ -1166,8 +1166,8 @@
     <string name="media_manager_status_scanning">Scanning</string>
     <string name="media_manager_status_healthy">Healthy</string>
     <plurals name="media_manager_status_missing_count">
-        <item quantity="one">%1$d missing</item>
-        <item quantity="other">%1$d missing</item>
+        <item quantity="one">%1$d issue</item>
+        <item quantity="other">%1$d issues</item>
     </plurals>
     <plurals name="media_manager_status_empty_count">
         <item quantity="one">%1$d empty</item>
@@ -1179,7 +1179,7 @@
         <item quantity="one">%1$d source needs attention</item>
         <item quantity="other">%1$d sources need attention</item>
     </plurals>
-    <string name="media_manager_missing_body">Resolve missing source files before export so previews, renders, and relink decisions stay predictable.</string>
+    <string name="media_manager_missing_body">Resolve missing or unverified source files before export so previews, renders, and relink decisions stay predictable.</string>
     <string name="media_manager_ready_title">All linked files are available</string>
     <string name="media_manager_ready_body">Your source media is available on this device, so preview, export, and handoff workflows should stay reliable.</string>
     <string name="media_manager_assets_title">Linked files</string>
@@ -1203,6 +1203,7 @@
     </plurals>
     <string name="media_file_meta">%1$s • %2$s</string>
     <string name="media_missing_asset_title">Source unavailable</string>
+    <string name="media_unverified_asset_title">Source unverified</string>
 
     <!-- SmartReframePanel -->
     <string name="smart_reframe_title">Smart Reframe</string>
@@ -1641,7 +1642,9 @@
     <string name="media_goto_first_use">Go to first use</string>
     <string name="media_status_online">Online</string>
     <string name="media_status_missing">Missing</string>
+    <string name="media_status_unverified">Unverified</string>
     <string name="media_source_unavailable">This source file is missing on this device. Relink it before export so previews and renders do not fall back to missing media.</string>
+    <string name="media_source_unverified">NovaCut could not verify this source URI. Relink it before export so previews and renders use a confirmed file.</string>
     <string name="cd_media_goto">Go to clip</string>
     <string name="cd_media_missing">Missing</string>
 

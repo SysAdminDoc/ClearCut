@@ -1,5 +1,26 @@
 # Changelog
 
+## v3.74.14 — 2026-06-04
+
+### Media relink editor integration
+- Added `EditorState.mediaRelinkReports` and wired `MediaRelinkProbe` into
+  `EditorViewModel` so project-open recovery restores run a source-media scan
+  before the user edits or exports.
+- Missing and unverified source reports now auto-open Media Manager on project
+  open and show a focused warning that counts missing/unverified media sources.
+- Media Manager consumes probe reports for each asset, distinguishes Online,
+  Missing, and Unverified states, and reuses the existing relink action path for
+  affected source URIs.
+- Relink/add-media changes refresh the probe report so Media Manager status does
+  not stay stale after a replacement source is chosen.
+- Added unit coverage for the project-open media relink warning copy.
+- Bumped runtime metadata to `versionName 3.74.14` / `versionCode 151`.
+- Verification: `git diff --check`, `scripts/verify_release_artifacts.py`,
+  APK-based 16 KB checks for debug/release, `apksigner verify` for
+  debug/release, `zipalign -c -P 16 -v 4` for debug/release/androidTest, and
+  `:app:testDebugUnitTest :app:assembleDebug :app:assembleRelease
+  :app:assembleDebugAndroidTest` passed.
+
 ## v3.74.13 — 2026-06-04
 
 ### Recovery open path

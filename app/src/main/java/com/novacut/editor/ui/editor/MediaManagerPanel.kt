@@ -37,6 +37,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.novacut.editor.R
+import com.novacut.editor.engine.MediaRelinkProbe
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.Track
 import com.novacut.editor.ui.theme.Mocha
@@ -51,13 +52,20 @@ data class MediaAsset(
     val fileSize: Long,
     val durationMs: Long,
     val usedInClipIds: List<String>,
-    val isAccessible: Boolean
+    val isAccessible: Boolean,
+    val relinkState: MediaRelinkProbe.RelinkState = if (isAccessible) {
+        MediaRelinkProbe.RelinkState.OK
+    } else {
+        MediaRelinkProbe.RelinkState.MISSING
+    },
+    val relinkMessage: String? = null
 )
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MediaManagerPanel(
     tracks: List<Track>,
+    relinkReports: Map<String, MediaRelinkProbe.ClipRelinkReport>,
     onJumpToClip: (String) -> Unit,
     onRelinkMedia: (Uri) -> Unit,
     onRemoveUnused: () -> Unit,
@@ -65,13 +73,13 @@ fun MediaManagerPanel(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    var assets by remember(tracks) { mutableStateOf(emptyList<MediaAsset>()) }
-    var isAnalyzing by remember(tracks) { mutableStateOf(true) }
+    var assets by remember(tracks, relinkReports) { mutableStateOf(emptyList<MediaAsset>()) }
+    var isAnalyzing by remember(tracks, relinkReports) { mutableStateOf(true) }
 
-    LaunchedEffect(context, tracks) {
+    LaunchedEffect(context, tracks, relinkReports) {
         isAnalyzing = true
         assets = withContext(Dispatchers.IO) {
-            analyzeMediaAssets(context, tracks)
+            analyzeMediaAssets(context, tracks, relinkReports)
         }
         isAnalyzing = false
     }
@@ -459,8 +467,18 @@ private fun MediaAssetCard(
     onJumpToClip: (String) -> Unit,
     onRelinkMedia: (Uri) -> Unit
 ) {
-    val accent = if (asset.isAccessible) Mocha.Blue else Mocha.Red
-    val statusLabel = stringResource(if (asset.isAccessible) R.string.media_status_online else R.string.media_status_missing)
+    val accent = when (asset.relinkState) {
+        MediaRelinkProbe.RelinkState.OK -> Mocha.Blue
+        MediaRelinkProbe.RelinkState.MISSING -> Mocha.Red
+        MediaRelinkProbe.RelinkState.UNKNOWN -> Mocha.Peach
+    }
+    val statusLabel = stringResource(
+        when (asset.relinkState) {
+            MediaRelinkProbe.RelinkState.OK -> R.string.media_status_online
+            MediaRelinkProbe.RelinkState.MISSING -> R.string.media_status_missing
+            MediaRelinkProbe.RelinkState.UNKNOWN -> R.string.media_status_unverified
+        }
+    )
     val usageLabel = pluralStringResource(
         R.plurals.media_used_in_clip_count,
         asset.usedInClipIds.size,
@@ -537,9 +555,21 @@ private fun MediaAssetCard(
 
             if (!asset.isAccessible) {
                 MediaManagerMessageCard(
-                    title = stringResource(R.string.media_missing_asset_title),
-                    body = stringResource(R.string.media_source_unavailable),
-                    accent = Mocha.Red,
+                    title = stringResource(
+                        if (asset.relinkState == MediaRelinkProbe.RelinkState.UNKNOWN) {
+                            R.string.media_unverified_asset_title
+                        } else {
+                            R.string.media_missing_asset_title
+                        }
+                    ),
+                    body = asset.relinkMessage ?: stringResource(
+                        if (asset.relinkState == MediaRelinkProbe.RelinkState.UNKNOWN) {
+                            R.string.media_source_unverified
+                        } else {
+                            R.string.media_source_unavailable
+                        }
+                    ),
+                    accent = accent,
                     icon = Icons.Default.BrokenImage
                 )
             }
@@ -594,7 +624,11 @@ private fun MediaAssetCard(
     }
 }
 
-private fun analyzeMediaAssets(context: Context, tracks: List<Track>): List<MediaAsset> {
+private fun analyzeMediaAssets(
+    context: Context,
+    tracks: List<Track>,
+    relinkReports: Map<String, MediaRelinkProbe.ClipRelinkReport>
+): List<MediaAsset> {
     val clipsByUri = mutableMapOf<String, MutableList<Clip>>()
 
     tracks.forEach { track ->
@@ -650,13 +684,34 @@ private fun analyzeMediaAssets(context: Context, tracks: List<Track>): List<Medi
             fileName = uri.lastPathSegment ?: fileName
         }
 
+        val relinkReport = clips.asSequence()
+            .mapNotNull { relinkReports[it.id] }
+            .sortedBy { report ->
+                when (report.state) {
+                    MediaRelinkProbe.RelinkState.MISSING -> 0
+                    MediaRelinkProbe.RelinkState.UNKNOWN -> 1
+                    MediaRelinkProbe.RelinkState.OK -> 2
+                }
+            }
+            .firstOrNull()
+        val relinkState = relinkReport?.state ?: if (accessible) {
+            MediaRelinkProbe.RelinkState.OK
+        } else {
+            MediaRelinkProbe.RelinkState.MISSING
+        }
+        val effectiveAccessible = relinkState == MediaRelinkProbe.RelinkState.OK
+
         MediaAsset(
             uri = uri,
             fileName = fileName,
             fileSize = fileSize,
             durationMs = clips.first().sourceDurationMs,
             usedInClipIds = clips.map { it.id },
-            isAccessible = accessible
+            isAccessible = effectiveAccessible,
+            relinkState = relinkState,
+            relinkMessage = relinkReport
+                ?.takeIf { it.state != MediaRelinkProbe.RelinkState.OK }
+                ?.userMessage
         )
     }.sortedWith(compareBy<MediaAsset> { it.isAccessible }.thenByDescending { it.usedInClipIds.size })
 }

@@ -10,8 +10,8 @@ NovaCut is an Android video editor under package `com.novacut.editor`. The repo 
 
 Current live version evidence:
 
-- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 150`, `versionName = "3.74.13"`.
-- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.13`.
+- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 151`, `versionName = "3.74.14"`.
+- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.14`.
 - [README.md](README.md) and [ROADMAP.md](ROADMAP.md) both describe the v3.74.x line.
 - The 2026-05-17 continuation pushes each completed roadmap batch back to `origin/master`; verify `git status --short --branch` before assuming branch sync.
 
@@ -67,6 +67,9 @@ High-level modules and patterns:
 - Editor project opens now use the schema-aware recovery outcome loader and
   preserve corrupt or newer-schema autosaves by blocking subsequent autosave
   writes until the recovery file is safe to replace.
+- Project-open media checks now run `MediaRelinkProbe`, store reports on
+  `EditorState`, and route missing/unverified sources into Media Manager's
+  existing relink workflow.
 - The privacy posture is coherent: local-first by default, opt-in cloud paths, explicit model downloads, and F-Droid awareness.
 - Cross-editor interoperability is already a first-class goal through FCPXML/OTIO/EDL-style planning.
 
@@ -152,6 +155,19 @@ High-level modules and patterns:
   autosave write inside `saveProject()`, preserving the on-disk recovery file
   instead of overwriting it with the Room/opened project state.
 - `RecoveryDialogTest` covers recovery feedback and autosave-blocking decisions.
+
+2026-06-04 media-relink continuation:
+
+- Completed the P0 Media relink editor integration in v3.74.14.
+  `EditorViewModel` now injects `MediaRelinkProbe`, stores per-clip
+  `ClipRelinkReport` values on `EditorState`, and runs the probe after a loaded
+  project recovery/open.
+- Project-open scans auto-open Media Manager and warn when missing or
+  unverified sources are found, so users get a relink path before edit/export.
+- Media Manager now consumes probe reports, renders Online/Missing/Unverified
+  asset states, and reuses the existing replacement-picker relink flow.
+- Relink/add-media callbacks refresh the probe report so the media-health status
+  is updated after source replacement.
 - Next roadmap item: P0 Release pipeline reactivation.
 
 2026-05-17 autonomous continuation:

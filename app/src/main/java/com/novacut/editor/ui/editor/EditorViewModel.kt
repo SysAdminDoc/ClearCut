@@ -53,6 +53,7 @@ import com.novacut.editor.engine.TimelineExchangeValidator
 import com.novacut.editor.engine.ProxyWorkflowEngine
 import com.novacut.editor.engine.MultiCamEngine
 import com.novacut.editor.engine.MediaImportEngine
+import com.novacut.editor.engine.MediaRelinkProbe
 import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.engine.VoiceoverRecorderEngine
 import com.novacut.editor.engine.TemplateManager
@@ -129,6 +130,17 @@ internal fun recoveryOpenFeedbackFor(
 internal fun shouldBlockAutoSaveForRecoveryOutcome(outcome: ProjectAutoSave.LoadOutcome): Boolean {
     return outcome is ProjectAutoSave.LoadOutcome.FutureSchema ||
         outcome is ProjectAutoSave.LoadOutcome.Corrupt
+}
+
+internal fun mediaRelinkOpenToast(missingCount: Int, unknownCount: Int): String? {
+    val total = missingCount + unknownCount
+    if (total <= 0) return null
+    val parts = buildList {
+        if (missingCount > 0) add("$missingCount missing")
+        if (unknownCount > 0) add("$unknownCount unverified")
+    }
+    val noun = if (total == 1) "source" else "sources"
+    return "Media check found ${parts.joinToString(" and ")} $noun. Opened Media Manager to relink before editing or export."
 }
 
 enum class PanelId {
@@ -292,7 +304,8 @@ data class EditorState(
     // Trust/report surfaces for operations that can lose data or need follow-up.
     // These are UI-only and intentionally excluded from project persistence.
     val backupImportFeedback: BackupImportFeedback? = null,
-    val timelineExchangeFeedback: TimelineExchangeFeedback? = null
+    val timelineExchangeFeedback: TimelineExchangeFeedback? = null,
+    val mediaRelinkReports: Map<String, MediaRelinkProbe.ClipRelinkReport> = emptyMap()
 )
 
 /**
@@ -429,6 +442,7 @@ class EditorViewModel @Inject constructor(
     private val proxyWorkflowEngine: ProxyWorkflowEngine,
     private val multiCamEngine: MultiCamEngine,
     private val mediaImportEngine: MediaImportEngine,
+    private val mediaRelinkProbe: MediaRelinkProbe,
     // v3.69 engines (15-feature wave)
     private val textBasedEditEngine: TextBasedEditEngine,
     private val autoChapterEngine: AutoChapterEngine,
@@ -455,6 +469,7 @@ class EditorViewModel @Inject constructor(
     private var latestSettings: AppSettings? = null
     private var lastAutoSaveRunning: Boolean? = null
     private var lastAutoSaveIntervalSec: Int? = null
+    private var mediaRelinkProbeJob: Job? = null
 
     private val _state = MutableStateFlow(EditorState())
     val state: StateFlow<EditorState> = _state.asStateFlow()
@@ -529,6 +544,7 @@ class EditorViewModel @Inject constructor(
             // project so the user immediately sees the whole clip. Matches CapCut /
             // VN UX where importing the first asset fills the editable area.
             requestInitialFitIfNeeded()
+            refreshMediaRelinkReports(openPanelOnProblems = false)
         }
     )
 
@@ -837,6 +853,9 @@ class EditorViewModel @Inject constructor(
             showToast(feedback.message, feedback.severity)
         }
         applyAutoSaveSettings()
+        if (outcome is ProjectAutoSave.LoadOutcome.Loaded) {
+            refreshMediaRelinkReports(openPanelOnProblems = true)
+        }
     }
 
     private fun restoreLoadedRecovery(recovery: AutoSaveState) {
@@ -3198,8 +3217,42 @@ class EditorViewModel @Inject constructor(
     fun cancelExport() = exportDelegate.cancelExport()
 
     // --- Media Manager ---
-    fun showMediaManager() = showPanel(PanelId.MEDIA_MANAGER)
+    fun showMediaManager() {
+        refreshMediaRelinkReports(openPanelOnProblems = false)
+        showPanel(PanelId.MEDIA_MANAGER)
+    }
     fun hideMediaManager() = hidePanel(PanelId.MEDIA_MANAGER)
+
+    private fun refreshMediaRelinkReports(openPanelOnProblems: Boolean) {
+        val tracks = _state.value.tracks
+        if (tracks.flatMap { it.clips }.isEmpty()) {
+            mediaRelinkProbeJob?.cancel()
+            _state.update { it.copy(mediaRelinkReports = emptyMap()) }
+            return
+        }
+
+        mediaRelinkProbeJob?.cancel()
+        mediaRelinkProbeJob = viewModelScope.launch {
+            val reports = mediaRelinkProbe.probeClips(tracks)
+            val missingCount = reports.values.count { it.state == MediaRelinkProbe.RelinkState.MISSING }
+            val unknownCount = reports.values.count { it.state == MediaRelinkProbe.RelinkState.UNKNOWN }
+            _state.update { state ->
+                state.copy(
+                    mediaRelinkReports = reports,
+                    panels = if (openPanelOnProblems && missingCount + unknownCount > 0) {
+                        state.panels.open(PanelId.MEDIA_MANAGER)
+                    } else {
+                        state.panels
+                    }
+                )
+            }
+            if (openPanelOnProblems) {
+                mediaRelinkOpenToast(missingCount, unknownCount)?.let { message ->
+                    showToast(message, ToastSeverity.Warning)
+                }
+            }
+        }
+    }
 
     fun jumpToClip(clipId: String) {
         val clip = _state.value.tracks.flatMap { it.clips }.find { it.id == clipId } ?: return
