@@ -95,19 +95,19 @@ jobs:
           done
 
       - name: Upload Debug APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: NovaCut-debug
           path: app/build/outputs/apk/debug/*.apk
 
       - name: Upload Release APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: NovaCut-release
           path: app/build/outputs/apk/release/*.apk
 
       - name: Upload Instrumentation APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: NovaCut-androidTest
           path: app/build/outputs/apk/androidTest/debug/*.apk
