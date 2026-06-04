@@ -26,9 +26,12 @@ import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import androidx.window.layout.FoldingFeature
 import androidx.window.layout.WindowInfoTracker
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.novacut.editor.engine.AppSettings
 import com.novacut.editor.engine.IncomingMediaIntentParser
 import com.novacut.editor.engine.IncomingMediaItem
 import com.novacut.editor.engine.ProjectShortcutPlanner
+import com.novacut.editor.engine.SettingsRepository
 import com.novacut.editor.ui.editor.EditorScreen
 import com.novacut.editor.ui.editor.LocalTabletopPosture
 import com.novacut.editor.ui.projects.ProjectListScreen
@@ -36,9 +39,13 @@ import com.novacut.editor.ui.settings.SettingsScreen
 import com.novacut.editor.ui.theme.NovaCutTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collect
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var settingsRepository: SettingsRepository
 
     private var pendingIncomingMedia by mutableStateOf<List<IncomingMediaItem>>(emptyList())
     private var pendingEditorOpen by mutableStateOf<PendingEditorOpen?>(null)
@@ -56,7 +63,8 @@ class MainActivity : ComponentActivity() {
         handleIncomingIntent(intent)
 
         setContent {
-            NovaCutTheme {
+            val settings by settingsRepository.settings.collectAsStateWithLifecycle(initialValue = AppSettings())
+            NovaCutTheme(appearanceMode = settings.appearanceMode) {
                 val navController = rememberNavController()
                 val currentBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = currentBackStackEntry?.destination?.route

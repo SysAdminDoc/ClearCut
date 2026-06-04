@@ -1,5 +1,26 @@
 # Changelog
 
+## v3.74.48 — 2026-06-04
+
+### Appearance and contrast regression gates
+- Added a persisted `AppearanceMode` setting with System (dark canvas), Dark,
+  and High Contrast Dark options, wired through the root `NovaCutTheme`.
+- Added high-contrast Material and shared chrome tokens through
+  `LocalNovaCutColors`, boosting semantic text, outlines, cards, buttons,
+  selected chips, dialog icons, and shared section headers.
+- Added the Settings appearance control and documented the dark-only System
+  rationale in `docs/appearance-policy.md` until a light video-neutral palette
+  has complete screenshot and contrast QA.
+- Added `NovaCutAppearancePolicyTest` coverage for System-to-Dark resolution,
+  WCAG AA text contrast, 3:1 non-text indicator contrast, selected-chip
+  contrast, and low-emphasis token guardrails.
+- Added the Compose accessibility test artifact and enabled root accessibility
+  checks in `NovaCutSmokeTest` for gallery, editor empty state, media picker,
+  export sheet, Settings, and privacy dashboard surfaces.
+- Bumped runtime metadata to `versionName 3.74.48` / `versionCode 185`.
+- Verification: focused JVM appearance policy test and androidTest Kotlin
+  compilation passed.
+
 ## v3.74.47 — 2026-06-04
 
 ### Play listing asset and privacy-disclosure gate

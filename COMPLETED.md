@@ -7,7 +7,7 @@ Last consolidated: 2026-06-04.
 
 ## Current Delivered Baseline
 
-- Current version: v3.74.47 (`versionCode` 184).
+- Current version: v3.74.48 (`versionCode` 185).
 - Multi-track Android NLE with project gallery, editor, timeline, preview,
   effects, transitions, text, captions, audio, export, settings, templates,
   project archive/import, and diagnostic bundle surfaces.
@@ -57,6 +57,11 @@ Last consolidated: 2026-06-04.
   Fastlane now carries deterministic icon, feature graphic, phone/tablet
   screenshots, SVG sources, alt-text inventory, privacy policy URL, Data safety
   worksheet, and a CI validator for the listing package.
+- Appearance-mode and contrast regression gates shipped in v3.74.48: Settings
+  now exposes System/Dark/High Contrast Dark, the root theme persists the
+  selected appearance, shared chrome uses high-contrast semantic tokens,
+  Compose smoke tests enable accessibility checks, and JVM contrast tests lock
+  text and non-text floors.
 - UI test harness bootstrap shipped in v3.74.11: shared Compose test tags,
   androidTest dependencies, and a smoke test covering project list,
   blank-project editor open, media picker, export sheet, Settings, and privacy

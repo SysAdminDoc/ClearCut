@@ -1,12 +1,18 @@
 package com.novacut.editor.ui.theme
 
-import androidx.compose.material3.*
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.novacut.editor.engine.AppearanceMode
 
 // Catppuccin Mocha palette
 object Mocha {
@@ -47,7 +53,7 @@ object Mocha {
     val Rosewater = Color(0xFFF5E0DC)
 }
 
-private val NovaCutColorScheme = darkColorScheme(
+private val NovaCutDarkColorScheme = darkColorScheme(
     primary = Mocha.Mauve,
     onPrimary = Mocha.Crust,
     primaryContainer = Mocha.Mauve.copy(alpha = 0.3f),
@@ -83,6 +89,136 @@ private val NovaCutColorScheme = darkColorScheme(
     surfaceContainerHigh = Mocha.PanelRaised,
     surfaceContainerHighest = Mocha.PanelHighest
 )
+
+private val NovaCutHighContrastColorScheme = darkColorScheme(
+    primary = Mocha.Sky,
+    onPrimary = Mocha.Crust,
+    primaryContainer = Mocha.Sky,
+    onPrimaryContainer = Mocha.Crust,
+    secondary = Mocha.Green,
+    onSecondary = Mocha.Crust,
+    secondaryContainer = Mocha.Green,
+    onSecondaryContainer = Mocha.Crust,
+    tertiary = Mocha.Peach,
+    onTertiary = Mocha.Crust,
+    tertiaryContainer = Mocha.Peach,
+    onTertiaryContainer = Mocha.Crust,
+    error = Mocha.Red,
+    onError = Mocha.Crust,
+    errorContainer = Mocha.Red,
+    onErrorContainer = Mocha.Crust,
+    background = Color(0xFF05070D),
+    onBackground = Color(0xFFFFFFFF),
+    surface = Color(0xFF070A12),
+    onSurface = Color(0xFFFFFFFF),
+    surfaceVariant = Color(0xFF111827),
+    onSurfaceVariant = Color(0xFFF4F7FF),
+    outline = Color(0xFFF4F7FF),
+    outlineVariant = Color(0xFFBAC2DE),
+    inverseSurface = Color(0xFFFFFFFF),
+    inverseOnSurface = Color(0xFF05070D),
+    inversePrimary = Mocha.Sky,
+    surfaceDim = Color(0xFF05070D),
+    surfaceBright = Color(0xFF172033),
+    surfaceContainerLowest = Color(0xFF05070D),
+    surfaceContainerLow = Color(0xFF070A12),
+    surfaceContainer = Color(0xFF0C111D),
+    surfaceContainerHigh = Color(0xFF111827),
+    surfaceContainerHighest = Color(0xFF172033)
+)
+
+data class NovaCutSemanticColors(
+    val mode: AppearanceMode,
+    val highContrast: Boolean,
+    val background: Color,
+    val backgroundMid: Color,
+    val panel: Color,
+    val panelRaised: Color,
+    val panelHighest: Color,
+    val cardStroke: Color,
+    val cardStrokeStrong: Color,
+    val text: Color,
+    val subtext: Color,
+    val disabledText: Color,
+)
+
+val LocalNovaCutColors = staticCompositionLocalOf {
+    NovaCutThemeDefaults.colorsFor(AppearanceMode.DARK)
+}
+
+object NovaCutThemeDefaults {
+    fun resolveMode(mode: AppearanceMode, systemDark: Boolean): AppearanceMode = when (mode) {
+        AppearanceMode.SYSTEM -> {
+            // NovaCut deliberately keeps the editing canvas dark until a video-neutral
+            // light palette has a full screenshot/contrast audit.
+            if (systemDark) AppearanceMode.DARK else AppearanceMode.DARK
+        }
+        AppearanceMode.DARK -> AppearanceMode.DARK
+        AppearanceMode.HIGH_CONTRAST_DARK -> AppearanceMode.HIGH_CONTRAST_DARK
+    }
+
+    fun colorSchemeFor(resolvedMode: AppearanceMode) = when (resolvedMode) {
+        AppearanceMode.HIGH_CONTRAST_DARK -> NovaCutHighContrastColorScheme
+        AppearanceMode.SYSTEM,
+        AppearanceMode.DARK -> NovaCutDarkColorScheme
+    }
+
+    fun colorsFor(resolvedMode: AppearanceMode): NovaCutSemanticColors = when (resolvedMode) {
+        AppearanceMode.HIGH_CONTRAST_DARK -> NovaCutSemanticColors(
+            mode = resolvedMode,
+            highContrast = true,
+            background = Color(0xFF05070D),
+            backgroundMid = Color(0xFF070A12),
+            panel = Color(0xFF070A12),
+            panelRaised = Color(0xFF0C111D),
+            panelHighest = Color(0xFF172033),
+            cardStroke = Color(0xFFBAC2DE),
+            cardStrokeStrong = Color(0xFFF4F7FF),
+            text = Color(0xFFFFFFFF),
+            subtext = Color(0xFFF4F7FF),
+            disabledText = Color(0xFFBAC2DE),
+        )
+        AppearanceMode.SYSTEM,
+        AppearanceMode.DARK -> NovaCutSemanticColors(
+            mode = AppearanceMode.DARK,
+            highContrast = false,
+            background = Mocha.Midnight,
+            backgroundMid = Mocha.Mantle,
+            panel = Mocha.Panel,
+            panelRaised = Mocha.PanelRaised,
+            panelHighest = Mocha.PanelHighest,
+            cardStroke = Mocha.CardStroke,
+            cardStrokeStrong = Mocha.CardStrokeStrong,
+            text = Mocha.Text,
+            subtext = Mocha.Subtext0,
+            disabledText = Mocha.Subtext0,
+        )
+    }
+
+    fun contrastRatio(foreground: Color, background: Color): Double {
+        val fg = relativeLuminance(foreground)
+        val bg = relativeLuminance(background)
+        val lighter = maxOf(fg, bg)
+        val darker = minOf(fg, bg)
+        return (lighter + 0.05) / (darker + 0.05)
+    }
+
+    private fun relativeLuminance(color: Color): Double {
+        val r = linearizedChannel(color.red)
+        val g = linearizedChannel(color.green)
+        val b = linearizedChannel(color.blue)
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+    }
+
+    private fun linearizedChannel(channel: Float): Double {
+        val srgb = channel.toDouble()
+        return if (srgb <= 0.03928) {
+            srgb / 12.92
+        } else {
+            Math.pow((srgb + 0.055) / 1.055, 2.4)
+        }
+    }
+}
 
 private val NovaCutTypography = Typography(
     displayLarge = TextStyle(
@@ -170,10 +306,19 @@ private val NovaCutTypography = Typography(
 )
 
 @Composable
-fun NovaCutTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = NovaCutColorScheme,
-        typography = NovaCutTypography,
-        content = content
+fun NovaCutTheme(
+    appearanceMode: AppearanceMode = AppearanceMode.SYSTEM,
+    content: @Composable () -> Unit
+) {
+    val resolvedMode = NovaCutThemeDefaults.resolveMode(
+        mode = appearanceMode,
+        systemDark = isSystemInDarkTheme(),
     )
+    CompositionLocalProvider(LocalNovaCutColors provides NovaCutThemeDefaults.colorsFor(resolvedMode)) {
+        MaterialTheme(
+            colorScheme = NovaCutThemeDefaults.colorSchemeFor(resolvedMode),
+            typography = NovaCutTypography,
+            content = content
+        )
+    }
 }

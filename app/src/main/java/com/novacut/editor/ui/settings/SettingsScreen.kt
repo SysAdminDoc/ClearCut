@@ -44,6 +44,7 @@ import androidx.core.content.FileProvider
 import androidx.core.content.ContextCompat
 import com.novacut.editor.NovaCutApp
 import com.novacut.editor.R
+import com.novacut.editor.engine.AppearanceMode
 import com.novacut.editor.engine.AppSettings
 import com.novacut.editor.engine.ProjectColorPolicy
 import com.novacut.editor.engine.segmentation.SegmentationModelState
@@ -55,6 +56,7 @@ import com.novacut.editor.ui.theme.NovaCutChromeIconButton
 import com.novacut.editor.ui.theme.NovaCutDialogIcon
 import com.novacut.editor.ui.theme.NovaCutFilterChip
 import com.novacut.editor.ui.theme.NovaCutHeroCard
+import com.novacut.editor.ui.theme.LocalNovaCutColors
 import com.novacut.editor.ui.theme.NovaCutMetricPill
 import com.novacut.editor.ui.theme.NovaCutPrimaryButton
 import com.novacut.editor.ui.theme.NovaCutScreenBackground
@@ -399,6 +401,23 @@ fun SettingsScreen(
                     )
                 }
             }
+        }
+
+        // Appearance
+        SettingsSection(
+            title = stringResource(R.string.settings_appearance),
+            description = stringResource(R.string.settings_appearance_description)
+        ) {
+            val appearanceModes = AppearanceMode.entries
+            SettingsDropdown(
+                icon = Icons.Default.Contrast,
+                accent = Mocha.Sky,
+                label = stringResource(R.string.settings_appearance_mode),
+                description = stringResource(R.string.settings_appearance_mode_description),
+                value = settings.appearanceMode.displayLabel(),
+                options = appearanceModes.map { it.displayLabel() },
+                onSelected = { index -> viewModel.setAppearanceMode(appearanceModes[index]) }
+            )
         }
 
         // Editor
@@ -1189,6 +1208,13 @@ private fun SegmentationModelState.displayLabel(): String = when (this) {
 }
 
 @Composable
+private fun AppearanceMode.displayLabel(): String = when (this) {
+    AppearanceMode.SYSTEM -> stringResource(R.string.settings_appearance_system)
+    AppearanceMode.DARK -> stringResource(R.string.settings_appearance_dark)
+    AppearanceMode.HIGH_CONTRAST_DARK -> stringResource(R.string.settings_appearance_high_contrast)
+}
+
+@Composable
 private fun modelStorageLabel(bytes: Long, downloadSize: String): String {
     return if (bytes > 0L) {
         stringResource(R.string.settings_installed_size_format, formatStorageBytes(bytes))
@@ -1203,6 +1229,7 @@ private fun SettingsSection(
     description: String? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val colors = LocalNovaCutColors.current
     Column(modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm)) {
         NovaCutSectionHeader(
             title = title,
@@ -1210,17 +1237,20 @@ private fun SettingsSection(
             modifier = Modifier.padding(bottom = Spacing.sm)
         )
         Card(
-            colors = CardDefaults.cardColors(containerColor = Mocha.Panel),
+            colors = CardDefaults.cardColors(containerColor = colors.panel),
             shape = RoundedCornerShape(Radius.xl),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.85f)),
+            border = androidx.compose.foundation.BorderStroke(
+                1.dp,
+                if (colors.highContrast) colors.cardStrokeStrong else colors.cardStroke.copy(alpha = 0.85f)
+            ),
             modifier = Modifier.fillMaxWidth()
         ) {
             Box(
                 modifier = Modifier.background(
                     Brush.verticalGradient(
                         listOf(
-                            Mocha.PanelHighest.copy(alpha = 0.78f),
-                            Mocha.Panel
+                            colors.panelHighest.copy(alpha = 0.78f),
+                            colors.panel
                         )
                     )
                 )
@@ -1247,6 +1277,7 @@ private fun SettingsDropdown(
     options: List<String>,
     onSelected: (Int) -> Unit
 ) {
+    val colors = LocalNovaCutColors.current
     var expanded by remember { mutableStateOf(false) }
     Box {
         SettingsTile(
@@ -1256,19 +1287,19 @@ private fun SettingsDropdown(
             description = description,
             onClick = { expanded = true }
         ) {
-            Text(value, color = Mocha.Subtext0, style = MaterialTheme.typography.bodyMedium)
+            Text(value, color = colors.subtext, style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.width(4.dp))
             Icon(
                 Icons.Default.ArrowDropDown,
                 stringResource(R.string.cd_dropdown),
-                tint = Mocha.Subtext0,
+                tint = colors.subtext,
                 modifier = Modifier.size(18.dp)
             )
         }
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
-            containerColor = Mocha.PanelHighest
+            containerColor = colors.panelHighest
         ) {
             options.forEachIndexed { idx, opt ->
                 DropdownMenuItem(

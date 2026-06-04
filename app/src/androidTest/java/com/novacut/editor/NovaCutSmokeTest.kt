@@ -2,22 +2,28 @@ package com.novacut.editor
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
+import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.tryPerformAccessibilityChecks
 import com.novacut.editor.ui.NovaCutTestTags
 import org.junit.Rule
 import org.junit.Test
 
 class NovaCutSmokeTest {
     @get:Rule
-    val compose = createAndroidComposeRule<MainActivity>()
+    val compose = createAndroidComposeRule<MainActivity>().apply {
+        enableAccessibilityChecks()
+    }
 
     @Test
     fun projectEditorExportAndSettingsSurfacesOpen() {
         compose.onNodeWithTag(NovaCutTestTags.PROJECTS_SCREEN).assertIsDisplayed()
+        compose.assertAccessibilityChecksPass()
 
         compose.onNodeWithTag(NovaCutTestTags.PROJECTS_CREATE_PROJECT).performClick()
         compose.onNodeWithTag(NovaCutTestTags.TEMPLATE_SHEET).assertIsDisplayed()
@@ -27,13 +33,16 @@ class NovaCutSmokeTest {
 
         compose.waitUntilAtLeastOneExists(NovaCutTestTags.EDITOR_SCREEN)
         dismissTutorialIfPresent()
+        compose.assertAccessibilityChecksPass()
 
         compose.onNodeWithTag(NovaCutTestTags.EDITOR_EMPTY_ADD_MEDIA).assertIsDisplayed().performClick()
         compose.onNodeWithTag(NovaCutTestTags.MEDIA_PICKER_SHEET).assertIsDisplayed()
+        compose.assertAccessibilityChecksPass()
         compose.onNodeWithTag(NovaCutTestTags.MEDIA_PICKER_CLOSE).performClick()
 
         compose.onNodeWithTag(NovaCutTestTags.EDITOR_EXPORT).assertIsDisplayed().performClick()
         compose.onNodeWithTag(NovaCutTestTags.EXPORT_SHEET).assertIsDisplayed()
+        compose.assertAccessibilityChecksPass()
         compose.onNodeWithTag(NovaCutTestTags.EXPORT_CLOSE).performClick()
 
         compose.onNodeWithTag(NovaCutTestTags.EDITOR_BACK).performClick()
@@ -41,10 +50,12 @@ class NovaCutSmokeTest {
 
         compose.onNodeWithTag(NovaCutTestTags.PROJECTS_SETTINGS).performClick()
         compose.onNodeWithTag(NovaCutTestTags.SETTINGS_SCREEN).assertIsDisplayed()
+        compose.assertAccessibilityChecksPass()
         compose.onNodeWithTag(NovaCutTestTags.SETTINGS_PRIVACY_OPEN)
             .performScrollTo()
             .performClick()
         compose.onNodeWithTag(NovaCutTestTags.SETTINGS_PRIVACY_DASHBOARD).assertIsDisplayed()
+        compose.assertAccessibilityChecksPass()
         compose.onNodeWithTag(NovaCutTestTags.SETTINGS_PRIVACY_CLOSE).performClick()
         compose.onNodeWithTag(NovaCutTestTags.SETTINGS_BACK).performClick()
 
@@ -72,5 +83,9 @@ class NovaCutSmokeTest {
         waitUntil(timeoutMillis) {
             onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
         }
+    }
+
+    private fun AndroidComposeTestRule<*, *>.assertAccessibilityChecksPass() {
+        onRoot().tryPerformAccessibilityChecks()
     }
 }

@@ -3,6 +3,7 @@ package com.novacut.editor.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.novacut.editor.engine.AppSettings
+import com.novacut.editor.engine.AppearanceMode
 import com.novacut.editor.engine.DiagnosticExportEngine
 import com.novacut.editor.engine.ModelDownloadManager
 import com.novacut.editor.engine.ProjectAutoSave
@@ -95,6 +96,7 @@ class SettingsViewModel @Inject constructor(
     fun setAiModelWifiOnly(v: Boolean) = viewModelScope.launch { repo.updateAiModelWifiOnly(v) }
     fun setIncludeDiagnosticTimelineShape(v: Boolean) =
         viewModelScope.launch { repo.updateIncludeDiagnosticTimelineShape(v) }
+    fun setAppearanceMode(v: AppearanceMode) = viewModelScope.launch { repo.updateAppearanceMode(v) }
 
     fun refreshAiModelStorage() {
         viewModelScope.launch {
