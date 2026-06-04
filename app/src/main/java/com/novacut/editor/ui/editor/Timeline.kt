@@ -886,6 +886,7 @@ fun Timeline(
                                     detectTapGestures(
                                         onTap = { offset ->
                                             val ppm = currentZoomLevel * BASE_SCALE
+                                            if (ppm < 0.001f) return@detectTapGestures
                                             val tappedMs = currentScrollOffsetMs + (offset.x / ppm).toLong()
                                             val trackClips = currentTracks.firstOrNull { it.id == track.id }?.clips ?: return@detectTapGestures
                                             val clip = trackClips.firstOrNull {
@@ -900,6 +901,7 @@ fun Timeline(
                                         },
                                         onLongPress = { offset ->
                                             val ppm = currentZoomLevel * BASE_SCALE
+                                            if (ppm < 0.001f) return@detectTapGestures
                                             val tappedMs = currentScrollOffsetMs + (offset.x / ppm).toLong()
                                             val trackClips = currentTracks.firstOrNull { it.id == track.id }?.clips ?: return@detectTapGestures
                                             val clip = trackClips.firstOrNull {

@@ -1043,6 +1043,7 @@ fun SpeedPanel(
                         onClick = {
                             onSpeedDragStarted()
                             onSpeedChanged(speed)
+                            onSpeedDragEnded()
                         },
                         label = {
                             Text(

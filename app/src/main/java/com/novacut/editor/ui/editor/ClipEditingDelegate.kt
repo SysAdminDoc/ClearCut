@@ -263,7 +263,22 @@ class ClipEditingDelegate(
             } else {
                 emptySet()
             }
-            s.copy(selectedClipId = clipId, selectedTrackId = trackId, selectedClipIds = newSelectedIds)
+            val updated = s.copy(selectedClipId = clipId, selectedTrackId = trackId, selectedClipIds = newSelectedIds)
+            if (clipId == null) {
+                updated.copyPanel { panel ->
+                    val clipPanels = setOf(
+                        PanelId.EFFECTS, PanelId.TRANSFORM, PanelId.SPEED_CURVE,
+                        PanelId.KEYFRAME_EDITOR, PanelId.MASK_EDITOR, PanelId.BLEND_MODE,
+                        PanelId.COLOR_GRADING, PanelId.AUDIO, PanelId.TRANSITION_PICKER,
+                        PanelId.AI_TOOLS, PanelId.NOISE_REDUCTION, PanelId.CAPTION_EDITOR,
+                        PanelId.PIP_PRESETS, PanelId.CHROMA_KEY
+                    )
+                    panel.copy(
+                        panels = PanelVisibility(panel.panels.openPanels - clipPanels),
+                        selectedEffectId = null
+                    )
+                }
+            } else updated
         }
         updatePreview()
     }
@@ -814,15 +829,17 @@ class ClipEditingDelegate(
 
         saveUndoState("Move clip to track")
         stateFlow.update { state ->
+            val freshClip = state.tracks.flatMap { it.clips }.firstOrNull { it.id == clipId }
+                ?: return@update state
             val tracksWithRemoved = state.tracks.map { track ->
-                if (track.id == sourceTrack.id) {
+                if (track.clips.any { it.id == clipId }) {
                     track.copy(clips = track.clips.filter { it.id != clipId })
                 } else track
             }
             val tracks = tracksWithRemoved.map { track ->
                 if (track.id == targetTrackId) {
                     val endMs = track.clips.maxOfOrNull { it.timelineEndMs } ?: 0L
-                    track.copy(clips = track.clips + movedClip.copy(timelineStartMs = endMs))
+                    track.copy(clips = track.clips + freshClip.copy(timelineStartMs = endMs))
                 } else track
             }
             recalculateDuration(state.copy(tracks = tracks))
