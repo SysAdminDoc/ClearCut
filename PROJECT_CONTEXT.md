@@ -10,8 +10,8 @@ NovaCut is an Android video editor under package `com.novacut.editor`. The repo 
 
 Current live version evidence:
 
-- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 166`, `versionName = "3.74.29"`.
-- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.29`.
+- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 167`, `versionName = "3.74.30"`.
+- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.30`.
 - [README.md](README.md) and [ROADMAP.md](ROADMAP.md) both describe the v3.74.x line.
 - The 2026-05-17 continuation pushes each completed roadmap batch back to `origin/master`; verify `git status --short --branch` before assuming branch sync.
 
@@ -442,6 +442,23 @@ High-level modules and patterns:
   APK-based 16 KB gates passed.
 - Next roadmap item: continue P1 EditorScreen panel router decomposition for
   the remaining utility sheets and always-on overlay routes.
+
+2026-06-04 utility panel and overlay router host extraction continuation:
+
+- Completed the current P1 EditorScreen panel router decomposition lane in
+  v3.74.30 by extracting utility sheets/dialogs into `EditorUtilityPanelHost`,
+  always-on preview/status overlays into `EditorOverlayHost`, and shared report
+  dialog rendering into `EditorFeedbackDialogs`.
+- `EditorScreen` now delegates primary, AI, clip-adjustment, utility, and
+  overlay route clusters through focused host calls while retaining top-level
+  layout coordination, launcher ownership, and action dispatch.
+- Verification: `git diff --check`, `scripts/verify_release_artifacts.py`,
+  APK-based 16 KB checks for debug/release, `apksigner verify` for
+  debug/release, `zipalign -c -P 16 -v 4` for debug/release/androidTest,
+  `:app:compileDebugKotlin --rerun-tasks`, `:app:testDebugUnitTest`,
+  `:app:assembleDebug`, `:app:assembleRelease`, and
+  `:app:assembleDebugAndroidTest` passed.
+- Next roadmap item: P1 Timeline refactor.
 
 2026-05-17 autonomous continuation:
 

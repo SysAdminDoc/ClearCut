@@ -8,7 +8,7 @@ Active roadmap for forward-looking work. Shipped work is summarized in
 [RESEARCH_REPORT.md](RESEARCH_REPORT.md), and detailed historical plans are
 archived under [docs/archive](docs/archive/).
 
-Current version: **v3.74.29** (`versionCode` 166). Last consolidated:
+Current version: **v3.74.30** (`versionCode` 167). Last consolidated:
 2026-06-04.
 
 > Last researched: Cycle 1 - 2026-06-04.
@@ -43,8 +43,12 @@ into `EditorAiPanelHost`, and v3.74.29 extracted clip-adjustment routes into
 `EditorClipAdjustmentPanelHost`. Maven metadata shows
 Media3 1.10.1 and WorkManager 2.11.2 current, with Compose BOM 2026.05.01, Room
 2.8.4, and Kotlin 2.4.0 available for deliberate review; AGP's newest observed
-metadata is 9.3.0-alpha09 and should stay out of routine bumps. Focused Gradle,
-full APK, release metadata, signature, zipalign, and 16 KB gates passed locally.
+metadata is 9.3.0-alpha09 and should stay out of routine bumps. v3.74.30
+completed the current panel-router lane by extracting utility sheets/dialogs
+into `EditorUtilityPanelHost`, always-on overlay routes into
+`EditorOverlayHost`, and shared report rows into `EditorFeedbackDialogs`.
+Focused Gradle, APK packaging, release metadata, signature, zipalign, and
+APK-based 16 KB gates passed locally for this batch.
 
 ## Current State
 
@@ -115,6 +119,9 @@ full APK, release metadata, signature, zipalign, and 16 KB gates passed locally.
 - v3.74.29 extracts the clip-adjustment panel router host for transform, crop,
   effect adjustment, color/audio/keyframe/speed/mask/blend/PiP/chroma/caption
   surfaces and their local transform/mask preview overlays.
+- v3.74.30 completes the current EditorScreen panel-router decomposition lane by
+  extracting utility sheets/dialogs, always-on overlay routes, and shared report
+  dialog rows out of the main screen body.
 
 ## Source Archives
 
@@ -127,7 +134,6 @@ full APK, release metadata, signature, zipalign, and 16 KB gates passed locally.
 
 | Priority | Work | Exit criteria |
 |---|---|---|
-| P1 | EditorScreen panel router decomposition | Finish extracting the remaining utility and always-on overlay routes into smaller host components that own only their local state and callbacks. |
 | P1 | Timeline refactor | Reduce `Timeline.kt` risk by extracting gesture handling, clip layout, overlays, and accessibility actions into focused files with tests where practical. |
 | P1 | Model activation gates | For every active AI/model dependency, keep source locator, SHA-256, license posture, delivery mode, F-Droid posture, and runtime checksum behavior current in `docs/models.md`. |
 | P2 | Project color policy consumers | Wire `ProjectColorPolicy` into Settings/export confidence once the Room/autosave migration plan is ready. |

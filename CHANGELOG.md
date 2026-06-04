@@ -1,5 +1,28 @@
 # Changelog
 
+## v3.74.30 — 2026-06-04
+
+### Utility panel and overlay router host extraction
+- Added `EditorUtilityPanelHost` to own scratchpad, chapter, recovery, AI
+  requirement, import/export feedback, media manager, render preview, batch
+  export, beat sync, style, speed, smart reframe, undo history, marker, TTS,
+  auto edit, noise reduction, effect library, sticker, drawing, multicam,
+  feature hub, project backup, and text-template routes.
+- Added `EditorOverlayHost` to own drawing canvas, export progress,
+  first-run tutorial, auto-save indicator, caption preview, motion path,
+  scopes, clip-label picker, toast, and bulk-undo overlays.
+- Moved backup import, timeline exchange, and legacy AI requirement row
+  rendering into `EditorFeedbackDialogs`.
+- Completed the current `EditorScreen` panel-router decomposition lane; the main
+  screen now delegates panel and overlay clusters through focused host calls.
+- Bumped runtime metadata to `versionName 3.74.30` / `versionCode 167`.
+- Verification: `git diff --check`, `scripts/verify_release_artifacts.py`,
+  APK-based 16 KB checks for debug/release, `apksigner verify` for
+  debug/release, `zipalign -c -P 16 -v 4` for debug/release/androidTest,
+  `:app:compileDebugKotlin --rerun-tasks`, `:app:testDebugUnitTest`,
+  `:app:assembleDebug`, `:app:assembleRelease`, and
+  `:app:assembleDebugAndroidTest` passed.
+
 ## v3.74.29 — 2026-06-04
 
 ### Clip adjustment panel router host extraction
