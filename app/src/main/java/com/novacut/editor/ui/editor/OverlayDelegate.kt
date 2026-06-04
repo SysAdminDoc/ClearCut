@@ -44,9 +44,12 @@ class OverlayDelegate(
         saveUndoState("Remove text")
         stateFlow.update { state ->
             state.copy(
-                textOverlays = state.textOverlays.filterNot { it.id == id },
-                editingTextOverlayId = if (state.editingTextOverlayId == id) null else state.editingTextOverlayId
-            )
+                textOverlays = state.textOverlays.filterNot { it.id == id }
+            ).copyPanel { panel ->
+                panel.copy(
+                    editingTextOverlayId = if (panel.editingTextOverlayId == id) null else panel.editingTextOverlayId
+                )
+            }
         }
         saveProject()
     }

@@ -39,11 +39,17 @@ class ColorGradingDelegate(
 
     fun showColorGrading() {
         pauseIfPlaying()
-        stateFlow.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.COLOR_GRADING)) }
+        stateFlow.update {
+            dismissedPanelState(it).copyPanel { panel ->
+                panel.copy(panels = panel.panels.closeAll().open(PanelId.COLOR_GRADING))
+            }
+        }
     }
 
     fun hideColorGrading() {
-        stateFlow.update { it.copy(panels = it.panels.close(PanelId.COLOR_GRADING)) }
+        stateFlow.update {
+            it.copyPanel { panel -> panel.copy(panels = panel.panels.close(PanelId.COLOR_GRADING)) }
+        }
     }
 
     fun beginColorGradeAdjust() {

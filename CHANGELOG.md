@@ -1,5 +1,27 @@
 # Changelog
 
+## v3.74.26 — 2026-06-04
+
+### Panel editor-state storage migration
+- Moved panel visibility, selected effect, and text-overlay editing target
+  storage into `EditorPanelState`.
+- Kept read-only `EditorState` compatibility accessors so existing editor UI,
+  delegates, and panel router reads remain stable.
+- Converted ViewModel and delegate panel mutation paths to update `state.panel`
+  through `copyPanel` / nested `panel.copy(...)`, including export, text editor,
+  tutorial, undo history, TTS, drawing, Cut Assistant, media relink, scopes,
+  scratchpad, recovery dialog, audio mixer, color grading, batch export, render
+  preview, clip import, and text-overlay removal flows.
+- Updated `EditorDomainStateTest` to construct the stored panel slice directly.
+- Bumped runtime metadata to `versionName 3.74.26` / `versionCode 163`.
+- Verification: `git diff --check`, `scripts/verify_release_artifacts.py`,
+  APK-based 16 KB checks for debug/release, `apksigner verify` for
+  debug/release, `zipalign -c -P 16 -v 4` for debug/release/androidTest,
+  `:app:compileDebugKotlin :app:testDebugUnitTest --tests
+  com.novacut.editor.ui.editor.EditorDomainStateTest`, and
+  `:app:testDebugUnitTest :app:assembleDebug :app:assembleRelease
+  :app:assembleDebugAndroidTest` passed.
+
 ## v3.74.25 — 2026-06-04
 
 ### Caption editor-state storage migration

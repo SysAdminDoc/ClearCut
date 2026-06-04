@@ -142,12 +142,15 @@ class ClipEditingDelegate(
                     }
                 }
 
-                recalculateDuration(state.copy(
-                    tracks = tracks,
-                    selectedClipId = clip.id,
-                    selectedTrackId = track.id,
-                    panels = state.panels.close(PanelId.MEDIA_PICKER)
-                ))
+                recalculateDuration(
+                    state.copy(
+                        tracks = tracks,
+                        selectedClipId = clip.id,
+                        selectedTrackId = track.id
+                    ).copyPanel { panel ->
+                        panel.copy(panels = panel.panels.close(PanelId.MEDIA_PICKER))
+                    }
+                )
             }
 
             // Rebuild through the shared path so preview and normalization stay in sync.
