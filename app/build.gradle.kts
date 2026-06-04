@@ -22,8 +22,8 @@ android {
         applicationId = "com.novacut.editor"
         minSdk = 26
         targetSdk = 36
-        versionCode = 148
-        versionName = "3.74.11"
+        versionCode = 149
+        versionName = "3.74.12"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -97,6 +97,13 @@ android {
     // legitimately needs the Android runtime.
     testOptions {
         unitTests.isReturnDefaultValues = true
+    }
+
+    lint {
+        // androidx.lifecycle's NullSafeMutableLiveData detector crashes under
+        // the current Kotlin 2.1 / AGP 8.7 lint stack, and NovaCut has no
+        // LiveData call sites for this detector to inspect.
+        disable += "NullSafeMutableLiveData"
     }
 }
 

@@ -1,5 +1,27 @@
 # Changelog
 
+## v3.74.12 — 2026-06-04
+
+### Release pipeline reactivation
+- Extended the GitHub Actions APK workflow to package the instrumentation APK,
+  verify release metadata, locate Android build tools, validate APK signatures,
+  check APK ZIP alignment, and upload the androidTest artifact alongside debug
+  and release APKs.
+- Added `scripts/verify_release_artifacts.py` so CI fails when Gradle version
+  metadata, app display version, roadmap/completed/changelog headings,
+  gitignored signing inputs, tag names, or generated APK metadata drift apart.
+- Switched the 16 KB native-library gate to inspect debug and release APKs
+  directly, matching the artifact surface that upload/release checks consume.
+- Disabled the crashing `NullSafeMutableLiveData` lint detector for this AGP
+  8.7 / Kotlin 2.1 stack; the repository has no LiveData call sites for that
+  detector to inspect.
+- Bumped runtime metadata to `versionName 3.74.12` / `versionCode 149`.
+- Verification: `git diff --check`, `scripts/verify_release_artifacts.py`,
+  APK-based 16 KB checks for debug/release, `apksigner verify` for
+  debug/release, `zipalign -c -P 16 -v 4` for debug/release/androidTest, and
+  `:app:testDebugUnitTest :app:assembleDebug :app:assembleRelease
+  :app:assembleDebugAndroidTest` passed.
+
 ## v3.74.11 — 2026-06-04
 
 ### UI test harness bootstrap

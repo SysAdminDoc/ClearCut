@@ -4,7 +4,7 @@ Research synthesis for planning. The detailed source plans are archived under
 [docs/archive/research](docs/archive/research/), and the previous expanded
 roadmaps are archived under [docs/archive/roadmap](docs/archive/roadmap/).
 
-Last consolidated: 2026-06-01.
+Last consolidated: 2026-06-03.
 
 ## Executive Summary
 
