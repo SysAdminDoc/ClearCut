@@ -6,6 +6,36 @@ roadmaps are archived under [docs/archive/roadmap](docs/archive/roadmap/).
 
 Last refreshed: 2026-06-04.
 
+## 2026-06-04 Cycle 20 Opt-In Product Health Refresh
+
+- [Verified] `PrivacyDashboard` already exposes an `OPT_IN_TELEMETRY` category
+  labeled "Opt-in usage telemetry (Sentry / Glean)" and marks it cloud/on-demand,
+  deletable, opt-out-capable, and disabled by default. The only app startup
+  observability currently installed is the local `CrashRecordStore` global
+  handler, and the diagnostic ZIP path is user-triggered, local-first, redacted,
+  and counts-only for its optional timeline-shape payload.
+- [Verified] Grep across `app/src/main`, Gradle scripts, and
+  `gradle/libs.versions.toml` finds no Sentry, Mozilla Glean, Firebase
+  Analytics, Crashlytics, OpenTelemetry, JankStats, `PerformanceMetricsState`,
+  or telemetry SDK dependency. This means the dashboard row is a future-facing
+  contract, not a shipped network path.
+- [Verified] Current Android vitals, JankStats, Play Data safety, User Data,
+  F-Droid anti-feature, Mozilla Glean, OpenTelemetry Android, Sentry Android,
+  Firebase Analytics, IETF DAP, Divvi Up, and W3C Privacy Principles sources all
+  point toward the same planning constraint: collect the minimum useful product
+  health signal, disclose SDK/provider behavior precisely, gate network upload
+  behind affirmative consent, and preserve deletion/export controls.
+- [Promoted] Merged the archived R5.5b aggregate-only usage-metrics idea into a
+  new P2 roadmap item for a local-first product-health ledger. The first
+  implementation should be a reviewable on-device counter ledger and diagnostic
+  summary, with Sentry/Glean/Firebase/OpenTelemetry/DAP treated as later
+  mutually exclusive adapter choices rather than hidden startup dependencies.
+- [Rejected] Do not add default-on analytics, automatic crash upload, per-event
+  timeline traces, raw stack-trace upload, screen-name analytics, persistent
+  identifiers, or media/project metadata sampling. Those would conflict with
+  NovaCut's local-first trust posture and create Play/F-Droid disclosure work
+  before the product has a proved user benefit.
+
 ## 2026-06-04 Cycle 19 SDH and Audio Description Export Refresh
 
 - [Verified] `V369FeaturesPanel` exposes a card titled "SDH + Audio

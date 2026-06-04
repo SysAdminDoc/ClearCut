@@ -11,7 +11,7 @@ archived under [docs/archive](docs/archive/).
 Current version: **v3.74.44** (`versionCode` 181). Last consolidated:
 2026-06-04.
 
-> Last researched: Cycle 19 - 2026-06-04.
+> Last researched: Cycle 20 - 2026-06-04.
 
 ## ▶ Implementer Instructions (for the build machine)
 
@@ -1749,3 +1749,146 @@ make both exportable before the UI presents them as accessibility outputs.
   https://www.w3.org/WAI/media/av/description/
 - TensorFlow YAMNet:
   https://www.tensorflow.org/hub/tutorials/yamnet?hl=en
+
+### Researcher Queue (Cycle 20 - 2026-06-04)
+
+Focus: make product-health observability useful without weakening NovaCut's
+local-first privacy posture or duplicating the in-flight Baseline Profile work.
+
+#### Privacy-Preserving Product Health
+
+- [ ] P2 - 🔬🤖 Add a local-first product-health ledger before telemetry SDKs
+  - Why: NovaCut already advertises an opt-in telemetry category and names
+    future Sentry/Glean collectors, but the app currently has only local crash
+    records and user-triggered diagnostic ZIPs. A local product-health ledger
+    gives maintainers aggregate evidence about fragile editor paths while
+    keeping media projects, filenames, captions, transcripts, and edit details
+    off the network until a user deliberately opts into a documented upload
+    path. This promotes the archived R5.5b aggregate-usage-metrics idea without
+    adding another generic analytics item.
+  - Evidence: `PrivacyDashboard.kt:33` defines `OPT_IN_TELEMETRY("Opt-in usage
+    telemetry (Sentry / Glean)")`; `PrivacyDashboard.kt:159`-`PrivacyDashboard.kt:164`
+    marks that row as cloud/on-demand, deletable, opt-out-capable, collected by
+    future SentryAndroid/Mozilla Glean, and disabled by default.
+    `DiagnosticExportEngine.kt:74`-`DiagnosticExportEngine.kt:88` already
+    documents a counts-only, user-triggered diagnostic payload that excludes
+    clip names, source URIs, captions, transcripts, and file paths.
+    `NovaCutApp.kt:32`-`NovaCutApp.kt:35` installs only the local
+    `CrashRecordStore` handler and notification channels. Grep across
+    `app/src/main`, Gradle scripts, and `gradle/libs.versions.toml` finds no
+    Sentry, Glean, Firebase Analytics, Crashlytics, OpenTelemetry, JankStats,
+    `PerformanceMetricsState`, or telemetry SDK dependency today. The archived
+    roadmap's R5.5b proposed aggregate-only usage metrics via Mozilla Glean or
+    Divvi Up, while R5.5d completed local diagnostic ZIP export without a
+    telemetry pipe.
+  - Current-source check: Android vitals gives Play developers opt-in,
+    system-collected quality signals for crashes, ANRs, rendering, battery,
+    and permission issues, but only for Play installs and users who allow data
+    sharing. JankStats and `PerformanceMetricsState` are the AndroidX path for
+    tagging real UI jank with Compose state. Google Play's Data safety and User
+    Data policies require accurate disclosure, SDK review, privacy policy
+    coverage, prominent in-app disclosure/affirmative consent where needed, and
+    retention/deletion mechanisms. F-Droid treats tracking or reporting
+    activity as an anti-feature when it is on by default or lacks informed
+    consent, and proprietary tracking SDKs can affect inclusion. Mozilla Glean
+    sends built-in pings only when collection is enabled and includes a
+    deletion-request ping when telemetry is disabled. OpenTelemetry Android and
+    Sentry can collect rich lifecycle, ANR, crash, frame, session, device, and
+    connectivity context, so NovaCut needs an explicit redaction/schema layer
+    before considering either. DAP/Divvi Up-style aggregation is promising for
+    anonymous aggregate counters, but it adds infrastructure and privacy-set
+    requirements that are premature before local schema review.
+  - Touches: `PrivacyDashboard` telemetry copy and controls, Settings privacy
+    toggle copy, `SettingsRepository` consent state, a new local product-health
+    ledger under app-private storage, optional `DiagnosticExportEngine` summary
+    inclusion, redaction helpers, event-schema docs, SDK facade stubs only after
+    consent is proven, Play Data safety/F-Droid metadata docs, and focused JVM
+    plus instrumentation tests.
+  - Acceptance: telemetry remains off on fresh install, after upgrade, and
+    after settings restore. The first build implements only a local, reviewable
+    ledger with coarse counters such as export attempts by codec family,
+    cancelled exports, anonymized failure class, cold-start bucket, slow-frame
+    bucket, model-download failure class, and diagnostic-ZIP creation count.
+    The schema forbids project names, media URIs, file paths, account IDs,
+    persistent identifiers, captions, transcripts, prompts, thumbnails,
+    location, device serials, and raw stack traces. Users can view, export,
+    delete, and disable the ledger. Any future network upload is separately
+    gated by affirmative consent, lists provider, endpoint, retention, deletion
+    behavior, Data safety impact, and F-Droid anti-feature impact, and does not
+    initialize a telemetry SDK until consent is true. Sentry crash reporting,
+    Glean aggregate metrics, Firebase Analytics, OpenTelemetry, and DAP/Divvi
+    Up are evaluated as mutually exclusive adapters rather than silently bundled
+    together.
+  - Verify: add tests proving fresh installs do not initialize telemetry SDKs
+    or open network exporters, cloud/telemetry dashboard rows are off by
+    default, the local ledger redacts prohibited fields, export/delete/disable
+    controls work, diagnostic ZIP inclusion is opt-in and counts-only, consent
+    changes persist across process restart, and future adapter code refuses to
+    upload when consent is false. Add an instrumentation or fake-network guard
+    that exercises app startup and Settings without telemetry traffic.
+  - Complexity: M
+
+#### Appendix - Cycle 20 Sources
+
+- Android vitals overview:
+  https://developer.android.com/topic/performance/vitals
+- Android vitals crashes:
+  https://developer.android.com/topic/performance/vitals/crash
+- Android vitals ANRs:
+  https://developer.android.com/topic/performance/vitals/anr
+- Android vitals slow/frozen frames:
+  https://developer.android.com/topic/performance/vitals/render
+- Android JankStats:
+  https://developer.android.com/topic/performance/jankstats
+- AndroidX `PerformanceMetricsState`:
+  https://developer.android.com/reference/androidx/metrics/performance/PerformanceMetricsState
+- Android system tracing:
+  https://developer.android.com/topic/performance/tracing
+- Android app startup:
+  https://developer.android.com/topic/performance/appstartup
+- Android `StrictMode`:
+  https://developer.android.com/reference/android/os/StrictMode
+- Android `ApplicationExitInfo`:
+  https://developer.android.com/reference/android/app/ApplicationExitInfo
+- Google Play Data safety form:
+  https://support.google.com/googleplay/android-developer/answer/10787469
+- Google Play User Data policy:
+  https://support.google.com/googleplay/android-developer/answer/10144311
+- Google Play SDK Index:
+  https://play.google.com/sdks
+- Mozilla Glean overview:
+  https://mozilla.github.io/glean/book/index.html
+- Mozilla Glean Android binding:
+  https://mozilla.github.io/glean/book/language-bindings/android/index.html
+- Mozilla Glean metrics:
+  https://mozilla.github.io/glean/book/user/collected-metrics/metrics.html
+- Mozilla Glean pings:
+  https://mozilla.github.io/glean/book/user/pings/index.html
+- Mozilla Glean built-in pings:
+  https://mozilla.github.io/glean/book/user/pings/sent-by-glean.html
+- Mozilla Glean source:
+  https://github.com/mozilla/glean
+- OpenTelemetry Android:
+  https://opentelemetry.io/docs/platforms/client-apps/android/
+- OpenTelemetry Android source:
+  https://github.com/open-telemetry/opentelemetry-android
+- Sentry Android:
+  https://docs.sentry.io/platforms/android/
+- Sentry Android options:
+  https://docs.sentry.io/platforms/android/configuration/options/
+- Firebase Analytics Android setup:
+  https://firebase.google.com/docs/analytics/get-started?platform=android
+- Firebase Analytics events:
+  https://firebase.google.com/docs/analytics/events?platform=android
+- F-Droid anti-features:
+  https://f-droid.org/en/docs/Anti-Features/
+- F-Droid inclusion policy:
+  https://f-droid.org/en/docs/Inclusion_Policy/
+- IETF PPM working group:
+  https://datatracker.ietf.org/group/ppm/
+- IETF DAP draft:
+  https://datatracker.ietf.org/doc/draft-ietf-ppm-dap/
+- Divvi Up Tella Android case study:
+  https://divviup.org/blog/horizontal-tella/
+- W3C Privacy Principles:
+  https://www.w3.org/TR/privacy-principles/
