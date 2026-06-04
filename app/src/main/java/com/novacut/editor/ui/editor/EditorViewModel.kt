@@ -214,11 +214,7 @@ data class EditorState(
     val captionTranslationQuality: com.novacut.editor.engine.CaptionTranslationEngine.LanguagePairQuality? = null,
     val captionTranslationVariant: com.novacut.editor.engine.CaptionTranslationEngine.ModelVariant =
         com.novacut.editor.engine.CaptionTranslationEngine.ModelVariant.NLLB_600M,
-    // Tier C.13 — compound clip navigation depth. The actual stack lives on
-    // EditorViewModel as a mutable companion; this state field is the
-    // immutable signal the UI (BackHandler, breadcrumb chip) reads. 0 == root.
-    val compoundNavDepth: Int = 0,
-    val compoundBreadcrumbText: String = "",
+    val compound: EditorCompoundState = EditorCompoundState(),
     val copiedEffects: List<Effect> = emptyList(),
     val isRecordingVoiceover: Boolean = false,
     val voiceoverDurationMs: Long = 0L,
@@ -295,6 +291,8 @@ data class EditorState(
     val backupImportFeedback: BackupImportFeedback? get() = media.backupImportFeedback
     val timelineExchangeFeedback: TimelineExchangeFeedback? get() = media.timelineExchangeFeedback
     val mediaRelinkReports: Map<String, MediaRelinkProbe.ClipRelinkReport> get() = media.relinkReports
+    val compoundNavDepth: Int get() = compound.depth
+    val compoundBreadcrumbText: String get() = compound.breadcrumbText
 }
 
 /**
@@ -4543,8 +4541,10 @@ class EditorViewModel @Inject constructor(
         )
         _state.update {
             it.copy(
-                compoundNavDepth = compoundNavStack.depth,
-                compoundBreadcrumbText = text,
+                compound = it.compound.copy(
+                    depth = compoundNavStack.depth,
+                    breadcrumbText = text,
+                ),
                 selectedClipId = if (clearSelection) null else it.selectedClipId,
                 selectedTrackId = if (clearSelection) null else it.selectedTrackId,
                 selectedClipIds = if (clearSelection) emptySet() else it.selectedClipIds,

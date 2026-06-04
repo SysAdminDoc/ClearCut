@@ -68,8 +68,10 @@ class EditorDomainStateTest {
             captionTranslationSourceLang = "en",
             captionTranslationTargetLang = "es",
             captionTranslationQuality = CaptionTranslationEngine.LanguagePairQuality.GOOD,
-            compoundNavDepth = 2,
-            compoundBreadcrumbText = "Root > Compound",
+            compound = EditorCompoundState(
+                depth = 2,
+                breadcrumbText = "Root > Compound"
+            ),
             export = EditorExportDomainState(
                 progress = 0.42f,
                 state = ExportState.EXPORTING,
