@@ -186,9 +186,10 @@ data class EditorState(
     val totalDurationMs: Long = 0L,
     val currentTool: EditorTool = EditorTool.NONE,
     val panels: PanelVisibility = PanelVisibility(),
-    val exportConfig: ExportConfig = ExportConfig(),
-    val exportProgress: Float = 0f,
-    val exportState: ExportState = ExportState.IDLE,
+    // Storage slices migrated out of the flat state constructor. Read-only
+    // compatibility accessors below preserve existing UI reads while mutation
+    // call sites move to nested domain state.
+    val export: EditorExportDomainState = EditorExportDomainState(),
     val textOverlays: List<TextOverlay> = emptyList(),
     val imageOverlays: List<ImageOverlay> = emptyList(),
     val timelineMarkers: List<TimelineMarker> = emptyList(),
@@ -203,9 +204,6 @@ data class EditorState(
     // one-shot action snackbar ("N clips deleted — Undo"). Null when no
     // banner is pending or after the user interacts with it.
     val bulkUndoPrompt: BulkUndoPrompt? = null,
-    // First storage slice migrated out of the flat state constructor. Read-only
-    // compatibility accessors below preserve existing UI reads while mutation
-    // call sites move to `copy(ai = state.ai.copy(...))`.
     val ai: EditorAiState = EditorAiState(),
     // R5.4a — caption-translation editor surface. Populated by
     // EditorViewModel.runCaptionTranslation(); the panel
@@ -221,17 +219,12 @@ data class EditorState(
     // immutable signal the UI (BackHandler, breadcrumb chip) reads. 0 == root.
     val compoundNavDepth: Int = 0,
     val compoundBreadcrumbText: String = "",
-    val lastExportedFilePath: String? = null,
     val copiedEffects: List<Effect> = emptyList(),
-    val exportErrorMessage: String? = null,
     val isRecordingVoiceover: Boolean = false,
     val voiceoverDurationMs: Long = 0L,
     val isLooping: Boolean = false,
     val editingTextOverlayId: String? = null,
     val activeScopeType: com.novacut.editor.ui.editor.ScopeType = com.novacut.editor.ui.editor.ScopeType.HISTOGRAM,
-    val exportStartTime: Long = 0L,
-    val renderSegments: List<com.novacut.editor.engine.SmartRenderEngine.RenderSegment> = emptyList(),
-    val renderSummary: com.novacut.editor.engine.SmartRenderEngine.SmartRenderSummary? = null,
     // Chapter markers
     val chapterMarkers: List<ChapterMarker> = emptyList(),
     // Multi-select
@@ -248,8 +241,6 @@ data class EditorState(
     val vuLevels: Map<String, Pair<Float, Float>> = emptyMap(),
     // Beat markers
     val beatMarkers: List<Long> = emptyList(),
-    // Batch export
-    val batchExportQueue: List<BatchExportItem> = emptyList(),
     // Project snapshots
     val projectSnapshots: List<ProjectSnapshot> = emptyList(),
     // Proxy
@@ -264,8 +255,6 @@ data class EditorState(
     val editorMode: EditorMode = EditorMode.PRO,
     // Timeline collapsed
     val isTimelineCollapsed: Boolean = false,
-    // Saved export config (for restoring after quick preview)
-    val savedExportConfig: ExportConfig? = null,
     // Drawing overlay
     val drawingPaths: List<com.novacut.editor.model.DrawingPath> = emptyList(),
     val isDrawingMode: Boolean = false,
@@ -283,6 +272,16 @@ data class EditorState(
     val timelineExchangeFeedback: TimelineExchangeFeedback? = null,
     val mediaRelinkReports: Map<String, MediaRelinkProbe.ClipRelinkReport> = emptyMap()
 ) {
+    val exportConfig: ExportConfig get() = export.config
+    val exportProgress: Float get() = export.progress
+    val exportState: ExportState get() = export.state
+    val lastExportedFilePath: String? get() = export.lastExportedFilePath
+    val exportErrorMessage: String? get() = export.errorMessage
+    val exportStartTime: Long get() = export.startTime
+    val renderSegments: List<SmartRenderEngine.RenderSegment> get() = export.renderSegments
+    val renderSummary: SmartRenderEngine.SmartRenderSummary? get() = export.renderSummary
+    val batchExportQueue: List<BatchExportItem> get() = export.batchQueue
+    val savedExportConfig: ExportConfig? get() = export.savedConfig
     val aiRequirementPrompt: AiRequirementPrompt? get() = ai.requirementPrompt
     val aiModelRequirement: com.novacut.editor.engine.AiToolRequirements.ToolRequirement?
         get() = ai.modelRequirement
@@ -693,12 +692,12 @@ class EditorViewModel @Inject constructor(
 
         viewModelScope.launch {
             videoEngine.exportProgress.collect { progress ->
-                _state.update { it.copy(exportProgress = progress) }
+                _state.update { it.copyExport { export -> export.copy(progress = progress) } }
             }
         }
         viewModelScope.launch {
             videoEngine.exportState.collect { exportState ->
-                _state.update { it.copy(exportState = exportState) }
+                _state.update { it.copyExport { export -> export.copy(state = exportState) } }
                 if (exportState == ExportState.CANCELLED) {
                     showToast("Export cancelled")
                 }
@@ -796,11 +795,15 @@ class EditorViewModel @Inject constructor(
                         else -> ExportQuality.HIGH
                     }
                     _state.update { s ->
-                        s.copy(exportConfig = s.exportConfig.copy(
-                            resolution = settings.defaultResolution,
-                            frameRate = settings.defaultFrameRate,
-                            quality = quality
-                        ))
+                        s.copyExport { export ->
+                            export.copy(
+                                config = s.exportConfig.copy(
+                                    resolution = settings.defaultResolution,
+                                    frameRate = settings.defaultFrameRate,
+                                    quality = quality
+                                )
+                            )
+                        }
                     }
                 }
 
@@ -1415,15 +1418,18 @@ class EditorViewModel @Inject constructor(
         videoEngine.resetExportState()
         _state.update { state ->
             val defaultDisclosure = AiUsageLedger.discloseToggleDefaultOn(state.aiUsageLedger)
-            dismissedPanelState(state).copy(
+            val dismissed = dismissedPanelState(state)
+            dismissed.copy(
                 panels = state.panels.closeAll().open(PanelId.EXPORT_SHEET),
-                exportConfig = state.exportConfig.copy(
-                    discloseAiUse = defaultDisclosure,
-                    writeAiUseSidecar = if (defaultDisclosure) true else state.exportConfig.writeAiUseSidecar
-                ),
-                exportState = ExportState.IDLE,
-                exportProgress = 0f,
-                exportErrorMessage = null
+                export = dismissed.export.copy(
+                    config = state.exportConfig.copy(
+                        discloseAiUse = defaultDisclosure,
+                        writeAiUseSidecar = if (defaultDisclosure) true else state.exportConfig.writeAiUseSidecar
+                    ),
+                    state = ExportState.IDLE,
+                    progress = 0f,
+                    errorMessage = null
+                )
             )
         }
     }
@@ -1432,8 +1438,10 @@ class EditorViewModel @Inject constructor(
             val restored = s.savedExportConfig
             s.copy(
                 panels = s.panels.close(PanelId.EXPORT_SHEET),
-                exportConfig = restored ?: s.exportConfig,
-                savedExportConfig = null
+                export = s.export.copy(
+                    config = restored ?: s.exportConfig,
+                    savedConfig = null
+                )
             )
         }
     }
@@ -2259,7 +2267,7 @@ class EditorViewModel @Inject constructor(
                 val project = _state.value.project.copy(aspectRatio = targetAspect)
                 _state.update { it.copy(
                     project = project,
-                    exportConfig = it.exportConfig.copy(aspectRatio = targetAspect),
+                    export = it.export.copy(config = it.exportConfig.copy(aspectRatio = targetAspect)),
                     ai = it.ai.copy(isReframing = false)
                 ) }
                 saveProject()
@@ -3966,7 +3974,7 @@ class EditorViewModel @Inject constructor(
 
     // Export
     fun updateExportConfig(config: ExportConfig) {
-        _state.update { it.copy(exportConfig = config) }
+        _state.update { it.copyExport { export -> export.copy(config = config) } }
     }
 
     fun startExport(outputDir: File) = exportDelegate.startExport(outputDir)
@@ -4139,20 +4147,24 @@ class EditorViewModel @Inject constructor(
                     }
                 }
                 _state.update {
-                    it.copy(
-                        lastExportedFilePath = file.absolutePath,
-                        exportState = ExportState.COMPLETE,
-                        exportErrorMessage = null
-                    )
+                    it.copyExport { export ->
+                        export.copy(
+                            lastExportedFilePath = file.absolutePath,
+                            state = ExportState.COMPLETE,
+                            errorMessage = null
+                        )
+                    }
                 }
                 showToast("Frame saved: ${file.name}")
             } catch (e: Exception) {
                 Log.w("EditorVM", "Frame capture failed", e)
                 _state.update {
-                    it.copy(
-                        exportState = ExportState.ERROR,
-                        exportErrorMessage = "Frame capture failed. Try another timestamp or source clip."
-                    )
+                    it.copyExport { export ->
+                        export.copy(
+                            state = ExportState.ERROR,
+                            errorMessage = "Frame capture failed. Try another timestamp or source clip."
+                        )
+                    }
                 }
                 showToast("Frame capture failed")
             }

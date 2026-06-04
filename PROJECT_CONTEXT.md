@@ -10,8 +10,8 @@ NovaCut is an Android video editor under package `com.novacut.editor`. The repo 
 
 Current live version evidence:
 
-- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 158`, `versionName = "3.74.21"`.
-- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.21`.
+- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 159`, `versionName = "3.74.22"`.
+- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.22`.
 - [README.md](README.md) and [ROADMAP.md](ROADMAP.md) both describe the v3.74.x line.
 - The 2026-05-17 continuation pushes each completed roadmap batch back to `origin/master`; verify `git status --short --branch` before assuming branch sync.
 
@@ -302,9 +302,30 @@ High-level modules and patterns:
   sheets, suggestions, usage ledger, Cut Assistant review, smart reframe,
   auto edit, TTS, and noise reduction.
 - Verification: `:app:compileDebugKotlin :app:testDebugUnitTest --tests
+  com.novacut.editor.ui.editor.EditorDomainStateTest`, full debug-unit/debug
+  APK/release APK/androidTest Gradle matrix, release metadata, signature,
+  zipalign, and APK-based 16 KB gates passed.
+- Next roadmap item after this batch was P1 Editor state storage migration for
+  panel, caption, compound, export, and media slices.
+
+2026-06-04 export editor state storage migration continuation:
+
+- Completed the export slice of P1 editor state storage migration in v3.74.22.
+  `EditorState` now stores export-related fields in
+  `export: EditorExportDomainState` instead of flat constructor properties.
+- Added read-only compatibility accessors for existing UI/delegate reads:
+  `exportConfig`, `exportProgress`, `exportState`, `lastExportedFilePath`,
+  `exportErrorMessage`, `exportStartTime`, `renderSegments`, `renderSummary`,
+  `batchExportQueue`, and `savedExportConfig`.
+- Converted export mutation call sites in `EditorViewModel` and
+  `ExportDelegate` to write through `copyExport` / nested `export.copy(...)`,
+  including export engine progress/state collection, export sheet defaults,
+  smart reframe export aspect sync, frame capture, contact-sheet/GIF/video
+  export outcomes, batch export, render preview, and quick-preview config.
+- Verification: `:app:compileDebugKotlin :app:testDebugUnitTest --tests
   com.novacut.editor.ui.editor.EditorDomainStateTest` passed.
 - Next roadmap item: P1 Editor state storage migration for panel, caption,
-  compound, export, and media slices.
+  compound, and media slices.
 
 2026-05-17 autonomous continuation:
 

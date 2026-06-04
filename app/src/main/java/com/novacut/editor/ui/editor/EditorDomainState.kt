@@ -57,16 +57,16 @@ data class EditorCompoundState(
 }
 
 data class EditorExportDomainState(
-    val config: ExportConfig,
-    val progress: Float,
-    val state: ExportState,
-    val lastExportedFilePath: String?,
-    val errorMessage: String?,
-    val startTime: Long,
-    val renderSegments: List<SmartRenderEngine.RenderSegment>,
-    val renderSummary: SmartRenderEngine.SmartRenderSummary?,
-    val batchQueue: List<BatchExportItem>,
-    val savedConfig: ExportConfig?
+    val config: ExportConfig = ExportConfig(),
+    val progress: Float = 0f,
+    val state: ExportState = ExportState.IDLE,
+    val lastExportedFilePath: String? = null,
+    val errorMessage: String? = null,
+    val startTime: Long = 0L,
+    val renderSegments: List<SmartRenderEngine.RenderSegment> = emptyList(),
+    val renderSummary: SmartRenderEngine.SmartRenderSummary? = null,
+    val batchQueue: List<BatchExportItem> = emptyList(),
+    val savedConfig: ExportConfig? = null
 ) : EditorDomainState {
     override val kind: EditorDomainState.Kind = EditorDomainState.Kind.EXPORT
 }
@@ -132,18 +132,7 @@ val EditorState.domainStates: EditorDomainStates
             depth = compoundNavDepth,
             breadcrumbText = compoundBreadcrumbText
         ),
-        export = EditorExportDomainState(
-            config = exportConfig,
-            progress = exportProgress,
-            state = exportState,
-            lastExportedFilePath = lastExportedFilePath,
-            errorMessage = exportErrorMessage,
-            startTime = exportStartTime,
-            renderSegments = renderSegments,
-            renderSummary = renderSummary,
-            batchQueue = batchExportQueue,
-            savedConfig = savedExportConfig
-        ),
+        export = export,
         ai = ai,
         media = EditorMediaState(
             backupImportFeedback = backupImportFeedback,
@@ -154,3 +143,6 @@ val EditorState.domainStates: EditorDomainStates
 
 inline fun EditorState.copyAi(transform: (EditorAiState) -> EditorAiState): EditorState =
     copy(ai = transform(ai))
+
+inline fun EditorState.copyExport(transform: (EditorExportDomainState) -> EditorExportDomainState): EditorState =
+    copy(export = transform(export))

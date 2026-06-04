@@ -65,6 +65,22 @@ class ExportDelegate(
     // all need the same cancel/teardown plumbing.
     @Volatile private var nonVideoExportJob: kotlinx.coroutines.Job? = null
 
+    private inline fun updateExport(transform: (EditorExportDomainState) -> EditorExportDomainState) {
+        stateFlow.update { it.copyExport(transform) }
+    }
+
+    private fun markExportStarted() {
+        updateExport {
+            it.copy(
+                startTime = System.currentTimeMillis(),
+                progress = 0f,
+                state = ExportState.EXPORTING,
+                errorMessage = null,
+                lastExportedFilePath = null
+            )
+        }
+    }
+
     /**
      * Expand filename template tokens. Supported tokens:
      *   {name}          project/base name
@@ -170,7 +186,7 @@ class ExportDelegate(
         val eligibility = engine.analyze(tracks, hasOverlays)
         if (!eligibility.eligible) return false
         val ok = engine.execute(eligibility, outputFile.absolutePath) { progress ->
-            stateFlow.update { it.copy(exportProgress = progress) }
+            updateExport { it.copy(progress = progress) }
         }
         if (!ok) {
             android.util.Log.w("ExportDelegate", "stream-copy failed, falling back to Transformer")
@@ -179,11 +195,13 @@ class ExportDelegate(
         }
         val finalizedFile = finalizeFilenameSize(outputFile)
         writeAiDisclosureSidecarIfRequested(finalizedFile, config, state)
-        stateFlow.update { it.copy(
-            exportState = ExportState.COMPLETE,
-            exportProgress = 1f,
-            lastExportedFilePath = finalizedFile.absolutePath
-        ) }
+        updateExport {
+            it.copy(
+                state = ExportState.COMPLETE,
+                progress = 1f,
+                lastExportedFilePath = finalizedFile.absolutePath
+            )
+        }
         showToast("Stream-copy export complete: ${finalizedFile.name}")
         return true
     }
@@ -222,10 +240,12 @@ class ExportDelegate(
         // Always push CANCELLED to the UI. The if-guard was only needed when we worried about
         // overwriting a COMPLETE state, but cancelExport() is only called by explicit user
         // action, so CANCELLED is always the right terminal state to show here.
-        stateFlow.update { it.copy(
-            exportState = ExportState.CANCELLED,
-            exportProgress = 0f
-        ) }
+        updateExport {
+            it.copy(
+                state = ExportState.CANCELLED,
+                progress = 0f
+            )
+        }
     }
 
     fun startExport(outputDir: File, preferredOutputName: String? = null) {
@@ -253,13 +273,7 @@ class ExportDelegate(
         // Contact-sheet export path — renders one PNG grid of clip thumbnails.
         // Short path because there's no Transformer, no foreground service, no audio.
         if (configWithChapters.exportAsContactSheet) {
-            stateFlow.update { it.copy(
-                exportStartTime = System.currentTimeMillis(),
-                exportProgress = 0f,
-                exportState = ExportState.EXPORTING,
-                exportErrorMessage = null,
-                lastExportedFilePath = null
-            ) }
+            markExportStarted()
             nonVideoExportJob = scope.launch {
                 var sheetFile: File? = null
                 try {
@@ -275,7 +289,12 @@ class ExportDelegate(
                         .flatMap { it.clips }
                         .sortedBy { it.timelineStartMs }
                     if (allClips.isEmpty()) {
-                        stateFlow.update { it.copy(exportState = ExportState.ERROR, exportErrorMessage = "No video clips") }
+                        updateExport {
+                            it.copy(
+                                state = ExportState.ERROR,
+                                errorMessage = "No video clips"
+                            )
+                        }
                         return@launch
                     }
                     val ok = ContactSheetExporter.export(
@@ -283,33 +302,43 @@ class ExportDelegate(
                         columns = configWithChapters.contactSheetColumns,
                         outputFile = targetSheetFile,
                         extractThumb = { uri, timeUs, w, h -> videoEngine.extractThumbnail(uri, timeUs, w, h) },
-                        onProgress = { p -> stateFlow.update { it.copy(exportProgress = p) } }
+                        onProgress = { p -> updateExport { it.copy(progress = p) } }
                     )
                     if (ok) {
-                        stateFlow.update { it.copy(
-                            exportState = ExportState.COMPLETE,
-                            exportProgress = 1f,
-                            lastExportedFilePath = targetSheetFile.absolutePath
-                        ) }
+                        updateExport {
+                            it.copy(
+                                state = ExportState.COMPLETE,
+                                progress = 1f,
+                                lastExportedFilePath = targetSheetFile.absolutePath
+                            )
+                        }
                         showToast("Contact sheet exported: ${targetSheetFile.name}")
                     } else {
-                        stateFlow.update { it.copy(
-                            exportState = ExportState.ERROR,
-                            exportErrorMessage = "Contact sheet render failed"
-                        ) }
+                        updateExport {
+                            it.copy(
+                                state = ExportState.ERROR,
+                                errorMessage = "Contact sheet render failed"
+                            )
+                        }
                     }
                 } catch (e: kotlinx.coroutines.CancellationException) {
-                    stateFlow.update {
-                        it.copy(exportState = ExportState.CANCELLED, exportProgress = 0f, lastExportedFilePath = null)
+                    updateExport {
+                        it.copy(
+                            state = ExportState.CANCELLED,
+                            progress = 0f,
+                            lastExportedFilePath = null
+                        )
                     }
                 } catch (e: Exception) {
                     android.util.Log.w("ExportDelegate", "Contact sheet export failed", e)
                     sheetFile?.delete()
-                    stateFlow.update { it.copy(
-                        exportState = ExportState.ERROR,
-                        exportErrorMessage = e.message ?: "Contact sheet export failed",
-                        lastExportedFilePath = null
-                    ) }
+                    updateExport {
+                        it.copy(
+                            state = ExportState.ERROR,
+                            errorMessage = e.message ?: "Contact sheet export failed",
+                            lastExportedFilePath = null
+                        )
+                    }
                 } finally {
                     nonVideoExportJob = null
                 }
@@ -319,13 +348,7 @@ class ExportDelegate(
 
         // GIF export path
         if (configWithChapters.exportAsGif) {
-            stateFlow.update { it.copy(
-                exportStartTime = System.currentTimeMillis(),
-                exportProgress = 0f,
-                exportState = ExportState.EXPORTING,
-                exportErrorMessage = null,
-                lastExportedFilePath = null
-            ) }
+            markExportStarted()
             nonVideoExportJob = scope.launch {
                 val frames = mutableListOf<android.graphics.Bitmap>()
                 var gifFile: File? = null
@@ -342,7 +365,12 @@ class ExportDelegate(
                         .flatMap { it.clips }
                         .sortedBy { it.timelineStartMs }
                     if (allClips.isEmpty()) {
-                        stateFlow.update { it.copy(exportState = ExportState.ERROR, exportErrorMessage = "No video clips") }
+                        updateExport {
+                            it.copy(
+                                state = ExportState.ERROR,
+                                errorMessage = "No video clips"
+                            )
+                        }
                         return@launch
                     }
                     val totalDurationMs = allClips.maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L
@@ -368,7 +396,7 @@ class ExportDelegate(
                         }
                         if (clip == null) {
                             frames.add(createGapGifFrame(maxWidth, configWithChapters.aspectRatio))
-                            stateFlow.update { it.copy(exportProgress = (i + 1).toFloat() / frameCount * 0.9f) }
+                            updateExport { it.copy(progress = (i + 1).toFloat() / frameCount * 0.9f) }
                             continue
                         }
                         // Respect speedCurve — `timelineOffsetToSourceMs` integrates the
@@ -393,11 +421,16 @@ class ExportDelegate(
                         } else {
                             bitmap?.recycle()
                         }
-                        stateFlow.update { it.copy(exportProgress = (i + 1).toFloat() / frameCount * 0.9f) }
+                        updateExport { it.copy(progress = (i + 1).toFloat() / frameCount * 0.9f) }
                     }
 
                     if (frames.isEmpty()) {
-                        stateFlow.update { it.copy(exportState = ExportState.ERROR, exportErrorMessage = "No frames extracted") }
+                        updateExport {
+                            it.copy(
+                                state = ExportState.ERROR,
+                                errorMessage = "No frames extracted"
+                            )
+                        }
                         return@launch
                     }
 
@@ -409,28 +442,34 @@ class ExportDelegate(
                         }
                     }
 
-                    stateFlow.update { it.copy(
-                        exportState = ExportState.COMPLETE,
-                        exportProgress = 1f,
-                        lastExportedFilePath = targetGifFile.absolutePath
-                    ) }
+                    updateExport {
+                        it.copy(
+                            state = ExportState.COMPLETE,
+                            progress = 1f,
+                            lastExportedFilePath = targetGifFile.absolutePath
+                        )
+                    }
                     showToast("GIF exported: ${targetGifFile.name}")
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     android.util.Log.d("ExportDelegate", "GIF export cancelled")
                     gifFile?.delete()
-                    stateFlow.update { it.copy(
-                        exportState = ExportState.CANCELLED,
-                        exportProgress = 0f,
-                        lastExportedFilePath = null
-                    ) }
+                    updateExport {
+                        it.copy(
+                            state = ExportState.CANCELLED,
+                            progress = 0f,
+                            lastExportedFilePath = null
+                        )
+                    }
                 } catch (e: Exception) {
                     android.util.Log.w("ExportDelegate", "GIF export failed", e)
                     gifFile?.delete()
-                    stateFlow.update { it.copy(
-                        exportState = ExportState.ERROR,
-                        exportErrorMessage = e.message ?: "GIF export failed",
-                        lastExportedFilePath = null
-                    ) }
+                    updateExport {
+                        it.copy(
+                            state = ExportState.ERROR,
+                            errorMessage = e.message ?: "GIF export failed",
+                            lastExportedFilePath = null
+                        )
+                    }
                 } finally {
                     nonVideoExportJob = null
                     frames.forEach { bitmap ->
@@ -444,13 +483,7 @@ class ExportDelegate(
             return
         }
 
-        stateFlow.update { it.copy(
-            exportStartTime = System.currentTimeMillis(),
-            exportProgress = 0f,
-            exportState = ExportState.EXPORTING,
-            exportErrorMessage = null,
-            lastExportedFilePath = null
-        ) }
+        markExportStarted()
 
         scope.launch {
             val ext = if (currentState.exportConfig.transparentBackground) "webm" else "mp4"
@@ -520,21 +553,25 @@ class ExportDelegate(
                 // so existing templates are unaffected.
                 val finalizedFile = finalizeFilenameSize(outputFile)
                 writeAiDisclosureSidecarIfRequested(finalizedFile, configWithChapters, currentState)
-                stateFlow.update { it.copy(
-                    exportState = ExportState.COMPLETE,
-                    exportProgress = 1f,
-                    lastExportedFilePath = finalizedFile.absolutePath
-                ) }
+                updateExport {
+                    it.copy(
+                        state = ExportState.COMPLETE,
+                        progress = 1f,
+                        lastExportedFilePath = finalizedFile.absolutePath
+                    )
+                }
                 showToast("Export complete: ${finalizedFile.name}")
             }
 
             fun handleVideoExportError(e: Exception) {
                 outputFile.delete()
-                stateFlow.update { it.copy(
-                    exportState = ExportState.ERROR,
-                    exportErrorMessage = e.message ?: "Unknown error",
-                    lastExportedFilePath = null
-                ) }
+                updateExport {
+                    it.copy(
+                        state = ExportState.ERROR,
+                        errorMessage = e.message ?: "Unknown error",
+                        lastExportedFilePath = null
+                    )
+                }
             }
 
             try {
@@ -574,7 +611,7 @@ class ExportDelegate(
                         textOverlays = textOverlays,
                         trackedObjects = currentState.trackedObjects,
                         onProgress = { progress ->
-                            stateFlow.update { it.copy(exportProgress = progress) }
+                            updateExport { it.copy(progress = progress) }
                         },
                         onComplete = ::handleVideoExportComplete,
                         onError = ::handleVideoExportError
@@ -589,7 +626,7 @@ class ExportDelegate(
                     textOverlays = textOverlays,
                     trackedObjects = currentState.trackedObjects,
                     onProgress = { progress ->
-                        stateFlow.update { it.copy(exportProgress = progress) }
+                        updateExport { it.copy(progress = progress) }
                     },
                     onComplete = ::handleVideoExportComplete,
                     onError = ::handleVideoExportError
@@ -603,11 +640,13 @@ class ExportDelegate(
                 throw e
             } catch (e: Exception) {
                 outputFile.delete()
-                stateFlow.update { it.copy(
-                    exportState = ExportState.ERROR,
-                    exportErrorMessage = e.message ?: "Unknown error",
-                    lastExportedFilePath = null
-                ) }
+                updateExport {
+                    it.copy(
+                        state = ExportState.ERROR,
+                        errorMessage = e.message ?: "Unknown error",
+                        lastExportedFilePath = null
+                    )
+                }
             }
         }
     }
@@ -733,11 +772,11 @@ class ExportDelegate(
 
     fun addBatchExportItem(config: ExportConfig, name: String) {
         val item = BatchExportItem(config = config, outputName = name)
-        stateFlow.update { it.copy(batchExportQueue = it.batchExportQueue + item) }
+        updateExport { it.copy(batchQueue = it.batchQueue + item) }
     }
 
     fun removeBatchExportItem(id: String) {
-        stateFlow.update { state -> state.copy(batchExportQueue = state.batchExportQueue.filter { it.id != id }) }
+        updateExport { export -> export.copy(batchQueue = export.batchQueue.filter { it.id != id }) }
     }
 
     fun startBatchExport() {
@@ -758,9 +797,13 @@ class ExportDelegate(
             try {
                 for ((index, item) in queue.withIndex()) {
                     stateFlow.update { s ->
-                        s.copy(batchExportQueue = s.batchExportQueue.map {
-                            if (it.id == item.id) it.copy(status = BatchExportStatus.IN_PROGRESS) else it
-                        })
+                        s.copyExport { export ->
+                            export.copy(
+                                batchQueue = s.batchExportQueue.map {
+                                    if (it.id == item.id) it.copy(status = BatchExportStatus.IN_PROGRESS) else it
+                                }
+                            )
+                        }
                     }
                     showToast("Exporting ${index + 1}/${queue.size}: ${item.outputName}")
                     videoEngine.resetExportState()
@@ -768,16 +811,26 @@ class ExportDelegate(
                     // the wait loop below immediately sees the previous item's COMPLETE/ERROR
                     // state and advances before the new export has started, causing two items
                     // to export concurrently and the batch queue to report incorrect statuses.
-                    stateFlow.update { it.copy(exportConfig = item.config, exportState = ExportState.IDLE, exportProgress = 0f) }
+                    updateExport {
+                        it.copy(
+                            config = item.config,
+                            state = ExportState.IDLE,
+                            progress = 0f
+                        )
+                    }
                     startExport(outputDir, item.outputName)
                     val progressJob = scope.launch {
                         stateFlow.map { it.exportProgress }
                             .distinctUntilChanged()
                             .collect { progress ->
                             stateFlow.update { s ->
-                                s.copy(batchExportQueue = s.batchExportQueue.map {
-                                    if (it.id == item.id) it.copy(progress = progress) else it
-                                })
+                                s.copyExport { export ->
+                                    export.copy(
+                                        batchQueue = s.batchExportQueue.map {
+                                            if (it.id == item.id) it.copy(progress = progress) else it
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
@@ -804,9 +857,13 @@ class ExportDelegate(
                     // collector got cancelled before observing the final 1.0 tick.
                     val finalProgress = if (result == ExportState.COMPLETE) 1f else 0f
                     stateFlow.update { s ->
-                        s.copy(batchExportQueue = s.batchExportQueue.map {
-                            if (it.id == item.id) it.copy(status = newStatus, progress = finalProgress) else it
-                        })
+                        s.copyExport { export ->
+                            export.copy(
+                                batchQueue = s.batchExportQueue.map {
+                                    if (it.id == item.id) it.copy(status = newStatus, progress = finalProgress) else it
+                                }
+                            )
+                        }
                     }
                     // Stop the batch when the user explicitly cancels — continuing onto the
                     // next item would feel like the cancel button was ignored. Failures don't
@@ -815,7 +872,7 @@ class ExportDelegate(
                     if (result == ExportState.CANCELLED) break
                 }
             } finally {
-                stateFlow.update { it.copy(exportConfig = originalConfig) }
+                updateExport { it.copy(config = originalConfig) }
             }
             val finalQueue = stateFlow.value.batchExportQueue
             val completedCount = finalQueue.count { it.status == BatchExportStatus.COMPLETED }
@@ -945,11 +1002,16 @@ class ExportDelegate(
         val s = stateFlow.value
         val segments = SmartRenderEngine.analyzeTimeline(s.tracks, s.exportConfig, s.textOverlays)
         val summary = SmartRenderEngine.getSummary(segments)
-        stateFlow.update { dismissedPanelState(it).copy(
-            panels = it.panels.closeAll().open(PanelId.RENDER_PREVIEW),
-            renderSegments = segments,
-            renderSummary = summary
-        ) }
+        stateFlow.update {
+            val dismissed = dismissedPanelState(it)
+            dismissed.copy(
+                panels = it.panels.closeAll().open(PanelId.RENDER_PREVIEW),
+                export = dismissed.export.copy(
+                    renderSegments = segments,
+                    renderSummary = summary
+                )
+            )
+        }
     }
 
     fun hideRenderPreview() {
@@ -962,7 +1024,12 @@ class ExportDelegate(
             resolution = com.novacut.editor.model.Resolution.SD_480P,
             quality = com.novacut.editor.model.ExportQuality.LOW
         )
-        stateFlow.update { it.copy(exportConfig = previewConfig, savedExportConfig = savedConfig) }
+        updateExport {
+            it.copy(
+                config = previewConfig,
+                savedConfig = savedConfig
+            )
+        }
         hideRenderPreview()
         showExportSheet()
         showToast("Rendering preview at 480p...")

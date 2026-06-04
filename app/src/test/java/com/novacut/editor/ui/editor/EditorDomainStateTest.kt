@@ -51,11 +51,13 @@ class EditorDomainStateTest {
             captionTranslationQuality = CaptionTranslationEngine.LanguagePairQuality.GOOD,
             compoundNavDepth = 2,
             compoundBreadcrumbText = "Root > Compound",
-            exportProgress = 0.42f,
-            exportState = ExportState.EXPORTING,
-            lastExportedFilePath = "C:/exports/final.mp4",
-            exportErrorMessage = "blocked",
-            exportStartTime = 1234L,
+            export = EditorExportDomainState(
+                progress = 0.42f,
+                state = ExportState.EXPORTING,
+                lastExportedFilePath = "C:/exports/final.mp4",
+                errorMessage = "blocked",
+                startTime = 1234L
+            ),
             ai = EditorAiState(
                 requirementPrompt = prompt,
                 modelRequirement = requirement,

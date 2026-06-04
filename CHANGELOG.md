@@ -1,5 +1,25 @@
 # Changelog
 
+## v3.74.22 — 2026-06-04
+
+### Export editor-state storage migration
+- Moved export-related editor storage into `EditorExportDomainState`, including
+  export config, progress, state, last exported file path, error text, start
+  time, smart-render preview data, batch export queue, and saved preview config.
+- Kept read-only `EditorState` compatibility accessors so existing export UI,
+  sharing, gallery, and v3.69 surfaces continue to read the same properties.
+- Converted `EditorViewModel` and `ExportDelegate` export mutation paths to
+  update `state.export` through `copyExport` / nested `export.copy(...)`.
+- Updated `EditorDomainStateTest` to construct the stored export slice directly.
+- Bumped runtime metadata to `versionName 3.74.22` / `versionCode 159`.
+- Verification: `git diff --check`, `scripts/verify_release_artifacts.py`,
+  APK-based 16 KB checks for debug/release, `apksigner verify` for
+  debug/release, `zipalign -c -P 16 -v 4` for debug/release/androidTest,
+  `:app:compileDebugKotlin :app:testDebugUnitTest --tests
+  com.novacut.editor.ui.editor.EditorDomainStateTest`, and
+  `:app:testDebugUnitTest :app:assembleDebug :app:assembleRelease
+  :app:assembleDebugAndroidTest` passed.
+
 ## v3.74.21 — 2026-06-04
 
 ### AI editor-state storage migration
