@@ -26,6 +26,7 @@ object PrivacyDashboard {
         ML_MODELS("Downloaded ML models (Whisper, MediaPipe)"),
         APP_PREFERENCES("App preferences (theme, export defaults)"),
         TEMPLATE_LIBRARY("Saved templates / effect packs"),
+        SETTINGS_RESET_REPORTS("Settings reset reports (preferences recovery)"),
         DIAGNOSTIC_LOGS("Diagnostic logs (logcat tail, redacted)"),
         CRASH_RECORDS("Crash records (fatal exception breadcrumbs)"),
         PROCESS_EXIT_HISTORY("Process-death history (ANR, low-memory, native crash)"),
@@ -122,6 +123,14 @@ object PrivacyDashboard {
             controls = Controls(canExport = true, canDelete = true, hasOptOut = false),
             collectedBy = listOf("TemplateManager"),
             retentionPolicy = "Kept until the template is removed from the Templates panel.",
+            collectedByDefault = true,
+        ),
+        DashboardEntry(
+            category = Category.SETTINGS_RESET_REPORTS,
+            location = StorageLocation.DEVICE_INTERNAL,
+            controls = Controls(canExport = true, canDelete = true, hasOptOut = false),
+            collectedBy = listOf("SettingsRepository", "SettingsResetReportStore", "DiagnosticExportEngine"),
+            retentionPolicy = "Preferences corruption-recovery reports are stored locally under filesDir/diagnostics/settings-reset-report.jsonl, capped to the 16 most recent resets, and included only in user-triggered diagnostic ZIP exports.",
             collectedByDefault = true,
         ),
         DashboardEntry(

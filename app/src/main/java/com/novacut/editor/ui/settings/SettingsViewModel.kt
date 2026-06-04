@@ -49,6 +49,11 @@ data class DiagnosticExportUiState(
     val errorMessage: String? = null
 )
 
+data class SettingsResetNoticeUiState(
+    val reportId: String,
+    val recordedAtEpochMs: Long,
+)
+
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val repo: SettingsRepository,
@@ -71,8 +76,12 @@ class SettingsViewModel @Inject constructor(
     private val _diagnosticExport = MutableStateFlow(DiagnosticExportUiState())
     val diagnosticExport: StateFlow<DiagnosticExportUiState> = _diagnosticExport.asStateFlow()
 
+    private val _settingsResetNotice = MutableStateFlow<SettingsResetNoticeUiState?>(null)
+    val settingsResetNotice: StateFlow<SettingsResetNoticeUiState?> = _settingsResetNotice.asStateFlow()
+
     init {
         refreshAiModelStorage()
+        refreshSettingsResetNoticeAfterSettingsLoad()
     }
 
     fun setResolution(v: Resolution) = viewModelScope.launch { repo.updateResolution(v) }
@@ -185,12 +194,36 @@ class SettingsViewModel @Inject constructor(
         _diagnosticExport.update { it.copy(message = null, errorMessage = null) }
     }
 
+    fun dismissSettingsResetNotice() {
+        _settingsResetNotice.value = null
+    }
+
     fun reportDiagnosticShareFailure() {
         _diagnosticExport.update {
             it.copy(
                 message = null,
                 errorMessage = "Diagnostic ZIP could not be shared from this device."
             )
+        }
+    }
+
+    private fun refreshSettingsResetNoticeAfterSettingsLoad() {
+        viewModelScope.launch {
+            try {
+                repo.settings.first()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                // The settings screen still opens with AppSettings defaults; the
+                // reset-report store is independent of the damaged DataStore.
+            }
+            val latest = withContext(Dispatchers.IO) { repo.latestSettingsResetReport() }
+            _settingsResetNotice.value = latest?.let {
+                SettingsResetNoticeUiState(
+                    reportId = it.id,
+                    recordedAtEpochMs = it.recordedAtEpochMs,
+                )
+            }
         }
     }
 

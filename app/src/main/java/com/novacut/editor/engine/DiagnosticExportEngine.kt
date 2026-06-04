@@ -37,6 +37,8 @@ import javax.inject.Singleton
  *  - `process-exit-history.json` — bounded Android 11+ process-death records
  *                           captured by [ProcessExitRecorder], or an
  *                           unsupported marker on older devices
+ *  - `settings-reset-report.jsonl` — optional bounded, redacted records for
+ *                           Settings DataStore corruption recovery
  *  - `logcat-tail.txt`    — last 200 logcat lines from the current process,
  *                           with PII / URI patterns redacted before write
  *  - `manifest.txt`       — ordered file list with sizes
@@ -68,6 +70,7 @@ class DiagnosticExportEngine @Inject constructor(
     private val crashRecordStore: CrashRecordStore,
     private val memoryTrimBreadcrumbStore: MemoryTrimBreadcrumbStore,
     private val processExitRecorder: ProcessExitRecorder,
+    private val settingsResetReportStore: SettingsResetReportStore,
 ) {
 
     /** Snapshot summary of a single model from [ModelDownloadManager]. */
@@ -215,6 +218,9 @@ class DiagnosticExportEngine @Inject constructor(
         }
         entries[ProcessExitRecorder.BUNDLE_ENTRY] =
             processExitRecorder.buildDiagnosticJson().toByteArray(Charsets.UTF_8)
+        settingsResetReportStore.buildDiagnosticText()?.let { settingsResetJsonl ->
+            entries[SettingsResetReportStore.BUNDLE_ENTRY] = settingsResetJsonl.toByteArray(Charsets.UTF_8)
+        }
         entries["logcat-tail.txt"] = buildLogcatTail().toByteArray(Charsets.UTF_8)
         entries["manifest.txt"] = buildManifest(entries).toByteArray(Charsets.UTF_8)
         target.outputStream().use { fos ->

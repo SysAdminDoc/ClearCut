@@ -118,6 +118,19 @@ class PrivacyDashboardTest {
     }
 
     @Test
+    fun settingsResetReportRowIsLocalAndDiagnosticExportable() {
+        val entry = PrivacyDashboard.entryFor(PrivacyDashboard.Category.SETTINGS_RESET_REPORTS)
+        assertNotNull(entry)
+        assertEquals(PrivacyDashboard.StorageLocation.DEVICE_INTERNAL, entry!!.location)
+        assertTrue(entry.controls.canExport)
+        assertTrue(entry.controls.canDelete)
+        assertFalse(entry.controls.hasOptOut)
+        assertTrue(entry.collectedBy.contains("SettingsResetReportStore"))
+        assertTrue(entry.collectedBy.contains("DiagnosticExportEngine"))
+        assertTrue(entry.retentionPolicy.contains("settings-reset-report.jsonl"))
+    }
+
+    @Test
     fun entryFor_unknownReturnsNull() {
         // Sanity: this object's lookup is implemented as firstOrNull, so
         // pasting an enum value not present in entries must return null.

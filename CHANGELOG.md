@@ -1,5 +1,26 @@
 # Changelog
 
+## v3.74.51 — 2026-06-04
+
+### Settings corruption recovery
+- Replaced the Settings DataStore delegate with a `PreferenceDataStoreFactory`
+  path using `ReplaceFileCorruptionHandler`, so unreadable
+  `novacut_settings` files recover to defaults and remain writable.
+- Added `SettingsResetReportStore`, a bounded local JSONL report under
+  `filesDir/diagnostics/settings-reset-report.jsonl` with redacted reset
+  reason, timestamp, error type, and sanitized message.
+- Added a dismissible Settings notice after a recovery reset and included
+  `settings-reset-report.jsonl` in user-triggered diagnostic ZIPs when reset
+  records exist.
+- Updated the Privacy Dashboard and Play privacy worksheet to disclose local
+  settings-reset reports separately from app preferences.
+- Tightened readable-but-invalid settings mapping so unknown enum values and
+  out-of-range numeric values fall back per key without wiping valid settings.
+- Bumped runtime metadata to `versionName 3.74.51` / `versionCode 188`.
+- Verification: focused JVM coverage for `SettingsRepositoryTest`,
+  `SettingsResetReportStoreTest`, `PrivacyDashboardTest`, and
+  `DiagnosticExportEngineTest` passed.
+
 ## v3.74.50 — 2026-06-04
 
 ### Process-death diagnostic history

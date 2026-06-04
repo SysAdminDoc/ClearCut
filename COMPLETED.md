@@ -7,7 +7,7 @@ Last consolidated: 2026-06-04.
 
 ## Current Delivered Baseline
 
-- Current version: v3.74.50 (`versionCode` 187).
+- Current version: v3.74.51 (`versionCode` 188).
 - Multi-track Android NLE with project gallery, editor, timeline, preview,
   effects, transitions, text, captions, audio, export, settings, templates,
   project archive/import, and diagnostic bundle surfaces.
@@ -71,6 +71,10 @@ Last consolidated: 2026-06-04.
   `ApplicationExitInfo` records are captured at startup, de-duped into a
   bounded local history, redacted/truncated for trace safety, and included in
   user-triggered diagnostic ZIP exports as `process-exit-history.json`.
+- Settings corruption recovery shipped in v3.74.51: Preferences DataStore now
+  uses a `ReplaceFileCorruptionHandler` to restore unreadable settings to
+  defaults, shows a one-shot Settings notice, and writes redacted bounded reset
+  reports into diagnostic ZIPs when present.
 - UI test harness bootstrap shipped in v3.74.11: shared Compose test tags,
   androidTest dependencies, and a smoke test covering project list,
   blank-project editor open, media picker, export sheet, Settings, and privacy

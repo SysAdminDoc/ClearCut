@@ -8,7 +8,7 @@ Active roadmap for forward-looking work. Shipped work is summarized in
 [RESEARCH_REPORT.md](RESEARCH_REPORT.md), and detailed historical plans are
 archived under [docs/archive](docs/archive/).
 
-Current version: **v3.74.50** (`versionCode` 187). Last consolidated:
+Current version: **v3.74.51** (`versionCode` 188). Last consolidated:
 2026-06-04.
 
 > Last researched: Cycle 22 - 2026-06-04.
@@ -110,6 +110,11 @@ v3.74.50 closed the Cycle 9 process-death diagnostic gate by recording Android
 11+ `ApplicationExitInfo` history on app startup, de-duping bounded exit records,
 redacting descriptions/traces, adding `process-exit-history.json` to
 user-triggered diagnostic ZIPs, and documenting the local-only privacy surface.
+v3.74.51 closed the Cycle 10 settings persistence gate by replacing the
+Preferences DataStore delegate with a `PreferenceDataStoreFactory`
+`ReplaceFileCorruptionHandler`, adding redacted bounded settings-reset reports,
+showing a one-shot Settings notice after recovery, and exporting reset reports
+through user-triggered diagnostic ZIPs when present.
 
 ## Current State
 
@@ -261,6 +266,11 @@ user-triggered diagnostic ZIPs, and documenting the local-only privacy surface.
   captures Android 11+ `ApplicationExitInfo` records on startup, stores a
   bounded/de-duped local history, redacts process descriptions and trace
   excerpts, and exports `process-exit-history.json` through diagnostic ZIPs.
+- v3.74.51 adds Preferences DataStore corruption recovery: unreadable
+  `novacut_settings` files are replaced with defaults through
+  `ReplaceFileCorruptionHandler`, readable invalid keys fall back per setting,
+  Settings shows a dismissible recovery notice, and diagnostic ZIPs can include
+  redacted `settings-reset-report.jsonl` records.
 
 ## Source Archives
 
@@ -1140,7 +1150,7 @@ corruption without weakening the existing per-key defaulting and validation.
 
 #### Persistence & Diagnostics
 
-- [ ] 🔬🤖 P2 — Add Preferences DataStore corruption recovery and settings-reset report
+- [x] 🔬🤖 P2 — Add Preferences DataStore corruption recovery and settings-reset report
   - Why: NovaCut persists export defaults, autosave interval, proxy mode,
     model-download Wi-Fi policy, one-handed/desktop preferences, and the
     AcoustID key in `novacut_settings`. `SettingsRepository` validates individual
@@ -1182,6 +1192,17 @@ corruption without weakening the existing per-key defaulting and validation.
     includes the reset timestamp/reason while excluding stored secrets, plus an
     emulator smoke restart after corrupting `novacut_settings.preferences_pb`.
   - Complexity: M
+  - Status: implemented in v3.74.51. `SettingsRepository` now constructs
+    Preferences DataStore with `PreferenceDataStoreFactory` and
+    `ReplaceFileCorruptionHandler`, records file-level resets through
+    `SettingsResetReportStore`, keeps readable invalid values on per-key
+    defaults without full-store wipes, shows a dismissible Settings notice, adds
+    a Privacy Dashboard category, and includes `settings-reset-report.jsonl` in
+    diagnostic ZIPs when records exist. JVM tests cover invalid preference
+    bytes, post-reset writes, mapper defaults, reset-report redaction, and
+    Privacy Dashboard disclosure. Device/emulator corruption smoke remains a
+    manual QA follow-up because this pass verified the temp-file DataStore path
+    and full APK packaging locally.
 
 #### Appendix — Cycle 10 Sources
 

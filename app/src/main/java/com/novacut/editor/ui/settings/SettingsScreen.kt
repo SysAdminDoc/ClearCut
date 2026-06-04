@@ -91,6 +91,7 @@ fun SettingsScreen(
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val aiModelStorage by viewModel.aiModelStorage.collectAsStateWithLifecycle()
     val diagnosticExport by viewModel.diagnosticExport.collectAsStateWithLifecycle()
+    val settingsResetNotice by viewModel.settingsResetNotice.collectAsStateWithLifecycle()
     val whisperModelState by viewModel.whisperModelState.collectAsStateWithLifecycle()
     val segmentationModelState by viewModel.segmentationModelState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -141,6 +142,14 @@ fun SettingsScreen(
                 message = message,
                 isError = diagnosticExport.errorMessage != null,
                 onDismiss = viewModel::dismissDiagnosticExportMessage
+            )
+        }
+        settingsResetNotice?.let {
+            SettingsFeedbackBanner(
+                message = stringResource(R.string.settings_reset_notice_message),
+                accentOverride = Mocha.Peach,
+                iconOverride = Icons.Default.Info,
+                onDismiss = viewModel::dismissSettingsResetNotice
             )
         }
 
@@ -860,10 +869,12 @@ private fun SettingsOverviewStat(
 private fun SettingsFeedbackBanner(
     message: String,
     isError: Boolean = false,
+    accentOverride: androidx.compose.ui.graphics.Color? = null,
+    iconOverride: ImageVector? = null,
     onDismiss: () -> Unit
 ) {
-    val accent = if (isError) Mocha.Red else Mocha.Green
-    val icon = if (isError) Icons.Default.Error else Icons.Default.CheckCircle
+    val accent = accentOverride ?: if (isError) Mocha.Red else Mocha.Green
+    val icon = iconOverride ?: if (isError) Icons.Default.Error else Icons.Default.CheckCircle
     Surface(
         modifier = Modifier
             .fillMaxWidth()

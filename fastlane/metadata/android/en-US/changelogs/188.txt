@@ -1,0 +1,4 @@
+- Settings corruption recovery
+- Replaced the Settings DataStore delegate with a PreferenceDataStoreFactory path using ReplaceFileCorruptionHandler, so unreadable novacut_settings files recover to defaults and remain writable.
+- Added SettingsResetReportStore, a bounded local JSONL report under filesDir/diagnostics/settings-reset-report.jsonl with redacted reset reason, timestamp, error type, and sanitized message.
+- Added a dismissible Settings notice after a recovery reset and included set...

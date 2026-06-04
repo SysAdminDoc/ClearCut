@@ -29,6 +29,7 @@ with the manifest permission list.
 | Downloaded ML models | App info/performance metadata about model install state | No | No | Optional | Kept until the user removes the model from Settings. Model files are not diagnostic payloads. |
 | App preferences | App activity/preferences | Yes | No | Required for app settings | Kept until app data is cleared or the app is uninstalled. |
 | Template library | User content/templates and app activity | Yes when templates are saved | No | Optional | Kept until template deletion. |
+| Settings reset reports | Diagnostics/preferences recovery | Yes after settings-file corruption recovery | No automatic sharing | Required for local recovery diagnostics | Bounded local reset reason/timestamp records, redacted and included only in user-triggered diagnostic ZIPs. |
 | Diagnostic logs | Diagnostics | No | No automatic sharing | Optional | Created only when the user exports a diagnostic ZIP; redacted and locally bounded. |
 | Crash records | Diagnostics/crash breadcrumbs | Yes after fatal crashes | No automatic sharing | Required for local crash recovery diagnostics | Bounded local fatal-crash breadcrumbs, included only in user-triggered diagnostic ZIPs. |
 | Process-death summaries | Diagnostics/process-death history | Yes on Android 11+ after process restarts | No automatic sharing | Required for local ANR/low-memory/native-crash diagnostics | Bounded local `ApplicationExitInfo` summaries, redacted and included only in user-triggered diagnostic ZIPs. |
