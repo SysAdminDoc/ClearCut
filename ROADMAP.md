@@ -8,7 +8,7 @@ Active roadmap for forward-looking work. Shipped work is summarized in
 [RESEARCH_REPORT.md](RESEARCH_REPORT.md), and detailed historical plans are
 archived under [docs/archive](docs/archive/).
 
-Current version: **v3.74.35** (`versionCode` 172). Last consolidated:
+Current version: **v3.74.36** (`versionCode` 173). Last consolidated:
 2026-06-04.
 
 > Last researched: Cycle 10 - 2026-06-04.
@@ -71,6 +71,9 @@ requesting `POST_NOTIFICATIONS` from the editor before first background export
 and keeping an in-app progress fallback when notifications stay off.
 v3.74.35 closed the managed-media backup policy split by excluding imports from
 cloud backup while including them in Android 12+ device transfer.
+v3.74.36 closed the P0 fatal-crash capture item by installing a global
+uncaught-exception handler that writes bounded, redacted local crash records and
+adds them to user-triggered diagnostic ZIP exports.
 
 ## Current State
 
@@ -160,6 +163,10 @@ cloud backup while including them in Android 12+ device transfer.
 - v3.74.35 splits Android 12+ backup policy so `media/imports` stays out of
   cloud backup quota but is included in device-to-device transfer; partial
   import and generated-media writes remain excluded.
+- v3.74.36 installs a global uncaught-exception handler on app startup. Fatal
+  exceptions now write a bounded, redacted JSON breadcrumb under
+  `filesDir/diagnostics/crashes`, chain to the previous platform handler, and
+  appear as `crash-records.json` only when the user exports a diagnostic ZIP.
 
 ## Source Archives
 
@@ -291,7 +298,7 @@ checked against `app/src/main`, `.github/workflows/build.yml`, and the manifest.
 
 ### Reliability & Security
 
-- [ ] P0 — Install a global uncaught-exception handler
+- [x] ✅ P0 — Install a global uncaught-exception handler
   - Why: The app ships a diagnostic-ZIP feature but has no crash capture, so a
     fatal exception is lost — nothing to attach to the diagnostic bundle and no
     recovery breadcrumb.
@@ -308,6 +315,11 @@ checked against `app/src/main`, `.github/workflows/build.yml`, and the manifest.
   - Verify: throw in a debug build, confirm the record is written and exportable;
     confirm normal crashes still propagate to the platform after capture.
   - Complexity: M
+  - Implemented in v3.74.36: `CrashRecordStore` now installs from
+    `NovaCutApp.onCreate()`, records fatal exceptions to a capped local JSON
+    store without raw throwable messages, includes the records in
+    `DiagnosticExportEngine` as `crash-records.json`, and updates the Privacy
+    Dashboard data model to describe local crash breadcrumbs.
 
 - [ ] P2 — Add a `networkSecurityConfig` that blocks cleartext app-wide
   - Why: With the `INTERNET` permission and an OkHttp cloud path, cleartext
