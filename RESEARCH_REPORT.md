@@ -6,6 +6,38 @@ roadmaps are archived under [docs/archive/roadmap](docs/archive/roadmap/).
 
 Last refreshed: 2026-06-04.
 
+## 2026-06-04 Cycle 11 Image Overlay Export Refresh
+
+- [Verified] README advertises "Sticker/GIF/image overlays", and the app does
+  persist `ImageOverlay` objects through autosave, undo snapshots, and archive
+  media collection. The sticker picker also exposes bundled sticker categories
+  plus a gallery-import route, so this is a visible creator workflow rather than
+  a hidden model field.
+- [Verified] The current overlay asset model is fragile. Bundled stickers are
+  represented as `content://com.novacut.editor.stickers/...` URIs, but the
+  manifest declares only AndroidX startup and FileProvider providers. Gallery
+  stickers use `PickVisualMedia(ImageOnly)` and are passed straight into
+  `viewModel.addImageOverlay(...)`; `OverlayDelegate` stores that source URI
+  directly, unlike the main media picker path that copies clips into
+  `filesDir/media/imports`.
+- [Verified] Export and preview evidence points to a rendering gap:
+  `ExportDelegate` disables stream-copy when `state.imageOverlays` exists, but
+  the Transformer calls pass only `textOverlays` and tracked objects into
+  `VideoEngine`; `VideoEngine` builds Media3 `OverlayEffect` entries from text
+  overlays, Lottie overlays, and `config.watermark`; and `PreviewPanel` renders
+  the current clip/player without consuming `imageOverlays`.
+- [Verified] Android's current Photo Picker docs say default selected-media
+  access lasts until the device restarts or the app stops unless the app takes a
+  persistable grant, and SAF docs note even persisted document URI access is
+  lost if the underlying document is moved or deleted. Media3's `BitmapOverlay`
+  API supports bitmap/URI overlays through `TextureOverlay`, so the path forward
+  is an app-owned overlay asset store plus preview/export compositing.
+- [Promoted] Added a P1 roadmap item for durable image/sticker overlay
+  compositing: import or generate durable overlay assets, replace fake bundled
+  sticker URIs with real resolvable sources, render active overlays in preview,
+  burn them into full exports, handle GIFs explicitly, and add restart/export
+  tests that prove overlay assets remain available.
+
 ## 2026-06-04 Cycle 10 DataStore Settings Recovery Refresh
 
 - [Verified] `SettingsRepository` creates the `novacut_settings` Preferences
