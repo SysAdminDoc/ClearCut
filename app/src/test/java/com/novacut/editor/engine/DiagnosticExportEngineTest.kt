@@ -152,4 +152,26 @@ class DiagnosticExportEngineTest {
         // sourceUrl is optional and defaults to null when omitted.
         assertEquals(null, a.sourceUrl)
     }
+
+    @Test
+    fun buildPermissionState_redactsContextAndSortsByPermission() {
+        val text = DiagnosticExportEngine.buildPermissionState(
+            listOf(
+                DiagnosticExportEngine.PermissionSnapshot(
+                    permissionName = "android.permission.NEARBY_WIFI_DEVICES",
+                    granted = false,
+                    context = "LAN target rtmp://192.168.1.2/app?key=secret",
+                ),
+                DiagnosticExportEngine.PermissionSnapshot(
+                    permissionName = "android.permission.ACCESS_LOCAL_NETWORK",
+                    granted = true,
+                    context = "Android 17 local streaming",
+                ),
+            )
+        )
+
+        assertTrue(text.indexOf("ACCESS_LOCAL_NETWORK") < text.indexOf("NEARBY_WIFI_DEVICES"))
+        assertFalse(text.contains("key=secret"))
+        assertTrue(text.contains("<redacted>"))
+    }
 }

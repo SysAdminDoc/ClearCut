@@ -1,5 +1,31 @@
 # Changelog
 
+## v3.74.53 — 2026-06-04
+
+### Local network permission gate
+- Declared Android 16 `NEARBY_WIFI_DEVICES` with `neverForLocation` and the
+  Android 17 forward `ACCESS_LOCAL_NETWORK` manifest permission for future LAN
+  streaming destinations.
+- Added `LocalNetworkPermissionPolicy`, mapping public/loopback destinations
+  to no gate, Android 16 target-SDK 36 LAN/multicast destinations to
+  `NEARBY_WIFI_DEVICES`, and Android 17 target-SDK 37+ LAN/multicast
+  destinations to `ACCESS_LOCAL_NETWORK`.
+- Exposed destination-specific permission decisions and permission-aware LAN
+  failure copy from `OutputStreamingEngine`, so future Live Studio UI can block
+  only LAN destinations while keeping public RTMP/RTMPS/SRT/WebRTC output
+  paths unaffected.
+- Added optional `permission-state.txt` diagnostic ZIP support and streaming
+  URL redaction for local-network permission snapshots.
+- Updated Play Data safety and privacy policy docs for local-network
+  permission behavior.
+- Bumped runtime metadata to `versionName 3.74.53` / `versionCode 190`.
+- Verification: focused JVM coverage for `LocalNetworkPermissionPolicyTest`,
+  `OutputStreamingEngineTest`, and `DiagnosticExportEngineTest` passed, followed
+  by the full Gradle gate: `:app:testDebugUnitTest`, `:app:assembleDebug`,
+  `:app:assembleRelease`, and `:app:assembleDebugAndroidTest`; release artifact
+  validation, Play listing validation, Fastlane sync check, and `git diff --check`
+  also passed.
+
 ## v3.74.52 — 2026-06-04
 
 ### Durable image overlay compositor

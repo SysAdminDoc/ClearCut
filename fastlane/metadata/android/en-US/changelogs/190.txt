@@ -1,0 +1,4 @@
+- Local network permission gate
+- Declared Android 16 NEARBY_WIFI_DEVICES with neverForLocation and the Android 17 forward ACCESS_LOCAL_NETWORK manifest permission for future LAN streaming destinations.
+- Added LocalNetworkPermissionPolicy, mapping public/loopback destinations to no gate, Android 16 target-SDK 36 LAN/multicast destinations to NEARBY_WIFI_DEVICES, and Android 17 target-SDK 37+ LAN/multicast destinations to ACCESS_LOCAL_NETWORK.
+- Exposed destination-specific permission decisi...

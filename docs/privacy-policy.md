@@ -26,7 +26,9 @@ Editing works offline. Network access is used only for user-initiated or
 feature-gated paths such as optional model downloads, optional cloud-capable
 generative tools when a consent sheet is accepted, or user-directed Android
 share/export flows handled by other apps. NovaCut does not initialize analytics
-or crash-reporting SDK uploads by default.
+or crash-reporting SDK uploads by default. Future live-streaming destinations
+on the user's LAN use Android's local-network permission path; public internet
+streaming destinations do not require local-network access.
 
 ## Microphone, Notifications, And Files
 

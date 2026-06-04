@@ -62,7 +62,7 @@ class EngineStringExtractionAuditTest {
             .filter { it.isFile && it.extension == "kt" }
             .count()
         // 2026-05-16: 102 engine .kt files.
-        // 2026-06-04: 137 after the durable image-overlay asset/export path.
+        // 2026-06-04: 138 after the local-network permission policy.
         // Bump intentionally when adding new engines so the
         // docs/models.md registry and the ROADMAP stay in sync. This assertion
         // is a checkpoint, not a hard cap.

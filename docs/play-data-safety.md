@@ -19,6 +19,8 @@ with the manifest permission list.
 | `android.permission.VIBRATE` | Timeline and editing haptic feedback. | No user data collected by the permission itself. |
 | `android.permission.INTERNET` | Optional model downloads and future consent-gated cloud tools. | Network paths are optional or feature-gated; editing works offline. |
 | `android.permission.ACCESS_NETWORK_STATE` | Checks network availability before optional downloads/cloud-capable actions. | Device network state is used locally for gating and error copy; no NovaCut telemetry upload. |
+| `android.permission.NEARBY_WIFI_DEVICES` | Android 16 local-network opt-in testing for LAN streaming destinations such as OBS, RTMP/SRT boxes, RTSP cameras, and multicast receivers. | Requested only for user-configured local-network streaming destinations; public internet streaming does not require it. |
+| `android.permission.ACCESS_LOCAL_NETWORK` | Android 17 local-network enforcement for target SDK 37+ LAN streaming destinations. | Future permission for direct LAN streaming only; not used for analytics or background scanning. |
 
 ## Privacy Dashboard Category Map
 

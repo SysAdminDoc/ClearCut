@@ -39,6 +39,8 @@ import javax.inject.Singleton
  *                           unsupported marker on older devices
  *  - `settings-reset-report.jsonl` — optional bounded, redacted records for
  *                           Settings DataStore corruption recovery
+ *  - `permission-state.txt` — optional runtime permission state snapshots,
+ *                           including local-network streaming permissions
  *  - `logcat-tail.txt`    — last 200 logcat lines from the current process,
  *                           with PII / URI patterns redacted before write
  *  - `manifest.txt`       — ordered file list with sizes
@@ -79,6 +81,12 @@ class DiagnosticExportEngine @Inject constructor(
         val installed: Boolean,
         val sizeBytes: Long,
         val sourceUrl: String? = null,
+    )
+
+    data class PermissionSnapshot(
+        val permissionName: String,
+        val granted: Boolean,
+        val context: String,
     )
 
     /**
@@ -172,12 +180,15 @@ class DiagnosticExportEngine @Inject constructor(
      * @param timelineShape optional [TimelineShape] summary. When non-null the
      *   ZIP includes `timeline-shape.json`. The shape carries counts only and
      *   never includes clip names, URIs, or captions — see [TimelineShape].
+     * @param permissionSnapshots optional runtime permission states. Used by
+     *   local-network streaming diagnostics without including destination URLs.
      * @param now wall-clock-millis stamp injected for deterministic tests.
      * @param retainCount keep at most this many ZIPs in the diagnostics dir.
      */
     suspend fun exportDiagnosticBundle(
         modelRegistry: List<ModelSnapshot> = emptyList(),
         timelineShape: TimelineShape? = null,
+        permissionSnapshots: List<PermissionSnapshot> = emptyList(),
         now: Long = System.currentTimeMillis(),
         retainCount: Int = 3,
     ): File = withContext(Dispatchers.IO) {
@@ -185,7 +196,7 @@ class DiagnosticExportEngine @Inject constructor(
         val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US)
             .format(Date(now))
         val zipFile = File(outDir, "diagnostic-$stamp.zip")
-        writeBundle(zipFile, modelRegistry, timelineShape, now)
+        writeBundle(zipFile, modelRegistry, timelineShape, permissionSnapshots, now)
         pruneOldBundles(outDir, retainCount)
         zipFile
     }
@@ -199,6 +210,7 @@ class DiagnosticExportEngine @Inject constructor(
         target: File,
         modelRegistry: List<ModelSnapshot>,
         timelineShape: TimelineShape? = null,
+        permissionSnapshots: List<PermissionSnapshot> = emptyList(),
         now: Long = System.currentTimeMillis(),
     ): Long {
         target.parentFile?.mkdirs()
@@ -209,6 +221,9 @@ class DiagnosticExportEngine @Inject constructor(
         entries["model-registry.txt"] = buildModelRegistry(modelRegistry).toByteArray(Charsets.UTF_8)
         if (timelineShape != null) {
             entries["timeline-shape.json"] = timelineShape.toJsonString().toByteArray(Charsets.UTF_8)
+        }
+        if (permissionSnapshots.isNotEmpty()) {
+            entries["permission-state.txt"] = buildPermissionState(permissionSnapshots).toByteArray(Charsets.UTF_8)
         }
         crashRecordStore.buildDiagnosticJson()?.let { crashRecordsJson ->
             entries[CrashRecordStore.CRASH_BUNDLE_ENTRY] = crashRecordsJson.toByteArray(Charsets.UTF_8)
@@ -341,6 +356,16 @@ class DiagnosticExportEngine @Inject constructor(
         const val DIAG_DIR = "diagnostics"
         private const val LOGCAT_LINES = 200
 
+        fun buildPermissionState(snapshots: List<PermissionSnapshot>): String = buildString {
+            appendLine("NovaCut permission state")
+            snapshots.sortedBy { it.permissionName }.forEach { snapshot ->
+                append(snapshot.permissionName)
+                append("; granted=").append(snapshot.granted)
+                append("; context=").append(redactSensitive(snapshot.context))
+                appendLine()
+            }
+        }
+
         /**
          * Build a [TimelineShape] summary from a list of project tracks. Pure
          * function — no Android dependencies — so the Settings opt-in toggle
@@ -403,6 +428,7 @@ class DiagnosticExportEngine @Inject constructor(
         private val SENSITIVE_PATTERNS = listOf(
             Regex("""content://[^\s)"']+"""),
             Regex("""file://[^\s)"']+"""),
+            Regex("""(?i)\b(?:rtmp|rtmps|srt|rist|rtsp)://[^\s)"']+"""),
             Regex("""/storage/[^\s)"']+"""),
             Regex("""/data/data/[A-Za-z0-9._]+/files/[^\s)"']+"""),
             Regex("""https?://[^\s)"']*\?[^\s)"']+"""),

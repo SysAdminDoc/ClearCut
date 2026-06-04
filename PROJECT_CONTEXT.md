@@ -10,8 +10,8 @@ NovaCut is an Android video editor under package `com.novacut.editor`. The repo 
 
 Current live version evidence:
 
-- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 189`, `versionName = "3.74.52"`.
-- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.52`.
+- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 190`, `versionName = "3.74.53"`.
+- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.53`.
 - [README.md](README.md) and [ROADMAP.md](ROADMAP.md) both describe the v3.74.x line.
 - The 2026-05-17 continuation pushes each completed roadmap batch back to `origin/master`; verify `git status --short --branch` before assuming branch sync.
 
@@ -180,6 +180,24 @@ High-level modules and patterns:
      support is implemented. `MediaRelinkProbe` now reports overlay-source
      accessibility, and Privacy Dashboard project-content disclosure lists
      `OverlayAssetStore`.
+
+14. Android local-network permission gate.
+   - Completed in v3.74.53. `AndroidManifest.xml` declares Android 16
+     `NEARBY_WIFI_DEVICES` with `neverForLocation` and future Android 17
+     `ACCESS_LOCAL_NETWORK` for LAN streaming destinations.
+   - `LocalNetworkPermissionPolicy` maps runtime SDK, target SDK, and
+     `OutputStreamingEngine.LocalNetworkScope` to no gate, `NEARBY_WIFI_DEVICES`,
+     or `ACCESS_LOCAL_NETWORK`. Public internet and loopback destinations stay
+     ungated; LAN/multicast destinations produce rationale/denial copy.
+   - `OutputStreamingEngine` exposes destination-specific permission decisions
+     and permission-aware LAN failure messages. `DiagnosticExportEngine` can add
+     redacted `permission-state.txt` snapshots for local-network permission
+     support bundles.
+   - Verification passed: focused JVM policy/engine/diagnostic coverage,
+     `:app:testDebugUnitTest`, `:app:assembleDebug`, `:app:assembleRelease`,
+     `:app:assembleDebugAndroidTest`, `scripts/verify_release_artifacts.py`,
+     `scripts/validate_play_listing_assets.py`,
+     `scripts/sync_fastlane_changelogs.py --check`, and `git diff --check`.
 
 ## Recent Implementation Notes
 
