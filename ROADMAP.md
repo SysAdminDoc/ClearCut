@@ -8,7 +8,7 @@ Active roadmap for forward-looking work. Shipped work is summarized in
 [RESEARCH_REPORT.md](RESEARCH_REPORT.md), and detailed historical plans are
 archived under [docs/archive](docs/archive/).
 
-Current version: **v3.74.33** (`versionCode` 170). Last consolidated:
+Current version: **v3.74.34** (`versionCode` 171). Last consolidated:
 2026-06-04.
 
 > Last researched: Cycle 3 - 2026-06-04.
@@ -65,6 +65,9 @@ timeline chrome composables, compact label formatters, ruler/waveform drawing,
 and volume-keyframe filtering into focused files with JVM coverage. v3.74.33
 closed the Cycle 2 P0 Android 15 media-processing timeout item by wiring
 `ExportService.onTimeout(...)` through a distinct `VideoEngine` error path.
+v3.74.34 closed the Cycle 2 Android 13 export notification permission item by
+requesting `POST_NOTIFICATIONS` from the editor before first background export
+and keeping an in-app progress fallback when notifications stay off.
 
 ## Current State
 
@@ -148,6 +151,9 @@ closed the Cycle 2 P0 Android 15 media-processing timeout item by wiring
   callbacks by failing active exports through a distinct `VideoEngine` timeout
   error, cancelling Transformer work, deleting the active output file, and
   stopping foreground service state.
+- v3.74.34 adds a contextual Android 13+ export notification permission path
+  before the first background export, remembers handled prompt state, and keeps
+  export progress/cancel controls available in-app when notifications are off.
 
 ## Source Archives
 
@@ -481,7 +487,7 @@ slip-slide findings above.
     tests. Emulator shortened-timeout validation remains the device QA follow-up.
   - Complexity: M
 
-- [ ] 🔬🤖 P1 — Add a contextual Android 13+ notification-permission path for exports
+- [x] ✅🔬🤖 P1 — Add a contextual Android 13+ notification-permission path for exports
   - Why: Export progress, completion, error, thermal, and cancel affordances rely
     on notifications, but newly installed Android 13+ apps have notifications off
     until the app requests `POST_NOTIFICATIONS`. Today NovaCut declares the
@@ -503,6 +509,13 @@ slip-slide findings above.
   - Verify: use the official ADB permission-state commands from the Android docs
     to simulate fresh install, allow, deny, and swipe-away states; confirm export
     notifications and in-app fallbacks behave correctly in each state.
+  - Implemented in v3.74.34: `EditorScreen` shows a contextual explanation
+    before the first API 33+ export notification request, remembers handled
+    prompt state, routes export starts through the Compose permission layer, and
+    keeps export running with in-app progress/cancel fallback copy when
+    notifications are declined. Settings now shows enabled/off/not-required
+    notification delivery state and opens Android notification settings for
+    recovery. ADB permission-state validation remains the device QA follow-up.
   - Complexity: M
 
 #### Data Safety

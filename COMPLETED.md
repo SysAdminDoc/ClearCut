@@ -7,7 +7,7 @@ Last consolidated: 2026-06-04.
 
 ## Current Delivered Baseline
 
-- Current version: v3.74.33 (`versionCode` 170).
+- Current version: v3.74.34 (`versionCode` 171).
 - Multi-track Android NLE with project gallery, editor, timeline, preview,
   effects, transitions, text, captions, audio, export, settings, templates,
   project archive/import, and diagnostic bundle surfaces.
@@ -130,6 +130,11 @@ Last consolidated: 2026-06-04.
   `ExportService` now handles both foreground-service timeout callbacks,
   fails active exports through `VideoEngine` with a distinct timeout error,
   removes foreground service state, and has focused JVM policy coverage.
+- Android 13 export notification permission path shipped in v3.74.34: first
+  background export now shows a contextual `POST_NOTIFICATIONS` prompt on API
+  33+, remembers handled prompt state, and keeps in-app progress/cancel controls
+  as the fallback when notifications stay off. Settings also shows current
+  notification delivery status and links to Android notification settings.
 
 ## Preserved Historical Detail
 

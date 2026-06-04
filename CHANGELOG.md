@@ -1,5 +1,30 @@
 # Changelog
 
+## v3.74.34 — 2026-06-04
+
+### Android 13 export notification permission path
+- Added `ExportNotificationPermissionPolicy` and JVM coverage for Android 13+
+  notification-permission export decisions.
+- Added a contextual export notification permission dialog before the first
+  Android 13+ background export when `POST_NOTIFICATIONS` is not granted.
+- Remembered handled prompt state in editor-scoped shared preferences so denied
+  or dismissed prompts do not reappear on every export attempt.
+- Kept export available when notifications are declined, with fallback copy that
+  tells the user to keep NovaCut open for in-app progress and cancel controls.
+- Added a Settings notification-delivery status row that refreshes on resume and
+  opens Android notification settings for recovery after denial or system block.
+- Routed `ExportSheet` export starts through `EditorScreen` so permission
+  requests happen from the Activity/Compose layer before `ExportDelegate` starts
+  `ExportService`.
+- Bumped runtime metadata to `versionName 3.74.34` / `versionCode 171`.
+- Verification: `git diff --check`, `scripts/verify_release_artifacts.py`,
+  APK-based 16 KB checks for debug/release, `apksigner verify` for
+  debug/release, `zipalign -c -P 16 -v 4` for debug/release/androidTest,
+  focused `:app:testDebugUnitTest --tests
+  com.novacut.editor.ui.editor.ExportNotificationPermissionPolicyTest`,
+  `:app:testDebugUnitTest`, `:app:assembleDebug`, `:app:assembleRelease`, and
+  `:app:assembleDebugAndroidTest` passed.
+
 ## v3.74.33 — 2026-06-04
 
 ### Android 15 media-processing timeout handling

@@ -36,6 +36,7 @@ fun BoxScope.EditorPrimaryPanelHost(
     useEmbeddedExportPane: Boolean,
     embeddedExportPaneWidth: Dp,
     context: Context,
+    onStartExportRequested: (File) -> Unit = { outputDir -> viewModel.startExport(outputDir) },
     onStartVoiceoverRecording: () -> Unit
 ) {
     BottomSheetSlot(
@@ -201,7 +202,7 @@ fun BoxScope.EditorPrimaryPanelHost(
             onStartExport = {
                 val moviesDir = context.getExternalFilesDir(android.os.Environment.DIRECTORY_MOVIES)
                 val outputDir = File(moviesDir ?: context.filesDir, "NovaCut").apply { mkdirs() }
-                viewModel.startExport(outputDir)
+                onStartExportRequested(outputDir)
             },
             onShare = {
                 viewModel.getShareIntent()?.let { intent ->

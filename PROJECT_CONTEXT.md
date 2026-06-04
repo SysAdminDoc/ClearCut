@@ -10,8 +10,8 @@ NovaCut is an Android video editor under package `com.novacut.editor`. The repo 
 
 Current live version evidence:
 
-- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 170`, `versionName = "3.74.33"`.
-- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.33`.
+- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 171`, `versionName = "3.74.34"`.
+- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.34`.
 - [README.md](README.md) and [ROADMAP.md](ROADMAP.md) both describe the v3.74.x line.
 - The 2026-05-17 continuation pushes each completed roadmap batch back to `origin/master`; verify `git status --short --branch` before assuming branch sync.
 
@@ -513,8 +513,34 @@ High-level modules and patterns:
   `:app:assembleDebugAndroidTest` passed.
 - Device QA follow-up: run the roadmap's Android 15+ shortened-timeout ADB
   recipe on an emulator/device to prove OS-delivered timeout behavior.
-- Next roadmap item: P1 Android 13+ export notification permission path from
-  the Cycle 2 researcher queue.
+- Followed by the Cycle 2 P1 Android 13+ export notification permission path in
+  v3.74.34.
+
+2026-06-04 Android 13 export notification permission continuation:
+
+- Closed the Cycle 2 P1 notification-permission item in v3.74.34 by routing
+  `ExportSheet` starts through `EditorScreen` so the Activity/Compose layer can
+  request `POST_NOTIFICATIONS` before `ExportDelegate` starts `ExportService`.
+- Added `ExportNotificationPermissionPolicy` with JVM coverage for pre-Android
+  13, first denied prompt, handled denial, and granted-permission decisions.
+- Added a contextual dialog explaining export progress/completion/error/thermal
+  notifications before the first API 33+ background export, remembers handled
+  prompt state in shared preferences, and starts export with in-app progress and
+  cancel controls when notifications remain off.
+- Added a Settings export-notification status row that recomputes on resume,
+  shows enabled/off/not-required delivery state, and opens Android notification
+  settings for users who need to recover from denial or app-level blocking.
+- Verification: `git diff --check`, `scripts/verify_release_artifacts.py`,
+  APK-based 16 KB checks for debug/release, `apksigner verify` for
+  debug/release, `zipalign -c -P 16 -v 4` for debug/release/androidTest,
+  focused `:app:testDebugUnitTest --tests
+  com.novacut.editor.ui.editor.ExportNotificationPermissionPolicyTest`,
+  `:app:testDebugUnitTest`, `:app:assembleDebug`, `:app:assembleRelease`, and
+  `:app:assembleDebugAndroidTest` passed.
+- Device QA follow-up: run the roadmap's Android 13+ ADB permission-state
+  allow/deny/swipe-away recipe on an emulator/device.
+- Next roadmap item: P1 backup/device-transfer policy for managed media imports
+  from the Cycle 2 researcher queue.
 
 2026-05-17 autonomous continuation:
 

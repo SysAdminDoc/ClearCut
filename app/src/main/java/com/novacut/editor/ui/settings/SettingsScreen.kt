@@ -1,13 +1,19 @@
 package com.novacut.editor.ui.settings
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings as AndroidSettings
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -30,7 +36,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.FileProvider
+import androidx.core.content.ContextCompat
 import com.novacut.editor.NovaCutApp
 import com.novacut.editor.R
 import com.novacut.editor.engine.AppSettings
@@ -80,13 +91,24 @@ fun SettingsScreen(
     val whisperModelState by viewModel.whisperModelState.collectAsStateWithLifecycle()
     val segmentationModelState by viewModel.segmentationModelState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val canRemoveWhisperModel = whisperModelState == WhisperModelState.READY && aiModelStorage.whisperBytes > 0L
     val canRemoveSegmentationModel = segmentationModelState == SegmentationModelState.READY && aiModelStorage.segmentationBytes > 0L
     var pendingAiModelRemoval by remember { mutableStateOf<SettingsAiModelRemovalTarget?>(null) }
     var showPrivacyDashboard by remember { mutableStateOf(false) }
+    var notificationStatusRefreshKey by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) {
         viewModel.refreshAiModelStorage()
+    }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                notificationStatusRefreshKey += 1
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     NovaCutScreenBackground(
@@ -163,6 +185,17 @@ fun SettingsScreen(
                 ],
                 options = listOf("H.264", "H.265 (HEVC)", "AV1", "VP9"),
                 onSelected = { viewModel.setDefaultCodec(listOf("H264", "HEVC", "AV1", "VP9")[it]) }
+            )
+        }
+
+        // Export Notifications
+        SettingsSection(
+            title = stringResource(R.string.settings_export_notifications),
+            description = stringResource(R.string.settings_export_notifications_description)
+        ) {
+            SettingsNotificationPermissionRow(
+                context = context,
+                refreshKey = notificationStatusRefreshKey
             )
         }
 
@@ -892,6 +925,89 @@ private fun SettingsDiagnosticExportRow(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SettingsNotificationPermissionRow(
+    context: Context,
+    refreshKey: Int
+) {
+    val runtimePermissionRequired = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+    val runtimePermissionGranted = remember(context, refreshKey) {
+        !runtimePermissionRequired ||
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+    }
+    val appNotificationsEnabled = remember(context, refreshKey) {
+        NotificationManagerCompat.from(context).areNotificationsEnabled()
+    }
+    val status = when {
+        !runtimePermissionRequired -> NotificationPermissionSettingsStatus.NotRequired
+        runtimePermissionGranted && appNotificationsEnabled -> NotificationPermissionSettingsStatus.Enabled
+        else -> NotificationPermissionSettingsStatus.Off
+    }
+    val badgeText = stringResource(status.badgeResId)
+    val description = stringResource(status.descriptionResId)
+
+    SettingsTile(
+        icon = if (status == NotificationPermissionSettingsStatus.Off) {
+            Icons.Default.NotificationsOff
+        } else {
+            Icons.Default.NotificationsActive
+        },
+        accent = status.accent,
+        label = stringResource(R.string.settings_export_notifications_row),
+        description = description,
+        onClick = { openAppNotificationSettings(context) },
+        semanticState = badgeText
+    ) {
+        SettingsStatusBadge(
+            text = badgeText,
+            accent = status.accent
+        )
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+            contentDescription = stringResource(R.string.settings_export_notifications_open),
+            tint = Mocha.Subtext0,
+            modifier = Modifier.size(18.dp)
+        )
+    }
+}
+
+private enum class NotificationPermissionSettingsStatus(
+    val badgeResId: Int,
+    val descriptionResId: Int,
+    val accent: androidx.compose.ui.graphics.Color
+) {
+    Enabled(
+        badgeResId = R.string.settings_export_notifications_enabled,
+        descriptionResId = R.string.settings_export_notifications_enabled_description,
+        accent = Mocha.Green
+    ),
+    Off(
+        badgeResId = R.string.settings_export_notifications_off,
+        descriptionResId = R.string.settings_export_notifications_off_description,
+        accent = Mocha.Yellow
+    ),
+    NotRequired(
+        badgeResId = R.string.settings_export_notifications_not_required,
+        descriptionResId = R.string.settings_export_notifications_not_required_description,
+        accent = Mocha.Sapphire
+    )
+}
+
+private fun openAppNotificationSettings(context: Context) {
+    val notificationIntent = Intent(AndroidSettings.ACTION_APP_NOTIFICATION_SETTINGS)
+        .putExtra(AndroidSettings.EXTRA_APP_PACKAGE, context.packageName)
+    runCatching {
+        context.startActivity(notificationIntent)
+    }.onFailure {
+        val fallbackIntent = Intent(AndroidSettings.ACTION_APPLICATION_DETAILS_SETTINGS)
+            .setData(Uri.parse("package:${context.packageName}"))
+        context.startActivity(fallbackIntent)
     }
 }
 

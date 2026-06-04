@@ -3,7 +3,9 @@
 package com.novacut.editor.ui.editor
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
@@ -61,6 +63,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import com.novacut.editor.R
+import java.io.File
+
+private const val EXPORT_NOTIFICATION_PERMISSION_PREFS = "export_notification_permission"
+private const val EXPORT_NOTIFICATION_PERMISSION_HANDLED = "handled"
 
 @Composable
 fun EditorScreen(
@@ -134,6 +140,57 @@ fun EditorScreen(
             viewModel.addImageOverlay(uri, com.novacut.editor.model.ImageOverlayType.STICKER)
         }
     }
+    val exportNotificationPrefs = remember(context) {
+        context.getSharedPreferences(EXPORT_NOTIFICATION_PERMISSION_PREFS, Context.MODE_PRIVATE)
+    }
+    var pendingNotificationExportDir by remember { mutableStateOf<File?>(null) }
+    var showExportNotificationPermissionDialog by remember { mutableStateOf(false) }
+
+    fun markExportNotificationPromptHandled() {
+        exportNotificationPrefs.edit()
+            .putBoolean(EXPORT_NOTIFICATION_PERMISSION_HANDLED, true)
+            .apply()
+    }
+
+    fun startPendingNotificationExport(showFallbackMessage: Boolean) {
+        val outputDir = pendingNotificationExportDir ?: return
+        pendingNotificationExportDir = null
+        if (showFallbackMessage) {
+            viewModel.showToast(context.getString(R.string.export_notification_permission_fallback))
+        }
+        viewModel.startExport(outputDir)
+    }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        markExportNotificationPromptHandled()
+        startPendingNotificationExport(showFallbackMessage = !granted)
+    }
+
+    fun startExportWithNotificationPermission(outputDir: File) {
+        val notificationPermissionGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        val decision = decideExportNotificationPermission(
+            sdkInt = Build.VERSION.SDK_INT,
+            notificationPermissionGranted = notificationPermissionGranted,
+            promptAlreadyHandled = exportNotificationPrefs.getBoolean(
+                EXPORT_NOTIFICATION_PERMISSION_HANDLED,
+                false
+            )
+        )
+
+        if (decision.shouldPrompt) {
+            pendingNotificationExportDir = outputDir
+            showExportNotificationPermissionDialog = true
+        } else {
+            viewModel.startExport(outputDir)
+        }
+    }
+
     LaunchedEffect(showLutPicker) {
         if (showLutPicker) {
             lutPickerLauncher.launch(arrayOf("*/*"))
@@ -291,6 +348,39 @@ fun EditorScreen(
 
     LaunchedEffect(state.selectedClipId) {
         if (state.selectedClipId == null) showClipLabelPicker = false
+    }
+
+    if (showExportNotificationPermissionDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showExportNotificationPermissionDialog = false
+                markExportNotificationPromptHandled()
+                startPendingNotificationExport(showFallbackMessage = true)
+            },
+            title = { Text(stringResource(R.string.export_notification_permission_title)) },
+            text = { Text(stringResource(R.string.export_notification_permission_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showExportNotificationPermissionDialog = false
+                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                ) {
+                    Text(stringResource(R.string.export_notification_permission_allow))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showExportNotificationPermissionDialog = false
+                        markExportNotificationPromptHandled()
+                        startPendingNotificationExport(showFallbackMessage = true)
+                    }
+                ) {
+                    Text(stringResource(R.string.export_notification_permission_not_now))
+                }
+            }
+        )
     }
 
     fun nudgeSelectedClip(deltaMs: Long): Boolean {
@@ -869,6 +959,7 @@ fun EditorScreen(
             useEmbeddedExportPane = useEmbeddedExportPane,
             embeddedExportPaneWidth = embeddedExportPaneWidth,
             context = context,
+            onStartExportRequested = ::startExportWithNotificationPermission,
             onStartVoiceoverRecording = {
                 if (ContextCompat.checkSelfPermission(
                         context,

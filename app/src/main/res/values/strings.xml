@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.74.33</string>
+    <string name="app_version">v3.74.34</string>
 
     <!-- Common -->
     <string name="close">Close</string>
@@ -296,6 +296,16 @@
     <string name="settings_default_aspect_ratio_description">Applied when you start a new project or template.</string>
     <string name="settings_default_codec">Default Codec</string>
     <string name="settings_default_codec_description">Pick the delivery format NovaCut suggests first.</string>
+    <string name="settings_export_notifications">Export Notifications</string>
+    <string name="settings_export_notifications_description">Check whether Android can show long-running export progress, completion, error, thermal, and cancel notifications.</string>
+    <string name="settings_export_notifications_row">Notification delivery</string>
+    <string name="settings_export_notifications_enabled">Enabled</string>
+    <string name="settings_export_notifications_off">Off</string>
+    <string name="settings_export_notifications_not_required">Not required</string>
+    <string name="settings_export_notifications_enabled_description">Android can show export notifications while in-app progress remains available.</string>
+    <string name="settings_export_notifications_off_description">Exports still run, but keep NovaCut open for progress and cancel controls until notifications are enabled.</string>
+    <string name="settings_export_notifications_not_required_description">This Android version does not require a runtime notification grant for export notifications.</string>
+    <string name="settings_export_notifications_open">Open notification settings</string>
     <string name="settings_timeline">Timeline</string>
     <string name="settings_timeline_description">Keep navigation, snapping, and playback feeling crisp.</string>
     <string name="settings_auto_save">Auto-save</string>
@@ -1665,6 +1675,11 @@
     <string name="notif_export_cancel">Cancel</string>
     <string name="notif_export_failed_default">Export failed</string>
     <string name="export_media_processing_timeout_error">Export stopped because Android reached its media-processing background time limit. Start the export again when the device allows more processing time.</string>
+    <string name="export_notification_permission_title">Keep export progress visible</string>
+    <string name="export_notification_permission_message">NovaCut uses export notifications for background progress, completion, errors, thermal warnings, and cancel controls. If you skip this, keep the editor open to monitor and cancel the export in app.</string>
+    <string name="export_notification_permission_allow">Allow notifications</string>
+    <string name="export_notification_permission_not_now">Not now</string>
+    <string name="export_notification_permission_fallback">Export notifications are off. Keep NovaCut open for progress and cancel controls.</string>
     <string name="notif_export_thermal_progress_light">thermal watch</string>
     <string name="notif_export_thermal_progress_heavy">thermal warning</string>
     <string name="notif_export_thermal_progress_pause">too hot</string>
