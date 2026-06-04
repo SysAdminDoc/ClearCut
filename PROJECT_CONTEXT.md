@@ -10,8 +10,8 @@ NovaCut is an Android video editor under package `com.novacut.editor`. The repo 
 
 Current live version evidence:
 
-- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 172`, `versionName = "3.74.35"`.
-- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.35`.
+- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 182`, `versionName = "3.74.45"`.
+- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.45`.
 - [README.md](README.md) and [ROADMAP.md](ROADMAP.md) both describe the v3.74.x line.
 - The 2026-05-17 continuation pushes each completed roadmap batch back to `origin/master`; verify `git status --short --branch` before assuming branch sync.
 
@@ -61,6 +61,11 @@ High-level modules and patterns:
 - The repo now has a repeatable Compose instrumentation smoke harness for the
   project gallery, blank-project editor open, media picker, export sheet,
   Settings, and privacy dashboard surfaces.
+- The repo now has a repeatable Baseline Profile and Macrobenchmark harness for
+  release startup/editor performance: `:baselineprofile` generates
+  `app/src/main/baseline-prof.txt` and reports default/profiled cold startup,
+  profiled warm startup, and blank-editor timeline scrub frame timing on a
+  managed Pixel 6 API 36 device.
 - The release workflow now packages debug, release, and instrumentation APKs,
   verifies version/changelog/artifact metadata, checks APK signatures and ZIP
   alignment, and runs APK-based 16 KB native-library checks.
@@ -124,6 +129,12 @@ High-level modules and patterns:
    - The Settings diagnostic ZIP workflow is now implemented.
    - Future diagnostics work should focus on emulator/UI validation and any additional redaction tests discovered from real support bundles.
 
+8. Memory trim policy.
+   - Cycle 4 is the next open researcher queue item after the v3.74.45
+     performance gate. Implement app-level `onTrimMemory` / editor-cache
+     trimming for bitmap thumbnails, waveform/generated-media caches, and any
+     large editor preview state without weakening configurable cache limits.
+
 ## Recent Implementation Notes
 
 2026-06-04 autonomous continuation:
@@ -155,6 +166,24 @@ High-level modules and patterns:
 - `NullSafeMutableLiveData` is disabled in the Android lint block because the
   androidx.lifecycle detector crashes under the current Kotlin 2.1 / AGP 8.7
   lint stack and NovaCut has no `LiveData`/`MutableLiveData` call sites for it.
+
+2026-06-04 performance-gate continuation:
+
+- Completed the Cycle 3 Baseline Profile and Macrobenchmark item in v3.74.45.
+  Added `:baselineprofile`, AndroidX Benchmark/ProfileInstaller wiring, a
+  managed Pixel 6 API 36 device, generated `app/src/main/baseline-prof.txt`,
+  and release APK profile shipping.
+- The generated profile journey covers project gallery launch, blank-project
+  editor open, export sheet open, and timeline scrub. The benchmark variant
+  reports default cold startup, profile-required cold startup, profile-required
+  warm startup, and blank-editor timeline scrub frame metrics.
+- Verification passed:
+  `:baselineprofile:pixel6Api36BenchmarkReleaseAndroidTest
+  :baselineprofile:collectNonMinifiedReleaseBaselineProfile`. `CompilationMode.None`
+  was attempted during development but consistently destabilized the managed
+  emulator runner after the first successful macrobenchmark, so the committed
+  comparison uses default installed compilation versus profile-required
+  compilation.
 
 2026-06-04 recovery-open continuation:
 
@@ -564,8 +593,7 @@ High-level modules and patterns:
   `:app:assembleDebugAndroidTest` passed.
 - Device QA follow-up: run an emulator/device `bmgr` backup/restore or direct
   transfer smoke with a project containing an imported local clip.
-- Next roadmap item: P2 Baseline Profile and Macrobenchmark coverage from the
-  Cycle 3 researcher queue.
+- Next roadmap item: Cycle 4 P2 app-level memory trim policy for editor caches.
 
 2026-05-17 autonomous continuation:
 

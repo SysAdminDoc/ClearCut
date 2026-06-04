@@ -1,5 +1,29 @@
 # Changelog
 
+## v3.74.45 — 2026-06-04
+
+### Baseline Profile and macrobenchmark coverage
+- Added a `:baselineprofile` Android test module with a managed Pixel 6 API 36
+  device, Baseline Profile generation for project gallery launch, blank-project
+  editor open, export sheet open, and timeline scrub paths.
+- Added Macrobenchmark coverage for default cold startup, baseline-profile cold
+  startup, baseline-profile warm startup, and blank-editor timeline scrub frame
+  timing.
+- Shipped the generated `app/src/main/baseline-prof.txt` through the release
+  APK via ProfileInstaller and the AndroidX Baseline Profile Gradle plugin.
+- Exposed Compose test tags as UIAutomator resource IDs and made the benchmark
+  flow resilient to Compose release builds by using visible-label readiness and
+  coordinate taps for nested text buttons.
+- Bumped runtime metadata to `versionName 3.74.45` / `versionCode 182`.
+- Verification: `:baselineprofile:pixel6Api36BenchmarkReleaseAndroidTest
+  :baselineprofile:collectNonMinifiedReleaseBaselineProfile` passed on the
+  managed emulator with default cold-start median 2565.0 ms, profile cold-start
+  median 1839.2 ms, profile warm-start median 879.8 ms, and editor timeline
+  scrub frame metrics captured. `CompilationMode.None` was attempted during
+  development but destabilized the managed emulator runner after the first
+  successful macrobenchmark, so the committed comparison uses default installed
+  compilation versus profile-required compilation.
+
 ## v3.74.44 — 2026-06-04
 
 ### Fastlane changelog history

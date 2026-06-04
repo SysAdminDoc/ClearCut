@@ -233,11 +233,11 @@ See [CHANGELOG.md](CHANGELOG.md) for full release history.
 | Video | Media3 1.10.1 (Transformer + ExoPlayer) |
 | Effects | OpenGL ES 3.0 (37 GLSL transitions, 40+ effect shaders) |
 | Audio DSP | Custom engine (EQ, compressor, chorus, delay, pitch shift) |
-| Speech-to-Text | ONNX Runtime 1.17.0 (Whisper) |
+| Speech-to-Text | ONNX Runtime 1.26.0 (Whisper) |
 | Noise Reduction | Spectral gate fallback (DeepFilterNet planned) |
 | Beat Detection | Spectral flux onset detection (aubio NDK ready) |
 | Loudness | EBU R128 / ITU-R BS.1770 measurement |
-| Segmentation | MediaPipe Tasks Vision 0.10.14 |
+| Segmentation | MediaPipe Tasks Vision 0.10.35 |
 | Video Matting | Planned (RobustVideoMatting, ONNX Runtime) |
 | Object Removal | LaMa-Dilated (ONNX Runtime, neighbor-fill fallback) |
 | Upscaling | Planned (Real-ESRGAN) |
@@ -246,7 +246,8 @@ See [CHANGELOG.md](CHANGELOG.md) for full release history.
 | Stabilization | Planned (OpenCV) |
 | TTS | Android System TTS (Piper via Sherpa-ONNX planned) |
 | ASR acceleration target | Sherpa-ONNX v1.13.2 AAR + Moonshine v2 Tiny EN policy (native backend still gated) |
-| Animated Titles | Lottie (Airbnb) |
+| Animated Titles | Lottie Compose 6.7.1 and Media3 Lottie overlay support |
+| Startup performance | AndroidX Baseline Profile / Macrobenchmark 1.4.1 |
 | Timeline Exchange | Planned (OpenTimelineIO) |
 | DI | Hilt / Dagger |
 | Database | Room (v4 with migration chain 1→4) |
@@ -309,11 +310,14 @@ com.novacut.editor/
 
 # Release build (requires keystore.properties or env vars)
 ./gradlew assembleRelease
+
+# Managed-device startup/editor performance gate
+./gradlew :baselineprofile:pixel6Api36BenchmarkReleaseAndroidTest :baselineprofile:collectNonMinifiedReleaseBaselineProfile
 ```
 
 ### Requirements
 - Android Studio Ladybug+ (2024.2+)
-- AGP 8.7.3, Gradle 8.9, JDK 17
+- AGP 8.7.3, Gradle 8.9, JDK 21
 - Android SDK 36
 
 ### Release Signing
@@ -334,12 +338,13 @@ Key external dependencies currently in `build.gradle.kts`:
 
 | Dependency | Version | Purpose |
 |-----------|---------|---------|
-| ONNX Runtime | 1.17.0 | Whisper ASR + LaMa inpainting |
+| ONNX Runtime | 1.26.0 | Whisper ASR + LaMa inpainting |
 | Sherpa-ONNX | 1.13.2 target | Future native Moonshine v2 ASR path; official AAR is a GitHub release asset, not a Maven dependency |
 | SAM 2.1 ONNX | Targeted | Future tracked-mask path via explicit model download; MobileSAM remains the small-device fallback |
-| MediaPipe | 0.10.14 | Selfie segmentation |
-| Lottie | 6.6.2 | Animated title templates |
-| OkHttp | 4.12.0 | Future opt-in cloud APIs |
+| MediaPipe | 0.10.35 | Selfie segmentation |
+| Lottie Compose | 6.7.1 | Animated title templates |
+| AndroidX Benchmark/ProfileInstaller | 1.4.1 / 1.4.1 | Baseline Profile generation and release profile install |
+| OkHttp | 5.3.2 | Future opt-in cloud APIs |
 
 ## Supported Devices
 

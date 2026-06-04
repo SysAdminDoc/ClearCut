@@ -8,7 +8,7 @@ Active roadmap for forward-looking work. Shipped work is summarized in
 [RESEARCH_REPORT.md](RESEARCH_REPORT.md), and detailed historical plans are
 archived under [docs/archive](docs/archive/).
 
-Current version: **v3.74.44** (`versionCode` 181). Last consolidated:
+Current version: **v3.74.45** (`versionCode` 182). Last consolidated:
 2026-06-04.
 
 > Last researched: Cycle 22 - 2026-06-04.
@@ -85,6 +85,10 @@ planned unpinned models from presenting as downloadable.
 v3.74.39 closed the instrumentation smoke CI item by adding a dedicated GitHub
 Actions emulator job that runs `NovaCutSmokeTest` through
 `connectedDebugAndroidTest`.
+v3.74.45 closed the Cycle 3 performance gate by adding the `:baselineprofile`
+module, generated release Baseline Profile, ProfileInstaller wiring, and
+managed-device Macrobenchmark coverage for default/profiled cold startup,
+profiled warm startup, and blank-editor timeline scrub frame timing.
 
 ## Current State
 
@@ -211,6 +215,9 @@ Actions emulator job that runs `NovaCutSmokeTest` through
   `fastlane/metadata/android/en-US/changelogs/` from explicit `versionCode`
   entries in `CHANGELOG.md`, so Play/F-Droid metadata no longer has a one-file
   changelog history.
+- v3.74.45 adds a generated Baseline Profile that ships in release APKs and a
+  managed Pixel 6 API 36 Macrobenchmark suite covering default cold startup,
+  profile-required cold/warm startup, and blank-editor timeline scrub frames.
 
 ## Source Archives
 
@@ -230,6 +237,7 @@ Actions emulator job that runs `NovaCutSmokeTest` through
 | ✅ P2 | Dependabot grouping and dependency freshness review | Implemented in v3.74.43: Gradle dependency updates are grouped by toolchain, UI, AndroidX runtime, media, ML/native, and small-library risk lanes; Compose BOM 2026.05.01 is staged; Room/Kotlin/KSP freshness is documented and held for a dedicated toolchain validation pass; changelog-heading auto-tagging is documented as a release-verification path rather than a Dependabot path. |
 | P2 | Room/Kotlin toolchain migration pass | Revisit Room 2.8.4 and Kotlin/KSP 2.1.21+ or 2.3+/2.4+ on a clean build graph with enough JVM headroom; exit only after `:app:compileDebugKotlin` and Room/KSP schema generation complete without daemon termination. |
 | ✅ P2 | Fastlane changelog history | Implemented in v3.74.44: `scripts/sync_fastlane_changelogs.py` derives 500-character Play changelog files from `CHANGELOG.md` entries with explicit `versionCode` evidence, and `fastlane/metadata/android/en-US/changelogs/` is populated for the recoverable release history. |
+| ✅ P2 | Baseline Profile and macrobenchmarks | Implemented in v3.74.45: `:baselineprofile` generates the release Baseline Profile, ProfileInstaller ships it in the APK, and managed Pixel 6 API 36 macrobenchmarks report default/profiled cold startup, profiled warm startup, and blank-editor timeline scrub frame timing. |
 | P3 | Caption translation engine activation | Replace source-text echo behavior with a real local model path such as MADLAD-400 or Bergamot only after model gates are complete. |
 | P3 | Advanced engine activations | Activate Oboe resampling, adjustment layers, keyframe graph UI, and remaining AI engines only when dependencies, APK size, 16 KB compliance, and device QA are clear. |
 
@@ -655,7 +663,7 @@ release-artifact gates without duplicating the timeline decomposition lane.
 
 #### Performance & Release Quality
 
-- [ ] 🔬🤖 P2 — Add Baseline Profile and Macrobenchmark coverage for launch and editor entry
+- [x] ✅🔬🤖 P2 — Add Baseline Profile and Macrobenchmark coverage for launch and editor entry
   - Why: NovaCut has a Compose smoke harness and release APK verification, but
     no repeatable cold-start or critical-user-journey performance gate. A
     video editor's first-launch project gallery, blank-editor open, and timeline
@@ -680,6 +688,14 @@ release-artifact gates without duplicating the timeline decomposition lane.
   - Verify: run the profile generation task on a managed device/emulator, confirm
     the release APK contains the generated profile, and compare Macrobenchmark
     startup results with `CompilationMode.None` vs profile/default compilation.
+  - Status: implemented in v3.74.45. `:baselineprofile` generated
+    `app/src/main/baseline-prof.txt` from the managed Pixel 6 API 36 profile
+    journey and the benchmark variant passed default cold startup,
+    profile-required cold/warm startup, and blank-editor timeline scrub frame
+    metrics. `CompilationMode.None` was attempted but consistently destabilized
+    the managed emulator runner after the first successful macrobenchmark, so
+    the committed suite uses default installed compilation versus
+    profile-required compilation.
   - Complexity: M
 
 #### Appendix — Cycle 3 Sources
@@ -1753,7 +1769,7 @@ make both exportable before the UI presents them as accessibility outputs.
 ### Researcher Queue (Cycle 20 - 2026-06-04)
 
 Focus: make product-health observability useful without weakening NovaCut's
-local-first privacy posture or duplicating the in-flight Baseline Profile work.
+local-first privacy posture or duplicating the completed Baseline Profile gate.
 
 #### Privacy-Preserving Product Health
 

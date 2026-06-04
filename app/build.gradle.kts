@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.androidx.baselineprofile)
 }
 
 fun resolveSigningSecret(vararg keys: String): String? {
@@ -22,8 +23,8 @@ android {
         applicationId = "com.novacut.editor"
         minSdk = 26
         targetSdk = 36
-        versionCode = 181
-        versionName = "3.74.44"
+        versionCode = 182
+        versionName = "3.74.45"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -176,6 +177,7 @@ dependencies {
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.hilt.work)
     ksp(libs.hilt.work.compiler)
+    implementation(libs.androidx.profileinstaller)
 
     // Image loading
     implementation(libs.coil.compose)
@@ -207,4 +209,10 @@ dependencies {
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.test.runner)
+
+    baselineProfile(project(":baselineprofile"))
+}
+
+baselineProfile {
+    automaticGenerationDuringBuild = false
 }

@@ -7,7 +7,7 @@ Last consolidated: 2026-06-04.
 
 ## Current Delivered Baseline
 
-- Current version: v3.74.44 (`versionCode` 181).
+- Current version: v3.74.45 (`versionCode` 182).
 - Multi-track Android NLE with project gallery, editor, timeline, preview,
   effects, transitions, text, captions, audio, export, settings, templates,
   project archive/import, and diagnostic bundle surfaces.
@@ -45,6 +45,10 @@ Last consolidated: 2026-06-04.
 - Fastlane changelog history shipped in v3.74.44 with generated Play Store
   changelog files for every CHANGELOG entry that has explicit versionCode
   evidence.
+- Baseline Profile and Macrobenchmark coverage shipped in v3.74.45: release
+  APKs include generated startup/editor/export/timeline profile rules, and the
+  managed Pixel 6 API 36 benchmark reports default/profiled cold startup,
+  profiled warm startup, and blank-editor timeline scrub frame timing.
 - UI test harness bootstrap shipped in v3.74.11: shared Compose test tags,
   androidTest dependencies, and a smoke test covering project list,
   blank-project editor open, media picker, export sheet, Settings, and privacy

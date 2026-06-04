@@ -1,0 +1,13 @@
+Lcom/novacut/editor/MainActivity;
+Lcom/novacut/editor/NovaCutApp;
+HSPLcom/novacut/editor/MainActivity;->**(**)**
+HSPLcom/novacut/editor/NovaCutApp;->**(**)**
+HSPLcom/novacut/editor/ui/theme/**->**(**)**
+HSPLcom/novacut/editor/ui/projects/**->**(**)**
+HSPLcom/novacut/editor/ui/editor/**->**(**)**
+HSPLcom/novacut/editor/ui/export/**->**(**)**
+HSPLcom/novacut/editor/ui/mediapicker/**->**(**)**
+HSPLcom/novacut/editor/model/**->**(**)**
+HSPLcom/novacut/editor/engine/Project**->**(**)**
+HSPLcom/novacut/editor/engine/Export**->**(**)**
+HSPLcom/novacut/editor/engine/Timeline**->**(**)**

@@ -22,3 +22,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "NovaCut"
 include(":app")
+include(":baselineprofile")

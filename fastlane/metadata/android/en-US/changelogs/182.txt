@@ -1,0 +1,4 @@
+- Baseline Profile and macrobenchmark coverage
+- Added a :baselineprofile Android test module with a managed Pixel 6 API 36 device, Baseline Profile generation for project gallery launch, blank-project editor open, export sheet open, and timeline scrub paths.
+- Added Macrobenchmark coverage for default cold startup, baseline-profile cold startup, baseline-profile warm startup, and blank-editor timeline scrub frame timing.
+- Shipped the generated app/src/main/baseline-prof.txt through the rel...

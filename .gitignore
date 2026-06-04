@@ -9,6 +9,7 @@
 .cxx
 local.properties
 /app/build
+/baselineprofile/build
 /app/release
 *.apk
 *.aab
