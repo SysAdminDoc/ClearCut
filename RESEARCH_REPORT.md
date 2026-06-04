@@ -6,6 +6,37 @@ roadmaps are archived under [docs/archive/roadmap](docs/archive/roadmap/).
 
 Last refreshed: 2026-06-04.
 
+## 2026-06-04 Cycle 17 Stock Asset Provider Terms Refresh
+
+- [Verified] `StockAssetEngine` is still a stub: `isProviderConfigured(...)`
+  always returns false, `search(...)` returns an empty result, and
+  `download(...)` returns false. It names Pexels, Pixabay, Freesound, and Free
+  Music Archive providers and carries `author`, `authorUrl`, `licenseName`, and
+  `attribution` fields, but grep finds no UI wiring, provider API keys in
+  `SettingsRepository`, HTTP clients, cache policy, download persistence, or
+  unit tests for provider configuration and attribution.
+- [Verified] The provider terms are materially different. Pexels requires API
+  authorization, visible Pexels links, photographer credit when possible, and
+  rate-limit tracking. Pixabay asks API users to show where results come from,
+  rate-limits by API key, requires 24-hour caching, and forbids permanent
+  image hotlinking. Freesound's API terms say free API use is non-commercial,
+  require credit to Freesound and users according to sound licenses, and forbid
+  bandwidth abuse or multiple keys to avoid limits. Free Music Archive content
+  is per-track licensed, mostly Creative Commons, where BY/NC/ND/SA terms can
+  decide whether export, remix, commercial posting, or no-attribution use is
+  allowed.
+- [Verified] The current single `attributionLine(...)` helper is too thin for a
+  real stock-asset feature: it does not persist the source page, provider terms
+  snapshot, license URL, commercial-use eligibility, derivative/no-derivatives
+  constraint, search-result provider branding, rate-limit/cache metadata, or
+  export-time credits. Treating every provider as the same "download and credit"
+  flow would create both user-trust and licensing risk.
+- [Promoted] Added a P2 roadmap item to implement stock assets as a
+  provider-gated catalog with explicit API-key setup, per-provider
+  rate-limit/cache handling, persisted source/license/attribution metadata, and
+  export/share checks that block or warn when a selected asset's license does
+  not allow the intended use.
+
 ## 2026-06-04 Cycle 16 FileProvider Grant-Path Refresh
 
 - [Verified] The active Add Media camera action creates a pending MP4 in

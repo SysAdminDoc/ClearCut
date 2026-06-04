@@ -11,7 +11,7 @@ archived under [docs/archive](docs/archive/).
 Current version: **v3.74.44** (`versionCode` 181). Last consolidated:
 2026-06-04.
 
-> Last researched: Cycle 16 - 2026-06-04.
+> Last researched: Cycle 17 - 2026-06-04.
 
 ## ▶ Implementer Instructions (for the build machine)
 
@@ -1509,3 +1509,85 @@ XML grant path.
   https://developer.android.com/reference/androidx/core/content/FileProvider
 - Android secure file sharing setup:
   https://developer.android.com/training/secure-file-sharing/setup-sharing
+
+### Researcher Queue (Cycle 17 - 2026-06-04)
+
+Focus: make the stock-asset library a provider-aware, license-safe catalog
+instead of a generic search/download stub.
+
+#### Stock Assets, Attribution & Provider Terms
+
+- [ ] 🔬🤖 P2 — Gate stock-asset providers on terms, attribution, and rate-limit contracts
+  - Why: `StockAssetEngine` already names Pexels, Pixabay, Freesound, and Free
+    Music Archive and exposes one generic `StockAsset` shape, but those
+    providers have different API-key, branding, attribution, cache, rate-limit,
+    hotlinking, commercial-use, and Creative Commons requirements. A working
+    stock-asset panel should never imply that all results are equally reusable
+    in exported videos, platform uploads, or commercial work. It needs a
+    provider capability model before any real HTTP/download path ships.
+  - Evidence: `StockAssetEngine.isProviderConfigured(...)` always returns
+    false, `search(...)` returns `SearchResult(emptyList(), 0, ...)`, and
+    `download(...)` returns false. The engine comment says API keys are
+    user-supplied via Settings, but `SettingsRepository` currently stores only
+    the optional `acoustIdApiKey`, and grep finds no stock-provider keys, HTTP
+    client, cache policy, provider UI, or `StockAssetEngine` tests. The single
+    `attributionLine(...)` helper formats title/author/provider/license but
+    does not persist source URL, license URL, provider terms, commercial-use
+    status, derivative/no-derivatives constraints, or export-time credit
+    placement.
+  - Current-source check: Pexels API docs require an authorization key, visible
+    Pexels links, photographer credit when possible, rate-limit tracking, and
+    no rate-limit abuse:
+    https://www.pexels.com/api/documentation/
+    Pixabay API docs ask API users to show where images/videos come from,
+    rate-limit by API key, cache requests for 24 hours, forbid permanent image
+    hotlinking, and return 429 on limit errors:
+    https://pixabay.com/api/docs/
+    Freesound API terms say free API use is non-commercial, require crediting
+    Freesound and users according to sound licenses, and forbid bandwidth abuse
+    or multiple keys to avoid limits:
+    https://freesound.org/docs/api/terms_of_use.html
+    Free Music Archive's FAQ and license guide emphasize per-track Creative
+    Commons terms, including attribution, NonCommercial, NoDerivatives, and
+    ShareAlike constraints:
+    https://freemusicarchive.org/faq/
+    https://freemusicarchive.org/License_Guide
+  - Touches: stock-provider settings and encrypted/key-handling policy,
+    provider capability model, provider-specific HTTP clients, retry and 429
+    handling, 24-hour Pixabay cache, Pexels/Pixabay result branding, Freesound
+    commercial-use gate, FMA/manual-source or documented-provider replacement,
+    asset metadata persistence in project state, export credits/caption
+    insertion, privacy-dashboard disclosure of external provider lookups,
+    diagnostic redaction of API keys and source URLs, and JVM/Compose tests.
+  - Acceptance: stock search remains disabled until the selected provider has
+    the required key or documented no-key source. Search results display the
+    provider/source branding required by that provider, downloads avoid
+    disallowed hotlinking, rate-limit and cache state are handled without
+    hammering APIs, and every imported asset persists source page, author,
+    author URL, license name, license URL, provider, fetched timestamp, and
+    reuse constraints. Export/direct-publish flows include or prompt for
+    required attribution, block commercial-intent exports for NC assets unless
+    the user confirms a noncommercial workflow, block ND assets when NovaCut has
+    materially remixed them, and show clear status when a provider is unavailable
+    or terms are unknown.
+  - Verify: add pure JVM tests for query validation, provider configuration,
+    attribution formatting, per-provider capability flags, rate-limit/cache
+    decisions, and license gates for BY/NC/ND/SA/CC0. Add fake-client tests for
+    Pexels/Pixabay/Freesound response parsing, 429/error handling, and no-secret
+    diagnostics. Add Compose tests that unavailable providers show setup copy,
+    search results show required source branding, and export/share paths include
+    or block attribution according to persisted asset metadata.
+  - Complexity: L
+
+#### Appendix — Cycle 17 Sources
+
+- Pexels API documentation:
+  https://www.pexels.com/api/documentation/
+- Pixabay API documentation:
+  https://pixabay.com/api/docs/
+- Freesound API terms:
+  https://freesound.org/docs/api/terms_of_use.html
+- Free Music Archive FAQ:
+  https://freemusicarchive.org/faq/
+- Free Music Archive License Guide:
+  https://freemusicarchive.org/License_Guide
