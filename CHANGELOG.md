@@ -1,5 +1,24 @@
 # Changelog
 
+## v3.74.50 — 2026-06-04
+
+### Process-death diagnostic history
+- Added `ProcessExitRecorder`, an Android 11+ `ApplicationExitInfo` adapter and
+  bounded local store for recent process deaths, de-duped by timestamp, reason,
+  and PID.
+- Recorded recent process-exit history on app startup and added
+  `process-exit-history.json` to user-triggered diagnostic ZIP exports,
+  including an explicit unsupported marker on pre-API-30 devices.
+- Captured reason, status, PID, process name, timestamp, importance, PSS/RSS,
+  description, and a redacted/truncated trace excerpt when the platform exposes
+  one.
+- Updated the Privacy Dashboard and store privacy docs to describe local-only
+  process-death summaries alongside fatal-crash breadcrumbs.
+- Bumped runtime metadata to `versionName 3.74.50` / `versionCode 187`.
+- Verification: focused JVM coverage for `ProcessExitRecorderTest`,
+  `DiagnosticExportEngineTest`, `PrivacyDashboardTest`, and
+  `PrivacyDashboardDisplayTest` passed.
+
 ## v3.74.49 — 2026-06-04
 
 ### Non-media document import router

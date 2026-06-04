@@ -1,0 +1,4 @@
+- Process-death diagnostic history
+- Added ProcessExitRecorder, an Android 11+ ApplicationExitInfo adapter and bounded local store for recent process deaths, de-duped by timestamp, reason, and PID.
+- Recorded recent process-exit history on app startup and added process-exit-history.json to user-triggered diagnostic ZIP exports, including an explicit unsupported marker on pre-API-30 devices.
+- Captured reason, status, PID, process name, timestamp, importance, PSS/RSS, description, and a redac...

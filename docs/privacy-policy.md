@@ -10,9 +10,9 @@ does not operate a NovaCut telemetry backend in the current release line.
 ## Data NovaCut Stores
 
 NovaCut stores project content, clip metadata, app preferences, templates, model
-registry state, AI usage ledger entries, fatal-crash breadcrumbs, and optional
-diagnostic ZIPs in app-private storage unless the user explicitly exports or
-shares a file.
+registry state, AI usage ledger entries, fatal-crash breadcrumbs, Android 11+
+process-death summaries, and optional diagnostic ZIPs in app-private storage
+unless the user explicitly exports or shares a file.
 
 Project archives and exported videos are created only when the user chooses an
 export/share action. Android backup and device-transfer rules keep managed media
@@ -39,8 +39,8 @@ the user chooses NovaCut as the target.
 Project data remains until the project is deleted. App preferences remain until
 the app is uninstalled or storage is cleared. Downloaded models remain until the
 user removes them from Settings. Diagnostic ZIPs are capped to the most recent
-local bundles, crash breadcrumbs are bounded, and memory-trim breadcrumbs are
-bounded under the diagnostics directory.
+local bundles, crash/process-death breadcrumbs are bounded, and memory-trim
+breadcrumbs are bounded under the diagnostics directory.
 
 ## Deletion
 

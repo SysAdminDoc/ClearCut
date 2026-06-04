@@ -112,6 +112,7 @@ class DiagnosticExportEngineTest {
             "device-info.txt",
             "media-codecs.txt",
             "model-registry.txt",
+            "process-exit-history.json",
             "logcat-tail.txt",
             "manifest.txt"
         ).forEach { name ->
@@ -129,6 +130,7 @@ class DiagnosticExportEngineTest {
                     "device-info.txt",
                     "media-codecs.txt",
                     "model-registry.txt",
+                    "process-exit-history.json",
                     "logcat-tail.txt",
                     "manifest.txt"
                 ),

@@ -31,6 +31,7 @@ with the manifest permission list.
 | Template library | User content/templates and app activity | Yes when templates are saved | No | Optional | Kept until template deletion. |
 | Diagnostic logs | Diagnostics | No | No automatic sharing | Optional | Created only when the user exports a diagnostic ZIP; redacted and locally bounded. |
 | Crash records | Diagnostics/crash breadcrumbs | Yes after fatal crashes | No automatic sharing | Required for local crash recovery diagnostics | Bounded local fatal-crash breadcrumbs, included only in user-triggered diagnostic ZIPs. |
+| Process-death summaries | Diagnostics/process-death history | Yes on Android 11+ after process restarts | No automatic sharing | Required for local ANR/low-memory/native-crash diagnostics | Bounded local `ApplicationExitInfo` summaries, redacted and included only in user-triggered diagnostic ZIPs. |
 | Cloud generative video calls | User content sent to a provider only after consent | No | Yes, with the selected provider only after explicit invocation | Optional | Provider retention is disclosed in the consent sheet before each call. |
 | AI usage ledger | App activity and AI disclosure history | No until an AI tool is used | No | Optional | Stored in the project for export/disclosure review and removable from the project controls. |
 | Opt-in usage telemetry | Diagnostics/app activity | No | No in the current release line | Optional and disabled | Future SDK adapters must remain off unless consent is true and a separate disclosure is shipped. |

@@ -8,7 +8,7 @@ Active roadmap for forward-looking work. Shipped work is summarized in
 [RESEARCH_REPORT.md](RESEARCH_REPORT.md), and detailed historical plans are
 archived under [docs/archive](docs/archive/).
 
-Current version: **v3.74.49** (`versionCode` 186). Last consolidated:
+Current version: **v3.74.50** (`versionCode` 187). Last consolidated:
 2026-06-04.
 
 > Last researched: Cycle 22 - 2026-06-04.
@@ -106,6 +106,10 @@ non-media document intent parsing, bounded JSON/XML/text/ZIP/octet-stream
 manifest filters, existing-engine validation for templates, effect packs, LUTs,
 OpenFX descriptors, archives, and timeline import status, plus a Projects
 preview/report dialog before any mutation.
+v3.74.50 closed the Cycle 9 process-death diagnostic gate by recording Android
+11+ `ApplicationExitInfo` history on app startup, de-duping bounded exit records,
+redacting descriptions/traces, adding `process-exit-history.json` to
+user-triggered diagnostic ZIPs, and documenting the local-only privacy surface.
 
 ## Current State
 
@@ -253,6 +257,10 @@ preview/report dialog before any mutation.
   archive, and timeline-interchange files flow through a content-only parser,
   bounded manifest filters, existing loader validation, and a Projects
   preview/report dialog before any template import mutation.
+- v3.74.50 adds process-death diagnostic history: `ProcessExitRecorder`
+  captures Android 11+ `ApplicationExitInfo` records on startup, stores a
+  bounded/de-duped local history, redacts process descriptions and trace
+  excerpts, and exports `process-exit-history.json` through diagnostic ZIPs.
 
 ## Source Archives
 
@@ -277,6 +285,7 @@ preview/report dialog before any mutation.
 | ✅ P2 | Play listing release gate | Implemented in v3.74.47: Fastlane metadata now includes deterministic Play icon, feature graphic, phone/tablet screenshots, SVG sources, alt-text inventory, privacy policy URL, Data safety worksheet, and a CI validator for listing/disclosure readiness. |
 | ✅ P2 | Appearance and contrast gates | Implemented in v3.74.48: persisted System/Dark/High Contrast Dark selection, high-contrast shared chrome tokens, Compose accessibility smoke checks, `docs/appearance-policy.md`, and JVM contrast guardrails for text, non-text, chips, and low-emphasis token misuse. |
 | ✅ P2 | Non-media document import router | Implemented in v3.74.49: content-only plugin/LUT/archive/timeline documents now classify through `IncomingDocumentIntentParser`, manifest filters stay specific without `*/*`, Projects shows a preview/report, and loaders validate templates, effect packs, LUTs, OpenFX descriptors, archives, and timeline-import stub status before mutation. |
+| ✅ P2 | Process-death diagnostic history | Implemented in v3.74.50: Android 11+ `ApplicationExitInfo` records are captured through `ProcessExitRecorder`, de-duped by timestamp/reason/PID, redacted/truncated, exposed in Privacy Dashboard copy, and included in diagnostic ZIPs as `process-exit-history.json` with an unsupported marker on older devices. |
 | P3 | Caption translation engine activation | Replace source-text echo behavior with a real local model path such as MADLAD-400 or Bergamot only after model gates are complete. |
 | P3 | Advanced engine activations | Activate Oboe resampling, adjustment layers, keyframe graph UI, and remaining AI engines only when dependencies, APK size, 16 KB compliance, and device QA are clear. |
 
@@ -1067,7 +1076,7 @@ app's Java uncaught-exception handler.
 
 #### Reliability & Diagnostics
 
-- [ ] 🔬🤖 P2 — Add `ApplicationExitInfo` process-death capture to diagnostic ZIP
+- [x] ✅🔬🤖 P2 — Add `ApplicationExitInfo` process-death capture to diagnostic ZIP
   - Why: The Cycle 1 crash handler item closes Java uncaught-exception capture,
     but it cannot fully explain ANRs, low-memory kills, native crashes, OS
     signals, freezer kills, initialization failures, or other process deaths
@@ -1907,6 +1916,14 @@ local-first privacy posture or duplicating the completed Baseline Profile gate.
     upload when consent is false. Add an instrumentation or fake-network guard
     that exercises app startup and Settings without telemetry traffic.
   - Complexity: M
+  - Status: implemented in v3.74.50. Added `ProcessExitRecorder`, API 30+
+    `ActivityManager.getHistoricalProcessExitReasons(...)` ingestion at
+    startup, local bounded/de-duped history, redacted/truncated description and
+    trace handling, `process-exit-history.json` diagnostic ZIP inclusion, and
+    privacy-dashboard copy. Focused JVM tests cover fake adapter records,
+    unsupported devices, crash/native/ANR/low-memory/signal mapping, duplicate
+    records, redaction, bounded trace excerpts, and diagnostic bundle entry
+    shape.
   - Status: implemented in v3.74.49. Added `IncomingDocumentIntentParser`,
     `IncomingDocumentImportRouter`, bounded document manifest filters, Projects
     preview/report UI, parser/manifest JVM tests, and docs in

@@ -10,8 +10,8 @@ NovaCut is an Android video editor under package `com.novacut.editor`. The repo 
 
 Current live version evidence:
 
-- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 186`, `versionName = "3.74.49"`.
-- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.49`.
+- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 187`, `versionName = "3.74.50"`.
+- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.50`.
 - [README.md](README.md) and [ROADMAP.md](ROADMAP.md) both describe the v3.74.x line.
 - The 2026-05-17 continuation pushes each completed roadmap batch back to `origin/master`; verify `git status --short --branch` before assuming branch sync.
 
@@ -28,6 +28,7 @@ Use these files first:
 - [docs/models.md](docs/models.md): model registry, licensing, privacy, Play Asset Delivery, F-Droid, and activation gates.
 - [docs/templates.md](docs/templates.md): template/plugin format and animation compatibility matrix.
 - [docs/incoming-document-imports.md](docs/incoming-document-imports.md): non-media document import safety contract and supported file families.
+- [docs/process-exit-diagnostics.md](docs/process-exit-diagnostics.md): ApplicationExitInfo process-death diagnostic history contract.
 - [app/build.gradle.kts](app/build.gradle.kts) and [gradle/libs.versions.toml](gradle/libs.versions.toml): build and dependency truth.
 
 Tool-specific instruction files:
@@ -158,6 +159,14 @@ High-level modules and patterns:
      size bounds. `IncomingDocumentImportRouter` validates recognized files
      through existing loaders and Projects shows a preview/report before any
      template import mutation.
+
+12. Process-death diagnostic history.
+   - Completed in v3.74.50. `ProcessExitRecorder` records Android 11+
+     `ApplicationExitInfo` process deaths on startup, de-dupes by
+     timestamp/reason/PID, stores a bounded local history under
+     `filesDir/diagnostics/process-exit-history.json`, redacts descriptions and
+     trace excerpts, and includes the JSON only in user-triggered diagnostic
+     ZIP exports.
 
 ## Recent Implementation Notes
 
@@ -662,8 +671,8 @@ High-level modules and patterns:
   `:app:assembleDebugAndroidTest` passed.
 - Device QA follow-up: run an emulator/device `bmgr` backup/restore or direct
   transfer smoke with a project containing an imported local clip.
-- Next roadmap item: Cycle 9 P2 ApplicationExitInfo process-death capture for
-  diagnostic ZIP exports.
+- Next roadmap item: Cycle 10 P2 Preferences DataStore corruption recovery and
+  settings-reset report.
 
 2026-05-17 autonomous continuation:
 
