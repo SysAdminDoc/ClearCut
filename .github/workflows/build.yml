@@ -41,25 +41,58 @@ jobs:
       - name: Run Unit Tests
         run: ./gradlew testDebugUnitTest
 
+      - name: Build Instrumentation APK
+        run: ./gradlew assembleDebugAndroidTest
+
       - name: Build Debug APK
         run: ./gradlew assembleDebug
 
       - name: Build Release APK
         run: ./gradlew assembleRelease
 
+      - name: Verify release metadata
+        run: python3 scripts/verify_release_artifacts.py
+
+      - name: Locate Android build tools
+        id: build-tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          build_tools_dir="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          if [ -z "$build_tools_dir" ]; then
+            echo "No Android build-tools directory found under $ANDROID_HOME/build-tools" >&2
+            exit 1
+          fi
+          echo "dir=$build_tools_dir" >> "$GITHUB_OUTPUT"
+          echo "Using Android build tools: $build_tools_dir"
+
+      - name: Verify APK signatures
+        shell: bash
+        run: |
+          set -euo pipefail
+          for apk in app/build/outputs/apk/debug/*.apk app/build/outputs/apk/release/*.apk; do
+            "${{ steps.build-tools.outputs.dir }}/apksigner" verify --verbose --print-certs "$apk"
+          done
+
+      - name: Verify APK zip alignment
+        shell: bash
+        run: |
+          set -euo pipefail
+          for apk in app/build/outputs/apk/debug/*.apk app/build/outputs/apk/release/*.apk app/build/outputs/apk/androidTest/debug/*.apk; do
+            "${{ steps.build-tools.outputs.dir }}/zipalign" -c -P 16 -v 4 "$apk"
+          done
+
       - name: 16 KB page-size alignment check (Play Store gate)
         # Google Play blocks uploads of apps targeting Android 15+ (API 35+) that
         # bundle native libraries whose ELF LOAD segments are not 16 KB aligned.
         # NovaCut targets API 36; non-compliance is a hard upload gate.
         # See docs/models.md §2 and ROADMAP.md R6.1.
+        shell: bash
         run: |
-          set -e
-          NATIVE_DIR="app/build/intermediates/merged_native_libs/release/out/lib"
-          if [ -d "$NATIVE_DIR" ]; then
-            python3 scripts/check_16kb_alignment.py "$NATIVE_DIR"
-          else
-            echo "No merged native libs found at $NATIVE_DIR — release build had no bundled .so. Skipping 16 KB check."
-          fi
+          set -euo pipefail
+          for apk in app/build/outputs/apk/debug/*.apk app/build/outputs/apk/release/*.apk; do
+            python3 scripts/check_16kb_alignment.py "$apk"
+          done
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
@@ -72,6 +105,12 @@ jobs:
         with:
           name: NovaCut-release
           path: app/build/outputs/apk/release/*.apk
+
+      - name: Upload Instrumentation APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: NovaCut-androidTest
+          path: app/build/outputs/apk/androidTest/debug/*.apk
 
       - name: Upload to Release
         if: startsWith(github.ref, 'refs/tags/v')

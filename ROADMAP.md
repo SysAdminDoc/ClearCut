@@ -1,11 +1,14 @@
 # NovaCut Roadmap
 
+> Single source of truth for all planned work. Items above the `---` are
+> existing plans; items below are research conducted 2026-06-03.
+
 Active roadmap for forward-looking work. Shipped work is summarized in
 [COMPLETED.md](COMPLETED.md), research synthesis lives in
 [RESEARCH_REPORT.md](RESEARCH_REPORT.md), and detailed historical plans are
 archived under [docs/archive](docs/archive/).
 
-Current version: **v3.74.11** (`versionCode` 148). Last consolidated:
+Current version: **v3.74.12** (`versionCode` 149). Last consolidated:
 2026-06-04.
 
 ## Current State
@@ -23,6 +26,9 @@ Current version: **v3.74.11** (`versionCode` 148). Last consolidated:
 - v3.74.11 adds the first repeatable Compose instrumentation smoke harness for
   the project gallery, blank-project editor open, media picker, export sheet,
   Settings, and privacy dashboard surfaces.
+- v3.74.12 reactivates release-pipeline checks for unit tests, debug/release
+  APKs, instrumentation APK packaging, release metadata, signatures, APK zip
+  alignment, and 16 KB native-library compliance.
 
 ## Source Archives
 
@@ -35,7 +41,6 @@ Current version: **v3.74.11** (`versionCode` 148). Last consolidated:
 
 | Priority | Work | Exit criteria |
 |---|---|---|
-| P0 | Release pipeline reactivation | Push/PR/tag CI proves unit tests, debug build, release build inputs, 16 KB alignment, and release artifact checks without relying on local-only state. |
 | P0 | Recovery open path | `loadRecoveryDataWithOutcome` becomes the default project-open path, with future-schema/corrupt/not-found outcomes surfaced to the user without data loss. |
 | P0 | Media relink editor integration | `MediaRelinkProbe` reports missing/unknown media when a project opens and gives users a focused relink path before edit/export. |
 | P0 | Compound clip gesture closure | Timeline long-press/radial action opens compound clips through `EditorViewModel.openCompoundClip`, with the existing breadcrumb and predictive-back gate active. |
@@ -74,3 +79,74 @@ Current version: **v3.74.11** (`versionCode` 148). Last consolidated:
   checks.
 - Another broad roadmap research pass before the P0/P1 adoption items above are
   closed.
+
+## Research-Backed Engine Candidates
+
+Specific open-source implementation candidates folded from the local NovaCut OSS
+research guide (`RESEARCH.md`, kept local-only and gitignored). Each is gated by
+the same dependency, APK-size, 16 KB-alignment, license, and device-QA checks as
+the existing "Advanced engine activations" line above. They are enumerated here so
+the concrete candidate detail is not stranded in a local-only file.
+
+- [ ] P2 — Timeline magnetic snapping and command-pattern undo
+  - Why: `slipClip()`/`slideClip()` exist but are not wired to drag gestures; no
+    magnetic snapping or clip grouping on the timeline.
+  - Touches: timeline gesture handling, edit-command model, undo/redo.
+  - Acceptance: sorted-edge 8dp proximity snap, grouped moves, and slip/slide
+    wired to gestures with command-based undo, behind existing accessibility gates.
+  - Source: RESEARCH.md (Kdenlive, Olive, OpenTimelineIO).
+- [ ] P2 — Captions engine upgrade to Sherpa-ONNX
+  - Why: current Whisper-via-ONNX path has no KV cache (O(n^2) per chunk);
+    Sherpa-ONNX is ~51x faster on the same model with word-level timestamps.
+  - Touches: caption transcription engine, model registry, model gates.
+  - Acceptance: Sherpa-ONNX (Whisper Tiny multilingual / Moonshine English) wired
+    behind model-requirement sheets with source/checksum/license/size recorded.
+  - Source: RESEARCH.md (sherpa-onnx, Moonshine, Vosk).
+- [ ] P2 — Video stabilization upgrade
+  - Why: current stabilization is basic frame differencing; OpenCV optical flow +
+    Kalman or vid.stab trajectory smoothing is substantially more robust.
+  - Touches: import-time analysis, GPU affine transform apply path.
+  - Acceptance: offline analysis during import, real-time GPU apply, 10-15% crop,
+    gated on NDK/dependency and device QA.
+  - Source: RESEARCH.md (OpenCV Android, vid.stab).
+- [ ] P3 — Segmentation quality and tap-to-select
+  - Why: MediaPipe selfie segmentation does a full-res GPU readback (perf issue);
+    RVM adds true alpha/hair detail and MobileSAM adds tap-to-segment.
+  - Touches: segmentation engine, mask compositing, selection UI.
+  - Acceptance: downsampled MediaPipe readback retained for real-time, RVM as an
+    AI-quality path, MobileSAM tap-select, all behind model gates.
+  - Source: RESEARCH.md (MediaPipe, RobustVideoMatting, MobileSAM).
+- [ ] P3 — Frame interpolation and AI upscaling activation
+  - Why: frame interpolation and upscaling are stubs/unimplemented; RIFE v4.6
+    (NCNN+Vulkan) and Real-ESRGAN x4plus have proven Android paths.
+  - Touches: export-time engine activation, model delivery.
+  - Acceptance: export-time slow-motion (24->60/120fps) and optional upscale,
+    gated on Vulkan availability, model size, and 16 KB compliance.
+  - Source: RESEARCH.md (RIFE, IFRNet, Real-ESRGAN).
+- [ ] P3 — Neural text-to-speech and style filters
+  - Why: TTS uses Android system voices; Piper-via-Sherpa-ONNX is offline and
+    near-human; AnimeGANv2/fast-neural-style add creative filters.
+  - Touches: TTS engine, AI filter pipeline, model registry.
+  - Acceptance: Piper voices and style-transfer filters wired behind opt-in model
+    download and license disclosure.
+  - Source: RESEARCH.md (Piper, eSpeak NG, AnimeGANv2).
+- [ ] P3 — Export codec and subtitle-burn extensions
+  - Why: export is Media3 H.264/MP4; AV1 (SVT-AV1) saves 30-50% bandwidth, libass
+    enables styled burned-in subtitles, FFmpegX provides a fallback encoder.
+  - Touches: export orchestrator, encoder selection, subtitle render.
+  - Acceptance: optional AV1 export, libass-styled subtitle burn-in, and an
+    FFmpeg fallback path, each gated on device support and APK-size budget.
+  - Source: RESEARCH.md (SVT-AV1, libass, FFmpegX-Android).
+- [ ] P3 — Proxy media workflow
+  - Why: no proxy workflow today; a 3-tier thumbnail/proxy/original pipeline keeps
+    large-source editing responsive.
+  - Touches: media import, background generation, preview-vs-export source switch.
+  - Acceptance: WorkManager+ForegroundService proxy generation (540p H.264) with
+    automatic proxy-for-preview / original-for-export switching.
+  - Source: RESEARCH.md (DaVinci/Premiere proxy patterns).
+
+---
+
+## Research-Driven Additions
+
+<!-- populated by the research pass -->

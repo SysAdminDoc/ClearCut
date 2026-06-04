@@ -10,8 +10,8 @@ NovaCut is an Android video editor under package `com.novacut.editor`. The repo 
 
 Current live version evidence:
 
-- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 148`, `versionName = "3.74.11"`.
-- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.11`.
+- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 149`, `versionName = "3.74.12"`.
+- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.12`.
 - [README.md](README.md) and [ROADMAP.md](ROADMAP.md) both describe the v3.74.x line.
 - The 2026-05-17 continuation pushes each completed roadmap batch back to `origin/master`; verify `git status --short --branch` before assuming branch sync.
 
@@ -61,6 +61,9 @@ High-level modules and patterns:
 - The repo now has a repeatable Compose instrumentation smoke harness for the
   project gallery, blank-project editor open, media picker, export sheet,
   Settings, and privacy dashboard surfaces.
+- The release workflow now packages debug, release, and instrumentation APKs,
+  verifies version/changelog/artifact metadata, checks APK signatures and ZIP
+  alignment, and runs APK-based 16 KB native-library checks.
 - The privacy posture is coherent: local-first by default, opt-in cloud paths, explicit model downloads, and F-Droid awareness.
 - Cross-editor interoperability is already a first-class goal through FCPXML/OTIO/EDL-style planning.
 
@@ -118,6 +121,20 @@ High-level modules and patterns:
   and `:app:testDebugUnitTest :app:assembleDebugAndroidTest`. Connected
   instrumentation could not run because ADB reported `emulator-5554` as
   `offline` even after restarting the ADB server.
+
+2026-06-04 release-pipeline continuation:
+
+- Completed the P0 Release pipeline reactivation in v3.74.12. The GitHub
+  Actions APK workflow now packages debug, release, and androidTest APKs,
+  runs `scripts/verify_release_artifacts.py`, verifies debug/release APK
+  signatures, checks ZIP alignment for all packaged APKs, runs the 16 KB gate
+  against debug/release APKs directly, and uploads the instrumentation APK.
+- `scripts/verify_release_artifacts.py` checks Gradle version metadata,
+  `strings.xml`, ROADMAP/COMPLETED/CHANGELOG version sync, private signing
+  ignore rules, tag/version consistency, and generated APK metadata.
+- `NullSafeMutableLiveData` is disabled in the Android lint block because the
+  androidx.lifecycle detector crashes under the current Kotlin 2.1 / AGP 8.7
+  lint stack and NovaCut has no `LiveData`/`MutableLiveData` call sites for it.
 - Next roadmap item: P0 Release pipeline reactivation.
 
 2026-05-17 autonomous continuation:

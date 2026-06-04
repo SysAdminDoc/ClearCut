@@ -7,7 +7,7 @@ Last consolidated: 2026-06-04.
 
 ## Current Delivered Baseline
 
-- Current version: v3.74.11 (`versionCode` 148).
+- Current version: v3.74.12 (`versionCode` 149).
 - Multi-track Android NLE with project gallery, editor, timeline, preview,
   effects, transitions, text, captions, audio, export, settings, templates,
   project archive/import, and diagnostic bundle surfaces.
@@ -43,6 +43,10 @@ Last consolidated: 2026-06-04.
   androidTest dependencies, and a smoke test covering project list,
   blank-project editor open, media picker, export sheet, Settings, and privacy
   dashboard surfaces.
+- Release pipeline reactivation shipped in v3.74.12: CI now packages debug,
+  release, and instrumentation APKs, verifies repository/build metadata,
+  checks APK signatures and ZIP alignment, and runs the APK-based 16 KB
+  native-library gate without local-only signing state.
 
 ## Preserved Historical Detail
 
