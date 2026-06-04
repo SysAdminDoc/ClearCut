@@ -6,6 +6,35 @@ roadmaps are archived under [docs/archive/roadmap](docs/archive/roadmap/).
 
 Last refreshed: 2026-06-04.
 
+## 2026-06-04 Cycle 22 Project Sync Refresh
+
+- [Verified] `ProjectSyncEngine` is a live stub: it names local-folder,
+  self-hosted, and LAN-peer targets, forbids last-writer-wins in its class
+  contract, but `plan(...)` returns null and `sync(...)` returns "Sync backend
+  not implemented." The detailed cross-device sync idea exists only in archived
+  C.16 roadmap notes, not in the current active Researcher Queue.
+- [Verified] NovaCut already has adjacent building blocks: Android backup rules
+  for app-private metadata, `ProjectArchive` export/import with media manifest
+  and schema checks, and `ProjectAutoSave` schema-version gating. Those pieces
+  make a conservative archive/manifest sync path more realistic than timeline
+  patch merging as a first implementation.
+- [Verified] Current primary sources favor local-folder and WebDAV first.
+  Android SAF supports user-selected directory-tree access. Syncthing documents
+  block hashing, temporary files, conflict copies, and versioning. WebDAV and
+  Nextcloud supply ETag/conflict/chunked-upload semantics. Git LFS provides an
+  object-ID/size verification reference. JSON Patch/Merge Patch and CRDT tools
+  are useful references but should wait until NovaCut defines timeline-level
+  merge semantics.
+- [Promoted] Added a P3 roadmap item for conflict-safe project sync planning:
+  local folder and WebDAV only for the first release, opt-in per project,
+  manifest hashes, no writes during planning, explicit conflict copies, chunked
+  upload where supported, and LAN peer sync held behind the existing local
+  network permission/security lane.
+- [Rejected] Do not ship last-writer-wins sync, hidden cloud backup-as-sync,
+  automatic LAN discovery, or timeline JSON patch merging as the first slice.
+  Those paths can overwrite work, surprise users, or create merge semantics the
+  current archive/autosave model does not yet define.
+
 ## 2026-06-04 Cycle 21 Caption Translation Activation Refresh
 
 - [Verified] `CaptionTranslationEngine` is still a translation stub: readiness

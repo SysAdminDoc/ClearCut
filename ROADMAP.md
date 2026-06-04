@@ -11,7 +11,7 @@ archived under [docs/archive](docs/archive/).
 Current version: **v3.74.44** (`versionCode` 181). Last consolidated:
 2026-06-04.
 
-> Last researched: Cycle 21 - 2026-06-04.
+> Last researched: Cycle 22 - 2026-06-04.
 
 ## ▶ Implementer Instructions (for the build machine)
 
@@ -2032,3 +2032,111 @@ reviewable offline translation path with model, license, and timing gates.
   https://www.w3.org/International/questions/qa-bidi-unicode-controls
 - Unicode CLDR LDML:
   https://unicode-org.github.io/cldr/ldml/tr35.html
+
+### Researcher Queue (Cycle 22 - 2026-06-04)
+
+Focus: revive the archived cross-device project-sync idea as a conservative,
+conflict-safe handoff that does not silently overwrite editor work or duplicate
+the already-shipped Android backup rules.
+
+#### Project Portability And Sync
+
+- [ ] P3 - 🔬🤖 Add conflict-safe project sync planning for folders and WebDAV
+  - Why: NovaCut already has Android backup coverage for app-private metadata
+    and project archive import/export, but those are not the same as explicit
+    user-controlled sync between devices. The live `ProjectSyncEngine` names
+    local-folder, self-hosted, and LAN-peer backends, yet every real sync method
+    is still a stub. The first implementable slice should sync project archives
+    or content-addressed archive parts to a user-selected folder or WebDAV
+    endpoint, surface conflicts as reviewable copies, and defer direct LAN peer
+    sync to the existing local-network permission/security lane.
+  - Evidence: `ProjectSyncEngine.kt:15` calls the engine a cross-device sync
+    stub; `ProjectSyncEngine.kt:17`-`ProjectSyncEngine.kt:29` says it should
+    extend `ProjectArchive`, support local folder / self-hosted / LAN peer
+    targets, and forbid last-writer-wins; `ProjectSyncEngine.kt:36` lists the
+    three backend types; `ProjectSyncEngine.kt:88`-`ProjectSyncEngine.kt:91`
+    returns null from `plan(...)`; `ProjectSyncEngine.kt:93`-`ProjectSyncEngine.kt:100`
+    returns "Sync backend not implemented" from `sync(...)`. The archived
+    roadmap listed C.16 cross-device project sync and suggested Syncthing-style
+    filesystem sync or Git-style history with project JSON/media refs, but the
+    current live roadmap has no detailed queue item for it. `ProjectArchive.kt`
+    already exports `.novacut` ZIPs, writes `media_manifest.json`, rejects
+    path traversal, and gates newer schemas; `ProjectAutoSave.kt` already has
+    schema-version inspection and future-schema load outcomes that a sync plan
+    can reuse.
+  - Current-source check: Android's Storage Access Framework lets a user grant
+    access to a selected directory tree, which fits a local-folder/Syncthing
+    target without broad storage permissions. Syncthing's docs describe block
+    hashing, temporary files, conflict copies, and per-folder versioning, which
+    supports a "never overwrite silently" design. WebDAV RFC 4918 supplies
+    ETag, locking, and conflict status semantics; Nextcloud documents WebDAV
+    endpoints and chunked upload v2 with destination headers, 5 MB-5 GB chunk
+    limits, and 24-hour upload-directory expiry. Git LFS's Basic Transfer API
+    separates object upload/download from verification by object ID and size,
+    which is a useful content-addressing reference even if NovaCut does not
+    embed Git. JSON Patch / Merge Patch are useful for metadata deltas, but a
+    media-heavy project should start with whole-archive or content-addressed
+    media parts because timeline-level merge semantics are not yet defined.
+  - Touches: `ProjectSyncEngine`, `ProjectArchive`, `ProjectAutoSave`,
+    sync-target settings UI, SAF folder grants, WebDAV client facade,
+    manifest/hash helper, conflict-review dialog, backup/privacy dashboard
+    copy, local-network-gated LAN-peer placeholder, and JVM tests with fake
+    targets.
+  - Acceptance: the first release supports only local folder and WebDAV targets.
+    Users choose the folder or endpoint explicitly, credentials stay in the
+    platform credential store or encrypted app storage, and sync is opt-in per
+    project. Each pushed unit includes a manifest with project ID, schema
+    version, app version, local revision hash, parent revision hash, archive or
+    part hashes, media entry hashes, size, and created time. `plan(...)` reports
+    `LOCAL_AHEAD`, `REMOTE_AHEAD`, `DIVERGED`, or `NONE` without writing. A
+    diverged state refuses automatic overwrite and offers keep local, keep
+    remote, or save both as copies. Large archives use chunked/resumable upload
+    where the backend supports it. Partial uploads, temp files, credentials,
+    diagnostics, and model caches are never treated as project content.
+  - Verify: add fake local-folder and fake WebDAV tests for target add/remove
+    races, manifest hashing, unchanged/no-op plans, local-ahead plans,
+    remote-ahead plans, diverged plans, chunk retry behavior, interruption
+    cleanup, future-schema refusal, conflict-copy creation, and no mutation
+    during `plan(...)`. Add archive round-trip tests proving synced archives
+    still reject path traversal, preserve media references through the manifest,
+    and can be opened as duplicate copies when conflict resolution requests it.
+  - Complexity: L
+
+#### Appendix - Cycle 22 Sources
+
+- Android Storage Access Framework:
+  https://developer.android.com/guide/topics/providers/document-provider
+- Android shared documents and tree access:
+  https://developer.android.com/training/data-storage/shared/documents-files
+- Android data backup overview:
+  https://developer.android.com/identity/data/backup
+- Android Auto Backup:
+  https://developer.android.com/identity/data/autobackup
+- Android network security:
+  https://developer.android.com/privacy-and-security/security-ssl
+- Android network operations:
+  https://developer.android.com/develop/connectivity/network-ops/connecting
+- Syncthing synchronization model:
+  https://docs.syncthing.net/users/syncing.html
+- Syncthing file versioning:
+  https://docs.syncthing.net/users/versioning.html
+- Syncthing folder types:
+  https://docs.syncthing.net/users/foldertypes.html
+- Nextcloud WebDAV API:
+  https://docs.nextcloud.com/server/latest/developer_manual/client_apis/WebDAV/index.html
+- Nextcloud WebDAV chunked upload:
+  https://docs.nextcloud.com/server/latest/developer_manual/client_apis/WebDAV/chunking.html
+- WebDAV RFC 4918:
+  https://datatracker.ietf.org/doc/html/rfc4918
+- Git LFS Basic Transfer API:
+  https://github.com/git-lfs/git-lfs/blob/main/docs/api/basic-transfers.md
+- JSON Patch RFC 6902:
+  https://datatracker.ietf.org/doc/html/rfc6902
+- JSON Merge Patch RFC 7396:
+  https://datatracker.ietf.org/doc/html/rfc7396
+- rsync algorithm:
+  https://rsync.samba.org/tech_report/
+- Automerge:
+  https://automerge.org/
+- Yjs:
+  https://yjs.dev/
