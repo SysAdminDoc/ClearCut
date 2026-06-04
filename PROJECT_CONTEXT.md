@@ -10,8 +10,8 @@ NovaCut is an Android video editor under package `com.novacut.editor`. The repo 
 
 Current live version evidence:
 
-- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 162`, `versionName = "3.74.25"`.
-- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.25`.
+- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 163`, `versionName = "3.74.26"`.
+- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.26`.
 - [README.md](README.md) and [ROADMAP.md](ROADMAP.md) both describe the v3.74.x line.
 - The 2026-05-17 continuation pushes each completed roadmap batch back to `origin/master`; verify `git status --short --branch` before assuming branch sync.
 
@@ -377,7 +377,27 @@ High-level modules and patterns:
   com.novacut.editor.ui.editor.EditorDomainStateTest`, full debug-unit/debug
   APK/release APK/androidTest Gradle matrix, release metadata, signature,
   zipalign, and APK-based 16 KB gates passed.
-- Next roadmap item: P1 Editor state storage migration for panel slice.
+- Next roadmap item after this batch was P1 Editor state storage migration for
+  panel slice.
+
+2026-06-04 panel editor state storage migration continuation:
+
+- Completed the panel slice of P1 editor state storage migration in v3.74.26.
+  `EditorState` now stores panel visibility, selected effect, and text-overlay
+  editing target in `panel: EditorPanelState` instead of flat constructor
+  properties.
+- Added read-only compatibility accessors for existing UI/delegate reads:
+  `panels`, `selectedEffectId`, and `editingTextOverlayId`.
+- Converted ViewModel and delegate panel mutation paths to write through
+  `copyPanel` / nested `panel.copy(...)`, including export, text editor,
+  tutorial, undo history, TTS, drawing, Cut Assistant, media relink, scopes,
+  scratchpad, recovery dialog, audio mixer, color grading, batch export, render
+  preview, clip import, and text-overlay removal flows.
+- Verification: `:app:compileDebugKotlin :app:testDebugUnitTest --tests
+  com.novacut.editor.ui.editor.EditorDomainStateTest`, full debug-unit/debug
+  APK/release APK/androidTest Gradle matrix, release metadata, signature,
+  zipalign, and APK-based 16 KB gates passed.
+- Next roadmap item: P1 EditorScreen panel router decomposition.
 
 2026-05-17 autonomous continuation:
 

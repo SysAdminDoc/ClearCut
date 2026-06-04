@@ -62,9 +62,11 @@ class EditorDomainStateTest {
             )
         )
         val state = EditorState(
-            panels = PanelVisibility(openPanels = setOf(PanelId.AI_TOOLS)),
-            selectedEffectId = "effect-1",
-            editingTextOverlayId = "text-1",
+            panel = EditorPanelState(
+                panels = PanelVisibility(openPanels = setOf(PanelId.AI_TOOLS)),
+                selectedEffectId = "effect-1",
+                editingTextOverlayId = "text-1"
+            ),
             caption = EditorCaptionState(
                 sourceLang = "en",
                 targetLang = "es",

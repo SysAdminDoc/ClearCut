@@ -763,11 +763,17 @@ class ExportDelegate(
     // --- Batch Export ---
     fun showBatchExport() {
         pauseIfPlaying()
-        stateFlow.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.BATCH_EXPORT)) }
+        stateFlow.update {
+            dismissedPanelState(it).copyPanel { panel ->
+                panel.copy(panels = panel.panels.closeAll().open(PanelId.BATCH_EXPORT))
+            }
+        }
     }
 
     fun hideBatchExport() {
-        stateFlow.update { it.copy(panels = it.panels.close(PanelId.BATCH_EXPORT)) }
+        stateFlow.update {
+            it.copyPanel { panel -> panel.copy(panels = panel.panels.close(PanelId.BATCH_EXPORT)) }
+        }
     }
 
     fun addBatchExportItem(config: ExportConfig, name: String) {
@@ -1005,7 +1011,9 @@ class ExportDelegate(
         stateFlow.update {
             val dismissed = dismissedPanelState(it)
             dismissed.copy(
-                panels = it.panels.closeAll().open(PanelId.RENDER_PREVIEW),
+                panel = dismissed.panel.copy(
+                    panels = dismissed.panels.closeAll().open(PanelId.RENDER_PREVIEW)
+                ),
                 export = dismissed.export.copy(
                     renderSegments = segments,
                     renderSummary = summary
@@ -1015,7 +1023,9 @@ class ExportDelegate(
     }
 
     fun hideRenderPreview() {
-        stateFlow.update { it.copy(panels = it.panels.close(PanelId.RENDER_PREVIEW)) }
+        stateFlow.update {
+            it.copyPanel { panel -> panel.copy(panels = panel.panels.close(PanelId.RENDER_PREVIEW)) }
+        }
     }
 
     fun renderQuickPreview() {

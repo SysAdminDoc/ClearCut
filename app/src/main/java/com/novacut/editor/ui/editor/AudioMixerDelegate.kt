@@ -33,11 +33,17 @@ class AudioMixerDelegate(
     // --- Audio Mixer ---
     fun showAudioMixer() {
         pauseIfPlaying()
-        stateFlow.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.AUDIO_MIXER)) }
+        stateFlow.update {
+            dismissedPanelState(it).copyPanel { panel ->
+                panel.copy(panels = panel.panels.closeAll().open(PanelId.AUDIO_MIXER))
+            }
+        }
     }
 
     fun hideAudioMixer() {
-        stateFlow.update { it.copy(panels = it.panels.close(PanelId.AUDIO_MIXER)) }
+        stateFlow.update {
+            it.copyPanel { panel -> panel.copy(panels = panel.panels.close(PanelId.AUDIO_MIXER)) }
+        }
     }
 
     // Volume + pan sliders fire onValueChange 60 Hz during a drag; writing an
@@ -232,11 +238,17 @@ class AudioMixerDelegate(
     // --- Audio Normalization ---
     fun showAudioNorm() {
         pauseIfPlaying()
-        stateFlow.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.AUDIO_NORM)) }
+        stateFlow.update {
+            dismissedPanelState(it).copyPanel { panel ->
+                panel.copy(panels = panel.panels.closeAll().open(PanelId.AUDIO_NORM))
+            }
+        }
     }
 
     fun hideAudioNorm() {
-        stateFlow.update { it.copy(panels = it.panels.close(PanelId.AUDIO_NORM)) }
+        stateFlow.update {
+            it.copyPanel { panel -> panel.copy(panels = panel.panels.close(PanelId.AUDIO_NORM)) }
+        }
     }
 
     fun normalizeAudio(targetLufs: Float) {

@@ -32,9 +32,9 @@ sealed interface EditorDomainState {
 }
 
 data class EditorPanelState(
-    val panels: PanelVisibility,
-    val selectedEffectId: String?,
-    val editingTextOverlayId: String?
+    val panels: PanelVisibility = PanelVisibility(),
+    val selectedEffectId: String? = null,
+    val editingTextOverlayId: String? = null
 ) : EditorDomainState {
     override val kind: EditorDomainState.Kind = EditorDomainState.Kind.PANEL
 }
@@ -116,17 +116,16 @@ data class EditorDomainStates(
 
 val EditorState.domainStates: EditorDomainStates
     get() = EditorDomainStates(
-        panel = EditorPanelState(
-            panels = panels,
-            selectedEffectId = selectedEffectId,
-            editingTextOverlayId = editingTextOverlayId
-        ),
+        panel = panel,
         caption = caption,
         compound = compound,
         export = export,
         ai = ai,
         media = media
     )
+
+inline fun EditorState.copyPanel(transform: (EditorPanelState) -> EditorPanelState): EditorState =
+    copy(panel = transform(panel))
 
 inline fun EditorState.copyAi(transform: (EditorAiState) -> EditorAiState): EditorState =
     copy(ai = transform(ai))

@@ -185,16 +185,15 @@ data class EditorState(
     val scrollOffsetMs: Long = 0L,
     val totalDurationMs: Long = 0L,
     val currentTool: EditorTool = EditorTool.NONE,
-    val panels: PanelVisibility = PanelVisibility(),
     // Storage slices migrated out of the flat state constructor. Read-only
     // compatibility accessors below preserve existing UI reads while mutation
     // call sites move to nested domain state.
+    val panel: EditorPanelState = EditorPanelState(),
     val export: EditorExportDomainState = EditorExportDomainState(),
     val textOverlays: List<TextOverlay> = emptyList(),
     val imageOverlays: List<ImageOverlay> = emptyList(),
     val timelineMarkers: List<TimelineMarker> = emptyList(),
     val waveforms: Map<String, List<Float>> = emptyMap(),
-    val selectedEffectId: String? = null,
     val undoStack: List<UndoAction> = emptyList(),
     val redoStack: List<UndoAction> = emptyList(),
     val toastMessage: String? = null,
@@ -211,7 +210,6 @@ data class EditorState(
     val isRecordingVoiceover: Boolean = false,
     val voiceoverDurationMs: Long = 0L,
     val isLooping: Boolean = false,
-    val editingTextOverlayId: String? = null,
     val activeScopeType: com.novacut.editor.ui.editor.ScopeType = com.novacut.editor.ui.editor.ScopeType.HISTOGRAM,
     // Chapter markers
     val chapterMarkers: List<ChapterMarker> = emptyList(),
@@ -256,6 +254,9 @@ data class EditorState(
     val trackedObjects: List<com.novacut.editor.model.TrackedObject> = emptyList(),
     val media: EditorMediaState = EditorMediaState()
 ) {
+    val panels: PanelVisibility get() = panel.panels
+    val selectedEffectId: String? get() = panel.selectedEffectId
+    val editingTextOverlayId: String? get() = panel.editingTextOverlayId
     val exportConfig: ExportConfig get() = export.config
     val exportProgress: Float get() = export.progress
     val exportState: ExportState get() = export.state
@@ -859,9 +860,9 @@ class EditorViewModel @Inject constructor(
             recoveryTimestampMs = recovery.timestamp,
             hasRecoveredContent = hadContent
         )
-        _state.update {
-            it.copy(
-                tracks = recovery.tracks.ifEmpty { it.tracks },
+        _state.update { current ->
+            current.copy(
+                tracks = recovery.tracks.ifEmpty { current.tracks },
                 textOverlays = recovery.textOverlays,
                 imageOverlays = recovery.imageOverlays,
                 timelineMarkers = recovery.timelineMarkers,
@@ -869,17 +870,20 @@ class EditorViewModel @Inject constructor(
                 playheadMs = recovery.playheadMs,
                 chapterMarkers = recovery.chapterMarkers,
                 beatMarkers = recovery.beatMarkers,
-                v369 = it.v369.copy(transcript = recovery.transcript ?: it.v369.transcript),
-                trackedObjects = recovery.trackedObjects.ifEmpty { it.trackedObjects },
-                ai = it.ai.copy(usageLedger = recovery.aiUsageLedger),
+                v369 = current.v369.copy(transcript = recovery.transcript ?: current.v369.transcript),
+                trackedObjects = recovery.trackedObjects.ifEmpty { current.trackedObjects },
+                ai = current.ai.copy(usageLedger = recovery.aiUsageLedger),
                 totalDurationMs = recovery.tracks.maxOfOrNull { t ->
                     t.clips.maxOfOrNull { c -> c.timelineEndMs } ?: 0L
-                } ?: 0L,
+                } ?: 0L
+            ).copyPanel { panel ->
                 // Surface a dialog only when the autosave is materially newer
                 // than the project metadata. Auto-save is also the normal
                 // full-state persistence path, so routine opens stay quiet.
-                panels = if (showRecoveryDialog) it.panels.open(PanelId.RECOVERY_DIALOG) else it.panels
-            )
+                panel.copy(
+                    panels = if (showRecoveryDialog) panel.panels.open(PanelId.RECOVERY_DIALOG) else panel.panels
+                )
+            }
         }
         _playheadMs.value = recovery.playheadMs
         if (recovery.tracks.flatMap { it.clips }.isNotEmpty()) {
@@ -1352,16 +1356,19 @@ class EditorViewModel @Inject constructor(
 
     private fun dismissedPanelState(state: EditorState) = normalizeSelectionState(
         state.copy(
-            panels = state.panels.closeAll(),
             ai = state.ai.copy(
                 noiseAnalysisResult = null,
                 cutAssistantReview = null
             ),
-            selectedEffectId = null,
-            editingTextOverlayId = null,
             selectedMaskId = null,
             isDrawingMode = false
-        )
+        ).copyPanel { panel ->
+            panel.copy(
+                panels = panel.panels.closeAll(),
+                selectedEffectId = null,
+                editingTextOverlayId = null
+            )
+        }
     )
 
     fun dismissAllPanels() { _state.update { dismissedPanelState(it) } }
@@ -1386,10 +1393,18 @@ class EditorViewModel @Inject constructor(
     // Generic panel show/hide — standard panels use these directly
     fun showPanel(panel: PanelId) {
         pauseIfPlaying()
-        _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(panel)) }
+        _state.update {
+            dismissedPanelState(it).copyPanel { panelState ->
+                panelState.copy(panels = panelState.panels.closeAll().open(panel))
+            }
+        }
     }
     fun hidePanel(panel: PanelId) {
-        _state.update { it.copy(panels = it.panels.close(panel)) }
+        _state.update {
+            it.copyPanel { panelState ->
+                panelState.copy(panels = panelState.panels.close(panel))
+            }
+        }
     }
 
     // Standard panel toggles
@@ -1417,7 +1432,9 @@ class EditorViewModel @Inject constructor(
             val defaultDisclosure = AiUsageLedger.discloseToggleDefaultOn(state.aiUsageLedger)
             val dismissed = dismissedPanelState(state)
             dismissed.copy(
-                panels = state.panels.closeAll().open(PanelId.EXPORT_SHEET),
+                panel = dismissed.panel.copy(
+                    panels = dismissed.panels.closeAll().open(PanelId.EXPORT_SHEET)
+                ),
                 export = dismissed.export.copy(
                     config = state.exportConfig.copy(
                         discloseAiUse = defaultDisclosure,
@@ -1434,7 +1451,9 @@ class EditorViewModel @Inject constructor(
         _state.update { s ->
             val restored = s.savedExportConfig
             s.copy(
-                panels = s.panels.close(PanelId.EXPORT_SHEET),
+                panel = s.panel.copy(
+                    panels = s.panels.close(PanelId.EXPORT_SHEET)
+                ),
                 export = s.export.copy(
                     config = restored ?: s.exportConfig,
                     savedConfig = null
@@ -1442,16 +1461,49 @@ class EditorViewModel @Inject constructor(
             )
         }
     }
-    fun showTextEditor() { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.TEXT_EDITOR), editingTextOverlayId = null) } }
-    fun editTextOverlay(id: String) { pauseIfPlaying(); _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.TEXT_EDITOR), editingTextOverlayId = id) } }
-    fun hideTextEditor() { _state.update { it.copy(panels = it.panels.close(PanelId.TEXT_EDITOR), editingTextOverlayId = null) } }
+    fun showTextEditor() {
+        pauseIfPlaying()
+        _state.update {
+            dismissedPanelState(it).copyPanel { panel ->
+                panel.copy(
+                    panels = panel.panels.closeAll().open(PanelId.TEXT_EDITOR),
+                    editingTextOverlayId = null
+                )
+            }
+        }
+    }
+    fun editTextOverlay(id: String) {
+        pauseIfPlaying()
+        _state.update {
+            dismissedPanelState(it).copyPanel { panel ->
+                panel.copy(
+                    panels = panel.panels.closeAll().open(PanelId.TEXT_EDITOR),
+                    editingTextOverlayId = id
+                )
+            }
+        }
+    }
+    fun hideTextEditor() {
+        _state.update {
+            it.copyPanel { panel ->
+                panel.copy(
+                    panels = panel.panels.close(PanelId.TEXT_EDITOR),
+                    editingTextOverlayId = null
+                )
+            }
+        }
+    }
     fun hideVoiceoverPanel() {
         if (_state.value.isRecordingVoiceover) stopVoiceover()
         voiceoverDurationJob?.cancel()
         hidePanel(PanelId.VOICEOVER_RECORDER)
     }
-    fun selectEffect(effectId: String?) { _state.update { it.copy(selectedEffectId = effectId) } }
-    fun clearSelectedEffect() { _state.update { it.copy(selectedEffectId = null) } }
+    fun selectEffect(effectId: String?) {
+        _state.update { it.copyPanel { panel -> panel.copy(selectedEffectId = effectId) } }
+    }
+    fun clearSelectedEffect() {
+        _state.update { it.copyPanel { panel -> panel.copy(selectedEffectId = null) } }
+    }
 
     // --- Color Grading (delegated) ---
     fun showColorGrading() = colorGradingDelegate.showColorGrading()
@@ -1966,7 +2018,9 @@ class EditorViewModel @Inject constructor(
         }
     }
     // --- Tutorial ---
-    fun showTutorial() { _state.update { it.copy(panels = it.panels.open(PanelId.TUTORIAL)) } } // no dismiss — overlays other panels
+    fun showTutorial() {
+        _state.update { it.copyPanel { panel -> panel.copy(panels = panel.panels.open(PanelId.TUTORIAL)) } }
+    } // no dismiss — overlays other panels
     fun hideTutorial() {
         hidePanel(PanelId.TUTORIAL)
         viewModelScope.launch { settingsRepo.setTutorialShown() }
@@ -1992,7 +2046,13 @@ class EditorViewModel @Inject constructor(
         val entries = _state.value.undoStack.mapIndexed { i, a ->
             com.novacut.editor.model.UndoHistoryEntry(i, a.description)
         }.reversed()
-        _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.UNDO_HISTORY), undoHistoryEntries = entries) }
+        _state.update {
+            dismissedPanelState(it)
+                .copy(undoHistoryEntries = entries)
+                .copyPanel { panel ->
+                    panel.copy(panels = panel.panels.closeAll().open(PanelId.UNDO_HISTORY))
+                }
+        }
     }
     fun hideUndoHistory() = hidePanel(PanelId.UNDO_HISTORY)
     fun jumpToUndoState(index: Int) {
@@ -2374,7 +2434,9 @@ class EditorViewModel @Inject constructor(
         _state.update {
             val dismissed = dismissedPanelState(it)
             dismissed.copy(
-                panels = it.panels.closeAll().open(PanelId.TTS),
+                panel = dismissed.panel.copy(
+                    panels = dismissed.panels.closeAll().open(PanelId.TTS)
+                ),
                 ai = dismissed.ai.copy(isTtsAvailable = ttsEngine.isAvailable())
             )
         }
@@ -2464,13 +2526,19 @@ class EditorViewModel @Inject constructor(
     // --- Drawing Overlay ---
     fun showDrawingMode() {
         pauseIfPlaying()
-        _state.update { dismissedPanelState(it).copy(
-            panels = it.panels.closeAll().open(PanelId.DRAWING),
-            isDrawingMode = true
-        ) }
+        _state.update {
+            dismissedPanelState(it)
+                .copy(isDrawingMode = true)
+                .copyPanel { panel ->
+                    panel.copy(panels = panel.panels.closeAll().open(PanelId.DRAWING))
+                }
+        }
     }
     fun hideDrawingMode() {
-        _state.update { it.copy(panels = it.panels.close(PanelId.DRAWING), isDrawingMode = false) }
+        _state.update {
+            it.copy(isDrawingMode = false)
+                .copyPanel { panel -> panel.copy(panels = panel.panels.close(PanelId.DRAWING)) }
+        }
     }
     fun addDrawingPath(path: com.novacut.editor.model.DrawingPath) {
         _state.update { it.copy(drawingPaths = it.drawingPaths + path) }
@@ -2776,10 +2844,10 @@ class EditorViewModel @Inject constructor(
                 }
                 val filteredAudio = perClipAudio.filterKeys { it in validIds }
                 val review = cutAssistantEngine.review(filteredTracks, filteredAudio).acceptAll()
-                _state.update { it.copy(
-                    ai = it.ai.copy(cutAssistantReview = review),
-                    panels = it.panels.closeAll()
-                ) }
+                _state.update {
+                    it.copy(ai = it.ai.copy(cutAssistantReview = review))
+                        .copyPanel { panel -> panel.copy(panels = panel.panels.closeAll()) }
+                }
                 showToast(
                     if (review.proposals.isEmpty()) "Cut Assistant: nothing to trim"
                     else "Cut Assistant: ${review.proposals.size} proposed cut(s)"
@@ -2999,9 +3067,8 @@ class EditorViewModel @Inject constructor(
         }
         _state.update {
             it.copy(
-                selectedClipId = sourceClip.id,
-                selectedEffectId = effect.id
-            )
+                selectedClipId = sourceClip.id
+            ).copyPanel { panel -> panel.copy(selectedEffectId = effect.id) }
         }
         updatePreview()
         saveProject()
@@ -3194,14 +3261,16 @@ class EditorViewModel @Inject constructor(
             val missingCount = reports.values.count { it.state == MediaRelinkProbe.RelinkState.MISSING }
             val unknownCount = reports.values.count { it.state == MediaRelinkProbe.RelinkState.UNKNOWN }
             _state.update { state ->
-                state.copy(
-                    media = state.media.copy(relinkReports = reports),
-                    panels = if (openPanelOnProblems && missingCount + unknownCount > 0) {
-                        state.panels.open(PanelId.MEDIA_MANAGER)
-                    } else {
-                        state.panels
+                state.copy(media = state.media.copy(relinkReports = reports))
+                    .copyPanel { panel ->
+                        panel.copy(
+                            panels = if (openPanelOnProblems && missingCount + unknownCount > 0) {
+                                panel.panels.open(PanelId.MEDIA_MANAGER)
+                            } else {
+                                panel.panels
+                            }
+                        )
                     }
-                )
             }
             if (openPanelOnProblems) {
                 mediaRelinkOpenToast(missingCount, unknownCount)?.let { message ->
@@ -3773,7 +3842,17 @@ class EditorViewModel @Inject constructor(
 
     fun toggleScopes() {
         val willShow = !_state.value.panels.isOpen(PanelId.SCOPES)
-        _state.update { it.copy(panels = if (willShow) it.panels.open(PanelId.SCOPES) else it.panels.close(PanelId.SCOPES)) }
+        _state.update {
+            it.copyPanel { panel ->
+                panel.copy(
+                    panels = if (willShow) {
+                        panel.panels.open(PanelId.SCOPES)
+                    } else {
+                        panel.panels.close(PanelId.SCOPES)
+                    }
+                )
+            }
+        }
         if (willShow) updateScopeFrame()
     }
 
@@ -4234,11 +4313,17 @@ class EditorViewModel @Inject constructor(
 
     fun showScratchpad() {
         pauseIfPlaying()
-        _state.update { dismissedPanelState(it).copy(panels = it.panels.closeAll().open(PanelId.SCRATCHPAD)) }
+        _state.update {
+            dismissedPanelState(it).copyPanel { panel ->
+                panel.copy(panels = panel.panels.closeAll().open(PanelId.SCRATCHPAD))
+            }
+        }
     }
 
     fun hideScratchpad() {
-        _state.update { it.copy(panels = it.panels.close(PanelId.SCRATCHPAD)) }
+        _state.update {
+            it.copyPanel { panel -> panel.copy(panels = panel.panels.close(PanelId.SCRATCHPAD)) }
+        }
     }
 
     fun updateProjectNotes(notes: String) {
@@ -4257,7 +4342,9 @@ class EditorViewModel @Inject constructor(
     }
 
     fun dismissRecoveryDialog(recover: Boolean) {
-        _state.update { it.copy(panels = it.panels.close(PanelId.RECOVERY_DIALOG)) }
+        _state.update {
+            it.copyPanel { panel -> panel.copy(panels = panel.panels.close(PanelId.RECOVERY_DIALOG)) }
+        }
         if (!recover) {
             showToast("Autosaved project data was kept to avoid losing this edit.", ToastSeverity.Warning)
         }
