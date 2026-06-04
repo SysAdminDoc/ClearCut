@@ -8,6 +8,7 @@ import androidx.work.Configuration
 import com.novacut.editor.BuildConfig
 import com.novacut.editor.engine.CrashRecordStore
 import com.novacut.editor.engine.MemoryTrimDispatcher
+import com.novacut.editor.engine.ProcessExitRecorder
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
@@ -19,6 +20,9 @@ class NovaCutApp : Application(), Configuration.Provider {
 
     @Inject
     lateinit var memoryTrimDispatcher: MemoryTrimDispatcher
+
+    @Inject
+    lateinit var processExitRecorder: ProcessExitRecorder
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
@@ -36,6 +40,7 @@ class NovaCutApp : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         CrashRecordStore(this).installGlobalHandler(VERSION)
+        processExitRecorder.recordStartupExitReasons()
         createNotificationChannels()
     }
 

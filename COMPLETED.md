@@ -7,7 +7,7 @@ Last consolidated: 2026-06-04.
 
 ## Current Delivered Baseline
 
-- Current version: v3.74.49 (`versionCode` 186).
+- Current version: v3.74.50 (`versionCode` 187).
 - Multi-track Android NLE with project gallery, editor, timeline, preview,
   effects, transitions, text, captions, audio, export, settings, templates,
   project archive/import, and diagnostic bundle surfaces.
@@ -67,6 +67,10 @@ Last consolidated: 2026-06-04.
   pure parser, manifest filters stay bounded to specific document MIME
   families, and Projects shows a preview/report before any template import
   mutation.
+- Process-death diagnostic history shipped in v3.74.50: Android 11+
+  `ApplicationExitInfo` records are captured at startup, de-duped into a
+  bounded local history, redacted/truncated for trace safety, and included in
+  user-triggered diagnostic ZIP exports as `process-exit-history.json`.
 - UI test harness bootstrap shipped in v3.74.11: shared Compose test tags,
   androidTest dependencies, and a smoke test covering project list,
   blank-project editor open, media picker, export sheet, Settings, and privacy

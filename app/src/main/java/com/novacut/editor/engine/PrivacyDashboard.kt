@@ -28,6 +28,7 @@ object PrivacyDashboard {
         TEMPLATE_LIBRARY("Saved templates / effect packs"),
         DIAGNOSTIC_LOGS("Diagnostic logs (logcat tail, redacted)"),
         CRASH_RECORDS("Crash records (fatal exception breadcrumbs)"),
+        PROCESS_EXIT_HISTORY("Process-death history (ANR, low-memory, native crash)"),
         CLOUD_GENERATIVE("Cloud generative video calls (consent-gated)"),
         AI_USAGE_LEDGER("AI usage ledger (per-project disclosure history)"),
         OPT_IN_TELEMETRY("Opt-in usage telemetry (Sentry / Glean)"),
@@ -137,6 +138,14 @@ object PrivacyDashboard {
             controls = Controls(canExport = true, canDelete = true, hasOptOut = false),
             collectedBy = listOf("CrashRecordStore", "DiagnosticExportEngine"),
             retentionPolicy = "Fatal-crash breadcrumbs are stored locally under filesDir/diagnostics/crashes, capped to the 8 most recent records, and included only in user-triggered diagnostic ZIP exports.",
+            collectedByDefault = true,
+        ),
+        DashboardEntry(
+            category = Category.PROCESS_EXIT_HISTORY,
+            location = StorageLocation.DEVICE_INTERNAL,
+            controls = Controls(canExport = true, canDelete = true, hasOptOut = false),
+            collectedBy = listOf("ProcessExitRecorder", "DiagnosticExportEngine"),
+            retentionPolicy = "Android 11+ process-death summaries are stored locally under filesDir/diagnostics/process-exit-history.json, capped to the 16 most recent unique records, and included only in user-triggered diagnostic ZIP exports.",
             collectedByDefault = true,
         ),
         DashboardEntry(
