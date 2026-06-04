@@ -14,7 +14,9 @@ Last refreshed: 2026-06-04.
   `EditorAiState`, `EditorExportDomainState`, `EditorMediaState`,
   `EditorCompoundState`, `EditorCaptionState`, and `EditorPanelState`, while
   preserving read-only compatibility accessors for existing UI and delegate
-  reads. The next architecture lane is EditorScreen panel router decomposition.
+  reads. The next architecture lane is EditorScreen panel router decomposition;
+  v3.74.27 started it by extracting the primary bottom-sheet cluster into
+  `EditorPrimaryPanelHost`.
 - [Verified] Current Maven metadata check: Media3 `1.10.1` and WorkManager
   `2.11.2` match latest release metadata; Compose BOM is `2026.05.00` vs
   `2026.05.01`; Room is `2.7.2` vs `2.8.4`; Kotlin is `2.1.0` vs `2.4.0`; AGP
@@ -30,6 +32,12 @@ Last refreshed: 2026-06-04.
   `apksigner verify`, `zipalign -c -P 16 -v 4`, the focused
   `EditorDomainStateTest`, and the debug-unit/debug-APK/release-APK/androidTest
   Gradle matrix. The known lint/R8 warnings remain non-fatal.
+- [Verified] Cycle 1 handoff check: Maven metadata still reports Media3 1.10.1,
+  WorkManager 2.11.2, Compose BOM 2026.05.01, Room 2.8.4, Kotlin 2.4.0, and AGP
+  9.3.0-alpha09. The active dirty tree already contains the next
+  `EditorPrimaryPanelHost` / `EditorScreen` panel-router refactor slice, so this
+  pass recorded it as the current implementation lane instead of adding a
+  duplicate roadmap item.
 
 ## Executive Summary
 
