@@ -169,8 +169,11 @@ object PrivacyDashboard {
             category = Category.AI_USAGE_LEDGER,
             location = StorageLocation.DEVICE_INTERNAL,
             controls = Controls(canExport = true, canDelete = true, hasOptOut = false),
-            collectedBy = listOf("AiUsageLedger", "ProjectAutoSave", "ExportDelegate", "DirectPublishEngine"),
-            retentionPolicy = "Stored only inside the project autosave; users can clear it from the export disclosure review.",
+            collectedBy = listOf("AiUsageLedger", "ProjectAutoSave", "ExportDelegate", "DirectPublishEngine", "C2paExportEngine"),
+            retentionPolicy = "Stored only inside the project autosave; users can clear it from the export " +
+                "disclosure review. Export can write local .ai-use.json and unsigned " +
+                ".c2pa-draft-manifest.json sidecars; remote C2PA signing requires explicit per-export " +
+                "consent before any media or hashes leave the device.",
             collectedByDefault = false,
         ),
         DashboardEntry(

@@ -114,7 +114,9 @@ class PrivacyDashboardTest {
         assertFalse(entry.controls.hasOptOut)
         assertFalse(entry.collectedByDefault)
         assertTrue(entry.collectedBy.contains("AiUsageLedger"))
+        assertTrue(entry.collectedBy.contains("C2paExportEngine"))
         assertTrue(entry.retentionPolicy.contains("project autosave", ignoreCase = true))
+        assertTrue(entry.retentionPolicy.contains(".c2pa-draft-manifest.json"))
     }
 
     @Test

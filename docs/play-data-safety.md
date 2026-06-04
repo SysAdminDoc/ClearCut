@@ -36,7 +36,7 @@ with the manifest permission list.
 | Crash records | Diagnostics/crash breadcrumbs | Yes after fatal crashes | No automatic sharing | Required for local crash recovery diagnostics | Bounded local fatal-crash breadcrumbs, included only in user-triggered diagnostic ZIPs. |
 | Process-death summaries | Diagnostics/process-death history | Yes on Android 11+ after process restarts | No automatic sharing | Required for local ANR/low-memory/native-crash diagnostics | Bounded local `ApplicationExitInfo` summaries, redacted and included only in user-triggered diagnostic ZIPs. |
 | Cloud generative video calls | User content sent to a provider only after consent | No | Yes, with the selected provider only after explicit invocation | Optional | Provider retention is disclosed in the consent sheet before each call. |
-| AI usage ledger | App activity and AI disclosure history | No until an AI tool is used | No | Optional | Stored in the project for export/disclosure review and removable from the project controls. |
+| AI usage ledger | App activity and AI disclosure history | No until an AI tool is used | No, except future remote C2PA signing after explicit per-export consent | Optional | Stored in the project for export/disclosure review, removable from the project controls, and optionally written to local `.ai-use.json` / unsigned `.c2pa-draft-manifest.json` sidecars. |
 | Opt-in usage telemetry | Diagnostics/app activity | No | No in the current release line | Optional and disabled | Future SDK adapters must remain off unless consent is true and a separate disclosure is shipped. |
 
 ## Current Declaration Summary
@@ -46,7 +46,8 @@ with the manifest permission list.
 - NovaCut does not upload analytics or crash telemetry by default.
 - User content can leave the device only through user-directed export/share,
   optional model/cloud actions, Android backup/device-transfer behavior, or
-  another app selected by the user.
+  another app selected by the user. Future remote C2PA signing must require
+  explicit per-export consent before media or hashes leave the device.
 - The privacy policy source is `docs/privacy-policy.md`; the public URL used
   for Play listing metadata is stored in
   `fastlane/metadata/android/en-US/privacy_policy_url.txt`.

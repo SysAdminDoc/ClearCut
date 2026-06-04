@@ -1,5 +1,29 @@
 # Changelog
 
+## v3.74.54 — 2026-06-04
+
+### C2PA draft manifest and signer gate
+- Migrated NovaCut's C2PA training/data-mining assertion from the old
+  `c2pa.training-mining` labels to current CAWG 1.1
+  `cawg.training-mining` entries.
+- Added `manifestDefinitionToJson(...)` for the C2PA builder-shaped manifest
+  definition with `claim_generator`, `claim_generator_info`, current CAWG
+  labels, redacted-title handling, and AI-ledger action mapping.
+- Added `SigningAvailability` decisions for missing C2PA libraries, missing
+  Android Keystore/StrongBox certificate enrollment, missing user PEM material,
+  and remote-signer consent requirements.
+- Renamed the export sidecar from `.c2pa-manifest.json` to
+  `.c2pa-draft-manifest.json` and embedded explicit unsigned/not-verifiable
+  status so local drafts cannot be confused with signed Content Credentials.
+- Updated export-sheet and privacy-dashboard copy for the unsigned draft
+  sidecar and remote-signing consent boundary.
+- Bumped runtime metadata to `versionName 3.74.54` / `versionCode 191`.
+- Verification: focused JVM coverage for `C2paExportEngineTest` and
+  `PrivacyDashboardTest` passed, followed by the full Gradle gate:
+  `:app:testDebugUnitTest`, `:app:assembleDebug`, `:app:assembleRelease`, and
+  `:app:assembleDebugAndroidTest`; release artifact validation, Play listing
+  validation, Fastlane sync check, and `git diff --check` also passed.
+
 ## v3.74.53 — 2026-06-04
 
 ### Local network permission gate

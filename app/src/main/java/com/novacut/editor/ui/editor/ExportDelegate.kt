@@ -708,7 +708,7 @@ class ExportDelegate(
         val engine = c2paExportEngine ?: return
         val sidecar = File(
             outputFile.parentFile,
-            "${outputFile.nameWithoutExtension}.c2pa-manifest.json"
+            "${outputFile.nameWithoutExtension}.c2pa-draft-manifest.json"
         )
         val generatedAt = System.currentTimeMillis()
         val manifest = engine.buildManifest(
@@ -718,7 +718,15 @@ class ExportDelegate(
             ledger = entries,
             exporterCreationTimeMs = generatedAt
         )
-        writeUtf8TextAtomically(sidecar, engine.manifestToJson(manifest).toString(2))
+        val availability = engine.signingAvailability(C2paExportEngine.SigningMode.ANDROID_KEYSTORE)
+        writeUtf8TextAtomically(
+            sidecar,
+            engine.draftSidecarToJson(
+                manifest = manifest,
+                availability = availability,
+                exportedFileName = outputFile.name
+            ).toString(2)
+        )
     }
 
     fun getShareIntent(): Intent? {

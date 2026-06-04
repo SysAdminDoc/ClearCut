@@ -14,19 +14,17 @@ import javax.inject.Singleton
  * implementation of that requirement and Google Pixel 10 already ships
  * hardware-backed signing at C2PA Assurance Level 2.
  *
- * This engine owns the **pure manifest construction** layer: given the
- * project name, export config, NovaCut version, and the per-project
- * `AiUsageLedger`, it builds a structured [C2paManifest] that the (future)
- * signing path can hand to either `c2pa-android` (official AAR) or
- * `proofmode/simple-c2pa` (community AAR) to actually sign and embed into
- * the exported MP4.
+ * This engine owns the pure manifest construction and availability layer:
+ * given the project name, export config, NovaCut version, and per-project
+ * [AiUsageLedger], it builds a structured [C2paManifest] that can be passed
+ * to c2pa-android's `Builder.fromJson(...)` once a signing library and
+ * certificate enrollment path are configured.
  *
- * **Today this is a stub** — no c2pa AAR is wired. The class exists so the
- * rest of the system can compose against it: export config builders can
- * already attach a manifest spec, the Privacy Dashboard (R5.5c) can render
- * the assertion list, and the export sheet can decide whether to offer a
- * "Content Credentials" toggle. When the AAR lands, only [signAndEmbed]
- * grows a real body.
+ * NovaCut deliberately separates draft manifest generation from verifiable
+ * Content Credentials. A `.c2pa-draft-manifest.json` sidecar is useful audit
+ * data, but it is not a signed C2PA manifest store and does not create a BMFF
+ * hard binding to the exported MP4. [signingAvailability] is the gate the UI
+ * and export path use to avoid implying otherwise.
  *
  * ## Activation candidates
  *
@@ -62,9 +60,9 @@ class C2paExportEngine @Inject constructor() {
     }
 
     /**
-     * One assertion that lands in the C2PA manifest. Names mirror the C2PA
-     * v2.4 specification labels so [signAndEmbed] can pass them through
-     * verbatim to c2pa-android's manifest builder.
+     * One assertion that lands in the C2PA manifest definition. Labels mirror
+     * C2PA 2.4 and current CAWG assertion labels so [manifestDefinitionToJson]
+     * can pass them through to c2pa-android's manifest builder.
      */
     data class Assertion(
         val label: String,
@@ -86,6 +84,22 @@ class C2paExportEngine @Inject constructor() {
         val title: String?,
         val signingMode: SigningMode,
         val assertions: List<Assertion>
+    )
+
+    enum class AvailabilityStatus {
+        READY,
+        LIBRARY_UNAVAILABLE,
+        CERTIFICATE_ENROLLMENT_REQUIRED,
+        USER_PEM_REQUIRED,
+        REMOTE_SIGNER_REQUIRED,
+        REMOTE_CONSENT_REQUIRED
+    }
+
+    data class SigningAvailability(
+        val status: AvailabilityStatus,
+        val canSignEmbeddedManifest: Boolean,
+        val canWriteDraftSidecar: Boolean = true,
+        val message: String
     )
 
     /**
@@ -190,17 +204,17 @@ class C2paExportEngine @Inject constructor() {
             "exporterCreationTimeMs must be >= 0"
         }
         val assertions = buildList {
-            // Always emit the c2pa.training-mining opt-out — NovaCut's
-            // privacy posture is that exports can be marked do-not-train.
+            // Always emit the CAWG training-mining opt-out. NovaCut's privacy
+            // posture is that exports can be marked do-not-train.
             add(
                 Assertion(
-                    label = "c2pa.training-mining",
+                    label = "cawg.training-mining",
                     data = mapOf(
                         "entries" to mapOf(
-                            "c2pa.ai_generative_training" to mapOf("use" to "notAllowed"),
-                            "c2pa.ai_inference" to mapOf("use" to "notAllowed"),
-                            "c2pa.ai_training" to mapOf("use" to "notAllowed"),
-                            "c2pa.data_mining" to mapOf("use" to "notAllowed")
+                            "cawg.ai_generative_training" to mapOf("use" to "notAllowed"),
+                            "cawg.ai_inference" to mapOf("use" to "notAllowed"),
+                            "cawg.ai_training" to mapOf("use" to "notAllowed"),
+                            "cawg.data_mining" to mapOf("use" to "notAllowed")
                         )
                     )
                 )
@@ -239,13 +253,16 @@ class C2paExportEngine @Inject constructor() {
         )
     }
 
-    fun manifestToJson(manifest: C2paManifest): JSONObject {
+    fun manifestDefinitionToJson(manifest: C2paManifest): JSONObject {
         return JSONObject().apply {
-            put("schema", "com.novacut.c2pa-manifest.v1")
-            put("claimGenerator", manifest.claimGenerator)
-            put("claimGeneratorInfoVersion", manifest.claimGeneratorInfoVersion)
-            put("title", manifest.title ?: JSONObject.NULL)
-            put("signingMode", manifest.signingMode.name)
+            put("claim_generator", manifest.claimGenerator)
+            put("claim_generator_info", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("name", "NovaCut")
+                    put("version", manifest.claimGeneratorInfoVersion)
+                })
+            })
+            if (manifest.title != null) put("title", manifest.title)
             put("assertions", JSONArray().apply {
                 manifest.assertions.forEach { assertion ->
                     put(JSONObject().apply {
@@ -254,6 +271,35 @@ class C2paExportEngine @Inject constructor() {
                     })
                 }
             })
+        }
+    }
+
+    fun manifestToJson(manifest: C2paManifest): JSONObject {
+        return draftSidecarToJson(
+            manifest = manifest,
+            availability = signingAvailability(manifest.signingMode),
+            exportedFileName = null
+        )
+    }
+
+    fun draftSidecarToJson(
+        manifest: C2paManifest,
+        availability: SigningAvailability,
+        exportedFileName: String?
+    ): JSONObject {
+        return JSONObject().apply {
+            put("schema", "com.novacut.c2pa-draft-manifest.v2")
+            put("c2paSpecification", "2.4")
+            put("format", "video/mp4")
+            put("embeddedManifestStore", false)
+            put("hardBinding", false)
+            put("isVerifiableContentCredential", availability.canSignEmbeddedManifest)
+            put("contentCredentialsStatus", availability.status.name)
+            put("contentCredentialsMessage", availability.message)
+            put("exportedFileName", exportedFileName ?: JSONObject.NULL)
+            put("title", manifest.title ?: JSONObject.NULL)
+            put("signingMode", manifest.signingMode.name)
+            put("manifestDefinition", manifestDefinitionToJson(manifest))
         }
     }
 
@@ -303,23 +349,103 @@ class C2paExportEngine @Inject constructor() {
 
     @Volatile private var cachedAvailability: Boolean? = null
 
+    fun signingAvailability(
+        signingMode: SigningMode,
+        libraryAvailable: Boolean = isAvailable(),
+        keystoreKeyAvailable: Boolean = false,
+        certificateChainAvailable: Boolean = false,
+        userPrivateKeyAvailable: Boolean = false,
+        remoteSignerConfigured: Boolean = false,
+        remoteConsentGranted: Boolean = false
+    ): SigningAvailability {
+        if (!libraryAvailable) {
+            return SigningAvailability(
+                status = AvailabilityStatus.LIBRARY_UNAVAILABLE,
+                canSignEmbeddedManifest = false,
+                message = "Content Credentials are unavailable because no C2PA signing library is bundled."
+            )
+        }
+        return when (signingMode) {
+            SigningMode.ANDROID_KEYSTORE,
+            SigningMode.STRONGBOX -> {
+                if (keystoreKeyAvailable && certificateChainAvailable) {
+                    SigningAvailability(
+                        status = AvailabilityStatus.READY,
+                        canSignEmbeddedManifest = true,
+                        message = "Content Credentials signer is ready for embedded MP4 signing."
+                    )
+                } else {
+                    SigningAvailability(
+                        status = AvailabilityStatus.CERTIFICATE_ENROLLMENT_REQUIRED,
+                        canSignEmbeddedManifest = false,
+                        message = "Content Credentials are unavailable until a device key and certificate chain are enrolled."
+                    )
+                }
+            }
+            SigningMode.USER_PEM -> {
+                if (certificateChainAvailable && userPrivateKeyAvailable) {
+                    SigningAvailability(
+                        status = AvailabilityStatus.READY,
+                        canSignEmbeddedManifest = true,
+                        message = "User PEM signer is ready for embedded MP4 signing."
+                    )
+                } else {
+                    SigningAvailability(
+                        status = AvailabilityStatus.USER_PEM_REQUIRED,
+                        canSignEmbeddedManifest = false,
+                        message = "Content Credentials need a user PEM private key and certificate chain."
+                    )
+                }
+            }
+            SigningMode.WEB_SERVICE -> {
+                if (!remoteSignerConfigured) {
+                    SigningAvailability(
+                        status = AvailabilityStatus.REMOTE_SIGNER_REQUIRED,
+                        canSignEmbeddedManifest = false,
+                        message = "Content Credentials need a configured remote signing service."
+                    )
+                } else if (!remoteConsentGranted) {
+                    SigningAvailability(
+                        status = AvailabilityStatus.REMOTE_CONSENT_REQUIRED,
+                        canSignEmbeddedManifest = false,
+                        message = "Remote Content Credentials signing requires explicit per-export consent."
+                    )
+                } else {
+                    SigningAvailability(
+                        status = AvailabilityStatus.READY,
+                        canSignEmbeddedManifest = true,
+                        message = "Remote signer is ready after explicit user consent."
+                    )
+                }
+            }
+        }
+    }
+
     /**
      * Sign and embed the manifest into the exported MP4 at [outputPath].
      * Returns a [SignResult] describing what happened.
      *
-     * Today this is a stub that returns `UNAVAILABLE`. When the c2pa AAR
-     * lands, this method bridges to its Builder API; the rest of the
-     * engine surface (manifest construction, AI-ledger → assertion
-     * conversion) does not change.
+     * Returns `UNAVAILABLE` until both a C2PA library and signer credentials
+     * are configured. The signing bridge must embed a manifest store into the
+     * MP4 and leave a verifiable BMFF hard binding; a draft sidecar is not
+     * enough to return [SignResult.Signed].
      */
     suspend fun signAndEmbed(
         manifest: C2paManifest,
         outputPath: String
     ): SignResult {
         require(outputPath.isNotBlank()) { "outputPath must not be blank" }
-        Log.d(TAG, "signAndEmbed: stub — no c2pa library wired (target=$outputPath, mode=${manifest.signingMode})")
+        val availability = signingAvailability(manifest.signingMode)
+        if (!availability.canSignEmbeddedManifest) {
+            Log.d(
+                TAG,
+                "signAndEmbed unavailable: ${availability.status} (target=$outputPath, mode=${manifest.signingMode})"
+            )
+            return SignResult.Unavailable(reason = availability.message)
+        }
+        Log.d(TAG, "signAndEmbed: signer bridge not implemented (target=$outputPath, mode=${manifest.signingMode})")
         return SignResult.Unavailable(
-            reason = "c2pa-android is not yet wired in this build"
+            reason = "C2PA signer bridge is not implemented in this build"
         )
     }
 

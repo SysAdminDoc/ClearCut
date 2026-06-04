@@ -12,8 +12,9 @@ does not operate a NovaCut telemetry backend in the current release line.
 NovaCut stores project content, overlay image/sticker asset copies, clip
 metadata, app preferences, templates, model registry state, AI usage ledger
 entries, fatal-crash breadcrumbs, Android 11+ process-death summaries,
-settings-reset reports, and optional diagnostic ZIPs in app-private storage
-unless the user explicitly exports or shares a file.
+settings-reset reports, local AI-use/C2PA draft sidecars, and optional
+diagnostic ZIPs in app-private storage unless the user explicitly exports or
+shares a file.
 
 Project archives and exported videos are created only when the user chooses an
 export/share action. Android backup and device-transfer rules keep managed media
@@ -28,7 +29,9 @@ generative tools when a consent sheet is accepted, or user-directed Android
 share/export flows handled by other apps. NovaCut does not initialize analytics
 or crash-reporting SDK uploads by default. Future live-streaming destinations
 on the user's LAN use Android's local-network permission path; public internet
-streaming destinations do not require local-network access.
+streaming destinations do not require local-network access. Future remote C2PA
+signing requires explicit per-export consent before media or hashes leave the
+device; local `.c2pa-draft-manifest.json` sidecars are unsigned drafts.
 
 ## Microphone, Notifications, And Files
 

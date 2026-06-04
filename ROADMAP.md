@@ -8,7 +8,7 @@ Active roadmap for forward-looking work. Shipped work is summarized in
 [RESEARCH_REPORT.md](RESEARCH_REPORT.md), and detailed historical plans are
 archived under [docs/archive](docs/archive/).
 
-Current version: **v3.74.53** (`versionCode` 190). Last consolidated:
+Current version: **v3.74.54** (`versionCode` 191). Last consolidated:
 2026-06-04.
 
 > Last researched: Cycle 22 - 2026-06-04.
@@ -125,6 +125,12 @@ temporary and Android 17 forward permissions, adding a pure
 `LocalNetworkPermissionPolicy` for API/target/scope decisions, exposing
 destination-specific gates through `OutputStreamingEngine`, and adding optional
 permission-state diagnostic ZIP support.
+v3.74.54 started the Cycle 13 C2PA lane by migrating the draft manifest to
+current CAWG `cawg.training-mining` labels, adding C2PA builder-shaped manifest
+definition JSON, explicitly gating embedded Content Credentials on library,
+certificate/key, user PEM, or remote-signer consent availability, and renaming
+the local sidecar to `.c2pa-draft-manifest.json` so it cannot be confused with a
+signed MP4 manifest store.
 
 ## Current State
 
@@ -292,6 +298,10 @@ permission-state diagnostic ZIP support.
   `ACCESS_LOCAL_NETWORK` on Android 17 target SDK 37+, permission-denial
   failures surface actionable copy, and diagnostics can include redacted
   permission-state snapshots.
+- v3.74.54 adds current CAWG training/data-mining labels and honest C2PA draft
+  sidecar semantics: export writes `.c2pa-draft-manifest.json` with unsigned
+  status, signer availability explains missing library/certificate/PEM/remote
+  consent states, and the privacy dashboard names the local-only draft behavior.
 
 ## Source Archives
 
@@ -319,6 +329,7 @@ permission-state diagnostic ZIP support.
 | ✅ P2 | Process-death diagnostic history | Implemented in v3.74.50: Android 11+ `ApplicationExitInfo` records are captured through `ProcessExitRecorder`, de-duped by timestamp/reason/PID, redacted/truncated, exposed in Privacy Dashboard copy, and included in diagnostic ZIPs as `process-exit-history.json` with an unsupported marker on older devices. |
 | ✅ P1 | Durable image/sticker overlay compositor | Implemented in v3.74.52: `OverlayAssetStore` imports bundled/gallery stickers into app-owned overlay files before project mutation, `PreviewPanel` renders active image overlays, Media3 Transformer exports burn them with matching geometry, GIF overlays reject with explicit copy, and `MediaRelinkProbe` reports missing overlay sources. |
 | ✅ P2 | Android local-network permission gate | Implemented in v3.74.53: manifest declares Android 16 `NEARBY_WIFI_DEVICES` and Android 17 `ACCESS_LOCAL_NETWORK`, `LocalNetworkPermissionPolicy` maps API/target/scope decisions, `OutputStreamingEngine` exposes destination gates and permission-aware LAN failure copy, and diagnostics can export redacted permission-state snapshots. |
+| ✅ P1 | C2PA draft manifest and signer gate | Implemented in v3.74.54: draft manifests use current CAWG `cawg.training-mining` labels, C2PA builder-shaped manifest JSON, explicit signer/library/consent availability decisions, `.c2pa-draft-manifest.json` naming, and privacy/export copy that does not imply a verifiable embedded MP4 credential. |
 | P3 | Caption translation engine activation | Replace source-text echo behavior with a real local model path such as MADLAD-400 or Bergamot only after model gates are complete. |
 | P3 | Advanced engine activations | Activate Oboe resampling, adjustment layers, keyframe graph UI, and remaining AI engines only when dependencies, APK size, 16 KB compliance, and device QA are clear. |
 
@@ -1456,6 +1467,26 @@ a verifiable C2PA Content Credentials export path.
     confirming the C2PA native libraries still pass zipalign and 16 KB page-size
     gates.
   - Complexity: L
+  - Status: partial prerequisite shipped in v3.74.54. `C2paExportEngine` now
+    emits current CAWG `cawg.training-mining` entries, exposes
+    C2PA-builder-shaped manifest definition JSON with `claim_generator` and
+    `claim_generator_info`, keeps redacted titles omitted from that definition,
+    and maps AI ledger entries into current `c2pa.actions`. It also exposes
+    explicit availability states for missing libraries, missing Android
+    Keystore/StrongBox certificate enrollment, missing user PEM material, and
+    remote-signer consent. `ExportDelegate` writes
+    `.c2pa-draft-manifest.json` with unsigned/not-verifiable status instead of
+    the ambiguous `.c2pa-manifest.json`, and export/privacy copy now reflects
+    that local drafts are not Content Credentials. Remaining work: pin and
+    verify an actual C2PA Android AAR or equivalent, add certificate enrollment
+    and signer credential storage, implement embedded MP4 signing, validate the
+    BMFF hard binding with a reader, prove tamper failure, and rerun the 16 KB
+    native-library release gates. Verification passed: focused JVM
+    `C2paExportEngineTest` and `PrivacyDashboardTest`, `:app:testDebugUnitTest`,
+    `:app:assembleDebug`, `:app:assembleRelease`,
+    `:app:assembleDebugAndroidTest`, `scripts/verify_release_artifacts.py`,
+    `scripts/validate_play_listing_assets.py`,
+    `scripts/sync_fastlane_changelogs.py --check`, and `git diff --check`.
 
 #### Appendix — Cycle 13 Sources
 
