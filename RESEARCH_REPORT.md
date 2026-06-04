@@ -6,6 +6,32 @@ roadmaps are archived under [docs/archive/roadmap](docs/archive/roadmap/).
 
 Last refreshed: 2026-06-04.
 
+## 2026-06-04 Cycle 12 Local-Network Permission Refresh
+
+- [Verified] `OutputStreamingEngine` is still a live-streaming stub, but it
+  already exposes protocol metadata, destination validation, LAN/multicast
+  classification, and `requiresLocalNetworkPermission(...)` tests for RTMP,
+  SRT, RIST, RTSP, WebRTC, IPv4 private ranges, IPv6 local ranges, multicast,
+  `.local`, and loopback cases.
+- [Verified] The app has no local-network permission implementation yet. Grep
+  found no `NEARBY_WIFI_DEVICES`, `ACCESS_LOCAL_NETWORK`,
+  `RESTRICT_LOCAL_NETWORK`, local-network permission strings, or runtime
+  permission launcher. The manifest still declares only media/export/audio,
+  notification, haptics, internet, and network-state permissions.
+- [Verified] Android's current local-network permission docs say Android 16
+  restrictions are opt-in for target SDK 36 apps, Android 17 enforces local
+  network blocking by default for target SDK 37+ apps, Android 16 testing uses
+  the `RESTRICT_LOCAL_NETWORK` compat flag and `NEARBY_WIFI_DEVICES`, and the
+  future enforced permission is `ACCESS_LOCAL_NETWORK` in the `NEARBY_DEVICES`
+  group. Local TCP usually fails as timeout, while UDP/general denials usually
+  return `EPERM`.
+- [Promoted] Added a P2 roadmap item for an Android local-network permission
+  gate around future LAN streaming destinations: public ingest URLs skip the
+  prompt, LAN/mDNS/multicast destinations show scoped rationale and request the
+  right platform permission, denied/revoked states produce actionable copy, and
+  Android 16 compat plus Android 17 preview tests prove behavior before the
+  streaming library lands.
+
 ## 2026-06-04 Cycle 11 Image Overlay Export Refresh
 
 - [Verified] README advertises "Sticker/GIF/image overlays", and the app does

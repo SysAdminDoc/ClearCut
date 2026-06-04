@@ -11,7 +11,7 @@ archived under [docs/archive](docs/archive/).
 Current version: **v3.74.39** (`versionCode` 176). Last consolidated:
 2026-06-04.
 
-> Last researched: Cycle 11 - 2026-06-04.
+> Last researched: Cycle 12 - 2026-06-04.
 
 ## ▶ Implementer Instructions (for the build machine)
 
@@ -1141,3 +1141,61 @@ preview/export, using app-owned assets instead of fragile raw picker URIs.
   https://developer.android.com/training/data-storage/shared/documents-files#persist-permissions
 - AndroidX Media3 `BitmapOverlay` API:
   https://developer.android.com/reference/androidx/media3/effect/BitmapOverlay
+
+### Researcher Queue (Cycle 12 - 2026-06-04)
+
+Focus: prepare NovaCut's future live-streaming/LAN destination path for Android
+16 opt-in local-network restrictions and Android 17 enforcement.
+
+#### Platform Permissions & Live Output
+
+- [ ] 🔬🤖 P2 — Add Android local-network permission gate for LAN streaming destinations
+  - Why: `OutputStreamingEngine` already classifies public internet, LAN,
+    multicast, loopback, IPv6 local, and `.local` destinations and its comments
+    say the UI should show a one-time local-network consent sheet before
+    connecting. The manifest, strings, and UI do not yet declare or request
+    `NEARBY_WIFI_DEVICES` for Android 16 opt-in testing or future
+    `ACCESS_LOCAL_NETWORK` for Android 17 target-SDK enforcement. A creator
+    streaming to OBS, an RTMP/SRT box, RTSP camera, NDI bridge, or multicast
+    target on the same Wi-Fi could therefore see opaque socket timeouts once the
+    streaming library is enabled and platform restrictions are active.
+  - Evidence: grep finds `OutputStreamingEngine.requiresLocalNetworkPermission`
+    and JVM tests for LAN/multicast classification, but no
+    `NEARBY_WIFI_DEVICES`, `ACCESS_LOCAL_NETWORK`, `RESTRICT_LOCAL_NETWORK`,
+    local-network permission strings, or runtime permission launcher in
+    `app/src/main`. Android's local-network permission docs say Android 16
+    uses opt-in restrictions for target SDK 36 apps, Android 17 blocks local
+    network by default for target SDK 37+ apps, Android 16 testing restores
+    access through `NEARBY_WIFI_DEVICES`, and Android 17 uses
+    `ACCESS_LOCAL_NETWORK` in the `NEARBY_DEVICES` group:
+    https://developer.android.com/privacy-and-security/local-network-permission
+  - Touches: `AndroidManifest.xml`, a `LocalNetworkPermissionPolicy` that maps
+    SDK/target behavior to `NEARBY_WIFI_DEVICES` vs `ACCESS_LOCAL_NETWORK`,
+    future Live Studio / streaming destination UI, `OutputStreamingEngine`,
+    user-facing rationale and denial copy, privacy-dashboard permission notes,
+    diagnostic export of local-network permission state, and focused policy/UI
+    tests.
+  - Acceptance: public RTMP/RTMPS/SRT/WebRTC destinations do not request a
+    local-network permission; RFC1918, link-local, `.local`, multicast, and
+    direct LAN destinations show a scoped rationale before first connection.
+    Denial blocks only the LAN destination with actionable copy and does not
+    break public internet streaming. Granted/revoked states are rechecked before
+    each connection, persisted stream keys remain in encrypted storage, and
+    native/socket errors caused by local-network denial are surfaced as a
+    permission problem rather than a generic timeout.
+  - Verify: keep the existing classifier JVM tests, add policy tests across API
+    35/36/37 and target SDK 36/37, add manifest tests for the temporary and
+    future permissions, and add UI tests for public vs LAN destinations. On an
+    Android 16 device/emulator, enable `RESTRICT_LOCAL_NETWORK`, reboot, confirm
+    denied LAN connection fails with the new permission copy, grant Nearby
+    devices, and confirm the same connection reaches the native streaming stub;
+    repeat with Android 17 preview behavior when the SDK exposes
+    `ACCESS_LOCAL_NETWORK`.
+  - Complexity: M
+
+#### Appendix — Cycle 12 Sources
+
+- Android local network permission:
+  https://developer.android.com/privacy-and-security/local-network-permission
+- Android 16 behavior changes:
+  https://developer.android.com/about/versions/16/behavior-changes-16
