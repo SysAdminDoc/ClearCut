@@ -6,6 +6,26 @@ roadmaps are archived under [docs/archive/roadmap](docs/archive/roadmap/).
 
 Last refreshed: 2026-06-04.
 
+## 2026-06-04 Cycle 5 Distribution Metadata Refresh
+
+- [Verified] The Fastlane metadata tree contains only the English title,
+  short description, full description, and one legacy changelog file. Grep found
+  no Fastlane `images/` directory, screenshot folders, `featureGraphic`, store
+  icon, `Fastfile`, or `Appfile`, while the active roadmap already tracks
+  changelog history separately.
+- [Verified] NovaCut's manifest and shipped surfaces include user-data-relevant
+  paths (`INTERNET`, `ACCESS_NETWORK_STATE`, `RECORD_AUDIO`,
+  `POST_NOTIFICATIONS`, app-owned media import/export, backup/transfer policy,
+  optional model downloads, diagnostics, and user-directed sharing). Google Play
+  requires privacy-policy and Data safety declarations to remain complete,
+  accurate, and consistent with in-app behavior, while preview-asset guidance
+  requires store listing assets such as app icon, feature graphic, and
+  screenshots.
+- [Promoted] Added a P2 roadmap item for a deterministic Play/Fastlane listing
+  package: Fastlane-compatible graphics and screenshots, privacy-policy
+  source/link, data-safety worksheet, and a release validator for asset
+  dimensions/counts plus disclosure artifact presence.
+
 ## 2026-06-04 Cycle 4 Memory Pressure Refresh
 
 - [Verified] NovaCut declares `android:largeHeap="true"` and owns multiple

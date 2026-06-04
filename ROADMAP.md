@@ -11,7 +11,7 @@ archived under [docs/archive](docs/archive/).
 Current version: **v3.74.35** (`versionCode` 172). Last consolidated:
 2026-06-04.
 
-> Last researched: Cycle 4 - 2026-06-04.
+> Last researched: Cycle 5 - 2026-06-04.
 
 ## ▶ Implementer Instructions (for the build machine)
 
@@ -667,3 +667,59 @@ projects.
   https://developer.android.com/topic/performance/memory
 - Android `<application>` `largeHeap` guidance:
   https://developer.android.com/guide/topics/manifest/application-element#largeHeap
+
+### Researcher Queue (Cycle 5 - 2026-06-04)
+
+Focus: Play/Fastlane release readiness beyond the already-tracked changelog
+history item.
+
+#### Distribution Trust
+
+- [ ] 🔬🤖 P2 — Add Play listing asset and privacy-disclosure release gate
+  - Why: NovaCut has enough Fastlane text metadata to describe the editor, but
+    the repo does not yet carry the preview assets, screenshot inventory,
+    privacy-policy link/text, or data-safety worksheet needed to make Play
+    listing readiness repeatable. That leaves release approval dependent on
+    manual console state instead of versioned evidence.
+  - Evidence: `fastlane/metadata/android/en-US/` currently contains only
+    `title.txt`, `short_description.txt`, `full_description.txt`, and
+    `changelogs/67.txt`; grep finds no Fastlane `images/` directory,
+    `phoneScreenshots/`, `sevenInchScreenshots/`, `tenInchScreenshots/`,
+    `featureGraphic`, `icon`, `Fastfile`, or `Appfile`. The manifest declares
+    `INTERNET`, `ACCESS_NETWORK_STATE`, `RECORD_AUDIO`, `POST_NOTIFICATIONS`,
+    app-owned backup/transfer rules, and content import/export surfaces, so the
+    Play Data safety and privacy-policy package needs to distinguish local-only
+    editing, optional model/download/network behavior, microphone capture,
+    notifications, diagnostics, and user-directed export/share flows. Google
+    Play preview-asset guidance requires an app icon, feature graphic, and at
+    least two screenshots to publish a store listing, and recommends at least
+    four app screenshots at 1080px+ for promotional eligibility:
+    https://support.google.com/googleplay/android-developer/answer/9866151?hl=en
+  - Touches: Fastlane metadata structure, generated/captured store screenshots
+    for phone and large-screen editor flows, feature graphic/icon export,
+    privacy-policy source doc or URL wiring, data-safety worksheet, and release
+    verification scripts/docs.
+  - Acceptance: the repo has a deterministic store-listing package with
+    Fastlane-compatible `images/featureGraphic`, `images/icon`, at least four
+    phone screenshots, tablet screenshots or an explicit non-tablet-store
+    rationale, alt-text/caption inventory for each graphic, a privacy-policy
+    source/link that names NovaCut and contact/deletion/retention handling, and
+    a data-safety worksheet mapping each declared permission and SDK/user-data
+    flow to collected/shared/optional/local-only status.
+  - Verify: add a local metadata validator that checks Fastlane image paths,
+    dimensions, file types, screenshot counts, changelog coverage, and
+    privacy/data-safety worksheet presence; run it in the release gate, then do a
+    Play Console or Fastlane supply dry run for metadata/images before promoting
+    a release candidate.
+  - Complexity: M
+
+#### Appendix — Cycle 5 Sources
+
+- Google Play preview asset requirements:
+  https://support.google.com/googleplay/android-developer/answer/9866151?hl=en
+- Google Play User Data policy, privacy policy, and Data safety consistency:
+  https://support.google.com/googleplay/android-developer/answer/10144311?hl=en
+- Google Play Data safety form guidance:
+  https://support.google.com/googleplay/android-developer/answer/10787469?hl=en
+- Fastlane supply metadata image and screenshot structure:
+  https://docs.fastlane.tools/actions/supply/
