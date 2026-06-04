@@ -10,8 +10,8 @@ NovaCut is an Android video editor under package `com.novacut.editor`. The repo 
 
 Current live version evidence:
 
-- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 165`, `versionName = "3.74.28"`.
-- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.28`.
+- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 166`, `versionName = "3.74.29"`.
+- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.29`.
 - [README.md](README.md) and [ROADMAP.md](ROADMAP.md) both describe the v3.74.x line.
 - The 2026-05-17 continuation pushes each completed roadmap batch back to `origin/master`; verify `git status --short --branch` before assuming branch sync.
 
@@ -428,6 +428,20 @@ High-level modules and patterns:
   APK-based 16 KB gates passed.
 - Next roadmap item: continue P1 EditorScreen panel router decomposition for
   the remaining clip-adjustment, utility, and overlay routes.
+
+2026-06-04 clip adjustment panel router host extraction continuation:
+
+- Completed the third P1 EditorScreen panel router decomposition batch in
+  v3.74.29 by extracting transform, crop, effect adjustment, color grading,
+  audio mixer, keyframe, speed curve, mask, blend mode, PiP preset, chroma key,
+  and caption editor routes into `EditorClipAdjustmentPanelHost`.
+- The extracted host also owns the local transform and mask preview overlays so
+  clip-adjustment panel callbacks and preview affordances stay together.
+- Verification: `:app:compileDebugKotlin`, full debug-unit/debug APK/release
+  APK/androidTest Gradle matrix, release metadata, signature, zipalign, and
+  APK-based 16 KB gates passed.
+- Next roadmap item: continue P1 EditorScreen panel router decomposition for
+  the remaining utility sheets and always-on overlay routes.
 
 2026-05-17 autonomous continuation:
 

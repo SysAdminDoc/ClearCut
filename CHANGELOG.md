@@ -1,5 +1,25 @@
 # Changelog
 
+## v3.74.29 — 2026-06-04
+
+### Clip adjustment panel router host extraction
+- Added `EditorClipAdjustmentPanelHost` to own transform, crop, effect
+  adjustment, color grading, audio mixer, keyframe, speed curve, mask, blend
+  mode, PiP preset, chroma key, and caption editor routes.
+- Moved transform and mask preview overlays into the same clip-adjustment host
+  so the panel cluster keeps its local preview affordances together.
+- Reduced the main `EditorScreen` body to a host call for this route cluster,
+  while preserving shared inputs for selected clip, playhead, and context-only
+  feedback.
+- Left utility sheets and always-on overlays in `EditorScreen` for the next
+  decomposition pass.
+- Bumped runtime metadata to `versionName 3.74.29` / `versionCode 166`.
+- Verification: `git diff --check`, `scripts/verify_release_artifacts.py`,
+  APK-based 16 KB checks for debug/release, `apksigner verify` for
+  debug/release, `zipalign -c -P 16 -v 4` for debug/release/androidTest,
+  `:app:compileDebugKotlin`, and `:app:testDebugUnitTest :app:assembleDebug
+  :app:assembleRelease :app:assembleDebugAndroidTest` passed.
+
 ## v3.74.28 — 2026-06-04
 
 ### AI panel router host extraction

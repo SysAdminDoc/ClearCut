@@ -7,7 +7,7 @@ Last consolidated: 2026-06-04.
 
 ## Current Delivered Baseline
 
-- Current version: v3.74.28 (`versionCode` 165).
+- Current version: v3.74.29 (`versionCode` 166).
 - Multi-track Android NLE with project gallery, editor, timeline, preview,
   effects, transitions, text, captions, audio, export, settings, templates,
   project archive/import, and diagnostic bundle surfaces.
@@ -110,6 +110,10 @@ Last consolidated: 2026-06-04.
   routes now live in `EditorPrimaryPanelHost`.
 - AI panel router host extraction shipped in v3.74.28: AI tools and Cut
   Assistant review routes now live in `EditorAiPanelHost`.
+- Clip adjustment panel router host extraction shipped in v3.74.29: transform,
+  crop, effect adjustment, color grading, audio mixer, keyframe, speed curve,
+  mask, blend mode, PiP, chroma key, caption editor, and local transform/mask
+  overlay routes now live in `EditorClipAdjustmentPanelHost`.
 
 ## Preserved Historical Detail
 
