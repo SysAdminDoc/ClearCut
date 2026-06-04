@@ -355,10 +355,8 @@ data class UndoAction(
     val timelineMarkers: List<TimelineMarker> = emptyList(),
     val chapterMarkers: List<ChapterMarker> = emptyList(),
     val drawingPaths: List<com.novacut.editor.model.DrawingPath> = emptyList(),
-    // Restoring the playhead with the rest of the state prevents a scrub to
-    // an orphan timeline position after undoing a clip deletion or merge.
-    // Default 0 so callers that don't capture it (e.g. older serialization
-    // paths, if any) still construct a valid record.
+    val beatMarkers: List<Long> = emptyList(),
+    val trackedObjects: List<com.novacut.editor.model.TrackedObject> = emptyList(),
     val playheadMs: Long = 0L
 )
 
@@ -4084,6 +4082,8 @@ class EditorViewModel @Inject constructor(
             timelineMarkers = _state.value.timelineMarkers.toList(),
             chapterMarkers = _state.value.chapterMarkers.toList(),
             drawingPaths = _state.value.drawingPaths.toList(),
+            beatMarkers = _state.value.beatMarkers.toList(),
+            trackedObjects = _state.value.trackedObjects.toList(),
             playheadMs = _playheadMs.value
         )
 
@@ -4095,6 +4095,8 @@ class EditorViewModel @Inject constructor(
                 timelineMarkers = action.timelineMarkers,
                 chapterMarkers = action.chapterMarkers,
                 drawingPaths = action.drawingPaths,
+                beatMarkers = action.beatMarkers,
+                trackedObjects = action.trackedObjects,
                 undoStack = undoStack.dropLast(1),
                 redoStack = (it.redoStack + currentAction).takeLast(50)
             ))
@@ -4128,6 +4130,8 @@ class EditorViewModel @Inject constructor(
             timelineMarkers = _state.value.timelineMarkers.toList(),
             chapterMarkers = _state.value.chapterMarkers.toList(),
             drawingPaths = _state.value.drawingPaths.toList(),
+            beatMarkers = _state.value.beatMarkers.toList(),
+            trackedObjects = _state.value.trackedObjects.toList(),
             playheadMs = _playheadMs.value
         )
 
@@ -4139,6 +4143,8 @@ class EditorViewModel @Inject constructor(
                 timelineMarkers = action.timelineMarkers,
                 chapterMarkers = action.chapterMarkers,
                 drawingPaths = action.drawingPaths,
+                beatMarkers = action.beatMarkers,
+                trackedObjects = action.trackedObjects,
                 redoStack = redoStack.dropLast(1),
                 undoStack = (it.undoStack + currentAction).takeLast(50)
             ))
@@ -4369,6 +4375,8 @@ class EditorViewModel @Inject constructor(
                 timelineMarkers = state.timelineMarkers.toList(),
                 chapterMarkers = state.chapterMarkers.toList(),
                 drawingPaths = state.drawingPaths.toList(),
+                beatMarkers = state.beatMarkers.toList(),
+                trackedObjects = state.trackedObjects.toList(),
                 playheadMs = state.playheadMs
             )
             state.copy(

@@ -371,7 +371,15 @@ class AiToolsDelegate(
         }
         saveUndoState("AI auto captions")
         val overlays = withContext(Dispatchers.Default) { aiFeatures.captionsToOverlays(captions) }
-        stateFlow.update { it.copy(textOverlays = it.textOverlays + overlays) }
+        stateFlow.update { state ->
+            val existing = state.textOverlays
+            val deduped = overlays.filter { new ->
+                existing.none { old ->
+                    old.startTimeMs < new.endTimeMs && old.endTimeMs > new.startTimeMs
+                }
+            }
+            state.copy(textOverlays = existing + deduped)
+        }
         saveProject()
         val source = if (useWhisper) "Whisper" else "energy detection"
         showToast("Added ${captions.size} captions ($source)")

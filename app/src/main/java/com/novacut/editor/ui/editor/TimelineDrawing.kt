@@ -18,6 +18,7 @@ internal fun DrawScope.drawTimeRuler(
     height: Float,
     textMeasurer: TextMeasurer
 ) {
+    if (pixelsPerMs <= 0f || !pixelsPerMs.isFinite() || width <= 0f) return
     val intervalMs = when {
         pixelsPerMs > 0.5f -> 1000L
         pixelsPerMs > 0.1f -> 5000L
@@ -72,7 +73,8 @@ internal fun DrawScope.drawTimelineWaveform(samples: List<Float>, color: Color) 
 
     for (i in 0 until steps) {
         val sampleIndex = (i * samplesPerStep).toInt().coerceIn(0, samples.size - 1)
-        val amplitude = samples[sampleIndex].coerceIn(0f, 1f)
+        val raw = samples[sampleIndex]
+        val amplitude = if (raw.isFinite()) raw.coerceIn(0f, 1f) else 0f
         val barH = (amplitude * maxAmp).coerceAtLeast(1f)
         val x = i * 3f
 

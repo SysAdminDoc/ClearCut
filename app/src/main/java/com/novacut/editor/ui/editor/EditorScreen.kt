@@ -208,7 +208,7 @@ fun EditorScreen(
 
     val focusRequester = remember { FocusRequester() }
 
-    val hasOpenPanel = state.panels.hasOpenPanel || state.selectedEffectId != null || state.editingTextOverlayId != null
+    val hasOpenPanel = state.panels.hasOpenPanel || state.selectedEffectId != null || state.editingTextOverlayId != null || state.ai.cutAssistantReview != null
     val isTutorialOpen = state.panels.isOpen(PanelId.TUTORIAL)
     val hasClipSelection = state.selectedClipIds.isNotEmpty()
     val isClipMode = state.selectedClipId != null
@@ -405,8 +405,10 @@ fun EditorScreen(
                     event.key == Key.Spacebar -> { viewModel.togglePlayPause(); true }
                     // Delete/Backspace = delete clip
                     event.key == Key.Delete || event.key == Key.Backspace -> {
-                        if (state.selectedClipId != null) viewModel.deleteSelectedClip()
-                        true
+                        if (state.selectedClipId != null) {
+                            viewModel.deleteSelectedClip()
+                            true
+                        } else false
                     }
                     // M = add marker
                     event.key == Key.M && !event.isCtrlPressed -> { viewModel.addTimelineMarker(); true }
