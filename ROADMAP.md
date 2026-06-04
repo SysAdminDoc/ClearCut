@@ -8,7 +8,7 @@ Active roadmap for forward-looking work. Shipped work is summarized in
 [RESEARCH_REPORT.md](RESEARCH_REPORT.md), and detailed historical plans are
 archived under [docs/archive](docs/archive/).
 
-Current version: **v3.74.36** (`versionCode` 173). Last consolidated:
+Current version: **v3.74.37** (`versionCode` 174). Last consolidated:
 2026-06-04.
 
 > Last researched: Cycle 10 - 2026-06-04.
@@ -74,6 +74,10 @@ cloud backup while including them in Android 12+ device transfer.
 v3.74.36 closed the P0 fatal-crash capture item by installing a global
 uncaught-exception handler that writes bounded, redacted local crash records and
 adds them to user-triggered diagnostic ZIP exports.
+v3.74.37 closed the active timeline-refactor lane by moving visible clip layout,
+clip-content thresholds, trim/slip/slide drag-action policy, and slide snap
+target/haptic decisions out of `Timeline.kt` into focused helpers with JVM
+coverage.
 
 ## Current State
 
@@ -167,6 +171,10 @@ adds them to user-triggered diagnostic ZIP exports.
   exceptions now write a bounded, redacted JSON breadcrumb under
   `filesDir/diagnostics/crashes`, chain to the previous platform handler, and
   appear as `crash-records.json` only when the user exports a diagnostic ZIP.
+- v3.74.37 completes the active timeline-refactor lane by extracting visible
+  clip bounds, clip badge thresholds, unified trim/slip/slide drag-action
+  resolution, slide snap target collection, and snap haptic policy from
+  `Timeline.kt` into `TimelineClipLayout` with focused JVM tests.
 
 ## Source Archives
 
@@ -179,7 +187,7 @@ adds them to user-triggered diagnostic ZIP exports.
 
 | Priority | Work | Exit criteria |
 |---|---|---|
-| P1 | Timeline refactor | Continue after v3.74.32 by extracting clip layout and remaining gesture bodies from `Timeline.kt` into focused files with tests where practical. |
+| ✅ P1 | Timeline refactor | Implemented in v3.74.37: clip layout, badge visibility, trim/slip/slide drag-action policy, and slide snap target/haptic decisions now live outside `Timeline.kt` with focused JVM tests. |
 | P1 | Model activation gates | For every active AI/model dependency, keep source locator, SHA-256, license posture, delivery mode, F-Droid posture, and runtime checksum behavior current in `docs/models.md`. |
 | P2 | Project color policy consumers | Wire `ProjectColorPolicy` into Settings/export confidence once the Room/autosave migration plan is ready. |
 | P2 | Diagnostic ZIP timeline-shape toggle | Expose the privacy-preserving timeline-shape summary as an explicit Settings export option. |

@@ -7,7 +7,7 @@ Last consolidated: 2026-06-04.
 
 ## Current Delivered Baseline
 
-- Current version: v3.74.36 (`versionCode` 173).
+- Current version: v3.74.37 (`versionCode` 174).
 - Multi-track Android NLE with project gallery, editor, timeline, preview,
   effects, transitions, text, captions, audio, export, settings, templates,
   project archive/import, and diagnostic bundle surfaces.
@@ -143,6 +143,10 @@ Last consolidated: 2026-06-04.
   uncaught-exception handler, writes bounded redacted crash records under
   `filesDir/diagnostics/crashes`, chains to the previous platform handler, and
   includes `crash-records.json` only in user-triggered diagnostic ZIP exports.
+- Timeline clip layout and gesture extraction shipped in v3.74.37: visible clip
+  bounds, badge thresholds, trim/slip/slide drag-action policy, slide snap target
+  collection, and snap haptic checks now live outside `Timeline.kt` with focused
+  JVM coverage.
 
 ## Preserved Historical Detail
 

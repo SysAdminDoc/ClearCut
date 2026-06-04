@@ -1,5 +1,25 @@
 # Changelog
 
+## v3.74.37 — 2026-06-04
+
+### Timeline clip layout and gesture helper extraction
+- Added `TimelineClipLayout` helpers for visible clip pixel bounds, clip-content
+  badge thresholds, unified drag-zone selection, drag-action resolution, slide
+  snap targets, and slide snap haptic policy.
+- Updated `Timeline.kt` to delegate collapsed/expanded clip layout and trim,
+  slip, slide, and snap gesture decisions to the focused helper layer while
+  keeping Compose callback wiring in the renderer.
+- Guarded edge-trim gesture actions against invalid sub-minimum clip ranges
+  before dispatching trim callbacks.
+- Added focused JVM coverage for clip visibility, compact badge thresholds,
+  trim-handle/body gesture dispatch, trim clamps, slip/slide deltas, optional
+  beat/marker snap targets, and snap haptic thresholds.
+- Bumped runtime metadata to `versionName 3.74.37` / `versionCode 174`.
+- Verification: focused `:app:testDebugUnitTest --tests
+  com.novacut.editor.ui.editor.TimelineClipLayoutTest --tests
+  com.novacut.editor.ui.editor.TimelineEditingTest` passed. APK assemble was
+  not run for this batch.
+
 ## v3.74.36 — 2026-06-04
 
 ### Fatal-crash diagnostic breadcrumbs

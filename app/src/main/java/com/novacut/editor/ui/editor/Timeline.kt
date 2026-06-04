@@ -68,8 +68,6 @@ private const val BASE_SCALE = 0.15f // pixels per ms at zoom 1.0
 private const val MIN_TIMELINE_ZOOM = 0.01f
 private const val MAX_TIMELINE_ZOOM = 10f
 
-private enum class ClipGestureZone { TRIM_LEFT, TRIM_RIGHT, SLIDE, SLIP, NONE }
-
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun Timeline(
@@ -921,13 +919,16 @@ fun Timeline(
                         ) {
                             if (track.isCollapsed) {
                                 for (clip in track.clips) {
-                                    val clipStartPx = (clip.timelineStartMs - scrollOffsetMs) * pixelsPerMs
-                                    val clipWidthPx = clip.durationMs * pixelsPerMs
-                                    if (clipStartPx + clipWidthPx > 0 && clipStartPx < timelineWidthPx) {
+                                    val clipLayout = timelineClipLayout(
+                                        clip = clip,
+                                        scrollOffsetMs = scrollOffsetMs,
+                                        pixelsPerMs = pixelsPerMs
+                                    )
+                                    if (clipLayout.isVisibleIn(timelineWidthPx)) {
                                         Box(
                                             modifier = Modifier
-                                                .offset(x = with(density) { clipStartPx.toDp() })
-                                                .size(width = with(density) { clipWidthPx.toDp() }, height = 16.dp)
+                                                .offset(x = with(density) { clipLayout.startPx.toDp() })
+                                                .size(width = with(density) { clipLayout.widthPx.toDp() }, height = 16.dp)
                                                 .padding(vertical = 3.dp)
                                                 .clip(RoundedCornerShape(2.dp))
                                                 .background(trackColor.copy(alpha = 0.6f))
@@ -956,11 +957,16 @@ fun Timeline(
                             }
                             // Draw clips
                             track.clips.forEachIndexed { clipIdx, clip ->
-                                val clipStartPx = ((clip.timelineStartMs - scrollOffsetMs) * pixelsPerMs)
-                                val clipWidthPx = (clip.durationMs * pixelsPerMs)
+                                val clipLayout = timelineClipLayout(
+                                    clip = clip,
+                                    scrollOffsetMs = scrollOffsetMs,
+                                    pixelsPerMs = pixelsPerMs
+                                )
+                                val clipStartPx = clipLayout.startPx
+                                val clipWidthPx = clipLayout.widthPx
                                 val nextClipTransition = track.clips.getOrNull(clipIdx + 1)?.transition
 
-                                if (clipStartPx + clipWidthPx > 0 && clipStartPx < timelineWidthPx) {
+                                if (clipLayout.isVisibleIn(timelineWidthPx)) {
                                     val isSelected = clip.id == selectedClipId
                                     val isMultiSelected = clip.id in selectedClipIds
                                     val clipColor = trackColor
@@ -968,12 +974,13 @@ fun Timeline(
                                         rawName = clip.sourceUri.lastPathSegment,
                                         fallback = clipLabelForType(track.type)
                                     )
-                                    val showTrackBadge = clipWidthPx > 132f
-                                    val showSpeedBadge = clip.speed != 1f && clipWidthPx > 164f
-                                    val showEffectsBadge = clip.effects.isNotEmpty() && clipWidthPx > 152f
-                                    val showClipName = clipWidthPx > 84f
-                                    val showKeyframeBadge = clip.keyframes.isNotEmpty() && clipWidthPx > 152f
-                                    val compactClipBadges = clipWidthPx < 150f
+                                    val contentVisibility = timelineClipContentVisibility(clipWidthPx)
+                                    val showTrackBadge = contentVisibility.showTrackBadge
+                                    val showSpeedBadge = clip.speed != 1f && contentVisibility.showSpeedBadge
+                                    val showEffectsBadge = clip.effects.isNotEmpty() && contentVisibility.showEffectsBadge
+                                    val showClipName = contentVisibility.showClipName
+                                    val showKeyframeBadge = clip.keyframes.isNotEmpty() && contentVisibility.showKeyframeBadge
+                                    val compactClipBadges = contentVisibility.compactBadges
                                     val clipContentPaddingHorizontal = if (compactClipBadges) 6.dp else 8.dp
                                     val clipContentPaddingVertical = if (compactClipBadges) 6.dp else 7.dp
                                     val clipTypeLabel = clipLabelForType(track.type)
@@ -1215,93 +1222,100 @@ fun Timeline(
                                                 // trim-edge dragging was unresponsive on many devices.
                                                 if (!track.isLocked) Modifier.pointerInput(clip.id, currentIsTrimMode) {
                                                     val trimHandleWidthPx = trimHandleTouchWidth.toPx()
-                                                    var zone: ClipGestureZone = ClipGestureZone.NONE
+                                                    var zone: TimelineClipGestureZone = TimelineClipGestureZone.NONE
                                                     detectDragGestures(
                                                         onDragStart = { offset ->
                                                             val ppm = currentZoomLevel * BASE_SCALE
                                                             val currentClip = currentTracks.flatMap { it.clips }
                                                                 .firstOrNull { it.id == clip.id }
-                                                            val clipWidthLocal = if (currentClip != null && ppm > 0.0001f) {
-                                                                currentClip.durationMs * ppm
-                                                            } else 0f
-                                                            zone = when {
-                                                                offset.x < trimHandleWidthPx -> ClipGestureZone.TRIM_LEFT
-                                                                offset.x > clipWidthLocal - trimHandleWidthPx -> ClipGestureZone.TRIM_RIGHT
-                                                                currentIsTrimMode -> ClipGestureZone.SLIP
-                                                                else -> ClipGestureZone.SLIDE
-                                                            }
+                                                            val clipWidthLocal = currentClip?.durationMs?.times(ppm) ?: 0f
+                                                            zone = resolveTimelineClipGestureZone(
+                                                                touchXPx = offset.x,
+                                                                clipWidthPx = clipWidthLocal,
+                                                                trimHandleWidthPx = trimHandleWidthPx,
+                                                                isTrimMode = currentIsTrimMode
+                                                            )
+                                                            if (zone == TimelineClipGestureZone.NONE) return@detectDragGestures
                                                             onClipSelected(clip.id, track.id)
                                                             when (zone) {
-                                                                ClipGestureZone.TRIM_LEFT,
-                                                                ClipGestureZone.TRIM_RIGHT -> onTrimDragStarted()
-                                                                ClipGestureZone.SLIP -> onSlipEditStarted()
-                                                                ClipGestureZone.SLIDE -> onSlideEditStarted()
-                                                                ClipGestureZone.NONE -> Unit
+                                                                TimelineClipGestureZone.TRIM_LEFT,
+                                                                TimelineClipGestureZone.TRIM_RIGHT -> onTrimDragStarted()
+                                                                TimelineClipGestureZone.SLIP -> onSlipEditStarted()
+                                                                TimelineClipGestureZone.SLIDE -> onSlideEditStarted()
+                                                                TimelineClipGestureZone.NONE -> Unit
                                                             }
                                                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                                         },
                                                         onDragEnd = {
                                                             when (zone) {
-                                                                ClipGestureZone.TRIM_LEFT,
-                                                                ClipGestureZone.TRIM_RIGHT -> onTrimDragEnded()
-                                                                ClipGestureZone.SLIP -> onSlipEditEnded()
-                                                                ClipGestureZone.SLIDE -> onSlideEditEnded()
-                                                                ClipGestureZone.NONE -> Unit
+                                                                TimelineClipGestureZone.TRIM_LEFT,
+                                                                TimelineClipGestureZone.TRIM_RIGHT -> onTrimDragEnded()
+                                                                TimelineClipGestureZone.SLIP -> onSlipEditEnded()
+                                                                TimelineClipGestureZone.SLIDE -> onSlideEditEnded()
+                                                                TimelineClipGestureZone.NONE -> Unit
                                                             }
-                                                            zone = ClipGestureZone.NONE
+                                                            zone = TimelineClipGestureZone.NONE
                                                         },
                                                         onDragCancel = {
                                                             when (zone) {
-                                                                ClipGestureZone.TRIM_LEFT,
-                                                                ClipGestureZone.TRIM_RIGHT -> onTrimDragEnded()
-                                                                ClipGestureZone.SLIP -> onSlipEditEnded()
-                                                                ClipGestureZone.SLIDE -> onSlideEditEnded()
-                                                                ClipGestureZone.NONE -> Unit
+                                                                TimelineClipGestureZone.TRIM_LEFT,
+                                                                TimelineClipGestureZone.TRIM_RIGHT -> onTrimDragEnded()
+                                                                TimelineClipGestureZone.SLIP -> onSlipEditEnded()
+                                                                TimelineClipGestureZone.SLIDE -> onSlideEditEnded()
+                                                                TimelineClipGestureZone.NONE -> Unit
                                                             }
-                                                            zone = ClipGestureZone.NONE
+                                                            zone = TimelineClipGestureZone.NONE
                                                         },
                                                         onDrag = { change, dragAmount ->
                                                             val ppm = currentZoomLevel * BASE_SCALE
                                                             if (ppm < 0.001f) return@detectDragGestures
                                                             val currentClip = currentTracks.flatMap { it.clips }
                                                                 .firstOrNull { it.id == clip.id } ?: return@detectDragGestures
-                                                            val deltaMs = (dragAmount.x / ppm).toLong()
-                                                            when (zone) {
-                                                                ClipGestureZone.TRIM_LEFT -> {
-                                                                    val newStart = (currentClip.trimStartMs + deltaMs)
-                                                                        .coerceAtLeast(0L)
-                                                                        .coerceAtMost(currentClip.trimEndMs - 100L)
-                                                                    onTrimChanged(clip.id, newStart, null)
+                                                            when (
+                                                                val action = resolveTimelineClipGestureAction(
+                                                                    zone = zone,
+                                                                    clip = currentClip,
+                                                                    deltaXPx = dragAmount.x,
+                                                                    pixelsPerMs = ppm
+                                                                )
+                                                            ) {
+                                                                is TimelineClipGestureAction.TrimLeft -> {
+                                                                    onTrimChanged(clip.id, action.trimStartMs, null)
                                                                     change.consume()
                                                                 }
-                                                                ClipGestureZone.TRIM_RIGHT -> {
-                                                                    val newEnd = (currentClip.trimEndMs + deltaMs)
-                                                                        .coerceIn(
-                                                                            currentClip.trimStartMs + 100L,
-                                                                            currentClip.sourceDurationMs
-                                                                        )
-                                                                    onTrimChanged(clip.id, null, newEnd)
+                                                                is TimelineClipGestureAction.TrimRight -> {
+                                                                    onTrimChanged(clip.id, null, action.trimEndMs)
                                                                     change.consume()
                                                                 }
-                                                                ClipGestureZone.SLIP -> {
-                                                                    onSlipClip(clip.id, deltaMs)
+                                                                is TimelineClipGestureAction.Slip -> {
+                                                                    onSlipClip(clip.id, action.deltaMs)
                                                                     change.consume()
                                                                 }
-                                                                ClipGestureZone.SLIDE -> {
-                                                                    onSlideClip(clip.id, deltaMs)
+                                                                is TimelineClipGestureAction.Slide -> {
+                                                                    onSlideClip(clip.id, action.deltaMs)
                                                                     val snapThreshMs = (12.dp.toPx() / ppm).toLong()
-                                                                    val snapTargetsLocal = currentTracks
-                                                                        .flatMap { t -> t.clips.filter { it.id != clip.id }
-                                                                            .flatMap { listOf(it.timelineStartMs, it.timelineEndMs) } }
-                                                                        .plus(currentPlayheadMs).plus(0L)
-                                                                        .let { if (snapToBeat) it + beatMarkers else it }
-                                                                        .let { if (snapToMarker) it + markers.map { m -> m.timeMs } else it }
-                                                                    if (findSnapTarget(currentClip.timelineStartMs + deltaMs, snapTargetsLocal, snapThreshMs) != null) {
+                                                                    val snapTargetsLocal = timelineSlideSnapTargets(
+                                                                        tracks = currentTracks,
+                                                                        draggedClipId = clip.id,
+                                                                        playheadMs = currentPlayheadMs,
+                                                                        beatMarkers = beatMarkers,
+                                                                        markers = markers,
+                                                                        snapToBeat = snapToBeat,
+                                                                        snapToMarker = snapToMarker
+                                                                    )
+                                                                    if (
+                                                                        shouldTriggerTimelineSlideSnapHaptic(
+                                                                            currentStartMs = currentClip.timelineStartMs,
+                                                                            deltaMs = action.deltaMs,
+                                                                            snapTargets = snapTargetsLocal,
+                                                                            snapThresholdMs = snapThreshMs
+                                                                        )
+                                                                    ) {
                                                                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                                                     }
                                                                     change.consume()
                                                                 }
-                                                                ClipGestureZone.NONE -> Unit
+                                                                null -> Unit
                                                             }
                                                         }
                                                     )
