@@ -64,6 +64,7 @@ import com.novacut.editor.engine.AiUsageLedger
 import com.novacut.editor.engine.EncoderCapabilityProbe
 import com.novacut.editor.engine.ExportColorConfidenceEngine
 import com.novacut.editor.engine.ExportState
+import com.novacut.editor.engine.ProjectColorPolicy
 import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.model.AspectRatio
 import com.novacut.editor.model.AudioCodec
@@ -102,6 +103,7 @@ fun ExportSheet(
     totalDurationMs: Long = 0L,
     smartRenderSummary: SmartRenderEngine.SmartRenderSummary? = null,
     sourceHdrSummary: ExportColorConfidenceEngine.SourceHdrSummary = ExportColorConfidenceEngine.SourceHdrSummary(),
+    projectColorPolicy: ProjectColorPolicy = ProjectColorPolicy.DEFAULT,
     aiUsageLedger: List<AiUsageLedger.Entry> = emptyList(),
     presentation: ExportSheetPresentation = ExportSheetPresentation.BOTTOM_SHEET,
     onConfigChanged: (ExportConfig) -> Unit,
@@ -157,14 +159,16 @@ fun ExportSheet(
         width,
         height,
         hdrEncodeSupport,
-        sourceHdrSummary
+        sourceHdrSummary,
+        projectColorPolicy
     ) {
         ExportColorConfidenceEngine.analyze(
             config = effectiveConfig,
             width = width,
             height = height,
             hdrSupport = hdrEncodeSupport,
-            sourceSummary = sourceHdrSummary
+            sourceSummary = sourceHdrSummary,
+            projectColorPolicy = projectColorPolicy
         )
     }
 

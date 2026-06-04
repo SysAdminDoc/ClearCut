@@ -296,6 +296,8 @@
     <string name="settings_default_aspect_ratio_description">Applied when you start a new project or template.</string>
     <string name="settings_default_codec">Default Codec</string>
     <string name="settings_default_codec_description">Pick the delivery format NovaCut suggests first.</string>
+    <string name="settings_project_color_policy">Project Color Policy</string>
+    <string name="settings_project_color_policy_description">Current default color intent used by export confidence checks.</string>
     <string name="settings_export_notifications">Export Notifications</string>
     <string name="settings_export_notifications_description">Check whether Android can show long-running export progress, completion, error, thermal, and cancel notifications.</string>
     <string name="settings_export_notifications_row">Notification delivery</string>

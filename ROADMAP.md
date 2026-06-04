@@ -8,7 +8,7 @@ Active roadmap for forward-looking work. Shipped work is summarized in
 [RESEARCH_REPORT.md](RESEARCH_REPORT.md), and detailed historical plans are
 archived under [docs/archive](docs/archive/).
 
-Current version: **v3.74.40** (`versionCode` 177). Last consolidated:
+Current version: **v3.74.41** (`versionCode` 178). Last consolidated:
 2026-06-04.
 
 > Last researched: Cycle 12 - 2026-06-04.
@@ -192,6 +192,13 @@ Actions emulator job that runs `NovaCutSmokeTest` through
   boots a hosted Android emulator and runs `NovaCutSmokeTest` through
   `connectedDebugAndroidTest`, covering project gallery, blank editor, media
   picker, export sheet, Settings, and privacy dashboard launch surfaces.
+- v3.74.40 adds Sharesheet-compatible incoming video/image/audio routing with
+  `ACTION_SEND` / `ACTION_SEND_MULTIPLE` manifest filters, centralized
+  `content://` media parsing, ordered multi-share handoff, and parser/manifest
+  JVM coverage.
+- v3.74.41 wires `ProjectColorPolicy` into Settings and export confidence using
+  the conservative default policy, so color-policy coherence warnings are
+  visible before the future per-project persistence migration.
 
 ## Source Archives
 
@@ -206,7 +213,7 @@ Actions emulator job that runs `NovaCutSmokeTest` through
 |---|---|---|
 | ✅ P1 | Timeline refactor | Implemented in v3.74.37: clip layout, badge visibility, trim/slip/slide drag-action policy, and slide snap target/haptic decisions now live outside `Timeline.kt` with focused JVM tests. |
 | ✅ P1 | Model activation gates | Implemented in v3.74.38: every AI tool has tested source/delivery/F-Droid/runtime-checksum posture, and planned unpinned models no longer advertise downloads. |
-| P2 | Project color policy consumers | Wire `ProjectColorPolicy` into Settings/export confidence once the Room/autosave migration plan is ready. |
+| ✅ P2 | Project color policy consumers | Implemented in v3.74.41: Settings now shows the current conservative project color policy, and export confidence accepts `ProjectColorPolicy` to surface policy coherence, HDR-pass-through, SDR-tone-map no-op, and HDR-to-SDR tone-map warnings without forcing a Room migration. |
 | P2 | Diagnostic ZIP timeline-shape toggle | Expose the privacy-preserving timeline-shape summary as an explicit Settings export option. |
 | P2 | Dependabot grouping and dependency freshness review | Group dependency updates by toolchain risk, evaluate auto-tagging from `CHANGELOG.md` headings, and stage the current Compose BOM / Room / Kotlin freshness batch only after the editor-state migration has a clean compile baseline. |
 | P2 | Fastlane changelog history | Populate `fastlane/metadata/.../changelogs/` from release history or document why the channel is unused. |

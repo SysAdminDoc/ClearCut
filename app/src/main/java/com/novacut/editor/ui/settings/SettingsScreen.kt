@@ -45,6 +45,7 @@ import androidx.core.content.ContextCompat
 import com.novacut.editor.NovaCutApp
 import com.novacut.editor.R
 import com.novacut.editor.engine.AppSettings
+import com.novacut.editor.engine.ProjectColorPolicy
 import com.novacut.editor.engine.segmentation.SegmentationModelState
 import com.novacut.editor.engine.whisper.WhisperModelState
 import com.novacut.editor.model.*
@@ -144,6 +145,7 @@ fun SettingsScreen(
         Spacer(Modifier.height(10.dp))
 
         // Export Defaults
+        val projectColorPolicy = ProjectColorPolicy.DEFAULT
         SettingsSection(
             title = stringResource(R.string.settings_export_defaults),
             description = stringResource(R.string.settings_export_defaults_description)
@@ -186,6 +188,26 @@ fun SettingsScreen(
                 options = listOf("H.264", "H.265 (HEVC)", "AV1", "VP9"),
                 onSelected = { viewModel.setDefaultCodec(listOf("H264", "HEVC", "AV1", "VP9")[it]) }
             )
+            SettingsTile(
+                icon = Icons.Default.Palette,
+                accent = Mocha.Teal,
+                label = stringResource(R.string.settings_project_color_policy),
+                description = stringResource(R.string.settings_project_color_policy_description)
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xs)
+                ) {
+                    SettingsStatusBadge(
+                        text = projectColorPolicy.workingColorSpace.displayName,
+                        accent = Mocha.Teal
+                    )
+                    SettingsStatusBadge(
+                        text = projectColorPolicy.displayTransform.displayName,
+                        accent = Mocha.Sapphire
+                    )
+                }
+            }
         }
 
         // Export Notifications

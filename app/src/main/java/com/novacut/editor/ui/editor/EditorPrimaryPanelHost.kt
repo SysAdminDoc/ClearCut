@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.zIndex
 import com.novacut.editor.R
 import com.novacut.editor.engine.ExportColorConfidenceEngine
+import com.novacut.editor.engine.ProjectColorPolicy
 import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.Effect
@@ -192,6 +193,7 @@ fun BoxScope.EditorPrimaryPanelHost(
             totalDurationMs = state.totalDurationMs,
             smartRenderSummary = exportSmartRenderSummary,
             sourceHdrSummary = sourceHdrSummary,
+            projectColorPolicy = ProjectColorPolicy.DEFAULT,
             aiUsageLedger = state.aiUsageLedger,
             presentation = if (useEmbeddedExportPane) {
                 ExportSheetPresentation.EMBEDDED_PANE

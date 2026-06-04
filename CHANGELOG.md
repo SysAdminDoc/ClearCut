@@ -1,5 +1,25 @@
 # Changelog
 
+## v3.74.41 — 2026-06-04
+
+### Project color policy consumers
+- Wired `ProjectColorPolicy` into `ExportColorConfidenceEngine` so export
+  confidence now emits deterministic chips and warnings for SDR tone-map
+  no-ops, HDR pass-through intent with HDR metadata off, and HDR-to-SDR
+  tone-map conflicts.
+- Threaded the policy through `ExportSheet` and the editor export panel using
+  the conservative default policy until per-project persistence lands.
+- Added a read-only Settings row showing the current project color policy so
+  the surface is visible without implying Room-backed project color controls
+  exist yet.
+- Added focused JVM coverage for the new policy warning paths and kept the
+  existing coherence table tests.
+- Bumped runtime metadata to `versionName 3.74.41` / `versionCode 178`.
+- Verification: focused `:app:testDebugUnitTest --tests
+  com.novacut.editor.engine.ExportColorConfidenceEngineTest --tests
+  com.novacut.editor.engine.ProjectColorPolicyTest` and `git diff --check`
+  passed. APK assemble was not run for this batch.
+
 ## v3.74.40 — 2026-06-04
 
 ### Sharesheet incoming media routing

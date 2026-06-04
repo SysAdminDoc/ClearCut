@@ -131,6 +131,45 @@ class ExportColorConfidenceEngineTest {
     }
 
     @Test
+    fun hdrProjectPolicyWarnsWhenExportHdrMetadataIsOff() {
+        val report = ExportColorConfidenceEngine.analyze(
+            config = ExportConfig(codec = VideoCodec.HEVC, hdr10PlusMetadata = false),
+            width = 1920,
+            height = 1080,
+            hdrSupport = ExportColorConfidenceEngine.HdrEncodeSupport(setOf("HDR10+")),
+            projectColorPolicy = ProjectColorPolicy(
+                workingColorSpace = ProjectColorPolicy.WorkingColorSpace.HDR10_BT2020_PQ,
+                displayTransform = ProjectColorPolicy.DisplayTransform.NONE
+            )
+        )
+
+        assertTrue(report.hasWarnings)
+        assertTrue(report.warnings.any { it.contains("HDR pass-through") })
+        assertTrue(report.chips.any { chip ->
+            chip.label == "Project HDR intent" &&
+                chip.tone == ExportColorConfidenceEngine.Tone.WARNING
+        })
+    }
+
+    @Test
+    fun sdrProjectPolicyWarnsWhenToneMapIsSelected() {
+        val report = ExportColorConfidenceEngine.analyze(
+            config = ExportConfig(codec = VideoCodec.H264, hdr10PlusMetadata = false),
+            width = 1920,
+            height = 1080,
+            hdrSupport = ExportColorConfidenceEngine.HdrEncodeSupport(),
+            projectColorPolicy = ProjectColorPolicy(
+                workingColorSpace = ProjectColorPolicy.WorkingColorSpace.SDR_BT709,
+                displayTransform = ProjectColorPolicy.DisplayTransform.BT2390_TONEMAP
+            )
+        )
+
+        assertTrue(report.hasWarnings)
+        assertTrue(report.warnings.any { it.contains("working space is SDR") })
+        assertTrue(report.chips.any { chip -> chip.label == "Color policy warning" })
+    }
+
+    @Test
     fun hevcHdr10PlusSupportReportsDynamicMetadata() {
         val report = ExportColorConfidenceEngine.analyze(
             config = ExportConfig(codec = VideoCodec.HEVC, hdr10PlusMetadata = true),

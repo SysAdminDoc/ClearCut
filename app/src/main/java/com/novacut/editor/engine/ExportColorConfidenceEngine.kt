@@ -60,7 +60,8 @@ object ExportColorConfidenceEngine {
         width: Int,
         height: Int,
         hdrSupport: HdrEncodeSupport,
-        sourceSummary: SourceHdrSummary = SourceHdrSummary()
+        sourceSummary: SourceHdrSummary = SourceHdrSummary(),
+        projectColorPolicy: ProjectColorPolicy = ProjectColorPolicy.DEFAULT
     ): Report {
         val chips = mutableListOf<Chip>()
         val warnings = mutableListOf<String>()
@@ -85,6 +86,7 @@ object ExportColorConfidenceEngine {
                     tone = Tone.INFO
                 )
             }
+            addProjectColorPolicyChips(projectColorPolicy, config, chips, warnings)
             return Report(chips = chips, warnings = warnings)
         }
 
@@ -95,6 +97,7 @@ object ExportColorConfidenceEngine {
                 tone = Tone.WARNING
             )
             warnings += "${config.codec.label} cannot carry HDR in NovaCut exports. Switch to HEVC, AV1, or VP9 before preserving HDR metadata."
+            addProjectColorPolicyChips(projectColorPolicy, config, chips, warnings)
             return Report(chips = chips, warnings = warnings)
         }
 
@@ -162,6 +165,8 @@ object ExportColorConfidenceEngine {
             tone = Tone.INFO
         )
 
+        addProjectColorPolicyChips(projectColorPolicy, config, chips, warnings)
+
         return Report(chips = chips, warnings = warnings.distinct())
     }
 
@@ -228,6 +233,51 @@ object ExportColorConfidenceEngine {
 
     private fun SourceHdrSummary.formatList(): String =
         supportedFormats.sorted().joinToString(", ").ifBlank { "HDR" }
+
+    private fun addProjectColorPolicyChips(
+        policy: ProjectColorPolicy,
+        config: ExportConfig,
+        chips: MutableList<Chip>,
+        warnings: MutableList<String>
+    ) {
+        when (policy.coherence()) {
+            ProjectColorPolicy.Coherence.COHERENT -> {
+                chips += Chip(
+                    label = "Project color",
+                    detail = "${policy.workingColorSpace.displayName}; ${policy.displayTransform.displayName}.",
+                    tone = Tone.INFO
+                )
+            }
+            ProjectColorPolicy.Coherence.SDR_TONEMAP_NOOP -> {
+                chips += Chip(
+                    label = "Color policy warning",
+                    detail = "${policy.displayTransform.displayName} is selected for an SDR project.",
+                    tone = Tone.WARNING
+                )
+                warnings += "Project color policy applies tone mapping even though the working space is SDR."
+            }
+            ProjectColorPolicy.Coherence.HDR_PASSTHROUGH -> {
+                chips += Chip(
+                    label = "Project HDR intent",
+                    detail = "${policy.workingColorSpace.displayName} is set to pass through.",
+                    tone = if (config.hdr10PlusMetadata) Tone.GOOD else Tone.WARNING
+                )
+                if (!config.hdr10PlusMetadata) {
+                    warnings += "Project color policy is HDR pass-through, but Preserve HDR Metadata is off for this export."
+                }
+            }
+            ProjectColorPolicy.Coherence.HDR_TO_SDR_TONEMAP -> {
+                chips += Chip(
+                    label = "Project tone-map",
+                    detail = "${policy.workingColorSpace.displayName} uses ${policy.displayTransform.displayName}.",
+                    tone = if (config.hdr10PlusMetadata) Tone.WARNING else Tone.INFO
+                )
+                if (config.hdr10PlusMetadata) {
+                    warnings += "Project color policy tone-maps HDR to SDR, but Preserve HDR Metadata is on for this export."
+                }
+            }
+        }
+    }
 
     private fun String?.isApvMimeType(): Boolean =
         this?.equals(EncoderCapabilityProbe.MIME_APV, ignoreCase = true) == true
