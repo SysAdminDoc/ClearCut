@@ -14,6 +14,50 @@ import org.junit.Test
 class TimelineEditingTest {
 
     @Test
+    fun `long press opens compound clips through ViewModel callback`() {
+        var openedClipId: String? = null
+        var toggledClipId: String? = null
+
+        val result = dispatchTimelineClipLongPress(
+            clipId = "compound",
+            isCompound = true,
+            onOpenCompoundClip = { clipId ->
+                openedClipId = clipId
+                true
+            },
+            onToggleMultiSelect = { clipId -> toggledClipId = clipId }
+        )
+
+        assertEquals(TimelineClipLongPressResult.OPENED_COMPOUND, result)
+        assertEquals("compound", openedClipId)
+        assertNull(toggledClipId)
+    }
+
+    @Test
+    fun `long press keeps multi-select fallback for regular clips and rejected compound opens`() {
+        var regularToggledClipId: String? = null
+        val regularResult = dispatchTimelineClipLongPress(
+            clipId = "regular",
+            isCompound = false,
+            onOpenCompoundClip = { true },
+            onToggleMultiSelect = { clipId -> regularToggledClipId = clipId }
+        )
+
+        var rejectedToggledClipId: String? = null
+        val rejectedResult = dispatchTimelineClipLongPress(
+            clipId = "compound",
+            isCompound = true,
+            onOpenCompoundClip = { false },
+            onToggleMultiSelect = { clipId -> rejectedToggledClipId = clipId }
+        )
+
+        assertEquals(TimelineClipLongPressResult.TOGGLED_MULTI_SELECT, regularResult)
+        assertEquals("regular", regularToggledClipId)
+        assertEquals(TimelineClipLongPressResult.TOGGLED_MULTI_SELECT, rejectedResult)
+        assertEquals("compound", rejectedToggledClipId)
+    }
+
+    @Test
     fun `leading trim moves the clip start on the timeline`() {
         val clip = clip(
             id = "clip",

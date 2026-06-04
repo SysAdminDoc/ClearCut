@@ -39,24 +39,32 @@ private val noClipActions = listOf(
     RadialAction("snapshot", Icons.Default.CameraAlt, "Snapshot")
 )
 
-private val clipActions = listOf(
-    RadialAction("split", Icons.Default.ContentCut, "Split"),
-    RadialAction("duplicate", Icons.Default.ContentCopy, "Duplicate"),
-    RadialAction("effects", Icons.Default.AutoFixHigh, "Effects"),
-    RadialAction("speed", Icons.Default.Speed, "Speed"),
-    RadialAction("transform", Icons.Default.Transform, "Transform"),
-    RadialAction("delete", Icons.Default.Delete, "Delete")
-)
+private fun clipActions(includeOpenCompound: Boolean): List<RadialAction> = buildList {
+    if (includeOpenCompound) {
+        add(RadialAction("open_compound", Icons.Default.FileOpen, "Open"))
+    }
+    add(RadialAction("split", Icons.Default.ContentCut, "Split"))
+    add(RadialAction("duplicate", Icons.Default.ContentCopy, "Duplicate"))
+    add(RadialAction("effects", Icons.Default.AutoFixHigh, "Effects"))
+    add(RadialAction("speed", Icons.Default.Speed, "Speed"))
+    add(RadialAction("transform", Icons.Default.Transform, "Transform"))
+    add(RadialAction("delete", Icons.Default.Delete, "Delete"))
+}
 
 @Composable
 fun RadialActionMenu(
     position: Offset,
     hasClipSelected: Boolean,
+    hasOpenableCompoundClipSelected: Boolean = false,
     onAction: (String) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val actions = if (hasClipSelected) clipActions else noClipActions
+    val actions = if (hasClipSelected) {
+        clipActions(includeOpenCompound = hasOpenableCompoundClipSelected)
+    } else {
+        noClipActions
+    }
     val radiusPx = with(LocalDensity.current) { 70.dp.toPx() }
     val buttonSizePx = with(LocalDensity.current) { 40.dp.toPx() }
     val centerDotSizePx = with(LocalDensity.current) { 20.dp.toPx() }

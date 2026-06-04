@@ -10,8 +10,8 @@ NovaCut is an Android video editor under package `com.novacut.editor`. The repo 
 
 Current live version evidence:
 
-- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 151`, `versionName = "3.74.14"`.
-- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.14`.
+- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 152`, `versionName = "3.74.15"`.
+- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.15`.
 - [README.md](README.md) and [ROADMAP.md](ROADMAP.md) both describe the v3.74.x line.
 - The 2026-05-17 continuation pushes each completed roadmap batch back to `origin/master`; verify `git status --short --branch` before assuming branch sync.
 
@@ -70,6 +70,10 @@ High-level modules and patterns:
 - Project-open media checks now run `MediaRelinkProbe`, store reports on
   `EditorState`, and route missing/unverified sources into Media Manager's
   existing relink workflow.
+- Compound clip navigation is now reachable from the editor: timeline
+  long-press opens compound clips through `EditorViewModel.openCompoundClip`,
+  selected compound clips expose an Open radial action, and the breadcrumb chip
+  renders from `EditorState` while predictive back pops the compound level.
 - The privacy posture is coherent: local-first by default, opt-in cloud paths, explicit model downloads, and F-Droid awareness.
 - Cross-editor interoperability is already a first-class goal through FCPXML/OTIO/EDL-style planning.
 
@@ -168,7 +172,21 @@ High-level modules and patterns:
   asset states, and reuses the existing replacement-picker relink flow.
 - Relink/add-media callbacks refresh the probe report so the media-health status
   is updated after source replacement.
-- Next roadmap item: P0 Release pipeline reactivation.
+- Next roadmap item after this batch was P0 Compound clip gesture closure.
+
+2026-06-04 compound-gesture continuation:
+
+- Completed the P0 Compound clip gesture closure in v3.74.15. Timeline
+  long-press now dispatches compound clips to `EditorViewModel.openCompoundClip`
+  and keeps regular clips on the existing multi-select path, with unit coverage
+  for successful compound opens and fallback behavior.
+- The preview radial menu now adds an Open action when the selected clip is a
+  compound clip and routes that action through the same ViewModel method.
+- `CompoundNavBreadcrumb` now renders from `EditorState.compoundBreadcrumbText`
+  above the timeline, and `openCompoundClip` clears clip selection, multi-select,
+  and the active tool before publishing depth so the existing BackHandler's
+  compound gate exits the nested level first.
+- Next roadmap item: P0 Caption translation panel call site.
 
 2026-05-17 autonomous continuation:
 

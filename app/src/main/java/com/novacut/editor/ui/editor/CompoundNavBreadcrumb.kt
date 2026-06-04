@@ -19,54 +19,42 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
-import com.novacut.editor.engine.CompoundNavStack
+import com.novacut.editor.ui.NovaCutTestTags
 import com.novacut.editor.ui.theme.Mocha
 
 /**
  * Breadcrumb chip rendered above the timeline whenever the editor is
  * inside a compound clip's sub-timeline (Tier C.13 UI / Highest-Value #5).
  *
- * Hidden when [stack] is at root depth — the timeline reads as the project
- * itself in that case and no chip is required.
+ * Hidden when [breadcrumbText] is blank — the timeline reads as the project
+ * itself in that case and no chip is required. The ViewModel owns breadcrumb
+ * formatting so the UI can consume the same immutable state that drives the
+ * predictive-back gate.
  *
  * Tap-anywhere-to-exit semantics: tapping the chip pops one level via
  * [onExit]. The leading back arrow doubles as the affordance hint; the
- * label shows the full path computed by
- * `CompoundNavStack.formatBreadcrumb(rootLabel, separator, fallbackParentName)`.
- *
  * Predictive-back integration lives at the EditorScreen level — gate the
- * existing `BackHandler` on `stack.depth > 0` so the system back gesture
+ * existing `BackHandler` on `compoundNavDepth > 0` so the system back gesture
  * also pops one level. This composable owns the visual affordance only.
  */
 @Composable
 fun CompoundNavBreadcrumb(
-    stack: CompoundNavStack,
+    breadcrumbText: String,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (stack.isAtRoot) return
-
-    val rootLabel = stringResource(R.string.compound_breadcrumb_root)
-    val separator = " " + stringResource(R.string.compound_breadcrumb_separator) + " "
-    val text = stack.formatBreadcrumb(
-        rootLabel = rootLabel,
-        separator = separator,
-        fallbackParentName = { depth ->
-            // Strings format takes an Int positional arg; Compose-side
-            // stringResource(...) is the loaders' job. The lambda is called
-            // outside the Composable context, so we lean on the raw format.
-            "Group $depth"
-        },
-    )
+    val text = breadcrumbText.takeIf { it.isNotBlank() } ?: return
 
     Row(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
+            .testTag(NovaCutTestTags.EDITOR_COMPOUND_BREADCRUMB)
             .clip(RoundedCornerShape(20.dp))
             .border(BorderStroke(1.dp, Mocha.Mauve.copy(alpha = 0.55f)), RoundedCornerShape(20.dp))
             .background(Mocha.Mauve.copy(alpha = 0.14f))
@@ -89,4 +77,3 @@ fun CompoundNavBreadcrumb(
         )
     }
 }
-

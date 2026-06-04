@@ -4488,9 +4488,7 @@ class EditorViewModel @Inject constructor(
     //
     // Live nav stack is held here as a mutable companion. The immutable
     // EditorState carries the depth + breadcrumb-text signals the UI reads
-    // (BackHandler predicate + CompoundNavBreadcrumb chip). Timeline gesture
-    // wiring still needs to call `openCompoundClip(clipId)` when a compound
-    // clip is long-pressed — that's the remaining `Timeline.kt` work.
+    // (BackHandler predicate + CompoundNavBreadcrumb chip).
 
     private val compoundNavStack = com.novacut.editor.engine.CompoundNavStack()
 
@@ -4501,7 +4499,7 @@ class EditorViewModel @Inject constructor(
             .firstOrNull { it.id == clipId } ?: return false
         if (!compoundNavStack.canPush(clip)) return false
         compoundNavStack.push(clip)
-        publishCompoundNavState()
+        publishCompoundNavState(clearSelection = true)
         return true
     }
 
@@ -4511,7 +4509,7 @@ class EditorViewModel @Inject constructor(
         publishCompoundNavState()
     }
 
-    private fun publishCompoundNavState() {
+    private fun publishCompoundNavState(clearSelection: Boolean = false) {
         val text = compoundNavStack.formatBreadcrumb(
             rootLabel = appContext.getString(R.string.compound_breadcrumb_root),
             separator = " " + appContext.getString(R.string.compound_breadcrumb_separator) + " ",
@@ -4520,6 +4518,10 @@ class EditorViewModel @Inject constructor(
             it.copy(
                 compoundNavDepth = compoundNavStack.depth,
                 compoundBreadcrumbText = text,
+                selectedClipId = if (clearSelection) null else it.selectedClipId,
+                selectedTrackId = if (clearSelection) null else it.selectedTrackId,
+                selectedClipIds = if (clearSelection) emptySet() else it.selectedClipIds,
+                currentTool = if (clearSelection) EditorTool.NONE else it.currentTool,
             )
         }
     }

@@ -913,9 +913,11 @@ fun EditorScreen(
                     RadialActionMenu(
                         position = radialMenuPosition,
                         hasClipSelected = isClipMode,
+                        hasOpenableCompoundClipSelected = selectedClip?.isCompound == true,
                         onAction = { actionId ->
                             showRadialMenu = false
                             when (actionId) {
+                                "open_compound" -> selectedClip?.id?.let { viewModel.openCompoundClip(it) }
                                 "add_media" -> viewModel.showMediaPicker()
                                 "add_text" -> viewModel.showTextEditor()
                                 "add_audio" -> viewModel.showMediaPicker()
@@ -1036,6 +1038,13 @@ fun EditorScreen(
                 onDismiss = viewModel::dismissAiSuggestion
             )
 
+            if (state.compoundNavDepth > 0) {
+                CompoundNavBreadcrumb(
+                    breadcrumbText = state.compoundBreadcrumbText,
+                    onExit = viewModel::exitCompoundLevel,
+                )
+            }
+
             // Timeline
             if (!state.isTimelineCollapsed) {
                 Timeline(
@@ -1066,6 +1075,7 @@ fun EditorScreen(
                     onAddMarker = { viewModel.addTimelineMarker() },
                     onMarkerTapped = { marker -> viewModel.seekTo(marker.timeMs) },
                     onClipLongPress = viewModel::toggleClipMultiSelect,
+                    onOpenCompoundClip = viewModel::openCompoundClip,
                     onSlideClip = viewModel::slideClip,
                     onSlipClip = viewModel::slipClip,
                     onSlideEditStarted = viewModel::beginSlideEdit,

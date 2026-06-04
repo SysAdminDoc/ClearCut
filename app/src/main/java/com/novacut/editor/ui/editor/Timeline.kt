@@ -79,6 +79,21 @@ private const val MAX_TIMELINE_ZOOM = 10f
 
 private enum class ClipGestureZone { TRIM_LEFT, TRIM_RIGHT, SLIDE, SLIP, NONE }
 
+internal enum class TimelineClipLongPressResult { OPENED_COMPOUND, TOGGLED_MULTI_SELECT }
+
+internal fun dispatchTimelineClipLongPress(
+    clipId: String,
+    isCompound: Boolean,
+    onOpenCompoundClip: (String) -> Boolean,
+    onToggleMultiSelect: (String) -> Unit,
+): TimelineClipLongPressResult {
+    if (isCompound && onOpenCompoundClip(clipId)) {
+        return TimelineClipLongPressResult.OPENED_COMPOUND
+    }
+    onToggleMultiSelect(clipId)
+    return TimelineClipLongPressResult.TOGGLED_MULTI_SELECT
+}
+
 private fun findSnapTarget(positionMs: Long, targets: List<Long>, thresholdMs: Long): Long? {
     return targets.minByOrNull { abs(it - positionMs) }
         ?.takeIf { abs(it - positionMs) <= thresholdMs }
@@ -131,6 +146,7 @@ fun Timeline(
     onScrubStart: () -> Unit = {},
     onScrubEnd: () -> Unit = {},
     onClipLongPress: (String) -> Unit = {},
+    onOpenCompoundClip: (String) -> Boolean = { false },
     onSlideClip: (clipId: String, deltaMs: Long) -> Unit = { _, _ -> },
     onSlipClip: (clipId: String, deltaMs: Long) -> Unit = { _, _ -> },
     onSlideEditStarted: () -> Unit = {},
@@ -251,6 +267,8 @@ fun Timeline(
     val currentOnPlayheadMoved by rememberUpdatedState(onPlayheadMoved)
     val currentOnSplitAtPlayhead by rememberUpdatedState(onSplitAtPlayhead)
     val currentOnDeleteSelectedClip by rememberUpdatedState(onDeleteSelectedClip)
+    val currentOnClipLongPress by rememberUpdatedState(onClipLongPress)
+    val currentOnOpenCompoundClip by rememberUpdatedState(onOpenCompoundClip)
     val currentOnSlideClip by rememberUpdatedState(onSlideClip)
     val currentOnSlideEditStarted by rememberUpdatedState(onSlideEditStarted)
     val currentOnSlideEditEnded by rememberUpdatedState(onSlideEditEnded)
@@ -936,7 +954,12 @@ fun Timeline(
                                                 it.containsTimelinePosition(tappedMs)
                                             }
                                             if (clip != null) {
-                                                onClipLongPress(clip.id)
+                                                dispatchTimelineClipLongPress(
+                                                    clipId = clip.id,
+                                                    isCompound = clip.isCompound,
+                                                    onOpenCompoundClip = currentOnOpenCompoundClip,
+                                                    onToggleMultiSelect = currentOnClipLongPress,
+                                                )
                                             }
                                         }
                                     )
@@ -1015,6 +1038,7 @@ fun Timeline(
                                     val lockedClipStateLabel = stringResource(R.string.timeline_clip_state_locked)
                                     val splitClipActionLabel = stringResource(R.string.timeline_clip_action_split)
                                     val deleteClipActionLabel = stringResource(R.string.timeline_clip_action_delete)
+                                    val openCompoundActionLabel = stringResource(R.string.timeline_clip_action_open_compound)
                                     val nudgeDurationLabel = formatTimelineDurationLabel(ACCESSIBILITY_NUDGE_MS)
                                     val nudgeEarlierActionLabel = stringResource(
                                         R.string.timeline_clip_action_nudge_earlier,
@@ -1031,8 +1055,10 @@ fun Timeline(
                                         clip.timelineStartMs,
                                         clip.timelineEndMs,
                                         clip.durationMs,
+                                        clip.isCompound,
                                         splitClipActionLabel,
                                         deleteClipActionLabel,
+                                        openCompoundActionLabel,
                                         nudgeEarlierActionLabel,
                                         nudgeLaterActionLabel
                                     ) {
@@ -1066,6 +1092,15 @@ fun Timeline(
                                                         true
                                                     }
                                                 )
+                                                if (clip.isCompound) {
+                                                    add(
+                                                        CustomAccessibilityAction(
+                                                            label = openCompoundActionLabel
+                                                        ) {
+                                                            currentOnOpenCompoundClip(clip.id)
+                                                        }
+                                                    )
+                                                }
                                                 add(
                                                     CustomAccessibilityAction(
                                                         label = nudgeEarlierActionLabel

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.74.14</string>
+    <string name="app_version">v3.74.15</string>
 
     <!-- Common -->
     <string name="close">Close</string>
@@ -1791,6 +1791,7 @@
     <string name="timeline_clip_state_locked">Locked track</string>
     <string name="timeline_clip_action_split">Split clip</string>
     <string name="timeline_clip_action_delete">Delete clip</string>
+    <string name="timeline_clip_action_open_compound">Open compound clip</string>
     <string name="timeline_clip_action_nudge_earlier">Nudge earlier by %1$s</string>
     <string name="timeline_clip_action_nudge_later">Nudge later by %1$s</string>
 

@@ -7,7 +7,7 @@ Last consolidated: 2026-06-04.
 
 ## Current Delivered Baseline
 
-- Current version: v3.74.14 (`versionCode` 151).
+- Current version: v3.74.15 (`versionCode` 152).
 - Multi-track Android NLE with project gallery, editor, timeline, preview,
   effects, transitions, text, captions, audio, export, settings, templates,
   project archive/import, and diagnostic bundle surfaces.
@@ -55,6 +55,11 @@ Last consolidated: 2026-06-04.
   `MediaRelinkProbe`, missing/unverified source problems auto-open Media
   Manager, and Media Manager cards consume the probe report before users edit
   or export.
+- Compound clip gesture closure shipped in v3.74.15: timeline long-press opens
+  compound clips through `EditorViewModel.openCompoundClip`, the selected
+  compound radial menu includes an Open action, the breadcrumb chip is rendered
+  from `EditorState`, and compound entry clears selection so predictive back
+  exits the nested level first.
 
 ## Preserved Historical Detail
 

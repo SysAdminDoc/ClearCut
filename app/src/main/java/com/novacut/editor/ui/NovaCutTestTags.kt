@@ -12,6 +12,7 @@ object NovaCutTestTags {
     const val EDITOR_BACK = "editor.back"
     const val EDITOR_EMPTY_ADD_MEDIA = "editor.emptyAddMedia"
     const val EDITOR_EXPORT = "editor.export"
+    const val EDITOR_COMPOUND_BREADCRUMB = "editor.compoundBreadcrumb"
 
     const val MEDIA_PICKER_SHEET = "mediaPicker.sheet"
     const val MEDIA_PICKER_CLOSE = "mediaPicker.close"

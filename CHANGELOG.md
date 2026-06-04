@@ -1,5 +1,25 @@
 # Changelog
 
+## v3.74.15 — 2026-06-04
+
+### Compound clip gesture closure
+- Timeline long-press now dispatches compound clips to
+  `EditorViewModel.openCompoundClip` while preserving the existing multi-select
+  fallback for regular clips and rejected compound entries.
+- The preview radial menu adds an Open action when the selected clip is a
+  compound clip, routing through the same ViewModel open surface.
+- The compound breadcrumb chip now renders from `EditorState` above the
+  timeline, and compound entry clears clip selection, multi-select, and the
+  active tool so predictive back exits the compound level first.
+- Added an accessible `Open compound clip` custom action for compound timeline
+  clips and unit coverage for the long-press dispatcher.
+- Bumped runtime metadata to `versionName 3.74.15` / `versionCode 152`.
+- Verification: `git diff --check`, `scripts/verify_release_artifacts.py`,
+  APK-based 16 KB checks for debug/release, `apksigner verify` for
+  debug/release, `zipalign -c -P 16 -v 4` for debug/release/androidTest, and
+  `:app:testDebugUnitTest :app:assembleDebug :app:assembleRelease
+  :app:assembleDebugAndroidTest` passed.
+
 ## v3.74.14 — 2026-06-04
 
 ### Media relink editor integration
