@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <rect width="1920" height="1080" fill="#14161f"/>
+  <rect x="42" y="42" width="1836" height="996" rx="38" fill="#14161f" stroke="#384052" stroke-width="2"/>
+<rect x="42" y="42" width="1836" height="86" rx="38" fill="#1f2430"/>
+<text x="82" y="98" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="30" font-weight="700">NovaCut</text>
+<text x="1520" y="98" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="22" font-weight="500">Media manager</text>
+<text x="82" y="190" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="42" font-weight="750">Relink, verify, and organize sources</text>
+<rect x="82" y="246" width="1756" height="660" rx="26" fill="#1f2430" stroke="#384052" stroke-width="2"/>
+<text x="126" y="318" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="26" font-weight="600">Source</text>
+<text x="734" y="318" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="26" font-weight="600">Status</text>
+<text x="1134" y="318" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="26" font-weight="600">Action</text>
+<rect x="126" y="372" width="540" height="72" rx="16" fill="#273044"/><rect x="734" y="372" width="220" height="72" rx="16" fill="#a6e3a1"/><rect x="1134" y="372" width="300" height="72" rx="16" fill="#14161f" stroke="#384052" stroke-width="2"/>
+<rect x="126" y="492" width="540" height="72" rx="16" fill="#273044"/><rect x="734" y="492" width="220" height="72" rx="16" fill="#f9e2af"/><rect x="1134" y="492" width="300" height="72" rx="16" fill="#14161f" stroke="#384052" stroke-width="2"/>
+<rect x="126" y="612" width="540" height="72" rx="16" fill="#273044"/><rect x="734" y="612" width="220" height="72" rx="16" fill="#89dceb"/><rect x="1134" y="612" width="300" height="72" rx="16" fill="#14161f" stroke="#384052" stroke-width="2"/>
+<rect x="126" y="732" width="540" height="72" rx="16" fill="#273044"/><rect x="734" y="732" width="220" height="72" rx="16" fill="#fab387"/><rect x="1134" y="732" width="300" height="72" rx="16" fill="#14161f" stroke="#384052" stroke-width="2"/>
+<text x="762" y="418" fill="#14161f" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="800">Verified</text>
+<text x="762" y="538" fill="#14161f" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="800">Missing</text>
+<text x="762" y="658" fill="#14161f" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="800">Local</text>
+<text x="762" y="778" fill="#14161f" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="800">Proxy</text>
+</svg>

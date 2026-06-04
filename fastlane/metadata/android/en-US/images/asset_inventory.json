@@ -1,0 +1,86 @@
+{
+  "assets": [
+    {
+      "altText": "NovaCut app icon",
+      "caption": "High-resolution Play Store icon.",
+      "height": 512,
+      "path": "icon.png",
+      "source": "_source/icon.svg",
+      "width": 512
+    },
+    {
+      "altText": "NovaCut feature graphic",
+      "caption": "Feature graphic for the main store listing.",
+      "height": 500,
+      "path": "featureGraphic.png",
+      "source": "_source/featureGraphic.svg",
+      "width": 1024
+    },
+    {
+      "altText": "Project gallery screen",
+      "caption": "Project gallery with local autosaved projects.",
+      "height": 1920,
+      "path": "phoneScreenshots/01_project_gallery.png",
+      "source": "_source/phoneScreenshots_01_project_gallery.svg",
+      "width": 1080
+    },
+    {
+      "altText": "Editor timeline screen",
+      "caption": "Preview, editing tools, and multi-track timeline.",
+      "height": 1920,
+      "path": "phoneScreenshots/02_editor_timeline.png",
+      "source": "_source/phoneScreenshots_02_editor_timeline.svg",
+      "width": 1080
+    },
+    {
+      "altText": "Export settings screen",
+      "caption": "Export confidence and platform settings.",
+      "height": 1920,
+      "path": "phoneScreenshots/03_export_confidence.png",
+      "source": "_source/phoneScreenshots_03_export_confidence.svg",
+      "width": 1080
+    },
+    {
+      "altText": "Privacy dashboard screen",
+      "caption": "Local data controls and optional model downloads.",
+      "height": 1920,
+      "path": "phoneScreenshots/04_privacy_models.png",
+      "source": "_source/phoneScreenshots_04_privacy_models.svg",
+      "width": 1080
+    },
+    {
+      "altText": "Tablet editor layout",
+      "caption": "Three-pane tablet editor layout.",
+      "height": 1080,
+      "path": "tenInchScreenshots/01_tablet_editor.png",
+      "source": "_source/tenInchScreenshots_01_tablet_editor.svg",
+      "width": 1920
+    },
+    {
+      "altText": "Media manager table",
+      "caption": "Media relink and verification workflow.",
+      "height": 1080,
+      "path": "tenInchScreenshots/02_media_manager.png",
+      "source": "_source/tenInchScreenshots_02_media_manager.svg",
+      "width": 1920
+    },
+    {
+      "altText": "Caption and AI tools",
+      "caption": "Caption review and model-gated AI tools.",
+      "height": 1080,
+      "path": "tenInchScreenshots/03_captions_ai.png",
+      "source": "_source/tenInchScreenshots_03_captions_ai.svg",
+      "width": 1920
+    },
+    {
+      "altText": "Tablet export review",
+      "caption": "Export readiness and disclosure review.",
+      "height": 1080,
+      "path": "tenInchScreenshots/04_export_review.png",
+      "source": "_source/tenInchScreenshots_04_export_review.svg",
+      "width": 1920
+    }
+  ],
+  "schema": "com.novacut.play-listing-assets.v1",
+  "updated": "2026-06-04"
+}

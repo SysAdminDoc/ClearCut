@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
+  <rect width="1080" height="1920" fill="#14161f"/>
+  <rect x="46" y="56" width="988" height="1808" rx="54" fill="#14161f" stroke="#384052" stroke-width="2"/>
+<rect x="46" y="56" width="988" height="104" rx="54" fill="#1f2430"/>
+<text x="86" y="124" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="34" font-weight="700">NovaCut</text>
+<text x="816" y="124" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="500">Privacy</text>
+<rect x="502" y="92" width="76" height="10" rx="5" fill="#384052"/>
+<text x="86" y="254" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="48" font-weight="750">Privacy dashboard</text>
+<text x="86" y="304" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="500">What NovaCut stores and how to clear it</text>
+<rect x="86" y="370" width="908" height="132" rx="24" fill="#1f2430" stroke="#384052" stroke-width="2"/>
+<rect x="124" y="408" width="56" height="56" rx="16" fill="#89dceb"/>
+<text x="208" y="442" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="28" font-weight="700">Project content</text>
+<text x="208" y="478" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="20" font-weight="500">Export - delete - local controls</text>
+<rect x="86" y="550" width="908" height="132" rx="24" fill="#1f2430" stroke="#384052" stroke-width="2"/>
+<rect x="124" y="588" width="56" height="56" rx="16" fill="#fab387"/>
+<text x="208" y="622" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="28" font-weight="700">Crash records</text>
+<text x="208" y="658" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="20" font-weight="500">Export - delete - local controls</text>
+<rect x="86" y="730" width="908" height="132" rx="24" fill="#1f2430" stroke="#384052" stroke-width="2"/>
+<rect x="124" y="768" width="56" height="56" rx="16" fill="#f5c2e7"/>
+<text x="208" y="802" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="28" font-weight="700">ML models</text>
+<text x="208" y="838" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="20" font-weight="500">Export - delete - local controls</text>
+<rect x="86" y="910" width="908" height="132" rx="24" fill="#1f2430" stroke="#384052" stroke-width="2"/>
+<rect x="124" y="948" width="56" height="56" rx="16" fill="#a6e3a1"/>
+<text x="208" y="982" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="28" font-weight="700">Cloud tools off</text>
+<text x="208" y="1018" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="20" font-weight="500">Export - delete - local controls</text>
+<rect x="86" y="1212" width="908" height="256" rx="24" fill="#1f2430"/>
+<text x="126" y="1280" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="32" font-weight="700">Model downloads are optional</text>
+<text x="126" y="1328" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="23" font-weight="500">Editing works offline. Network use is explicit.</text>
+</svg>

@@ -7,7 +7,7 @@ Last consolidated: 2026-06-04.
 
 ## Current Delivered Baseline
 
-- Current version: v3.74.46 (`versionCode` 183).
+- Current version: v3.74.47 (`versionCode` 184).
 - Multi-track Android NLE with project gallery, editor, timeline, preview,
   effects, transitions, text, captions, audio, export, settings, templates,
   project archive/import, and diagnostic bundle surfaces.
@@ -53,6 +53,10 @@ Last consolidated: 2026-06-04.
   routes OS memory-pressure levels through a tested dispatcher, active media
   engines register thumbnail/waveform/proxy cache trim callbacks, and redacted
   memory-trim breadcrumbs are included in diagnostic ZIPs when present.
+- Play listing asset and privacy-disclosure release gate shipped in v3.74.47:
+  Fastlane now carries deterministic icon, feature graphic, phone/tablet
+  screenshots, SVG sources, alt-text inventory, privacy policy URL, Data safety
+  worksheet, and a CI validator for the listing package.
 - UI test harness bootstrap shipped in v3.74.11: shared Compose test tags,
   androidTest dependencies, and a smoke test covering project list,
   blank-project editor open, media picker, export sheet, Settings, and privacy

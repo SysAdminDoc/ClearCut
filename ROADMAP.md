@@ -8,7 +8,7 @@ Active roadmap for forward-looking work. Shipped work is summarized in
 [RESEARCH_REPORT.md](RESEARCH_REPORT.md), and detailed historical plans are
 archived under [docs/archive](docs/archive/).
 
-Current version: **v3.74.46** (`versionCode` 183). Last consolidated:
+Current version: **v3.74.47** (`versionCode` 184). Last consolidated:
 2026-06-04.
 
 > Last researched: Cycle 22 - 2026-06-04.
@@ -93,6 +93,10 @@ v3.74.46 closed the Cycle 4 memory-pressure gate by adding app-level
 `onTrimMemory` dispatch, tested trim-level policy, registered thumbnail,
 waveform, and proxy scratch cache eviction, and redacted diagnostic
 breadcrumbs.
+v3.74.47 closed the Cycle 5 distribution-trust gate by adding deterministic
+Fastlane Play listing images, SVG sources, alt-text inventory, privacy policy
+source/link, Data safety worksheet, and a CI validator for listing assets and
+disclosure coverage.
 
 ## Current State
 
@@ -227,6 +231,10 @@ breadcrumbs.
   editing keeps proxy scratch on low-memory callbacks, background/critical
   callbacks evict scratch caches, and diagnostic ZIPs can include redacted
   memory-trim breadcrumbs.
+- v3.74.47 adds a repeatable Play listing package: committed Fastlane icon,
+  feature graphic, phone/tablet screenshots, SVG sources, inventory alt text,
+  privacy policy URL, Data safety worksheet, and a CI validator for dimensions,
+  screenshot counts, text bounds, and manifest-permission disclosure coverage.
 
 ## Source Archives
 
@@ -248,6 +256,7 @@ breadcrumbs.
 | ✅ P2 | Fastlane changelog history | Implemented in v3.74.44: `scripts/sync_fastlane_changelogs.py` derives 500-character Play changelog files from `CHANGELOG.md` entries with explicit `versionCode` evidence, and `fastlane/metadata/android/en-US/changelogs/` is populated for the recoverable release history. |
 | ✅ P2 | Baseline Profile and macrobenchmarks | Implemented in v3.74.45: `:baselineprofile` generates the release Baseline Profile, ProfileInstaller ships it in the APK, and managed Pixel 6 API 36 macrobenchmarks report default/profiled cold startup, profiled warm startup, and blank-editor timeline scrub frame timing. |
 | ✅ P2 | Memory trim policy | Implemented in v3.74.46: `NovaCutApp.onTrimMemory` dispatches OS memory-pressure levels through a tested policy, active media engines register cache trim callbacks, proxy trimming skips in-flight renders, and diagnostic ZIPs include bounded redacted memory-trim breadcrumbs when present. |
+| ✅ P2 | Play listing release gate | Implemented in v3.74.47: Fastlane metadata now includes deterministic Play icon, feature graphic, phone/tablet screenshots, SVG sources, alt-text inventory, privacy policy URL, Data safety worksheet, and a CI validator for listing/disclosure readiness. |
 | P3 | Caption translation engine activation | Replace source-text echo behavior with a real local model path such as MADLAD-400 or Bergamot only after model gates are complete. |
 | P3 | Advanced engine activations | Activate Oboe resampling, adjustment layers, keyframe graph UI, and remaining AI engines only when dependencies, APK size, 16 KB compliance, and device QA are clear. |
 
@@ -776,7 +785,7 @@ history item.
 
 #### Distribution Trust
 
-- [ ] 🔬🤖 P2 — Add Play listing asset and privacy-disclosure release gate
+- [x] ✅ 🔬🤖 P2 — Add Play listing asset and privacy-disclosure release gate
   - Why: NovaCut has enough Fastlane text metadata to describe the editor, but
     the repo does not yet carry the preview assets, screenshot inventory,
     privacy-policy link/text, or data-safety worksheet needed to make Play
@@ -812,6 +821,15 @@ history item.
     privacy/data-safety worksheet presence; run it in the release gate, then do a
     Play Console or Fastlane supply dry run for metadata/images before promoting
     a release candidate.
+  - Status: implemented in v3.74.47. Fastlane now includes
+    `images/icon.png`, `images/featureGraphic.png`, four phone screenshots,
+    four tablet screenshots, SVG sources, and `asset_inventory.json` alt text.
+    `docs/privacy-policy.md`, `docs/play-data-safety.md`, and
+    `fastlane/metadata/android/en-US/privacy_policy_url.txt` provide the
+    privacy/disclosure package. `scripts/validate_play_listing_assets.py`
+    checks dimensions, PNG color type, screenshot counts, inventory coverage,
+    text bounds, privacy policy content, and manifest permission disclosure, and
+    the GitHub Actions build runs it after release metadata verification.
   - Complexity: M
 
 #### Appendix — Cycle 5 Sources

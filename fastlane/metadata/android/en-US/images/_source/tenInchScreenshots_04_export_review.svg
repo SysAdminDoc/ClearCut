@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <rect width="1920" height="1080" fill="#14161f"/>
+  <rect x="42" y="42" width="1836" height="996" rx="38" fill="#14161f" stroke="#384052" stroke-width="2"/>
+<rect x="42" y="42" width="1836" height="86" rx="38" fill="#1f2430"/>
+<text x="82" y="98" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="30" font-weight="700">NovaCut</text>
+<text x="1520" y="98" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="22" font-weight="500">Export review</text>
+<rect x="82" y="164" width="520" height="804" rx="24" fill="#1f2430" stroke="#384052" stroke-width="2"/>
+<text x="126" y="226" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="34" font-weight="750">Presets</text>
+<rect x="126" y="282" width="360" height="76" rx="20" fill="#89dceb"/>
+<rect x="126" y="386" width="360" height="76" rx="20" fill="#273044"/>
+<rect x="126" y="490" width="360" height="76" rx="20" fill="#273044"/>
+<text x="158" y="330" fill="#14161f" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="25" font-weight="800">YouTube 4K</text>
+<text x="158" y="434" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="25" font-weight="650">TikTok 1080p</text>
+<text x="158" y="538" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="25" font-weight="650">Audio only</text>
+<rect x="646" y="164" width="1190" height="804" rx="24" fill="#1f2430" stroke="#384052" stroke-width="2"/>
+<text x="694" y="232" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="40" font-weight="750">Release checks</text>
+<rect x="694" y="300" width="306" height="76" rx="20" fill="#a6e3a1"/>
+<rect x="1030" y="300" width="306" height="76" rx="20" fill="#a6e3a1"/>
+<rect x="1366" y="300" width="306" height="76" rx="20" fill="#f9e2af"/>
+<text x="734" y="348" fill="#14161f" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="800">Codec ready</text>
+<text x="1070" y="348" fill="#14161f" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="800">HDR safe</text>
+<text x="1406" y="348" fill="#14161f" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="800">Review AI</text>
+<rect x="694" y="446" width="900" height="90" rx="18" fill="#273044"/>
+<rect x="694" y="568" width="900" height="90" rx="18" fill="#273044"/>
+<rect x="694" y="690" width="900" height="90" rx="18" fill="#273044"/>
+<text x="734" y="502" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="25" font-weight="600">No missing media references</text>
+<text x="734" y="624" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="25" font-weight="600">Loudness and bitrate fit target platform</text>
+<text x="734" y="746" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="25" font-weight="600">Disclosure metadata ready for share targets</text>
+</svg>

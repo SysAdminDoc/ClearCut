@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
+  <rect width="1080" height="1920" fill="#14161f"/>
+  <rect x="46" y="56" width="988" height="1808" rx="54" fill="#14161f" stroke="#384052" stroke-width="2"/>
+<rect x="46" y="56" width="988" height="104" rx="54" fill="#1f2430"/>
+<text x="86" y="124" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="34" font-weight="700">NovaCut</text>
+<text x="816" y="124" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="500">Projects</text>
+<rect x="502" y="92" width="76" height="10" rx="5" fill="#384052"/>
+<text x="86" y="252" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="58" font-weight="750">Projects</text>
+<text x="86" y="302" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="25" font-weight="500">Local editing, no account required</text>
+<rect x="86" y="338" width="908" height="214" rx="24" fill="#1f2430" stroke="#384052" stroke-width="2"/>
+<rect x="118" y="372" width="220" height="146" rx="18" fill="#89dceb"/>
+<text x="372" y="420" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="34" font-weight="700">Travel cut</text>
+<text x="372" y="466" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="22" font-weight="500">12 clips - 4K timeline - autosaved</text>
+<rect x="372" y="490" width="150" height="26" rx="13" fill="#273044"/>
+<rect x="544" y="490" width="120" height="26" rx="13" fill="#273044"/>
+<rect x="86" y="598" width="908" height="214" rx="24" fill="#1f2430" stroke="#384052" stroke-width="2"/>
+<rect x="118" y="632" width="220" height="146" rx="18" fill="#fab387"/>
+<text x="372" y="680" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="34" font-weight="700">Creator reel</text>
+<text x="372" y="726" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="22" font-weight="500">12 clips - 4K timeline - autosaved</text>
+<rect x="372" y="750" width="150" height="26" rx="13" fill="#273044"/>
+<rect x="544" y="750" width="120" height="26" rx="13" fill="#273044"/>
+<rect x="86" y="858" width="908" height="214" rx="24" fill="#1f2430" stroke="#384052" stroke-width="2"/>
+<rect x="118" y="892" width="220" height="146" rx="18" fill="#a6e3a1"/>
+<text x="372" y="940" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="34" font-weight="700">Client review</text>
+<text x="372" y="986" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="22" font-weight="500">12 clips - 4K timeline - autosaved</text>
+<rect x="372" y="1010" width="150" height="26" rx="13" fill="#273044"/>
+<rect x="544" y="1010" width="120" height="26" rx="13" fill="#273044"/>
+<rect x="734" y="1632" width="260" height="78" rx="28" fill="#fab387"/>
+<text x="772" y="1684" fill="#14161f" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="28" font-weight="800">New project</text>
+</svg>

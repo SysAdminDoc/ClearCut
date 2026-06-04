@@ -1,0 +1,3 @@
+- Play listing asset and privacy-disclosure gate
+- Added a deterministic Fastlane Play listing image package with a 512x512 32-bit PNG icon, 1024x500 feature graphic, four 1080x1920 phone screenshots, four 1920x1080 tablet screenshots, SVG sources, and an alt-text/caption inventory.
+- Added scripts/generate_play_listing_assets.py for source regeneration and scripts/validate_play_listing_assets.py for a standard-library release gate that checks image dimensions/color types, screenshot counts,...

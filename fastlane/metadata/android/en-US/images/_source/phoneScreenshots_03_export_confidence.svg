@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
+  <rect width="1080" height="1920" fill="#14161f"/>
+  <rect x="46" y="56" width="988" height="1808" rx="54" fill="#14161f" stroke="#384052" stroke-width="2"/>
+<rect x="46" y="56" width="988" height="104" rx="54" fill="#1f2430"/>
+<text x="86" y="124" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="34" font-weight="700">NovaCut</text>
+<text x="816" y="124" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="500">Export</text>
+<rect x="502" y="92" width="76" height="10" rx="5" fill="#384052"/>
+<rect x="86" y="214" width="908" height="392" rx="28" fill="#1f2430"/>
+<text x="126" y="292" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="42" font-weight="750">Export confidence</text>
+<rect x="126" y="338" width="230" height="58" rx="20" fill="#a6e3a1"/>
+<text x="154" y="377" fill="#14161f" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="25" font-weight="800">Ready</text>
+<text x="126" y="454" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="27" font-weight="650">HEVC 4K - HDR metadata preserved</text>
+<text x="126" y="502" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="23" font-weight="500">Audio loudness and codec checks passed</text>
+<rect x="86" y="674" width="908" height="646" rx="28" fill="#1f2430" stroke="#384052" stroke-width="2"/>
+<text x="126" y="746" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="30" font-weight="700">Format</text>
+<rect x="126" y="786" width="240" height="62" rx="18" fill="#89dceb"/>
+<text x="158" y="828" fill="#14161f" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="26" font-weight="800">H.265</text>
+<text x="126" y="930" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="30" font-weight="700">Resolution</text>
+<rect x="126" y="970" width="240" height="62" rx="18" fill="#fab387"/>
+<text x="158" y="1012" fill="#14161f" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="26" font-weight="800">4K</text>
+<text x="126" y="1114" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="30" font-weight="700">Destinations</text>
+<rect x="126" y="1154" width="280" height="62" rx="18" fill="#273044"/>
+<rect x="430" y="1154" width="280" height="62" rx="18" fill="#273044"/>
+<text x="158" y="1196" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="650">Gallery</text>
+<text x="462" y="1196" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="650">Share sheet</text>
+<rect x="734" y="1588" width="260" height="82" rx="28" fill="#a6e3a1"/>
+<text x="802" y="1642" fill="#14161f" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="28" font-weight="800">Export</text>
+</svg>

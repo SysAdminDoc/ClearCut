@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <rect width="1920" height="1080" fill="#14161f"/>
+  <rect x="42" y="42" width="1836" height="996" rx="38" fill="#14161f" stroke="#384052" stroke-width="2"/>
+<rect x="42" y="42" width="1836" height="86" rx="38" fill="#1f2430"/>
+<text x="82" y="98" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="30" font-weight="700">NovaCut</text>
+<text x="1520" y="98" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="22" font-weight="500">Tablet editor</text>
+<rect x="82" y="164" width="330" height="804" rx="24" fill="#1f2430" stroke="#384052" stroke-width="2"/>
+<text x="116" y="220" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="30" font-weight="700">Media</text>
+<rect x="116" y="258" width="250" height="120" rx="18" fill="#89dceb"/>
+<rect x="116" y="404" width="250" height="120" rx="18" fill="#fab387"/>
+<rect x="116" y="550" width="250" height="120" rx="18" fill="#a6e3a1"/>
+<rect x="456" y="164" width="954" height="568" rx="24" fill="#1f2430"/>
+<rect x="514" y="218" width="838" height="440" rx="18" fill="#273044"/>
+<g transform="translate(803.20,308.20) scale(1.1000)">
+      <circle cx="118" cy="118" r="112" fill="#273044"/>
+      <circle cx="118" cy="108" r="82" fill="#1889dceb"/>
+      <rect x="52" y="44" width="38" height="148" rx="12" fill="#f5e0dc"/>
+      <rect x="148" y="44" width="38" height="148" rx="12" fill="#e6eeff"/>
+      <path d="M92 44 H126 C134 44 141 49 144 57 L190 178 C194 190 185 202 172 202 H137 C128 202 121 196 118 188 L72 67 C68 55 78 44 92 44 Z" fill="#fab387"/>
+      <path d="M108 34 H132 C142 34 150 42 151 52 L168 184 C170 197 160 208 147 208 H123 C113 208 105 200 104 190 L87 58 C85 45 95 34 108 34 Z" fill="#89dceb"/>
+    </g>
+<rect x="456" y="766" width="1380" height="202" rx="24" fill="#1f2430"/>
+<rect x="500" y="820" width="252" height="76" rx="14" fill="#89dceb"/>
+<rect x="774" y="820" width="252" height="76" rx="14" fill="#fab387"/>
+<rect x="1048" y="820" width="252" height="76" rx="14" fill="#a6e3a1"/>
+<rect x="1322" y="820" width="252" height="76" rx="14" fill="#f5c2e7"/>
+<line x1="960" y1="752" x2="960" y2="964" stroke="#f38ba8" stroke-width="4"/>
+<rect x="1448" y="164" width="388" height="568" rx="24" fill="#1f2430" stroke="#384052" stroke-width="2"/>
+<text x="1488" y="224" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="30" font-weight="700">Inspector</text>
+<text x="1488" y="280" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="500">Transform</text>
+<text x="1488" y="338" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="500">Color</text>
+<text x="1488" y="396" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="500">Audio</text>
+</svg>

@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
+  <rect width="1080" height="1920" fill="#14161f"/>
+  <rect x="46" y="56" width="988" height="1808" rx="54" fill="#14161f" stroke="#384052" stroke-width="2"/>
+<rect x="46" y="56" width="988" height="104" rx="54" fill="#1f2430"/>
+<text x="86" y="124" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="34" font-weight="700">NovaCut</text>
+<text x="816" y="124" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="500">Editor</text>
+<rect x="502" y="92" width="76" height="10" rx="5" fill="#384052"/>
+<rect x="86" y="208" width="908" height="620" rx="28" fill="#1f2430"/>
+<rect x="132" y="254" width="816" height="462" rx="20" fill="#273044"/>
+<g transform="translate(416.10,361.10) scale(1.0500)">
+      <circle cx="118" cy="118" r="112" fill="#273044"/>
+      <circle cx="118" cy="108" r="82" fill="#1889dceb"/>
+      <rect x="52" y="44" width="38" height="148" rx="12" fill="#f5e0dc"/>
+      <rect x="148" y="44" width="38" height="148" rx="12" fill="#e6eeff"/>
+      <path d="M92 44 H126 C134 44 141 49 144 57 L190 178 C194 190 185 202 172 202 H137 C128 202 121 196 118 188 L72 67 C68 55 78 44 92 44 Z" fill="#fab387"/>
+      <path d="M108 34 H132 C142 34 150 42 151 52 L168 184 C170 197 160 208 147 208 H123 C113 208 105 200 104 190 L87 58 C85 45 95 34 108 34 Z" fill="#89dceb"/>
+    </g>
+<text x="132" y="770" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="25" font-weight="500">Preview ready - 4K HEVC</text>
+<rect x="86" y="884" width="908" height="328" rx="24" fill="#1f2430" stroke="#384052" stroke-width="2"/>
+<text x="122" y="938" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="30" font-weight="700">Tools</text>
+<rect x="122" y="974" width="152" height="66" rx="22" fill="#89dceb"/>
+<rect x="298" y="974" width="152" height="66" rx="22" fill="#fab387"/>
+<rect x="474" y="974" width="152" height="66" rx="22" fill="#a6e3a1"/>
+<rect x="650" y="974" width="152" height="66" rx="22" fill="#f5c2e7"/>
+<text x="146" y="1017" fill="#14161f" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="800">Cut</text>
+<text x="326" y="1017" fill="#14161f" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="800">Color</text>
+<text x="500" y="1017" fill="#14161f" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="800">Audio</text>
+<text x="674" y="1017" fill="#14161f" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="800">Titles</text>
+<rect x="86" y="1250" width="908" height="298" rx="24" fill="#1f2430"/>
+<rect x="118" y="1300" width="144" height="96" rx="14" fill="#89dceb"/>
+<rect x="118" y="1430" width="144" height="42" rx="12" fill="#273044"/>
+<rect x="284" y="1300" width="144" height="96" rx="14" fill="#fab387"/>
+<rect x="284" y="1430" width="144" height="42" rx="12" fill="#273044"/>
+<rect x="450" y="1300" width="144" height="96" rx="14" fill="#a6e3a1"/>
+<rect x="450" y="1430" width="144" height="42" rx="12" fill="#273044"/>
+<rect x="616" y="1300" width="144" height="96" rx="14" fill="#f5c2e7"/>
+<rect x="616" y="1430" width="144" height="42" rx="12" fill="#273044"/>
+<rect x="782" y="1300" width="144" height="96" rx="14" fill="#8aadf4"/>
+<rect x="782" y="1430" width="144" height="42" rx="12" fill="#273044"/>
+<line x1="504" y1="1246" x2="504" y2="1536" stroke="#f38ba8" stroke-width="5"/>
+</svg>

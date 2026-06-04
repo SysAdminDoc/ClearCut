@@ -53,6 +53,9 @@ jobs:
       - name: Verify release metadata
         run: python3 scripts/verify_release_artifacts.py
 
+      - name: Verify Play listing assets
+        run: python3 scripts/validate_play_listing_assets.py
+
       - name: Locate Android build tools
         id: build-tools
         shell: bash

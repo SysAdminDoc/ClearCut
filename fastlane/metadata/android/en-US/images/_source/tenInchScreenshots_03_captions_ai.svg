@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <rect width="1920" height="1080" fill="#14161f"/>
+  <rect x="42" y="42" width="1836" height="996" rx="38" fill="#14161f" stroke="#384052" stroke-width="2"/>
+<rect x="42" y="42" width="1836" height="86" rx="38" fill="#1f2430"/>
+<text x="82" y="98" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="30" font-weight="700">NovaCut</text>
+<text x="1520" y="98" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="22" font-weight="500">Captions and AI</text>
+<rect x="82" y="164" width="830" height="804" rx="24" fill="#1f2430" stroke="#384052" stroke-width="2"/>
+<text x="126" y="226" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="34" font-weight="750">Caption review</text>
+<rect x="126" y="280" width="724" height="110" rx="18" fill="#273044"/>
+<rect x="126" y="420" width="724" height="110" rx="18" fill="#273044"/>
+<rect x="126" y="560" width="724" height="110" rx="18" fill="#273044"/>
+<text x="166" y="346" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="25" font-weight="600">Speaker 1: tighten intro timing</text>
+<text x="166" y="486" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="25" font-weight="600">Speaker 2: keep SDH tag separate</text>
+<text x="166" y="626" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="25" font-weight="600">Review translated target row</text>
+<rect x="956" y="164" width="880" height="804" rx="24" fill="#1f2430" stroke="#384052" stroke-width="2"/>
+<text x="1000" y="226" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="34" font-weight="750">AI tools</text>
+<rect x="1000" y="286" width="330" height="92" rx="22" fill="#89dceb"/>
+<rect x="1362" y="286" width="330" height="92" rx="22" fill="#fab387"/>
+<rect x="1000" y="422" width="330" height="92" rx="22" fill="#a6e3a1"/>
+<rect x="1362" y="422" width="330" height="92" rx="22" fill="#f5c2e7"/>
+<text x="1040" y="344" fill="#14161f" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="25" font-weight="800">Auto captions</text>
+<text x="1402" y="344" fill="#14161f" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="25" font-weight="800">Smart crop</text>
+<text x="1040" y="480" fill="#14161f" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="25" font-weight="800">Denoise</text>
+<text x="1402" y="480" fill="#14161f" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="25" font-weight="800">Model gate</text>
+<text x="1000" y="626" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="25" font-weight="500">Every model shows source, license, size, and install state.</text>
+</svg>

@@ -1,5 +1,25 @@
 # Changelog
 
+## v3.74.47 — 2026-06-04
+
+### Play listing asset and privacy-disclosure gate
+- Added a deterministic Fastlane Play listing image package with a 512x512
+  32-bit PNG icon, 1024x500 feature graphic, four 1080x1920 phone screenshots,
+  four 1920x1080 tablet screenshots, SVG sources, and an alt-text/caption
+  inventory.
+- Added `scripts/generate_play_listing_assets.py` for source regeneration and
+  `scripts/validate_play_listing_assets.py` for a standard-library release gate
+  that checks image dimensions/color types, screenshot counts, inventory
+  coverage, text metadata bounds, privacy policy URL, privacy policy content,
+  and manifest permission coverage in the Data safety worksheet.
+- Added `docs/privacy-policy.md`, `docs/play-data-safety.md`, and
+  `docs/play-listing-assets.md` so the store listing has versioned privacy,
+  data-safety, and asset provenance sources.
+- Wired the Play listing validator into the GitHub Actions build after release
+  metadata verification.
+- Bumped runtime metadata to `versionName 3.74.47` / `versionCode 184`.
+- Verification: `python scripts\validate_play_listing_assets.py` passed.
+
 ## v3.74.46 — 2026-06-04
 
 ### App-level memory trim policy

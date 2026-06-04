@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="500" viewBox="0 0 1024 500">
+  <rect width="1024" height="500" fill="#14161f"/>
+  <rect x="0" y="0" width="1024" height="500" rx="0" fill="#14161f"/>
+<circle cx="810" cy="88" r="176" fill="#123848"/>
+<circle cx="104" cy="430" r="180" fill="#35263d"/>
+<g transform="translate(79.44,141.44) scale(0.9200)">
+      <circle cx="118" cy="118" r="112" fill="#273044"/>
+      <circle cx="118" cy="108" r="82" fill="#1889dceb"/>
+      <rect x="52" y="44" width="38" height="148" rx="12" fill="#f5e0dc"/>
+      <rect x="148" y="44" width="38" height="148" rx="12" fill="#e6eeff"/>
+      <path d="M92 44 H126 C134 44 141 49 144 57 L190 178 C194 190 185 202 172 202 H137 C128 202 121 196 118 188 L72 67 C68 55 78 44 92 44 Z" fill="#fab387"/>
+      <path d="M108 34 H132 C142 34 150 42 151 52 L168 184 C170 197 160 208 147 208 H123 C113 208 105 200 104 190 L87 58 C85 45 95 34 108 34 Z" fill="#89dceb"/>
+    </g>
+<text x="352" y="176" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="60" font-weight="800">NovaCut</text>
+<text x="356" y="230" fill="#89dceb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="28" font-weight="700">Private Android video editing</text>
+<rect x="356" y="274" width="164" height="52" rx="18" fill="#89dceb"/>
+<rect x="540" y="274" width="188" height="52" rx="18" fill="#fab387"/>
+<rect x="748" y="274" width="150" height="52" rx="18" fill="#a6e3a1"/>
+<text x="386" y="309" fill="#14161f" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="21" font-weight="800">Timeline</text>
+<text x="570" y="309" fill="#14161f" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="21" font-weight="800">AI tools</text>
+<text x="780" y="309" fill="#14161f" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="21" font-weight="800">Export</text>
+<rect x="356" y="364" width="534" height="6" rx="3" fill="#384052"/>
+<rect x="356" y="388" width="402" height="6" rx="3" fill="#384052"/>
+</svg>

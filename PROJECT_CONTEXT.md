@@ -10,8 +10,8 @@ NovaCut is an Android video editor under package `com.novacut.editor`. The repo 
 
 Current live version evidence:
 
-- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 183`, `versionName = "3.74.46"`.
-- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.46`.
+- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 184`, `versionName = "3.74.47"`.
+- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.47`.
 - [README.md](README.md) and [ROADMAP.md](ROADMAP.md) both describe the v3.74.x line.
 - The 2026-05-17 continuation pushes each completed roadmap batch back to `origin/master`; verify `git status --short --branch` before assuming branch sync.
 
@@ -136,6 +136,13 @@ High-level modules and patterns:
      engine construction at app startup, and diagnostic ZIPs include bounded
      redacted memory-trim breadcrumbs when present.
 
+9. Play listing release gate.
+   - Completed in v3.74.47. Fastlane now carries deterministic Play listing
+     icon, feature graphic, phone/tablet screenshots, SVG sources, alt-text
+     inventory, privacy policy URL, and a Data safety worksheet. CI runs
+     `scripts/validate_play_listing_assets.py` after release metadata
+     verification.
+
 ## Recent Implementation Notes
 
 2026-06-04 autonomous continuation:
@@ -200,6 +207,21 @@ High-level modules and patterns:
   com.novacut.editor.engine.MemoryTrimRegistryTest --tests
   com.novacut.editor.engine.MemoryTrimBreadcrumbStoreTest --tests
   com.novacut.editor.engine.MemoryTrimDispatcherTest`.
+
+2026-06-04 Play listing continuation:
+
+- Completed the Cycle 5 Play listing asset and privacy-disclosure release gate
+  in v3.74.47. Added committed Fastlane images for icon, feature graphic, four
+  phone screenshots, and four tablet screenshots, plus SVG sources and
+  `asset_inventory.json` alt text/captions.
+- Added `docs/privacy-policy.md`, `docs/play-data-safety.md`,
+  `docs/play-listing-assets.md`, and
+  `fastlane/metadata/android/en-US/privacy_policy_url.txt`.
+- Added `scripts/generate_play_listing_assets.py` for deterministic asset
+  regeneration and `scripts/validate_play_listing_assets.py` for standard
+  release-gate validation; GitHub Actions runs the validator after
+  `scripts/verify_release_artifacts.py`.
+- Verification passed: `python scripts\validate_play_listing_assets.py`.
 
 2026-06-04 recovery-open continuation:
 
@@ -609,8 +631,7 @@ High-level modules and patterns:
   `:app:assembleDebugAndroidTest` passed.
 - Device QA follow-up: run an emulator/device `bmgr` backup/restore or direct
   transfer smoke with a project containing an imported local clip.
-- Next roadmap item: Cycle 5 P2 Play listing asset and privacy-disclosure
-  release gate.
+- Next roadmap item: Cycle 7 P2 appearance-mode and contrast regression gates.
 
 2026-05-17 autonomous continuation:
 
