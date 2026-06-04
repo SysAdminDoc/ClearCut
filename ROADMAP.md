@@ -11,7 +11,7 @@ archived under [docs/archive](docs/archive/).
 Current version: **v3.74.44** (`versionCode` 181). Last consolidated:
 2026-06-04.
 
-> Last researched: Cycle 20 - 2026-06-04.
+> Last researched: Cycle 21 - 2026-06-04.
 
 ## ▶ Implementer Instructions (for the build machine)
 
@@ -1892,3 +1892,143 @@ local-first privacy posture or duplicating the in-flight Baseline Profile work.
   https://divviup.org/blog/horizontal-tella/
 - W3C Privacy Principles:
   https://www.w3.org/TR/privacy-principles/
+
+### Researcher Queue (Cycle 21 - 2026-06-04)
+
+Focus: turn the caption-translation UI from source-text echo into a real,
+reviewable offline translation path with model, license, and timing gates.
+
+#### Caption Translation Activation
+
+- [ ] P3 - 🔬🤖 Activate caption translation with offline model gates and reviewable output
+  - Why: NovaCut already has the caption-translation panel, target-language
+    selection, quality chip, per-row edit/regenerate state, and ViewModel
+    orchestration. The engine still reports no model, refuses downloads, and
+    returns the source caption text as the translated text. A dedicated
+    activation contract prevents the UI from implying completed translation and
+    gives the implementer a concrete choice between ML Kit, Bergamot/Mozilla
+    Firefox Translation models, and MADLAD-style open weights.
+  - Evidence: `CaptionTranslationEngine.kt:15` calls the engine a stub for
+    on-device caption translation; `CaptionTranslationEngine.kt:48`-`CaptionTranslationEngine.kt:52`
+    lists NLLB, MADLAD-400, and Bergamot variants; `CaptionTranslationEngine.kt:128`
+    always returns false for readiness; `CaptionTranslationEngine.kt:137`-`CaptionTranslationEngine.kt:143`
+    logs `downloadModel` as a stub and returns false; `CaptionTranslationEngine.kt:149`-`CaptionTranslationEngine.kt:165`
+    maps every target segment back to `seg.text`. `EditorViewModel.kt:4474`-`EditorViewModel.kt:4528`
+    already launches `captionTranslationEngine.translate(...)` when a target
+    language is picked, and `CaptionEditorPanel.kt:219`-`CaptionEditorPanel.kt:229`
+    renders `CaptionTranslationPanel`. `docs/models.md:67`-`docs/models.md:68`
+    names MADLAD-400 and Bergamot planning rows, while `docs/models.md:118`
+    keeps `caption_translate` at `DEPENDENCY_MISSING` until exact bytes,
+    SHA-256, size, delivery mode, and F-Droid posture are pinned. The live
+    roadmap summary row already lists "Caption translation engine activation"
+    as P3; this queue item expands that row rather than adding a parallel lane.
+  - Current-source check: ML Kit translation can translate between more than
+    50 languages, uses on-demand dynamic model downloads, recommends Wi-Fi
+    downloads and explicit model deletion, and now documents Data safety
+    collection such as device/app information, performance metrics, event
+    types, error codes, configured source/destination languages, Firebase
+    Remote Config, and Firebase installations for Translate. That makes ML Kit
+    useful for the Play build but not a drop-in F-Droid/local-first answer.
+    MADLAD-400 3B is Apache-2.0 and lists 419 languages on its Hugging Face
+    card, with broader MADLAD research covering 419-language audited data and
+    translation models trained across more than 450 languages; however, the
+    mobile Q4 target is still very large and needs runtime proof. NLLB distilled
+    remains a broad fallback but the 600M model card is CC-BY-NC and describes
+    a research-oriented single-sentence model, so it should not become the
+    commercial/default implementation. Bergamot/Firefox Translation models run
+    locally and privately with CPU-optimized per-pair models, but language
+    coverage is narrower and the Android path needs a C++/Marian integration
+    decision. WebVTT, TTML, W3C caption guidance, BCP-47/CLDR locale handling,
+    and bidi controls make translated-caption output a timing, wrapping,
+    speaker-label, and script-direction problem, not just a string replacement.
+  - Touches: `CaptionTranslationEngine`, `ModelDownloadManager`,
+    `AiToolRequirements` `caption_translate`, `docs/models.md`, Settings/model
+    download copy, `CaptionTranslationPanel`, `EditorViewModel`
+    `runCaptionTranslation(...)`, subtitle exporters, `BidiTextPolicy`,
+    `AiUsageLedger`, privacy dashboard/model disclosure copy, F-Droid metadata,
+    and JVM/Compose/export tests.
+  - Acceptance: the UI clearly labels translation as unavailable until a
+    supported model or language-pair pack is installed. Model selection records
+    exact source URL, license, size, SHA-256, delivery mode, F-Droid posture,
+    and fallback language-pair matrix before the tool can report anything above
+    `DEPENDENCY_MISSING`. Play builds may offer an ML Kit adapter only if the
+    Data safety and SDK-disclosure copy names the collected language/model
+    diagnostics; F-Droid builds must either use open local models or hide the
+    adapter. The first local adapter should support a small reviewed language
+    set, preserve caption cue start/end times, re-interpolate word timing only
+    when karaoke export needs it, keep speaker labels and SDH tags separate
+    from translated dialogue, validate BCP-47 target codes, handle RTL/bidi
+    text without corrupting WebVTT/TTML output, route user edits into the saved
+    caption state, and record assistive translation use in the project ledger.
+  - Verify: add engine tests proving no source-text echo is presented as a
+    completed translation, installed and missing models produce distinct
+    states, source/target BCP-47 tags validate, model SHA/license metadata is
+    required before readiness, translation failures preserve the original
+    captions, and user-edited target rows are not overwritten by regeneration.
+    Add Compose tests for unavailable/download/translated/edited/pending states.
+    Add exporter tests for WebVTT/TTML/SRT round-trips with long translated
+    lines, speaker labels, SDH tags, RTL text, and karaoke word timings.
+  - Complexity: L
+
+#### Appendix - Cycle 21 Sources
+
+- ML Kit Translation for Android:
+  https://developers.google.com/ml-kit/language/translation/android
+- ML Kit translation supported languages:
+  https://developers.google.com/ml-kit/language/translation/translation-language-support
+- ML Kit language identification for Android:
+  https://developers.google.com/ml-kit/language/identification/android
+- ML Kit Android data disclosure:
+  https://developers.google.com/ml-kit/android-data-disclosure
+- ML Kit model installation paths:
+  https://developers.google.com/ml-kit/tips/model-installation-paths/android
+- Google MADLAD-400 3B model card:
+  https://huggingface.co/google/madlad400-3b-mt
+- Hugging Face MADLAD-400 docs:
+  https://huggingface.co/docs/transformers/model_doc/madlad-400
+- MADLAD-400 paper:
+  https://arxiv.org/abs/2309.04662
+- Google Research MADLAD-400 code:
+  https://github.com/google-research/google-research/tree/master/madlad_400
+- Meta NLLB-200 announcement:
+  https://ai.meta.com/blog/nllb-200-high-quality-machine-translation/en-gb/
+- Meta NLLB-200 distilled 600M model card:
+  https://huggingface.co/facebook/nllb-200-distilled-600M
+- Meta NLLB fairseq branch:
+  https://github.com/facebookresearch/fairseq/tree/nllb
+- NLLB Nature paper:
+  https://www.nature.com/articles/s41586-024-07335-x
+- Bergamot project:
+  https://browser.mt/
+- Mozilla Translations:
+  https://github.com/mozilla/translations
+- Bergamot translator library:
+  https://github.com/browsermt/bergamot-translator
+- Firefox Translation models:
+  https://github.com/mozilla/firefox-translations-models
+- Marian NMT:
+  https://marian-nmt.github.io/
+- RTranslator 3 grant:
+  https://nlnet.nl/project/RTranslator/
+- RTranslator source:
+  https://github.com/niedev/RTranslator
+- ONNX Runtime Android mobile deployment:
+  https://onnxruntime.ai/docs/tutorials/mobile/deploy-android.html
+- ONNX Runtime quantization:
+  https://onnxruntime.ai/docs/performance/model-optimizations/quantization.html
+- Android Play Asset Delivery:
+  https://developer.android.com/guide/playcore/asset-delivery
+- Android App Bundles:
+  https://developer.android.com/guide/app-bundle
+- Android startup analysis:
+  https://developer.android.com/topic/performance/appstartup/analysis-optimization
+- W3C WebVTT:
+  https://www.w3.org/TR/webvtt1/
+- W3C TTML2:
+  https://www.w3.org/TR/ttml2/
+- W3C captions guidance:
+  https://www.w3.org/WAI/media/av/captions/
+- W3C bidi controls:
+  https://www.w3.org/International/questions/qa-bidi-unicode-controls
+- Unicode CLDR LDML:
+  https://unicode-org.github.io/cldr/ldml/tr35.html

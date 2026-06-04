@@ -6,6 +6,37 @@ roadmaps are archived under [docs/archive/roadmap](docs/archive/roadmap/).
 
 Last refreshed: 2026-06-04.
 
+## 2026-06-04 Cycle 21 Caption Translation Activation Refresh
+
+- [Verified] `CaptionTranslationEngine` is still a translation stub: readiness
+  is always false, `downloadModel(...)` logs and returns false, and
+  `translate(...)` maps source caption text back into target caption text.
+  The UI and ViewModel path are farther along: the caption panel renders
+  `CaptionTranslationPanel`, target-language selection calls
+  `runCaptionTranslation(...)`, and row edit/regenerate state is already tested.
+- [Verified] `docs/models.md` keeps `caption_translate` at
+  `DEPENDENCY_MISSING` until exact model bytes, SHA-256, license posture,
+  delivery mode, and F-Droid posture are recorded. The live roadmap summary
+  already has a P3 caption-translation activation row, so the new queue entry
+  expands that existing row rather than opening a duplicate lane.
+- [Verified] Current sources split the implementation choices clearly. ML Kit
+  Translation is mature and has explicit model-management APIs, but its Android
+  data-disclosure page lists diagnostic/analytics collection and Translate
+  source/destination language collection, so it needs Play-only disclosure and
+  F-Droid handling. MADLAD-400 is Apache-2.0 and broad but large. NLLB distilled
+  is broad but CC-BY-NC and research-oriented. Bergamot/Firefox Translation
+  models keep text local and private but require narrower per-pair model and
+  C++/Marian integration decisions.
+- [Promoted] Added a P3 roadmap item for offline, reviewable caption translation
+  activation with model/license/checksum gates, ML Kit as an optional disclosed
+  adapter, open local models for F-Droid, no source-text echo presented as
+  success, and exporter coverage for WebVTT/TTML/SRT, RTL/bidi text, SDH tags,
+  speaker labels, and karaoke word timings.
+- [Rejected] Do not route captions to cloud translation by default, do not ship
+  NLLB as a production default under its noncommercial license, and do not mark
+  source-text echo output as translated. Each of those would create user-trust,
+  licensing, or accessibility-delivery risk.
+
 ## 2026-06-04 Cycle 20 Opt-In Product Health Refresh
 
 - [Verified] `PrivacyDashboard` already exposes an `OPT_IN_TELEMETRY` category
