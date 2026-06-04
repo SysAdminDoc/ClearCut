@@ -8,29 +8,38 @@ Active roadmap for forward-looking work. Shipped work is summarized in
 [RESEARCH_REPORT.md](RESEARCH_REPORT.md), and detailed historical plans are
 archived under [docs/archive](docs/archive/).
 
-Current version: **v3.74.31** (`versionCode` 168). Last consolidated:
+Current version: **v3.74.32** (`versionCode` 169). Last consolidated:
 2026-06-04.
 
-> Last researched: Cycle 1 - 2026-06-04.
+> Last researched: Cycle 2 - 2026-06-04.
 
-## Implementer Instructions
+## ▶ Implementer Instructions (for the build machine)
 
-- Treat this roadmap as the active queue for release-hardening and editor
-  architecture work. Shipped items belong in `COMPLETED.md`/`CHANGELOG.md`; keep
-  archived research in `docs/archive/` unless live code or current Android
-  policy changes make an item newly actionable.
-- Preserve the current direction: finish EditorScreen panel-router
-  decomposition, timeline decomposition, and model-gate honesty before adding
-  another broad feature sweep.
-- Use JDK 21 for Gradle work, and keep the release gate concrete:
-  focused unit tests, debug/release APKs, instrumentation APK packaging,
-  signature verification, zipalign, and 16 KB alignment checks.
-- Do not pull alpha Android Gradle Plugin metadata into routine freshness work;
-  stage Compose BOM, Room, and Kotlin bumps only after the editor-state
-  migration has a clean compile baseline.
-- Researcher-queue ownership tags: `🤖` means implementer-actionable, `🔧`
-  means user/external/manual gated, `🔬` means researcher-added this cycle, and
-  `✅` means implemented/closed by the build lane.
+This roadmap is fed continuously by a research machine. On every pass, the
+build machine should:
+
+1. `git pull --rebase` to get the latest researched items before starting.
+2. Work the open 🤖 items top-down by priority (P0 -> P3). Build them properly:
+   multi-file structure, real error handling, no runtime auto-install hacks,
+   version strings synced, docs/CHANGELOG updated in the same commit.
+3. In addition to building items, run a full UX audit each pass. Walk every
+   screen, page, dialog, form, table, and empty/loading/error/disabled state
+   across light/dark/high-contrast themes. Check onboarding, navigation clarity,
+   spacing/contrast/alignment, clipping/overflow, hierarchy, microcopy,
+   destructive-action guards, keyboard and screen-reader accessibility, and
+   trust signals. Fix what you find, or file it back as a new 🤖 roadmap item if
+   it is larger than a pass.
+4. Check off ✅ each item you complete, leave it in place with the checkmark,
+   commit per logical change with a "why" message, and push.
+5. Never edit this Implementer Instructions block or the 🔬 Researcher Queue
+   headings. Never force-push.
+
+Current direction: finish timeline decomposition, keep model-gate honesty
+current, and close release/platform trust gaps before another broad feature
+sweep. Use JDK 21 for Gradle work, keep the release gate concrete, and avoid
+routine alpha Android Gradle Plugin bumps. Ownership tags: `🤖` means
+implementer-actionable, `🔧` means user/external/manual gated, `🔬` means
+researcher-added this cycle, and `✅` means implemented/closed by the build lane.
 
 2026-06-04 research refresh: the v3.74.21 through v3.74.26 editor-state
 migrations moved the AI, export, media, compound, caption, and panel storage
@@ -51,7 +60,9 @@ Focused Gradle, APK packaging, release metadata, signature, zipalign, and
 APK-based 16 KB gates passed locally for this batch. v3.74.31 started the
 timeline refactor by extracting interaction/accessibility policy, the
 full-project overview scrollbar, shared timeline accent colors, and focused JVM
-coverage from `Timeline.kt`.
+coverage from `Timeline.kt`. v3.74.32 continued the timeline refactor by moving
+timeline chrome composables, compact label formatters, ruler/waveform drawing,
+and volume-keyframe filtering into focused files with JVM coverage.
 
 ## Current State
 
@@ -128,6 +139,9 @@ coverage from `Timeline.kt`.
 - v3.74.31 starts the Timeline refactor by extracting interaction/accessibility
   policy, the full-project overview scrollbar, and shared track accent colors
   out of the main timeline renderer with focused JVM tests.
+- v3.74.32 continues the Timeline refactor by extracting toolbar/chip chrome,
+  compact label formatters, ruler/waveform drawing helpers, and volume-keyframe
+  filtering out of the main timeline renderer with focused JVM tests.
 
 ## Source Archives
 
@@ -140,7 +154,7 @@ coverage from `Timeline.kt`.
 
 | Priority | Work | Exit criteria |
 |---|---|---|
-| P1 | Timeline refactor | Continue after v3.74.31 by extracting clip layout, overlay drawing, and remaining gesture bodies from `Timeline.kt` into focused files with tests where practical. |
+| P1 | Timeline refactor | Continue after v3.74.32 by extracting clip layout and remaining gesture bodies from `Timeline.kt` into focused files with tests where practical. |
 | P1 | Model activation gates | For every active AI/model dependency, keep source locator, SHA-256, license posture, delivery mode, F-Droid posture, and runtime checksum behavior current in `docs/models.md`. |
 | P2 | Project color policy consumers | Wire `ProjectColorPolicy` into Settings/export confidence once the Room/autosave migration plan is ready. |
 | P2 | Diagnostic ZIP timeline-shape toggle | Expose the privacy-preserving timeline-shape summary as an explicit Settings export option. |
@@ -421,3 +435,112 @@ checked against `app/src/main`, `.github/workflows/build.yml`, and the manifest.
   scaffold; exercise the RTL path on a real build).
 - P1 — Wire slip/slide to timeline gestures (sequenced after the command-pattern
   undo Engine Candidate).
+
+### Researcher Queue (Cycle 2 - 2026-06-04)
+
+Focus: Android 15/16 platform behavior, notification trust, and backup/restore
+data safety. These are net-new against the existing crash/network/CI/i18n/
+slip-slide findings above.
+
+#### Platform Reliability
+
+- [ ] 🔬🤖 P0 — Handle Android 15 `mediaProcessing` foreground-service timeouts
+  - Why: NovaCut targets SDK 36 and exports through a
+    `mediaProcessing` foreground service. Android allows this service type a
+    limited runtime budget and calls `Service.onTimeout(int, int)` when the
+    budget is exhausted; the service must stop within seconds or the app can
+    ANR/crash during long exports.
+  - Evidence: `AndroidManifest.xml` declares
+    `foregroundServiceType="mediaProcessing"` for `ExportService`, and
+    `ExportService.kt` passes `FOREGROUND_SERVICE_TYPE_MEDIA_PROCESSING` to
+    `startForeground()` on Android 15+ but has no `onTimeout` override or timeout
+    test path. Android's foreground-service type docs describe the 6-hours-per-
+    24-hours budget and the required `stopSelf()` behavior:
+    https://developer.android.com/about/versions/15/changes/foreground-service-types
+  - Touches: `engine/ExportService.kt`, `engine/VideoEngine.kt` cancellation/error
+    reporting, export UI state in `ExportDelegate`, and a focused service/unit or
+    instrumentation test.
+  - Acceptance: on API 35+, `ExportService.onTimeout(...)` cancels the active
+    export, records a user-visible terminal error distinct from manual cancel,
+    removes foreground notifications, calls `stopForeground()`/`stopSelf()`, and
+    leaves any partial output in the same cleanup state as other export failures.
+  - Verify: run an Android 15+ emulator with a shortened timeout such as
+    `adb shell device_config put activity_manager media_processing_fgs_timeout_duration 10000`,
+    start an export, confirm timeout cleanup and no ANR, then reset the device
+    config.
+  - Complexity: M
+
+- [ ] 🔬🤖 P1 — Add a contextual Android 13+ notification-permission path for exports
+  - Why: Export progress, completion, error, thermal, and cancel affordances rely
+    on notifications, but newly installed Android 13+ apps have notifications off
+    until the app requests `POST_NOTIFICATIONS`. Today NovaCut declares the
+    permission but only requests `RECORD_AUDIO`, so a first export can silently
+    lose drawer-visible progress and trust feedback.
+  - Evidence: `AndroidManifest.xml` declares `POST_NOTIFICATIONS`; grep shows the
+    only `ActivityResultContracts.RequestPermission()` launcher in
+    `EditorScreen.kt` requests `Manifest.permission.RECORD_AUDIO`. Android's
+    notification permission docs say newly installed Android 13+ apps must request
+    the permission before sending notifications, and denied foreground-service
+    notifications appear in Task Manager but not the notification drawer:
+    https://developer.android.com/develop/ui/compose/notifications/notification-permission
+  - Touches: export start flow, Settings notification/status row, string resources,
+    and fallback in-app export progress messaging when notifications are denied.
+  - Acceptance: before the first background export or thermal warning path on
+    API 33+, NovaCut explains why export notifications matter, requests
+    `POST_NOTIFICATIONS`, remembers denied/dismissed state, and keeps in-app
+    progress/cancel controls complete when notification drawer delivery is blocked.
+  - Verify: use the official ADB permission-state commands from the Android docs
+    to simulate fresh install, allow, deny, and swipe-away states; confirm export
+    notifications and in-app fallbacks behave correctly in each state.
+  - Complexity: M
+
+#### Data Safety
+
+- [ ] 🔬🤖 P1 — Split backup and device-transfer policy for managed media imports
+  - Why: NovaCut copies picked media into `filesDir/media/imports`, but the
+    current backup rules use include-whitelists that omit this directory. That
+    avoids large cloud backups, but a device-transfer restore can resurrect
+    project metadata without the imported media files those projects reference.
+    Including all managed videos in cloud backup would also hit Android's 25 MB
+    Auto Backup quota quickly, so the policy needs an explicit split instead of
+    accidental omission.
+  - Evidence: `LocalMediaImport.kt` defines `managedMediaDir(context)` as
+    `filesDir/media/imports`; `backup_rules.xml` and `data_extraction_rules.xml`
+    include database/autosave/generated media dirs but not `media/imports`.
+    Android's Auto Backup docs state that once an `<include>` element is used,
+    only included files are backed up, and Android 12+ lets apps separate
+    `<cloud-backup>` from `<device-transfer>` so large files can be excluded from
+    cloud but transferred device-to-device:
+    https://developer.android.com/identity/data/autobackup
+  - Touches: `res/xml/backup_rules.xml`, `res/xml/data_extraction_rules.xml`,
+    managed-media tests, Media Relink/Privacy Dashboard copy, and restore-health
+    diagnostics.
+  - Acceptance: cloud backup stays below quota and excludes bulky user media
+    intentionally; device-transfer either includes `media/imports` or opens a
+    first-run restore-health report that explains which projects need relinking;
+    `disableIfNoEncryptionCapabilities` is evaluated for cloud backup because
+    generated voiceover/TTS/media artifacts can be sensitive.
+  - Verify: add tests that assert every durable app-owned media directory is
+    classified as cloud-included, cloud-excluded, or D2D-included; run an emulator
+    backup/restore or `bmgr` smoke with a project containing an imported local
+    clip and confirm the restored project either plays or produces an actionable
+    relink report.
+  - Complexity: M
+
+#### Quick Wins (Cycle 2)
+
+- P1 — Add `ExportService.onTimeout(...)` handling and the shortened-timeout adb
+  validation recipe before long-export QA.
+- P1 — Add notification permission UX before the first Android 13+ background
+  export.
+- P1 — Add backup-rule classification tests for `media/imports`, generated media,
+  diagnostics, models, and temporary/partial files.
+
+#### Appendix — Cycle 2 Sources
+
+- Android foreground-service media-processing timeout:
+  https://developer.android.com/about/versions/15/changes/foreground-service-types
+- Android notification runtime permission:
+  https://developer.android.com/develop/ui/compose/notifications/notification-permission
+- Android Auto Backup and data-extraction rules:
+  https://developer.android.com/identity/data/autobackup

@@ -6,6 +6,31 @@ roadmaps are archived under [docs/archive/roadmap](docs/archive/roadmap/).
 
 Last refreshed: 2026-06-04.
 
+## 2026-06-04 Cycle 2 Platform Hardening Refresh
+
+- [Verified] NovaCut targets SDK 36 and declares `ExportService` as
+  `mediaProcessing`; `ExportService.kt` starts foreground work with
+  `FOREGROUND_SERVICE_TYPE_MEDIA_PROCESSING` on Android 15+ but has no
+  `Service.onTimeout(int, int)` override. Android's foreground-service type docs
+  make timeout cleanup a release risk for long exports because the service must
+  call `stopSelf()` within seconds after the timeout callback.
+- [Verified] `POST_NOTIFICATIONS` is declared, but the only runtime permission
+  launcher found in the editor requests `RECORD_AUDIO`. Android 13+ newly
+  installed apps keep notifications off until requested, and denied foreground
+  service notifications are absent from the notification drawer, so export
+  progress needs a contextual permission/fallback path.
+- [Verified] `LocalMediaImport.kt` stores app-owned imported media under
+  `filesDir/media/imports`, while `backup_rules.xml` and
+  `data_extraction_rules.xml` whitelist database/autosave/generated-media dirs
+  but omit managed imports. Android Auto Backup docs make this important in both
+  directions: include-whitelists exclude all unspecified files, cloud backup has
+  a 25 MB quota, and Android 12+ permits different `<cloud-backup>` and
+  `<device-transfer>` rules.
+- [Promoted] These findings were added to `ROADMAP.md` under
+  `Researcher Queue (Cycle 2 - 2026-06-04)` as P0/P1 implementation-ready items
+  with Android official-doc links, local file evidence, acceptance criteria, and
+  verification recipes.
+
 ## 2026-06-04 Freshness Refresh
 
 - [Verified] The Active Queue's editor state storage migration lane completed
