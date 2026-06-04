@@ -16,7 +16,8 @@ Last refreshed: 2026-06-04.
   preserving read-only compatibility accessors for existing UI and delegate
   reads. The next architecture lane is EditorScreen panel router decomposition;
   v3.74.27 started it by extracting the primary bottom-sheet cluster into
-  `EditorPrimaryPanelHost`.
+  `EditorPrimaryPanelHost`, and v3.74.28 extracted AI tools / Cut Assistant
+  review into `EditorAiPanelHost`.
 - [Verified] Current Maven metadata check: Media3 `1.10.1` and WorkManager
   `2.11.2` match latest release metadata; Compose BOM is `2026.05.00` vs
   `2026.05.01`; Room is `2.7.2` vs `2.8.4`; Kotlin is `2.1.0` vs `2.4.0`; AGP

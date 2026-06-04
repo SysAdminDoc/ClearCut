@@ -7,7 +7,7 @@ Last consolidated: 2026-06-04.
 
 ## Current Delivered Baseline
 
-- Current version: v3.74.27 (`versionCode` 164).
+- Current version: v3.74.28 (`versionCode` 165).
 - Multi-track Android NLE with project gallery, editor, timeline, preview,
   effects, transitions, text, captions, audio, export, settings, templates,
   project archive/import, and diagnostic bundle surfaces.
@@ -108,6 +108,8 @@ Last consolidated: 2026-06-04.
 - Primary panel router host extraction shipped in v3.74.27: media picker,
   effects, speed, transition, text editor, export, audio, and voiceover recorder
   routes now live in `EditorPrimaryPanelHost`.
+- AI panel router host extraction shipped in v3.74.28: AI tools and Cut
+  Assistant review routes now live in `EditorAiPanelHost`.
 
 ## Preserved Historical Detail
 

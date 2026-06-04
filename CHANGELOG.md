@@ -1,5 +1,24 @@
 # Changelog
 
+## v3.74.28 — 2026-06-04
+
+### AI panel router host extraction
+- Added `EditorAiPanelHost` to own the AI tools sheet and Cut Assistant review
+  sheet routes.
+- Moved AI tool dispatch, disabled-tool feedback, model download/remove
+  callbacks, processing cancellation, and Cut Assistant proposal callbacks out
+  of the main `EditorScreen` body.
+- Kept `EditorScreen` responsible for collecting the Whisper and segmentation
+  model-state flows and passing their current values into the host.
+- Left clip-adjustment, utility, and overlay routes in `EditorScreen` for the
+  next decomposition pass.
+- Bumped runtime metadata to `versionName 3.74.28` / `versionCode 165`.
+- Verification: `git diff --check`, `scripts/verify_release_artifacts.py`,
+  APK-based 16 KB checks for debug/release, `apksigner verify` for
+  debug/release, `zipalign -c -P 16 -v 4` for debug/release/androidTest,
+  `:app:compileDebugKotlin`, and `:app:testDebugUnitTest :app:assembleDebug
+  :app:assembleRelease :app:assembleDebugAndroidTest` passed.
+
 ## v3.74.27 — 2026-06-04
 
 ### Primary panel router host extraction

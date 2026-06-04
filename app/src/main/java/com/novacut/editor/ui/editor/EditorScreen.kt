@@ -1235,6 +1235,15 @@ fun EditorScreen(
             }
         )
 
+        EditorAiPanelHost(
+            state = state,
+            viewModel = viewModel,
+            whisperModelState = whisperState,
+            whisperDownloadProgress = whisperProgress,
+            segmentationModelState = segmentationState,
+            segmentationDownloadProgress = segmentationProgress
+        )
+
         // Transform panel
         BottomSheetSlot(
             visible = state.panels.isOpen(PanelId.TRANSFORM),
@@ -1270,53 +1279,6 @@ fun EditorScreen(
                 },
                 onClose = viewModel::hideCropPanel
             )
-        }
-
-        // AI tools panel
-        BottomSheetSlot(
-            visible = state.panels.isOpen(PanelId.AI_TOOLS),
-            modifier = Modifier.align(Alignment.BottomCenter)
-        ) {
-            AiToolsPanel(
-                hasSelectedClip = state.selectedClipId != null,
-                onToolSelected = { toolId ->
-                    if (toolId == "cut_assistant") {
-                        viewModel.proposeCutsForReview()
-                    } else {
-                        viewModel.runAiTool(toolId)
-                    }
-                },
-                onDisabledToolTapped = { toolName -> viewModel.showToast("Select a clip to use $toolName") },
-                onCancelProcessing = viewModel::cancelAiTool,
-                onClose = viewModel::hideAiToolsPanel,
-                processingTool = state.aiProcessingTool,
-                whisperModelState = whisperState,
-                whisperDownloadProgress = whisperProgress,
-                onDownloadWhisper = viewModel::downloadWhisperModel,
-                onDeleteWhisper = viewModel::deleteWhisperModel,
-                segmentationModelState = segmentationState,
-                segmentationDownloadProgress = segmentationProgress,
-                onDownloadSegmentation = viewModel::downloadSegmentationModel,
-                onDeleteSegmentation = viewModel::deleteSegmentationModel
-            )
-        }
-
-        // Cut Assistant review
-        BottomSheetSlot(
-            visible = state.cutAssistantReview != null,
-            modifier = Modifier.align(Alignment.BottomCenter)
-        ) {
-            state.cutAssistantReview?.let { review ->
-                CutAssistantReviewPanel(
-                    review = review,
-                    tracks = state.tracks,
-                    onToggleProposal = viewModel::toggleCutProposal,
-                    onAcceptAll = viewModel::acceptAllCutProposals,
-                    onRejectAll = viewModel::rejectAllCutProposals,
-                    onApply = viewModel::applyAcceptedCuts,
-                    onClose = viewModel::dismissCutAssistantReview
-                )
-            }
         }
 
         // Effect adjustment panel
