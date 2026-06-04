@@ -1,5 +1,25 @@
 # Changelog
 
+## v3.74.24 — 2026-06-04
+
+### Compound editor-state storage migration
+- Moved compound navigation editor storage into `EditorCompoundState`,
+  including navigation depth and breadcrumb text.
+- Kept read-only `EditorState` compatibility accessors so existing predictive
+  back, breadcrumb, and editor UI reads remain stable.
+- Converted the compound navigation publisher to update `state.compound`
+  through nested `compound.copy(...)`.
+- Updated `EditorDomainStateTest` to construct the stored compound slice
+  directly.
+- Bumped runtime metadata to `versionName 3.74.24` / `versionCode 161`.
+- Verification: `git diff --check`, `scripts/verify_release_artifacts.py`,
+  APK-based 16 KB checks for debug/release, `apksigner verify` for
+  debug/release, `zipalign -c -P 16 -v 4` for debug/release/androidTest,
+  `:app:compileDebugKotlin :app:testDebugUnitTest --tests
+  com.novacut.editor.ui.editor.EditorDomainStateTest`, and
+  `:app:testDebugUnitTest :app:assembleDebug :app:assembleRelease
+  :app:assembleDebugAndroidTest` passed.
+
 ## v3.74.23 — 2026-06-04
 
 ### Media editor-state storage migration

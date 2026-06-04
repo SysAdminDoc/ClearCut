@@ -8,13 +8,14 @@ Active roadmap for forward-looking work. Shipped work is summarized in
 [RESEARCH_REPORT.md](RESEARCH_REPORT.md), and detailed historical plans are
 archived under [docs/archive](docs/archive/).
 
-Current version: **v3.74.23** (`versionCode` 160). Last consolidated:
+Current version: **v3.74.24** (`versionCode` 161). Last consolidated:
 2026-06-04.
 
-2026-06-04 research refresh: the v3.74.21, v3.74.22, and v3.74.23 editor-state
-migrations moved the AI, export, and media storage slices into `EditorAiState`,
-`EditorExportDomainState`, and `EditorMediaState`, leaving panel, caption, and
-compound storage as the remaining P1 migration lane. Maven metadata shows
+2026-06-04 research refresh: the v3.74.21 through v3.74.24 editor-state
+migrations moved the AI, export, media, and compound storage slices into
+`EditorAiState`, `EditorExportDomainState`, `EditorMediaState`, and
+`EditorCompoundState`, leaving panel and caption storage as the remaining P1
+migration lane. Maven metadata shows
 Media3 1.10.1 and WorkManager 2.11.2 current, with Compose BOM 2026.05.01, Room
 2.8.4, and Kotlin 2.4.0 available for deliberate review; AGP's newest observed
 metadata is 9.3.0-alpha09 and should stay out of routine bumps. Focused Gradle,
@@ -73,6 +74,9 @@ full APK, release metadata, signature, zipalign, and 16 KB gates passed locally.
 - v3.74.23 moves media/trust-report editor state into `EditorMediaState`
   storage while keeping read-only compatibility accessors for Media Manager,
   backup import, and timeline-exchange reads.
+- v3.74.24 moves compound navigation editor state into `EditorCompoundState`
+  storage while keeping read-only compatibility accessors for predictive back
+  and breadcrumb reads.
 
 ## Source Archives
 
@@ -85,7 +89,7 @@ full APK, release metadata, signature, zipalign, and 16 KB gates passed locally.
 
 | Priority | Work | Exit criteria |
 |---|---|---|
-| P1 | Editor state storage migration | Move remaining `EditorState` constructor storage and `copy(...)` call sites onto the panel, caption, and compound domain slices without regressing existing editor surfaces. |
+| P1 | Editor state storage migration | Move remaining `EditorState` constructor storage and `copy(...)` call sites onto the panel and caption domain slices without regressing existing editor surfaces. |
 | P1 | EditorScreen panel router decomposition | Replace the large monolithic panel routing surface with smaller host components that own only their local state and callbacks. |
 | P1 | Timeline refactor | Reduce `Timeline.kt` risk by extracting gesture handling, clip layout, overlays, and accessibility actions into focused files with tests where practical. |
 | P1 | Model activation gates | For every active AI/model dependency, keep source locator, SHA-256, license posture, delivery mode, F-Droid posture, and runtime checksum behavior current in `docs/models.md`. |

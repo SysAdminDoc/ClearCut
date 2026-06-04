@@ -13,8 +13,9 @@ Last refreshed: 2026-06-04.
   AI storage into `EditorAiState`, and the v3.74.22 / versionCode 159 pass
   moved export storage into `EditorExportDomainState`; the v3.74.23 /
   versionCode 160 pass moved media feedback storage into `EditorMediaState`,
-  while preserving read-only compatibility accessors for existing UI and
-  delegate reads.
+  and the v3.74.24 / versionCode 161 pass moved compound navigation storage
+  into `EditorCompoundState`, while preserving read-only compatibility
+  accessors for existing UI and delegate reads.
 - [Verified] Current Maven metadata check: Media3 `1.10.1` and WorkManager
   `2.11.2` match latest release metadata; Compose BOM is `2026.05.00` vs
   `2026.05.01`; Room is `2.7.2` vs `2.8.4`; Kotlin is `2.1.0` vs `2.4.0`; AGP

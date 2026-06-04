@@ -10,8 +10,8 @@ NovaCut is an Android video editor under package `com.novacut.editor`. The repo 
 
 Current live version evidence:
 
-- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 160`, `versionName = "3.74.23"`.
-- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.23`.
+- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 161`, `versionName = "3.74.24"`.
+- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.24`.
 - [README.md](README.md) and [ROADMAP.md](ROADMAP.md) both describe the v3.74.x line.
 - The 2026-05-17 continuation pushes each completed roadmap batch back to `origin/master`; verify `git status --short --branch` before assuming branch sync.
 
@@ -340,9 +340,26 @@ High-level modules and patterns:
   `copyMedia` / nested `media.copy(...)`, including backup import feedback,
   relink reports, OTIO/FCPXML feedback, and dismissal helpers.
 - Verification: `:app:compileDebugKotlin :app:testDebugUnitTest --tests
+  com.novacut.editor.ui.editor.EditorDomainStateTest`, full debug-unit/debug
+  APK/release APK/androidTest Gradle matrix, release metadata, signature,
+  zipalign, and APK-based 16 KB gates passed.
+- Next roadmap item after this batch was P1 Editor state storage migration for
+  panel, caption, and compound slices.
+
+2026-06-04 compound editor state storage migration continuation:
+
+- Completed the compound slice of P1 editor state storage migration in
+  v3.74.24. `EditorState` now stores compound navigation in
+  `compound: EditorCompoundState` instead of flat constructor properties.
+- Added read-only compatibility accessors for existing UI reads:
+  `compoundNavDepth` and `compoundBreadcrumbText`.
+- Converted compound mutation in `publishCompoundNavState()` to write through
+  nested `compound.copy(...)` while preserving selection-clearing behavior on
+  compound entry.
+- Verification: `:app:compileDebugKotlin :app:testDebugUnitTest --tests
   com.novacut.editor.ui.editor.EditorDomainStateTest` passed.
-- Next roadmap item: P1 Editor state storage migration for panel, caption, and
-  compound slices.
+- Next roadmap item: P1 Editor state storage migration for panel and caption
+  slices.
 
 2026-05-17 autonomous continuation:
 

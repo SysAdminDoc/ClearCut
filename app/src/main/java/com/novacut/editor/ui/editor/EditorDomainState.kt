@@ -50,8 +50,8 @@ data class EditorCaptionState(
 }
 
 data class EditorCompoundState(
-    val depth: Int,
-    val breadcrumbText: String
+    val depth: Int = 0,
+    val breadcrumbText: String = ""
 ) : EditorDomainState {
     override val kind: EditorDomainState.Kind = EditorDomainState.Kind.COMPOUND
 }
@@ -128,10 +128,7 @@ val EditorState.domainStates: EditorDomainStates
             quality = captionTranslationQuality,
             variant = captionTranslationVariant
         ),
-        compound = EditorCompoundState(
-            depth = compoundNavDepth,
-            breadcrumbText = compoundBreadcrumbText
-        ),
+        compound = compound,
         export = export,
         ai = ai,
         media = media
@@ -145,3 +142,6 @@ inline fun EditorState.copyExport(transform: (EditorExportDomainState) -> Editor
 
 inline fun EditorState.copyMedia(transform: (EditorMediaState) -> EditorMediaState): EditorState =
     copy(media = transform(media))
+
+inline fun EditorState.copyCompound(transform: (EditorCompoundState) -> EditorCompoundState): EditorState =
+    copy(compound = transform(compound))
