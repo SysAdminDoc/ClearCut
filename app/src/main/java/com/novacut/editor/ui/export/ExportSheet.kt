@@ -53,6 +53,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -76,6 +77,7 @@ import com.novacut.editor.model.TargetSizePreset
 import com.novacut.editor.model.VideoCodec
 import com.novacut.editor.model.Watermark
 import com.novacut.editor.model.WatermarkPosition
+import com.novacut.editor.ui.NovaCutTestTags
 import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.NovaCutPrimaryButton
 import com.novacut.editor.ui.theme.NovaCutSecondaryButton
@@ -262,6 +264,7 @@ fun ExportSheet(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .testTag(NovaCutTestTags.EXPORT_SHEET)
             .background(Mocha.Panel, containerShape)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = Spacing.lg, vertical = 14.dp)
@@ -322,7 +325,12 @@ fun ExportSheet(
                     shape = CircleShape,
                     border = BorderStroke(1.dp, Mocha.CardStroke)
                 ) {
-                    IconButton(onClick = onClose, modifier = Modifier.size(40.dp)) {
+                    IconButton(
+                        onClick = onClose,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .testTag(NovaCutTestTags.EXPORT_CLOSE)
+                    ) {
                         Icon(
                             Icons.Default.Close,
                             stringResource(R.string.close),

@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -36,6 +37,7 @@ import com.novacut.editor.engine.AppSettings
 import com.novacut.editor.engine.segmentation.SegmentationModelState
 import com.novacut.editor.engine.whisper.WhisperModelState
 import com.novacut.editor.model.*
+import com.novacut.editor.ui.NovaCutTestTags
 import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.NovaCutChromeIconButton
 import com.novacut.editor.ui.theme.NovaCutDialogIcon
@@ -87,7 +89,11 @@ fun SettingsScreen(
         viewModel.refreshAiModelStorage()
     }
 
-    NovaCutScreenBackground(modifier = modifier.fillMaxSize()) {
+    NovaCutScreenBackground(
+        modifier = modifier
+            .fillMaxSize()
+            .testTag(NovaCutTestTags.SETTINGS_SCREEN)
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -483,7 +489,8 @@ fun SettingsScreen(
                 label = stringResource(R.string.settings_privacy_open_label),
                 description = stringResource(R.string.settings_privacy_open_description),
                 actionLabel = stringResource(R.string.settings_privacy_open_action),
-                onClick = { showPrivacyDashboard = true }
+                onClick = { showPrivacyDashboard = true },
+                modifier = Modifier.testTag(NovaCutTestTags.SETTINGS_PRIVACY_OPEN)
             )
         }
 
@@ -528,6 +535,7 @@ fun SettingsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(max = 640.dp)
+                        .testTag(NovaCutTestTags.SETTINGS_PRIVACY_DASHBOARD)
                 ) {
                     Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                         PrivacyDashboardPanel()
@@ -539,7 +547,8 @@ fun SettingsScreen(
                         ) {
                             NovaCutSecondaryButton(
                                 text = stringResource(R.string.settings_privacy_close),
-                                onClick = { showPrivacyDashboard = false }
+                                onClick = { showPrivacyDashboard = false },
+                                modifier = Modifier.testTag(NovaCutTestTags.SETTINGS_PRIVACY_CLOSE)
                             )
                         }
                     }
@@ -678,7 +687,8 @@ private fun SettingsHero(
                 NovaCutChromeIconButton(
                     icon = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = stringResource(R.string.back),
-                    onClick = onBack
+                    onClick = onBack,
+                    modifier = Modifier.testTag(NovaCutTestTags.SETTINGS_BACK)
                 )
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
@@ -1265,14 +1275,16 @@ private fun SettingsActionRow(
     label: String,
     description: String,
     actionLabel: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     SettingsTile(
         icon = icon,
         accent = accent,
         label = label,
         description = description,
-        onClick = onClick
+        onClick = onClick,
+        modifier = modifier
     ) {
         NovaCutMetricPill(
             text = actionLabel,
@@ -1357,6 +1369,7 @@ private fun SettingsTile(
     label: String,
     description: String? = null,
     onClick: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
     role: Role = Role.Button,
     semanticState: String? = null,
     trailing: @Composable RowScope.() -> Unit
@@ -1369,6 +1382,7 @@ private fun SettingsTile(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .then(modifier)
                 .defaultMinSize(minHeight = 72.dp)
                 .then(if (onClick != null) Modifier.clickable(role = role, onClick = onClick) else Modifier)
                 .then(

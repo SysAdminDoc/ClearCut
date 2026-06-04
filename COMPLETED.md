@@ -3,11 +3,11 @@
 Consolidated completion log for shipped roadmap work. The full chronological
 history remains in [CHANGELOG.md](CHANGELOG.md).
 
-Last consolidated: 2026-06-01.
+Last consolidated: 2026-06-04.
 
 ## Current Delivered Baseline
 
-- Current version: v3.74.9 (`versionCode` 146).
+- Current version: v3.74.11 (`versionCode` 148).
 - Multi-track Android NLE with project gallery, editor, timeline, preview,
   effects, transitions, text, captions, audio, export, settings, templates,
   project archive/import, and diagnostic bundle surfaces.
@@ -39,6 +39,10 @@ Last consolidated: 2026-06-01.
 - Dynamic launcher shortcut planner and static app shortcuts shipped.
 - Media relink probe, diagnostic timeline-shape summary, and autosave schema
   future-gate shipped at the engine layer.
+- UI test harness bootstrap shipped in v3.74.11: shared Compose test tags,
+  androidTest dependencies, and a smoke test covering project list,
+  blank-project editor open, media picker, export sheet, Settings, and privacy
+  dashboard surfaces.
 
 ## Preserved Historical Detail
 

@@ -34,6 +34,7 @@ import com.novacut.editor.engine.finalizePendingCameraCapture
 import com.novacut.editor.engine.importUriToManagedMedia
 import com.novacut.editor.engine.pendingCameraCaptureDir
 import com.novacut.editor.engine.resolveManagedMediaExtension
+import com.novacut.editor.ui.NovaCutTestTags
 import com.novacut.editor.ui.editor.PremiumEditorPanel
 import com.novacut.editor.ui.editor.PremiumPanelCard
 import com.novacut.editor.ui.editor.PremiumPanelPill
@@ -336,6 +337,7 @@ fun MediaPickerSheet(
         icon = Icons.Default.PermMedia,
         accent = Mocha.Blue,
         onClose = onClose,
+        closeButtonTestTag = NovaCutTestTags.MEDIA_PICKER_CLOSE,
         modifier = modifier
             .heightIn(min = 240.dp, max = 560.dp)
             .dragAndDropTarget(

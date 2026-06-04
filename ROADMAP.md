@@ -5,8 +5,8 @@ Active roadmap for forward-looking work. Shipped work is summarized in
 [RESEARCH_REPORT.md](RESEARCH_REPORT.md), and detailed historical plans are
 archived under [docs/archive](docs/archive/).
 
-Current version: **v3.74.9** (`versionCode` 146). Last consolidated:
-2026-06-01.
+Current version: **v3.74.11** (`versionCode` 148). Last consolidated:
+2026-06-04.
 
 ## Current State
 
@@ -20,6 +20,9 @@ Current version: **v3.74.9** (`versionCode` 146). Last consolidated:
 - The active development direction is not another broad feature list. It is
   wiring the shipped scaffolds into reliable editor flows, closing release
   readiness gaps, and keeping AI/model surfaces honest about availability.
+- v3.74.11 adds the first repeatable Compose instrumentation smoke harness for
+  the project gallery, blank-project editor open, media picker, export sheet,
+  Settings, and privacy dashboard surfaces.
 
 ## Source Archives
 
@@ -32,7 +35,6 @@ Current version: **v3.74.9** (`versionCode` 146). Last consolidated:
 
 | Priority | Work | Exit criteria |
 |---|---|---|
-| P0 | UI test harness bootstrap | A repeatable emulator/instrumented smoke path covers the project list, editor open, media import, export sheet, settings privacy/dashboard, and the highest-risk dialogs. |
 | P0 | Release pipeline reactivation | Push/PR/tag CI proves unit tests, debug build, release build inputs, 16 KB alignment, and release artifact checks without relying on local-only state. |
 | P0 | Recovery open path | `loadRecoveryDataWithOutcome` becomes the default project-open path, with future-schema/corrupt/not-found outcomes surfaced to the user without data loss. |
 | P0 | Media relink editor integration | `MediaRelinkProbe` reports missing/unknown media when a project opens and gives users a focused relink path before edit/export. |

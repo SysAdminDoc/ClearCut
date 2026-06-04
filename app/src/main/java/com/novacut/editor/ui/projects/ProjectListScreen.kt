@@ -26,6 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -44,6 +45,7 @@ import com.novacut.editor.R
 import com.novacut.editor.model.Project
 import com.novacut.editor.model.ProjectFilterMode
 import com.novacut.editor.model.SortMode
+import com.novacut.editor.ui.NovaCutTestTags
 import com.novacut.editor.ui.editor.PremiumSnackbarHost
 import com.novacut.editor.ui.editor.ToastSeverity
 import com.novacut.editor.ui.editor.inferSeverity
@@ -102,7 +104,9 @@ fun ProjectListScreen(
     }
 
     NovaCutScreenBackground(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
+            .testTag(NovaCutTestTags.PROJECTS_SCREEN)
     ) {
         val importTemplate = { templateImportLauncher.launch(arrayOf("*/*")) }
 
@@ -297,7 +301,8 @@ private fun ProjectHomeHero(
             NovaCutChromeIconButton(
                 icon = Icons.Default.Settings,
                 contentDescription = stringResource(R.string.projects_settings),
-                onClick = onSettings
+                onClick = onSettings,
+                modifier = Modifier.testTag(NovaCutTestTags.PROJECTS_SETTINGS)
             )
         }
 
@@ -351,7 +356,8 @@ private fun ProjectHomeHero(
                 secondaryLabel = stringResource(R.string.template_import),
                 secondaryIcon = Icons.Default.FileOpen,
                 onSecondary = onImportTemplate,
-                enabled = actionsEnabled
+                enabled = actionsEnabled,
+                primaryTestTag = NovaCutTestTags.PROJECTS_CREATE_PROJECT
             )
         }
 
@@ -602,7 +608,8 @@ private fun ProjectEmptyState(
                         secondaryLabel = stringResource(R.string.projects_new_project),
                         secondaryIcon = Icons.Default.Add,
                         onSecondary = onCreateProject,
-                        enabled = actionsEnabled
+                        enabled = actionsEnabled,
+                        secondaryTestTag = NovaCutTestTags.PROJECTS_CREATE_PROJECT
                     )
                 } else {
                     ProjectEmptyStateActions(
@@ -654,7 +661,8 @@ private fun ProjectEmptyStateActions(
         secondaryLabel = stringResource(R.string.template_import),
         secondaryIcon = Icons.Default.FileOpen,
         onSecondary = onImportTemplate,
-        enabled = enabled
+        enabled = enabled,
+        primaryTestTag = NovaCutTestTags.PROJECTS_CREATE_PROJECT
     )
 }
 
@@ -666,7 +674,9 @@ private fun ProjectActionRow(
     secondaryLabel: String,
     secondaryIcon: androidx.compose.ui.graphics.vector.ImageVector,
     onSecondary: () -> Unit,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    primaryTestTag: String? = null,
+    secondaryTestTag: String? = null
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         val stackActions = maxWidth < 360.dp
@@ -677,13 +687,17 @@ private fun ProjectActionRow(
                     icon = primaryIcon,
                     onClick = onPrimary,
                     enabled = enabled,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(primaryTestTag?.let { Modifier.testTag(it) } ?: Modifier)
                 )
                 NovaCutSecondaryButton(
                     text = secondaryLabel,
                     icon = secondaryIcon,
                     onClick = onSecondary,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(secondaryTestTag?.let { Modifier.testTag(it) } ?: Modifier),
                     contentColor = Mocha.Text,
                     enabled = enabled
                 )
@@ -695,13 +709,17 @@ private fun ProjectActionRow(
                     icon = primaryIcon,
                     onClick = onPrimary,
                     enabled = enabled,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .weight(1f)
+                        .then(primaryTestTag?.let { Modifier.testTag(it) } ?: Modifier)
                 )
                 NovaCutSecondaryButton(
                     text = secondaryLabel,
                     icon = secondaryIcon,
                     onClick = onSecondary,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .then(secondaryTestTag?.let { Modifier.testTag(it) } ?: Modifier),
                     contentColor = Mocha.Text,
                     enabled = enabled
                 )

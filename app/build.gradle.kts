@@ -22,8 +22,9 @@ android {
         applicationId = "com.novacut.editor"
         minSdk = 26
         targetSdk = 36
-        versionCode = 147
-        versionName = "3.74.10"
+        versionCode = 148
+        versionName = "3.74.11"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {
@@ -191,6 +192,12 @@ dependencies {
     // Tier 4: OkHttp (cloud inpainting API)
     implementation(libs.okhttp)
 
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
+
     testImplementation(libs.junit4)
     testImplementation(libs.org.json)
+
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    androidTestImplementation(libs.androidx.test.runner)
 }

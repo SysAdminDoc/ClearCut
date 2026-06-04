@@ -1,5 +1,23 @@
 # Changelog
 
+## v3.74.11 — 2026-06-04
+
+### UI test harness bootstrap
+- Added shared `NovaCutTestTags` constants and stable Compose test tags for the
+  project gallery, template picker, editor shell, empty-project media import,
+  media picker, export sheet, Settings, privacy dashboard dialog, and first-run
+  tutorial dismissal.
+- Added Compose instrumentation dependencies and
+  `NovaCutSmokeTest.projectEditorExportAndSettingsSurfacesOpen()`, which opens a
+  blank project through the real UI and verifies the high-risk editor, import,
+  export, settings, and privacy surfaces.
+- Bumped runtime metadata to `versionName 3.74.11` / `versionCode 148`.
+- Verification: `git diff --check`,
+  `:app:compileDebugKotlin :app:compileDebugAndroidTestKotlin --rerun-tasks`,
+  and `:app:testDebugUnitTest :app:assembleDebugAndroidTest` passed. Connected
+  instrumentation was blocked because ADB reported `emulator-5554` as `offline`
+  after an ADB server restart.
+
 ## v3.74.10 — 2026-06-02
 
 Hardening pass. The previous merge of divergent histories left `master` in a

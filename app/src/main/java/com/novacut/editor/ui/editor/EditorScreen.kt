@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -61,6 +62,7 @@ import com.novacut.editor.ui.export.BatchExportPanel
 import com.novacut.editor.ui.export.ExportSheet
 import com.novacut.editor.ui.export.ExportSheetPresentation
 import com.novacut.editor.ui.mediapicker.MediaPickerSheet
+import com.novacut.editor.ui.NovaCutTestTags
 import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.NovaCutDialogIcon
 import com.novacut.editor.ui.theme.NovaCutPrimaryButton
@@ -661,6 +663,7 @@ fun EditorScreen(
     CompositionLocalProvider(LocalLayoutMode provides layoutMode) {
     Box(modifier = Modifier
         .fillMaxSize()
+        .testTag(NovaCutTestTags.EDITOR_SCREEN)
         .background(Mocha.Base)
         .focusRequester(focusRequester)
         .focusable()
@@ -846,7 +849,9 @@ fun EditorScreen(
                                     text = stringResource(R.string.editor_add_media),
                                     icon = Icons.Default.Add,
                                     onClick = viewModel::showMediaPicker,
-                                    modifier = Modifier.widthIn(min = 180.dp)
+                                    modifier = Modifier
+                                        .widthIn(min = 180.dp)
+                                        .testTag(NovaCutTestTags.EDITOR_EMPTY_ADD_MEDIA)
                                 )
                             }
                         }
@@ -1220,7 +1225,8 @@ fun EditorScreen(
                     }
                     viewModel.addClipToTrack(uri, trackType)
                 },
-                onClose = viewModel::hideMediaPicker
+                onClose = viewModel::hideMediaPicker,
+                modifier = Modifier.testTag(NovaCutTestTags.MEDIA_PICKER_SHEET)
             )
         }
 
@@ -2875,7 +2881,9 @@ private fun EditorTopBar(
                 ) {
                     IconButton(
                         onClick = onBack,
-                        modifier = Modifier.size(if (isCompactBar) 36.dp else 38.dp)
+                        modifier = Modifier
+                            .size(if (isCompactBar) 36.dp else 38.dp)
+                            .testTag(NovaCutTestTags.EDITOR_BACK)
                     ) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
@@ -3149,7 +3157,9 @@ private fun EditorTopBar(
                     ),
                     shape = RoundedCornerShape(16.dp),
                     contentPadding = PaddingValues(horizontal = if (isCompactBar) 12.dp else 14.dp, vertical = 0.dp),
-                    modifier = Modifier.height(if (isCompactBar) 36.dp else 38.dp)
+                    modifier = Modifier
+                        .height(if (isCompactBar) 36.dp else 38.dp)
+                        .testTag(NovaCutTestTags.EDITOR_EXPORT)
                 ) {
                     Icon(
                         Icons.Default.Upload,
@@ -3163,4 +3173,3 @@ private fun EditorTopBar(
         }
     }
 }
-

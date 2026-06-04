@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.engine.UserTemplate
 import com.novacut.editor.model.*
+import com.novacut.editor.ui.NovaCutTestTags
 import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.NovaCutChromeIconButton
 import com.novacut.editor.ui.theme.NovaCutDialogIcon
@@ -132,6 +134,7 @@ fun ProjectTemplateSheet(
         modifier = modifier
             .fillMaxWidth()
             .fillMaxHeight(0.92f)
+            .testTag(NovaCutTestTags.TEMPLATE_SHEET)
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
             .background(Mocha.Panel, RoundedCornerShape(topStart = Radius.xxl, topEnd = Radius.xxl))
@@ -347,6 +350,9 @@ private fun UserTemplateCard(
             .clip(RoundedCornerShape(Radius.xl))
             .background(Mocha.PanelHighest)
             .border(1.dp, Mocha.CardStrokeStrong, RoundedCornerShape(Radius.xl))
+            .then(
+                if (template.id == "blank") Modifier.testTag(NovaCutTestTags.TEMPLATE_BLANK) else Modifier
+            )
             .clickable(role = Role.Button, onClick = onClick)
             .semantics { contentDescription = templateDescription }
     ) {

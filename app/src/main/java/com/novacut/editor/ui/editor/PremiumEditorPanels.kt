@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -49,6 +50,7 @@ fun PremiumEditorPanel(
     modifier: Modifier = Modifier,
     scrollable: Boolean = false,
     closeContentDescription: String? = null,
+    closeButtonTestTag: String? = null,
     headerActions: @Composable RowScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -130,7 +132,8 @@ fun PremiumEditorPanel(
                 PremiumPanelIconButton(
                     icon = Icons.Default.Close,
                     contentDescription = closeContentDescription ?: stringResource(R.string.tool_close),
-                    onClick = onClose
+                    onClick = onClose,
+                    modifier = closeButtonTestTag?.let { Modifier.testTag(it) } ?: Modifier
                 )
             }
         }

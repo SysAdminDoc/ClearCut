@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -30,6 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.novacut.editor.R
+import com.novacut.editor.ui.NovaCutTestTags
 import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.Motion
 import com.novacut.editor.ui.theme.NovaCutPrimaryButton
@@ -82,6 +84,7 @@ fun FirstRunTutorial(
     Box(
         modifier = modifier
             .fillMaxSize()
+            .testTag(NovaCutTestTags.TUTORIAL_SCREEN)
             .pointerInput(Unit) {
                 awaitPointerEventScope {
                     while (true) {
@@ -109,6 +112,7 @@ fun FirstRunTutorial(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(Spacing.lg)
+                .testTag(NovaCutTestTags.TUTORIAL_SKIP)
                 .defaultMinSize(minHeight = TouchTarget.minimum)
                 .clickable(role = Role.Button, onClick = onComplete)
         ) {

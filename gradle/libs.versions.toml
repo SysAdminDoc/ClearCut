@@ -25,6 +25,7 @@ ffmpegKit = "6.1.1"
 deepfilternet = "0.0.8"
 junit4 = "4.13.2"
 json = "20240303"
+androidxTestRunner = "1.6.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -36,6 +37,8 @@ androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
 androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-compose-material-icons = { group = "androidx.compose.material", name = "material-icons-extended" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
@@ -70,6 +73,7 @@ ffmpeg-kit-sixteenkb = { group = "com.moizhassan.ffmpeg", name = "ffmpeg-kit-16k
 android-deepfilternet = { group = "io.github.kaleyravideo", name = "android-deepfilternet", version.ref = "deepfilternet" }
 junit4 = { group = "junit", name = "junit", version.ref = "junit4" }
 org-json = { group = "org.json", name = "json", version.ref = "json" }
+androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

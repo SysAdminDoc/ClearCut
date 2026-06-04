@@ -1,6 +1,6 @@
 # NovaCut Project Context
 
-Last consolidated: 2026-06-01. Last implementation update: 2026-05-17.
+Last consolidated: 2026-06-04. Last implementation update: 2026-06-04.
 
 This file is the committed project memory for future work. It reconciles the live repository, local instruction files, prior memory, current roadmap, and the deep research run in [.ai/research/2026-05-17](.ai/research/2026-05-17/).
 
@@ -10,8 +10,8 @@ NovaCut is an Android video editor under package `com.novacut.editor`. The repo 
 
 Current live version evidence:
 
-- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 146`, `versionName = "3.74.9"`.
-- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.9`.
+- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 148`, `versionName = "3.74.11"`.
+- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.11`.
 - [README.md](README.md) and [ROADMAP.md](ROADMAP.md) both describe the v3.74.x line.
 - The 2026-05-17 continuation pushes each completed roadmap batch back to `origin/master`; verify `git status --short --branch` before assuming branch sync.
 
@@ -58,6 +58,9 @@ High-level modules and patterns:
 - The roadmap is unusually detailed and maps many features to concrete touch points.
 - Many future features already have model, policy, or planner scaffolds rather than only TODO comments.
 - The repository has broad unit-test coverage around engine helpers, planners, and metadata models.
+- The repo now has a repeatable Compose instrumentation smoke harness for the
+  project gallery, blank-project editor open, media picker, export sheet,
+  Settings, and privacy dashboard surfaces.
 - The privacy posture is coherent: local-first by default, opt-in cloud paths, explicit model downloads, and F-Droid awareness.
 - Cross-editor interoperability is already a first-class goal through FCPXML/OTIO/EDL-style planning.
 
@@ -100,6 +103,23 @@ High-level modules and patterns:
 
 ## Recent Implementation Notes
 
+2026-06-04 autonomous continuation:
+
+- Completed the P0 UI test harness bootstrap in v3.74.11. Added shared
+  `NovaCutTestTags`, stable tags on the project gallery, template picker,
+  editor, media picker, export sheet, Settings, privacy dashboard, and
+  first-run tutorial, plus `NovaCutSmokeTest` under `app/src/androidTest`.
+- The smoke opens a blank project through the real UI, dismisses the first-run
+  tutorial when present, verifies the empty-editor Add Media path, opens/closes
+  the media picker, opens/closes the export sheet, returns to projects, and
+  verifies Settings -> Privacy dashboard.
+- Verification passed: `git diff --check`,
+  `:app:compileDebugKotlin :app:compileDebugAndroidTestKotlin --rerun-tasks`,
+  and `:app:testDebugUnitTest :app:assembleDebugAndroidTest`. Connected
+  instrumentation could not run because ADB reported `emulator-5554` as
+  `offline` even after restarting the ADB server.
+- Next roadmap item: P0 Release pipeline reactivation.
+
 2026-05-17 autonomous continuation:
 
 - Restored `:app:testDebugUnitTest` to a green baseline by letting `AutoSaveState.deserialize()` accept an injectable URI parser for JVM tests while keeping `Uri.parse()` as the production default.
@@ -125,9 +145,10 @@ High-level modules and patterns:
 Expected local commands:
 
 ```powershell
-$env:JAVA_HOME = "C:\Program Files\Android\openjdk\jdk-21.0.8"
+$env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-21.0.11.10-hotspot"
 .\gradlew.bat --version
 .\gradlew.bat :app:testDebugUnitTest --no-daemon
+.\gradlew.bat :app:assembleDebugAndroidTest --no-daemon
 .\gradlew.bat :app:assembleDebug --no-daemon
 python scripts\check_16kb_alignment.py app\build\outputs\apk\debug\app-debug.apk
 & 'C:\Users\--\AppData\Local\Android\Sdk\build-tools\36.0.0\zipalign.exe' -c -P 16 -v 4 app\build\outputs\apk\debug\app-debug.apk
