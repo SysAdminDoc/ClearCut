@@ -221,6 +221,13 @@ High-level modules and patterns:
      `scripts/verify_release_artifacts.py`,
      `scripts/validate_play_listing_assets.py`,
      `scripts/sync_fastlane_changelogs.py --check`, and `git diff --check`.
+   - Blocked after dependency review: documented JitPack coordinates for
+     `com.github.contentauth:c2pa-android` returned HTTP 500 for both `1.0.0`
+     and `v1.0.0`, GitHub Packages returned HTTP 401 without credentials, and
+     the latest public GitHub release is `0.0.9` with a 37,276,693 byte
+     `c2pa-release.aar`. Do not silently vendor that native AAR into the base
+     app; decide authenticated package access vs vendoring plus license notice,
+     binary-size, and 16 KB native-library verification policy first.
 
 ## Recent Implementation Notes
 
