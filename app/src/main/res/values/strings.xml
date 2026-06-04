@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.74.17</string>
+    <string name="app_version">v3.74.18</string>
 
     <!-- Common -->
     <string name="close">Close</string>
@@ -1038,42 +1038,6 @@
     <string name="effect_library_all">All Effects</string>
     <string name="effect_library_no_favorites">No favorites yet. Tap the star on any effect.</string>
 
-    <!-- FillerRemovalPanel -->
-    <string name="filler_removal_title">Remove Fillers &amp; Silence</string>
-    <string name="filler_removal_close_cd">Close filler removal</string>
-    <string name="filler_removal_description">Automatically detect and remove filler words (um, uh, like, you know) and silent gaps from your clip.</string>
-    <string name="filler_removal_analyzing">Analyzing audio\u2026</string>
-    <string name="filler_removal_analyze_button">Detect Fillers &amp; Silence</string>
-    <string name="filler_removal_found_count">Found %1$d segments to remove</string>
-    <string name="filler_removal_filler_words">Filler Words</string>
-    <string name="filler_removal_silences">Silences</string>
-    <string name="filler_removal_apply">Remove Selected (%1$d)</string>
-    <string name="filler_removal_subtitle">Spot filler words and dead air, then clean the cut in one pass before you polish pacing by hand.</string>
-    <string name="filler_removal_overview_title">Cleanup pass</string>
-    <string name="filler_removal_status_waiting">Awaiting scan</string>
-    <string name="filler_removal_status_analyzing">Analyzing audio</string>
-    <string name="filler_removal_status_ready">Speech cleanup</string>
-    <plurals name="filler_removal_ready_count">
-        <item quantity="one">%1$d cut ready</item>
-        <item quantity="other">%1$d cuts ready</item>
-    </plurals>
-    <string name="filler_removal_scope_title">Analyze this clip</string>
-    <string name="filler_removal_scope_body">NovaCut looks for filler speech and silent gaps so you can remove the soft spots before the final trim pass.</string>
-    <string name="filler_removal_detection_title">What gets flagged</string>
-    <string name="filler_removal_detection_body">Suggestions stay focused on filler phrases and dead air so the edit stays tight without flattening intentional pauses.</string>
-    <string name="filler_removal_detection_safe">Non-destructive suggestions</string>
-    <string name="filler_removal_empty_title">No cleanup regions yet</string>
-    <string name="filler_removal_empty_body">Run analysis first. If the clip is already tight, NovaCut will leave the pacing untouched.</string>
-    <string name="filler_removal_empty_cta">Run scan</string>
-    <string name="filler_removal_ready_badge">Ready to cut</string>
-    <string name="filler_removal_apply_title">Cleanup suggestions ready</string>
-    <string name="filler_removal_apply_body">Review the suggested filler words and silent gaps, then remove them in one pass to tighten the performance.</string>
-    <string name="filler_removal_analyzing_title">Reviewing speech cadence</string>
-    <string name="filler_removal_analyzing_body">NovaCut is scanning the selected clip for filler speech and dead air so cleanup suggestions feel deliberate instead of aggressive.</string>
-    <string name="filler_removal_waiting_title">Scan the clip first</string>
-    <string name="filler_removal_waiting_body">Start with a quick scan and NovaCut will surface the spots most likely to benefit from cleanup.</string>
-    <string name="filler_removal_disabled_hint">Scan the clip first to unlock one-tap cleanup.</string>
-
     <!-- CutAssistantReviewPanel -->
     <string name="cut_assistant_title">Cut Assistant</string>
     <string name="cut_assistant_close_cd">Close cut assistant</string>
@@ -1321,11 +1285,6 @@
     <string name="panel_effect_library_clip_required_title">Select a clip first</string>
     <string name="panel_effect_library_select_clip_hint">Select a clip to copy, paste, or export its effects.</string>
 
-    <!-- FillerRemovalPanel -->
-    <string name="panel_filler_removal_found">Found %1$d regions</string>
-    <string name="panel_filler_removal_found_description">Filler words and silent gaps</string>
-    <string name="panel_filler_removal_remove_all">Remove All (%1$d regions)</string>
-
     <!-- MarkerListPanel -->
     <string name="panel_marker_header">Markers (%1$d)</string>
     <string name="panel_marker_search">Search markers\u2026</string>
@@ -1510,9 +1469,6 @@
     <string name="cd_tap_beats">Tap beats</string>
     <string name="cd_karaoke_section">Karaoke styles</string>
     <string name="cd_caption_styles_section">Caption styles</string>
-    <string name="cd_filler_analyze">Detect fillers</string>
-    <string name="cd_filler_regions_found">Regions found</string>
-    <string name="cd_filler_remove_all">Remove all filler regions</string>
     <string name="cd_tutorial_direction">Direction indicator</string>
     <string name="cd_tutorial_next">Next step</string>
     <string name="cd_noise_analyze">Analyze noise</string>

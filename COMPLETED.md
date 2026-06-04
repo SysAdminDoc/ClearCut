@@ -7,7 +7,7 @@ Last consolidated: 2026-06-04.
 
 ## Current Delivered Baseline
 
-- Current version: v3.74.17 (`versionCode` 154).
+- Current version: v3.74.18 (`versionCode` 155).
 - Multi-track Android NLE with project gallery, editor, timeline, preview,
   effects, transitions, text, captions, audio, export, settings, templates,
   project archive/import, and diagnostic bundle surfaces.
@@ -69,6 +69,11 @@ Last consolidated: 2026-06-04.
   runs, renders modified runs through Transformer, and stitches successful run
   outputs with FFmpeg concat before falling back to whole-timeline Transformer
   when the safe mixed-render envelope is not met.
+- FillerRemovalPanel final deletion shipped in v3.74.18: the deleted standalone
+  panel route no longer carries a `PanelId`, bottom-sheet slot, ViewModel
+  analyze/apply methods, filler-region state, obsolete `AiFeatures`
+  detection path, or panel-only strings; the `filler_removal` tool action stays
+  on Cut Assistant Review.
 
 ## Preserved Historical Detail
 

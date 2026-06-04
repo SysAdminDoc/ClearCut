@@ -1,5 +1,23 @@
 # Changelog
 
+## v3.74.18 — 2026-06-04
+
+### FillerRemovalPanel final deletion
+- Deleted the deprecated standalone `FillerRemovalPanel` bottom-sheet route now
+  that the `filler_removal` tool action opens Cut Assistant Review.
+- Removed `PanelId.FILLER_REMOVAL`, the legacy editor state fields, and the old
+  `show/hide/analyze/apply` ViewModel methods tied to the panel.
+- Removed the unused standalone `AiFeatures.detectFillerAndSilence` path plus
+  the `RemovalRegion` / `RemovalType` model that only served that route.
+- Removed panel-only filler-removal strings and the deleted slot's deprecation
+  suppression while keeping the active Cut Assistant filler/silence strings.
+- Bumped runtime metadata to `versionName 3.74.18` / `versionCode 155`.
+- Verification: `git diff --check`, `scripts/verify_release_artifacts.py`,
+  APK-based 16 KB checks for debug/release, `apksigner verify` for
+  debug/release, `zipalign -c -P 16 -v 4` for debug/release/androidTest, and
+  `:app:testDebugUnitTest :app:assembleDebug :app:assembleRelease
+  :app:assembleDebugAndroidTest` passed.
+
 ## v3.74.17 — 2026-06-04
 
 ### Mixed-render export orchestrator

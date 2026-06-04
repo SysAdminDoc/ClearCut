@@ -10,8 +10,8 @@ NovaCut is an Android video editor under package `com.novacut.editor`. The repo 
 
 Current live version evidence:
 
-- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 154`, `versionName = "3.74.17"`.
-- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.17`.
+- [app/build.gradle.kts](app/build.gradle.kts): `compileSdk = 36`, `targetSdk = 36`, `versionCode = 155`, `versionName = "3.74.18"`.
+- [app/src/main/res/values/strings.xml](app/src/main/res/values/strings.xml): `app_version` is `v3.74.18`.
 - [README.md](README.md) and [ROADMAP.md](ROADMAP.md) both describe the v3.74.x line.
 - The 2026-05-17 continuation pushes each completed roadmap batch back to `origin/master`; verify `git status --short --branch` before assuming branch sync.
 
@@ -81,6 +81,9 @@ High-level modules and patterns:
   eligible `MixedRenderComposer` plans pass stream-copy runs through
   `StreamCopyExportEngine`, render modified runs through Media3 Transformer,
   and stitch run outputs through `FFmpegEngine.concat`.
+- Filler cleanup has a single editor route through Cut Assistant Review; the
+  deleted standalone FillerRemovalPanel no longer carries panel state, a
+  bottom-sheet slot, or obsolete ViewModel analyze/apply methods.
 - The privacy posture is coherent: local-first by default, opt-in cloud paths, explicit model downloads, and F-Droid awareness.
 - Cross-editor interoperability is already a first-class goal through FCPXML/OTIO/EDL-style planning.
 
@@ -228,7 +231,23 @@ High-level modules and patterns:
   shortcut and before the whole-timeline Transformer fallback, while sharing the
   existing notes, subtitle, AI-disclosure, C2PA, state, and toast finalization
   path.
-- Next roadmap item: P1 FillerRemovalPanel final deletion.
+- Next roadmap item after this batch was P1 FillerRemovalPanel final deletion.
+
+2026-06-04 filler-removal deletion continuation:
+
+- Completed the P1 FillerRemovalPanel final deletion in v3.74.18. The
+  `filler_removal` tool action already routes to Cut Assistant Review, so the
+  legacy bottom-sheet slot, `PanelId.FILLER_REMOVAL`, `FillerRemovalPanel.kt`,
+  `EditorState.fillerRegions`, `EditorState.isAnalyzingFillers`, and the
+  `show/hide/analyze/apply` ViewModel methods were removed.
+- Removed the old standalone `AiFeatures.detectFillerAndSilence` path and
+  `RemovalRegion` / `RemovalType` model that were only used by that panel.
+  Active silence and filler proposals remain owned by `CutAssistantEngine` and
+  `SilenceDetectionEngine`.
+- Removed panel-only filler-removal strings and the deleted slot's deprecation
+  suppression. The menu label `tool_remove_fillers` remains because it still
+  opens Cut Assistant Review.
+- Next roadmap item: P1 Per-tool AI requirement adoption.
 
 2026-05-17 autonomous continuation:
 

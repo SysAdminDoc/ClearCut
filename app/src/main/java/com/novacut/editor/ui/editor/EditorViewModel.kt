@@ -151,7 +151,7 @@ enum class PanelId {
     SCOPES, CAPTION_EDITOR, CHAPTER_MARKERS, SNAPSHOT_HISTORY,
     TEXT_TEMPLATES, MEDIA_MANAGER, AUDIO_NORM, RENDER_PREVIEW,
     CLOUD_BACKUP, TUTORIAL, UNDO_HISTORY, CAPTION_STYLE_GALLERY,
-    BEAT_SYNC, SMART_REFRAME, SPEED_PRESETS, FILLER_REMOVAL,
+    BEAT_SYNC, SMART_REFRAME, SPEED_PRESETS,
     AUTO_EDIT, TTS, EFFECT_LIBRARY, NOISE_REDUCTION, STICKER_PICKER,
     DRAWING, MULTI_CAM, MARKER_LIST, SCRATCHPAD, RECOVERY_DIALOG,
     // v3.69 — 15-feature wave (composite hub + drill-downs).
@@ -265,9 +265,6 @@ data class EditorState(
     val isAnalyzingBeats: Boolean = false,
     // Smart reframe
     val isReframing: Boolean = false,
-    // Filler removal
-    val isAnalyzingFillers: Boolean = false,
-    val fillerRegions: List<com.novacut.editor.ai.RemovalRegion> = emptyList(),
     // Auto-edit
     val isAutoEditing: Boolean = false,
     // Editor mode
@@ -2291,83 +2288,6 @@ class EditorViewModel @Inject constructor(
         saveProject()
         showToast("Speed preset applied")
         hideSpeedPresets()
-    }
-
-    // --- Filler/Silence Removal ---
-    fun showFillerRemoval() = showPanel(PanelId.FILLER_REMOVAL)
-    fun hideFillerRemoval() = hidePanel(PanelId.FILLER_REMOVAL)
-
-    fun analyzeFillers() {
-        val clip = getSelectedClip() ?: return
-        if (!clipHasAudio(clip)) {
-            showToast("Selected clip has no audio to analyze")
-            return
-        }
-        _state.update { it.copy(isAnalyzingFillers = true) }
-        viewModelScope.launch {
-            try {
-                val regions = aiFeatures.detectFillerAndSilence(clip.sourceUri)
-                _state.update { it.copy(
-                    isAnalyzingFillers = false,
-                    fillerRegions = regions
-                ) }
-                showToast("Found ${regions.size} filler/silence regions")
-            } catch (e: Exception) {
-                _state.update { it.copy(isAnalyzingFillers = false) }
-                showToast("Analysis failed")
-            }
-        }
-    }
-
-    fun applyFillerRemoval() {
-        val regions = _state.value.fillerRegions
-        if (regions.isEmpty()) { showToast("No regions to remove"); return }
-        val originalClip = getSelectedClip() ?: return
-        saveUndoState("Remove fillers")
-        // Convert source-relative times to timeline positions and split+remove in reverse
-        // Re-read clip state each iteration since splits mutate clip boundaries
-        for (region in regions.sortedByDescending { it.startMs }) {
-            val currentClip = _state.value.tracks.flatMap { it.clips }
-                .find { it.sourceUri == originalClip.sourceUri && region.startMs >= it.trimStartMs && region.startMs < it.trimEndMs }
-                ?: continue
-            val timelineOffset = currentClip.sourceTimeToTimelineOffsetMs(region.startMs, includeBoundaries = false)
-                ?: continue
-            val timelinePos = currentClip.timelineStartMs + timelineOffset
-            if (timelinePos <= currentClip.timelineStartMs || timelinePos >= currentClip.timelineEndMs) continue
-            splitClipAt(currentClip.id, timelinePos)
-            val clips = _state.value.tracks.flatMap { it.clips }
-            val fillerClip = clips.find { it.timelineStartMs == timelinePos }
-            if (fillerClip != null) {
-                _state.update { s ->
-                    s.copy(tracks = s.tracks.map { track ->
-                        track.copy(clips = track.clips.filter { it.id != fillerClip.id })
-                    })
-                }
-            }
-        }
-        // Close gaps left by removed filler clips (ripple delete)
-        _state.update { s ->
-            val tracks = s.tracks.map { track ->
-                val sorted = track.clips.sortedBy { it.timelineStartMs }
-                var nextStartMs = 0L
-                val rippled = sorted.map { clip ->
-                    if (clip.timelineStartMs > nextStartMs) {
-                        val shifted = clip.copy(timelineStartMs = nextStartMs)
-                        nextStartMs += shifted.durationMs
-                        shifted
-                    } else {
-                        nextStartMs = clip.timelineStartMs + clip.durationMs
-                        clip
-                    }
-                }
-                track.copy(clips = rippled)
-            }
-            recalculateDuration(s.copy(tracks = tracks))
-        }
-        rebuildTimeline()
-        saveProject()
-        showToast("Removed ${regions.size} filler regions")
-        hideFillerRemoval()
     }
 
     // --- Auto-Edit ---
