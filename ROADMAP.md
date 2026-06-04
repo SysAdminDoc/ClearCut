@@ -8,7 +8,7 @@ Active roadmap for forward-looking work. Shipped work is summarized in
 [RESEARCH_REPORT.md](RESEARCH_REPORT.md), and detailed historical plans are
 archived under [docs/archive](docs/archive/).
 
-Current version: **v3.74.52** (`versionCode` 189). Last consolidated:
+Current version: **v3.74.53** (`versionCode` 190). Last consolidated:
 2026-06-04.
 
 > Last researched: Cycle 22 - 2026-06-04.
@@ -120,6 +120,11 @@ stickers into app-owned overlay assets before project mutation, rejecting GIFs
 with explicit copy until animation is supported, rendering active image
 overlays in preview, burning them into Media3 Transformer exports with matching
 center-offset geometry, and adding overlay-source relink diagnostics.
+v3.74.53 closed the Cycle 12 local-network gate by declaring the Android 16
+temporary and Android 17 forward permissions, adding a pure
+`LocalNetworkPermissionPolicy` for API/target/scope decisions, exposing
+destination-specific gates through `OutputStreamingEngine`, and adding optional
+permission-state diagnostic ZIP support.
 
 ## Current State
 
@@ -281,6 +286,12 @@ center-offset geometry, and adding overlay-source relink diagnostics.
   active overlays render in preview and Transformer exports with matching
   timing/geometry, GIF overlays are rejected explicitly until animation is
   supported, and overlay sources participate in relink diagnostics.
+- v3.74.53 adds Android local-network permission readiness for future Live
+  Studio streaming: public internet destinations skip the gate, LAN/multicast
+  destinations map to `NEARBY_WIFI_DEVICES` on Android 16 target SDK 36 and
+  `ACCESS_LOCAL_NETWORK` on Android 17 target SDK 37+, permission-denial
+  failures surface actionable copy, and diagnostics can include redacted
+  permission-state snapshots.
 
 ## Source Archives
 
@@ -307,6 +318,7 @@ center-offset geometry, and adding overlay-source relink diagnostics.
 | ✅ P2 | Non-media document import router | Implemented in v3.74.49: content-only plugin/LUT/archive/timeline documents now classify through `IncomingDocumentIntentParser`, manifest filters stay specific without `*/*`, Projects shows a preview/report, and loaders validate templates, effect packs, LUTs, OpenFX descriptors, archives, and timeline-import stub status before mutation. |
 | ✅ P2 | Process-death diagnostic history | Implemented in v3.74.50: Android 11+ `ApplicationExitInfo` records are captured through `ProcessExitRecorder`, de-duped by timestamp/reason/PID, redacted/truncated, exposed in Privacy Dashboard copy, and included in diagnostic ZIPs as `process-exit-history.json` with an unsupported marker on older devices. |
 | ✅ P1 | Durable image/sticker overlay compositor | Implemented in v3.74.52: `OverlayAssetStore` imports bundled/gallery stickers into app-owned overlay files before project mutation, `PreviewPanel` renders active image overlays, Media3 Transformer exports burn them with matching geometry, GIF overlays reject with explicit copy, and `MediaRelinkProbe` reports missing overlay sources. |
+| ✅ P2 | Android local-network permission gate | Implemented in v3.74.53: manifest declares Android 16 `NEARBY_WIFI_DEVICES` and Android 17 `ACCESS_LOCAL_NETWORK`, `LocalNetworkPermissionPolicy` maps API/target/scope decisions, `OutputStreamingEngine` exposes destination gates and permission-aware LAN failure copy, and diagnostics can export redacted permission-state snapshots. |
 | P3 | Caption translation engine activation | Replace source-text echo behavior with a real local model path such as MADLAD-400 or Bergamot only after model gates are complete. |
 | P3 | Advanced engine activations | Activate Oboe resampling, adjustment layers, keyframe graph UI, and remaining AI engines only when dependencies, APK size, 16 KB compliance, and device QA are clear. |
 
@@ -1313,7 +1325,7 @@ Focus: prepare NovaCut's future live-streaming/LAN destination path for Android
 
 #### Platform Permissions & Live Output
 
-- [ ] 🔬🤖 P2 — Add Android local-network permission gate for LAN streaming destinations
+- [x] ✅ 🔬🤖 P2 — Add Android local-network permission gate for LAN streaming destinations
   - Why: `OutputStreamingEngine` already classifies public internet, LAN,
     multicast, loopback, IPv6 local, and `.local` destinations and its comments
     say the UI should show a one-time local-network consent sheet before
@@ -1356,6 +1368,24 @@ Focus: prepare NovaCut's future live-streaming/LAN destination path for Android
     repeat with Android 17 preview behavior when the SDK exposes
     `ACCESS_LOCAL_NETWORK`.
   - Complexity: M
+  - Status: implemented in v3.74.53. The manifest declares Android 16
+    `NEARBY_WIFI_DEVICES` with `neverForLocation` and future Android 17
+    `ACCESS_LOCAL_NETWORK`. `LocalNetworkPermissionPolicy` maps runtime SDK,
+    target SDK, and destination scope to no gate, Android 16 temporary
+    permission, or Android 17 local-network permission; public internet and
+    loopback destinations stay ungated. `OutputStreamingEngine` exposes
+    destination-specific decisions and permission-aware LAN failure copy, and
+    `DiagnosticExportEngine` can include redacted permission-state snapshots.
+    JVM tests cover API 35/36/37 policy behavior, granted/denied states,
+    public-vs-LAN destination decisions, manifest declarations, diagnostic
+    redaction, and existing LAN/multicast classifiers. Verification passed:
+    focused JVM coverage, `:app:testDebugUnitTest`, `:app:assembleDebug`,
+    `:app:assembleRelease`, `:app:assembleDebugAndroidTest`,
+    `scripts/verify_release_artifacts.py`, `scripts/validate_play_listing_assets.py`,
+    `scripts/sync_fastlane_changelogs.py --check`, and `git diff --check`.
+    Android 16 `RESTRICT_LOCAL_NETWORK` and Android 17 preview device behavior
+    remain manual validation because this build environment has no active
+    emulator.
 
 #### Appendix — Cycle 12 Sources
 

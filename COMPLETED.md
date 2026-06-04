@@ -7,7 +7,7 @@ Last consolidated: 2026-06-04.
 
 ## Current Delivered Baseline
 
-- Current version: v3.74.52 (`versionCode` 189).
+- Current version: v3.74.53 (`versionCode` 190).
 - Multi-track Android NLE with project gallery, editor, timeline, preview,
   effects, transitions, text, captions, audio, export, settings, templates,
   project archive/import, and diagnostic bundle surfaces.
@@ -81,6 +81,11 @@ Last consolidated: 2026-06-04.
   Media3 Transformer exports burn them with matching timing/geometry, GIF
   overlays reject explicitly until animation is supported, and missing overlay
   sources participate in relink diagnostics.
+- Android local-network permission gate shipped in v3.74.53: future Live
+  Studio LAN/multicast destinations now map to Android 16
+  `NEARBY_WIFI_DEVICES` or Android 17 `ACCESS_LOCAL_NETWORK` while public
+  internet streaming remains ungated, and diagnostics can include redacted
+  permission-state snapshots.
 - UI test harness bootstrap shipped in v3.74.11: shared Compose test tags,
   androidTest dependencies, and a smoke test covering project list,
   blank-project editor open, media picker, export sheet, Settings, and privacy

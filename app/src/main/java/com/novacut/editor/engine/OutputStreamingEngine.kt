@@ -1,6 +1,7 @@
 package com.novacut.editor.engine
 
 import android.content.Context
+import android.os.Build
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -215,6 +216,40 @@ class OutputStreamingEngine @Inject constructor(
             LocalNetworkScope.PUBLIC_INTERNET, LocalNetworkScope.LOOPBACK -> false
         }
     }
+
+    fun localNetworkPermissionDecision(
+        url: String,
+        runtimeSdkInt: Int = Build.VERSION.SDK_INT,
+        targetSdkInt: Int = context.applicationInfo?.targetSdkVersion ?: 0,
+        permissionGranted: Boolean = false,
+        permissionDenied: Boolean = false,
+    ): LocalNetworkPermissionPolicy.Decision =
+        LocalNetworkPermissionPolicy.evaluate(
+            scope = classifyNetworkScope(url),
+            runtimeSdkInt = runtimeSdkInt,
+            targetSdkInt = targetSdkInt,
+            permissionGranted = permissionGranted,
+            permissionDenied = permissionDenied,
+        )
+
+    fun permissionAwareLocalNetworkFailureMessage(
+        url: String,
+        runtimeSdkInt: Int = Build.VERSION.SDK_INT,
+        targetSdkInt: Int = context.applicationInfo?.targetSdkVersion ?: 0,
+        permissionGranted: Boolean = false,
+        permissionDenied: Boolean = false,
+        throwable: Throwable? = null,
+    ): String? =
+        LocalNetworkPermissionPolicy.permissionFailureMessage(
+            decision = localNetworkPermissionDecision(
+                url = url,
+                runtimeSdkInt = runtimeSdkInt,
+                targetSdkInt = targetSdkInt,
+                permissionGranted = permissionGranted,
+                permissionDenied = permissionDenied,
+            ),
+            throwable = throwable,
+        )
 
     /**
      * Extract the host segment from a URL of the shape

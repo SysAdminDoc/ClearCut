@@ -275,4 +275,43 @@ class OutputStreamingEngineTest {
         assertEquals(false, engine.requiresLocalNetworkPermission("rtmp://live.twitch.tv/app"))
         assertEquals(false, engine.requiresLocalNetworkPermission("rtmp://localhost/app"))
     }
+
+    @Test
+    fun localNetworkPermissionDecision_gatesOnlyLanDestinations() {
+        val publicDecision = engine.localNetworkPermissionDecision(
+            url = "rtmp://live.twitch.tv/app",
+            runtimeSdkInt = 36,
+            targetSdkInt = 36,
+        )
+        val lanDecision = engine.localNetworkPermissionDecision(
+            url = "rtmp://192.168.1.5/app",
+            runtimeSdkInt = 36,
+            targetSdkInt = 36,
+        )
+
+        assertEquals(LocalNetworkPermissionPolicy.GateState.NOT_REQUIRED, publicDecision.gateState)
+        assertEquals(LocalNetworkPermissionPolicy.GateState.NEEDS_PERMISSION, lanDecision.gateState)
+        assertEquals(LocalNetworkPermissionPolicy.ANDROID_16_PERMISSION, lanDecision.permissionName)
+    }
+
+    @Test
+    fun permissionAwareLocalNetworkFailureMessage_onlyForLocalPermissionFailures() {
+        val publicMessage = engine.permissionAwareLocalNetworkFailureMessage(
+            url = "rtmp://live.twitch.tv/app",
+            runtimeSdkInt = 37,
+            targetSdkInt = 37,
+            throwable = java.net.SocketTimeoutException("timed out"),
+        )
+        val lanMessage = engine.permissionAwareLocalNetworkFailureMessage(
+            url = "rtmp://192.168.1.5/app",
+            runtimeSdkInt = 37,
+            targetSdkInt = 37,
+            permissionDenied = true,
+            throwable = java.net.SocketTimeoutException("timed out"),
+        )
+
+        assertNull(publicMessage)
+        assertNotNull(lanMessage)
+        assertTrue(lanMessage!!.contains("Local network permission"))
+    }
 }
