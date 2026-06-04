@@ -11,7 +11,7 @@ archived under [docs/archive](docs/archive/).
 Current version: **v3.74.37** (`versionCode` 174). Last consolidated:
 2026-06-04.
 
-> Last researched: Cycle 10 - 2026-06-04.
+> Last researched: Cycle 11 - 2026-06-04.
 
 ## ▶ Implementer Instructions (for the build machine)
 
@@ -1046,3 +1046,72 @@ corruption without weakening the existing per-key defaulting and validation.
   https://developer.android.com/topic/libraries/architecture/datastore#corruption
 - Android `ReplaceFileCorruptionHandler` API:
   https://developer.android.com/reference/kotlin/androidx/datastore/core/handlers/ReplaceFileCorruptionHandler
+
+### Researcher Queue (Cycle 11 - 2026-06-04)
+
+Focus: make the advertised sticker/GIF/image overlay lane durable and visible in
+preview/export, using app-owned assets instead of fragile raw picker URIs.
+
+#### Creator Workflow & Export Fidelity
+
+- [ ] 🔬🤖 P1 — Add durable image/sticker overlay compositor and asset store
+  - Why: NovaCut advertises sticker/GIF/image overlays and exposes a sticker
+    picker, custom image picker, autosave persistence, undo snapshots, archive
+    packing, and stream-copy disqualification for `imageOverlays`, but the
+    current preview/export paths do not appear to composite those overlays.
+    `VideoEngine` builds export `OverlayEffect` entries from text overlays,
+    Lottie overlays, and the optional brand watermark only; `PreviewPanel`
+    renders the current clip/player and chrome, not `imageOverlays`. That means
+    a creator can add a sticker-like project object that survives autosave but
+    may not show in live preview or the final export.
+  - Evidence: README lists "Sticker/GIF/image overlays" as a feature.
+    `StickerPickerPanel` creates bundled sticker URIs such as
+    `content://com.novacut.editor.stickers/emoji/0`, while the manifest declares
+    only AndroidX startup and `${applicationId}.fileprovider` providers, not a
+    sticker provider. `EditorScreen` sends gallery stickers through
+    `PickVisualMedia(ImageOnly)` directly to `viewModel.addImageOverlay(...)`;
+    `OverlayDelegate.addImageOverlay(...)` stores the URI as
+    `ImageOverlay.sourceUri`; `ProjectAutoSave` serializes that URI; and
+    `ProjectArchive` registers image overlays for media packing. `ExportDelegate`
+    disables stream-copy when `state.imageOverlays` is non-empty, but the
+    `videoEngine.export(...)` and `exportMixed(...)` calls pass `textOverlays`
+    and tracked objects only. Android's Photo Picker docs say default media
+    access lasts only until the device restarts or the app stops unless
+    persisted, and the SAF docs note even persisted document URIs can break
+    when the document is moved or deleted:
+    https://developer.android.com/training/data-storage/shared/photo-picker#persist-media-file-access
+  - Touches: an `OverlayAssetStore` or generalized `LocalMediaImport` path for
+    image/GIF/watermark assets, a bundled-sticker resolver that renders shelf
+    glyphs/assets to real app-owned files instead of fake content URIs,
+    `OverlayDelegate`/`EditorViewModel` async import states, `PreviewPanel`
+    image overlay rendering and transform handles, a Media3
+    `BitmapOverlay`/custom `TextureOverlay` export implementation,
+    `ProjectAutoSave`, `ProjectArchive`, `MediaRelinkProbe`, privacy/diagnostic
+    copy, strings, and focused tests.
+  - Acceptance: bundled stickers, custom image stickers, still image overlays,
+    and brand watermark assets all resolve to durable app-owned sources or a
+    deliberately persisted SAF grant before project state is mutated. Overlays
+    are visible at the correct playhead range in preview, transform gestures
+    update position/scale/rotation/opacity, and full exports burn them in with
+    the same geometry. GIF overlays either animate through a bounded frame or
+    Media3 texture path or are clearly marked unsupported before insertion; no
+    GIF silently becomes a broken still. Missing/moved external sources produce
+    relink cards and diagnostic hints instead of silent no-op exports.
+  - Verify: add JVM tests for overlay-asset import, bundled-sticker resolution,
+    autosave/archive round-trip, missing-source relink classification, and GIF
+    unsupported/animated decisions. Add Compose tests that insert bundled and
+    gallery stickers, scrub through active/inactive ranges, and confirm preview
+    semantics/controls. Add an instrumentation or golden-pixel export test where
+    a high-contrast sticker appears at expected frame coordinates after app
+    restart, plus a watermark restart test proving `takePersistableUriPermission`
+    or local-copy behavior survives reboot/app-stop conditions.
+  - Complexity: L
+
+#### Appendix — Cycle 11 Sources
+
+- Android Photo Picker media-access persistence:
+  https://developer.android.com/training/data-storage/shared/photo-picker#persist-media-file-access
+- Android Storage Access Framework persisted permission caveats:
+  https://developer.android.com/training/data-storage/shared/documents-files#persist-permissions
+- AndroidX Media3 `BitmapOverlay` API:
+  https://developer.android.com/reference/androidx/media3/effect/BitmapOverlay
