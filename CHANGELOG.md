@@ -1,5 +1,23 @@
 # Changelog
 
+## v3.74.42 — 2026-06-04
+
+### Diagnostic timeline-shape opt-in
+- Added a Settings/DataStore toggle for including the sanitized timeline-shape
+  summary in user-created diagnostic ZIPs.
+- Wired Settings diagnostic export to read the most recently updated project's
+  autosave, summarize only track/clip/effect/transition counts, and pass that
+  optional payload to `DiagnosticExportEngine`.
+- Kept the ZIP export non-blocking when no saved project timeline is available;
+  users still get the diagnostic bundle and a clear local-only status message.
+- Added Settings UI copy that names the counts-only scope and explicitly says
+  media names, URIs, captions, and transcripts are not included.
+- Bumped runtime metadata to `versionName 3.74.42` / `versionCode 179`.
+- Verification: focused `:app:testDebugUnitTest --tests
+  com.novacut.editor.engine.DiagnosticTimelineShapeTest --tests
+  com.novacut.editor.engine.DiagnosticExportEngineTest` and `git diff --check`
+  passed. APK assemble was not run for this batch.
+
 ## v3.74.41 — 2026-06-04
 
 ### Project color policy consumers

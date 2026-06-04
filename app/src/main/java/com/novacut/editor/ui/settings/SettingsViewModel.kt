@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.novacut.editor.engine.AppSettings
 import com.novacut.editor.engine.DiagnosticExportEngine
 import com.novacut.editor.engine.ModelDownloadManager
+import com.novacut.editor.engine.ProjectAutoSave
 import com.novacut.editor.engine.SettingsRepository
+import com.novacut.editor.engine.db.ProjectDao
 import com.novacut.editor.engine.segmentation.SegmentationEngine
 import com.novacut.editor.engine.whisper.WhisperEngine
 import com.novacut.editor.model.*
@@ -51,7 +53,9 @@ class SettingsViewModel @Inject constructor(
     private val repo: SettingsRepository,
     private val whisperEngine: WhisperEngine,
     private val segmentationEngine: SegmentationEngine,
-    private val diagnosticExportEngine: DiagnosticExportEngine
+    private val diagnosticExportEngine: DiagnosticExportEngine,
+    private val projectDao: ProjectDao,
+    private val autoSave: ProjectAutoSave
 ) : ViewModel() {
 
     val settings: StateFlow<AppSettings> = repo.settings
@@ -89,6 +93,8 @@ class SettingsViewModel @Inject constructor(
     fun setConfirmBeforeDelete(v: Boolean) = viewModelScope.launch { repo.updateConfirmBeforeDelete(v) }
     fun setDefaultExportQuality(v: String) = viewModelScope.launch { repo.updateDefaultExportQuality(v) }
     fun setAiModelWifiOnly(v: Boolean) = viewModelScope.launch { repo.updateAiModelWifiOnly(v) }
+    fun setIncludeDiagnosticTimelineShape(v: Boolean) =
+        viewModelScope.launch { repo.updateIncludeDiagnosticTimelineShape(v) }
 
     fun refreshAiModelStorage() {
         viewModelScope.launch {
@@ -133,7 +139,16 @@ class SettingsViewModel @Inject constructor(
                         )
                     )
                 }
-                val bundle = diagnosticExportEngine.exportDiagnosticBundle(modelRegistry)
+                val settingsSnapshot = repo.settings.first()
+                val timelineShape = if (settingsSnapshot.includeDiagnosticTimelineShape) {
+                    withContext(Dispatchers.IO) { latestTimelineShape() }
+                } else {
+                    null
+                }
+                val bundle = diagnosticExportEngine.exportDiagnosticBundle(
+                    modelRegistry = modelRegistry,
+                    timelineShape = timelineShape
+                )
                 _diagnosticExport.update {
                     it.copy(
                         isExporting = false,
@@ -142,7 +157,10 @@ class SettingsViewModel @Inject constructor(
                             fileName = bundle.name,
                             sizeBytes = bundle.length()
                         ),
-                        message = "Diagnostic ZIP saved locally. Share it only when you choose.",
+                        message = diagnosticExportMessage(
+                            timelineShapeRequested = settingsSnapshot.includeDiagnosticTimelineShape,
+                            timelineShapeIncluded = timelineShape != null
+                        ),
                         errorMessage = null
                     )
                 }
@@ -171,6 +189,26 @@ class SettingsViewModel @Inject constructor(
                 message = null,
                 errorMessage = "Diagnostic ZIP could not be shared from this device."
             )
+        }
+    }
+
+    private suspend fun latestTimelineShape(): DiagnosticExportEngine.TimelineShape? {
+        val latestProject = projectDao.getAllProjectsSnapshot().firstOrNull() ?: return null
+        val state = autoSave.loadRecoveryData(latestProject.id) ?: return null
+        return DiagnosticExportEngine.summarizeTimelineShape(state.tracks)
+    }
+
+    private fun diagnosticExportMessage(
+        timelineShapeRequested: Boolean,
+        timelineShapeIncluded: Boolean
+    ): String {
+        return when {
+            timelineShapeIncluded ->
+                "Diagnostic ZIP saved locally with sanitized timeline shape. Share it only when you choose."
+            timelineShapeRequested ->
+                "Diagnostic ZIP saved locally. No saved project timeline was available to summarize."
+            else ->
+                "Diagnostic ZIP saved locally. Share it only when you choose."
         }
     }
 

@@ -347,6 +347,8 @@
     <string name="settings_reset_tutorial_action">Reset tutorial</string>
     <string name="settings_diagnostics">Diagnostics</string>
     <string name="settings_diagnostics_description">Create a local support bundle only when you choose to share one.</string>
+    <string name="settings_diagnostic_timeline_shape">Include timeline shape</string>
+    <string name="settings_diagnostic_timeline_shape_description">Adds counts only: track totals, clip totals, effect types, and transition types. It never includes media names, URIs, captions, or transcripts.</string>
     <string name="settings_diagnostic_export">Diagnostic ZIP</string>
     <string name="settings_diagnostic_export_description">Saves app, device, codec, model, and redacted log details. Project files, media, captions, and transcripts are never included.</string>
     <string name="settings_diagnostic_export_action">Save ZIP</string>

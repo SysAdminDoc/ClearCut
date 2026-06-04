@@ -518,6 +518,14 @@ fun SettingsScreen(
             title = stringResource(R.string.settings_diagnostics),
             description = stringResource(R.string.settings_diagnostics_description)
         ) {
+            SettingsSwitch(
+                icon = Icons.Default.ViewStream,
+                accent = Mocha.Teal,
+                label = stringResource(R.string.settings_diagnostic_timeline_shape),
+                description = stringResource(R.string.settings_diagnostic_timeline_shape_description),
+                checked = settings.includeDiagnosticTimelineShape,
+                onChanged = viewModel::setIncludeDiagnosticTimelineShape
+            )
             SettingsDiagnosticExportRow(
                 state = diagnosticExport,
                 onExport = viewModel::exportDiagnosticBundle,

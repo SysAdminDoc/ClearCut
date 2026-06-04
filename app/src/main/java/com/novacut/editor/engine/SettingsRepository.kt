@@ -44,7 +44,8 @@ data class AppSettings(
     val desktopModeOverride: DesktopOverride = DesktopOverride.AUTO,
     // v3.69: optional AcoustID API key for content-ID lookup. Empty = use the
     // local hash-only path (see ContentIdEngine).
-    val acoustIdApiKey: String = ""
+    val acoustIdApiKey: String = "",
+    val includeDiagnosticTimelineShape: Boolean = false
 )
 
 enum class DesktopOverride { AUTO, FORCE_ON, FORCE_OFF }
@@ -78,6 +79,7 @@ class SettingsRepository @Inject constructor(
         val ONE_HANDED_MODE = booleanPreferencesKey("one_handed_mode")
         val DESKTOP_OVERRIDE = stringPreferencesKey("desktop_override")
         val ACOUSTID_KEY = stringPreferencesKey("acoustid_api_key")
+        val INCLUDE_DIAGNOSTIC_TIMELINE_SHAPE = booleanPreferencesKey("include_diagnostic_timeline_shape")
     }
 
     private val data: Flow<Preferences> = context.dataStore.data
@@ -126,7 +128,8 @@ class SettingsRepository @Inject constructor(
                 desktopModeOverride = prefs[Keys.DESKTOP_OVERRIDE]?.let {
                     runCatching { DesktopOverride.valueOf(it) }.getOrNull()
                 } ?: DesktopOverride.AUTO,
-                acoustIdApiKey = prefs[Keys.ACOUSTID_KEY] ?: ""
+                acoustIdApiKey = prefs[Keys.ACOUSTID_KEY] ?: "",
+                includeDiagnosticTimelineShape = prefs[Keys.INCLUDE_DIAGNOSTIC_TIMELINE_SHAPE] ?: false
             )
         }
 
@@ -254,6 +257,10 @@ class SettingsRepository @Inject constructor(
 
     suspend fun updateAiModelWifiOnly(value: Boolean) {
         context.dataStore.edit { it[Keys.AI_MODEL_WIFI_ONLY] = value }
+    }
+
+    suspend fun updateIncludeDiagnosticTimelineShape(value: Boolean) {
+        context.dataStore.edit { it[Keys.INCLUDE_DIAGNOSTIC_TIMELINE_SHAPE] = value }
     }
 
     suspend fun updateOneHandedMode(value: Boolean) {
