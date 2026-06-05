@@ -4,7 +4,29 @@ Research synthesis for planning. The detailed source plans are archived under
 [docs/archive/research](docs/archive/research/), and the previous expanded
 roadmaps are archived under [docs/archive/roadmap](docs/archive/roadmap/).
 
-Last refreshed: 2026-06-04.
+Last refreshed: 2026-06-05.
+
+## 2026-06-05 Cycle 23 Research Plan Reconciliation
+
+- [Verified] `RESEARCH_FEATURE_PLAN.md` was added in `79019e0 docs: add
+  research feature plan` as a root companion planning document after a broad
+  pass over source, docs, build files, Android metadata, and external sources.
+- [Verified] The companion plan's top recommendations do not require fresh
+  duplicate build-lane rows today. FileProvider/camera coverage is already
+  active in Cycles 15 and 16 and has in-progress source/test work in the
+  worktree; signed C2PA is Cycle 13; direct publish naming is Cycle 14; the
+  translated-locale, network-security, release-provenance, README-claim, and
+  transform-gesture rows already exist in Cycle 1; local-network matrix work is
+  Cycle 12; metadata-scrubbed archives are Cycle 18; SDH/audio-description is
+  Cycle 19; product-health ledger is Cycle 20; caption translation activation is
+  Cycle 21; conflict-safe sync is Cycle 22; and proxy workflow remains in the
+  older research-backed engine candidates.
+- [Promoted] Added a completed Cycle 23 reconciliation row to `ROADMAP.md` so
+  implementers know the root companion plan is tracked, but the roadmap remains
+  the implementation single source of truth.
+- [Rejected] Do not duplicate the current FileProvider row while
+  `MediaPicker.kt`, `strings.xml`, `file_paths.xml`, and
+  `FileProviderPathsTest.kt` are already dirty with implementation-lane work.
 
 ## 2026-06-04 Cycle 22 Project Sync Refresh
 
@@ -823,8 +845,9 @@ the same verified evidence. Each finding's claim was re-checked against
 `UncaughtExceptionHandler`, no `networkSecurityConfig`, `values/`-only resources,
 and no checksum/emulator step in CI.
 
-## Archived Research Inputs
+## Tracked Research Inputs
 
+- [RESEARCH_FEATURE_PLAN.md](RESEARCH_FEATURE_PLAN.md)
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-25.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-25.md)
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-25-loop6.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-25-loop6.md)
 - [docs/archive/roadmap/ROADMAP-2026-05-25.md](docs/archive/roadmap/ROADMAP-2026-05-25.md)

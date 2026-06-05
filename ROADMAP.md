@@ -1,7 +1,7 @@
 # NovaCut Roadmap
 
 > Single source of truth for all planned work. Items above the `---` are
-> existing plans; items below are research conducted 2026-06-03.
+> existing plans; items below are research conducted 2026-06-03 onward.
 
 Active roadmap for forward-looking work. Shipped work is summarized in
 [COMPLETED.md](COMPLETED.md), research synthesis lives in
@@ -11,7 +11,7 @@ archived under [docs/archive](docs/archive/).
 Current version: **v3.74.54** (`versionCode` 191). Last consolidated:
 2026-06-04.
 
-> Last researched: Cycle 22 - 2026-06-04.
+> Last researched: Cycle 23 - 2026-06-05.
 
 ## ▶ Implementer Instructions (for the build machine)
 
@@ -2361,3 +2361,35 @@ the already-shipped Android backup rules.
   https://automerge.org/
 - Yjs:
   https://yjs.dev/
+
+### Researcher Queue (Cycle 23 - 2026-06-05)
+
+Focus: reconcile the newly tracked `RESEARCH_FEATURE_PLAN.md` companion plan
+with the active roadmap without duplicating existing implementation lanes or
+touching the in-progress FileProvider source/test worktree edits.
+
+#### Companion Plan Reconciliation
+
+- [x] ✅ 🔬 P2 - Reconcile root research feature plan with active queues
+  - Why: `79019e0 docs: add research feature plan` added a 2026-06-05 root
+    companion plan, but `ROADMAP.md` and `RESEARCH_REPORT.md` still pointed at
+    Cycle 22. The implementer queue needs to say which companion-plan findings
+    are already active, which are deferred, and whether a fresh row was added.
+  - Evidence: `RESEARCH_FEATURE_PLAN.md` prioritizes FileProvider grant
+    coverage, signed C2PA, direct publish naming, one translated locale,
+    release checksums/provenance, metadata-scrubbed archive/share paths, Play
+    On-device AI pack planning, conflict-safe sync, FCPXML overlay fidelity,
+    transform gesture validation, network security config, README claim audit,
+    stock provider contracts, SDH/audio-description separation, product-health
+    ledger, caption translation activation, and proxy workflow. Those map to
+    existing active rows in Cycle 1, Cycle 12 through Cycle 22, or the older
+    research-backed engine candidates above this section. The current dirty
+    source/test files are already implementing the Cycle 15/16
+    camera/FileProvider lane and were left unstaged.
+  - Outcome: no new build-lane row was promoted in Cycle 23. The root companion
+    plan remains a tracked planning artifact, while this roadmap remains the
+    implementation single source of truth.
+  - Verify: future research passes should check `RESEARCH_FEATURE_PLAN.md`
+    against this roadmap before adding any duplicate queue item, then update
+    `RESEARCH_REPORT.md` with the reconciliation result.
+  - Complexity: S
