@@ -7,6 +7,7 @@ import android.media.MediaScannerConnection
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import android.util.Log
 import androidx.core.content.FileProvider
 import com.novacut.editor.BuildConfig
 import com.novacut.editor.engine.AiUsageLedger
@@ -740,7 +741,13 @@ class ExportDelegate(
             showToast("Export file no longer available")
             return null
         }
-        val uri = FileProvider.getUriForFile(appContext, "${appContext.packageName}.fileprovider", file)
+        val uri = runCatching {
+            FileProvider.getUriForFile(appContext, "${appContext.packageName}.fileprovider", file)
+        }.getOrElse { error ->
+            Log.w("ExportDelegate", "Export share FileProvider handoff failed for $filePath", error)
+            showToast(appContext.getString(com.novacut.editor.R.string.editor_share_location_failed))
+            return null
+        }
         return Intent(Intent.ACTION_SEND).apply {
             type = exportMimeTypeFor(file.name)
             putExtra(Intent.EXTRA_STREAM, uri)

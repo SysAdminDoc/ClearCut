@@ -8,8 +8,8 @@ Active roadmap for forward-looking work. Shipped work is summarized in
 [RESEARCH_REPORT.md](RESEARCH_REPORT.md), and detailed historical plans are
 archived under [docs/archive](docs/archive/).
 
-Current version: **v3.74.54** (`versionCode` 191). Last consolidated:
-2026-06-04.
+Current version: **v3.74.55** (`versionCode` 192). Last consolidated:
+2026-06-05.
 
 > Last researched: Cycle 23 - 2026-06-05.
 
@@ -1663,7 +1663,13 @@ XML grant path.
 
 #### File Sharing & URI Grants
 
-- [ ] 🔬🤖 P1 — Add FileProvider grant-path contract for camera capture and shared artifacts
+- [x] 🔬🤖 P1 — Add FileProvider grant-path contract for camera capture and shared artifacts
+  - Status: shipped in v3.74.55. `file_paths.xml` now grants
+    `cacheDir/camera-captures` with a narrow `camera_captures` root instead of
+    exposing managed private media. Editor template sharing now has explicit
+    external and internal template roots, export share/open handoffs catch
+    unshareable stored paths, and the JVM source contract fails if a new
+    `getUriForFile(...)` producer is added without a documented narrow root.
   - Why: Record Video currently creates its destination under
     `cacheDir/camera-captures` and asks FileProvider for a content URI before
     launching the camera intent. `file_paths.xml` does not expose that cache
@@ -1708,6 +1714,9 @@ XML grant path.
     instrumentation test for the camera capture URI, representative tests for
     diagnostics/export/archive/direct publish files, and a negative test proving
     an unrelated private file cannot be shared.
+    Completed verification: `FileProviderPathsTest` passed with the corrected
+    Android SDK environment; broader Gradle/release gates are recorded in
+    `CHANGELOG.md` for v3.74.55.
   - Complexity: M
 
 #### Appendix — Cycle 16 Sources

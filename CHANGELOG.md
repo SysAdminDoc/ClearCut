@@ -1,5 +1,28 @@
 # Changelog
 
+## v3.74.55 — 2026-06-05
+
+### FileProvider grant-path contract
+- Added a narrow `camera_captures` FileProvider cache root for Record Video
+  handoff files under `cacheDir/camera-captures`.
+- Removed the broad managed-media FileProvider exposure and kept imported media
+  private to NovaCut-managed storage.
+- Added an internal template FileProvider root and made editor template export
+  use the same external-or-internal fallback behavior as project template
+  sharing.
+- Wrapped camera, template, export-share, and export-notification URI handoffs
+  so root mismatches show actionable copy or fall back to the app shell instead
+  of crashing.
+- Added `FileProviderPathsTest` coverage for the exact XML roots, broad-path
+  rejections, and a source-table scan that requires every `getUriForFile(...)`
+  producer to be represented by a named narrow root.
+- Bumped runtime metadata to `versionName 3.74.55` / `versionCode 192`.
+- Verification: focused JVM coverage for `FileProviderPathsTest` passed,
+  followed by the Gradle release gate: `:app:testDebugUnitTest`,
+  `:app:assembleDebug`, `:app:assembleRelease`, and
+  `:app:assembleDebugAndroidTest`; release artifact validation, Fastlane sync
+  check, and `git diff --check` also passed.
+
 ## v3.74.54 — 2026-06-04
 
 ### C2PA draft manifest and signer gate

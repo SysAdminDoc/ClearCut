@@ -93,7 +93,7 @@ conflict-safe local/WebDAV feature rather than a stub.
 - Platform: Android app with Kotlin, Jetpack Compose, Hilt, Room, WorkManager,
   Media3, CameraX dependencies, ONNX Runtime, MediaPipe Tasks Vision, FFmpeg Kit
   16 KB fork, and local model assets.
-- Current app identity: `versionName` is `3.74.54` and `versionCode` is `191`
+- Current app identity: `versionName` is `3.74.55` and `versionCode` is `192`
   in `app/build.gradle.kts`.
 - Android targets: `compileSdk = 36`, `targetSdk = 36`, `minSdk = 26`.
 - Product posture: local-first editor with explicit model availability gates

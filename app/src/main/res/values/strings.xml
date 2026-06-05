@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.74.54</string>
+    <string name="app_version">v3.74.55</string>
 
     <!-- Common -->
     <string name="close">Close</string>
@@ -560,12 +560,13 @@
     <string name="media_picker_multi_description">Select multiple photos or videos in one pass.</string>
     <string name="media_picker_record_video">Record Video</string>
     <string name="media_picker_capture_title">Capture on Device</string>
-    <string name="media_picker_capture_description">Record a clip without leaving NovaCut. Camera permission is only requested when you start recording.</string>
+    <string name="media_picker_capture_description">Open your device camera, then NovaCut will keep the recorded clip available in this edit.</string>
     <string name="media_picker_source_photo_picker">System photo picker</string>
     <string name="media_picker_source_files">File picker</string>
     <string name="media_picker_source_audio">Audio files</string>
     <string name="media_picker_source_kept_local">Imports stay available offline</string>
     <string name="media_picker_local_copy_failed">NovaCut couldn\'t keep that media available locally. Try choosing it again.</string>
+    <string name="media_picker_camera_handoff_failed">NovaCut couldn\'t open the device camera. Try importing a clip from your library instead.</string>
     <string name="media_picker_some_imports_failed">Some media couldn\'t be kept locally. The successful imports were added.</string>
     <string name="media_picker_importing_batch_title">Preparing media</string>
     <string name="media_picker_importing_batch_description">Keeping selected files available in this edit.</string>
@@ -725,6 +726,7 @@
     <string name="editor_timeline">Timeline</string>
     <string name="editor_toggle_timeline">Toggle timeline</string>
     <string name="editor_share_video">Share video</string>
+    <string name="editor_share_location_failed">NovaCut couldn\'t create a secure share link for that file. Export again, then try sharing.</string>
     <string name="editor_select_clip_effects">Select a clip to use Effects</string>
     <string name="editor_select_clip_color_grade">Select a clip to color grade</string>
     <string name="editor_select_clip_keyframes">Select a clip for keyframes</string>

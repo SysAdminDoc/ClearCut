@@ -3,11 +3,11 @@
 Consolidated completion log for shipped roadmap work. The full chronological
 history remains in [CHANGELOG.md](CHANGELOG.md).
 
-Last consolidated: 2026-06-04.
+Last consolidated: 2026-06-05.
 
 ## Current Delivered Baseline
 
-- Current version: v3.74.54 (`versionCode` 191).
+- Current version: v3.74.55 (`versionCode` 192).
 - Multi-track Android NLE with project gallery, editor, timeline, preview,
   effects, transitions, text, captions, audio, export, settings, templates,
   project archive/import, and diagnostic bundle surfaces.
@@ -91,6 +91,12 @@ Last consolidated: 2026-06-04.
   manifest JSON, write `.c2pa-draft-manifest.json` with unsigned/not-verifiable
   status, and explain missing library/certificate/PEM/remote-consent states
   before any embedded MP4 Content Credentials claim is made.
+- FileProvider grant-path contract shipped in v3.74.55: Record Video uses a
+  narrow `cacheDir/camera-captures` content-URI root, managed imported media is
+  no longer exposed through a broad `filesDir/media` root, template export has
+  explicit external/internal roots, export share/open handoffs fail with user
+  copy instead of crashes, and a JVM source-table test enumerates every
+  `getUriForFile(...)` producer.
 - UI test harness bootstrap shipped in v3.74.11: shared Compose test tags,
   androidTest dependencies, and a smoke test covering project list,
   blank-project editor open, media picker, export sheet, Settings, and privacy

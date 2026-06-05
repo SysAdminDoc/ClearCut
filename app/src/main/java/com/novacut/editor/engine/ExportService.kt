@@ -171,11 +171,18 @@ class ExportService : Service() {
     private fun buildOpenIntent(): Intent {
         val file = latestOutputPath?.let(::File)?.takeIf { it.exists() }
         if (file != null) {
-            val uri = FileProvider.getUriForFile(
-                this,
-                "${packageName}.fileprovider",
-                file
-            )
+            val uri = runCatching {
+                FileProvider.getUriForFile(
+                    this,
+                    "${packageName}.fileprovider",
+                    file
+                )
+            }.getOrElse { error ->
+                Log.w(TAG, "Export notification FileProvider handoff failed for ${file.path}", error)
+                return Intent(this, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                }
+            }
             return Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(uri, exportMimeTypeFor(file.name))
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)

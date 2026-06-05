@@ -6,6 +6,19 @@ roadmaps are archived under [docs/archive/roadmap](docs/archive/roadmap/).
 
 Last refreshed: 2026-06-05.
 
+## 2026-06-05 Cycle 16 Implementation Closure
+
+- [Shipped] v3.74.55 closes the FileProvider grant-path contract promoted in
+  Cycle 16. Camera captures now use a dedicated `cache-path` for
+  `camera-captures/`, managed imported media is no longer exposed through a
+  broad `filesDir/media` root, template exports have explicit external and
+  internal roots, and export share/open URI failures fall back to user-visible
+  copy or the app shell instead of crashing.
+- [Verified] `FileProviderPathsTest` now enumerates the exact XML roots,
+  rejects broad/private media paths, and scans source for all
+  `getUriForFile(...)` producer files so future producers must update the
+  contract.
+
 ## 2026-06-05 Cycle 23 Research Plan Reconciliation
 
 - [Verified] `RESEARCH_FEATURE_PLAN.md` was added in `79019e0 docs: add

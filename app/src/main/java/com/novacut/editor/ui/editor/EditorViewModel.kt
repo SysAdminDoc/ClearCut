@@ -4412,7 +4412,7 @@ class EditorViewModel @Inject constructor(
             try {
                 val exportResult = withContext(Dispatchers.IO) {
                     val template = templateManager.getTemplate(templateId) ?: return@withContext null
-                    val dir = File(appContext.getExternalFilesDir(null), "templates").apply { mkdirs() }
+                    val dir = File(appContext.getExternalFilesDir(null) ?: appContext.filesDir, "templates").apply { mkdirs() }
                     val sanitized = sanitizeFileName(template.name, fallback = "template")
                     val outputFile = File(dir, "$sanitized.novacut-template")
                     val success = templateManager.exportTemplateToFile(template.id, outputFile)
@@ -4422,9 +4422,17 @@ class EditorViewModel @Inject constructor(
                 if (exportResult != null) {
                     val (_, outputFile) = exportResult
                     showToast("Template exported: ${outputFile.name}")
-                    val uri = androidx.core.content.FileProvider.getUriForFile(
-                        appContext, "${appContext.packageName}.fileprovider", outputFile
-                    )
+                    val uri = runCatching {
+                        androidx.core.content.FileProvider.getUriForFile(
+                            appContext,
+                            "${appContext.packageName}.fileprovider",
+                            outputFile
+                        )
+                    }.getOrElse { error ->
+                        Log.w("EditorViewModel", "Template export FileProvider handoff failed", error)
+                        showToast(appContext.getString(R.string.editor_share_location_failed))
+                        return@launch
+                    }
                     val shareIntent = Intent(Intent.ACTION_SEND).apply {
                         type = "application/json"
                         putExtra(Intent.EXTRA_STREAM, uri)

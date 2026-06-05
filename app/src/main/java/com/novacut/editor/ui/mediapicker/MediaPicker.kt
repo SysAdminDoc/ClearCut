@@ -2,6 +2,7 @@ package com.novacut.editor.ui.mediapicker
 
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -297,14 +298,32 @@ fun MediaPickerSheet(
     fun startCameraCapture() {
         val cameraDir = pendingCameraCaptureDir(context).apply { mkdirs() }
         val videoFile = File(cameraDir, "novacut_${System.currentTimeMillis()}.mp4")
-        val uri = FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            videoFile
-        )
+        val uri = runCatching {
+            FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                videoFile
+            )
+        }.onFailure { error ->
+            Log.w("MediaPicker", "Failed to create camera capture content URI", error)
+            videoFile.delete()
+        }.getOrNull()
+
+        if (uri == null) {
+            permissionMessage = context.getString(R.string.media_picker_camera_handoff_failed)
+            return
+        }
+
         cameraVideoFile = videoFile
         cameraVideoUri = uri
-        cameraLauncher.launch(uri)
+        runCatching { cameraLauncher.launch(uri) }
+            .onFailure { error ->
+                Log.w("MediaPicker", "Failed to launch camera capture", error)
+                cameraVideoFile = null
+                cameraVideoUri = null
+                videoFile.delete()
+                permissionMessage = context.getString(R.string.media_picker_camera_handoff_failed)
+            }
     }
 
     // Clean up stale, unfinalized camera captures without touching imported media that
