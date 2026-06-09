@@ -38,3 +38,7 @@ qa/
 # also lock with TrackedFilesAuditTest so they can never enter the tracked set.
 HostShield-Research-Report.md
 research/
+
+# Markdown files local-only (except README)
+*.md
+!README.md
