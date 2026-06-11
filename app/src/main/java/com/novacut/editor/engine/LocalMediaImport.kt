@@ -29,7 +29,11 @@ internal fun importUriToManagedMedia(
                 sourceCanonical.length() > 0L &&
                 isInsideDirectory(sourceCanonical, managedMediaDir(context))
             ) {
-                return Uri.fromFile(sourceCanonical)
+                val managedUri = Uri.fromFile(sourceCanonical)
+                if (!mediaAssetSidecarFileFor(sourceCanonical).isFile) {
+                    writeManagedMediaAssetSidecar(context, managedUri, uri, mediaType)
+                }
+                return managedUri
             }
         }
     }
@@ -89,7 +93,9 @@ internal fun importUriToManagedMedia(
                 return null
             }
         }
-        Uri.fromFile(destinationFile)
+        Uri.fromFile(destinationFile).also { managedUri ->
+            writeManagedMediaAssetSidecar(context, managedUri, uri, mediaType)
+        }
     } catch (e: Exception) {
         partialFile.delete()
         destinationFile.delete()
@@ -146,12 +152,13 @@ internal fun sweepUnreferencedManagedMedia(
     var bytes = 0L
     dir.listFiles()?.forEach { f ->
         if (!f.isFile) return@forEach
-        if (f.name.endsWith(".partial")) return@forEach
+        if (f.name.endsWith(".partial") || isMediaAssetSidecar(f)) return@forEach
         if (f.lastModified() > ageCutoff) return@forEach
         val canonical = runCatching { f.canonicalPath }.getOrNull() ?: return@forEach
         if (canonical in referencedPaths) return@forEach
         val size = f.length()
         if (f.delete()) {
+            runCatching { mediaAssetSidecarFileFor(f).delete() }
             deleted++
             bytes += size
         }
@@ -164,7 +171,9 @@ internal fun deleteManagedMediaUri(context: Context, uri: Uri): Boolean {
     val file = uri.path?.let(::File) ?: return false
     val canonical = runCatching { file.canonicalFile }.getOrNull() ?: return false
     if (!isInsideDirectory(canonical, managedMediaDir(context))) return false
-    return canonical.isFile && canonical.delete()
+    return canonical.isFile && canonical.delete().also { deleted ->
+        if (deleted) runCatching { mediaAssetSidecarFileFor(canonical).delete() }
+    }
 }
 
 internal fun finalizePendingCameraCapture(
@@ -199,7 +208,9 @@ internal fun finalizePendingCameraCapture(
 
     return try {
         moveFileReplacing(pendingCanonical, destinationFile)
-        Uri.fromFile(destinationFile)
+        Uri.fromFile(destinationFile).also { managedUri ->
+            writeManagedMediaAssetSidecar(context, managedUri, Uri.fromFile(pendingCanonical), mediaType)
+        }
     } catch (_: Exception) {
         try {
             writeFileAtomically(destinationFile, requireNonEmpty = true) { tempFile ->
@@ -208,7 +219,9 @@ internal fun finalizePendingCameraCapture(
                 }
             }
             pendingCanonical.delete()
-            Uri.fromFile(destinationFile)
+            Uri.fromFile(destinationFile).also { managedUri ->
+                writeManagedMediaAssetSidecar(context, managedUri, Uri.fromFile(pendingCanonical), mediaType)
+            }
         } catch (copyError: Exception) {
             destinationFile.delete()
             Log.w(LOCAL_MEDIA_IMPORT_TAG, "Failed to finalize camera capture ${pendingCanonical.path}", copyError)
