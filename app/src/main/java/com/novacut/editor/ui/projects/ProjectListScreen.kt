@@ -193,30 +193,45 @@ fun ProjectListScreen(
             } else {
                 val hasActiveSearch = searchQuery.isNotBlank()
                 val hasActiveFilter = filterMode != ProjectFilterMode.ALL
+                val sortLabel = sortMode.localizedLabel()
+                val filterLabel = filterMode.localizedLabel()
                 NovaCutSectionHeader(
                     title = if (hasActiveSearch) {
-                        buildString {
-                            append(projects.size)
-                            append(if (projects.size == 1) " result" else " results")
+                        if (projects.size == 1) {
+                            stringResource(R.string.projects_results_count_one)
+                        } else {
+                            stringResource(R.string.projects_results_count_many, projects.size)
                         }
                     } else if (hasActiveFilter) {
-                        filterMode.label
+                        filterLabel
                     } else {
                         stringResource(R.string.projects_recent)
                     },
                     description = if (hasActiveSearch && hasActiveFilter) {
-                        "Filtered by ${filterMode.label.lowercase(Locale.getDefault())}, sorted by ${sortMode.label.lowercase(Locale.getDefault())}."
+                        stringResource(
+                            R.string.projects_filtered_sorted_summary,
+                            filterLabel.lowercase(Locale.getDefault()),
+                            sortLabel.lowercase(Locale.getDefault())
+                        )
                     } else if (hasActiveSearch) {
-                        "Sorted by ${sortMode.label.lowercase(Locale.getDefault())}."
+                        stringResource(
+                            R.string.projects_sorted_summary,
+                            sortLabel.lowercase(Locale.getDefault())
+                        )
                     } else if (hasActiveFilter) {
-                        "${projects.size} of $projectTotalCount projects, sorted by ${sortMode.label.lowercase(Locale.getDefault())}."
+                        stringResource(
+                            R.string.projects_filter_count_sorted_summary,
+                            projects.size,
+                            projectTotalCount,
+                            sortLabel.lowercase(Locale.getDefault())
+                        )
                     } else {
-                        "Pick up where you left off, duplicate a cut, or jump into a template."
+                        stringResource(R.string.projects_recent_subtitle)
                     },
                     modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, top = 14.dp, bottom = Spacing.sm),
                     trailing = {
                         NovaCutMetricPill(
-                            text = sortMode.label,
+                            text = sortLabel,
                             accent = Mocha.Sapphire,
                             icon = Icons.Default.FilterList
                         )
@@ -645,7 +660,7 @@ private fun ProjectHomeHero(
                 items(SortMode.entries.toList()) { mode ->
                     NovaCutFilterChip(
                         onClick = { onSortModeChanged(mode) },
-                        text = mode.label,
+                        text = mode.localizedLabel(),
                         selected = sortMode == mode,
                         accent = Mocha.Rosewater,
                         icon = if (sortMode == mode) Icons.Default.Check else null
@@ -737,7 +752,7 @@ private fun ProjectFilterChipsRow(
         items(ProjectFilterMode.entries.toList()) { mode ->
             NovaCutFilterChip(
                 onClick = { onFilterModeChanged(mode) },
-                text = mode.label,
+                text = mode.localizedLabel(),
                 selected = filterMode == mode,
                 accent = Mocha.Mauve,
                 icon = if (filterMode == mode) Icons.Default.Check else null
@@ -814,7 +829,7 @@ private fun ProjectEmptyState(
                         isConstrainedEmpty = isConstrainedEmpty,
                         hasActiveSearch = hasActiveSearch,
                         hasActiveFilter = hasActiveFilter,
-                        filterLabel = filterMode.label
+                        filterLabel = filterMode.localizedLabel()
                     ),
                     color = Mocha.Text,
                     style = MaterialTheme.typography.headlineMedium
@@ -1496,6 +1511,24 @@ private fun formatDate(timestamp: Long): String {
             sdf.format(java.util.Date(timestamp))
         }
     }
+}
+
+@Composable
+private fun SortMode.localizedLabel(): String = when (this) {
+    SortMode.DATE_DESC -> stringResource(R.string.project_sort_recent)
+    SortMode.DATE_ASC -> stringResource(R.string.project_sort_oldest)
+    SortMode.NAME_ASC -> stringResource(R.string.project_sort_name_asc)
+    SortMode.NAME_DESC -> stringResource(R.string.project_sort_name_desc)
+    SortMode.DURATION_DESC -> stringResource(R.string.project_sort_longest)
+}
+
+@Composable
+private fun ProjectFilterMode.localizedLabel(): String = when (this) {
+    ProjectFilterMode.ALL -> stringResource(R.string.project_filter_all)
+    ProjectFilterMode.RECENT_7D -> stringResource(R.string.project_filter_this_week)
+    ProjectFilterMode.LONG -> stringResource(R.string.project_filter_long)
+    ProjectFilterMode.SHORT -> stringResource(R.string.project_filter_short)
+    ProjectFilterMode.EMPTY -> stringResource(R.string.project_filter_empty)
 }
 
 @Composable

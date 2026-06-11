@@ -86,6 +86,9 @@ Planning files are local-only in the development checkout:
 
 ## Features
 
+### Languages
+- English and Spanish (`es`) are available through Android 13+ per-app language settings.
+
 ### Timeline Editing
 - Multi-track timeline with video, audio, overlay, text, and adjustment layers
 - Trim, split, merge, crop, rotate with visual handles
