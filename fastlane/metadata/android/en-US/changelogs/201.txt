@@ -1,0 +1,4 @@
+- Android 17 audio hardening gate
+- Added a static Android audio API policy validator with fixture self-tests and CI wiring.
+- Locked ExportService to media-processing-only behavior so it cannot start TTS, microphone, playback, or audio-focus APIs from a background foreground service path.
+- Documented the Android 17 cmd audio set-enable-hardening throw smoke test for TTS preview, voiceover recording, and export.

@@ -330,6 +330,17 @@ Before release, verify audio focus on a physical device:
 - Start a TTS preview, then leave the panel or close the editor. Preview speech
   should stop and other audio should be able to resume.
 
+### Manual QA: Android 17 audio hardening
+
+On an Android 17 Beta 3+ device or emulator, enable loud audio-hardening failures before checking editor audio paths:
+
+```bash
+adb shell cmd audio set-enable-hardening throw
+adb logcat | grep AudioHardening
+```
+
+With the editor activity visible, run TTS preview, start and stop a voiceover recording, then start an export. TTS preview and voiceover should continue to require visible editor interaction, and export should stay in the `mediaProcessing` foreground service without starting TextToSpeech, MediaRecorder, audio playback, or audio-focus APIs from `ExportService`.
+
 ### Requirements
 - Android Studio Ladybug+ (2024.2+)
 - AGP 8.7.3, Gradle 8.9, JDK 21

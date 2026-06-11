@@ -71,6 +71,11 @@ jobs:
           python3 scripts/validate_distribution_readiness.py --self-test
           python3 scripts/validate_distribution_readiness.py
 
+      - name: Verify Android audio API policy
+        run: |
+          python3 scripts/validate_android_audio_api_policy.py --self-test
+          python3 scripts/validate_android_audio_api_policy.py
+
       - name: Locate Android build tools
         id: build-tools
         shell: bash
