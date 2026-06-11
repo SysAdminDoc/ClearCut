@@ -457,6 +457,79 @@ fun KeyframeCurveEditor(
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    var timeText by remember(keyframe.timeOffsetMs) {
+                        mutableStateOf(String.format(java.util.Locale.getDefault(), "%.3f", keyframe.timeOffsetMs / 1000.0))
+                    }
+                    val range = getPropertyRange(keyframe.property)
+                    var valueText by remember(keyframe.value) {
+                        mutableStateOf(formatKeyframeValue(keyframe.value))
+                    }
+
+                    androidx.compose.material3.OutlinedTextField(
+                        value = timeText,
+                        onValueChange = { newText ->
+                            timeText = newText
+                            val seconds = newText.toDoubleOrNull() ?: return@OutlinedTextField
+                            val newTimeMs = (seconds * 1000).toLong().coerceIn(0L, clipDurationMs)
+                            val updated = keyframes.toMutableList()
+                            val index = updated.indexOf(keyframe)
+                            if (index >= 0) {
+                                updated[index] = keyframe.copy(timeOffsetMs = newTimeMs)
+                                onKeyframesChanged(updated)
+                                selectedKeyframe = updated[index]
+                            }
+                        },
+                        label = { Text("Time (s)") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                        colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Mocha.Text,
+                            unfocusedTextColor = Mocha.Text,
+                            focusedBorderColor = Mocha.Sky,
+                            unfocusedBorderColor = Mocha.Surface1,
+                            focusedLabelColor = Mocha.Sky,
+                            unfocusedLabelColor = Mocha.Subtext0,
+                            cursorColor = Mocha.Sky
+                        ),
+                        textStyle = MaterialTheme.typography.bodyMedium
+                    )
+
+                    androidx.compose.material3.OutlinedTextField(
+                        value = valueText,
+                        onValueChange = { newText ->
+                            valueText = newText
+                            val newValue = newText.toFloatOrNull() ?: return@OutlinedTextField
+                            val clamped = newValue.coerceIn(range.first, range.second)
+                            val updated = keyframes.toMutableList()
+                            val index = updated.indexOf(keyframe)
+                            if (index >= 0) {
+                                updated[index] = keyframe.copy(value = clamped)
+                                onKeyframesChanged(updated)
+                                selectedKeyframe = updated[index]
+                            }
+                        },
+                        label = { Text("Value") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                        colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Mocha.Text,
+                            unfocusedTextColor = Mocha.Text,
+                            focusedBorderColor = PROPERTY_COLORS[keyframe.property] ?: selectionAccent,
+                            unfocusedBorderColor = Mocha.Surface1,
+                            focusedLabelColor = PROPERTY_COLORS[keyframe.property] ?: selectionAccent,
+                            unfocusedLabelColor = Mocha.Subtext0,
+                            cursorColor = PROPERTY_COLORS[keyframe.property] ?: selectionAccent
+                        ),
+                        textStyle = MaterialTheme.typography.bodyMedium
+                    )
+                }
             }
         }
     }

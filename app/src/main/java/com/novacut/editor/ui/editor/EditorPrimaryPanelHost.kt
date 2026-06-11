@@ -142,6 +142,10 @@ fun BoxScope.EditorPrimaryPanelHost(
                     viewModel.setTransitionDuration(clipId, durationMs)
                 },
                 onDurationDragStarted = viewModel::beginTransitionDurationChange,
+                onEasingChanged = { easing ->
+                    val clipId = state.selectedClipId ?: return@TransitionPicker
+                    viewModel.setTransitionEasing(clipId, easing)
+                },
                 onClose = viewModel::hideTransitionPicker,
                 currentTransition = clip?.transition
             )

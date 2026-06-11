@@ -6,11 +6,19 @@ import java.util.UUID
 @Immutable
 data class Transition(
     val type: TransitionType,
-    val durationMs: Long = 500L
+    val durationMs: Long = 500L,
+    val easing: TransitionEasing = TransitionEasing.LINEAR
 ) {
     init {
         require(durationMs > 0) { "Transition duration must be positive" }
     }
+}
+
+enum class TransitionEasing(val displayName: String) {
+    LINEAR("Linear"),
+    EASE_IN("Ease In"),
+    EASE_OUT("Ease Out"),
+    EASE_IN_OUT("Ease In/Out")
 }
 
 enum class TransitionType(val displayName: String) {

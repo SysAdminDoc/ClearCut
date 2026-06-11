@@ -8,6 +8,7 @@ import androidx.media3.effect.BaseGlShaderProgram
 import androidx.media3.effect.GlEffect
 import androidx.media3.effect.GlShaderProgram
 import com.novacut.editor.model.TrackedObject
+import com.novacut.editor.model.TransitionEasing
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -19,11 +20,15 @@ import java.nio.ByteOrder
 class ShaderEffect(
     private val fragmentShader: String,
     private val uniforms: Map<String, Float> = emptyMap(),
-    private val dynamicUniforms: ((Long) -> Map<String, Float>)? = null
+    private val dynamicUniforms: ((Long) -> Map<String, Float>)? = null,
+    private val transitionEasing: TransitionEasing = TransitionEasing.LINEAR
 ) : GlEffect {
     override fun toGlShaderProgram(context: Context, useHdr: Boolean): GlShaderProgram {
-        return ShaderProgram(fragmentShader, uniforms, dynamicUniforms, useHdr)
+        return ShaderProgram(fragmentShader, uniforms, dynamicUniforms, useHdr, transitionEasing)
     }
+
+    fun withEasing(easing: TransitionEasing): ShaderEffect =
+        ShaderEffect(fragmentShader, uniforms, dynamicUniforms, easing)
 }
 
 @UnstableApi
@@ -31,7 +36,8 @@ private class ShaderProgram(
     private val fragmentShaderSource: String,
     private val uniforms: Map<String, Float>,
     private val dynamicUniforms: ((Long) -> Map<String, Float>)?,
-    useHdr: Boolean
+    useHdr: Boolean,
+    private val transitionEasing: TransitionEasing = TransitionEasing.LINEAR
 ) : BaseGlShaderProgram(useHdr, 1) {
 
     private var glProgram = 0
@@ -56,7 +62,17 @@ private class ShaderProgram(
         // `1.0 / uResolution` (sharpen, blur, vignette, scanlines, …) can never produce
         // GLSL Infinity if Media3 ever calls drawFrame before configure() set width/height.
         uniform2f("uResolution", width.coerceAtLeast(1).toFloat(), height.coerceAtLeast(1).toFloat())
-        uniform1f("uTime", presentationTimeUs / 1_000_000f)
+
+        val rawTimeSec = presentationTimeUs / 1_000_000f
+        val durationUs = uniforms["uDurationUs"]
+        if (durationUs != null && durationUs > 0f && transitionEasing != TransitionEasing.LINEAR) {
+            val rawProgress = (rawTimeSec * 1_000_000f / durationUs).coerceIn(0f, 1f)
+            val easedProgress = applyTransitionEasing(rawProgress, transitionEasing)
+            uniform1f("uTime", easedProgress * durationUs / 1_000_000f)
+        } else {
+            uniform1f("uTime", rawTimeSec)
+        }
+
         for ((name, value) in uniforms) uniform1f(name, value)
         dynamicUniforms?.invoke(presentationTimeUs)?.forEach { (name, value) ->
             uniform1f(name, value)
@@ -139,6 +155,13 @@ private class ShaderProgram(
     }
 
     companion object {
+        fun applyTransitionEasing(t: Float, easing: TransitionEasing): Float = when (easing) {
+            TransitionEasing.LINEAR -> t
+            TransitionEasing.EASE_IN -> t * t
+            TransitionEasing.EASE_OUT -> t * (2f - t)
+            TransitionEasing.EASE_IN_OUT -> if (t < 0.5f) 2f * t * t else -1f + (4f - 2f * t) * t
+        }
+
         private const val VERT = "#version 300 es\n" +
             "in vec4 aPosition;\nin vec2 aTexCoord;\nout vec2 vTexCoord;\n" +
             "void main() { gl_Position = aPosition; vTexCoord = aTexCoord; }"

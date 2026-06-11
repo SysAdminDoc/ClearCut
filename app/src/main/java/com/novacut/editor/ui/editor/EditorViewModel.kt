@@ -1125,6 +1125,7 @@ class EditorViewModel @Inject constructor(
     fun setTransition(clipId: String, transition: Transition?) = effectsDelegate.setTransition(clipId, transition)
     fun beginTransitionDurationChange() = effectsDelegate.beginTransitionDurationChange()
     fun setTransitionDuration(clipId: String, durationMs: Long) = effectsDelegate.setTransitionDuration(clipId, durationMs)
+    fun setTransitionEasing(clipId: String, easing: TransitionEasing) = effectsDelegate.setTransitionEasing(clipId, easing)
 
     // --- Overlays & Markers (delegated) ---
     fun addTextOverlay(text: TextOverlay) = overlayDelegate.addTextOverlay(text)

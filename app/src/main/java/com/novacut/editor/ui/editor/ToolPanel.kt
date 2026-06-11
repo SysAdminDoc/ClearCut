@@ -1427,6 +1427,7 @@ fun TransitionPicker(
     onDurationChanged: (Long) -> Unit,
     modifier: Modifier = Modifier,
     onDurationDragStarted: () -> Unit = {},
+    onEasingChanged: (TransitionEasing) -> Unit = {},
     onClose: () -> Unit,
     currentTransition: Transition?
 ) {
@@ -1559,6 +1560,46 @@ fun TransitionPicker(
                     onDragStarted = onDurationDragStarted,
                     onValueChange = { onDurationChanged(it.toLong()) }
                 )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+            PremiumPanelCard(accent = Mocha.Lavender) {
+                Text(
+                    text = "Easing",
+                    color = Mocha.Text,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = "Control the transition speed curve",
+                    color = Mocha.Subtext0,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TransitionEasing.entries.forEach { easing ->
+                        val isSelected = currentTransition.easing == easing
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { onEasingChanged(easing) },
+                            label = { Text(easing.displayName) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                containerColor = Mocha.Surface0,
+                                selectedContainerColor = Mocha.Lavender.copy(alpha = 0.3f),
+                                labelColor = Mocha.Text,
+                                selectedLabelColor = Mocha.Lavender
+                            ),
+                            border = FilterChipDefaults.filterChipBorder(
+                                borderColor = if (isSelected) Mocha.Lavender else Mocha.Surface1,
+                                selectedBorderColor = Mocha.Lavender,
+                                enabled = true,
+                                selected = isSelected
+                            )
+                        )
+                    }
+                }
             }
         }
     }

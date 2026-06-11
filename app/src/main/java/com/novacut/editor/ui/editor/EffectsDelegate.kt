@@ -2,6 +2,7 @@ package com.novacut.editor.ui.editor
 
 import com.novacut.editor.model.Effect
 import com.novacut.editor.model.Transition
+import com.novacut.editor.model.TransitionEasing
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.util.UUID
 
@@ -186,6 +187,22 @@ class EffectsDelegate(
             }
             recalculateDuration(state.copy(tracks = tracks))
         }
+    }
+
+    fun setTransitionEasing(clipId: String, easing: TransitionEasing) {
+        saveUndoState("Change transition easing")
+        stateFlow.update { state ->
+            val tracks = state.tracks.map { track ->
+                track.copy(clips = track.clips.map { clip ->
+                    if (clip.id == clipId && clip.transition != null) {
+                        clip.copy(transition = clip.transition.copy(easing = easing))
+                    } else clip
+                })
+            }
+            state.copy(tracks = tracks)
+        }
+        rebuildPlayerTimeline()
+        saveProject()
     }
 
 }

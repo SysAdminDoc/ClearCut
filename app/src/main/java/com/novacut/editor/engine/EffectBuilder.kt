@@ -419,7 +419,7 @@ internal object EffectBuilder {
         // any plausible transition length while staying comfortably inside
         // Float's representable range after * 1000.
         val durationUs = transition.durationMs.coerceIn(1L, 2_147_000L) * 1000f
-        return when (transition.type) {
+        val effect = when (transition.type) {
             TransitionType.DISSOLVE, TransitionType.FADE_BLACK ->
                 EffectShaders.transitionFadeIn(durationUs)
             TransitionType.FADE_WHITE ->
@@ -459,6 +459,9 @@ internal object EffectBuilder {
             TransitionType.SQUARES_WIRE -> EffectShaders.transitionSquaresWire(durationUs)
             TransitionType.COLOR_PHASE -> EffectShaders.transitionColorPhase(durationUs)
         }
+        return if (transition.easing != com.novacut.editor.model.TransitionEasing.LINEAR) {
+            (effect as ShaderEffect).withEasing(transition.easing)
+        } else effect
     }
 
     /**
@@ -475,7 +478,7 @@ internal object EffectBuilder {
         // Float's representable range after * 1000.
         val durationUs = transition.durationMs.coerceIn(1L, 2_147_000L) * 1000f
         val clipDurationUs = clipDurationMs.coerceIn(1L, 2_147_000L) * 1000f
-        return when (transition.type) {
+        val effect = when (transition.type) {
             TransitionType.DISSOLVE, TransitionType.FADE_BLACK ->
                 EffectShaders.transitionFadeOut(durationUs, clipDurationUs)
             TransitionType.FADE_WHITE ->
@@ -492,9 +495,11 @@ internal object EffectBuilder {
                 EffectShaders.transitionSpinOut(durationUs, clipDurationUs)
             TransitionType.CIRCLE_OPEN, TransitionType.RADIAL_WIPE ->
                 EffectShaders.transitionCircleClose(durationUs, clipDurationUs)
-            // All other exotic transitions: generic fade to black
             else -> EffectShaders.transitionFadeOut(durationUs, clipDurationUs)
         }
+        return if (transition.easing != com.novacut.editor.model.TransitionEasing.LINEAR) {
+            (effect as ShaderEffect).withEasing(transition.easing)
+        } else effect
     }
 
     /**
