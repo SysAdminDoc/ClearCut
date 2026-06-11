@@ -1,0 +1,5 @@
+- Open-source license notices
+- Added a Settings entry for third-party notices that lists bundled dependency licenses and source links.
+- Surfaced FFmpegKit / FFmpeg GPLv3 obligation copy and the packaged source offer text in-app.
+- Added JVM coverage that keeps the notices registry non-empty and requires FFmpegKit, DeepFilterNet, MediaPipe, Lottie, and OkHttp notices.
+- Updated README distribution guidance and Fastlane release notes for the license surface.

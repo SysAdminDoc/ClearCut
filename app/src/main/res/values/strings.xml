@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.74.56</string>
+    <string name="app_version">v3.74.57</string>
 
     <!-- Common -->
     <string name="close">Close</string>
@@ -80,6 +80,20 @@
     <string name="privacy_dashboard_retention_label">Retention</string>
     <string name="privacy_dashboard_collected_by_label">Collected by</string>
     <string name="privacy_dashboard_controls_label">You can</string>
+    <string name="settings_open_source_licenses_section_title">Third-party notices</string>
+    <string name="settings_open_source_licenses_section_description">Review bundled dependency licenses and source-offer obligations.</string>
+    <string name="settings_open_source_licenses">Open source licenses</string>
+    <string name="settings_open_source_licenses_description">Lists shipped dependency notices, including FFmpegKit GPLv3 source-offer material.</string>
+    <string name="settings_open_source_licenses_action">Open</string>
+    <string name="settings_open_source_licenses_close">Close</string>
+    <string name="opensource_licenses_title">Open source licenses</string>
+    <string name="opensource_licenses_subtitle">%1$d bundled dependency notices used by this build.</string>
+    <string name="opensource_licenses_artifact_label">Artifact</string>
+    <string name="opensource_licenses_license_label">License</string>
+    <string name="opensource_licenses_notice_label">Notice</string>
+    <string name="opensource_licenses_source_offer_label">Source offer</string>
+    <string name="opensource_licenses_project_label">Project</string>
+    <string name="opensource_licenses_full_text_label">Full text</string>
 
     <!-- Caption translation panel (R5.4a UI) -->
     <string name="caption_translation_title">Caption Translation</string>

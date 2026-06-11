@@ -25,6 +25,9 @@ object NovaCutTestTags {
     const val SETTINGS_PRIVACY_OPEN = "settings.privacy.open"
     const val SETTINGS_PRIVACY_DASHBOARD = "settings.privacy.dashboard"
     const val SETTINGS_PRIVACY_CLOSE = "settings.privacy.close"
+    const val SETTINGS_LICENSES_OPEN = "settings.licenses.open"
+    const val SETTINGS_LICENSES_DIALOG = "settings.licenses.dialog"
+    const val SETTINGS_LICENSES_CLOSE = "settings.licenses.close"
 
     const val TUTORIAL_SCREEN = "tutorial.screen"
     const val TUTORIAL_SKIP = "tutorial.skip"

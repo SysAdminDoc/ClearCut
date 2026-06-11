@@ -100,6 +100,7 @@ fun SettingsScreen(
     val canRemoveSegmentationModel = segmentationModelState == SegmentationModelState.READY && aiModelStorage.segmentationBytes > 0L
     var pendingAiModelRemoval by remember { mutableStateOf<SettingsAiModelRemovalTarget?>(null) }
     var showPrivacyDashboard by remember { mutableStateOf(false) }
+    var showOpenSourceLicenses by remember { mutableStateOf(false) }
     var notificationStatusRefreshKey by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) {
@@ -585,6 +586,22 @@ fun SettingsScreen(
             )
         }
 
+        // Third-party notices
+        SettingsSection(
+            title = stringResource(R.string.settings_open_source_licenses_section_title),
+            description = stringResource(R.string.settings_open_source_licenses_section_description)
+        ) {
+            SettingsActionRow(
+                icon = Icons.Default.Info,
+                accent = Mocha.Teal,
+                label = stringResource(R.string.settings_open_source_licenses),
+                description = stringResource(R.string.settings_open_source_licenses_description),
+                actionLabel = stringResource(R.string.settings_open_source_licenses_action),
+                onClick = { showOpenSourceLicenses = true },
+                modifier = Modifier.testTag(NovaCutTestTags.SETTINGS_LICENSES_OPEN)
+            )
+        }
+
         // About
         SettingsSection(
             title = stringResource(R.string.settings_about),
@@ -640,6 +657,43 @@ fun SettingsScreen(
                                 text = stringResource(R.string.settings_privacy_close),
                                 onClick = { showPrivacyDashboard = false },
                                 modifier = Modifier.testTag(NovaCutTestTags.SETTINGS_PRIVACY_CLOSE)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        if (showOpenSourceLicenses) {
+            androidx.compose.ui.window.Dialog(
+                onDismissRequest = { showOpenSourceLicenses = false }
+            ) {
+                androidx.compose.material3.Surface(
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(Radius.xxl),
+                    color = Mocha.PanelHighest,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 640.dp)
+                        .testTag(NovaCutTestTags.SETTINGS_LICENSES_DIALOG)
+                ) {
+                    Column {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f, fill = false)
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            OpenSourceLicensesPanel()
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            NovaCutSecondaryButton(
+                                text = stringResource(R.string.settings_open_source_licenses_close),
+                                onClick = { showOpenSourceLicenses = false },
+                                modifier = Modifier.testTag(NovaCutTestTags.SETTINGS_LICENSES_CLOSE)
                             )
                         }
                     }

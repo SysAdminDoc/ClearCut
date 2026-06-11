@@ -360,6 +360,12 @@ Key external dependencies currently in `build.gradle.kts`:
 | Lottie Compose | 6.7.1 | Animated title templates |
 | AndroidX Benchmark/ProfileInstaller | 1.4.1 / 1.4.1 | Baseline Profile generation and release profile install |
 | OkHttp | 5.3.2 | Future opt-in cloud APIs |
+| FFmpegKit 16 KB | 6.1.1 | FFmpeg-backed fallback export paths not covered by Media3 Transformer |
+| Android DeepFilterNet | 0.0.8 | On-device voiceover noise reduction |
+
+### Distribution and Third-party Notices
+
+Open-source notices are available in **Settings > Third-party notices > Open source licenses**. Redistributed builds that include `com.moizhassan.ffmpeg:ffmpeg-kit-16kb:6.1.1` must keep the packaged FFmpegKit / FFmpeg license resources and source-offer text. The fork source is published at https://github.com/moizhassankh/ffmpeg-kit-android-16KB, and the bundled source-offer resource points to FFmpegKit source access at https://github.com/arthenica/ffmpeg-kit/wiki/Source.
 
 ## Supported Devices
 
