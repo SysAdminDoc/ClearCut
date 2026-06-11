@@ -25,15 +25,15 @@ import com.novacut.editor.ui.theme.Mocha
 
 private data class ReframeOption(
     val ratio: AspectRatio,
-    val platform: String
+    val platformResId: Int
 )
 
 private val reframeOptions = listOf(
-    ReframeOption(AspectRatio.RATIO_16_9, "YouTube"),
-    ReframeOption(AspectRatio.RATIO_9_16, "TikTok / Reels"),
-    ReframeOption(AspectRatio.RATIO_1_1, "Instagram"),
-    ReframeOption(AspectRatio.RATIO_4_5, "Portrait ads"),
-    ReframeOption(AspectRatio.RATIO_4_3, "Classic")
+    ReframeOption(AspectRatio.RATIO_16_9, R.string.smart_reframe_platform_youtube),
+    ReframeOption(AspectRatio.RATIO_9_16, R.string.crop_preset_platform_tiktok_reels),
+    ReframeOption(AspectRatio.RATIO_1_1, R.string.smart_reframe_platform_instagram),
+    ReframeOption(AspectRatio.RATIO_4_5, R.string.smart_reframe_platform_portrait_ads),
+    ReframeOption(AspectRatio.RATIO_4_3, R.string.crop_preset_platform_classic)
 )
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -48,7 +48,7 @@ fun SmartReframePanel(
     val isCompactGrid = LocalConfiguration.current.screenWidthDp < 430
     PremiumEditorPanel(
         title = stringResource(R.string.smart_reframe_title),
-        subtitle = "Retarget the frame for different platforms while keeping the shot focused on the subject.",
+        subtitle = stringResource(R.string.smart_reframe_subtitle),
         icon = Icons.Default.Crop,
         accent = Mocha.Mauve,
         onClose = onClose,
@@ -73,13 +73,13 @@ fun SmartReframePanel(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Current delivery frame",
+                        text = stringResource(R.string.smart_reframe_current_frame_title),
                         style = MaterialTheme.typography.titleMedium,
                         color = Mocha.Text
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "Choose a destination ratio and NovaCut will rebuild the crop for that surface.",
+                        text = stringResource(R.string.smart_reframe_current_frame_description),
                         style = MaterialTheme.typography.bodyMedium,
                         color = Mocha.Subtext0
                     )
@@ -96,7 +96,7 @@ fun SmartReframePanel(
                         accent = Mocha.Mauve
                     )
                     PremiumPanelPill(
-                        text = if (isProcessing) "Reframing" else "${reframeOptions.size} targets",
+                        text = if (isProcessing) stringResource(R.string.smart_reframe_processing) else stringResource(R.string.smart_reframe_targets_count, reframeOptions.size),
                         accent = if (isProcessing) Mocha.Peach else Mocha.Blue
                     )
                 }
@@ -107,12 +107,12 @@ fun SmartReframePanel(
 
         PremiumPanelCard(accent = Mocha.Blue) {
             Text(
-                text = "Destination ratios",
+                text = stringResource(R.string.smart_reframe_destination_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = Mocha.Text
             )
             Text(
-                text = "Social formats lead with portrait-first crops, while classic formats preserve a more open composition.",
+                text = stringResource(R.string.smart_reframe_destination_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Mocha.Subtext0
             )
@@ -198,7 +198,7 @@ private fun SmartReframeCard(
                     textAlign = TextAlign.Center
                 )
                 Text(
-                    text = option.platform,
+                    text = stringResource(option.platformResId),
                     style = MaterialTheme.typography.bodySmall,
                     color = Mocha.Subtext0,
                     textAlign = TextAlign.Center
@@ -206,7 +206,7 @@ private fun SmartReframeCard(
             }
 
             PremiumPanelPill(
-                text = if (isSelected) "Current frame" else "Reframe target",
+                text = if (isSelected) stringResource(R.string.smart_reframe_current_pill) else stringResource(R.string.smart_reframe_target_pill),
                 accent = accent
             )
         }

@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Delete
@@ -465,7 +467,7 @@ fun KeyframeCurveEditor(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     var timeText by remember(keyframe.timeOffsetMs) {
-                        mutableStateOf(String.format(java.util.Locale.getDefault(), "%.3f", keyframe.timeOffsetMs / 1000.0))
+                        mutableStateOf(formatEditorDecimal(keyframe.timeOffsetMs / 1000.0, 3))
                     }
                     val range = getPropertyRange(keyframe.property)
                     var valueText by remember(keyframe.value) {
@@ -476,7 +478,7 @@ fun KeyframeCurveEditor(
                         value = timeText,
                         onValueChange = { newText ->
                             timeText = newText
-                            val seconds = newText.toDoubleOrNull() ?: return@OutlinedTextField
+                            val seconds = parseEditorDecimal(newText) ?: return@OutlinedTextField
                             val newTimeMs = (seconds * 1000).toLong().coerceIn(0L, clipDurationMs)
                             val updated = keyframes.toMutableList()
                             val index = updated.indexOf(keyframe)
@@ -486,7 +488,8 @@ fun KeyframeCurveEditor(
                                 selectedKeyframe = updated[index]
                             }
                         },
-                        label = { Text("Time (s)") },
+                        label = { Text(stringResource(R.string.keyframe_time_label)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true,
                         modifier = Modifier.weight(1f),
                         colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
@@ -505,7 +508,7 @@ fun KeyframeCurveEditor(
                         value = valueText,
                         onValueChange = { newText ->
                             valueText = newText
-                            val newValue = newText.toFloatOrNull() ?: return@OutlinedTextField
+                            val newValue = parseEditorDecimal(newText)?.toFloat() ?: return@OutlinedTextField
                             val clamped = newValue.coerceIn(range.first, range.second)
                             val updated = keyframes.toMutableList()
                             val index = updated.indexOf(keyframe)
@@ -515,7 +518,8 @@ fun KeyframeCurveEditor(
                                 selectedKeyframe = updated[index]
                             }
                         },
-                        label = { Text("Value") },
+                        label = { Text(stringResource(R.string.keyframe_value_label)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true,
                         modifier = Modifier.weight(1f),
                         colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
@@ -675,7 +679,7 @@ private fun KeyframeInterpolation.displayLabel(): String {
 }
 
 private fun formatKeyframeValue(value: Float): String {
-    return String.format(Locale.getDefault(), "%.2f", value)
+    return formatEditorDecimal(value.toDouble(), 2)
 }
 
 private fun formatEditorTimestamp(timeMs: Long): String {

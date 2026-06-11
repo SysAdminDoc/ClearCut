@@ -57,7 +57,7 @@ fun BeatSyncPanel(
 
     PremiumEditorPanel(
         title = stringResource(R.string.beat_sync_title),
-        subtitle = "Find the groove, mark the pulse, and snap cuts to the rhythm without scrubbing by hand.",
+        subtitle = stringResource(R.string.beat_sync_subtitle),
         icon = Icons.Default.MusicNote,
         accent = Mocha.Peach,
         onClose = onClose,
@@ -73,16 +73,16 @@ fun BeatSyncPanel(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Rhythm overview",
+                        text = stringResource(R.string.beat_sync_rhythm_overview_title),
                         style = MaterialTheme.typography.titleMedium,
                         color = Mocha.Text
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = if (hasBeats) {
-                            "NovaCut has a beat map ready. You can refine the pulse manually before you commit it to the timeline."
+                            stringResource(R.string.beat_sync_overview_ready)
                         } else {
-                            "Start with beat detection or tap along live while preview playback is running."
+                            stringResource(R.string.beat_sync_overview_empty)
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = Mocha.Subtext0
@@ -99,16 +99,16 @@ fun BeatSyncPanel(
                         text = if (hasBeats) {
                             stringResource(R.string.beat_sync_markers_count, beatMarkers.size)
                         } else {
-                            "No beat map"
+                            stringResource(R.string.beat_sync_no_beat_map)
                         },
                         accent = Mocha.Peach
                     )
                     PremiumPanelPill(
-                        text = if (avgBpm > 0.0) "${avgBpm.roundToInt()} BPM" else "BPM pending",
+                        text = if (avgBpm > 0.0) stringResource(R.string.beat_sync_bpm_value, avgBpm.roundToInt()) else stringResource(R.string.beat_sync_bpm_pending),
                         accent = Mocha.Blue
                     )
                     PremiumPanelPill(
-                        text = if (isPlaying) "Tap ready" else "Play to tap",
+                        text = if (isPlaying) stringResource(R.string.beat_sync_tap_ready) else stringResource(R.string.beat_sync_play_to_tap),
                         accent = if (isPlaying) Mocha.Green else Mocha.Overlay1
                     )
                 }
@@ -119,12 +119,12 @@ fun BeatSyncPanel(
 
         PremiumPanelCard(accent = Mocha.Blue) {
             Text(
-                text = "Capture the beat",
+                text = stringResource(R.string.beat_sync_capture_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = Mocha.Text
             )
             Text(
-                text = "Use automatic analysis for a quick first pass, then tap beats live if you want to tighten sync against the exact feel of the music.",
+                text = stringResource(R.string.beat_sync_capture_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Mocha.Subtext0
             )
@@ -136,7 +136,7 @@ fun BeatSyncPanel(
                     shape = RoundedCornerShape(18.dp)
                 ) {
                     Text(
-                        text = "Start playback to tap beats live after the first analysis pass.",
+                        text = stringResource(R.string.beat_sync_playback_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = Mocha.Subtext0,
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
@@ -255,15 +255,15 @@ fun BeatSyncPanel(
 
         PremiumPanelCard(accent = Mocha.Mauve) {
             Text(
-                text = "Beat timeline",
+                text = stringResource(R.string.beat_sync_timeline_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = Mocha.Text
             )
             Text(
                 text = if (hasBeats) {
-                    "Review the detected pulse before applying it to your edit decisions."
+                    stringResource(R.string.beat_sync_timeline_ready)
                 } else {
-                    "Detected markers will appear here as soon as NovaCut maps the rhythm."
+                    stringResource(R.string.beat_sync_timeline_empty)
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = Mocha.Subtext0
@@ -301,7 +301,7 @@ fun BeatSyncPanel(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "No markers yet",
+                            text = stringResource(R.string.beat_sync_no_markers),
                             style = MaterialTheme.typography.bodyMedium,
                             color = Mocha.Overlay1
                         )
@@ -322,12 +322,12 @@ fun BeatSyncPanel(
                     )
                     BeatSyncMetric(
                         label = stringResource(R.string.beat_sync_label_bpm),
-                        value = if (avgBpm > 0.0) avgBpm.roundToInt().toString() else "—",
+                        value = if (avgBpm > 0.0) avgBpm.roundToInt().toString() else stringResource(R.string.beat_sync_bpm_placeholder),
                         accent = Mocha.Blue
                     )
                     BeatSyncMetric(
                         label = stringResource(R.string.beat_sync_label_scan),
-                        value = "${(totalDurationMs / 1000f).roundToInt()}s",
+                        value = stringResource(R.string.panel_text_template_duration_format, (totalDurationMs / 1000f).roundToInt()),
                         accent = Mocha.Mauve
                     )
                 }
@@ -347,12 +347,12 @@ fun BeatSyncPanel(
 
         PremiumPanelCard(accent = Mocha.Green) {
             Text(
-                text = "Apply beat sync",
+                text = stringResource(R.string.beat_sync_apply_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = Mocha.Text
             )
             Text(
-                text = "Use the current beat map to drive timing decisions across the edit.",
+                text = stringResource(R.string.beat_sync_apply_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Mocha.Subtext0
             )

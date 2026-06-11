@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.74.68</string>
+    <string name="app_version">v3.74.69</string>
 
     <!-- Common -->
     <string name="close">Close</string>
@@ -282,6 +282,20 @@
     <string name="noise_reduction_description">Analyzes audio to detect noise type (hiss, hum, broadband) and automatically applies the best DSP filters.</string>
     <string name="noise_reduction_analyzing">Analyzing noise profile\u2026</string>
     <string name="noise_reduction_analyze_button">Analyze &amp; Fix Noise</string>
+    <string name="noise_reduction_subtitle">Profile hiss, hum, and broadband noise, then let NovaCut clean the track before the final mix pass.</string>
+    <string name="noise_reduction_profile_title">Noise profile</string>
+    <string name="noise_reduction_profile_ready">Profile ready</string>
+    <string name="noise_reduction_awaiting_scan">Awaiting scan</string>
+    <string name="noise_reduction_cleaning_now">Cleaning now</string>
+    <string name="noise_reduction_ai_assist">AI assist</string>
+    <string name="noise_reduction_analyze_title">Analyze and reduce</string>
+    <string name="noise_reduction_analyze_description">Run a guided cleanup pass to detect the dominant noise character and apply the best reduction profile automatically.</string>
+    <string name="noise_reduction_type_hiss">Hiss</string>
+    <string name="noise_reduction_type_hum">Hum</string>
+    <string name="noise_reduction_type_broadband">Broadband</string>
+    <string name="noise_reduction_cleanup_applied">Cleanup applied</string>
+    <string name="noise_reduction_no_result_title">No analysis result yet</string>
+    <string name="noise_reduction_no_result_description">Run the pass once and NovaCut will surface the detected profile here so you can judge whether the cleanup is headed in the right direction.</string>
 
     <!-- AudioNormPanel -->
     <string name="audio_norm_title">Audio Normalization</string>
@@ -296,6 +310,19 @@
     <string name="audio_norm_cinema">Cinema (-24 LUFS)</string>
     <string name="audio_norm_loud">Loud (-9 LUFS)</string>
     <string name="audio_norm_custom">Custom</string>
+    <string name="audio_norm_subtitle">Match clip loudness to the delivery target before you export or stack more effects.</string>
+    <string name="audio_norm_loudness_target_title">Loudness target</string>
+    <string name="audio_norm_loudness_target_description">Choose a delivery profile and NovaCut will rebalance the selected clip around that LUFS target.</string>
+    <string name="audio_norm_current_percent">%1$d%% current</string>
+    <string name="audio_norm_profiles_title">Normalization profiles</string>
+    <string name="audio_norm_custom_description">Dial the exact target when you are matching an existing delivery spec or audio chain.</string>
+    <string name="audio_norm_min_lufs">-30 LUFS</string>
+    <string name="audio_norm_max_lufs">-5 LUFS</string>
+    <string name="audio_norm_apply_title">Apply normalization</string>
+    <string name="audio_norm_apply_description">This keeps your level strategy aligned before you export, publish, or mix against music.</string>
+    <string name="audio_norm_custom_hint">Set a manual loudness target</string>
+    <string name="audio_norm_recommended_for">Recommended for %1$s</string>
+    <string name="audio_norm_lufs_format">%1$d LUFS</string>
 
     <!-- SettingsScreen -->
     <string name="settings_title">Settings</string>
@@ -1123,6 +1150,15 @@
     <string name="auto_edit_close_cd">Close auto edit</string>
     <string name="auto_edit_description">AI analyzes your clips for quality, motion, and faces, then creates a highlight reel with the best moments.</string>
     <string name="auto_edit_start">Generate Highlight Reel</string>
+    <string name="auto_edit_subtitle">Turn rough footage into a first-cut highlight reel with a concise creative brief and an AI-assisted timing pass.</string>
+    <string name="auto_edit_source_overview_title">Source overview</string>
+    <string name="auto_edit_brief_title">Edit brief</string>
+    <string name="auto_edit_brief_description">Guide the first cut with a short prompt like \"fast travel recap with strongest reactions first\" or leave it blank for a neutral highlight reel.</string>
+    <string name="auto_edit_generate_with_audio">NovaCut can pace the reel against your current audio bed while it scores the strongest moments.</string>
+    <string name="auto_edit_generate_no_audio">You can still generate a first cut now, but adding music or guide audio usually improves pacing.</string>
+    <string name="auto_edit_clip_count">%1$d clips</string>
+    <string name="auto_edit_audio_ready">Audio ready</string>
+    <string name="auto_edit_no_soundtrack">No soundtrack</string>
 
     <!-- BeatSyncPanel -->
     <string name="beat_sync_title">Beat Sync</string>
@@ -1130,6 +1166,25 @@
     <string name="beat_sync_detect">Detect Beats</string>
     <string name="beat_sync_detecting">Analyzing\u2026</string>
     <string name="beat_sync_apply">Apply Beat Sync</string>
+    <string name="beat_sync_subtitle">Find the groove, mark the pulse, and snap cuts to the rhythm without scrubbing by hand.</string>
+    <string name="beat_sync_rhythm_overview_title">Rhythm overview</string>
+    <string name="beat_sync_overview_ready">NovaCut has a beat map ready. You can refine the pulse manually before you commit it to the timeline.</string>
+    <string name="beat_sync_overview_empty">Start with beat detection or tap along live while preview playback is running.</string>
+    <string name="beat_sync_no_beat_map">No beat map</string>
+    <string name="beat_sync_bpm_value">%1$d BPM</string>
+    <string name="beat_sync_bpm_pending">BPM pending</string>
+    <string name="beat_sync_tap_ready">Tap ready</string>
+    <string name="beat_sync_play_to_tap">Play to tap</string>
+    <string name="beat_sync_capture_title">Capture the beat</string>
+    <string name="beat_sync_capture_description">Use automatic analysis for a quick first pass, then tap beats live if you want to tighten sync against the exact feel of the music.</string>
+    <string name="beat_sync_playback_hint">Start playback to tap beats live after the first analysis pass.</string>
+    <string name="beat_sync_timeline_title">Beat timeline</string>
+    <string name="beat_sync_timeline_ready">Review the detected pulse before applying it to your edit decisions.</string>
+    <string name="beat_sync_timeline_empty">Detected markers will appear here as soon as NovaCut maps the rhythm.</string>
+    <string name="beat_sync_no_markers">No markers yet</string>
+    <string name="beat_sync_bpm_placeholder">—</string>
+    <string name="beat_sync_apply_title">Apply beat sync</string>
+    <string name="beat_sync_apply_description">Use the current beat map to drive timing decisions across the edit.</string>
 
     <!-- BlendModeSelector -->
     <string name="blend_mode_title">Blend Mode</string>
@@ -1217,6 +1272,18 @@
     <!-- SmartReframePanel -->
     <string name="smart_reframe_title">Smart Reframe</string>
     <string name="smart_reframe_close_cd">Close smart reframe</string>
+    <string name="smart_reframe_subtitle">Retarget the frame for different platforms while keeping the shot focused on the subject.</string>
+    <string name="smart_reframe_current_frame_title">Current delivery frame</string>
+    <string name="smart_reframe_current_frame_description">Choose a destination ratio and NovaCut will rebuild the crop for that surface.</string>
+    <string name="smart_reframe_processing">Reframing</string>
+    <string name="smart_reframe_targets_count">%1$d targets</string>
+    <string name="smart_reframe_destination_title">Destination ratios</string>
+    <string name="smart_reframe_destination_description">Social formats lead with portrait-first crops, while classic formats preserve a more open composition.</string>
+    <string name="smart_reframe_current_pill">Current frame</string>
+    <string name="smart_reframe_target_pill">Reframe target</string>
+    <string name="smart_reframe_platform_youtube">YouTube</string>
+    <string name="smart_reframe_platform_instagram">Instagram</string>
+    <string name="smart_reframe_platform_portrait_ads">Portrait ads</string>
 
     <!-- AutoSaveIndicator -->
     <string name="autosave_saving">Saving\u2026</string>
@@ -1943,4 +2010,116 @@
 
     <!-- ProjectTemplateSheet -->
     <string name="cd_file_open">Import template</string>
+
+    <!-- V369FeaturesPanel (Creator Intelligence) -->
+    <string name="v369_subtitle">Speech edits, safety checks, publishing prep, and adaptive controls.</string>
+    <string name="v369_readiness_clip">Clip</string>
+    <string name="v369_readiness_choose_one">Choose one</string>
+    <string name="v369_readiness_transcript">Transcript</string>
+    <string name="v369_readiness_run_captions">Run captions</string>
+    <string name="v369_readiness_available">Available</string>
+    <string name="v369_readiness_render_first">Render first</string>
+    <string name="v369_text_edit_title">Text-Based Editing</string>
+    <string name="v369_text_edit_subtitle">Delete transcript words and ripple-cut the matching timeline ranges.</string>
+    <string name="v369_text_edit_need_transcript">Run Auto Captions first to enable text-based edits.</string>
+    <string name="v369_text_edit_words_status">%1$d words available; %2$d selected.</string>
+    <string name="v369_select_fillers">Select fillers</string>
+    <string name="v369_apply_cuts">Apply cuts</string>
+    <string name="v369_chapters_title">Auto-Chapters</string>
+    <string name="v369_chapters_subtitle">Detect natural sections and prepare a platform-ready chapter list.</string>
+    <plurals name="v369_chapter_candidates_ready">
+        <item quantity="one">%1$d candidate chapter ready.</item>
+        <item quantity="other">%1$d candidate chapters ready.</item>
+    </plurals>
+    <string name="v369_detect">Detect</string>
+    <string name="v369_talking_head_title">Talking-Head Framing</string>
+    <string name="v369_talking_head_subtitle">Create smooth face-aware position keyframes for talking-head edits.</string>
+    <string name="v369_track_selected_clip">Track selected clip</string>
+    <string name="v369_karaoke_title">Karaoke Captions</string>
+    <string name="v369_karaoke_subtitle">Generate word-timed captions with concise social-video styles.</string>
+    <string name="v369_generate_captions">Generate captions</string>
+    <string name="v369_stream_copy_title">Stream-Copy Export</string>
+    <string name="v369_stream_copy_subtitle">Confirm when a trim can export losslessly without re-encoding.</string>
+    <string name="v369_stream_copy_unchecked">Eligibility has not been checked yet.</string>
+    <string name="v369_stream_copy_eligible">Eligible for fast lossless export.</string>
+    <string name="v369_stream_copy_reencode">Re-encode required: %1$s</string>
+    <string name="v369_stream_copy_hint">Untouched single-source trims can use the fast path; complex timelines export through the normal render pipeline.</string>
+    <string name="v369_check_eligibility">Check eligibility</string>
+    <string name="v369_content_id_title">Content-ID Pre-check</string>
+    <string name="v369_content_id_subtitle">Fingerprint the last export before upload for copyright-risk review.</string>
+    <string name="v369_content_id_match">Match: %1$s</string>
+    <string name="v369_content_id_hash">Local hash: %1$s...</string>
+    <string name="v369_content_id_hint">Local hashing works now. Online lookup can be enabled when the fingerprint service is configured.</string>
+    <string name="v369_check_last_export">Check last export</string>
+    <string name="v369_direct_publish_title">Direct Publish</string>
+    <string name="v369_direct_publish_subtitle">Prepare the last export for platform handoff with a clean title.</string>
+    <string name="v369_publish_title_label">Title</string>
+    <string name="v369_flash_safety_title">Flash Safety (WCAG)</string>
+    <string name="v369_flash_safety_subtitle">Scan high-contrast flash patterns before publishing.</string>
+    <plurals name="v369_flash_risky_segments">
+        <item quantity="one">%1$d risky segment</item>
+        <item quantity="other">%1$d risky segments</item>
+    </plurals>
+    <string name="v369_scan_selected_clip">Scan selected clip</string>
+    <string name="v369_color_blind_title">Color-Blind Preview</string>
+    <string name="v369_color_blind_subtitle">Preview accessibility simulations without altering the export.</string>
+    <string name="v369_color_blind_hint">Preview mode is non-destructive and stays separate from final render settings.</string>
+    <string name="v369_thumbnail_title">AI Thumbnail Picker</string>
+    <string name="v369_thumbnail_subtitle">Score candidate frames for sharpness, faces, and composition.</string>
+    <string name="v369_thumbnail_candidate_cd">Candidate at %1$dms</string>
+    <string name="v369_thumbnail_score_format">%.2f</string>
+    <string name="v369_score_clip_frames">Score clip frames</string>
+    <string name="v369_hdr_title">Preserve HDR on Export</string>
+    <string name="v369_hdr_subtitle">Keep HDR metadata when the selected codec can carry it.</string>
+    <string name="v369_hdr_switch_codec">Switch to HEVC/AV1/VP9 in Export to enable</string>
+    <string name="v369_hdr_enabled">Enabled; export keeps HDR metadata.</string>
+    <string name="v369_hdr_off">Off; export tone-maps to SDR.</string>
+    <string name="v369_sdh_title">SDH + Audio Description</string>
+    <string name="v369_sdh_subtitle">Prepare captions and description intent for accessible exports.</string>
+    <string name="v369_sdh_hint">Use a transcript first; export-time audio-description generation is handled separately.</string>
+    <string name="v369_dex_title">DeX / Desktop Layout</string>
+    <string name="v369_dex_subtitle">Adapt the editor for DeX, Chromebook, large screens, and pointer workflows.</string>
+    <string name="v369_dex_active">Desktop layout active</string>
+    <string name="v369_dex_phone">Phone layout</string>
+    <string name="v369_dex_auto">Auto</string>
+    <string name="v369_dex_desktop">Desktop</string>
+    <string name="v369_dex_phone_chip">Phone</string>
+    <string name="v369_one_handed_title">One-Handed Mode</string>
+    <string name="v369_one_handed_subtitle">Compact key controls into a thumb-friendly phone layout.</string>
+    <string name="v369_one_handed_active">Active; compact controls</string>
+    <string name="v369_midi_title">S Pen + MIDI Jog/Shuttle</string>
+    <string name="v369_midi_subtitle">Connect precision input for keyframes, transport, and shuttle review.</string>
+    <string name="v369_midi_connect">Connect first MIDI device</string>
+    <string name="v369_midi_scanning">Scanning for MIDI controller</string>
+    <string name="v369_midi_not_found">No MIDI device found</string>
+    <string name="v369_collapse_format">Collapse %1$s</string>
+    <string name="v369_expand_format">Expand %1$s</string>
+
+    <!-- Project trash -->
+    <string name="trash_empty_button">Empty trash</string>
+    <string name="trash_collapse_cd">Collapse trash</string>
+    <string name="trash_expand_cd">Expand trash</string>
+    <string name="trash_restore_cd">Restore project</string>
+    <string name="trash_delete_forever_cd">Delete project forever</string>
+    <plurals name="trash_kept_summary">
+        <item quantity="one">%1$d deleted project kept for 30 days.</item>
+        <item quantity="other">%1$d deleted projects kept for 30 days.</item>
+    </plurals>
+    <plurals name="trash_auto_delete_in">
+        <item quantity="one">Auto-deletes in %1$d day</item>
+        <item quantity="other">Auto-deletes in %1$d days</item>
+    </plurals>
+    <string name="trash_empty_confirm_title">Empty trash?</string>
+    <plurals name="trash_empty_confirm_message">
+        <item quantity="one">%1$d project will be permanently deleted. This can\'t be undone.</item>
+        <item quantity="other">%1$d projects will be permanently deleted. This can\'t be undone.</item>
+    </plurals>
+    <string name="trash_empty_confirm_action">Delete all</string>
+    <string name="trash_delete_forever_title">Delete forever?</string>
+    <string name="trash_delete_forever_message">\"%1$s\" will be permanently deleted. This can\'t be undone.</string>
+    <string name="trash_delete_forever_action">Delete forever</string>
+
+    <!-- Keyframe precision inputs -->
+    <string name="keyframe_time_label">Time (s)</string>
+    <string name="keyframe_value_label">Value</string>
 </resources>

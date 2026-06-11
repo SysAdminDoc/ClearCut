@@ -49,7 +49,7 @@ fun AutoEditPanel(
 
     PremiumEditorPanel(
         title = stringResource(R.string.auto_edit_title),
-        subtitle = "Turn rough footage into a first-cut highlight reel with a concise creative brief and an AI-assisted timing pass.",
+        subtitle = stringResource(R.string.auto_edit_subtitle),
         icon = Icons.Default.AutoFixHigh,
         accent = Mocha.Mauve,
         onClose = onClose,
@@ -58,7 +58,7 @@ fun AutoEditPanel(
     ) {
         PremiumPanelCard(accent = Mocha.Mauve) {
             Text(
-                text = "Source overview",
+                text = stringResource(R.string.auto_edit_source_overview_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = Mocha.Text
             )
@@ -100,12 +100,12 @@ fun AutoEditPanel(
 
         PremiumPanelCard(accent = Mocha.Blue) {
             Text(
-                text = "Edit brief",
+                text = stringResource(R.string.auto_edit_brief_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = Mocha.Text
             )
             Text(
-                text = "Guide the first cut with a short prompt like \"fast travel recap with strongest reactions first\" or leave it blank for a neutral highlight reel.",
+                text = stringResource(R.string.auto_edit_brief_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Mocha.Subtext0
             )
@@ -144,15 +144,15 @@ fun AutoEditPanel(
 
         PremiumPanelCard(accent = if (hasAudio) Mocha.Green else Mocha.Peach) {
             Text(
-                text = "Generate highlight reel",
+                text = stringResource(R.string.cd_auto_edit_generate),
                 style = MaterialTheme.typography.titleMedium,
                 color = Mocha.Text
             )
             Text(
                 text = if (hasAudio) {
-                    "NovaCut can pace the reel against your current audio bed while it scores the strongest moments."
+                    stringResource(R.string.auto_edit_generate_with_audio)
                 } else {
-                    "You can still generate a first cut now, but adding music or guide audio usually improves pacing."
+                    stringResource(R.string.auto_edit_generate_no_audio)
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = Mocha.Subtext0
@@ -163,11 +163,11 @@ fun AutoEditPanel(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 PremiumPanelPill(
-                    text = "$clipCount clips",
+                    text = stringResource(R.string.auto_edit_clip_count, clipCount),
                     accent = Mocha.Blue
                 )
                 PremiumPanelPill(
-                    text = if (hasAudio) "Audio ready" else "No soundtrack",
+                    text = if (hasAudio) stringResource(R.string.auto_edit_audio_ready) else stringResource(R.string.auto_edit_no_soundtrack),
                     accent = if (hasAudio) Mocha.Green else Mocha.Peach
                 )
             }

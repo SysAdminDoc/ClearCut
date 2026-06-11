@@ -62,7 +62,7 @@ fun AudioNormPanel(
 
     PremiumEditorPanel(
         title = stringResource(R.string.audio_norm_title),
-        subtitle = "Match clip loudness to the delivery target before you export or stack more effects.",
+        subtitle = stringResource(R.string.audio_norm_subtitle),
         icon = Icons.Default.GraphicEq,
         accent = Mocha.Mauve,
         onClose = onClose,
@@ -77,13 +77,13 @@ fun AudioNormPanel(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Loudness target",
+                        text = stringResource(R.string.audio_norm_loudness_target_title),
                         style = MaterialTheme.typography.titleMedium,
                         color = Mocha.Text
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "Choose a delivery profile and NovaCut will rebalance the selected clip around that LUFS target.",
+                        text = stringResource(R.string.audio_norm_loudness_target_description),
                         style = MaterialTheme.typography.bodyMedium,
                         color = Mocha.Subtext0
                     )
@@ -96,7 +96,7 @@ fun AudioNormPanel(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     PremiumPanelPill(
-                        text = "${(currentVolume * 100f).toInt()}% current",
+                        text = stringResource(R.string.audio_norm_current_percent, (currentVolume * 100f).toInt()),
                         accent = Mocha.Blue
                     )
                     PremiumPanelPill(
@@ -111,7 +111,7 @@ fun AudioNormPanel(
 
         PremiumPanelCard(accent = Mocha.Blue) {
             Text(
-                text = "Normalization profiles",
+                text = stringResource(R.string.audio_norm_profiles_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = Mocha.Text
             )
@@ -149,7 +149,7 @@ fun AudioNormPanel(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Dial the exact target when you are matching an existing delivery spec or audio chain.",
+                            text = stringResource(R.string.audio_norm_custom_description),
                             style = MaterialTheme.typography.bodyMedium,
                             color = Mocha.Subtext0
                         )
@@ -177,8 +177,8 @@ fun AudioNormPanel(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("-30 LUFS", style = MaterialTheme.typography.labelMedium, color = Mocha.Subtext0)
-                    Text("-5 LUFS", style = MaterialTheme.typography.labelMedium, color = Mocha.Subtext0)
+                    Text(stringResource(R.string.audio_norm_min_lufs), style = MaterialTheme.typography.labelMedium, color = Mocha.Subtext0)
+                    Text(stringResource(R.string.audio_norm_max_lufs), style = MaterialTheme.typography.labelMedium, color = Mocha.Subtext0)
                 }
             }
         }
@@ -193,13 +193,13 @@ fun AudioNormPanel(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Apply normalization",
+                        text = stringResource(R.string.audio_norm_apply_title),
                         style = MaterialTheme.typography.titleMedium,
                         color = Mocha.Text
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "This keeps your level strategy aligned before you export, publish, or mix against music.",
+                        text = stringResource(R.string.audio_norm_apply_description),
                         style = MaterialTheme.typography.bodyMedium,
                         color = Mocha.Subtext0
                     )
@@ -278,9 +278,9 @@ private fun NormalizationModeRow(
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = if (mode == NormalizationMode.CUSTOM) {
-                            "Set a manual loudness target"
+                            stringResource(R.string.audio_norm_custom_hint)
                         } else {
-                            "Recommended for ${stringResource(mode.labelResId).lowercase()}"
+                            stringResource(R.string.audio_norm_recommended_for, stringResource(mode.labelResId).lowercase())
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = Mocha.Subtext0
@@ -298,4 +298,5 @@ private fun NormalizationModeRow(
     }
 }
 
-private fun formatLufs(value: Float): String = "${value.toInt()} LUFS"
+@Composable
+private fun formatLufs(value: Float): String = stringResource(R.string.audio_norm_lufs_format, value.toInt())

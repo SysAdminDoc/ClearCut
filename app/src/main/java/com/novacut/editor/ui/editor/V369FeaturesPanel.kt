@@ -23,8 +23,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.Image
+import com.novacut.editor.R
 import com.novacut.editor.engine.ColorBlindPreviewEngine
 import com.novacut.editor.engine.DirectPublishEngine
 import com.novacut.editor.engine.KaraokeCaptionEngine
@@ -58,8 +61,8 @@ fun V369FeaturesPanel(
     val hasClip = state.selectedClipId != null
 
     PremiumEditorPanel(
-        title = "Creator Intelligence",
-        subtitle = "Speech edits, safety checks, publishing prep, and adaptive controls.",
+        title = stringResource(R.string.v369_features_label),
+        subtitle = stringResource(R.string.v369_subtitle),
         icon = Icons.Default.AutoAwesome,
         accent = Mocha.Mauve,
         onClose = onDismiss,
@@ -74,23 +77,23 @@ fun V369FeaturesPanel(
 
         // 1. Text-based editing
         FeatureCard(
-            title = "Text-Based Editing",
-            subtitle = "Delete transcript words and ripple-cut the matching timeline ranges.",
+            title = stringResource(R.string.v369_text_edit_title),
+            subtitle = stringResource(R.string.v369_text_edit_subtitle),
             accent = Mocha.Blue,
             icon = Icons.AutoMirrored.Filled.Subject
         ) {
             val transcript = v.transcript
             Text(
-                if (transcript == null) "Run Auto Captions first to enable text-based edits."
-                else "${transcript.words.size} words available; ${v.selectedWordIndices.size} selected.",
+                if (transcript == null) stringResource(R.string.v369_text_edit_need_transcript)
+                else stringResource(R.string.v369_text_edit_words_status, transcript.words.size, v.selectedWordIndices.size),
                 color = Mocha.Subtext1,
                 style = MaterialTheme.typography.bodySmall
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TinyButton("Select fillers", enabled = transcript != null) {
+                TinyButton(stringResource(R.string.v369_select_fillers), enabled = transcript != null) {
                     viewModel.v369Delegate.selectFillerWords()
                 }
-                TinyButton("Apply cuts", enabled = hasClip && v.selectedWordIndices.isNotEmpty()) {
+                TinyButton(stringResource(R.string.v369_apply_cuts), enabled = hasClip && v.selectedWordIndices.isNotEmpty()) {
                     state.selectedClipId?.let { viewModel.v369Delegate.applyDeletions(it) }
                 }
             }
@@ -98,21 +101,21 @@ fun V369FeaturesPanel(
 
         // 2. Auto-chapter
         FeatureCard(
-            title = "Auto-Chapters",
-            subtitle = "Detect natural sections and prepare a platform-ready chapter list.",
+            title = stringResource(R.string.v369_chapters_title),
+            subtitle = stringResource(R.string.v369_chapters_subtitle),
             accent = Mocha.Green,
             icon = Icons.AutoMirrored.Filled.ViewList
         ) {
             Text(
-                "${v.chapterCandidates.size} candidate chapter${if (v.chapterCandidates.size == 1) "" else "s"} ready.",
+                pluralStringResource(R.plurals.v369_chapter_candidates_ready, v.chapterCandidates.size, v.chapterCandidates.size),
                 color = Mocha.Subtext1,
                 style = MaterialTheme.typography.bodySmall
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TinyButton("Detect", enabled = v.transcript != null && !v.isGeneratingChapters) {
+                TinyButton(stringResource(R.string.v369_detect), enabled = v.transcript != null && !v.isGeneratingChapters) {
                     viewModel.v369Delegate.generateChapters(v.transcript?.words ?: emptyList())
                 }
-                TinyButton("Apply", enabled = v.chapterCandidates.isNotEmpty()) {
+                TinyButton(stringResource(R.string.ai_apply), enabled = v.chapterCandidates.isNotEmpty()) {
                     viewModel.v369Delegate.applyChaptersToProject()
                 }
             }
@@ -120,21 +123,21 @@ fun V369FeaturesPanel(
 
         // 3. Talking-head framing
         FeatureCard(
-            title = "Talking-Head Framing",
-            subtitle = "Create smooth face-aware position keyframes for talking-head edits.",
+            title = stringResource(R.string.v369_talking_head_title),
+            subtitle = stringResource(R.string.v369_talking_head_subtitle),
             accent = Mocha.Sapphire,
             icon = Icons.Default.Face
         ) {
             if (v.isTrackingFaces) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Mocha.Sapphire)
-            TinyButton("Track selected clip", enabled = hasClip && !v.isTrackingFaces) {
+            TinyButton(stringResource(R.string.v369_track_selected_clip), enabled = hasClip && !v.isTrackingFaces) {
                 state.selectedClipId?.let { viewModel.v369Delegate.trackTalkingHead(it) }
             }
         }
 
         // 4. Karaoke captions
         FeatureCard(
-            title = "Karaoke Captions",
-            subtitle = "Generate word-timed captions with concise social-video styles.",
+            title = stringResource(R.string.v369_karaoke_title),
+            subtitle = stringResource(R.string.v369_karaoke_subtitle),
             accent = Mocha.Yellow,
             icon = Icons.Default.Mic
         ) {
@@ -153,23 +156,23 @@ fun V369FeaturesPanel(
                     )
                 }
             }
-            TinyButton("Generate captions", enabled = v.transcript != null) {
+            TinyButton(stringResource(R.string.v369_generate_captions), enabled = v.transcript != null) {
                 viewModel.v369Delegate.generateKaraokeCaptions()
             }
         }
 
         // 5. Stream-copy export
         FeatureCard(
-            title = "Stream-Copy Export",
-            subtitle = "Confirm when a trim can export losslessly without re-encoding.",
+            title = stringResource(R.string.v369_stream_copy_title),
+            subtitle = stringResource(R.string.v369_stream_copy_subtitle),
             accent = Mocha.Teal,
             icon = Icons.Default.Speed
         ) {
             val elig = v.streamCopyEligibility
             val label = when {
-                elig == null -> "Eligibility has not been checked yet."
-                elig.eligible -> "Eligible for fast lossless export."
-                else -> "Re-encode required: ${elig.reason}"
+                elig == null -> stringResource(R.string.v369_stream_copy_unchecked)
+                elig.eligible -> stringResource(R.string.v369_stream_copy_eligible)
+                else -> stringResource(R.string.v369_stream_copy_reencode, elig.reason)
             }
             val color = when {
                 elig == null -> Mocha.Subtext1
@@ -178,49 +181,50 @@ fun V369FeaturesPanel(
             }
             Text(label, color = color, style = MaterialTheme.typography.bodySmall)
             Text(
-                "Untouched single-source trims can use the fast path; complex timelines export through the normal render pipeline.",
+                stringResource(R.string.v369_stream_copy_hint),
                 color = Mocha.Overlay1,
                 style = MaterialTheme.typography.labelMedium
             )
-            TinyButton("Check eligibility") {
+            TinyButton(stringResource(R.string.v369_check_eligibility)) {
                 viewModel.v369Delegate.checkStreamCopyEligibility()
             }
         }
 
         // 6. Content-ID / AcoustID
         FeatureCard(
-            title = "Content-ID Pre-check",
-            subtitle = "Fingerprint the last export before upload for copyright-risk review.",
+            title = stringResource(R.string.v369_content_id_title),
+            subtitle = stringResource(R.string.v369_content_id_subtitle),
             accent = Mocha.Red,
             icon = Icons.Default.Copyright
         ) {
             val result = v.contentIdResult
             if (result != null) {
-                val txt = if (result.matchedTitle != null) "Match: ${result.matchedTitle}"
-                else "Local hash: ${result.hash.take(16)}..."
+                val matchedTitle = result.matchedTitle
+                val txt = if (matchedTitle != null) stringResource(R.string.v369_content_id_match, matchedTitle)
+                else stringResource(R.string.v369_content_id_hash, result.hash.take(16))
                 Text(txt, color = Mocha.Subtext1, style = MaterialTheme.typography.bodySmall)
             }
             Text(
-                "Local hashing works now. Online lookup can be enabled when the fingerprint service is configured.",
+                stringResource(R.string.v369_content_id_hint),
                 color = Mocha.Overlay1,
                 style = MaterialTheme.typography.labelMedium
             )
-            TinyButton("Check last export", enabled = state.lastExportedFilePath != null) {
+            TinyButton(stringResource(R.string.v369_check_last_export), enabled = state.lastExportedFilePath != null) {
                 viewModel.v369Delegate.runContentIdOnLastExport()
             }
         }
 
         // 7. Direct publish
         FeatureCard(
-            title = "Direct Publish",
-            subtitle = "Prepare the last export for platform handoff with a clean title.",
+            title = stringResource(R.string.v369_direct_publish_title),
+            subtitle = stringResource(R.string.v369_direct_publish_subtitle),
             accent = Mocha.Pink,
             icon = Icons.Default.Share
         ) {
             var title by rememberSaveable(state.project.id) { mutableStateOf(state.project.name) }
             OutlinedTextField(
                 value = title, onValueChange = { title = it },
-                label = { Text("Title") },
+                label = { Text(stringResource(R.string.v369_publish_title_label)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = RoundedCornerShape(Radius.md),
@@ -258,28 +262,28 @@ fun V369FeaturesPanel(
 
         // 8. Flash safety
         FeatureCard(
-            title = "Flash Safety (WCAG)",
-            subtitle = "Scan high-contrast flash patterns before publishing.",
+            title = stringResource(R.string.v369_flash_safety_title),
+            subtitle = stringResource(R.string.v369_flash_safety_subtitle),
             accent = Mocha.Peach,
             icon = Icons.Default.FlashOn
         ) {
             if (v.isAnalyzingFlashes) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Mocha.Peach)
             if (v.flashWarnings.isNotEmpty()) {
                 Text(
-                    "${v.flashWarnings.size} risky segment${if (v.flashWarnings.size == 1) "" else "s"}",
+                    pluralStringResource(R.plurals.v369_flash_risky_segments, v.flashWarnings.size, v.flashWarnings.size),
                     color = Mocha.Peach,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
-            TinyButton("Scan selected clip", enabled = hasClip && !v.isAnalyzingFlashes) {
+            TinyButton(stringResource(R.string.v369_scan_selected_clip), enabled = hasClip && !v.isAnalyzingFlashes) {
                 state.selectedClipId?.let { viewModel.v369Delegate.analyzeFlashSafety(it) }
             }
         }
 
         // 9. Color-blind preview
         FeatureCard(
-            title = "Color-Blind Preview",
-            subtitle = "Preview accessibility simulations without altering the export.",
+            title = stringResource(R.string.v369_color_blind_title),
+            subtitle = stringResource(R.string.v369_color_blind_subtitle),
             accent = Mocha.Mauve,
             icon = Icons.Default.Palette
         ) {
@@ -299,7 +303,7 @@ fun V369FeaturesPanel(
                 }
             }
             Text(
-                "Preview mode is non-destructive and stays separate from final render settings.",
+                stringResource(R.string.v369_color_blind_hint),
                 color = Mocha.Overlay1,
                 style = MaterialTheme.typography.labelMedium
             )
@@ -307,8 +311,8 @@ fun V369FeaturesPanel(
 
         // 10. AI thumbnail picker
         FeatureCard(
-            title = "AI Thumbnail Picker",
-            subtitle = "Score candidate frames for sharpness, faces, and composition.",
+            title = stringResource(R.string.v369_thumbnail_title),
+            subtitle = stringResource(R.string.v369_thumbnail_subtitle),
             accent = Mocha.Sky,
             icon = Icons.Default.Image
         ) {
@@ -326,7 +330,7 @@ fun V369FeaturesPanel(
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Image(
                                     bitmap = bmp.asImageBitmap(),
-                                    contentDescription = "Candidate at ${cand.timeMs}ms",
+                                    contentDescription = stringResource(R.string.v369_thumbnail_candidate_cd, cand.timeMs),
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier
                                         .size(width = 96.dp, height = 54.dp)
@@ -334,7 +338,7 @@ fun V369FeaturesPanel(
                                         .border(1.dp, Mocha.Sky.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
                                 )
                                 Text(
-                                    "%.2f".format(cand.score),
+                                    stringResource(R.string.v369_thumbnail_score_format, cand.score),
                                     color = Mocha.Subtext0,
                                     style = MaterialTheme.typography.labelSmall
                                 )
@@ -343,15 +347,15 @@ fun V369FeaturesPanel(
                     }
                 }
             }
-            TinyButton("Score clip frames", enabled = hasClip && !v.isScoringThumbnails) {
+            TinyButton(stringResource(R.string.v369_score_clip_frames), enabled = hasClip && !v.isScoringThumbnails) {
                 state.selectedClipId?.let { viewModel.v369Delegate.scoreThumbnails(it) }
             }
         }
 
         // 11. HDR preservation (HDR10 / HDR10+ / HLG passthrough on HEVC/AV1/VP9)
         FeatureCard(
-            title = "Preserve HDR on Export",
-            subtitle = "Keep HDR metadata when the selected codec can carry it.",
+            title = stringResource(R.string.v369_hdr_title),
+            subtitle = stringResource(R.string.v369_hdr_subtitle),
             accent = Mocha.Rosewater,
             icon = Icons.Default.Hd
         ) {
@@ -369,9 +373,9 @@ fun V369FeaturesPanel(
                 Spacer(Modifier.width(8.dp))
                 Text(
                     when {
-                        !codecCanCarryHdr -> "Switch to HEVC/AV1/VP9 in Export to enable"
-                        hdr -> "Enabled; export keeps HDR metadata."
-                        else -> "Off; export tone-maps to SDR."
+                        !codecCanCarryHdr -> stringResource(R.string.v369_hdr_switch_codec)
+                        hdr -> stringResource(R.string.v369_hdr_enabled)
+                        else -> stringResource(R.string.v369_hdr_off)
                     },
                     color = Mocha.Subtext1,
                     style = MaterialTheme.typography.bodySmall
@@ -381,13 +385,13 @@ fun V369FeaturesPanel(
 
         // 12. SDH / Audio description
         FeatureCard(
-            title = "SDH + Audio Description",
-            subtitle = "Prepare captions and description intent for accessible exports.",
+            title = stringResource(R.string.v369_sdh_title),
+            subtitle = stringResource(R.string.v369_sdh_subtitle),
             accent = Mocha.Maroon,
             icon = Icons.Default.Hearing
         ) {
             Text(
-                "Use a transcript first; export-time audio-description generation is handled separately.",
+                stringResource(R.string.v369_sdh_hint),
                 color = Mocha.Subtext1,
                 style = MaterialTheme.typography.bodySmall
             )
@@ -395,15 +399,15 @@ fun V369FeaturesPanel(
 
         // 13. DeX / desktop-mode
         FeatureCard(
-            title = "DeX / Desktop Layout",
-            subtitle = "Adapt the editor for DeX, Chromebook, large screens, and pointer workflows.",
+            title = stringResource(R.string.v369_dex_title),
+            subtitle = stringResource(R.string.v369_dex_subtitle),
             accent = Mocha.Lavender,
             icon = Icons.Default.DesktopWindows
         ) {
             val override by viewModel.desktopOverride.collectAsStateWithLifecycle()
             val active = LocalLayoutMode.current == LayoutMode.DESKTOP
             Text(
-                if (active) "Desktop layout active" else "Phone layout",
+                if (active) stringResource(R.string.v369_dex_active) else stringResource(R.string.v369_dex_phone),
                 color = if (active) Mocha.Green else Mocha.Subtext1,
                 style = MaterialTheme.typography.bodySmall
             )
@@ -418,9 +422,9 @@ fun V369FeaturesPanel(
                         selected = override == opt,
                         onClick = { viewModel.setDesktopOverride(opt) },
                         text = when (opt) {
-                            com.novacut.editor.engine.DesktopOverride.AUTO -> "Auto"
-                            com.novacut.editor.engine.DesktopOverride.FORCE_ON -> "Desktop"
-                            com.novacut.editor.engine.DesktopOverride.FORCE_OFF -> "Phone"
+                            com.novacut.editor.engine.DesktopOverride.AUTO -> stringResource(R.string.v369_dex_auto)
+                            com.novacut.editor.engine.DesktopOverride.FORCE_ON -> stringResource(R.string.v369_dex_desktop)
+                            com.novacut.editor.engine.DesktopOverride.FORCE_OFF -> stringResource(R.string.v369_dex_phone_chip)
                         },
                         accent = Mocha.Lavender
                     )
@@ -430,8 +434,8 @@ fun V369FeaturesPanel(
 
         // 14. One-handed mode
         FeatureCard(
-            title = "One-Handed Mode",
-            subtitle = "Compact key controls into a thumb-friendly phone layout.",
+            title = stringResource(R.string.v369_one_handed_title),
+            subtitle = stringResource(R.string.v369_one_handed_subtitle),
             accent = Mocha.Flamingo,
             icon = Icons.Default.TouchApp
         ) {
@@ -440,7 +444,7 @@ fun V369FeaturesPanel(
                 Switch(checked = one, onCheckedChange = { viewModel.setOneHandedMode(it) })
                 Spacer(Modifier.width(8.dp))
                 Text(
-                if (one) "Active; compact controls" else "Off",
+                if (one) stringResource(R.string.v369_one_handed_active) else stringResource(R.string.state_off),
                     color = Mocha.Subtext1,
                     style = MaterialTheme.typography.bodySmall
                 )
@@ -449,14 +453,16 @@ fun V369FeaturesPanel(
 
         // 15. S Pen + BT MIDI jog/shuttle
         FeatureCard(
-            title = "S Pen + MIDI Jog/Shuttle",
-            subtitle = "Connect precision input for keyframes, transport, and shuttle review.",
+            title = stringResource(R.string.v369_midi_title),
+            subtitle = stringResource(R.string.v369_midi_subtitle),
             accent = Mocha.Flamingo,
             icon = Icons.Default.Tune
         ) {
-            TinyButton("Connect first MIDI device") {
+            val midiScanningToast = stringResource(R.string.v369_midi_scanning)
+            val midiNotFoundToast = stringResource(R.string.v369_midi_not_found)
+            TinyButton(stringResource(R.string.v369_midi_connect)) {
                 val ok = viewModel.v369Delegate.stylusMidi.connectFirstAvailable()
-                viewModel.showToast(if (ok) "Scanning for MIDI controller" else "No MIDI device found")
+                viewModel.showToast(if (ok) midiScanningToast else midiNotFoundToast)
             }
         }
 
@@ -478,20 +484,20 @@ private fun CreatorReadinessStrip(
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
         ReadinessCard(
-            label = "Clip",
-            value = if (hasClip) "Selected" else "Choose one",
+            label = stringResource(R.string.v369_readiness_clip),
+            value = if (hasClip) stringResource(R.string.cd_check_mark) else stringResource(R.string.v369_readiness_choose_one),
             accent = if (hasClip) Mocha.Green else Mocha.Peach,
             icon = Icons.Default.Movie
         )
         ReadinessCard(
-            label = "Transcript",
-            value = if (hasTranscript) "Ready" else "Run captions",
+            label = stringResource(R.string.v369_readiness_transcript),
+            value = if (hasTranscript) stringResource(R.string.ai_tool_status_ready) else stringResource(R.string.v369_readiness_run_captions),
             accent = if (hasTranscript) Mocha.Green else Mocha.Sapphire,
             icon = Icons.Default.ClosedCaption
         )
         ReadinessCard(
-            label = "Export",
-            value = if (hasExport) "Available" else "Render first",
+            label = stringResource(R.string.export_title),
+            value = if (hasExport) stringResource(R.string.v369_readiness_available) else stringResource(R.string.v369_readiness_render_first),
             accent = if (hasExport) Mocha.Green else Mocha.Mauve,
             icon = Icons.Default.FileUpload
         )
@@ -588,7 +594,7 @@ private fun FeatureCard(
                 }
                 Icon(
                     if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (expanded) "Collapse $title" else "Expand $title",
+                    contentDescription = if (expanded) stringResource(R.string.v369_collapse_format, title) else stringResource(R.string.v369_expand_format, title),
                     tint = Mocha.Subtext0,
                     modifier = Modifier.size(22.dp)
                 )

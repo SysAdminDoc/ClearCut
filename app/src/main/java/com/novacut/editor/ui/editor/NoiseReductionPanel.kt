@@ -36,7 +36,7 @@ fun NoiseReductionPanel(
 ) {
     PremiumEditorPanel(
         title = stringResource(R.string.noise_reduction_title),
-        subtitle = "Profile hiss, hum, and broadband noise, then let NovaCut clean the track before the final mix pass.",
+        subtitle = stringResource(R.string.noise_reduction_subtitle),
         icon = Icons.Default.GraphicEq,
         accent = Mocha.Mauve,
         onClose = onClose,
@@ -51,7 +51,7 @@ fun NoiseReductionPanel(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Noise profile",
+                        text = stringResource(R.string.noise_reduction_profile_title),
                         style = MaterialTheme.typography.titleMedium,
                         color = Mocha.Text
                     )
@@ -70,11 +70,11 @@ fun NoiseReductionPanel(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     PremiumPanelPill(
-                        text = if (analysisResult != null) "Profile ready" else "Awaiting scan",
+                        text = if (analysisResult != null) stringResource(R.string.noise_reduction_profile_ready) else stringResource(R.string.noise_reduction_awaiting_scan),
                         accent = Mocha.Mauve
                     )
                     PremiumPanelPill(
-                        text = if (isAnalyzing) "Cleaning now" else "AI assist",
+                        text = if (isAnalyzing) stringResource(R.string.noise_reduction_cleaning_now) else stringResource(R.string.noise_reduction_ai_assist),
                         accent = if (isAnalyzing) Mocha.Peach else Mocha.Blue
                     )
                 }
@@ -85,12 +85,12 @@ fun NoiseReductionPanel(
 
         PremiumPanelCard(accent = Mocha.Blue) {
             Text(
-                text = "Analyze and reduce",
+                text = stringResource(R.string.noise_reduction_analyze_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = Mocha.Text
             )
             Text(
-                text = "Run a guided cleanup pass to detect the dominant noise character and apply the best reduction profile automatically.",
+                text = stringResource(R.string.noise_reduction_analyze_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Mocha.Subtext0
             )
@@ -99,9 +99,9 @@ fun NoiseReductionPanel(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                PremiumPanelPill(text = "Hiss", accent = Mocha.Blue)
-                PremiumPanelPill(text = "Hum", accent = Mocha.Mauve)
-                PremiumPanelPill(text = "Broadband", accent = Mocha.Peach)
+                PremiumPanelPill(text = stringResource(R.string.noise_reduction_type_hiss), accent = Mocha.Blue)
+                PremiumPanelPill(text = stringResource(R.string.noise_reduction_type_hum), accent = Mocha.Mauve)
+                PremiumPanelPill(text = stringResource(R.string.noise_reduction_type_broadband), accent = Mocha.Peach)
             }
 
             Button(
@@ -151,7 +151,7 @@ fun NoiseReductionPanel(
                     )
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Cleanup applied",
+                            text = stringResource(R.string.noise_reduction_cleanup_applied),
                             style = MaterialTheme.typography.titleMedium,
                             color = Mocha.Text
                         )
@@ -166,12 +166,12 @@ fun NoiseReductionPanel(
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
-                        text = "No analysis result yet",
+                        text = stringResource(R.string.noise_reduction_no_result_title),
                         style = MaterialTheme.typography.titleMedium,
                         color = Mocha.Text
                     )
                     Text(
-                        text = "Run the pass once and NovaCut will surface the detected profile here so you can judge whether the cleanup is headed in the right direction.",
+                        text = stringResource(R.string.noise_reduction_no_result_description),
                         style = MaterialTheme.typography.bodyMedium,
                         color = Mocha.Subtext0
                     )

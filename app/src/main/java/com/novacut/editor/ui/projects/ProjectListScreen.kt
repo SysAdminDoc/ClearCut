@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -224,6 +225,8 @@ fun ProjectListScreen(
 
                 val trashed by viewModel.trashedProjects.collectAsStateWithLifecycle()
                 var showTrash by remember { mutableStateOf(false) }
+                var confirmEmptyTrash by remember { mutableStateOf(false) }
+                var pendingDeleteForever by remember { mutableStateOf<Project?>(null) }
 
                 LazyColumn(
                     modifier = Modifier
@@ -248,7 +251,7 @@ fun ProjectListScreen(
                                 count = trashed.size,
                                 expanded = showTrash,
                                 onToggle = { showTrash = !showTrash },
-                                onEmptyTrash = viewModel::emptyTrash
+                                onEmptyTrash = { confirmEmptyTrash = true }
                             )
                         }
 
@@ -257,11 +260,102 @@ fun ProjectListScreen(
                                 TrashedProjectCard(
                                     project = project,
                                     onRestore = { viewModel.restoreProject(project) },
-                                    onDeleteForever = { viewModel.deleteProjectForever(project) }
+                                    onDeleteForever = { pendingDeleteForever = project }
                                 )
                             }
                         }
                     }
+                }
+
+                // Permanent deletions get an explicit confirmation: the trash IS
+                // the undo path, so purging it must not ride on a single mis-tap
+                // (the button sits directly beside the expand/collapse header).
+                if (confirmEmptyTrash) {
+                    AlertDialog(
+                        onDismissRequest = { confirmEmptyTrash = false },
+                        icon = { NovaCutDialogIcon(icon = Icons.Default.DeleteForever, accent = Mocha.Red) },
+                        title = {
+                            Text(
+                                text = stringResource(R.string.trash_empty_confirm_title),
+                                color = Mocha.Text,
+                                style = MaterialTheme.typography.titleLarge
+                            )
+                        },
+                        text = {
+                            Text(
+                                text = pluralStringResource(
+                                    R.plurals.trash_empty_confirm_message,
+                                    trashed.size,
+                                    trashed.size
+                                ),
+                                color = Mocha.Subtext0,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        },
+                        confirmButton = {
+                            NovaCutSecondaryButton(
+                                text = stringResource(R.string.trash_empty_confirm_action),
+                                onClick = {
+                                    viewModel.emptyTrash()
+                                    confirmEmptyTrash = false
+                                },
+                                icon = Icons.Default.DeleteForever,
+                                contentColor = Mocha.Red
+                            )
+                        },
+                        dismissButton = {
+                            NovaCutSecondaryButton(
+                                text = stringResource(R.string.cancel),
+                                onClick = { confirmEmptyTrash = false }
+                            )
+                        },
+                        containerColor = Mocha.PanelHighest,
+                        titleContentColor = Mocha.Text,
+                        textContentColor = Mocha.Subtext0,
+                        shape = RoundedCornerShape(Radius.xxl)
+                    )
+                }
+
+                pendingDeleteForever?.let { doomed ->
+                    AlertDialog(
+                        onDismissRequest = { pendingDeleteForever = null },
+                        icon = { NovaCutDialogIcon(icon = Icons.Default.DeleteForever, accent = Mocha.Red) },
+                        title = {
+                            Text(
+                                text = stringResource(R.string.trash_delete_forever_title),
+                                color = Mocha.Text,
+                                style = MaterialTheme.typography.titleLarge
+                            )
+                        },
+                        text = {
+                            Text(
+                                text = stringResource(R.string.trash_delete_forever_message, doomed.name),
+                                color = Mocha.Subtext0,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        },
+                        confirmButton = {
+                            NovaCutSecondaryButton(
+                                text = stringResource(R.string.trash_delete_forever_action),
+                                onClick = {
+                                    viewModel.deleteProjectForever(doomed)
+                                    pendingDeleteForever = null
+                                },
+                                icon = Icons.Default.DeleteForever,
+                                contentColor = Mocha.Red
+                            )
+                        },
+                        dismissButton = {
+                            NovaCutSecondaryButton(
+                                text = stringResource(R.string.cancel),
+                                onClick = { pendingDeleteForever = null }
+                            )
+                        },
+                        containerColor = Mocha.PanelHighest,
+                        titleContentColor = Mocha.Text,
+                        textContentColor = Mocha.Subtext0,
+                        shape = RoundedCornerShape(Radius.xxl)
+                    )
                 }
             }
         }
@@ -1347,7 +1441,7 @@ private fun TrashSectionHeader(
                     style = MaterialTheme.typography.titleSmall
                 )
                 Text(
-                    text = "$count deleted project${if (count == 1) "" else "s"} kept for 30 days.",
+                    text = pluralStringResource(R.plurals.trash_kept_summary, count, count),
                     color = Mocha.Subtext0,
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1,
@@ -1363,12 +1457,16 @@ private fun TrashSectionHeader(
                         containerColor = Mocha.Red.copy(alpha = 0.08f)
                     )
                 ) {
-                    Text("Empty trash", style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.trash_empty_button), style = MaterialTheme.typography.labelMedium)
                 }
             }
             Icon(
                 imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                contentDescription = if (expanded) "Collapse trash" else "Expand trash",
+                contentDescription = if (expanded) {
+                    stringResource(R.string.trash_collapse_cd)
+                } else {
+                    stringResource(R.string.trash_expand_cd)
+                },
                 tint = Mocha.Subtext0,
                 modifier = Modifier.size(22.dp)
             )
@@ -1448,7 +1546,7 @@ private fun TrashedProjectCard(
                     val daysAgo = ((System.currentTimeMillis() - deletedAt) / 86_400_000).toInt()
                     val daysLeft = (30 - daysAgo).coerceAtLeast(0)
                     Text(
-                        text = "Auto-deletes in $daysLeft day${if (daysLeft == 1) "" else "s"}",
+                        text = pluralStringResource(R.plurals.trash_auto_delete_in, daysLeft, daysLeft),
                         color = Mocha.Overlay1,
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -1457,7 +1555,7 @@ private fun TrashedProjectCard(
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 NovaCutChromeIconButton(
                     icon = Icons.Default.RestoreFromTrash,
-                    contentDescription = "Restore project",
+                    contentDescription = stringResource(R.string.trash_restore_cd),
                     onClick = onRestore,
                     tint = Mocha.Green,
                     containerColor = Mocha.Green.copy(alpha = 0.08f),
@@ -1465,7 +1563,7 @@ private fun TrashedProjectCard(
                 )
                 NovaCutChromeIconButton(
                     icon = Icons.Default.DeleteForever,
-                    contentDescription = "Delete project forever",
+                    contentDescription = stringResource(R.string.trash_delete_forever_cd),
                     onClick = onDeleteForever,
                     tint = Mocha.Red,
                     containerColor = Mocha.Red.copy(alpha = 0.08f),
