@@ -244,47 +244,12 @@ fun ProjectListScreen(
 
                     if (trashed.isNotEmpty()) {
                         item(key = "__trash_header") {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { showTrash = !showTrash }
-                                    .padding(vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Default.Delete,
-                                        contentDescription = null,
-                                        tint = Mocha.Subtext0,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = "Trash (${trashed.size})",
-                                        color = Mocha.Subtext0,
-                                        style = MaterialTheme.typography.titleSmall
-                                    )
-                                }
-                                Row {
-                                    if (showTrash) {
-                                        Text(
-                                            text = "Empty",
-                                            color = Mocha.Red,
-                                            style = MaterialTheme.typography.labelMedium,
-                                            modifier = Modifier
-                                                .clickable { viewModel.emptyTrash() }
-                                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                                        )
-                                    }
-                                    Icon(
-                                        imageVector = if (showTrash) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                        contentDescription = if (showTrash) "Collapse" else "Expand",
-                                        tint = Mocha.Subtext0,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            }
+                            TrashSectionHeader(
+                                count = trashed.size,
+                                expanded = showTrash,
+                                onToggle = { showTrash = !showTrash },
+                                onEmptyTrash = viewModel::emptyTrash
+                            )
                         }
 
                         if (showTrash) {
@@ -1338,6 +1303,79 @@ private fun ProjectMetadataChip(
     }
 }
 
+@Composable
+private fun TrashSectionHeader(
+    count: Int,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    onEmptyTrash: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(role = Role.Button, onClick = onToggle),
+        color = Mocha.Panel,
+        shape = RoundedCornerShape(Radius.xl),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f))
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+        ) {
+            Surface(
+                color = Mocha.Red.copy(alpha = 0.12f),
+                shape = RoundedCornerShape(Radius.lg),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Red.copy(alpha = 0.22f))
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DeleteSweep,
+                    contentDescription = null,
+                    tint = Mocha.Red,
+                    modifier = Modifier
+                        .padding(Spacing.sm)
+                        .size(18.dp)
+                )
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = "Trash",
+                    color = Mocha.Text,
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Text(
+                    text = "$count deleted project${if (count == 1) "" else "s"} kept for 30 days.",
+                    color = Mocha.Subtext0,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            if (expanded) {
+                TextButton(
+                    onClick = onEmptyTrash,
+                    shape = RoundedCornerShape(Radius.md),
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = Mocha.Red,
+                        containerColor = Mocha.Red.copy(alpha = 0.08f)
+                    )
+                ) {
+                    Text("Empty trash", style = MaterialTheme.typography.labelMedium)
+                }
+            }
+            Icon(
+                imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                contentDescription = if (expanded) "Collapse trash" else "Expand trash",
+                tint = Mocha.Subtext0,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+    }
+}
+
 private fun formatDuration(ms: Long): String {
     if (ms <= 0) return "0:00"
     val totalSeconds = ms / 1000
@@ -1368,21 +1406,40 @@ private fun TrashedProjectCard(
     onRestore: () -> Unit,
     onDeleteForever: () -> Unit
 ) {
-    Card(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Mocha.Surface0.copy(alpha = 0.5f)),
-        shape = RoundedCornerShape(12.dp)
+        color = Mocha.Panel.copy(alpha = 0.72f),
+        shape = RoundedCornerShape(Radius.xl),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.72f))
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(Spacing.md),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+            Surface(
+                color = Mocha.Red.copy(alpha = 0.10f),
+                shape = RoundedCornerShape(Radius.md),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Red.copy(alpha = 0.18f))
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DeleteOutline,
+                    contentDescription = null,
+                    tint = Mocha.Red,
+                    modifier = Modifier
+                        .padding(Spacing.sm)
+                        .size(18.dp)
+                )
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs)
+            ) {
                 Text(
                     text = project.name,
-                    color = Mocha.Subtext0,
+                    color = Mocha.Text,
                     style = MaterialTheme.typography.titleSmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -1391,24 +1448,28 @@ private fun TrashedProjectCard(
                     val daysAgo = ((System.currentTimeMillis() - deletedAt) / 86_400_000).toInt()
                     val daysLeft = (30 - daysAgo).coerceAtLeast(0)
                     Text(
-                        text = "Auto-deletes in $daysLeft days",
+                        text = "Auto-deletes in $daysLeft day${if (daysLeft == 1) "" else "s"}",
                         color = Mocha.Overlay1,
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
             }
-            IconButton(onClick = onRestore) {
-                Icon(
-                    imageVector = Icons.Default.RestoreFromTrash,
-                    contentDescription = "Restore",
-                    tint = Mocha.Green
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                NovaCutChromeIconButton(
+                    icon = Icons.Default.RestoreFromTrash,
+                    contentDescription = "Restore project",
+                    onClick = onRestore,
+                    tint = Mocha.Green,
+                    containerColor = Mocha.Green.copy(alpha = 0.08f),
+                    borderColor = Mocha.Green.copy(alpha = 0.18f)
                 )
-            }
-            IconButton(onClick = onDeleteForever) {
-                Icon(
-                    imageVector = Icons.Default.DeleteForever,
-                    contentDescription = "Delete forever",
-                    tint = Mocha.Red
+                NovaCutChromeIconButton(
+                    icon = Icons.Default.DeleteForever,
+                    contentDescription = "Delete project forever",
+                    onClick = onDeleteForever,
+                    tint = Mocha.Red,
+                    containerColor = Mocha.Red.copy(alpha = 0.08f),
+                    borderColor = Mocha.Red.copy(alpha = 0.18f)
                 )
             }
         }

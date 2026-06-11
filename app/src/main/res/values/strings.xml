@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.74.65</string>
+    <string name="app_version">v3.74.66</string>
 
     <!-- Common -->
     <string name="close">Close</string>
@@ -1745,7 +1745,7 @@
     <string name="desktop_sidebar_record">Record</string>
     <string name="desktop_sidebar_media_count">MEDIA (%1$d)</string>
     <string name="desktop_sidebar_media_empty">No media yet. Add media above to build the project library.</string>
-    <string name="v369_features_label">Feature hub</string>
+    <string name="v369_features_label">Creator Intelligence</string>
     <string name="ai_apply">Apply</string>
 
     <!-- DrawingOverlayPanel -->
