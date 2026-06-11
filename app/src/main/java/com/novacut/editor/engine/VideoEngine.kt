@@ -1031,13 +1031,24 @@ class VideoEngine @Inject constructor(
                 overlappingImages.forEach { overlay ->
                     val relStart = (overlay.startTimeMs - clipStart).coerceAtLeast(0L)
                     val relEnd = (overlay.endTimeMs - clipStart).coerceAtMost(clip.durationMs)
-                    ExportImageOverlay.create(
-                        context = context,
-                        overlay = overlay,
-                        relStartMs = relStart,
-                        relEndMs = relEnd,
-                        outputFrameWidth = targetW,
-                    )?.let { add(it) }
+                    val animated = ExportAnimatedImageOverlay.isAnimatedSource(context, overlay.sourceUri)
+                    if (animated) {
+                        ExportAnimatedImageOverlay.create(
+                            context = context,
+                            overlay = overlay,
+                            relStartMs = relStart,
+                            relEndMs = relEnd,
+                            outputFrameWidth = targetW,
+                        )?.let { add(it) }
+                    } else {
+                        ExportImageOverlay.create(
+                            context = context,
+                            overlay = overlay,
+                            relStartMs = relStart,
+                            relEndMs = relEnd,
+                            outputFrameWidth = targetW,
+                        )?.let { add(it) }
+                    }
                 }
                 config.watermark?.let { watermark ->
                     ExportWatermarkOverlay.create(
