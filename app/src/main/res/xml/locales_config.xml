@@ -9,10 +9,11 @@
 
     Add a <locale android:name="..."/> entry for every BCP-47 tag a
     res/values-* resource folder ships translations for. The baseline
-    English UI lives in res/values/strings.xml, so en is the only
-    listed locale today. Future locales (e.g. es, fr, de, pt-BR, ja,
-    zh-Hans, zh-Hant) get appended as their res/values-* folders land.
+    English UI lives in res/values/strings.xml. Future locales (e.g.
+    fr, de, pt-BR, ja, zh-Hans, zh-Hant) get appended as their
+    res/values-* folders land.
 -->
 <locale-config xmlns:android="http://schemas.android.com/apk/res/android">
     <locale android:name="en" />
+    <locale android:name="es" />
 </locale-config>

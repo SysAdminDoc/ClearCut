@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.74.69</string>
+    <string name="app_version">v3.74.70</string>
 
     <!-- Common -->
     <string name="close">Close</string>
@@ -628,6 +628,22 @@
     <string name="projects_search">Search</string>
     <string name="projects_clear">Clear</string>
     <string name="projects_recent">Recent Projects</string>
+    <string name="projects_recent_subtitle">Pick up where you left off, duplicate a cut, or jump into a template.</string>
+    <string name="projects_results_count_one">1 result</string>
+    <string name="projects_results_count_many">%1$d results</string>
+    <string name="projects_filtered_sorted_summary">Filtered by %1$s, sorted by %2$s.</string>
+    <string name="projects_sorted_summary">Sorted by %1$s.</string>
+    <string name="projects_filter_count_sorted_summary">%1$d of %2$d projects, sorted by %3$s.</string>
+    <string name="project_sort_recent">Recent</string>
+    <string name="project_sort_oldest">Oldest</string>
+    <string name="project_sort_name_asc">A-Z</string>
+    <string name="project_sort_name_desc">Z-A</string>
+    <string name="project_sort_longest">Longest</string>
+    <string name="project_filter_all">All</string>
+    <string name="project_filter_this_week">This week</string>
+    <string name="project_filter_long">Longer than 1 min</string>
+    <string name="project_filter_short">Under 10 s</string>
+    <string name="project_filter_empty">No clips</string>
     <string name="projects_no_matching">No matching projects</string>
     <string name="projects_no_projects_yet">No projects yet</string>
     <string name="projects_ready_title">Your studio starts here.</string>
