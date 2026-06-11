@@ -205,6 +205,7 @@ fun EditorScreen(
     var showRadialMenu by remember { mutableStateOf(false) }
     var radialMenuPosition by remember { mutableStateOf(Offset.Zero) }
     var isToolPanelExpanded by remember { mutableStateOf(false) }
+    var isTimelineTrimGestureActive by remember { mutableStateOf(false) }
 
     val focusRequester = remember { FocusRequester() }
 
@@ -228,31 +229,37 @@ fun EditorScreen(
     }
     val screenHeightDp = configuration.screenHeightDp
     val isCompactEditorHeight = adaptiveLayoutDecision.compactTimeline || screenHeightDp < 820
+    val isTrimInteractionActive = state.currentTool == EditorTool.TRIM || isTimelineTrimGestureActive
+    val isBottomToolPanelExpanded = isToolPanelExpanded && !isTrimInteractionActive
     val selectedPreviewHeight = when {
         !isClipMode -> 0.dp
         adaptiveLayoutDecision.paneMode == AdaptiveEditorLayoutPolicy.PaneMode.TABLETOP_SPLIT -> 360.dp
         adaptiveLayoutDecision.paneMode == AdaptiveEditorLayoutPolicy.PaneMode.THREE_PANE -> 300.dp
         adaptiveLayoutDecision.paneMode == AdaptiveEditorLayoutPolicy.PaneMode.TWO_PANE -> 280.dp
-        isToolPanelExpanded -> 154.dp
-        isCompactEditorHeight -> 224.dp
-        else -> 252.dp
+        isTrimInteractionActive && isCompactEditorHeight -> 240.dp
+        isTrimInteractionActive -> 260.dp
+        isBottomToolPanelExpanded -> 184.dp
+        isCompactEditorHeight -> 268.dp
+        else -> 292.dp
     }
     val timelineMinHeight = when {
         adaptiveLayoutDecision.paneMode == AdaptiveEditorLayoutPolicy.PaneMode.TABLETOP_SPLIT -> 280.dp
         adaptiveLayoutDecision.paneMode == AdaptiveEditorLayoutPolicy.PaneMode.THREE_PANE -> 280.dp
         adaptiveLayoutDecision.paneMode == AdaptiveEditorLayoutPolicy.PaneMode.TWO_PANE -> 252.dp
-        isClipMode && isToolPanelExpanded -> 184.dp
-        isClipMode && isCompactEditorHeight -> 204.dp
-        isClipMode -> 224.dp
+        isClipMode && isTrimInteractionActive -> 300.dp
+        isClipMode && isBottomToolPanelExpanded -> 220.dp
+        isClipMode && isCompactEditorHeight -> 260.dp
+        isClipMode -> 280.dp
         else -> 240.dp
     }
     val timelineMaxHeight = when {
         adaptiveLayoutDecision.paneMode == AdaptiveEditorLayoutPolicy.PaneMode.TABLETOP_SPLIT -> 380.dp
         adaptiveLayoutDecision.paneMode == AdaptiveEditorLayoutPolicy.PaneMode.THREE_PANE -> 420.dp
         adaptiveLayoutDecision.paneMode == AdaptiveEditorLayoutPolicy.PaneMode.TWO_PANE -> 360.dp
-        isClipMode && isToolPanelExpanded -> 208.dp
-        isClipMode && isCompactEditorHeight -> 248.dp
-        isClipMode -> 284.dp
+        isClipMode && isTrimInteractionActive -> 430.dp
+        isClipMode && isBottomToolPanelExpanded -> 260.dp
+        isClipMode && isCompactEditorHeight -> 360.dp
+        isClipMode -> 390.dp
         else -> 330.dp
     }
     val useEmbeddedExportPane = state.panels.isOpen(PanelId.EXPORT_SHEET) &&
@@ -779,69 +786,92 @@ fun EditorScreen(
                 )
             }
 
-            // Timeline
-            if (!state.isTimelineCollapsed) {
-                Timeline(
-                    tracks = state.tracks,
-                    playheadMs = playheadMs,
-                    totalDurationMs = state.totalDurationMs,
-                    zoomLevel = state.zoomLevel,
-                    scrollOffsetMs = state.scrollOffsetMs,
-                    selectedClipId = state.selectedClipId,
-                    isTrimMode = state.currentTool == EditorTool.TRIM,
-                    waveforms = if (viewModel.showWaveforms) state.waveforms else emptyMap(),
-                    onClipSelected = viewModel::selectClip,
-                    onPlayheadMoved = viewModel::seekTo,
-                    onZoomChanged = viewModel::setZoomLevel,
-                    onScrollChanged = viewModel::setScrollOffset,
-                    onTrimChanged = viewModel::trimClip,
-                    onTrimDragStarted = viewModel::beginTrim,
-                    onTrimDragEnded = viewModel::endTrim,
-                    onTimelineWidthChanged = viewModel::setTimelineWidth,
-                    onToggleTrackMute = viewModel::toggleTrackMute,
-                    onToggleTrackVisible = viewModel::toggleTrackVisibility,
-                    onToggleTrackLock = viewModel::toggleTrackLock,
-                    beatMarkers = state.beatMarkers,
-                    selectedClipIds = state.selectedClipIds,
-                    snapToBeat = viewModel.snapToBeat,
-                    snapToMarker = viewModel.snapToMarker,
-                    markers = state.timelineMarkers,
-                    onAddMarker = { viewModel.addTimelineMarker() },
-                    onMarkerTapped = { marker -> viewModel.seekTo(marker.timeMs) },
-                    onClipLongPress = viewModel::toggleClipMultiSelect,
-                    onOpenCompoundClip = viewModel::openCompoundClip,
-                    onSlideClip = viewModel::slideClip,
-                    onSlipClip = viewModel::slipClip,
-                    onSlideEditStarted = viewModel::beginSlideEdit,
-                    onSlideEditEnded = viewModel::endSlideEdit,
-                    onSlipEditStarted = viewModel::beginSlipEdit,
-                    onSlipEditEnded = viewModel::endSlipEdit,
-                    onToggleTrackCollapsed = viewModel::toggleTrackCollapsed,
-                    onToggleTrackWaveform = viewModel::toggleTrackWaveform,
-                    onCollapseAllTracks = viewModel::collapseAllTracks,
-                    onExpandAllTracks = viewModel::expandAllTracks,
-                    onSetTrackHeight = viewModel::setTrackHeight,
-                    onScrubStart = viewModel::beginScrub,
-                    onScrubEnd = viewModel::endScrub,
-                    onSplitAtPlayhead = viewModel::splitClipAtPlayhead,
-                    onDeleteSelectedClip = viewModel::deleteSelectedClip,
-                    engine = viewModel.engine,
-                    modifier = Modifier.heightIn(min = timelineMinHeight, max = timelineMaxHeight)
-                )
-            }
+            val shouldShowTimeline = !state.isTimelineCollapsed ||
+                isClipMode ||
+                isTrimInteractionActive
 
-            // Bottom tool area (PowerDirector-style tab bar + sub-menu grids)
-            BottomToolArea(
-                selectedClipId = state.selectedClipId,
-                hasCopiedEffects = state.copiedEffects.isNotEmpty(),
-                textOverlays = state.textOverlays,
-                onEditTextOverlay = { id -> viewModel.editTextOverlay(id) },
-                editorMode = state.editorMode,
-                onExpandedChange = { expanded -> isToolPanelExpanded = expanded },
-                onDeleteTextOverlay = { id ->
-                    viewModel.removeTextOverlay(id)
-                },
-                onAction = { actionId ->
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = true)
+            ) {
+                // Timeline
+                if (shouldShowTimeline) {
+                    Timeline(
+                        tracks = state.tracks,
+                        playheadMs = playheadMs,
+                        totalDurationMs = state.totalDurationMs,
+                        zoomLevel = state.zoomLevel,
+                        scrollOffsetMs = state.scrollOffsetMs,
+                        selectedClipId = state.selectedClipId,
+                        isTrimMode = state.currentTool == EditorTool.TRIM,
+                        waveforms = if (viewModel.showWaveforms) state.waveforms else emptyMap(),
+                        onClipSelected = viewModel::selectClip,
+                        onPlayheadMoved = viewModel::seekTo,
+                        onZoomChanged = viewModel::setZoomLevel,
+                        onScrollChanged = viewModel::setScrollOffset,
+                        onTrimChanged = viewModel::trimClip,
+                        onTrimDragStarted = {
+                            isTimelineTrimGestureActive = true
+                            viewModel.beginTrim()
+                        },
+                        onTrimDragEnded = {
+                            viewModel.endTrim()
+                            isTimelineTrimGestureActive = false
+                        },
+                        onTimelineWidthChanged = viewModel::setTimelineWidth,
+                        onToggleTrackMute = viewModel::toggleTrackMute,
+                        onToggleTrackVisible = viewModel::toggleTrackVisibility,
+                        onToggleTrackLock = viewModel::toggleTrackLock,
+                        beatMarkers = state.beatMarkers,
+                        selectedClipIds = state.selectedClipIds,
+                        snapToBeat = viewModel.snapToBeat,
+                        snapToMarker = viewModel.snapToMarker,
+                        markers = state.timelineMarkers,
+                        onAddMarker = { viewModel.addTimelineMarker() },
+                        onMarkerTapped = { marker -> viewModel.seekTo(marker.timeMs) },
+                        onClipLongPress = viewModel::toggleClipMultiSelect,
+                        onOpenCompoundClip = viewModel::openCompoundClip,
+                        onSlideClip = viewModel::slideClip,
+                        onSlipClip = viewModel::slipClip,
+                        onSlideEditStarted = viewModel::beginSlideEdit,
+                        onSlideEditEnded = viewModel::endSlideEdit,
+                        onSlipEditStarted = viewModel::beginSlipEdit,
+                        onSlipEditEnded = viewModel::endSlipEdit,
+                        onToggleTrackCollapsed = viewModel::toggleTrackCollapsed,
+                        onToggleTrackWaveform = viewModel::toggleTrackWaveform,
+                        onCollapseAllTracks = viewModel::collapseAllTracks,
+                        onExpandAllTracks = viewModel::expandAllTracks,
+                        onSetTrackHeight = viewModel::setTrackHeight,
+                        onScrubStart = viewModel::beginScrub,
+                        onScrubEnd = viewModel::endScrub,
+                        onSplitAtPlayhead = viewModel::splitClipAtPlayhead,
+                        onDeleteSelectedClip = viewModel::deleteSelectedClip,
+                        engine = viewModel.engine,
+                        modifier = Modifier
+                            .weight(1f, fill = true)
+                            .fillMaxWidth()
+                            .heightIn(min = timelineMinHeight)
+                    )
+                } else {
+                    Spacer(modifier = Modifier.weight(1f, fill = true))
+                }
+
+                // Bottom tool area (PowerDirector-style tab bar + sub-menu grids)
+                BottomToolArea(
+                    selectedClipId = state.selectedClipId,
+                    hasCopiedEffects = state.copiedEffects.isNotEmpty(),
+                    textOverlays = state.textOverlays,
+                    onEditTextOverlay = { id -> viewModel.editTextOverlay(id) },
+                    editorMode = state.editorMode,
+                    compactLocked = isTrimInteractionActive,
+                    onExpandedChange = { expanded ->
+                        isToolPanelExpanded = expanded && !isTrimInteractionActive
+                    },
+                    onDeleteTextOverlay = { id ->
+                        viewModel.removeTextOverlay(id)
+                    },
+                    onAction = { actionId ->
                     when (actionId) {
                         "edit" -> viewModel.showMediaPicker()
                         "audio_add" -> viewModel.showMediaPicker()
@@ -950,7 +980,8 @@ fun EditorScreen(
                         else -> Log.w("EditorScreen", "Unknown action: $actionId")
                     }
                 }
-            )
+                )
+            }
         }
 
         // Bottom sheets / overlays

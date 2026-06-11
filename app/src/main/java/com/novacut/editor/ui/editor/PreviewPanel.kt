@@ -98,7 +98,7 @@ fun PreviewPanel(
         modifier = modifier
             .fillMaxWidth()
             .background(outerGradient)
-            .padding(horizontal = 10.dp, vertical = 8.dp),
+            .padding(horizontal = 8.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Card(
@@ -107,13 +107,13 @@ fun PreviewPanel(
                 .weight(1f),
             colors = CardDefaults.cardColors(containerColor = Mocha.Panel),
             border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
-            shape = RoundedCornerShape(26.dp)
+            shape = RoundedCornerShape(24.dp)
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(previewGradient)
-                    .padding(10.dp)
+                    .padding(8.dp)
             ) {
                 BoxWithConstraints(
                     modifier = Modifier.fillMaxSize(),
@@ -130,7 +130,7 @@ fun PreviewPanel(
                     Box(
                         modifier = Modifier
                             .size(frameWidth, frameHeight)
-                            .clip(RoundedCornerShape(22.dp))
+                            .clip(RoundedCornerShape(20.dp))
                             .background(Mocha.Crust)
                             .then(
                                 // `awaitEachGesture` lets us bracket each gesture so we can
@@ -353,18 +353,18 @@ fun PreviewPanel(
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
         Surface(
             color = Mocha.Panel,
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(18.dp),
             border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
@@ -389,7 +389,7 @@ fun PreviewPanel(
                 ) {
                     IconButton(
                         onClick = onTogglePlayback,
-                        modifier = Modifier.size(42.dp)
+                        modifier = Modifier.size(40.dp)
                     ) {
                         Icon(
                             if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
@@ -399,7 +399,7 @@ fun PreviewPanel(
                                 stringResource(R.string.preview_play)
                             },
                             tint = Mocha.Midnight,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 }
