@@ -102,23 +102,35 @@ jobs:
             python3 scripts/check_16kb_alignment.py "$apk"
           done
 
+      - name: Write APK SHA-256 checksums
+        run: |
+          python3 scripts/write_release_checksums.py --self-test
+          python3 scripts/write_release_checksums.py
+          python3 scripts/write_release_checksums.py --check
+
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
           name: NovaCut-debug
-          path: app/build/outputs/apk/debug/*.apk
+          path: |
+            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/debug/*.sha256
 
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
           name: NovaCut-release
-          path: app/build/outputs/apk/release/*.apk
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/release/*.sha256
 
       - name: Upload Instrumentation APK
         uses: actions/upload-artifact@v4
         with:
           name: NovaCut-androidTest
-          path: app/build/outputs/apk/androidTest/debug/*.apk
+          path: |
+            app/build/outputs/apk/androidTest/debug/*.apk
+            app/build/outputs/apk/androidTest/debug/*.sha256
 
       - name: Upload to Release
         if: startsWith(github.ref, 'refs/tags/v')
@@ -126,7 +138,8 @@ jobs:
           gh release create "${{ github.ref_name }}" \
             --title "NovaCut ${{ github.ref_name }}" \
             --generate-notes \
-            app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/release/*.apk \
+            app/build/outputs/apk/release/*.sha256
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

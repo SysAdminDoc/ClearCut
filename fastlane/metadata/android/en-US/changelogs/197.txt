@@ -1,0 +1,4 @@
+- Release checksum provenance
+- Added a repeatable SHA-256 checksum writer/checker for debug, release, and androidTest APK outputs.
+- Updated CI to run the checksum self-test, write sidecar files before artifact upload, verify them, and attach the release checksum sidecar to tagged GitHub releases.
+- Documented the local checksum reproduction commands in README.
