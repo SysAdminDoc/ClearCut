@@ -23,3 +23,5 @@ Features:
 - Catppuccin Mocha dark theme throughout
 
 Core editing works offline. Network use is explicit for optional model downloads, provider-backed assets, cloud-capable tools, remote signing, LAN streaming, and user-directed share/export handoff.
+
+Distribution status: GitHub Releases are the direct APK channel for this checkout. Google Play metadata is prepared, and F-Droid metadata is present, but verified-developer registration is not complete.

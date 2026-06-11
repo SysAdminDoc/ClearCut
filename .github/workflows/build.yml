@@ -66,6 +66,11 @@ jobs:
           python3 scripts/validate_public_claims.py --self-test
           python3 scripts/validate_public_claims.py --explain
 
+      - name: Verify distribution readiness
+        run: |
+          python3 scripts/validate_distribution_readiness.py --self-test
+          python3 scripts/validate_distribution_readiness.py
+
       - name: Locate Android build tools
         id: build-tools
         shell: bash

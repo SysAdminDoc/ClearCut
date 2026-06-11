@@ -364,6 +364,13 @@ python scripts\check_apk_size.py --update-baseline
 python scripts\check_apk_size.py
 ```
 
+### Distribution Readiness
+GitHub Releases are the direct APK distribution channel for this checkout. Google Play listing metadata, privacy disclosures, Data safety worksheet, and screenshot assets are committed under `fastlane/metadata/android/en-US/` and validated in CI.
+
+F-Droid-compatible Fastlane metadata is present in the same source tree. F-Droid publication still needs a final reproducible-build metadata pass, including `AllowedAPKSigningKeys` after the release signing key policy is fixed.
+
+Android developer verification is not complete. Starting in September 2026, Google requires apps installed on certified Android devices in initial regions to be registered by a verified developer, and package names must be registered with a signed APK. NovaCut can keep shipping direct APKs locally, but broad sideload/F-Droid continuity depends on completing that account/package-name step or documenting a limited-distribution fallback.
+
 ### Dependencies
 Key external dependencies currently in `build.gradle.kts`:
 

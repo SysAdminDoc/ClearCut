@@ -1,0 +1,4 @@
+- Distribution readiness gate
+- Added a repeatable distribution-readiness validator with fixture self-tests and CI wiring.
+- Documented GitHub Releases, Google Play metadata, F-Droid metadata, and Android developer-verification status without claiming account registration is complete.
+- Added Fastlane distribution-status copy so store metadata stays honest about direct APK, Play, and F-Droid readiness.
