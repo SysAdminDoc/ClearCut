@@ -1,0 +1,2 @@
+- Public feature claim guard
+- Added a JVM regression test that keeps the README slip/slide editing claim backed by EditorScreen, Timeline, and EditorViewModel wiring.
