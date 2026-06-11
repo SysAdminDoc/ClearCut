@@ -1,6 +1,8 @@
 package com.novacut.editor.engine
 
 import android.content.Context
+import android.media.AudioFocusRequest
+import android.media.AudioManager
 import android.media.MediaRecorder
 import android.net.Uri
 import android.os.Build
@@ -17,6 +19,9 @@ import javax.inject.Singleton
 class VoiceoverRecorderEngine @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
+    private val audioManager = context.getSystemService(AudioManager::class.java)
+    private val focusChangeListener = AudioManager.OnAudioFocusChangeListener { }
+    private var activeFocusRequest: AudioFocusRequest? = null
     private var recorder: MediaRecorder? = null
     private var outputFile: File? = null
     private var partialOutputFile: File? = null
@@ -28,6 +33,10 @@ class VoiceoverRecorderEngine @Inject constructor(
     @Synchronized
     fun startRecording(): File? {
         discardActiveRecording("re-start")
+        if (!requestVoiceoverAudioFocus()) {
+            Log.w("VoiceoverRecorder", "Voiceover audio focus request was denied")
+            return null
+        }
 
         val dir = File(context.filesDir, VOICEOVER_DIR_NAME).also { it.mkdirs() }
         sweepAbandonedVoiceoverPartials(dir)
@@ -63,6 +72,7 @@ class VoiceoverRecorderEngine @Inject constructor(
         } catch (e: Exception) {
             Log.w("VoiceoverRecorder", "Failed to start voiceover recording", e)
             runCatching { rec.release() }
+            abandonVoiceoverAudioFocus()
             partialFile.delete()
             file.delete()
             outputFile = null
@@ -126,6 +136,39 @@ class VoiceoverRecorderEngine @Inject constructor(
         partialOutputFile = null
         startTime = 0L
         _isRecording.value = false
+        abandonVoiceoverAudioFocus()
+    }
+
+    private fun requestVoiceoverAudioFocus(): Boolean {
+        val manager = audioManager ?: return true
+        val result = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val request = NovaCutAudioFocusPolicy.buildFocusRequest(
+                gainType = NovaCutAudioFocusPolicy.VOICEOVER_FOCUS_GAIN,
+                attributes = NovaCutAudioFocusPolicy.buildVoiceoverCaptureAttributes(),
+                listener = focusChangeListener,
+            )
+            activeFocusRequest = request
+            manager.requestAudioFocus(request)
+        } else {
+            @Suppress("DEPRECATION")
+            manager.requestAudioFocus(
+                focusChangeListener,
+                AudioManager.STREAM_MUSIC,
+                NovaCutAudioFocusPolicy.VOICEOVER_FOCUS_GAIN,
+            )
+        }
+        return result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+    }
+
+    private fun abandonVoiceoverAudioFocus() {
+        val manager = audioManager ?: return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            activeFocusRequest?.let { manager.abandonAudioFocusRequest(it) }
+            activeFocusRequest = null
+        } else {
+            @Suppress("DEPRECATION")
+            manager.abandonAudioFocus(focusChangeListener)
+        }
     }
 }
 

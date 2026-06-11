@@ -44,15 +44,28 @@ def require_contains(path: Path, expected: str) -> None:
 def verify_repository_metadata(version_code: int, version_name: str) -> None:
     display_version = f"v{version_name}"
     require_contains(ROOT / "app" / "src" / "main" / "res" / "values" / "strings.xml", f">{display_version}<")
-    require_contains(ROOT / "ROADMAP.md", f"Current version: **{display_version}** (`versionCode` {version_code})")
-    require_contains(ROOT / "COMPLETED.md", f"Current version: {display_version} (`versionCode` {version_code})")
 
-    changelog = read_text(ROOT / "CHANGELOG.md")
-    first_heading = next((line.strip() for line in changelog.splitlines() if line.startswith("## ")), "")
-    if not first_heading.startswith(f"## {display_version} "):
-        raise VerificationError(
-            f"CHANGELOG.md first release heading is {first_heading!r}, expected {display_version}"
-        )
+    for forbidden_tracker in (
+        "AUTONOMOUS-LOOP-STATE.md",
+        "COMPLETED.md",
+        "PROJECT_CONTEXT.md",
+        "TODO.md",
+    ):
+        if (ROOT / forbidden_tracker).exists():
+            raise VerificationError(f"{forbidden_tracker} must not exist; use ROADMAP.md as the only open-work tracker")
+
+    roadmap_path = ROOT / "ROADMAP.md"
+    if roadmap_path.exists():
+        require_contains(roadmap_path, f"Current version: **{display_version}** (`versionCode` {version_code})")
+
+    changelog_path = ROOT / "CHANGELOG.md"
+    if changelog_path.exists():
+        changelog = read_text(changelog_path)
+        first_heading = next((line.strip() for line in changelog.splitlines() if line.startswith("## ")), "")
+        if not first_heading.startswith(f"## {display_version} "):
+            raise VerificationError(
+                f"CHANGELOG.md first release heading is {first_heading!r}, expected {display_version}"
+            )
 
     gitignore = read_text(ROOT / ".gitignore")
     for private_input in ("keystore.properties", "*.jks", "*.keystore"):

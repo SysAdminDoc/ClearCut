@@ -1,0 +1,4 @@
+- Audio focus and noisy-device handling
+- Routed preview playback through shared Media3 audio attributes with built-in audio-focus and becoming-noisy handling so timeline audio no longer ignores competing apps or headphone disconnects.
+- Added transient ducking focus for TTS preview and transient-exclusive focus for voiceover recording, with focus abandoned on completion, error, stop, and editor teardown.
+- Paused timeline preview before TTS preview or voiceover recording starts, and stopped...

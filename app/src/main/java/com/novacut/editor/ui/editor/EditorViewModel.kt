@@ -2486,6 +2486,7 @@ class EditorViewModel @Inject constructor(
     }
 
     fun previewTts(text: String, style: com.novacut.editor.engine.TtsEngine.VoiceStyle) {
+        pauseIfPlaying()
         viewModelScope.launch { ttsEngine.preview(text, style) }
     }
 
@@ -3965,6 +3966,8 @@ class EditorViewModel @Inject constructor(
     private var voiceoverDurationJob: Job? = null
 
     fun startVoiceover() {
+        pauseIfPlaying()
+        ttsEngine.stopPreview()
         val file = voiceoverEngine.startRecording()
         if (file == null) {
             showToast("Microphone access failed")
