@@ -23,10 +23,10 @@ keystore.properties
 hs_err_pid*.log
 replay_pid*.log
 
-# Private docs — keep local only.
-# NOTE: ROADMAP.md, CHANGELOG.md, and CODEX_CHANGELOG.md are tracked in git as
-# the public source of truth. They are intentionally NOT listed here.
-# Anything below this comment is local working-tree only.
+# Local planning docs — keep local only.
+# README.md is the only tracked markdown file. ROADMAP.md remains the local
+# source of truth for open work; CHANGELOG.md and RESEARCH.md stay local.
+# The broad *.md rule below enforces this policy.
 CLAUDE.md
 .claude/
 RESEARCH.md
