@@ -1,6 +1,9 @@
 package com.novacut.editor.engine
 
 import android.content.Context
+import android.media.AudioFocusRequest
+import android.media.AudioManager
+import android.os.Build
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
@@ -25,6 +28,16 @@ import kotlin.coroutines.resume
 class TtsEngine @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
+    private val audioManager = context.getSystemService(AudioManager::class.java)
+    private val focusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
+        if (focusChange == AudioManager.AUDIOFOCUS_LOSS ||
+            focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT
+        ) {
+            stopPreview()
+        }
+    }
+    private var activePreviewFocusRequest: AudioFocusRequest? = null
+    @Volatile private var finishActivePreview: (() -> Unit)? = null
     private var tts: TextToSpeech? = null
     @Volatile private var isReady = false
     private val outputDir = File(context.filesDir, TTS_OUTPUT_DIR_NAME).also { it.mkdirs() }
@@ -78,6 +91,7 @@ class TtsEngine @Inject constructor(
         if (!isReady) return@withContext null
         if (text.isBlank()) return@withContext null
 
+        stopPreview()
         engine.language = locale
         engine.setPitch(style.pitch)
         engine.setSpeechRate(style.rate)
@@ -185,20 +199,71 @@ class TtsEngine @Inject constructor(
         val engine = tts ?: return@withContext
         if (!isReady) return@withContext
         if (text.isBlank()) return@withContext
+        stopPreview()
         mutex.withLock {
             engine.language = locale
             engine.setPitch(style.pitch)
             engine.setSpeechRate(style.rate)
-            engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "preview")
+            if (!requestPreviewAudioFocus()) return@withLock
+            val utteranceId = "${TTS_PREVIEW_UTTERANCE_ID}_${UUID.randomUUID()}"
+            suspendCancellableCoroutine<Unit> { cont ->
+                var finished = false
+
+                fun finish() {
+                    if (finished) return
+                    finished = true
+                    finishActivePreview = null
+                    try { engine.setOnUtteranceProgressListener(null) } catch (_: Exception) {}
+                    abandonPreviewAudioFocus()
+                    if (cont.isActive) cont.resume(Unit)
+                }
+
+                finishActivePreview = ::finish
+                engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                    override fun onStart(id: String?) = Unit
+
+                    override fun onDone(id: String?) {
+                        if (id == utteranceId) finish()
+                    }
+
+                    @Deprecated("Deprecated in API")
+                    override fun onError(id: String?) {
+                        if (id == utteranceId) finish()
+                    }
+
+                    override fun onError(id: String?, errorCode: Int) {
+                        if (id == utteranceId) finish()
+                    }
+
+                    override fun onStop(id: String?, interrupted: Boolean) {
+                        if (id == utteranceId) finish()
+                    }
+                })
+                val result = engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
+                if (result != TextToSpeech.SUCCESS) {
+                    finish()
+                }
+
+                cont.invokeOnCancellation {
+                    try { engine.stop() } catch (_: Exception) {}
+                    finish()
+                }
+            }
         }
     }
 
     fun stopPreview() {
-        tts?.stop()
+        val finish = finishActivePreview
+        if (finish != null) {
+            try { tts?.stop() } catch (_: Exception) {}
+            finish()
+        } else {
+            abandonPreviewAudioFocus()
+        }
     }
 
     fun release() {
-        tts?.stop()
+        stopPreview()
         tts?.shutdown()
         tts = null
         isReady = false
@@ -214,9 +279,42 @@ class TtsEngine @Inject constructor(
             ?.filter { it.isFile && it.name.endsWith(TTS_PARTIAL_SUFFIX) && it.lastModified() < cutoff }
             ?.forEach { it.delete() }
     }
+
+    private fun requestPreviewAudioFocus(): Boolean {
+        val manager = audioManager ?: return true
+        val result = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val request = NovaCutAudioFocusPolicy.buildFocusRequest(
+                gainType = NovaCutAudioFocusPolicy.TTS_PREVIEW_FOCUS_GAIN,
+                attributes = NovaCutAudioFocusPolicy.buildSpeechAttributes(),
+                listener = focusChangeListener,
+            )
+            activePreviewFocusRequest = request
+            manager.requestAudioFocus(request)
+        } else {
+            @Suppress("DEPRECATION")
+            manager.requestAudioFocus(
+                focusChangeListener,
+                AudioManager.STREAM_MUSIC,
+                NovaCutAudioFocusPolicy.TTS_PREVIEW_FOCUS_GAIN,
+            )
+        }
+        return result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+    }
+
+    private fun abandonPreviewAudioFocus() {
+        val manager = audioManager ?: return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            activePreviewFocusRequest?.let { manager.abandonAudioFocusRequest(it) }
+            activePreviewFocusRequest = null
+        } else {
+            @Suppress("DEPRECATION")
+            manager.abandonAudioFocus(focusChangeListener)
+        }
+    }
 }
 
 internal const val TTS_OUTPUT_DIR_NAME = "tts_output"
+private const val TTS_PREVIEW_UTTERANCE_ID = "preview"
 private const val TTS_FILE_PREFIX = "tts_"
 private const val TTS_PARTIAL_SUFFIX = ".partial.wav"
 private const val ABANDONED_PARTIAL_MAX_AGE_MS = 10 * 60 * 1000L

@@ -151,10 +151,15 @@ class VideoEngine @Inject constructor(
                 .build()
             val renderersFactory = DefaultRenderersFactory(context)
                 .setEnableDecoderFallback(true)
+            val previewAudioAttributes = NovaCutAudioFocusPolicy.buildPreviewAttributes()
             player = ExoPlayer.Builder(context)
                 .setLoadControl(loadControl)
                 .setRenderersFactory(renderersFactory)
                 .build()
+                .apply {
+                    setAudioAttributes(previewAudioAttributes, true)
+                    setHandleAudioBecomingNoisy(true)
+                }
         }
         return requireNotNull(player) { "ExoPlayer failed to initialize" }
     }

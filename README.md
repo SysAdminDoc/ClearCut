@@ -73,14 +73,16 @@ A professional Android video editor built with Kotlin and Jetpack Compose. Open 
 
 
 
-See [CHANGELOG.md](CHANGELOG.md) for full release history.
+Release history is maintained in git tags and the development checkout's local
+`CHANGELOG.md`.
 
 ## Project planning
 
-- [ROADMAP.md](ROADMAP.md) tracks active and future work.
-- [COMPLETED.md](COMPLETED.md) summarizes shipped roadmap work.
-- [RESEARCH_REPORT.md](RESEARCH_REPORT.md) summarizes product, platform, and ecosystem research.
-- Historical roadmap and research inputs live under [docs/archive](docs/archive/).
+Planning files are local-only in the development checkout:
+
+- `ROADMAP.md` is the only source of truth for incomplete actionable work.
+- `RESEARCH.md` stores consolidated product, platform, and ecosystem research.
+- Shipped work lives in git history and the local `CHANGELOG.md`.
 
 ## Features
 
@@ -314,6 +316,19 @@ com.novacut.editor/
 # Managed-device startup/editor performance gate
 ./gradlew :baselineprofile:pixel6Api36BenchmarkReleaseAndroidTest :baselineprofile:collectNonMinifiedReleaseBaselineProfile
 ```
+
+### Manual QA: audio focus
+
+Before release, verify audio focus on a physical device:
+
+- Start music in another app, open NovaCut, and play timeline preview. The
+  external app should pause or duck while NovaCut plays.
+- Connect headphones, start preview playback, then unplug them. NovaCut preview
+  should pause instead of continuing through the speaker.
+- Start timeline preview, then start a voiceover recording. Preview should pause
+  before recording starts and focus should release when recording stops.
+- Start a TTS preview, then leave the panel or close the editor. Preview speech
+  should stop and other audio should be able to resume.
 
 ### Requirements
 - Android Studio Ladybug+ (2024.2+)

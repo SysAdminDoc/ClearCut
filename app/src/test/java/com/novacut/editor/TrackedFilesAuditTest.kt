@@ -48,13 +48,12 @@ class TrackedFilesAuditTest {
     }
 
     /**
-     * Sanity check: the canonical source-of-truth docs must remain tracked. If
-     * a future commit accidentally `git rm --cached`s one of these (for example
-     * after re-reading the older .gitignore lines that listed them as private),
-     * the build fails loudly instead of silently losing the public roadmap.
+     * Sanity check: the public build/release contract files must remain tracked.
+     * Planning and research markdown are intentionally local-only; the README is
+     * the only tracked markdown file in this repo.
      */
     @Test
-    fun canonicalPlanningDocsRemainTracked() {
+    fun requiredPublicFilesRemainTracked() {
         val repoRoot = locateRepoRoot() ?: return
         val tracked = gitLsFiles(repoRoot)?.toSet() ?: run {
             assumeTrue("git command unavailable; skipping tracked-docs audit", false)
@@ -63,8 +62,27 @@ class TrackedFilesAuditTest {
 
         val missing = REQUIRED_TRACKED.filterNot { it in tracked }
         assertTrue(
-            "Canonical source-of-truth files must stay tracked. Missing: $missing",
+            "Required public files must stay tracked. Missing: $missing",
             missing.isEmpty()
+        )
+    }
+
+    @Test
+    fun markdownDocsStayLocalExceptReadme() {
+        val repoRoot = locateRepoRoot() ?: return
+        val tracked = gitLsFiles(repoRoot) ?: run {
+            assumeTrue("git command unavailable; skipping tracked-markdown audit", false)
+            return
+        }
+
+        val trackedPrivateMarkdown = tracked.filter { path ->
+            path.endsWith(".md") && path != "README.md"
+        }
+
+        assertTrue(
+            "README.md is the only tracked markdown file; private planning docs " +
+                "must stay local-only. Tracked private markdown: $trackedPrivateMarkdown",
+            trackedPrivateMarkdown.isEmpty()
         )
     }
 
@@ -90,7 +108,8 @@ class TrackedFilesAuditTest {
     }
 
     private fun locateRepoRoot(): File? {
-        var dir: File? = File(System.getProperty("user.dir")).absoluteFile
+        val userDir = System.getProperty("user.dir") ?: return null
+        var dir: File? = File(userDir).absoluteFile
         repeat(6) {
             val current = dir ?: return null
             if (File(current, ".git").exists()) return current
@@ -106,9 +125,6 @@ class TrackedFilesAuditTest {
         )
 
         private val REQUIRED_TRACKED = listOf(
-            "ROADMAP.md",
-            "CHANGELOG.md",
-            "PROJECT_CONTEXT.md",
             "README.md",
             "LICENSE",
             ".github/workflows/build.yml",
@@ -116,8 +132,6 @@ class TrackedFilesAuditTest {
             "app/build.gradle.kts",
             "app/src/main/AndroidManifest.xml",
             "gradle/libs.versions.toml",
-            "docs/models.md",
-            "docs/templates.md",
         )
     }
 }
