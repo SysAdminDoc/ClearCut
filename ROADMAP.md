@@ -8,7 +8,7 @@ Active roadmap for forward-looking work. Shipped work is in
 [RESEARCH.md](RESEARCH.md), and detailed historical plans are
 archived under [docs/archive](docs/archive/).
 
-Current version: **v3.74.75** (`versionCode` 212). Last consolidated:
+Current version: **v3.74.76** (`versionCode` 213). Last consolidated:
 2026-06-11.
 
 > Last researched: Cycle 26 - 2026-06-06.
@@ -148,6 +148,9 @@ content URIs untouched for the later relink/repair flow.
 v3.74.75 added the first project-level media asset manifest to autosave JSON and
 optional `assetId` fields on clips, while preserving `sourceUri` as the
 compatibility fallback for older saves and current playback/export paths.
+v3.74.76 made autosave restore use the project media manifest as a fallback:
+when a clip has an `assetId` but no usable `sourceUri`, restore resolves the
+clip from the corresponding `mediaAssets.managedUri` instead of dropping it.
 
 ## Current State
 
@@ -2660,8 +2663,10 @@ move.
   needing the original picker grant, and project JSON contains enough metadata
   to diagnose missing assets without touching timeline clips.
   Progress: v3.74.75 writes a top-level autosave `mediaAssets` manifest and
-  persists optional clip `assetId` values. Remaining work: route preview/export
-  resolution through asset ids and add archive/Room migration coverage.
+  persists optional clip `assetId` values. v3.74.76 lets restore recover clip
+  source URIs from that manifest when sourceUri is absent. Remaining work: route
+  preview/export resolution through asset ids and add archive/Room migration
+  coverage.
 
 - [ ] P1 — Add a project-level repair/relink flow before preview/export.
   Verify every referenced asset when opening a project and before playback or

@@ -1,6 +1,7 @@
 package com.novacut.editor.engine
 
 import android.net.FakeUri
+import android.net.TestUri
 import com.novacut.editor.model.AudioEffect
 import com.novacut.editor.model.AudioEffectType
 import com.novacut.editor.model.Clip
@@ -321,6 +322,49 @@ class AutoSaveStateTest {
 
         assertEquals("asset-media", state.mediaAssets.single().assetId)
         assertEquals("asset-media", state.tracks.single().clips.single().assetId)
+    }
+
+    @Test
+    fun deserialize_recoversClipSourceUriFromAssetIdWhenSourceUriMissing() {
+        val managedUri = "file:///managed/clip.mp4"
+        val root = JSONObject().apply {
+            put("version", AutoSaveState.FORMAT_VERSION)
+            put("projectId", "project")
+            put("mediaAssets", JSONArray().put(JSONObject().apply {
+                put("assetId", "asset-media")
+                put("managedUri", managedUri)
+                put("mediaType", "video")
+                put("importStatus", "ready")
+            }))
+            put("tracks", JSONArray().put(JSONObject().apply {
+                put("type", TrackType.VIDEO.name)
+                put("index", 0)
+                put("clips", JSONArray().put(JSONObject().apply {
+                    put("id", "clip")
+                    put("assetId", "asset-media")
+                    put("sourceDurationMs", 5_000L)
+                    put("trimStartMs", 0L)
+                    put("trimEndMs", 5_000L)
+                    put("effects", JSONArray())
+                    put("keyframes", JSONArray())
+                }))
+            }))
+        }
+
+        val state = AutoSaveState.deserialize(
+            root.toString(),
+            uriParser = { raw ->
+                TestUri(
+                    raw = raw,
+                    schemeValue = raw.substringBefore(":", "file"),
+                    segment = raw.substringAfterLast('/')
+                )
+            }
+        )
+
+        val clip = state.tracks.single().clips.single()
+        assertEquals("asset-media", clip.assetId)
+        assertEquals(managedUri, clip.sourceUri.toString())
     }
 
     @Test
