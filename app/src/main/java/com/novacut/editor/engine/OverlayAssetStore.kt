@@ -39,6 +39,7 @@ sealed class OverlayAssetImportResult {
 enum class OverlayAssetKind {
     BUNDLED_STICKER,
     STILL_IMAGE,
+    ANIMATED_IMAGE,
 }
 
 enum class OverlayAssetRejectionReason {
@@ -313,18 +314,19 @@ class OverlayAssetStore @Inject constructor(
             fileName: String?,
             requestedType: ImageOverlayType,
         ): OverlayAssetDecision {
-            if (requestedType == ImageOverlayType.GIF || isGif(mimeType, fileName)) {
-                return OverlayAssetDecision(
-                    accepted = false,
-                    rejectionReason = OverlayAssetRejectionReason.ANIMATED_GIF_UNSUPPORTED,
-                )
-            }
+            val isAnimated = requestedType == ImageOverlayType.GIF || isGif(mimeType, fileName)
+                || isAnimatedWebp(mimeType, fileName)
             val extension = normalizedExtension(mimeType, fileName)
             return OverlayAssetDecision(
                 accepted = true,
-                kind = OverlayAssetKind.STILL_IMAGE,
-                extension = extension ?: "img",
+                kind = if (isAnimated) OverlayAssetKind.ANIMATED_IMAGE else OverlayAssetKind.STILL_IMAGE,
+                extension = extension ?: if (isAnimated) "gif" else "img",
             )
+        }
+
+        private fun isAnimatedWebp(mimeType: String?, fileName: String?): Boolean {
+            val ext = fileName?.substringAfterLast('.', "")?.lowercase(Locale.US)
+            return ext == "webp" && mimeType?.contains("webp", ignoreCase = true) == true
         }
 
         private fun isGif(mimeType: String?, fileName: String?): Boolean {

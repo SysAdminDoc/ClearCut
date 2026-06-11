@@ -29,21 +29,18 @@ class OverlayAssetStoreTest {
     }
 
     @Test
-    fun decideImport_rejectsExplicitGifOverlayRequests() {
+    fun decideImport_acceptsGifOverlayAsAnimated() {
         val decision = OverlayAssetStore.decideImport(
             mimeType = "image/png",
             fileName = "sticker.png",
             requestedType = ImageOverlayType.GIF,
         )
-        assertFalse(decision.accepted)
-        assertEquals(
-            OverlayAssetRejectionReason.ANIMATED_GIF_UNSUPPORTED,
-            decision.rejectionReason,
-        )
+        assertTrue(decision.accepted)
+        assertEquals(OverlayAssetKind.ANIMATED_IMAGE, decision.kind)
     }
 
     @Test
-    fun decideImport_rejectsGifMimeOrExtension() {
+    fun decideImport_acceptsGifMimeOrExtensionAsAnimated() {
         val byMime = OverlayAssetStore.decideImport(
             mimeType = "image/gif",
             fileName = "sticker.png",
@@ -54,10 +51,10 @@ class OverlayAssetStoreTest {
             fileName = "sticker.GIF",
             requestedType = ImageOverlayType.IMAGE,
         )
-        assertFalse(byMime.accepted)
-        assertFalse(byExtension.accepted)
-        assertEquals(OverlayAssetRejectionReason.ANIMATED_GIF_UNSUPPORTED, byMime.rejectionReason)
-        assertEquals(OverlayAssetRejectionReason.ANIMATED_GIF_UNSUPPORTED, byExtension.rejectionReason)
+        assertTrue(byMime.accepted)
+        assertTrue(byExtension.accepted)
+        assertEquals(OverlayAssetKind.ANIMATED_IMAGE, byMime.kind)
+        assertEquals(OverlayAssetKind.ANIMATED_IMAGE, byExtension.kind)
     }
 
     @Test
