@@ -30,6 +30,7 @@ class ClipEditingDelegate(
     private val rebuildPlayerTimeline: () -> Unit,
     private val saveProject: () -> Unit,
     private val updatePreview: () -> Unit,
+    private val seekPreviewTo: (Long) -> Unit,
     private val recalculateDuration: (EditorState) -> EditorState,
     private val onClipAdded: ((clipId: String, uri: Uri) -> Unit)? = null
 ) {
@@ -47,6 +48,7 @@ class ClipEditingDelegate(
     private val recentDeletesMs = ArrayDeque<Long>()
     private val bulkDeleteWindowMs = 10_000L
     private val bulkDeleteThreshold = 3
+    private var lastTrimPreviewSeekMs: Long? = null
     // --- Add Clip ---
     fun addClipToTrack(uri: Uri, trackType: TrackType = TrackType.VIDEO) {
         scope.launch {
@@ -607,12 +609,16 @@ class ClipEditingDelegate(
             return
         }
         saveUndoState("Trim clip")
-        videoEngine.setScrubbingMode(true)
+        // Trim drags need live frame feedback at the in/out boundary. ExoPlayer's
+        // scrubbing optimization can hold the surface on a loading frame here, so
+        // leave normal decode enabled and avoid only the expensive timeline rebuild.
+        videoEngine.setScrubbingMode(false)
     }
 
     fun trimClip(clipId: String, newTrimStartMs: Long? = null, newTrimEndMs: Long? = null) {
         val targetIds = linkedClipIds(stateFlow.value.tracks, clipId)
         if (tracksContainLockedClip(targetIds)) return
+        var previewSeekMs: Long? = null
         stateFlow.update { state ->
             val tracks = state.tracks.map { track ->
                 val targetClipId = track.clips.firstOrNull { it.id in targetIds }?.id
@@ -627,17 +633,36 @@ class ClipEditingDelegate(
                     )
                 }
             }
-            recalculateDuration(state.copy(tracks = tracks))
+            val updatedState = recalculateDuration(state.copy(tracks = tracks))
+            val previewClip = updatedState.tracks
+                .asSequence()
+                .flatMap { it.clips.asSequence() }
+                .firstOrNull { it.id == clipId }
+            val frameStepMs = (1000L / updatedState.project.frameRate.coerceAtLeast(1))
+                .coerceAtLeast(1L)
+            previewSeekMs = when {
+                previewClip == null -> null
+                newTrimStartMs != null -> previewClip.timelineStartMs
+                newTrimEndMs != null -> (previewClip.timelineEndMs - frameStepMs)
+                    .coerceAtLeast(previewClip.timelineStartMs)
+                else -> null
+            }?.coerceIn(0L, updatedState.totalDurationMs.coerceAtLeast(0L))
+            updatedState
         }
+        lastTrimPreviewSeekMs = previewSeekMs
+        previewSeekMs?.let(seekPreviewTo)
         // rebuildPlayerTimeline() moved to endTrim() — trim fires at touch-event
         // rate during drag, and rebuilding ExoPlayer's MediaItem set on every
         // tick was the primary source of timeline clunkiness. beginTrim already
-        // sets scrubbingMode(true) so the player suppresses decode work mid-drag.
+        // keeps the preview pinned to the in/out frame without rebuilding the
+        // player timeline every tick.
     }
 
     fun endTrim() {
         videoEngine.setScrubbingMode(false)
         rebuildPlayerTimeline()
+        lastTrimPreviewSeekMs?.let(seekPreviewTo)
+        lastTrimPreviewSeekMs = null
         saveProject()
     }
 

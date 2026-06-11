@@ -235,21 +235,31 @@ fun EditorScreen(
     val isTrimToolActive = state.currentTool == EditorTool.TRIM
     val isTrimInteractionActive = isTrimToolActive || isTimelineTrimGestureActive
     val isBottomToolPanelExpanded = isToolPanelExpanded && !isTrimToolActive
+    val previewMinHeight = when {
+        adaptiveLayoutDecision.paneMode == AdaptiveEditorLayoutPolicy.PaneMode.TABLETOP_SPLIT -> 240.dp
+        adaptiveLayoutDecision.paneMode == AdaptiveEditorLayoutPolicy.PaneMode.THREE_PANE -> 220.dp
+        adaptiveLayoutDecision.paneMode == AdaptiveEditorLayoutPolicy.PaneMode.TWO_PANE -> 200.dp
+        isClipMode && isTrimToolActive -> 220.dp
+        isClipMode && isCompactEditorHeight -> 210.dp
+        isClipMode -> 230.dp
+        else -> 180.dp
+    }
     // Height available to the timeline after reserving the top bar (~64dp), a
-    // usable preview (~180dp), and the tool rail (96dp compact / 244dp with a
+    // usable preview, and the tool rail (96dp compact / 244dp with a
     // sub-menu open) — keeps a tall track stack from starving the preview and
     // keeps the fixed minimums below from overflowing short screens.
     val timelineHeightBudget = (
-        screenHeightDp.dp - 64.dp - 180.dp -
+        screenHeightDp.dp - 64.dp - previewMinHeight -
             (if (isBottomToolPanelExpanded) 244.dp else 96.dp)
         ).coerceAtLeast(160.dp)
     val timelineMinHeight = when {
         adaptiveLayoutDecision.paneMode == AdaptiveEditorLayoutPolicy.PaneMode.TABLETOP_SPLIT -> 280.dp
         adaptiveLayoutDecision.paneMode == AdaptiveEditorLayoutPolicy.PaneMode.THREE_PANE -> 280.dp
         adaptiveLayoutDecision.paneMode == AdaptiveEditorLayoutPolicy.PaneMode.TWO_PANE -> 252.dp
-        isClipMode && isTrimToolActive -> 300.dp
+        isClipMode && isTrimToolActive && isCompactEditorHeight -> 240.dp
+        isClipMode && isTrimToolActive -> 280.dp
         isClipMode && isBottomToolPanelExpanded -> 220.dp
-        isClipMode && isCompactEditorHeight -> 260.dp
+        isClipMode && isCompactEditorHeight -> 220.dp
         isClipMode -> 280.dp
         else -> 240.dp
     }.coerceAtMost(timelineHeightBudget)
@@ -257,10 +267,10 @@ fun EditorScreen(
         adaptiveLayoutDecision.paneMode == AdaptiveEditorLayoutPolicy.PaneMode.TABLETOP_SPLIT -> 380.dp
         adaptiveLayoutDecision.paneMode == AdaptiveEditorLayoutPolicy.PaneMode.THREE_PANE -> 420.dp
         adaptiveLayoutDecision.paneMode == AdaptiveEditorLayoutPolicy.PaneMode.TWO_PANE -> 360.dp
-        isClipMode && isTrimToolActive && isCompactEditorHeight -> 340.dp
-        isClipMode && isTrimToolActive -> 430.dp
+        isClipMode && isTrimToolActive && isCompactEditorHeight -> 300.dp
+        isClipMode && isTrimToolActive -> 360.dp
         isClipMode && isBottomToolPanelExpanded -> 260.dp
-        isClipMode && isCompactEditorHeight -> 360.dp
+        isClipMode && isCompactEditorHeight -> 280.dp
         isClipMode -> 390.dp
         else -> 330.dp
     }.coerceIn(timelineMinHeight, timelineHeightBudget)
@@ -608,6 +618,7 @@ fun EditorScreen(
             if (hasClips || hasOpenPanel) Box(
                 modifier = Modifier
                     .weight(1f)
+                    .heightIn(min = previewMinHeight)
                     .pointerInput(Unit) {
                         detectTapGestures(
                             onLongPress = { offset ->

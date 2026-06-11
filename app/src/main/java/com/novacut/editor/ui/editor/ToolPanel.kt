@@ -217,7 +217,7 @@ fun BottomToolArea(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(max = if (compactLocked) 88.dp else 236.dp)
+            .heightIn(max = if (compactLocked || subMenuItems == null) 88.dp else 236.dp)
     ) {
         // Sub-menu grid (slides up above tab bar)
         if (!compactLocked) {

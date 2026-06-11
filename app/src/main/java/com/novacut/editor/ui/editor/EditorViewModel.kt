@@ -523,7 +523,8 @@ class EditorViewModel @Inject constructor(
         mediaImportEngine = mediaImportEngine,
         scope = viewModelScope, saveUndoState = ::saveUndoState, showToast = ::showToast,
         rebuildPlayerTimeline = ::rebuildPlayerTimeline, saveProject = ::saveProject,
-        updatePreview = ::updatePreview, recalculateDuration = ::recalculateDuration,
+        updatePreview = ::updatePreview, seekPreviewTo = ::seekTo,
+        recalculateDuration = ::recalculateDuration,
         onClipAdded = { clipId, uri ->
             viewModelScope.launch(Dispatchers.IO) {
                 val (w, h) = videoEngine.getVideoResolution(uri)
