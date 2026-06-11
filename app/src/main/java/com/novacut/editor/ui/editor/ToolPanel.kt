@@ -176,7 +176,8 @@ fun BottomToolArea(
     onAction: (String) -> Unit,
     onEditTextOverlay: (String) -> Unit = {},
     onDeleteTextOverlay: (String) -> Unit = {},
-    editorMode: EditorMode = EditorMode.PRO
+    editorMode: EditorMode = EditorMode.PRO,
+    compactLocked: Boolean = false
 ) {
     val isClipMode = selectedClipId != null
 
@@ -192,12 +193,13 @@ fun BottomToolArea(
     var activeTabId by remember { mutableStateOf<String?>(null) }
 
     // Reset active tab when switching between project/clip mode
-    LaunchedEffect(isClipMode) {
+    LaunchedEffect(isClipMode, compactLocked) {
         activeTabId = null
     }
 
     // Resolve sub-menu for the currently active tab
     val subMenuItems: List<SubMenuItem>? = when {
+        compactLocked -> null
         !isClipMode && activeTabId == "text" -> textSubMenu
         !isClipMode && activeTabId == "project_tools" -> projectToolsSubMenu
         isClipMode && activeTabId == "edit" -> clipEditSubMenu
@@ -208,39 +210,45 @@ fun BottomToolArea(
         else -> null
     }
 
-    LaunchedEffect(subMenuItems != null) {
-        onExpandedChange(subMenuItems != null)
+    LaunchedEffect(subMenuItems != null, compactLocked) {
+        onExpandedChange(!compactLocked && subMenuItems != null)
     }
 
-    Column(modifier = modifier.fillMaxWidth()) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(max = if (compactLocked) 88.dp else 236.dp)
+    ) {
         // Sub-menu grid (slides up above tab bar)
-        AnimatedVisibility(
-            visible = subMenuItems != null,
-            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
-        ) {
-            subMenuItems?.let { items ->
-                Column {
-                    SubMenuGrid(
-                        items = items,
-                        onItemSelected = { itemId ->
-                            onAction(itemId)
-                            activeTabId = null
-                        },
-                        disabledIds = buildSet {
-                            if (!hasCopiedEffects) add("paste_fx")
-                            if (!isClipMode) {
-                                add("color_grade"); add("keyframes"); add("masks"); add("blend_mode")
+        if (!compactLocked) {
+            AnimatedVisibility(
+                visible = subMenuItems != null,
+                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
+            ) {
+                subMenuItems?.let { items ->
+                    Column {
+                        SubMenuGrid(
+                            items = items,
+                            onItemSelected = { itemId ->
+                                onAction(itemId)
+                                activeTabId = null
+                            },
+                            disabledIds = buildSet {
+                                if (!hasCopiedEffects) add("paste_fx")
+                                if (!isClipMode) {
+                                    add("color_grade"); add("keyframes"); add("masks"); add("blend_mode")
+                                }
                             }
-                        }
-                    )
-                    // Text overlay list when text tab active
-                    if (!isClipMode && activeTabId == "text" && textOverlays.isNotEmpty()) {
-                        TextOverlayList(
-                            overlays = textOverlays,
-                            onEdit = onEditTextOverlay,
-                            onDelete = onDeleteTextOverlay
                         )
+                        // Text overlay list when text tab active
+                        if (!isClipMode && activeTabId == "text" && textOverlays.isNotEmpty()) {
+                            TextOverlayList(
+                                overlays = textOverlays,
+                                onEdit = onEditTextOverlay,
+                                onDelete = onDeleteTextOverlay
+                            )
+                        }
                     }
                 }
             }
@@ -328,7 +336,7 @@ private fun BottomTabBar(
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 8.dp)
+                .padding(horizontal = 6.dp, vertical = 5.dp)
         ) {
             val fitAllTabs = tabs.size <= 6
             val compactItem = maxWidth < 390.dp
@@ -336,7 +344,7 @@ private fun BottomTabBar(
             if (fitAllTabs) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
                     tabs.forEach { tab ->
                         BottomTabBarItem(
@@ -424,12 +432,12 @@ private fun BottomTabBarItem(
 ) {
     val isBack = tab.id == "back"
     val tabLabel = if (tab.labelRes != 0) stringResource(tab.labelRes) else ""
-    val itemShape = RoundedCornerShape(18.dp)
+    val itemShape = RoundedCornerShape(16.dp)
     val iconShape = CircleShape
-    val iconBoxSize = if (compact) 36.dp else 38.dp
-    val iconSize = if (compact) 18.dp else 20.dp
-    val labelSlotHeight = if (compact) 24.dp else 26.dp
-    val itemHeight = if (compact) 66.dp else 70.dp
+    val iconBoxSize = if (compact) 32.dp else 34.dp
+    val iconSize = if (compact) 17.dp else 18.dp
+    val labelSlotHeight = if (compact) 18.dp else 20.dp
+    val itemHeight = if (compact) 58.dp else 62.dp
     val itemBorderColor by animateColorAsState(
         targetValue = when {
             isActive && !isBack -> Mocha.Mauve.copy(alpha = 0.22f)
@@ -486,7 +494,7 @@ private fun BottomTabBarItem(
             .height(itemHeight)
             .background(itemContainerColor)
             .border(BorderStroke(1.dp, itemBorderColor), itemShape)
-            .padding(vertical = 4.dp, horizontal = 4.dp),
+            .padding(vertical = 3.dp, horizontal = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
@@ -505,7 +513,7 @@ private fun BottomTabBarItem(
             )
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(3.dp))
         Box(
             modifier = Modifier.height(labelSlotHeight),
             contentAlignment = Alignment.TopCenter
@@ -513,11 +521,11 @@ private fun BottomTabBarItem(
             if (tabLabel.isNotEmpty()) {
                 Text(
                     text = tabLabel,
-                    fontSize = if (compact) 9.sp else 10.sp,
+                    fontSize = if (compact) 8.sp else 9.sp,
                     color = labelColor,
                     textAlign = TextAlign.Center,
                     maxLines = 2,
-                    lineHeight = if (compact) 11.sp else 12.sp,
+                    lineHeight = if (compact) 9.sp else 10.sp,
                     overflow = TextOverflow.Ellipsis
                 )
             }
@@ -534,11 +542,11 @@ private fun SubMenuGrid(
 ) {
     val itemsPerRow = 5
     val preferredTileWidth = 76.dp
-    val tileHeight = 84.dp
-    val tileShape = RoundedCornerShape(18.dp)
-    val iconBoxSize = 36.dp
-    val iconSize = 20.dp
-    val labelSlotHeight = 30.dp
+    val tileHeight = 74.dp
+    val tileShape = RoundedCornerShape(16.dp)
+    val iconBoxSize = 32.dp
+    val iconSize = 18.dp
+    val labelSlotHeight = 24.dp
     val rows = items.chunked(itemsPerRow)
 
     Surface(
@@ -548,9 +556,9 @@ private fun SubMenuGrid(
     ) {
         Column(
             modifier = Modifier
-                .heightIn(max = 200.dp)
+                .heightIn(max = 156.dp)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 16.dp)
+                .padding(horizontal = 12.dp, vertical = 10.dp)
         ) {
             Box(
                 modifier = Modifier
@@ -560,10 +568,10 @@ private fun SubMenuGrid(
                     .clip(RoundedCornerShape(10.dp))
                     .background(Mocha.Surface2.copy(alpha = 0.8f))
             )
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(10.dp))
             BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                 val tileWidth = minOf(preferredTileWidth, maxWidth / itemsPerRow)
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     rows.forEach { rowItems ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -592,7 +600,7 @@ private fun SubMenuGrid(
                                             ),
                                             tileShape
                                         )
-                                        .padding(horizontal = 8.dp, vertical = 8.dp)
+                                        .padding(horizontal = 8.dp, vertical = 7.dp)
                                         .alpha(if (isDisabled) 0.45f else 1f),
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
