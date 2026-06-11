@@ -367,7 +367,11 @@ data class AutoSaveState(
     val trackedObjects: List<com.novacut.editor.model.TrackedObject> = emptyList(),
     // R8.9: per-project AI usage ledger. This drives disclosure defaults
     // during export and survives restarts without involving telemetry.
-    val aiUsageLedger: List<AiUsageLedger.Entry> = emptyList()
+    val aiUsageLedger: List<AiUsageLedger.Entry> = emptyList(),
+    // v3.74.75: project-level media asset manifest. Clips still carry sourceUri
+    // as the compatibility fallback while new saves can diagnose/repair assets
+    // through stable ids.
+    val mediaAssets: List<ProjectMediaAsset> = emptyList()
 ) {
     fun serialize(): String {
         val json = JSONObject().apply {
@@ -381,6 +385,9 @@ data class AutoSaveState(
             put("timestamp", timestamp)
             put("playheadMs", playheadMs)
             put("tracks", serializeTracks(tracks))
+            if (mediaAssets.isNotEmpty()) {
+                put("mediaAssets", serializeMediaAssets(mediaAssets))
+            }
             put("textOverlays", serializeTextOverlays(textOverlays))
             if (chapterMarkers.isNotEmpty()) {
                 put("chapterMarkers", JSONArray().apply {
@@ -532,6 +539,7 @@ data class AutoSaveState(
         private const val MAX_DRAWING_POINTS_PER_PATH = 4_096
         private const val MAX_BEAT_MARKERS = 20_000
         private const val MAX_AI_USAGE_ENTRIES = 2_000
+        private const val MAX_MEDIA_ASSETS = 5_000
         private const val MAX_TRACKED_OBJECTS = 1_000
         private const val MAX_TRACKED_OBJECT_KEYFRAMES = 10_000
         private const val MAX_TEXT_OVERLAYS = 5_000
@@ -796,6 +804,7 @@ data class AutoSaveState(
                     Log.w(TAG, "Failed to deserialize tracked object $i", e); null
                 }
             }
+            val mediaAssets = deserializeMediaAssets(json.optJSONArray("mediaAssets") ?: JSONArray())
             return AutoSaveState(
                 projectId = json.optString("projectId", ""),
                 timestamp = json.optLong("timestamp", System.currentTimeMillis()),
@@ -809,8 +818,61 @@ data class AutoSaveState(
                 beatMarkers = beatMarkers,
                 transcript = transcript,
                 trackedObjects = trackedObjects,
-                aiUsageLedger = aiUsageLedger
+                aiUsageLedger = aiUsageLedger,
+                mediaAssets = mediaAssets
             )
+        }
+
+        private fun serializeMediaAssets(mediaAssets: List<ProjectMediaAsset>): JSONArray {
+            return JSONArray().apply {
+                mediaAssets.forEach { asset ->
+                    put(JSONObject().apply {
+                        put("assetId", asset.assetId)
+                        put("managedUri", asset.managedUri)
+                        put("originalUri", asset.originalUri)
+                        put("mediaType", asset.mediaType)
+                        asset.displayName?.let { put("displayName", it) }
+                        asset.mimeType?.let { put("mimeType", it) }
+                        put("sizeBytes", asset.sizeBytes)
+                        asset.durationMs?.let { put("durationMs", it) }
+                        asset.width?.let { put("width", it) }
+                        asset.height?.let { put("height", it) }
+                        asset.quickFingerprint?.let { put("quickFingerprint", it) }
+                        put("importStatus", asset.importStatus)
+                        put("lastVerifiedAtEpochMs", asset.lastVerifiedAtEpochMs)
+                    })
+                }
+            }
+        }
+
+        private fun deserializeMediaAssets(arr: JSONArray): List<ProjectMediaAsset> {
+            return (0 until cappedArrayLength(arr, MAX_MEDIA_ASSETS, "media assets")).mapNotNull { i ->
+                try {
+                    val asset = arr.getJSONObject(i)
+                    val assetId = asset.optString("assetId")
+                    val managedUri = asset.optString("managedUri")
+                    val originalUri = asset.optString("originalUri")
+                    if (assetId.isBlank() || managedUri.isBlank()) return@mapNotNull null
+                    ProjectMediaAsset(
+                        assetId = assetId,
+                        managedUri = managedUri,
+                        originalUri = originalUri.ifBlank { managedUri },
+                        displayName = asset.optString("displayName", "").takeIf { it.isNotEmpty() },
+                        mediaType = asset.optString("mediaType", "video"),
+                        mimeType = asset.optString("mimeType", "").takeIf { it.isNotEmpty() },
+                        sizeBytes = asset.optLong("sizeBytes", 0L).coerceAtLeast(0L),
+                        durationMs = asset.optLong("durationMs", -1L).takeIf { it >= 0L },
+                        width = asset.optInt("width", 0).takeIf { it > 0 },
+                        height = asset.optInt("height", 0).takeIf { it > 0 },
+                        quickFingerprint = asset.optString("quickFingerprint", "").takeIf { it.isNotEmpty() },
+                        importStatus = asset.optString("importStatus", "unknown"),
+                        lastVerifiedAtEpochMs = asset.optLong("lastVerifiedAtEpochMs", 0L).coerceAtLeast(0L)
+                    )
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to deserialize media asset $i", e)
+                    null
+                }
+            }
         }
 
         // --- Track serialization ---
@@ -857,6 +919,7 @@ data class AutoSaveState(
                 Log.w(TAG, "serializeClip: compound nesting depth exceeded for ${clip.id}; truncating")
                 return JSONObject().apply {
                     put("id", clip.id)
+                    clip.assetId?.let { put("assetId", it) }
                     put("sourceUri", clip.sourceUri.toString())
                     put("sourceDurationMs", clip.sourceDurationMs)
                     put("trimStartMs", clip.trimStartMs)
@@ -865,6 +928,7 @@ data class AutoSaveState(
             }
             return JSONObject().apply {
                 put("id", clip.id)
+                clip.assetId?.let { put("assetId", it) }
                 put("sourceUri", clip.sourceUri.toString())
                 put("sourceDurationMs", clip.sourceDurationMs)
                 put("timelineStartMs", clip.timelineStartMs)
@@ -1322,6 +1386,7 @@ data class AutoSaveState(
             }
             return Clip(
                 id = json.optString("id", java.util.UUID.randomUUID().toString()),
+                assetId = json.optString("assetId", "").takeIf { it.isNotEmpty() },
                 sourceUri = parsedSourceUri,
                 sourceDurationMs = sourceDurationMs.coerceAtLeast(trimEndMs),
                 timelineStartMs = json.optLong("timelineStartMs", 0L).coerceAtLeast(0L),

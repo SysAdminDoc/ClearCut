@@ -138,6 +138,7 @@ private fun finiteFraction(value: Float, fallback: Float): Float {
 @Immutable
 data class Clip(
     val id: String = UUID.randomUUID().toString(),
+    val assetId: String? = null,
     val sourceUri: Uri,
     val sourceDurationMs: Long,
     val timelineStartMs: Long,

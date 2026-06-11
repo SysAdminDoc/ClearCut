@@ -60,7 +60,9 @@ import com.novacut.editor.engine.OverlayAssetStore
 import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.engine.VoiceoverRecorderEngine
 import com.novacut.editor.engine.TemplateManager
+import com.novacut.editor.engine.attachMediaAssetIdsToTracks
 import com.novacut.editor.engine.backfillManagedMediaAssetSidecars
+import com.novacut.editor.engine.buildProjectMediaAssets
 import com.novacut.editor.engine.sanitizeFileName
 import com.novacut.editor.engine.writeUtf8TextAtomically
 import com.novacut.editor.engine.db.ProjectDao
@@ -4323,9 +4325,11 @@ class EditorViewModel @Inject constructor(
         state: EditorState = _state.value,
         projectId: String = state.project.id
     ): AutoSaveState {
+        val mediaAssets = buildProjectMediaAssets(appContext, state.tracks, state.imageOverlays)
+        val tracks = attachMediaAssetIdsToTracks(state.tracks, mediaAssets)
         return AutoSaveState(
             projectId = projectId,
-            tracks = state.tracks,
+            tracks = tracks,
             textOverlays = state.textOverlays,
             imageOverlays = state.imageOverlays,
             timelineMarkers = state.timelineMarkers,
@@ -4335,7 +4339,8 @@ class EditorViewModel @Inject constructor(
             beatMarkers = state.beatMarkers,
             transcript = state.v369.transcript,
             trackedObjects = state.trackedObjects,
-            aiUsageLedger = state.aiUsageLedger
+            aiUsageLedger = state.aiUsageLedger,
+            mediaAssets = mediaAssets
         )
     }
 

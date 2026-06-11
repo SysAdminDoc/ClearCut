@@ -240,6 +240,90 @@ class AutoSaveStateTest {
     }
 
     @Test
+    fun serialize_writesMediaAssetsAndClipAssetIds() {
+        val state = AutoSaveState(
+            projectId = "project",
+            mediaAssets = listOf(
+                ProjectMediaAsset(
+                    assetId = "asset-media",
+                    managedUri = "file:///managed/clip.mp4",
+                    originalUri = "content://source/clip",
+                    displayName = "clip.mp4",
+                    mediaType = "video",
+                    mimeType = "video/mp4",
+                    sizeBytes = 1234L,
+                    durationMs = 5000L,
+                    width = 1920,
+                    height = 1080,
+                    quickFingerprint = "fingerprint",
+                    importStatus = "ready",
+                    lastVerifiedAtEpochMs = 99L
+                )
+            ),
+            tracks = listOf(
+                Track(
+                    type = TrackType.VIDEO,
+                    index = 0,
+                    clips = listOf(
+                        Clip(
+                            assetId = "asset-media",
+                            sourceUri = FakeUri,
+                            sourceDurationMs = 5_000L,
+                            timelineStartMs = 0L
+                        )
+                    )
+                )
+            )
+        )
+
+        val root = JSONObject(state.serialize())
+        val asset = root.getJSONArray("mediaAssets").getJSONObject(0)
+        val clip = root.getJSONArray("tracks")
+            .getJSONObject(0)
+            .getJSONArray("clips")
+            .getJSONObject(0)
+
+        assertEquals("asset-media", asset.getString("assetId"))
+        assertEquals("file:///managed/clip.mp4", asset.getString("managedUri"))
+        assertEquals("ready", asset.getString("importStatus"))
+        assertEquals("asset-media", clip.getString("assetId"))
+    }
+
+    @Test
+    fun deserialize_restoresMediaAssetsAndClipAssetIds() {
+        val root = JSONObject().apply {
+            put("version", AutoSaveState.FORMAT_VERSION)
+            put("projectId", "project")
+            put("mediaAssets", JSONArray().put(JSONObject().apply {
+                put("assetId", "asset-media")
+                put("managedUri", "file:///managed/clip.mp4")
+                put("originalUri", "content://source/clip")
+                put("mediaType", "video")
+                put("importStatus", "ready")
+            }))
+            put("tracks", JSONArray().put(JSONObject().apply {
+                put("type", TrackType.VIDEO.name)
+                put("index", 0)
+                put("clips", JSONArray().put(JSONObject().apply {
+                    put("id", "clip")
+                    put("assetId", "asset-media")
+                    put("sourceUri", FakeUri.toString())
+                    put("sourceDurationMs", 5_000L)
+                    put("trimStartMs", 0L)
+                    put("trimEndMs", 5_000L)
+                    put("effects", JSONArray())
+                    put("keyframes", JSONArray())
+                }))
+            }))
+        }
+
+        val state = AutoSaveState.deserialize(root.toString(), uriParser = { FakeUri })
+
+        assertEquals("asset-media", state.mediaAssets.single().assetId)
+        assertEquals("asset-media", state.tracks.single().clips.single().assetId)
+    }
+
+    @Test
     fun deserialize_capsPathologicalRecoveredCollections() {
         val textOverlays = JSONArray().apply {
             repeat(5_010) { index ->

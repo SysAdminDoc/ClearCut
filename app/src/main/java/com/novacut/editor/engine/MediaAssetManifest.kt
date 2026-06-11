@@ -6,6 +6,8 @@ import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.webkit.MimeTypeMap
 import com.novacut.editor.model.Clip
+import com.novacut.editor.model.ImageOverlay
+import com.novacut.editor.model.Track
 import com.novacut.editor.model.TrackType
 import org.json.JSONObject
 import java.io.File
@@ -25,6 +27,22 @@ internal data class MediaAssetReference(
 internal data class ManagedMediaAssetBackfillResult(
     val referencesScanned: Int,
     val sidecarsCreated: Int
+)
+
+data class ProjectMediaAsset(
+    val assetId: String,
+    val managedUri: String,
+    val originalUri: String,
+    val displayName: String?,
+    val mediaType: String,
+    val mimeType: String?,
+    val sizeBytes: Long,
+    val durationMs: Long?,
+    val width: Int?,
+    val height: Int?,
+    val quickFingerprint: String?,
+    val importStatus: String,
+    val lastVerifiedAtEpochMs: Long
 )
 
 internal data class MediaAssetRecord(
@@ -101,8 +119,15 @@ internal fun mediaAssetSidecarFileFor(mediaFile: File): File {
 internal fun isMediaAssetSidecar(file: File): Boolean = file.name.endsWith(".asset.json")
 
 internal fun collectMediaAssetReferences(state: AutoSaveState): List<MediaAssetReference> {
+    return collectMediaAssetReferences(state.tracks, state.imageOverlays)
+}
+
+internal fun collectMediaAssetReferences(
+    tracks: List<Track>,
+    imageOverlays: List<ImageOverlay>
+): List<MediaAssetReference> {
     val references = mutableListOf<MediaAssetReference>()
-    state.tracks.forEach { track ->
+    tracks.forEach { track ->
         val mediaType = when (track.type) {
             TrackType.AUDIO -> "audio"
             else -> "video"
@@ -111,7 +136,7 @@ internal fun collectMediaAssetReferences(state: AutoSaveState): List<MediaAssetR
             collectClipMediaAssetReferences(clip, mediaType, references)
         }
     }
-    state.imageOverlays.forEach { overlay ->
+    imageOverlays.forEach { overlay ->
         references += MediaAssetReference(overlay.sourceUri, "image")
     }
     return references.distinctBy { it.uri.toString() }
@@ -138,6 +163,37 @@ internal fun backfillManagedMediaAssetSidecars(
     )
 }
 
+internal fun buildProjectMediaAssets(
+    context: Context,
+    state: AutoSaveState
+): List<ProjectMediaAsset> {
+    return buildProjectMediaAssets(context, state.tracks, state.imageOverlays)
+}
+
+internal fun buildProjectMediaAssets(
+    context: Context,
+    tracks: List<Track>,
+    imageOverlays: List<ImageOverlay>
+): List<ProjectMediaAsset> {
+    val managedDir = managedMediaDir(context)
+    return collectMediaAssetReferences(tracks, imageOverlays).map { reference ->
+        projectMediaAssetForReference(context, managedDir, reference)
+    }
+}
+
+internal fun attachMediaAssetIdsToTracks(
+    tracks: List<Track>,
+    mediaAssets: List<ProjectMediaAsset>
+): List<Track> {
+    if (mediaAssets.isEmpty()) return tracks
+    val assetIdsByUri = mediaAssets
+        .flatMap { asset -> listOf(asset.managedUri to asset.assetId, asset.originalUri to asset.assetId) }
+        .toMap()
+    return tracks.map { track ->
+        track.copy(clips = track.clips.map { clip -> attachMediaAssetIdToClip(clip, assetIdsByUri) })
+    }
+}
+
 internal fun quickMediaAssetFingerprint(file: File): String? {
     if (!file.isFile || file.length() <= 0L) return null
     val digest = MessageDigest.getInstance("SHA-256")
@@ -152,6 +208,17 @@ internal fun quickMediaAssetFingerprint(file: File): String? {
     return digest.digest().joinToString(separator = "") { "%02x".format(it) }
 }
 
+private fun attachMediaAssetIdToClip(
+    clip: Clip,
+    assetIdsByUri: Map<String, String>
+): Clip {
+    val assetId = clip.assetId ?: assetIdsByUri[clip.sourceUri.toString()]
+    val children = clip.compoundClips.map { child ->
+        attachMediaAssetIdToClip(child, assetIdsByUri)
+    }
+    return clip.copy(assetId = assetId, compoundClips = children)
+}
+
 private fun collectClipMediaAssetReferences(
     clip: Clip,
     mediaType: String,
@@ -163,6 +230,90 @@ private fun collectClipMediaAssetReferences(
     }
 }
 
+private fun projectMediaAssetForReference(
+    context: Context,
+    managedDir: File,
+    reference: MediaAssetReference
+): ProjectMediaAsset {
+    val managedFile = managedMediaFileForReference(reference.uri, managedDir)
+    if (managedFile != null) {
+        val sidecar = mediaAssetSidecarFileFor(managedFile)
+        val sidecarAsset = runCatching {
+            if (sidecar.isFile) projectMediaAssetFromJson(JSONObject(sidecar.readText(Charsets.UTF_8))) else null
+        }.getOrNull()
+        if (sidecarAsset != null) return sidecarAsset
+
+        val record = buildMediaAssetRecord(
+            context = context,
+            managedFile = managedFile,
+            managedUri = reference.uri,
+            originalUri = reference.uri,
+            mediaType = reference.mediaType,
+            importedAtEpochMs = managedFile.lastModified().takeIf { it > 0L } ?: System.currentTimeMillis()
+        )
+        if (record != null) return record.toProjectMediaAsset()
+    }
+
+    return ProjectMediaAsset(
+        assetId = assetIdForUri(reference.uri),
+        managedUri = reference.uri.toString(),
+        originalUri = reference.uri.toString(),
+        displayName = reference.uri.lastPathSegment,
+        mediaType = reference.mediaType,
+        mimeType = null,
+        sizeBytes = managedFile?.length() ?: 0L,
+        durationMs = null,
+        width = null,
+        height = null,
+        quickFingerprint = null,
+        importStatus = if (reference.uri.scheme == "file") "missing" else "external",
+        lastVerifiedAtEpochMs = System.currentTimeMillis()
+    )
+}
+
+private fun projectMediaAssetFromJson(json: JSONObject): ProjectMediaAsset {
+    return ProjectMediaAsset(
+        assetId = json.optString("assetId"),
+        managedUri = json.optString("managedUri"),
+        originalUri = json.optString("originalUri"),
+        displayName = json.optNullableString("displayName"),
+        mediaType = json.optString("mediaType", "video"),
+        mimeType = json.optNullableString("mimeType"),
+        sizeBytes = json.optLong("sizeBytes", 0L).coerceAtLeast(0L),
+        durationMs = json.optNullableLong("durationMs"),
+        width = json.optNullableInt("width"),
+        height = json.optNullableInt("height"),
+        quickFingerprint = json.optNullableString("quickFingerprint"),
+        importStatus = json.optString("importStatus", "ready"),
+        lastVerifiedAtEpochMs = json.optLong("lastVerifiedAtEpochMs", System.currentTimeMillis())
+    )
+}
+
+private fun MediaAssetRecord.toProjectMediaAsset(): ProjectMediaAsset {
+    return ProjectMediaAsset(
+        assetId = assetId,
+        managedUri = managedUri,
+        originalUri = originalUri,
+        displayName = displayName,
+        mediaType = mediaType,
+        mimeType = mimeType,
+        sizeBytes = sizeBytes,
+        durationMs = durationMs,
+        width = width,
+        height = height,
+        quickFingerprint = quickFingerprint,
+        importStatus = "ready",
+        lastVerifiedAtEpochMs = lastVerifiedAtEpochMs
+    )
+}
+
+private fun assetIdForUri(uri: Uri): String {
+    val digest = MessageDigest.getInstance("SHA-256")
+        .digest(uri.toString().toByteArray(Charsets.UTF_8))
+        .joinToString(separator = "") { "%02x".format(it) }
+    return "asset-${digest.take(24)}"
+}
+
 private fun managedMediaFileForReference(uri: Uri, managedDir: File): File? {
     if (uri.scheme != "file") return null
     val path = uri.path ?: return null
@@ -171,6 +322,21 @@ private fun managedMediaFileForReference(uri: Uri, managedDir: File): File? {
     if (!file.isFile || file.length() <= 0L) return null
     if (!file.toPath().startsWith(root.toPath())) return null
     return file
+}
+
+private fun JSONObject.optNullableString(name: String): String? {
+    if (!has(name) || isNull(name)) return null
+    return optString(name).takeIf { it.isNotEmpty() }
+}
+
+private fun JSONObject.optNullableLong(name: String): Long? {
+    if (!has(name) || isNull(name)) return null
+    return optLong(name).takeIf { it >= 0L }
+}
+
+private fun JSONObject.optNullableInt(name: String): Int? {
+    if (!has(name) || isNull(name)) return null
+    return optInt(name).takeIf { it > 0 }
 }
 
 private fun buildMediaAssetRecord(

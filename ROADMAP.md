@@ -8,7 +8,7 @@ Active roadmap for forward-looking work. Shipped work is in
 [RESEARCH.md](RESEARCH.md), and detailed historical plans are
 archived under [docs/archive](docs/archive/).
 
-Current version: **v3.74.74** (`versionCode` 211). Last consolidated:
+Current version: **v3.74.75** (`versionCode` 212). Last consolidated:
 2026-06-11.
 
 > Last researched: Cycle 26 - 2026-06-06.
@@ -145,6 +145,9 @@ v3.74.74 continued the media durability lane by lazily backfilling missing
 managed-media asset sidecars after autosave recovery opens existing projects,
 including nested compound clips and image overlays while leaving external
 content URIs untouched for the later relink/repair flow.
+v3.74.75 added the first project-level media asset manifest to autosave JSON and
+optional `assetId` fields on clips, while preserving `sourceUri` as the
+compatibility fallback for older saves and current playback/export paths.
 
 ## Current State
 
@@ -2656,6 +2659,9 @@ move.
   older autosaves/archives. Acceptance: saved projects can reopen without
   needing the original picker grant, and project JSON contains enough metadata
   to diagnose missing assets without touching timeline clips.
+  Progress: v3.74.75 writes a top-level autosave `mediaAssets` manifest and
+  persists optional clip `assetId` values. Remaining work: route preview/export
+  resolution through asset ids and add archive/Room migration coverage.
 
 - [ ] P1 — Add a project-level repair/relink flow before preview/export.
   Verify every referenced asset when opening a project and before playback or
