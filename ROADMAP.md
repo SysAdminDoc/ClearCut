@@ -8,7 +8,7 @@ Active roadmap for forward-looking work. Shipped work is in
 [RESEARCH.md](RESEARCH.md), and detailed historical plans are
 archived under [docs/archive](docs/archive/).
 
-Current version: **v3.74.73** (`versionCode` 210). Last consolidated:
+Current version: **v3.74.74** (`versionCode` 211). Last consolidated:
 2026-06-11.
 
 > Last researched: Cycle 26 - 2026-06-06.
@@ -141,6 +141,10 @@ asset sidecar for each new app-owned import/camera capture, including stable
 asset id, original/managed URI, type, MIME, size, duration/dimensions when
 available, import status, and a cheap content fingerprint for later background
 hash/dedupe work.
+v3.74.74 continued the media durability lane by lazily backfilling missing
+managed-media asset sidecars after autosave recovery opens existing projects,
+including nested compound clips and image overlays while leaving external
+content URIs untouched for the later relink/repair flow.
 
 ## Current State
 
@@ -2643,7 +2647,8 @@ move.
   original/managed URI, media type, MIME, size, duration/dimensions when
   probeable, import/verify timestamps, and a cheap fingerprint. Cleanup deletes
   sidecars with their media and ignores sidecars during orphan sweeps.
-  Next: make existing project opens backfill sidecars lazily.
+  v3.74.74 also backfills missing sidecars lazily when existing autosaved
+  projects reopen.
 
 - [ ] P1 — Promote `MediaAsset` into the project model and persistence layer.
   Add an asset table/manifest keyed by stable asset id. Clips should migrate to

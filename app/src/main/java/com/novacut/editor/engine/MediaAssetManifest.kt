@@ -5,6 +5,8 @@ import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.webkit.MimeTypeMap
+import com.novacut.editor.model.Clip
+import com.novacut.editor.model.TrackType
 import org.json.JSONObject
 import java.io.File
 import java.io.RandomAccessFile
@@ -14,6 +16,16 @@ import java.util.Locale
 private const val MEDIA_ASSET_TAG = "MediaAssetManifest"
 private const val MEDIA_ASSET_SCHEMA_VERSION = 1
 private const val FINGERPRINT_WINDOW_BYTES = 1024 * 1024
+
+internal data class MediaAssetReference(
+    val uri: Uri,
+    val mediaType: String
+)
+
+internal data class ManagedMediaAssetBackfillResult(
+    val referencesScanned: Int,
+    val sidecarsCreated: Int
+)
 
 internal data class MediaAssetRecord(
     val assetId: String,
@@ -88,6 +100,44 @@ internal fun mediaAssetSidecarFileFor(mediaFile: File): File {
 
 internal fun isMediaAssetSidecar(file: File): Boolean = file.name.endsWith(".asset.json")
 
+internal fun collectMediaAssetReferences(state: AutoSaveState): List<MediaAssetReference> {
+    val references = mutableListOf<MediaAssetReference>()
+    state.tracks.forEach { track ->
+        val mediaType = when (track.type) {
+            TrackType.AUDIO -> "audio"
+            else -> "video"
+        }
+        track.clips.forEach { clip ->
+            collectClipMediaAssetReferences(clip, mediaType, references)
+        }
+    }
+    state.imageOverlays.forEach { overlay ->
+        references += MediaAssetReference(overlay.sourceUri, "image")
+    }
+    return references.distinctBy { it.uri.toString() }
+}
+
+internal fun backfillManagedMediaAssetSidecars(
+    context: Context,
+    state: AutoSaveState
+): ManagedMediaAssetBackfillResult {
+    val references = collectMediaAssetReferences(state)
+    val managedDir = managedMediaDir(context)
+    var created = 0
+    references.forEach { reference ->
+        val file = managedMediaFileForReference(reference.uri, managedDir) ?: return@forEach
+        if (!mediaAssetSidecarFileFor(file).isFile &&
+            writeManagedMediaAssetSidecar(context, reference.uri, reference.uri, reference.mediaType)
+        ) {
+            created++
+        }
+    }
+    return ManagedMediaAssetBackfillResult(
+        referencesScanned = references.size,
+        sidecarsCreated = created
+    )
+}
+
 internal fun quickMediaAssetFingerprint(file: File): String? {
     if (!file.isFile || file.length() <= 0L) return null
     val digest = MessageDigest.getInstance("SHA-256")
@@ -100,6 +150,27 @@ internal fun quickMediaAssetFingerprint(file: File): String? {
         }
     }
     return digest.digest().joinToString(separator = "") { "%02x".format(it) }
+}
+
+private fun collectClipMediaAssetReferences(
+    clip: Clip,
+    mediaType: String,
+    references: MutableList<MediaAssetReference>
+) {
+    references += MediaAssetReference(clip.sourceUri, mediaType)
+    clip.compoundClips.forEach { child ->
+        collectClipMediaAssetReferences(child, mediaType, references)
+    }
+}
+
+private fun managedMediaFileForReference(uri: Uri, managedDir: File): File? {
+    if (uri.scheme != "file") return null
+    val path = uri.path ?: return null
+    val file = runCatching { File(path).canonicalFile }.getOrNull() ?: return null
+    val root = runCatching { managedDir.canonicalFile }.getOrNull() ?: return null
+    if (!file.isFile || file.length() <= 0L) return null
+    if (!file.toPath().startsWith(root.toPath())) return null
+    return file
 }
 
 private fun buildMediaAssetRecord(

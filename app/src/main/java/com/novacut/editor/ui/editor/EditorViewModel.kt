@@ -60,6 +60,7 @@ import com.novacut.editor.engine.OverlayAssetStore
 import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.engine.VoiceoverRecorderEngine
 import com.novacut.editor.engine.TemplateManager
+import com.novacut.editor.engine.backfillManagedMediaAssetSidecars
 import com.novacut.editor.engine.sanitizeFileName
 import com.novacut.editor.engine.writeUtf8TextAtomically
 import com.novacut.editor.engine.db.ProjectDao
@@ -894,11 +895,24 @@ class EditorViewModel @Inject constructor(
             rebuildPlayerTimeline()
         }
         preloadVisibleWaveforms(_state.value)
+        backfillRecoveredManagedMediaAssets(recovery)
         // Restored content may have arrived AFTER the timeline laid out with
         // zero clips. In that race the first setTimelineWidth call saw an
         // empty project and skipped the fit. Fire now so the user opens a
         // restored project to the whole timeline framed, not a tiny window.
         requestInitialFitIfNeeded()
+    }
+
+    private fun backfillRecoveredManagedMediaAssets(recovery: AutoSaveState) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = backfillManagedMediaAssetSidecars(appContext, recovery)
+            if (result.sidecarsCreated > 0) {
+                Log.i(
+                    "EditorViewModel",
+                    "Backfilled ${result.sidecarsCreated} media asset sidecar(s) from ${result.referencesScanned} restored reference(s)"
+                )
+            }
+        }
     }
 
     private fun applyAutoSaveSettings(settings: AppSettings? = latestSettings) {

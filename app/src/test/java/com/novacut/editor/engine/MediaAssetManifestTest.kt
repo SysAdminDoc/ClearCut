@@ -1,5 +1,12 @@
 package com.novacut.editor.engine
 
+import android.net.FakeUri
+import android.net.SecondFakeUri
+import android.net.TestUri
+import com.novacut.editor.model.Clip
+import com.novacut.editor.model.ImageOverlay
+import com.novacut.editor.model.Track
+import com.novacut.editor.model.TrackType
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -70,5 +77,54 @@ class MediaAssetManifestTest {
         assertTrue(json.has("sha256"))
         assertEquals("pending", json.getString("hashStatus"))
         assertEquals("sha256:size:first-last-1m", json.getString("fingerprintAlgorithm"))
+    }
+
+    @Test
+    fun collectMediaAssetReferencesIncludesNestedClipsAndImageOverlays() {
+        val nestedUri = SecondFakeUri as android.net.Uri
+        val overlayUri = TestUri(
+            raw = "content://overlay/sticker.png",
+            schemeValue = "content",
+            segment = "sticker.png"
+        )
+        val state = AutoSaveState(
+            projectId = "project",
+            tracks = listOf(
+                Track(
+                    type = TrackType.VIDEO,
+                    index = 0,
+                    clips = listOf(
+                        Clip(
+                            sourceUri = FakeUri,
+                            sourceDurationMs = 1000L,
+                            timelineStartMs = 0L,
+                            isCompound = true,
+                            compoundClips = listOf(
+                                Clip(
+                                    sourceUri = nestedUri,
+                                    sourceDurationMs = 500L,
+                                    timelineStartMs = 0L
+                                )
+                            )
+                        )
+                    )
+                )
+            ),
+            imageOverlays = listOf(
+                ImageOverlay(
+                    sourceUri = overlayUri,
+                    startTimeMs = 0L,
+                    endTimeMs = 1000L
+                )
+            )
+        )
+
+        val references = collectMediaAssetReferences(state)
+
+        assertEquals(
+            listOf(FakeUri.toString(), nestedUri.toString(), overlayUri.toString()),
+            references.map { it.uri.toString() }
+        )
+        assertEquals(listOf("video", "video", "image"), references.map { it.mediaType })
     }
 }
