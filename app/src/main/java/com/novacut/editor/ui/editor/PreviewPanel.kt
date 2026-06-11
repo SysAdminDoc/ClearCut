@@ -256,33 +256,6 @@ fun PreviewPanel(
                             }
                         }
 
-                        if (!showGapState) {
-                            Surface(
-                                color = Mocha.Midnight.copy(alpha = 0.72f),
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier
-                                    .align(Alignment.TopStart)
-                                    .padding(10.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(8.dp)
-                                            .background(Mocha.Rosewater, CircleShape)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = stringResource(R.string.preview_live),
-                                        color = Mocha.Text,
-                                        style = MaterialTheme.typography.labelMedium
-                                    )
-                                }
-                            }
-                        }
-
                         if (showScopesButton && totalDurationMs > 0 && !showGapState) {
                             Surface(
                                 color = Mocha.Midnight.copy(alpha = 0.72f),

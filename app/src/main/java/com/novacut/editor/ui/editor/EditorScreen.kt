@@ -1324,14 +1324,15 @@ private fun EditorTopBar(
 
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                    verticalArrangement = Arrangement.spacedBy(0.dp)
                 ) {
                     Text(
                         text = projectName,
                         color = Mocha.Text,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleMedium.copy(lineHeight = 20.sp),
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.offset(y = 7.dp)
                     )
                     Surface(
                         onClick = onToggleEditorMode,
