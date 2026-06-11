@@ -1,0 +1,4 @@
+- APK size budget gate
+- Added a committed APK size baseline and checker with a 2 MB per-output growth allowance for debug, release, and androidTest APKs.
+- Wired the size-budget self-test and check into CI before Play listing and release publication steps.
+- Documented the deliberate baseline refresh workflow in README.

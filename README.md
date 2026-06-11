@@ -356,6 +356,14 @@ python scripts\write_release_checksums.py --check
 Get-FileHash app\build\outputs\apk\release\app-release.apk -Algorithm SHA256
 ```
 
+### APK Size Budget
+CI checks debug, release, and androidTest APK sizes against `scripts/apk_size_baseline.json` with a 2 MB per-output growth allowance. After an intentional dependency or asset-size change, refresh the baseline from a verified build:
+
+```powershell
+python scripts\check_apk_size.py --update-baseline
+python scripts\check_apk_size.py
+```
+
 ### Dependencies
 Key external dependencies currently in `build.gradle.kts`:
 

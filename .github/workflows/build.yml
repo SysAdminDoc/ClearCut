@@ -53,6 +53,11 @@ jobs:
       - name: Verify release metadata
         run: python3 scripts/verify_release_artifacts.py
 
+      - name: Verify APK size budget
+        run: |
+          python3 scripts/check_apk_size.py --self-test
+          python3 scripts/check_apk_size.py
+
       - name: Verify Play listing assets
         run: python3 scripts/validate_play_listing_assets.py
 

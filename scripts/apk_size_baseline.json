@@ -1,0 +1,15 @@
+{
+  "maxGrowthBytes": 2097152,
+  "outputs": {
+    "androidTest/debug/app-debug-androidTest.apk": {
+      "baselineBytes": 2928297
+    },
+    "debug/app-debug.apk": {
+      "baselineBytes": 439621480
+    },
+    "release/app-release.apk": {
+      "baselineBytes": 417960729
+    }
+  },
+  "schema": "com.novacut.apk-size-budget.v1"
+}
