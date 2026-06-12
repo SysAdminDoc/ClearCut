@@ -50,6 +50,46 @@ class MediaHealthTest {
     }
 
     @Test
+    fun analyzeBlocksEmptyManagedLocalMedia() {
+        withTempMedia("empty.mp4", bytes = ByteArray(0)) { media ->
+            val uri = fileUri(media)
+            val state = stateWithClip(
+                clipUri = uri,
+                clipAssetId = "asset-empty",
+                asset = asset(assetId = "asset-empty", managedUri = uri.toString())
+            )
+
+            val report = MediaHealth.analyze(state)
+
+            assertFalse(report.isReady)
+            assertTrue(report.issues.any {
+                it.type == MediaHealthIssueType.EMPTY_LOCAL_FILE &&
+                    it.severity == MediaHealthSeverity.BLOCKING
+            })
+        }
+    }
+
+    @Test
+    fun analyzeBlocksBlankAssetIdentityFields() {
+        withTempMedia("clip.mp4", bytes = byteArrayOf(1)) { media ->
+            val uri = fileUri(media)
+            val state = stateWithClip(
+                clipUri = uri,
+                clipAssetId = "",
+                asset = asset(assetId = "", managedUri = "")
+            )
+
+            val report = MediaHealth.analyze(state)
+
+            assertFalse(report.isReady)
+            assertTrue(report.issues.any {
+                it.type == MediaHealthIssueType.BLANK_ASSET_FIELD &&
+                    it.severity == MediaHealthSeverity.BLOCKING
+            })
+        }
+    }
+
+    @Test
     fun analyzeWarnsForExternalMediaWithoutManagedManifest() {
         val state = stateWithClip(
             clipUri = TestUri(
@@ -144,6 +184,29 @@ class MediaHealthTest {
 
             assertTrue(report.isReady)
             assertTrue(report.issues.any { it.type == MediaHealthIssueType.MISSING_PROXY_FILE })
+        }
+    }
+
+    @Test
+    fun analyzeWarnsButDoesNotBlockWhenProxyFileIsEmpty() {
+        withTempMedia("clip.mp4", bytes = byteArrayOf(1)) { media ->
+            withTempMedia("empty-proxy.mp4", bytes = ByteArray(0)) { proxy ->
+                val uri = fileUri(media)
+                val emptyProxy = fileUri(proxy)
+                val state = stateWithClip(
+                    clipUri = uri,
+                    proxyUri = emptyProxy,
+                    asset = asset(assetId = "asset-ready", managedUri = uri.toString())
+                )
+
+                val report = MediaHealth.analyze(state)
+
+                assertTrue(report.isReady)
+                assertTrue(report.issues.any {
+                    it.type == MediaHealthIssueType.EMPTY_PROXY_FILE &&
+                        it.severity == MediaHealthSeverity.WARNING
+                })
+            }
         }
     }
 

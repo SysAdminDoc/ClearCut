@@ -163,4 +163,22 @@ class MediaAssetManifestTest {
             dir.deleteRecursively()
         }
     }
+
+    @Test
+    fun readProjectMediaAssetSidecarRejectsEmptyAndMalformedJson() {
+        val dir = Files.createTempDirectory("media-sidecar-corrupt-").toFile()
+        try {
+            val emptySidecar = File(dir, "empty.mp4.asset.json").apply {
+                writeBytes(ByteArray(0))
+            }
+            val malformedSidecar = File(dir, "malformed.mp4.asset.json").apply {
+                writeText("""{ "assetId": "asset-1", "managedUri": """, Charsets.UTF_8)
+            }
+
+            assertNull(readProjectMediaAssetSidecar(emptySidecar))
+            assertNull(readProjectMediaAssetSidecar(malformedSidecar))
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
 }
