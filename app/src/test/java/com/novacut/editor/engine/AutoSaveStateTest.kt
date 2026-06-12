@@ -368,6 +368,73 @@ class AutoSaveStateTest {
     }
 
     @Test
+    fun deserialize_prefersManagedAssetUriOverStaleSerializedSourceUri() {
+        val managedUri = "file:///managed/clip.mp4"
+        val staleSourceUri = "content://source/stale"
+        val root = JSONObject().apply {
+            put("version", AutoSaveState.FORMAT_VERSION)
+            put("projectId", "project")
+            put("mediaAssets", JSONArray().put(JSONObject().apply {
+                put("assetId", "asset-media")
+                put("managedUri", managedUri)
+                put("originalUri", staleSourceUri)
+                put("mediaType", "video")
+                put("importStatus", "ready")
+            }))
+            put("tracks", JSONArray().put(JSONObject().apply {
+                put("type", TrackType.VIDEO.name)
+                put("index", 0)
+                put("clips", JSONArray().put(JSONObject().apply {
+                    put("id", "clip")
+                    put("assetId", "asset-media")
+                    put("sourceUri", staleSourceUri)
+                    put("sourceDurationMs", 5_000L)
+                    put("trimStartMs", 0L)
+                    put("trimEndMs", 5_000L)
+                    put("effects", JSONArray())
+                    put("keyframes", JSONArray())
+                }))
+            }))
+        }
+
+        val state = AutoSaveState.deserialize(
+            root.toString(),
+            uriParser = { raw ->
+                TestUri(
+                    raw = raw,
+                    schemeValue = raw.substringBefore(":", "file"),
+                    segment = raw.substringAfterLast('/')
+                )
+            }
+        )
+
+        val clip = state.tracks.single().clips.single()
+        assertEquals("asset-media", clip.assetId)
+        assertEquals(managedUri, clip.sourceUri.toString())
+    }
+
+    @Test
+    fun collectMediaReferenceUris_includesManagedAssetUris() {
+        val root = JSONObject().apply {
+            put("tracks", JSONArray().put(JSONObject().apply {
+                put("clips", JSONArray().put(JSONObject().apply {
+                    put("sourceUri", "content://source/stale")
+                }))
+            }))
+            put("mediaAssets", JSONArray().put(JSONObject().apply {
+                put("assetId", "asset-media")
+                put("managedUri", "file:///managed/clip.mp4")
+                put("originalUri", "content://source/stale")
+            }))
+        }
+
+        assertEquals(
+            setOf("content://source/stale", "file:///managed/clip.mp4"),
+            collectMediaReferenceUrisFromAutoSaveJson(root.toString())
+        )
+    }
+
+    @Test
     fun deserialize_capsPathologicalRecoveredCollections() {
         val textOverlays = JSONArray().apply {
             repeat(5_010) { index ->

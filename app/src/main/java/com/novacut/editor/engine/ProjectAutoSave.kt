@@ -18,6 +18,19 @@ import javax.inject.Singleton
 private const val TAG = "ProjectAutoSave"
 private const val MAX_AUTOSAVE_FILE_BYTES = 25_000_000L
 
+internal fun collectMediaReferenceUrisFromAutoSaveJson(raw: String): Set<String> {
+    val mediaUriKeys = listOf("sourceUri", "managedUri")
+    return mediaUriKeys
+        .flatMap { key ->
+            Regex("\"$key\"\\s*:\\s*\"([^\"]+)\"")
+                .findAll(raw)
+                .map { it.groupValues[1] }
+                .toList()
+        }
+        .filter { it.isNotBlank() }
+        .toSet()
+}
+
 @Singleton
 class ProjectAutoSave @Inject constructor(
     @ApplicationContext private val context: Context
@@ -212,24 +225,19 @@ class ProjectAutoSave @Inject constructor(
     }
 
     /**
-     * Collect every source URI referenced by every project's auto-save JSON
+     * Collect every media URI referenced by every project's auto-save JSON
      * on disk. Used by the managed-media GC to know which imports are still
      * live. Uses a cheap regex over the raw JSON rather than full deserializer
      * round-trip so this runs in milliseconds even across hundreds of projects
-     * and stays forward-compatible with new Clip fields (the serialization
-     * contract only needs `"sourceUri": "..."` to survive).
+     * and stays forward-compatible with new Clip fields.
      */
     suspend fun collectReferencedSourceUris(): Set<String> = withContext(Dispatchers.IO) {
         saveMutex.withLock {
             val uris = mutableSetOf<String>()
-            val sourceUriRegex = Regex("\"sourceUri\"\\s*:\\s*\"([^\"]+)\"")
             autoSaveDir.listFiles { f -> f.isFile && f.name.endsWith(".json") }
                 ?.forEach { file ->
                     try {
-                        val text = readAutoSaveText(file)
-                        sourceUriRegex.findAll(text).forEach { match ->
-                            uris += match.groupValues[1]
-                        }
+                        uris += collectMediaReferenceUrisFromAutoSaveJson(readAutoSaveText(file))
                     } catch (e: Exception) {
                         Log.w(TAG, "Failed to scan ${file.name} for source URIs", e)
                     }
@@ -1364,8 +1372,10 @@ data class AutoSaveState(
             val audioFxArr = json.optJSONArray("audioEffects") ?: JSONArray()
             val captionsArr = json.optJSONArray("captions") ?: JSONArray()
             val assetId = json.optString("assetId", "").takeIf { it.isNotEmpty() }
-            val sourceUriStr = json.optString("sourceUri", "")
-                .ifEmpty { assetId?.let { mediaAssetUrisById[it] } ?: "" }
+            val serializedSourceUri = json.optString("sourceUri", "")
+            val sourceUriStr = assetId
+                ?.let { mediaAssetUrisById[it] }
+                ?: serializedSourceUri
             if (sourceUriStr.isEmpty()) {
                 Log.w(TAG, "Skipping clip ${json.optString("id", "?")} with empty sourceUri")
                 return null
