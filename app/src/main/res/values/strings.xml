@@ -36,6 +36,14 @@
     <string name="export_codec">Codec</string>
     <string name="export_quality">Quality</string>
     <string name="export_output_details">Output Details</string>
+    <string name="export_history_title">Recent exports</string>
+    <string name="export_history_description">Last results are saved locally with diagnostics for retry and support.</string>
+    <string name="export_history_status_complete">Complete</string>
+    <string name="export_history_status_failed">Failed</string>
+    <string name="export_history_status_cancelled">Cancelled</string>
+    <string name="export_history_status_blocked">Blocked</string>
+    <string name="export_history_detail_format">%1$s • %2$s • %3$s</string>
+    <string name="export_history_media_issues_format">%1$d repair items • %2$d warnings</string>
     <string name="export_smart_render_title">Smart render outlook</string>
     <string name="export_smart_render_detail">%1$d%% of the timeline can stream through. %2$d ranges copy directly; %3$d need re-encode.</string>
     <string name="export_delivery_summary">Delivery Summary</string>

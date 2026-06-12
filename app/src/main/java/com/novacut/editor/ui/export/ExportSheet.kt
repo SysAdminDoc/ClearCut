@@ -63,6 +63,8 @@ import com.novacut.editor.R
 import com.novacut.editor.engine.AiUsageLedger
 import com.novacut.editor.engine.EncoderCapabilityProbe
 import com.novacut.editor.engine.ExportColorConfidenceEngine
+import com.novacut.editor.engine.ExportHistoryEntry
+import com.novacut.editor.engine.ExportHistoryStatus
 import com.novacut.editor.engine.ExportState
 import com.novacut.editor.engine.ProjectColorPolicy
 import com.novacut.editor.engine.SmartRenderEngine
@@ -84,6 +86,8 @@ import com.novacut.editor.ui.theme.NovaCutPrimaryButton
 import com.novacut.editor.ui.theme.NovaCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
+import java.text.DateFormat
+import java.util.Date
 
 enum class ExportSheetPresentation {
     BOTTOM_SHEET,
@@ -105,6 +109,7 @@ fun ExportSheet(
     sourceHdrSummary: ExportColorConfidenceEngine.SourceHdrSummary = ExportColorConfidenceEngine.SourceHdrSummary(),
     projectColorPolicy: ProjectColorPolicy = ProjectColorPolicy.DEFAULT,
     aiUsageLedger: List<AiUsageLedger.Entry> = emptyList(),
+    exportHistory: List<ExportHistoryEntry> = emptyList(),
     presentation: ExportSheetPresentation = ExportSheetPresentation.BOTTOM_SHEET,
     onConfigChanged: (ExportConfig) -> Unit,
     onStartExport: () -> Unit,
@@ -409,11 +414,15 @@ fun ExportSheet(
         }
 
         if (exportState == ExportState.ERROR) {
+            val latestFailureDiagnostic = exportHistory.firstOrNull {
+                it.status == ExportHistoryStatus.FAILED || it.status == ExportHistoryStatus.BLOCKED
+            }?.diagnosticSummary
             ExportStateCard(
                 icon = Icons.Default.Error,
                 tint = Mocha.Red,
                 title = stringResource(R.string.export_failed),
                 body = errorMessage?.takeIf { it.isNotBlank() } ?: stringResource(R.string.error),
+                secondaryBody = latestFailureDiagnostic,
                 primaryLabel = stringResource(R.string.retry),
                 onPrimary = onStartExport,
                 secondaryLabel = stringResource(R.string.close),
@@ -1091,6 +1100,11 @@ fun ExportSheet(
             }
         }
 
+        if (exportHistory.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(12.dp))
+            ExportHistorySection(exportHistory.take(3))
+        }
+
         if (videoModeEnabled) {
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -1268,6 +1282,104 @@ private fun ExportSectionCard(
                     )
                 }
                 content()
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExportHistorySection(entries: List<ExportHistoryEntry>) {
+    val dateFormat = remember {
+        DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
+    }
+    ExportSectionCard(
+        title = stringResource(R.string.export_history_title),
+        description = stringResource(R.string.export_history_description),
+        accent = Mocha.Teal
+    ) {
+        entries.forEachIndexed { index, entry ->
+            ExportHistoryRow(entry = entry, dateFormat = dateFormat)
+            if (index < entries.lastIndex) {
+                HorizontalDivider(color = Mocha.CardStroke.copy(alpha = 0.7f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExportHistoryRow(
+    entry: ExportHistoryEntry,
+    dateFormat: DateFormat
+) {
+    val statusColor = when (entry.status) {
+        ExportHistoryStatus.COMPLETE -> Mocha.Green
+        ExportHistoryStatus.FAILED -> Mocha.Red
+        ExportHistoryStatus.CANCELLED -> Mocha.Peach
+        ExportHistoryStatus.BLOCKED -> Mocha.Yellow
+    }
+    val statusLabel = when (entry.status) {
+        ExportHistoryStatus.COMPLETE -> stringResource(R.string.export_history_status_complete)
+        ExportHistoryStatus.FAILED -> stringResource(R.string.export_history_status_failed)
+        ExportHistoryStatus.CANCELLED -> stringResource(R.string.export_history_status_cancelled)
+        ExportHistoryStatus.BLOCKED -> stringResource(R.string.export_history_status_blocked)
+    }
+    val detail = stringResource(
+        R.string.export_history_detail_format,
+        dateFormat.format(Date(entry.finishedAtEpochMs)),
+        entry.outputBytes?.let(::formatHistoryBytes) ?: entry.resolutionLabel,
+        formatEtaSeconds((entry.elapsedMs / 1000L).coerceAtLeast(0L))
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Surface(
+                color = statusColor.copy(alpha = 0.16f),
+                shape = RoundedCornerShape(Radius.md),
+                border = BorderStroke(1.dp, statusColor.copy(alpha = 0.32f))
+            ) {
+                Text(
+                    text = statusLabel,
+                    color = statusColor,
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = entry.outputName ?: entry.projectName,
+                    color = Mocha.Text,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = detail,
+                    color = Mocha.Subtext0,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                entry.diagnosticSummary?.let { diagnostic ->
+                    Text(
+                        text = diagnostic,
+                        color = if (entry.status == ExportHistoryStatus.COMPLETE) Mocha.Subtext0 else Mocha.Yellow,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                if (entry.mediaBlockingCount > 0 || entry.mediaWarningCount > 0) {
+                    Text(
+                        text = stringResource(
+                            R.string.export_history_media_issues_format,
+                            entry.mediaBlockingCount,
+                            entry.mediaWarningCount
+                        ),
+                        color = Mocha.Peach,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
             }
         }
     }
@@ -2057,4 +2169,11 @@ private fun formatEtaSeconds(seconds: Long): String = when {
     seconds >= 3600 -> "%dh %dm".format(seconds / 3600, (seconds % 3600) / 60)
     seconds >= 60 -> "%dm %02ds".format(seconds / 60, seconds % 60)
     else -> "${seconds}s"
+}
+
+private fun formatHistoryBytes(bytes: Long): String = when {
+    bytes >= 1_073_741_824L -> "%.1f GB".format(bytes / 1_073_741_824.0)
+    bytes >= 1_048_576L -> "%.0f MB".format(bytes / 1_048_576.0)
+    bytes >= 1024L -> "%.0f KB".format(bytes / 1024.0)
+    else -> "$bytes B"
 }

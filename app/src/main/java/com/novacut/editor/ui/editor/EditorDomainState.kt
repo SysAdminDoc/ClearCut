@@ -4,6 +4,7 @@ import com.novacut.editor.engine.AiToolRequirements
 import com.novacut.editor.engine.AiUsageLedger
 import com.novacut.editor.engine.CaptionTranslationEngine
 import com.novacut.editor.engine.CutAssistantEngine
+import com.novacut.editor.engine.ExportHistoryEntry
 import com.novacut.editor.engine.MediaRelinkProbe
 import com.novacut.editor.engine.MediaHealthReport
 import com.novacut.editor.engine.SmartRenderEngine
@@ -67,7 +68,8 @@ data class EditorExportDomainState(
     val renderSegments: List<SmartRenderEngine.RenderSegment> = emptyList(),
     val renderSummary: SmartRenderEngine.SmartRenderSummary? = null,
     val batchQueue: List<BatchExportItem> = emptyList(),
-    val savedConfig: ExportConfig? = null
+    val savedConfig: ExportConfig? = null,
+    val history: List<ExportHistoryEntry> = emptyList()
 ) : EditorDomainState {
     override val kind: EditorDomainState.Kind = EditorDomainState.Kind.EXPORT
 }

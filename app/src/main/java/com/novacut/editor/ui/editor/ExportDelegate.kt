@@ -13,6 +13,8 @@ import com.novacut.editor.BuildConfig
 import com.novacut.editor.engine.AiUsageLedger
 import com.novacut.editor.engine.C2paExportEngine
 import com.novacut.editor.engine.ContactSheetExporter
+import com.novacut.editor.engine.ExportHistoryStatus
+import com.novacut.editor.engine.ExportHistoryStore
 import com.novacut.editor.engine.ExportService
 import com.novacut.editor.engine.ExportState
 import com.novacut.editor.engine.MediaHealthReport
@@ -20,6 +22,7 @@ import com.novacut.editor.engine.MixedRenderExportPlanner
 import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.engine.StreamCopyExportEngine
 import com.novacut.editor.engine.VideoEngine
+import com.novacut.editor.engine.buildExportHistoryEntry
 import com.novacut.editor.engine.exportMimeTypeFor
 import com.novacut.editor.engine.exportUsesImageCollection
 import com.novacut.editor.engine.sanitizeFileName
@@ -67,20 +70,65 @@ class ExportDelegate(
     // (GIF encode, contact-sheet render) + any future CPU-only export paths
     // all need the same cancel/teardown plumbing.
     @Volatile private var nonVideoExportJob: kotlinx.coroutines.Job? = null
+    private val exportHistoryStore = ExportHistoryStore.forContext(appContext)
 
     private inline fun updateExport(transform: (EditorExportDomainState) -> EditorExportDomainState) {
         stateFlow.update { it.copyExport(transform) }
     }
 
-    private fun markExportStarted() {
+    fun loadExportHistory() {
+        scope.launch(Dispatchers.IO) {
+            val history = exportHistoryStore.read()
+            withContext(Dispatchers.Main) {
+                updateExport { it.copy(history = history) }
+            }
+        }
+    }
+
+    private fun markExportStarted(startedAtMs: Long = System.currentTimeMillis()): Long {
         updateExport {
             it.copy(
-                startTime = System.currentTimeMillis(),
+                startTime = startedAtMs,
                 progress = 0f,
                 state = ExportState.EXPORTING,
                 errorMessage = null,
                 lastExportedFilePath = null
             )
+        }
+        return startedAtMs
+    }
+
+    private fun recordExportHistory(
+        sourceState: EditorState,
+        status: ExportHistoryStatus,
+        startedAtMs: Long,
+        outputFile: File?,
+        config: ExportConfig,
+        timelineDurationMs: Long,
+        errorMessage: String? = null,
+        diagnosticSummary: String? = null,
+        healthReport: MediaHealthReport? = sourceState.media.healthReport
+    ) {
+        val finishedAtMs = System.currentTimeMillis()
+        val entry = buildExportHistoryEntry(
+            projectId = sourceState.project.id,
+            projectName = sourceState.project.name,
+            status = status,
+            startedAtEpochMs = startedAtMs,
+            finishedAtEpochMs = finishedAtMs,
+            outputFile = outputFile,
+            config = config,
+            timelineDurationMs = timelineDurationMs,
+            errorMessage = errorMessage,
+            diagnosticSummary = diagnosticSummary,
+            mediaWarningCount = healthReport?.warningCount ?: 0,
+            mediaBlockingCount = healthReport?.blockingCount ?: 0
+        )
+        scope.launch(Dispatchers.IO) {
+            val history = exportHistoryStore.append(entry)
+            withContext(Dispatchers.Main) {
+                updateExport { it.copy(history = history) }
+            }
         }
     }
 
@@ -171,7 +219,10 @@ class ExportDelegate(
         config: ExportConfig,
         textOverlays: List<com.novacut.editor.model.TextOverlay>,
         state: EditorState,
-        outputFile: File
+        outputFile: File,
+        startedAtMs: Long,
+        totalDurationMs: Long,
+        healthReport: MediaHealthReport?
     ): Boolean {
         val engine = streamCopyEngine ?: return false
         if (!config.allowStreamCopy) return false
@@ -205,6 +256,16 @@ class ExportDelegate(
                 lastExportedFilePath = finalizedFile.absolutePath
             )
         }
+        recordExportHistory(
+            sourceState = state,
+            status = ExportHistoryStatus.COMPLETE,
+            startedAtMs = startedAtMs,
+            outputFile = finalizedFile,
+            config = config,
+            timelineDurationMs = totalDurationMs,
+            diagnosticSummary = "Stream-copy export completed without transcoding.",
+            healthReport = healthReport
+        )
         showToast("Stream-copy export complete: ${finalizedFile.name}")
         return true
     }
@@ -236,6 +297,9 @@ class ExportDelegate(
     }
 
     fun cancelExport() {
+        val currentState = stateFlow.value
+        val startedAtMs = currentState.exportStartTime.takeIf { it > 0L } ?: System.currentTimeMillis()
+        val cancellingNonVideoExport = nonVideoExportJob != null
         // Cancel GIF export coroutine if one is running
         nonVideoExportJob?.cancel()
         nonVideoExportJob = null
@@ -247,6 +311,18 @@ class ExportDelegate(
             it.copy(
                 state = ExportState.CANCELLED,
                 progress = 0f
+            )
+        }
+        if (!cancellingNonVideoExport) {
+            recordExportHistory(
+                sourceState = currentState,
+                status = ExportHistoryStatus.CANCELLED,
+                startedAtMs = startedAtMs,
+                outputFile = null,
+                config = currentState.exportConfig,
+                timelineDurationMs = currentState.totalDurationMs,
+                diagnosticSummary = "Export was cancelled by the user.",
+                healthReport = currentState.media.healthReport
             )
         }
     }
@@ -284,6 +360,17 @@ class ExportDelegate(
                         panel.copy(panels = panel.panels.closeAll().open(PanelId.MEDIA_MANAGER))
                     }
             }
+            recordExportHistory(
+                sourceState = currentState,
+                status = ExportHistoryStatus.BLOCKED,
+                startedAtMs = System.currentTimeMillis(),
+                outputFile = null,
+                config = currentState.exportConfig,
+                timelineDurationMs = currentState.totalDurationMs,
+                errorMessage = mediaPreflight.message,
+                diagnosticSummary = "Media preflight blocked export: ${mediaPreflight.message}",
+                healthReport = healthReport
+            )
             showToast(mediaPreflight.message)
             return
         }
@@ -306,7 +393,7 @@ class ExportDelegate(
         // Contact-sheet export path — renders one PNG grid of clip thumbnails.
         // Short path because there's no Transformer, no foreground service, no audio.
         if (configWithChapters.exportAsContactSheet) {
-            markExportStarted()
+            val startedAtMs = markExportStarted()
             nonVideoExportJob = scope.launch {
                 var sheetFile: File? = null
                 try {
@@ -322,12 +409,24 @@ class ExportDelegate(
                         .flatMap { it.clips }
                         .sortedBy { it.timelineStartMs }
                     if (allClips.isEmpty()) {
+                        val message = "No video clips"
                         updateExport {
                             it.copy(
                                 state = ExportState.ERROR,
-                                errorMessage = "No video clips"
+                                errorMessage = message
                             )
                         }
+                        recordExportHistory(
+                            sourceState = currentState,
+                            status = ExportHistoryStatus.FAILED,
+                            startedAtMs = startedAtMs,
+                            outputFile = null,
+                            config = configWithChapters,
+                            timelineDurationMs = totalDurationMs,
+                            errorMessage = message,
+                            diagnosticSummary = "Contact sheet export had no video clips to render.",
+                            healthReport = healthReport
+                        )
                         return@launch
                     }
                     val ok = ContactSheetExporter.export(
@@ -345,14 +444,36 @@ class ExportDelegate(
                                 lastExportedFilePath = targetSheetFile.absolutePath
                             )
                         }
+                        recordExportHistory(
+                            sourceState = currentState,
+                            status = ExportHistoryStatus.COMPLETE,
+                            startedAtMs = startedAtMs,
+                            outputFile = targetSheetFile,
+                            config = configWithChapters,
+                            timelineDurationMs = totalDurationMs,
+                            diagnosticSummary = "Contact sheet export completed.",
+                            healthReport = healthReport
+                        )
                         showToast("Contact sheet exported: ${targetSheetFile.name}")
                     } else {
+                        val message = "Contact sheet render failed"
                         updateExport {
                             it.copy(
                                 state = ExportState.ERROR,
-                                errorMessage = "Contact sheet render failed"
+                                errorMessage = message
                             )
                         }
+                        recordExportHistory(
+                            sourceState = currentState,
+                            status = ExportHistoryStatus.FAILED,
+                            startedAtMs = startedAtMs,
+                            outputFile = targetSheetFile,
+                            config = configWithChapters,
+                            timelineDurationMs = totalDurationMs,
+                            errorMessage = message,
+                            diagnosticSummary = "Contact sheet renderer returned no output.",
+                            healthReport = healthReport
+                        )
                     }
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     updateExport {
@@ -362,16 +483,38 @@ class ExportDelegate(
                             lastExportedFilePath = null
                         )
                     }
+                    recordExportHistory(
+                        sourceState = currentState,
+                        status = ExportHistoryStatus.CANCELLED,
+                        startedAtMs = startedAtMs,
+                        outputFile = null,
+                        config = configWithChapters,
+                        timelineDurationMs = totalDurationMs,
+                        diagnosticSummary = "Contact sheet export was cancelled.",
+                        healthReport = healthReport
+                    )
                 } catch (e: Exception) {
                     android.util.Log.w("ExportDelegate", "Contact sheet export failed", e)
                     sheetFile?.delete()
+                    val message = e.message ?: "Contact sheet export failed"
                     updateExport {
                         it.copy(
                             state = ExportState.ERROR,
-                            errorMessage = e.message ?: "Contact sheet export failed",
+                            errorMessage = message,
                             lastExportedFilePath = null
                         )
                     }
+                    recordExportHistory(
+                        sourceState = currentState,
+                        status = ExportHistoryStatus.FAILED,
+                        startedAtMs = startedAtMs,
+                        outputFile = null,
+                        config = configWithChapters,
+                        timelineDurationMs = totalDurationMs,
+                        errorMessage = message,
+                        diagnosticSummary = "Contact sheet export failed during thumbnail extraction or file write.",
+                        healthReport = healthReport
+                    )
                 } finally {
                     nonVideoExportJob = null
                 }
@@ -381,7 +524,7 @@ class ExportDelegate(
 
         // GIF export path
         if (configWithChapters.exportAsGif) {
-            markExportStarted()
+            val startedAtMs = markExportStarted()
             nonVideoExportJob = scope.launch {
                 val frames = mutableListOf<android.graphics.Bitmap>()
                 var gifFile: File? = null
@@ -398,12 +541,24 @@ class ExportDelegate(
                         .flatMap { it.clips }
                         .sortedBy { it.timelineStartMs }
                     if (allClips.isEmpty()) {
+                        val message = "No video clips"
                         updateExport {
                             it.copy(
                                 state = ExportState.ERROR,
-                                errorMessage = "No video clips"
+                                errorMessage = message
                             )
                         }
+                        recordExportHistory(
+                            sourceState = currentState,
+                            status = ExportHistoryStatus.FAILED,
+                            startedAtMs = startedAtMs,
+                            outputFile = null,
+                            config = configWithChapters,
+                            timelineDurationMs = totalDurationMs,
+                            errorMessage = message,
+                            diagnosticSummary = "GIF export had no video clips to sample.",
+                            healthReport = healthReport
+                        )
                         return@launch
                     }
                     val totalDurationMs = allClips.maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L
@@ -458,12 +613,24 @@ class ExportDelegate(
                     }
 
                     if (frames.isEmpty()) {
+                        val message = "No frames extracted"
                         updateExport {
                             it.copy(
                                 state = ExportState.ERROR,
-                                errorMessage = "No frames extracted"
+                                errorMessage = message
                             )
                         }
+                        recordExportHistory(
+                            sourceState = currentState,
+                            status = ExportHistoryStatus.FAILED,
+                            startedAtMs = startedAtMs,
+                            outputFile = null,
+                            config = configWithChapters,
+                            timelineDurationMs = totalDurationMs,
+                            errorMessage = message,
+                            diagnosticSummary = "GIF export could not extract any usable frames.",
+                            healthReport = healthReport
+                        )
                         return@launch
                     }
 
@@ -482,6 +649,16 @@ class ExportDelegate(
                             lastExportedFilePath = targetGifFile.absolutePath
                         )
                     }
+                    recordExportHistory(
+                        sourceState = currentState,
+                        status = ExportHistoryStatus.COMPLETE,
+                        startedAtMs = startedAtMs,
+                        outputFile = targetGifFile,
+                        config = configWithChapters,
+                        timelineDurationMs = totalDurationMs,
+                        diagnosticSummary = "GIF export completed with $frameCount sampled frame(s).",
+                        healthReport = healthReport
+                    )
                     showToast("GIF exported: ${targetGifFile.name}")
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     android.util.Log.d("ExportDelegate", "GIF export cancelled")
@@ -493,16 +670,38 @@ class ExportDelegate(
                             lastExportedFilePath = null
                         )
                     }
+                    recordExportHistory(
+                        sourceState = currentState,
+                        status = ExportHistoryStatus.CANCELLED,
+                        startedAtMs = startedAtMs,
+                        outputFile = null,
+                        config = configWithChapters,
+                        timelineDurationMs = totalDurationMs,
+                        diagnosticSummary = "GIF export was cancelled.",
+                        healthReport = healthReport
+                    )
                 } catch (e: Exception) {
                     android.util.Log.w("ExportDelegate", "GIF export failed", e)
                     gifFile?.delete()
+                    val message = e.message ?: "GIF export failed"
                     updateExport {
                         it.copy(
                             state = ExportState.ERROR,
-                            errorMessage = e.message ?: "GIF export failed",
+                            errorMessage = message,
                             lastExportedFilePath = null
                         )
                     }
+                    recordExportHistory(
+                        sourceState = currentState,
+                        status = ExportHistoryStatus.FAILED,
+                        startedAtMs = startedAtMs,
+                        outputFile = null,
+                        config = configWithChapters,
+                        timelineDurationMs = totalDurationMs,
+                        errorMessage = message,
+                        diagnosticSummary = "GIF export failed during frame extraction or encoding.",
+                        healthReport = healthReport
+                    )
                 } finally {
                     nonVideoExportJob = null
                     frames.forEach { bitmap ->
@@ -516,7 +715,7 @@ class ExportDelegate(
             return
         }
 
-        markExportStarted()
+        val startedAtMs = markExportStarted()
 
         scope.launch {
             val ext = if (currentState.exportConfig.transparentBackground) "webm" else "mp4"
@@ -593,18 +792,40 @@ class ExportDelegate(
                         lastExportedFilePath = finalizedFile.absolutePath
                     )
                 }
+                recordExportHistory(
+                    sourceState = currentState,
+                    status = ExportHistoryStatus.COMPLETE,
+                    startedAtMs = startedAtMs,
+                    outputFile = finalizedFile,
+                    config = configWithChapters,
+                    timelineDurationMs = totalDurationMs,
+                    diagnosticSummary = "Video export completed.",
+                    healthReport = healthReport
+                )
                 showToast("Export complete: ${finalizedFile.name}")
             }
 
             fun handleVideoExportError(e: Exception) {
                 outputFile.delete()
+                val message = e.message ?: "Unknown error"
                 updateExport {
                     it.copy(
                         state = ExportState.ERROR,
-                        errorMessage = e.message ?: "Unknown error",
+                        errorMessage = message,
                         lastExportedFilePath = null
                     )
                 }
+                recordExportHistory(
+                    sourceState = currentState,
+                    status = ExportHistoryStatus.FAILED,
+                    startedAtMs = startedAtMs,
+                    outputFile = null,
+                    config = configWithChapters,
+                    timelineDurationMs = totalDurationMs,
+                    errorMessage = message,
+                    diagnosticSummary = "Video export failed in the encoder pipeline.",
+                    healthReport = healthReport
+                )
             }
 
             try {
@@ -620,7 +841,14 @@ class ExportDelegate(
                 // notification) pinned forever on every successful stream-copy.
                 // So start the service only when we fall through to the Transformer.
                 if (tryStreamCopy(
-                        tracks, configWithChapters, textOverlays, currentState, outputFile
+                        tracks = tracks,
+                        config = configWithChapters,
+                        textOverlays = textOverlays,
+                        state = currentState,
+                        outputFile = outputFile,
+                        startedAtMs = startedAtMs,
+                        totalDurationMs = totalDurationMs,
+                        healthReport = healthReport
                     )
                 ) {
                     return@launch
@@ -675,13 +903,25 @@ class ExportDelegate(
                 throw e
             } catch (e: Exception) {
                 outputFile.delete()
+                val message = e.message ?: "Unknown error"
                 updateExport {
                     it.copy(
                         state = ExportState.ERROR,
-                        errorMessage = e.message ?: "Unknown error",
+                        errorMessage = message,
                         lastExportedFilePath = null
                     )
                 }
+                recordExportHistory(
+                    sourceState = currentState,
+                    status = ExportHistoryStatus.FAILED,
+                    startedAtMs = startedAtMs,
+                    outputFile = null,
+                    config = configWithChapters,
+                    timelineDurationMs = totalDurationMs,
+                    errorMessage = message,
+                    diagnosticSummary = "Video export failed before the encoder could finish.",
+                    healthReport = healthReport
+                )
             }
         }
     }

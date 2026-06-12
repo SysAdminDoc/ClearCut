@@ -205,6 +205,7 @@ fun BoxScope.EditorPrimaryPanelHost(
             sourceHdrSummary = sourceHdrSummary,
             projectColorPolicy = ProjectColorPolicy.DEFAULT,
             aiUsageLedger = state.aiUsageLedger,
+            exportHistory = state.exportHistory,
             presentation = if (useEmbeddedExportPane) {
                 ExportSheetPresentation.EMBEDDED_PANE
             } else {
@@ -222,7 +223,7 @@ fun BoxScope.EditorPrimaryPanelHost(
                 }
             },
             onSaveToGallery = viewModel::saveToGallery,
-            onCancel = { viewModel.engine.cancelExport() },
+            onCancel = viewModel::cancelExport,
             onExportOtio = viewModel::exportToOtio,
             onExportFcpxml = viewModel::exportToFcpxml,
             onCaptureFrame = viewModel::captureFrame,

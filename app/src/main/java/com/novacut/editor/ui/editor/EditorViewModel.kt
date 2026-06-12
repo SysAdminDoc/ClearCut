@@ -281,6 +281,7 @@ data class EditorState(
     val renderSummary: SmartRenderEngine.SmartRenderSummary? get() = export.renderSummary
     val batchExportQueue: List<BatchExportItem> get() = export.batchQueue
     val savedExportConfig: ExportConfig? get() = export.savedConfig
+    val exportHistory: List<com.novacut.editor.engine.ExportHistoryEntry> get() = export.history
     val aiRequirementPrompt: AiRequirementPrompt? get() = ai.requirementPrompt
     val aiModelRequirement: com.novacut.editor.engine.AiToolRequirements.ToolRequirement?
         get() = ai.modelRequirement
@@ -685,6 +686,7 @@ class EditorViewModel @Inject constructor(
 
     init {
         val autoSaveId = projectId ?: _state.value.project.id
+        exportDelegate.loadExportHistory()
 
         // Load existing project if projectId provided, then restore auto-save
         viewModelScope.launch {
