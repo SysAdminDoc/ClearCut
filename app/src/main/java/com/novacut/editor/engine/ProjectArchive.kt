@@ -340,8 +340,13 @@ object ProjectArchive {
 
             val unresolved = mutableListOf<String>()
             val seenSourceUris = LinkedHashSet<String>()
-            val rewritten = rawState.copy(projectId = effectiveProjectId)
-                .rewriteArchivedMediaUris(manifestMap, extractedFiles, seenSourceUris, unresolved)
+            val rewritten = rewriteArchivedMediaUrisForImport(
+                state = rawState.copy(projectId = effectiveProjectId),
+                manifestEntryMap = manifestMap,
+                extractedFiles = extractedFiles,
+                seenSourceUris = seenSourceUris,
+                unresolvedSink = unresolved
+            )
 
             val mediaTotal = seenSourceUris.size
             val mediaResolved = mediaTotal - unresolved.size
@@ -507,23 +512,45 @@ object ProjectArchive {
         return readUtf8WithByteLimit(zipInput, maxBytes)
     }
 
+    internal fun rewriteArchivedMediaUrisForImport(
+        state: AutoSaveState,
+        manifestEntryMap: Map<String, String>,
+        extractedFiles: Map<String, Uri>,
+        seenSourceUris: MutableSet<String>,
+        unresolvedSink: MutableList<String>
+    ): AutoSaveState {
+        return state.rewriteArchivedMediaUris(
+            manifestEntryMap = manifestEntryMap,
+            extractedFiles = extractedFiles,
+            seenSourceUris = seenSourceUris,
+            unresolvedSink = unresolvedSink
+        )
+    }
+
     private fun AutoSaveState.rewriteArchivedMediaUris(
         manifestEntryMap: Map<String, String>,
         extractedFiles: Map<String, Uri>,
         seenSourceUris: MutableSet<String>,
         unresolvedSink: MutableList<String>
     ): AutoSaveState {
-        fun resolveArchivedUri(originalUri: Uri): Uri {
-            val key = originalUri.toString()
-            val isFresh = key.isNotBlank() && seenSourceUris.add(key)
-
-            val mappedEntry = manifestEntryMap[key]
+        fun resolveDirectArchivedUri(uriString: String): Uri? {
+            val mappedEntry = manifestEntryMap[uriString]
             if (mappedEntry != null) {
                 extractedFiles[mappedEntry]?.let { return it }
             }
-            val fallback = fallbackArchivedUri(originalUri, extractedFiles)
-            if (fallback != null) return fallback
+            return null
+        }
 
+        fun resolveMappedArchivedUri(originalUri: Uri): Uri? {
+            val key = originalUri.toString()
+            return resolveDirectArchivedUri(key) ?: fallbackArchivedUri(originalUri, extractedFiles)
+        }
+
+        fun resolveArchivedUri(originalUri: Uri): Uri {
+            val key = originalUri.toString()
+            val isFresh = key.isNotBlank() && seenSourceUris.add(key)
+            val resolved = resolveMappedArchivedUri(originalUri)
+            if (resolved != null) return resolved
             if (isFresh) unresolvedSink += key
             return originalUri
         }
@@ -536,13 +563,26 @@ object ProjectArchive {
             )
         }
 
+        fun rewriteAsset(asset: ProjectMediaAsset): ProjectMediaAsset {
+            val resolvedManagedUri = resolveDirectArchivedUri(asset.managedUri)
+                ?: resolveDirectArchivedUri(asset.originalUri)
+                ?: resolveArchivedUri(Uri.parse(asset.managedUri))
+            val resolvedOriginalUri = resolveDirectArchivedUri(asset.originalUri)
+                ?: resolvedManagedUri
+            return asset.copy(
+                managedUri = resolvedManagedUri.toString(),
+                originalUri = resolvedOriginalUri.toString()
+            )
+        }
+
         return copy(
             tracks = tracks.map { track ->
                 track.copy(clips = track.clips.map(::rewriteClip))
             },
             imageOverlays = imageOverlays.map { overlay ->
                 overlay.copy(sourceUri = resolveArchivedUri(overlay.sourceUri))
-            }
+            },
+            mediaAssets = mediaAssets.map(::rewriteAsset)
         )
     }
 

@@ -152,8 +152,19 @@ internal fun sweepUnreferencedManagedMedia(
     var bytes = 0L
     dir.listFiles()?.forEach { f ->
         if (!f.isFile) return@forEach
-        if (f.name.endsWith(".partial") || isMediaAssetSidecar(f)) return@forEach
+        if (f.name.endsWith(".partial")) return@forEach
         if (f.lastModified() > ageCutoff) return@forEach
+        if (isMediaAssetSidecar(f)) {
+            val mediaFile = mediaFileForAssetSidecar(f)
+            if (mediaFile != null && !mediaFile.isFile) {
+                val size = f.length()
+                if (f.delete()) {
+                    deleted++
+                    bytes += size
+                }
+            }
+            return@forEach
+        }
         val canonical = runCatching { f.canonicalPath }.getOrNull() ?: return@forEach
         if (canonical in referencedPaths) return@forEach
         val size = f.length()
