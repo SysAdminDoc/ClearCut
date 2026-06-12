@@ -58,6 +58,7 @@ import com.novacut.editor.engine.MediaHealth
 import com.novacut.editor.engine.MediaRelinkProbe
 import com.novacut.editor.engine.OverlayAssetImportResult
 import com.novacut.editor.engine.OverlayAssetStore
+import com.novacut.editor.engine.ProjectMediaAsset
 import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.engine.VoiceoverRecorderEngine
 import com.novacut.editor.engine.TemplateManager
@@ -472,6 +473,8 @@ class EditorViewModel @Inject constructor(
     private var lastAutoSaveIntervalSec: Int? = null
     private var mediaRelinkProbeJob: Job? = null
     private var captionTranslationJob: Job? = null
+    private val projectMediaManifestCacheLock = Any()
+    private var projectMediaManifestCache: CachedProjectMediaManifest? = null
 
     private val _state = MutableStateFlow(EditorState())
     val state: StateFlow<EditorState> = _state.asStateFlow()
@@ -919,6 +922,7 @@ class EditorViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             val result = backfillManagedMediaAssetSidecars(appContext, recovery)
             if (result.sidecarsCreated > 0) {
+                invalidateProjectMediaManifestCache()
                 Log.i(
                     "EditorViewModel",
                     "Backfilled ${result.sidecarsCreated} media asset sidecar(s) from ${result.referencesScanned} restored reference(s)"
@@ -4351,7 +4355,7 @@ class EditorViewModel @Inject constructor(
         state: EditorState = _state.value,
         projectId: String = state.project.id
     ): AutoSaveState {
-        val mediaAssets = buildProjectMediaAssets(appContext, state.tracks, state.imageOverlays)
+        val mediaAssets = projectMediaAssetsFor(state)
         val tracks = attachMediaAssetIdsToTracks(state.tracks, mediaAssets)
         return AutoSaveState(
             projectId = projectId,
@@ -4368,6 +4372,29 @@ class EditorViewModel @Inject constructor(
             aiUsageLedger = state.aiUsageLedger,
             mediaAssets = mediaAssets
         )
+    }
+
+    private fun projectMediaAssetsFor(state: EditorState): List<ProjectMediaAsset> {
+        val cacheKey = mediaManifestCacheKey(state.tracks, state.imageOverlays)
+        return synchronized(projectMediaManifestCacheLock) {
+            val cached = projectMediaManifestCache
+            if (cached?.key == cacheKey) {
+                cached.mediaAssets
+            } else {
+                buildProjectMediaAssets(appContext, state.tracks, state.imageOverlays).also { mediaAssets ->
+                    projectMediaManifestCache = CachedProjectMediaManifest(
+                        key = cacheKey,
+                        mediaAssets = mediaAssets
+                    )
+                }
+            }
+        }
+    }
+
+    private fun invalidateProjectMediaManifestCache() {
+        synchronized(projectMediaManifestCacheLock) {
+            projectMediaManifestCache = null
+        }
     }
 
     private fun analyzeMediaHealthForState(state: EditorState = _state.value) =
@@ -5058,3 +5085,8 @@ private fun safeEditorFloat(value: Float, fallback: Float, min: Float, max: Floa
     val safeFallback = if (fallback.isFinite()) fallback.coerceIn(min, max) else min
     return if (value.isFinite()) value.coerceIn(min, max) else safeFallback
 }
+
+private data class CachedProjectMediaManifest(
+    val key: String,
+    val mediaAssets: List<ProjectMediaAsset>
+)
