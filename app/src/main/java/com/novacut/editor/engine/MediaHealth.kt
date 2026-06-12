@@ -18,6 +18,8 @@ enum class MediaHealthIssueType {
     BLANK_ASSET_FIELD,
     MISSING_LOCAL_FILE,
     EMPTY_LOCAL_FILE,
+    MISSING_PROXY_FILE,
+    EMPTY_PROXY_FILE,
     EXTERNAL_SOURCE,
     MISSING_ASSET_MANIFEST,
     MISSING_REFERENCE_ASSET_ID,
@@ -166,6 +168,29 @@ object MediaHealth {
                     message = "Timeline media URI does not match the managed or original URI in its asset manifest entry."
                 )
             }
+
+            reference.proxyUri?.let { proxyUri ->
+                if (uriScheme(proxyUri) == "file") {
+                    when (localFileState(proxyUri.toString())) {
+                        LocalFileState.READY -> Unit
+                        LocalFileState.EMPTY -> issues += MediaHealthIssue(
+                            type = MediaHealthIssueType.EMPTY_PROXY_FILE,
+                            severity = MediaHealthSeverity.WARNING,
+                            subjectId = reference.id,
+                            uri = proxyUri.toString(),
+                            message = "Preview proxy exists but is empty; NovaCut should fall back to source media."
+                        )
+                        LocalFileState.MISSING,
+                        LocalFileState.INVALID -> issues += MediaHealthIssue(
+                            type = MediaHealthIssueType.MISSING_PROXY_FILE,
+                            severity = MediaHealthSeverity.WARNING,
+                            subjectId = reference.id,
+                            uri = proxyUri.toString(),
+                            message = "Preview proxy is missing; NovaCut should fall back to source media."
+                        )
+                    }
+                }
+            }
         }
 
         return MediaHealthReport(
@@ -255,7 +280,8 @@ object MediaHealth {
             id = clip.id,
             assetId = clip.assetId,
             uri = clip.sourceUri,
-            mediaType = mediaType
+            mediaType = mediaType,
+            proxyUri = clip.proxyUri
         )
         clip.compoundClips.forEach { child ->
             collectClipReferences(child, track, mediaType, out)
@@ -266,7 +292,8 @@ object MediaHealth {
         val id: String,
         val assetId: String?,
         val uri: Uri,
-        val mediaType: String
+        val mediaType: String,
+        val proxyUri: Uri? = null
     )
 
     private enum class LocalFileState {

@@ -125,8 +125,31 @@ class MediaHealthTest {
         }
     }
 
+    @Test
+    fun analyzeWarnsButDoesNotBlockWhenProxyFileIsMissing() {
+        withTempMedia("clip.mp4", bytes = byteArrayOf(1)) { media ->
+            val uri = fileUri(media)
+            val missingProxy = TestUri(
+                raw = File(media.parentFile, "missing-proxy.mp4").toURI().toString(),
+                schemeValue = "file",
+                segment = "missing-proxy.mp4"
+            )
+            val state = stateWithClip(
+                clipUri = uri,
+                proxyUri = missingProxy,
+                asset = asset(assetId = "asset-ready", managedUri = uri.toString())
+            )
+
+            val report = MediaHealth.analyze(state)
+
+            assertTrue(report.isReady)
+            assertTrue(report.issues.any { it.type == MediaHealthIssueType.MISSING_PROXY_FILE })
+        }
+    }
+
     private fun stateWithClip(
         clipUri: android.net.Uri,
+        proxyUri: android.net.Uri? = null,
         clipAssetId: String = "asset-ready",
         asset: ProjectMediaAsset?,
         extraAssets: List<ProjectMediaAsset> = emptyList()
@@ -142,6 +165,7 @@ class MediaHealthTest {
                             id = "clip-1",
                             assetId = clipAssetId,
                             sourceUri = clipUri,
+                            proxyUri = proxyUri,
                             sourceDurationMs = 1_000L,
                             timelineStartMs = 0L
                         )

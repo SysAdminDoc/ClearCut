@@ -139,15 +139,21 @@ internal fun shouldBlockAutoSaveForRecoveryOutcome(outcome: ProjectAutoSave.Load
         outcome is ProjectAutoSave.LoadOutcome.Corrupt
 }
 
-internal fun mediaRelinkOpenToast(missingCount: Int, unknownCount: Int): String? {
-    val total = missingCount + unknownCount
+internal fun mediaRelinkOpenToast(
+    missingCount: Int,
+    unknownCount: Int,
+    healthBlockingCount: Int = 0,
+    healthWarningCount: Int = 0
+): String? {
+    val total = missingCount + unknownCount + healthBlockingCount + healthWarningCount
     if (total <= 0) return null
     val parts = buildList {
-        if (missingCount > 0) add("$missingCount missing")
-        if (unknownCount > 0) add("$unknownCount unverified")
+        if (missingCount > 0) add("$missingCount missing ${if (missingCount == 1) "source" else "sources"}")
+        if (unknownCount > 0) add("$unknownCount unverified ${if (unknownCount == 1) "source" else "sources"}")
+        if (healthBlockingCount > 0) add("$healthBlockingCount repair ${if (healthBlockingCount == 1) "item" else "items"}")
+        if (healthWarningCount > 0) add("$healthWarningCount ${if (healthWarningCount == 1) "warning" else "warnings"}")
     }
-    val noun = if (total == 1) "source" else "sources"
-    return "Media check found ${parts.joinToString(" and ")} $noun. Opened Media Manager to relink before editing or export."
+    return "Media check found ${parts.joinToString(" and ")}. Opened Media Manager to relink or repair before editing or export."
 }
 
 enum class PanelId {
@@ -502,7 +508,8 @@ class EditorViewModel @Inject constructor(
         pauseIfPlaying = ::pauseIfPlaying, dismissedPanelState = ::dismissedPanelState,
         showExportSheet = ::showExportSheet,
         streamCopyEngine = streamCopyEngine,
-        c2paExportEngine = c2paExportEngine
+        c2paExportEngine = c2paExportEngine,
+        mediaHealthPreflight = ::analyzeMediaHealthForState
     )
 
     val aiToolsDelegate = AiToolsDelegate(
@@ -863,7 +870,7 @@ class EditorViewModel @Inject constructor(
         val hadContent = recovery.tracks.any { it.clips.isNotEmpty() } ||
             recovery.textOverlays.isNotEmpty() ||
             recovery.imageOverlays.isNotEmpty()
-        val mediaHealthReport = MediaHealth.analyze(recovery)
+        val mediaHealthReport = analyzeMediaHealthForRecovery(recovery)
         val showRecoveryDialog = shouldShowRecoveryDialog(
             projectUpdatedAtMs = _state.value.project.updatedAt,
             recoveryTimestampMs = recovery.timestamp,
@@ -3307,20 +3314,31 @@ class EditorViewModel @Inject constructor(
         val imageOverlays = _state.value.imageOverlays
         if (tracks.flatMap { it.clips }.isEmpty() && imageOverlays.isEmpty()) {
             mediaRelinkProbeJob?.cancel()
-            _state.update { it.copyMedia { media -> media.copy(relinkReports = emptyMap()) } }
+            val healthReport = analyzeMediaHealthForState(_state.value)
+            _state.update { state ->
+                state.copyMedia { media ->
+                    media.copy(relinkReports = emptyMap(), healthReport = healthReport)
+                }
+            }
             return
         }
 
         mediaRelinkProbeJob?.cancel()
         mediaRelinkProbeJob = viewModelScope.launch {
             val reports = mediaRelinkProbe.probeClips(tracks) + mediaRelinkProbe.probeImageOverlays(imageOverlays)
+            val healthReport = analyzeMediaHealthForState(_state.value)
             val missingCount = reports.values.count { it.state == MediaRelinkProbe.RelinkState.MISSING }
             val unknownCount = reports.values.count { it.state == MediaRelinkProbe.RelinkState.UNKNOWN }
+            val healthBlockingCount = healthReport.blockingCount
+            val healthWarningCount = healthReport.warningCount
             _state.update { state ->
-                state.copy(media = state.media.copy(relinkReports = reports))
+                state.copy(media = state.media.copy(relinkReports = reports, healthReport = healthReport))
                     .copyPanel { panel ->
                         panel.copy(
-                            panels = if (openPanelOnProblems && missingCount + unknownCount > 0) {
+                            panels = if (
+                                openPanelOnProblems &&
+                                missingCount + unknownCount + healthBlockingCount + healthWarningCount > 0
+                            ) {
                                 panel.panels.open(PanelId.MEDIA_MANAGER)
                             } else {
                                 panel.panels
@@ -3329,7 +3347,12 @@ class EditorViewModel @Inject constructor(
                     }
             }
             if (openPanelOnProblems) {
-                mediaRelinkOpenToast(missingCount, unknownCount)?.let { message ->
+                mediaRelinkOpenToast(
+                    missingCount = missingCount,
+                    unknownCount = unknownCount,
+                    healthBlockingCount = healthBlockingCount,
+                    healthWarningCount = healthWarningCount
+                )?.let { message ->
                     showToast(message, ToastSeverity.Warning)
                 }
             }
@@ -4346,6 +4369,12 @@ class EditorViewModel @Inject constructor(
             mediaAssets = mediaAssets
         )
     }
+
+    private fun analyzeMediaHealthForState(state: EditorState = _state.value) =
+        MediaHealth.analyze(buildAutoSaveState(state))
+
+    private fun analyzeMediaHealthForRecovery(recovery: AutoSaveState) =
+        MediaHealth.analyze(recovery)
 
     private fun sanitizedProjectFileStem(name: String): String {
         return sanitizeFileName(name, fallback = "NovaCut")

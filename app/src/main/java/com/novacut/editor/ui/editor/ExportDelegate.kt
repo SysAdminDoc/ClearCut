@@ -15,6 +15,7 @@ import com.novacut.editor.engine.C2paExportEngine
 import com.novacut.editor.engine.ContactSheetExporter
 import com.novacut.editor.engine.ExportService
 import com.novacut.editor.engine.ExportState
+import com.novacut.editor.engine.MediaHealthReport
 import com.novacut.editor.engine.MixedRenderExportPlanner
 import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.engine.StreamCopyExportEngine
@@ -55,7 +56,8 @@ class ExportDelegate(
     private val dismissedPanelState: (EditorState) -> EditorState,
     private val showExportSheet: () -> Unit,
     private val streamCopyEngine: StreamCopyExportEngine? = null,
-    private val c2paExportEngine: C2paExportEngine? = null
+    private val c2paExportEngine: C2paExportEngine? = null,
+    private val mediaHealthPreflight: (EditorState) -> MediaHealthReport? = { it.media.healthReport }
 ) {
     // --- Export ---
     // Holder for the GIF-style / contact-sheet / any other non-Transformer
@@ -257,6 +259,32 @@ class ExportDelegate(
         }
         if (currentState.tracks.flatMap { it.clips }.isEmpty()) {
             showToast("No clips to export")
+            return
+        }
+        val healthReport = mediaHealthPreflight(currentState)
+        val mediaPreflight = ExportMediaPreflight.evaluate(
+            healthReport = healthReport,
+            relinkReports = currentState.media.relinkReports
+        )
+        stateFlow.update { state ->
+            state.copyMedia { media -> media.copy(healthReport = healthReport) }
+        }
+        if (!mediaPreflight.canExport) {
+            stateFlow.update { state ->
+                dismissedPanelState(state)
+                    .copyExport { export ->
+                        export.copy(
+                            state = ExportState.ERROR,
+                            progress = 0f,
+                            errorMessage = mediaPreflight.message,
+                            lastExportedFilePath = null
+                        )
+                    }
+                    .copyPanel { panel ->
+                        panel.copy(panels = panel.panels.closeAll().open(PanelId.MEDIA_MANAGER))
+                    }
+            }
+            showToast(mediaPreflight.message)
             return
         }
 
