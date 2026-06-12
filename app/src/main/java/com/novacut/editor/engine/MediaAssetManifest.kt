@@ -18,6 +18,7 @@ import java.util.Locale
 private const val MEDIA_ASSET_TAG = "MediaAssetManifest"
 private const val MEDIA_ASSET_SCHEMA_VERSION = 1
 private const val FINGERPRINT_WINDOW_BYTES = 1024 * 1024
+private const val MAX_MEDIA_ASSET_SIDECAR_BYTES = 64L * 1024L
 
 internal data class MediaAssetReference(
     val uri: Uri,
@@ -117,6 +118,11 @@ internal fun mediaAssetSidecarFileFor(mediaFile: File): File {
 }
 
 internal fun isMediaAssetSidecar(file: File): Boolean = file.name.endsWith(".asset.json")
+
+internal fun mediaFileForAssetSidecar(sidecar: File): File? {
+    if (!isMediaAssetSidecar(sidecar)) return null
+    return File(sidecar.parentFile, sidecar.name.removeSuffix(".asset.json"))
+}
 
 internal fun collectMediaAssetReferences(state: AutoSaveState): List<MediaAssetReference> {
     return collectMediaAssetReferences(state.tracks, state.imageOverlays)
@@ -237,10 +243,7 @@ private fun projectMediaAssetForReference(
 ): ProjectMediaAsset {
     val managedFile = managedMediaFileForReference(reference.uri, managedDir)
     if (managedFile != null) {
-        val sidecar = mediaAssetSidecarFileFor(managedFile)
-        val sidecarAsset = runCatching {
-            if (sidecar.isFile) projectMediaAssetFromJson(JSONObject(sidecar.readText(Charsets.UTF_8))) else null
-        }.getOrNull()
+        val sidecarAsset = readProjectMediaAssetSidecar(mediaAssetSidecarFileFor(managedFile))
         if (sidecarAsset != null) return sidecarAsset
 
         val record = buildMediaAssetRecord(
@@ -271,11 +274,25 @@ private fun projectMediaAssetForReference(
     )
 }
 
-private fun projectMediaAssetFromJson(json: JSONObject): ProjectMediaAsset {
+internal fun readProjectMediaAssetSidecar(sidecar: File): ProjectMediaAsset? {
+    if (!sidecar.isFile || sidecar.length() <= 0L || sidecar.length() > MAX_MEDIA_ASSET_SIDECAR_BYTES) {
+        return null
+    }
+    return runCatching {
+        sidecar.inputStream().use { input ->
+            projectMediaAssetFromJson(JSONObject(readUtf8WithByteLimit(input, MAX_MEDIA_ASSET_SIDECAR_BYTES)))
+        }
+    }.getOrNull()
+}
+
+internal fun projectMediaAssetFromJson(json: JSONObject): ProjectMediaAsset? {
+    val assetId = json.optString("assetId", "").takeIf { it.isNotBlank() } ?: return null
+    val managedUri = json.optString("managedUri", "").takeIf { it.isNotBlank() } ?: return null
+    val originalUri = json.optString("originalUri", "").takeIf { it.isNotBlank() } ?: managedUri
     return ProjectMediaAsset(
-        assetId = json.optString("assetId"),
-        managedUri = json.optString("managedUri"),
-        originalUri = json.optString("originalUri"),
+        assetId = assetId,
+        managedUri = managedUri,
+        originalUri = originalUri,
         displayName = json.optNullableString("displayName"),
         mediaType = json.optString("mediaType", "video"),
         mimeType = json.optNullableString("mimeType"),

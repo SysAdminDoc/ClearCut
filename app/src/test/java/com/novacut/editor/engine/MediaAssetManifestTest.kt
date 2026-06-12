@@ -10,6 +10,7 @@ import com.novacut.editor.model.TrackType
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -28,6 +29,8 @@ class MediaAssetManifestTest {
         )
         assertTrue(isMediaAssetSidecar(File("/tmp/project/clip.mp4.asset.json")))
         assertFalse(isMediaAssetSidecar(mediaFile))
+        assertEquals(mediaFile, mediaFileForAssetSidecar(File("/tmp/project/clip.mp4.asset.json")))
+        assertNull(mediaFileForAssetSidecar(mediaFile))
     }
 
     @Test
@@ -126,5 +129,38 @@ class MediaAssetManifestTest {
             references.map { it.uri.toString() }
         )
         assertEquals(listOf("video", "video", "image"), references.map { it.mediaType })
+    }
+
+    @Test
+    fun projectMediaAssetFromJsonRejectsBlankIdentityFields() {
+        assertNull(projectMediaAssetFromJson(JSONObject().put("managedUri", "file:///clip.mp4")))
+        assertNull(projectMediaAssetFromJson(JSONObject().put("assetId", "asset-1")))
+    }
+
+    @Test
+    fun projectMediaAssetFromJsonDefaultsBlankOriginalUriToManagedUri() {
+        val asset = projectMediaAssetFromJson(
+            JSONObject()
+                .put("assetId", "asset-1")
+                .put("managedUri", "file:///clip.mp4")
+                .put("originalUri", "")
+                .put("mediaType", "video")
+        )
+
+        assertEquals("file:///clip.mp4", asset?.originalUri)
+    }
+
+    @Test
+    fun readProjectMediaAssetSidecarRejectsOversizedJson() {
+        val dir = Files.createTempDirectory("media-sidecar-").toFile()
+        try {
+            val sidecar = File(dir, "clip.mp4.asset.json").apply {
+                writeText(" ".repeat(65 * 1024), Charsets.UTF_8)
+            }
+
+            assertNull(readProjectMediaAssetSidecar(sidecar))
+        } finally {
+            dir.deleteRecursively()
+        }
     }
 }
