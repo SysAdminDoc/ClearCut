@@ -174,7 +174,8 @@ enum class PanelId {
     V369_FEATURES,
     TEXT_BASED_EDIT, AUTO_CHAPTER, TALKING_HEAD, KARAOKE_CAPTIONS,
     CONTENT_ID, DIRECT_PUBLISH, FLASH_SAFETY, COLOR_BLIND_PREVIEW,
-    AI_THUMBNAIL, AUDIO_DESCRIPTION
+    AI_THUMBNAIL, AUDIO_DESCRIPTION,
+    COMMAND_PALETTE
 }
 
 data class PanelVisibility(
@@ -2156,6 +2157,10 @@ class EditorViewModel @Inject constructor(
         rebuildTimeline()
         showToast("Restored: ${target.description}")
     }
+
+    // --- Command Palette ---
+    fun showCommandPalette() = showPanel(PanelId.COMMAND_PALETTE)
+    fun hideCommandPalette() = hidePanel(PanelId.COMMAND_PALETTE)
 
     // --- Marker List ---
     fun showMarkerList() = showPanel(PanelId.MARKER_LIST)

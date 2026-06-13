@@ -526,7 +526,8 @@ fun EditorScreen(
                 editorMode = state.editorMode,
                 onToggleEditorMode = viewModel::toggleEditorMode,
                 onOpenScratchpad = viewModel::showScratchpad,
-                onOpenV369Features = viewModel::showV369Features
+                onOpenV369Features = viewModel::showV369Features,
+                onSearch = viewModel::showCommandPalette
             )
 
             val editConfidenceStatus = remember(
@@ -886,20 +887,7 @@ fun EditorScreen(
                 }
 
                 // Bottom tool area (PowerDirector-style tab bar + sub-menu grids)
-                BottomToolArea(
-                    selectedClipId = state.selectedClipId,
-                    hasCopiedEffects = state.copiedEffects.isNotEmpty(),
-                    textOverlays = state.textOverlays,
-                    onEditTextOverlay = { id -> viewModel.editTextOverlay(id) },
-                    editorMode = state.editorMode,
-                    compactLocked = previewFirstLayout.lockBottomToolArea,
-                    onExpandedChange = { expanded ->
-                        isToolPanelExpanded = expanded
-                    },
-                    onDeleteTextOverlay = { id ->
-                        viewModel.removeTextOverlay(id)
-                    },
-                    onAction = { actionId ->
+                val editorOnAction: (String) -> Unit = { actionId ->
                     when (actionId) {
                         "edit" -> viewModel.showMediaPicker()
                         "audio_add" -> viewModel.showMediaPicker()
@@ -1005,9 +993,28 @@ fun EditorScreen(
                         "ai_style_transfer" -> viewModel.runAiTool("ai_style_transfer")
                         "bg_replace" -> viewModel.runAiTool("bg_replace")
                         // smart_reframe handled above via showSmartReframe()
+                        "command_palette", "search" -> viewModel.showCommandPalette()
+                        "add_media" -> viewModel.showMediaPicker()
+                        "export" -> viewModel.showExportSheet()
+                        "undo" -> viewModel.undo()
+                        "redo" -> viewModel.redo()
                         else -> Log.w("EditorScreen", "Unknown action: $actionId")
                     }
                 }
+                BottomToolArea(
+                    selectedClipId = state.selectedClipId,
+                    hasCopiedEffects = state.copiedEffects.isNotEmpty(),
+                    textOverlays = state.textOverlays,
+                    onEditTextOverlay = { id -> viewModel.editTextOverlay(id) },
+                    editorMode = state.editorMode,
+                    compactLocked = previewFirstLayout.lockBottomToolArea,
+                    onExpandedChange = { expanded ->
+                        isToolPanelExpanded = expanded
+                    },
+                    onDeleteTextOverlay = { id ->
+                        viewModel.removeTextOverlay(id)
+                    },
+                    onAction = editorOnAction
                 )
             }
         }
@@ -1066,7 +1073,8 @@ fun EditorScreen(
                 stickerImageLauncher.launch(
                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                 )
-            }
+            },
+            onAction = editorOnAction
         )
 
         EditorOverlayHost(
@@ -1239,7 +1247,8 @@ private fun EditorTopBar(
     editorMode: EditorMode = EditorMode.PRO,
     onToggleEditorMode: () -> Unit = {},
     onOpenScratchpad: () -> Unit = {},
-    onOpenV369Features: () -> Unit = {}
+    onOpenV369Features: () -> Unit = {},
+    onSearch: () -> Unit = {}
 ) {
     var showOverflow by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
@@ -1732,7 +1741,19 @@ private fun EditorTopBar(
                     }
                 }
 
-                Spacer(modifier = Modifier.width(6.dp))
+                IconButton(
+                    onClick = onSearch,
+                    modifier = Modifier.size(if (isCompactBar) 32.dp else 36.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = stringResource(R.string.tool_search),
+                        modifier = Modifier.size(if (isCompactBar) 17.dp else 19.dp),
+                        tint = Mocha.Subtext1
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(4.dp))
 
                 Button(
                     onClick = onExport,

@@ -51,7 +51,8 @@ fun BoxScope.EditorUtilityPanelHost(
     playheadMs: Long,
     context: Context,
     onRelinkMedia: (Uri) -> Unit,
-    onImportStickerFromGallery: () -> Unit
+    onImportStickerFromGallery: () -> Unit,
+    onAction: (String) -> Unit = {}
 ) {
     BottomSheetSlot(
         visible = state.panels.isOpen(PanelId.SCRATCHPAD),
@@ -362,6 +363,17 @@ fun BoxScope.EditorUtilityPanelHost(
             onDelete = viewModel::deleteTimelineMarker,
             onUpdateLabel = viewModel::updateMarkerLabel,
             onClose = viewModel::hideMarkerList
+        )
+    }
+
+    BottomSheetSlot(
+        visible = state.panels.isOpen(PanelId.COMMAND_PALETTE),
+        modifier = Modifier.align(Alignment.BottomCenter)
+    ) {
+        CommandPaletteSheet(
+            hasSelectedClip = state.selectedClipId != null,
+            onAction = onAction,
+            onDismiss = viewModel::hideCommandPalette
         )
     }
 

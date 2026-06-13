@@ -931,6 +931,11 @@
     <string name="tool_auto_edit">Auto\nEdit</string>
     <string name="tool_multi_cam">Multi\nCam</string>
     <string name="tool_marker_list">Marker\nList</string>
+    <string name="tool_add_media">Add Media</string>
+    <string name="tool_export">Export</string>
+    <string name="tool_undo">Undo</string>
+    <string name="tool_redo">Redo</string>
+    <string name="tool_search">Search tools</string>
 
     <!-- ToolPanel -->
     <string name="tool_effects">Effects</string>

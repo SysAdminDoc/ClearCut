@@ -1,0 +1,60 @@
+package com.novacut.editor.ui.editor
+
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class CommandRegistryTest {
+
+    @Test
+    fun fuzzyMatchFindsExactSubstring() {
+        assertTrue(CommandRegistry.fuzzyMatch("split", "Split Clip"))
+    }
+
+    @Test
+    fun fuzzyMatchIsCaseInsensitive() {
+        assertTrue(CommandRegistry.fuzzyMatch("SPLIT", "Split Clip"))
+        assertTrue(CommandRegistry.fuzzyMatch("split", "SPLIT CLIP"))
+    }
+
+    @Test
+    fun fuzzyMatchFindsScatteredCharacters() {
+        assertTrue(CommandRegistry.fuzzyMatch("smt", "Smart Crop"))
+        assertTrue(CommandRegistry.fuzzyMatch("bg", "Background Removal"))
+    }
+
+    @Test
+    fun fuzzyMatchRejectsNonMatchingQuery() {
+        assertFalse(CommandRegistry.fuzzyMatch("xyz", "Split Clip"))
+        assertFalse(CommandRegistry.fuzzyMatch("zz", "Trim"))
+    }
+
+    @Test
+    fun fuzzyMatchEmptyQueryMatchesEverything() {
+        assertTrue(CommandRegistry.fuzzyMatch("", "anything"))
+        assertTrue(CommandRegistry.fuzzyMatch("  ", "anything"))
+    }
+
+    @Test
+    fun allCommandsReturnsNonEmptyList() {
+        val commands = CommandRegistry.allCommands()
+        assertTrue("Expected at least 40 commands", commands.size >= 40)
+    }
+
+    @Test
+    fun allCommandsHaveUniqueIds() {
+        val commands = CommandRegistry.allCommands()
+        val ids = commands.map { it.actionId }
+        val dupes = ids.groupBy { it }.filter { it.value.size > 1 }.keys
+        assertTrue("Duplicate action IDs: $dupes", dupes.isEmpty())
+    }
+
+    @Test
+    fun clipRequiringCommandsAreTagged() {
+        val commands = CommandRegistry.allCommands()
+        val split = commands.find { it.actionId == "split" }
+        assertTrue("split should require a clip", split?.requiresClip == true)
+        val addMedia = commands.find { it.actionId == "add_media" }
+        assertFalse("add_media should not require a clip", addMedia?.requiresClip == true)
+    }
+}
