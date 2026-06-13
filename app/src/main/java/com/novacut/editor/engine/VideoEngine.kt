@@ -1563,6 +1563,20 @@ class VideoEngine @Inject constructor(
                         onError(IllegalStateException("Empty output file"))
                         return
                     }
+                    val verification = ExportOutputVerifier.verify(
+                        outputFile = outputFile,
+                        expectVideo = !config.exportAudioOnly && !config.exportStemsOnly
+                    )
+                    if (!verification.valid) {
+                        Log.e(TAG, "Post-export verification failed: ${verification.reason}")
+                        _exportErrorMessage.value = verification.reason ?: "Export verification failed"
+                        _exportState.value = ExportState.ERROR
+                        _exportProgress.value = 0f
+                        activeExportOutputFile = null
+                        runCatching { outputFile.delete() }
+                        onError(IllegalStateException(verification.reason ?: "Export verification failed"))
+                        return
+                    }
                     terminalReached = true
                     if (markCompleteOnFinish) {
                         _exportState.value = ExportState.COMPLETE
