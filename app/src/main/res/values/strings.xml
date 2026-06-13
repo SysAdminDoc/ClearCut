@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.74.88</string>
+    <string name="app_version">v3.74.89</string>
 
     <!-- Common -->
     <string name="close">Close</string>
@@ -434,6 +434,9 @@
     <!-- PreviewPanel -->
     <string name="preview_scopes">Scopes</string>
     <string name="preview_composition_guides">Composition guides</string>
+    <string name="preview_compare">Before/after comparison</string>
+    <string name="preview_compare_original">Original</string>
+    <string name="preview_compare_edited">Edited</string>
     <string name="preview_add_media">Add media to get started</string>
     <string name="preview_back_5s">Back 5s</string>
     <string name="preview_previous_frame">Previous frame</string>

@@ -1,18 +1,23 @@
 package com.novacut.editor.ui.editor
 
+import android.graphics.Bitmap
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateRotation
 import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BrokenImage
+import androidx.compose.material.icons.filled.Compare
 import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Pause
@@ -24,6 +29,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.pointer.pointerInput
@@ -32,6 +41,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.Player
@@ -44,6 +55,8 @@ import com.novacut.editor.model.AspectRatio
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.ImageOverlay
 import com.novacut.editor.ui.theme.Mocha
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @androidx.annotation.OptIn(UnstableApi::class)
 @Composable
@@ -72,7 +85,10 @@ fun PreviewPanel(
     showScopesButton: Boolean = false,
     onToggleScopes: () -> Unit = {},
     showCompositionGuides: Boolean = false,
-    onToggleCompositionGuides: () -> Unit = {}
+    onToggleCompositionGuides: () -> Unit = {},
+    isSplitPreviewEnabled: Boolean = false,
+    onToggleSplitPreview: () -> Unit = {},
+    hasActiveEffects: Boolean = false
 ) {
     val currentTimelineUri = currentTimelineClip?.let { it.proxyUri ?: it.sourceUri }
     val currentClipIsStillImage = remember(currentTimelineUri) {
@@ -263,6 +279,16 @@ fun PreviewPanel(
                             CompositionGuidesOverlay()
                         }
 
+                        if (isSplitPreviewEnabled && hasActiveEffects && currentTimelineClip != null && !showGapState) {
+                            SplitPreviewOverlay(
+                                engine = engine,
+                                clip = currentTimelineClip,
+                                playheadMs = playheadMs,
+                                frameWidthDp = frameWidth,
+                                frameHeightDp = frameHeight,
+                            )
+                        }
+
                         if (totalDurationMs > 0 && !showGapState) {
                             Column(
                                 modifier = Modifier
@@ -307,6 +333,28 @@ fun PreviewPanel(
                                             tint = if (showCompositionGuides) Mocha.Mauve else Mocha.Subtext0.copy(alpha = 0.9f),
                                             modifier = Modifier.size(18.dp)
                                         )
+                                    }
+                                }
+                                if (hasActiveEffects) {
+                                    Surface(
+                                        color = if (isSplitPreviewEnabled) Mocha.Teal.copy(alpha = 0.3f) else Mocha.Midnight.copy(alpha = 0.72f),
+                                        shape = CircleShape,
+                                        border = androidx.compose.foundation.BorderStroke(
+                                            1.dp,
+                                            if (isSplitPreviewEnabled) Mocha.Teal.copy(alpha = 0.6f) else Mocha.CardStroke
+                                        ),
+                                    ) {
+                                        IconButton(
+                                            onClick = onToggleSplitPreview,
+                                            modifier = Modifier.size(38.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Compare,
+                                                contentDescription = stringResource(R.string.preview_compare),
+                                                tint = if (isSplitPreviewEnabled) Mocha.Teal else Mocha.Subtext0.copy(alpha = 0.9f),
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -649,5 +697,110 @@ private fun CompositionGuidesOverlay() {
         val crossSize = minOf(w, h) * 0.02f
         drawLine(guideColor, Offset(cx - crossSize, cy), Offset(cx + crossSize, cy), strokeWidth = 1f)
         drawLine(guideColor, Offset(cx, cy - crossSize), Offset(cx, cy + crossSize), strokeWidth = 1f)
+    }
+}
+
+@Composable
+private fun BoxScope.SplitPreviewOverlay(
+    engine: VideoEngine,
+    clip: Clip,
+    playheadMs: Long,
+    frameWidthDp: androidx.compose.ui.unit.Dp,
+    frameHeightDp: androidx.compose.ui.unit.Dp,
+) {
+    val density = LocalDensity.current
+    val frameWidthPx = with(density) { frameWidthDp.toPx() }
+    val frameHeightPx = with(density) { frameHeightDp.toPx() }
+
+    var wipePosition by remember { mutableFloatStateOf(0.5f) }
+    var originalBitmap by remember { mutableStateOf<Bitmap?>(null) }
+
+    val sourceUri = clip.sourceUri
+    val sourceTimeUs = ((playheadMs - clip.timelineStartMs + clip.trimStartMs)
+        .coerceIn(clip.trimStartMs, clip.trimEndMs)) * 1000L
+
+    LaunchedEffect(sourceUri, sourceTimeUs / 100_000) {
+        originalBitmap = withContext(Dispatchers.IO) {
+            engine.extractThumbnail(
+                sourceUri,
+                sourceTimeUs,
+                frameWidthPx.toInt().coerceAtLeast(64),
+                frameHeightPx.toInt().coerceAtLeast(36)
+            )
+        }
+    }
+
+    val bmp = originalBitmap
+    if (bmp != null && !bmp.isRecycled) {
+        val imageBitmap = remember(bmp) { bmp.asImageBitmap() }
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .clipToBounds()
+                .pointerInput(Unit) {
+                    detectDragGestures { change, _ ->
+                        change.consume()
+                        wipePosition = (change.position.x / size.width).coerceIn(0.05f, 0.95f)
+                    }
+                }
+        ) {
+            val wipeX = size.width * wipePosition
+            clipRect(right = wipeX) {
+                drawImage(
+                    imageBitmap,
+                    srcSize = IntSize(bmp.width, bmp.height),
+                    dstSize = IntSize(size.width.toInt(), size.height.toInt()),
+                )
+            }
+
+            drawLine(
+                color = Mocha.Text,
+                start = Offset(wipeX, 0f),
+                end = Offset(wipeX, size.height),
+                strokeWidth = 3f
+            )
+
+            val handleRadius = 10f
+            drawCircle(
+                color = Mocha.Text,
+                radius = handleRadius,
+                center = Offset(wipeX, size.height / 2f)
+            )
+            drawCircle(
+                color = Mocha.Crust,
+                radius = handleRadius - 3f,
+                center = Offset(wipeX, size.height / 2f)
+            )
+        }
+
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Surface(
+                color = Mocha.Midnight.copy(alpha = 0.72f),
+                shape = RoundedCornerShape(6.dp),
+            ) {
+                Text(
+                    stringResource(R.string.preview_compare_original),
+                    color = Mocha.Teal,
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                )
+            }
+            Surface(
+                color = Mocha.Midnight.copy(alpha = 0.72f),
+                shape = RoundedCornerShape(6.dp),
+            ) {
+                Text(
+                    stringResource(R.string.preview_compare_edited),
+                    color = Mocha.Rosewater,
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                )
+            }
+        }
     }
 }

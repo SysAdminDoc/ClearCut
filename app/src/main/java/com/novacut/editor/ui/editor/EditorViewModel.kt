@@ -260,6 +260,8 @@ data class EditorState(
     val editorMode: EditorMode = EditorMode.PRO,
     // Timeline collapsed
     val isTimelineCollapsed: Boolean = false,
+    // Split-screen before/after comparison
+    val isSplitPreviewEnabled: Boolean = false,
     // Drawing overlay
     val drawingPaths: List<com.novacut.editor.model.DrawingPath> = emptyList(),
     val isDrawingMode: Boolean = false,
@@ -2934,6 +2936,11 @@ class EditorViewModel @Inject constructor(
     // --- Timeline Collapse ---
     fun toggleTimelineCollapse() {
         _state.update { it.copy(isTimelineCollapsed = !it.isTimelineCollapsed) }
+    }
+
+    // --- Split Preview Comparison ---
+    fun toggleSplitPreview() {
+        _state.update { it.copy(isSplitPreviewEnabled = !it.isSplitPreviewEnabled) }
     }
 
     // Helper for beat sync splitting
