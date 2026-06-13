@@ -1191,6 +1191,10 @@
         <item quantity="one">%1$d fuente necesita atención</item>
         <item quantity="other">%1$d fuentes necesitan atención</item>
     </plurals>
+    <plurals name="media_manager_bulk_relink">
+        <item quantity="one">Revincular %1$d fuente faltante</item>
+        <item quantity="other">Revincular %1$d fuentes faltantes</item>
+    </plurals>
     <string name="media_manager_missing_body">Resuelva los archivos fuente faltantes o no verificados antes de exportarlos para que las vistas previas, las renderizaciones y las decisiones de vinculación sean predecibles.</string>
     <string name="media_manager_ready_title">Todos los archivos vinculados están disponibles.</string>
     <string name="media_manager_ready_body">Sus medios de origen están disponibles en este dispositivo, por lo que los flujos de trabajo de vista previa, exportación y transferencia deben seguir siendo confiables.</string>
@@ -1496,6 +1500,7 @@
     <string name="project_import_copy_failed">NovaCut no pudo copiar ese medio en el almacenamiento local.</string>
     <string name="cd_smart_reframe">Replanteo inteligente</string>
     <string name="cd_clip_thumbnail">Miniatura del clip</string>
+    <string name="cd_clip_source_missing">Fuente del clip no encontrada</string>
     <string name="cd_tts_preview">Vista previa del discurso</string>
     <string name="settings_editor">Redactor</string>
     <string name="settings_editor_description">Elija cuánto control y orientación muestra el editor de forma predeterminada.</string>

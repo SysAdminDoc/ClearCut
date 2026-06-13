@@ -199,13 +199,13 @@ class VideoEngine @Inject constructor(
     }
 
     @androidx.annotation.OptIn(UnstableApi::class)
-    fun prepareTimeline(tracks: List<Track>) {
+    fun prepareTimeline(tracks: List<Track>, missingClipIds: Set<String> = emptySet()) {
         val p = getPlayer()
         videoClips = collectPreviewClips(tracks)
         val timelineEndMs = tracks.maxOfOrNull { track ->
             track.clips.maxOfOrNull { clip -> clip.timelineEndMs } ?: 0L
         } ?: 0L
-        previewSegments = buildPreviewSegments(videoClips, timelineEndMs)
+        previewSegments = buildPreviewSegments(videoClips, timelineEndMs, missingClipIds)
         if (previewSegments.isEmpty()) {
             p.clearMediaItems()
             clipDurationsMs = emptyList()
@@ -1349,7 +1349,8 @@ class VideoEngine @Inject constructor(
 
     private fun buildPreviewSegments(
         clips: List<Clip>,
-        totalTimelineDurationMs: Long
+        totalTimelineDurationMs: Long,
+        missingClipIds: Set<String> = emptySet()
     ): List<PreviewSegment> {
         if (clips.isEmpty()) return emptyList()
 
@@ -1366,12 +1367,21 @@ class VideoEngine @Inject constructor(
                     mediaUri = gapUri
                 )
             }
-            segments += PreviewSegment(
-                clip = clip,
-                timelineStartMs = clip.timelineStartMs,
-                durationMs = clip.durationMs,
-                mediaUri = resolvePreviewMediaUri(clip)
-            )
+            if (clip.id in missingClipIds) {
+                segments += PreviewSegment(
+                    clip = clip,
+                    timelineStartMs = clip.timelineStartMs,
+                    durationMs = clip.durationMs,
+                    mediaUri = gapUri
+                )
+            } else {
+                segments += PreviewSegment(
+                    clip = clip,
+                    timelineStartMs = clip.timelineStartMs,
+                    durationMs = clip.durationMs,
+                    mediaUri = resolvePreviewMediaUri(clip)
+                )
+            }
             cursorMs = clip.timelineEndMs
         }
 
