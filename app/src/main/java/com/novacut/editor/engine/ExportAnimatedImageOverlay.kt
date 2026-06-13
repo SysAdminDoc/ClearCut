@@ -17,12 +17,12 @@ import com.novacut.editor.model.ImageOverlay
 
 @UnstableApi
 internal class ExportAnimatedImageOverlay private constructor(
-    private val drawable: AnimatedImageDrawable,
+    private val movie: android.graphics.Movie,
+    private val animDurationMs: Int,
     private val frameWidth: Int,
     private val frameHeight: Int,
     private val relStartUs: Long,
     private val relEndUs: Long,
-    private val overlayDurationUs: Long,
     private val visibleSettings: StaticOverlaySettings,
 ) : BitmapOverlay() {
 
@@ -39,10 +39,14 @@ internal class ExportAnimatedImageOverlay private constructor(
         val quantizedMs = (frameTimeMs / 33L) * 33L
         if (quantizedMs != lastFrameTimeMs) {
             lastFrameTimeMs = quantizedMs
+            val loopedMs = if (animDurationMs > 0) (frameTimeMs % animDurationMs).toInt() else 0
+            movie.setTime(loopedMs)
             val canvas = Canvas(frameBitmap)
             canvas.drawColor(android.graphics.Color.TRANSPARENT, android.graphics.PorterDuff.Mode.CLEAR)
-            drawable.setBounds(0, 0, frameWidth, frameHeight)
-            drawable.draw(canvas)
+            val scaleX = frameWidth.toFloat() / movie.width().coerceAtLeast(1)
+            val scaleY = frameHeight.toFloat() / movie.height().coerceAtLeast(1)
+            canvas.scale(scaleX, scaleY)
+            movie.draw(canvas, 0f, 0f)
         }
         return frameBitmap
     }
@@ -57,11 +61,6 @@ internal class ExportAnimatedImageOverlay private constructor(
 
     override fun release() {
         super.release()
-        // The drawable was started with REPEAT_INFINITE — without stop() it
-        // keeps scheduling frame-decode callbacks on the main looper long
-        // after the export has finished.
-        try { drawable.stop() } catch (_: Exception) {}
-        drawable.callback = null
         try { if (!frameBitmap.isRecycled) frameBitmap.recycle() } catch (_: Exception) {}
     }
 
@@ -69,6 +68,7 @@ internal class ExportAnimatedImageOverlay private constructor(
         private const val TAG = "ExportAnimatedOverlay"
         private const val MAX_OVERLAY_DIMENSION = 512
 
+        @Suppress("DEPRECATION")
         fun create(
             context: Context,
             overlay: ImageOverlay,
@@ -76,30 +76,23 @@ internal class ExportAnimatedImageOverlay private constructor(
             relEndMs: Long,
             outputFrameWidth: Int,
         ): ExportAnimatedImageOverlay? {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
-                Log.w(TAG, "AnimatedImageDrawable requires API 28+")
-                return null
-            }
-            var startedDrawable: AnimatedImageDrawable? = null
             return try {
-                val source = ImageDecoder.createSource(context.contentResolver, overlay.sourceUri)
-                val drawable = ImageDecoder.decodeDrawable(source) { decoder, info, _ ->
-                    val w = info.size.width
-                    val h = info.size.height
-                    val targetW = ExportImageOverlay.outputWidthForFrame(overlay.scale, outputFrameWidth)
-                        .coerceAtMost(MAX_OVERLAY_DIMENSION)
-                    val scale = targetW.toFloat() / w.coerceAtLeast(1)
-                    val targetH = (h * scale).toInt().coerceAtLeast(1).coerceAtMost(MAX_OVERLAY_DIMENSION)
-                    decoder.setTargetSize(targetW, targetH)
-                }
-                if (drawable !is AnimatedImageDrawable) {
-                    Log.w(TAG, "Source is not animated, falling back to static overlay")
-                    drawable.callback = null
-                    return null
-                }
-                drawable.repeatCount = AnimatedImageDrawable.REPEAT_INFINITE
-                drawable.start()
-                startedDrawable = drawable
+                val inputStream = context.contentResolver.openInputStream(overlay.sourceUri)
+                    ?: run {
+                        Log.w(TAG, "Cannot open animated overlay ${overlay.sourceUri}")
+                        return null
+                    }
+                val movie = inputStream.use { android.graphics.Movie.decodeStream(it) }
+                    ?: run {
+                        Log.w(TAG, "Movie.decodeStream returned null for ${overlay.sourceUri}")
+                        return null
+                    }
+                val movieW = movie.width().coerceAtLeast(1)
+                val movieH = movie.height().coerceAtLeast(1)
+                val targetW = ExportImageOverlay.outputWidthForFrame(overlay.scale, outputFrameWidth)
+                    .coerceAtMost(MAX_OVERLAY_DIMENSION)
+                val scale = targetW.toFloat() / movieW
+                val targetH = (movieH * scale).toInt().coerceAtLeast(1).coerceAtMost(MAX_OVERLAY_DIMENSION)
 
                 val settings = StaticOverlaySettings.Builder()
                     .setAlphaScale(overlay.opacity.coerceIn(0f, 1f))
@@ -115,20 +108,16 @@ internal class ExportAnimatedImageOverlay private constructor(
                 val relEndUs = relEndMs.coerceAtLeast(relStartMs + 1L) * 1000L
 
                 ExportAnimatedImageOverlay(
-                    drawable = drawable,
-                    frameWidth = drawable.intrinsicWidth.coerceAtLeast(1),
-                    frameHeight = drawable.intrinsicHeight.coerceAtLeast(1),
+                    movie = movie,
+                    animDurationMs = movie.duration().coerceAtLeast(0),
+                    frameWidth = targetW,
+                    frameHeight = targetH,
                     relStartUs = relStartUs,
                     relEndUs = relEndUs,
-                    overlayDurationUs = relEndUs - relStartUs,
                     visibleSettings = settings,
                 )
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to decode animated overlay ${overlay.sourceUri}", e)
-                startedDrawable?.let {
-                    try { it.stop() } catch (_: Exception) {}
-                    it.callback = null
-                }
                 null
             }
         }
