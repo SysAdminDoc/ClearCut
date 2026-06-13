@@ -3,6 +3,7 @@ package com.novacut.editor.engine
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.net.Uri
 import android.opengl.GLES30
 import android.opengl.GLUtils
 import android.util.Log
@@ -12,6 +13,7 @@ import com.airbnb.lottie.LottieDrawable
 import com.airbnb.lottie.TextDelegate
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.suspendCancellableCoroutine
+import java.util.zip.ZipInputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
@@ -28,25 +30,42 @@ import kotlin.coroutines.resume
  * 3. Render frame-by-frame for export overlay
  *
  * Templates stored in: assets/lottie_templates/
- * Format: .json (Lottie) or .lottie (dotLottie compressed)
+ * Format: .json (Lottie JSON) or .lottie (dotLottie ZIP container via loadDotLottie)
  *
- * ## R6.16 — dotLottie + state-machine roadmap
+ * ## R6.16 — dotLottie v2 / state-machine spike (completed)
  *
- * Lottie shipped state machines in late 2025 and dotLottie compressed
- * containers (10-15x smaller files than equivalent JSON). When
- * `lottie-compose:7.x` ships with the state-machine API:
+ * ### Findings
  *
+ * **dotLottie container loading** — ADOPTED. Lottie-android 6.7.x supports
+ * `.lottie` zip containers via `LottieCompositionFactory.fromZipStream()`.
+ * The decompressed inner structure yields the same `LottieComposition`
+ * surface, so `renderFrame()` / `renderFrameToTexture()` work unchanged.
+ * `loadDotLottie(uri)` added below. Files are 10-15x smaller than raw JSON,
+ * making downloadable template packs practical without bloating APK.
+ *
+ * **Text/color replacement** — WORKS. `TextDelegate` replaces text layers.
+ * Color properties are controllable via `LottieValueCallback` with
+ * `KeyPath("layer", "**")`. Both work with dotLottie-loaded compositions.
+ *
+ * **State machines** — DEFERRED. Lottie-android 6.7.x does not expose a
+ * public state-machine API. The Lottie spec defines state machines, but the
+ * Android runtime has not shipped the corresponding control surface as of
+ * 6.7.1. When `lottie-compose:7.x+` ships state-machine support:
  *   1. Bump the version pin in gradle/libs.versions.toml.
- *   2. Add a `loadDotLottie(uri: Uri)` parallel to the existing JSON loader
- *      that accepts the `.lottie` zip container. The decompressed inner
- *      structure has the same `LottieComposition` surface, so the rest of
- *      this engine doesn't change.
- *   3. Add a `getStateMachineInputs(composition)` accessor that surfaces
- *      the state machine's boolean / number / trigger inputs so the UI can
- *      drive them at render time (matches [RiveTemplateEngine.StateMachineInput]).
- *   4. Re-evaluate Tier A.13 (Rive) — when this lands, Lottie covers the
- *      *interactive template* use case at near-parity, and Rive becomes
- *      Under Consideration rather than Next.
+ *   2. Add `getStateMachineInputs(composition)` that surfaces boolean /
+ *      number / trigger inputs for UI-driven rendering.
+ *   3. Re-evaluate Rive — Lottie state machines at parity would make Rive
+ *      redundant for interactive templates.
+ *
+ * **APK impact** — ZERO. lottie-compose 6.7.1 is already a dependency.
+ * dotLottie loading uses the same library; no new binary. Template packs
+ * would be downloaded on-demand, not bundled.
+ *
+ * **Rive status** — REMAINS INACTIVE. dotLottie covers static + text +
+ * color animated templates today. State-machine interactivity is the only
+ * gap, and it is an upstream blocker (not a NovaCut limitation). Rive adds
+ * ~2.5 MB native library per ABI; deferring avoids that cost until Lottie
+ * state machines are confirmed unavailable in a stable 7.x release.
  */
 @Singleton
 class LottieTemplateEngine @Inject constructor(
@@ -139,6 +158,35 @@ class LottieTemplateEngine @Inject constructor(
             }
         } catch (e: Exception) {
             Log.w(TAG, "Exception loading Lottie template: $assetPath", e)
+            null
+        }
+    }
+
+    /**
+     * Load a dotLottie (.lottie) container from a content URI.
+     * dotLottie files are ZIP archives containing the Lottie JSON + bundled assets.
+     * Supported since lottie-android 6.x via fromZipStream().
+     */
+    suspend fun loadDotLottie(uri: Uri): LottieComposition? {
+        return try {
+            val inputStream = context.contentResolver.openInputStream(uri) ?: run {
+                Log.w(TAG, "Failed to open dotLottie URI: $uri")
+                return null
+            }
+            suspendCancellableCoroutine { cont ->
+                val zipStream = ZipInputStream(inputStream)
+                val task = LottieCompositionFactory.fromZipStream(zipStream, null)
+                task.addListener { composition ->
+                    zipStream.close()
+                    if (cont.isActive) cont.resume(composition)
+                }.addFailureListener { e ->
+                    Log.w(TAG, "Failed to load dotLottie: $uri", e)
+                    zipStream.close()
+                    if (cont.isActive) cont.resume(null)
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Exception loading dotLottie: $uri", e)
             null
         }
     }
