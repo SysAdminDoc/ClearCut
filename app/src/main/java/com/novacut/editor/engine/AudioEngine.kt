@@ -13,6 +13,10 @@ import java.nio.ShortBuffer
 import javax.inject.Inject
 import javax.inject.Singleton
 import android.util.Log
+import java.io.DataInputStream
+import java.io.DataOutputStream
+import java.io.File
+import java.security.MessageDigest
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -33,6 +37,8 @@ class AudioEngine @Inject constructor(
      * Max 64 entries (~50KB total for 200-sample waveforms).
      */
     private val waveformCache = LruCache<String, FloatArray>(64)
+    private val diskCacheDir = File(context.filesDir, "waveform-cache")
+    private val maxDiskCacheBytes = 50L * 1024 * 1024 // 50 MB
 
     init {
         memoryTrimRegistry.register(
@@ -43,11 +49,54 @@ class AudioEngine @Inject constructor(
         }
     }
 
-    /**
-     * Clear the waveform cache (e.g., when project changes).
-     */
     fun clearWaveformCache() {
         waveformCache.evictAll()
+    }
+
+    private fun diskCacheKeyHash(key: String): String {
+        val md = MessageDigest.getInstance("SHA-256")
+        return md.digest(key.toByteArray()).joinToString("") { "%02x".format(it) }.take(32)
+    }
+
+    private fun readDiskCache(cacheKey: String): FloatArray? = try {
+        val file = File(diskCacheDir, diskCacheKeyHash(cacheKey))
+        if (file.exists() && file.length() >= 4) {
+            file.setLastModified(System.currentTimeMillis())
+            DataInputStream(file.inputStream().buffered()).use { dis ->
+                val count = dis.readInt()
+                if (count in 1..10_000) {
+                    FloatArray(count) { dis.readFloat() }
+                } else null
+            }
+        } else null
+    } catch (_: Exception) { null }
+
+    private fun writeDiskCache(cacheKey: String, data: FloatArray) {
+        try {
+            diskCacheDir.mkdirs()
+            val file = File(diskCacheDir, diskCacheKeyHash(cacheKey))
+            val tmp = File(diskCacheDir, "${file.name}.tmp")
+            DataOutputStream(tmp.outputStream().buffered()).use { dos ->
+                dos.writeInt(data.size)
+                data.forEach { dos.writeFloat(it) }
+            }
+            tmp.renameTo(file)
+            evictDiskCacheIfNeeded()
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to write waveform disk cache", e)
+        }
+    }
+
+    private fun evictDiskCacheIfNeeded() {
+        val files = diskCacheDir.listFiles() ?: return
+        var totalSize = files.sumOf { it.length() }
+        if (totalSize <= maxDiskCacheBytes) return
+        val sorted = files.sortedBy { it.lastModified() }
+        for (file in sorted) {
+            if (totalSize <= maxDiskCacheBytes * 3 / 4) break
+            totalSize -= file.length()
+            file.delete()
+        }
     }
 
     /**
@@ -63,6 +112,10 @@ class AudioEngine @Inject constructor(
         val boundedSampleCount = sampleCount.coerceAtMost(10_000)
         val cacheKey = "${uri}|${boundedSampleCount}"
         waveformCache.get(cacheKey)?.let { return@withContext it }
+        readDiskCache(cacheKey)?.let { cached ->
+            waveformCache.put(cacheKey, cached)
+            return@withContext cached
+        }
         if (isNonAudioVisualAsset(uri)) {
             val silent = FloatArray(boundedSampleCount) { 0f }
             waveformCache.put(cacheKey, silent)
@@ -169,6 +222,7 @@ class AudioEngine @Inject constructor(
                 result[i] = peak / maxAmplitude
             }
             waveformCache.put(cacheKey, result)
+            writeDiskCache(cacheKey, result)
             result
         } catch (e: Exception) {
             Log.e(TAG, "Waveform extraction failed for $uri", e)
