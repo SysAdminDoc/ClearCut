@@ -124,6 +124,8 @@ fun ExportSheet(
     encoderName: String? = null,
     stallWarning: Boolean = false,
     lastExportedFilePath: String? = null,
+    suggestedResolution: Resolution? = null,
+    suggestedFps: Int? = null,
     presentation: ExportSheetPresentation = ExportSheetPresentation.BOTTOM_SHEET,
     onConfigChanged: (ExportConfig) -> Unit,
     onStartExport: () -> Unit,
@@ -886,6 +888,64 @@ fun ExportSheet(
             description = stringResource(R.string.export_delivery_options_description),
             accent = Mocha.Sapphire
         ) {
+            if (videoModeEnabled && suggestedResolution != null &&
+                (suggestedResolution != config.resolution || (suggestedFps != null && suggestedFps != config.frameRate))
+            ) {
+                val label = buildString {
+                    append("Suggested: ${suggestedResolution.label}")
+                    if (suggestedFps != null) append(" ${suggestedFps}fps")
+                }
+                val upscaleWarning = config.resolution.height > suggestedResolution.height
+                Surface(
+                    shape = RoundedCornerShape(Radius.md),
+                    color = if (upscaleWarning) Mocha.Yellow.copy(alpha = 0.12f) else Mocha.Green.copy(alpha = 0.12f),
+                    border = BorderStroke(
+                        1.dp,
+                        if (upscaleWarning) Mocha.Yellow.copy(alpha = 0.3f) else Mocha.Green.copy(alpha = 0.3f)
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            var updated = config.copy(resolution = suggestedResolution)
+                            if (suggestedFps != null) updated = updated.copy(frameRate = suggestedFps)
+                            onConfigChanged(updated)
+                        }
+                        .padding(bottom = 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            if (upscaleWarning) Icons.Default.Warning else Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                            tint = if (upscaleWarning) Mocha.Yellow else Mocha.Green,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                label,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = if (upscaleWarning) Mocha.Yellow else Mocha.Green
+                            )
+                            if (upscaleWarning) {
+                                Text(
+                                    "Export exceeds source resolution",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Mocha.Subtext0
+                                )
+                            }
+                        }
+                        Text(
+                            "Apply",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Mocha.Mauve
+                        )
+                    }
+                }
+            }
+
             if (videoModeEnabled) {
                 ExportChoiceGroup(
                     title = stringResource(R.string.export_resolution),

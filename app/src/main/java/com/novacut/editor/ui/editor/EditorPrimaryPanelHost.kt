@@ -19,6 +19,7 @@ import com.novacut.editor.engine.ExportColorConfidenceEngine
 import com.novacut.editor.engine.ProjectColorPolicy
 import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.model.Clip
+import com.novacut.editor.model.Resolution
 import com.novacut.editor.model.Effect
 import com.novacut.editor.model.EffectType
 import com.novacut.editor.model.TrackType
@@ -209,6 +210,8 @@ fun BoxScope.EditorPrimaryPanelHost(
             encoderName = state.export.encoderName,
             stallWarning = state.export.stallWarning,
             lastExportedFilePath = state.lastExportedFilePath,
+            suggestedResolution = Resolution.FHD_1080P,
+            suggestedFps = state.project.frameRate,
             presentation = if (useEmbeddedExportPane) {
                 ExportSheetPresentation.EMBEDDED_PANE
             } else {
