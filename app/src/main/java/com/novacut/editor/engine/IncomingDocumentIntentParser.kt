@@ -22,7 +22,7 @@ enum class IncomingDocumentKind(
     ),
     STYLE_PACK(
         displayName = "Caption / text style pack",
-        targetAction = "Review pending style-pack support",
+        targetAction = "Install to Caption Gallery",
         maxBytes = 1_000_000L,
     ),
     LUT_CUBE(

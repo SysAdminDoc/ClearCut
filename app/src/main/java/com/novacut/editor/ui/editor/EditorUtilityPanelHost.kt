@@ -51,6 +51,7 @@ fun BoxScope.EditorUtilityPanelHost(
     playheadMs: Long,
     context: Context,
     onRelinkMedia: (Uri) -> Unit,
+    onBulkRelinkMissing: () -> Unit,
     onImportStickerFromGallery: () -> Unit,
     onAction: (String) -> Unit = {}
 ) {
@@ -245,6 +246,7 @@ fun BoxScope.EditorUtilityPanelHost(
             mediaHealthReport = state.media.healthReport,
             onJumpToClip = viewModel::jumpToClip,
             onRelinkMedia = onRelinkMedia,
+            onBulkRelinkMissing = onBulkRelinkMissing,
             onRemoveUnused = viewModel::removeUnusedMedia,
             onClose = viewModel::hideMediaManager
         )
@@ -315,7 +317,8 @@ fun BoxScope.EditorUtilityPanelHost(
     ) {
         CaptionStyleGallery(
             onStyleSelected = viewModel::applyCaptionStyle,
-            onClose = viewModel::hideCaptionStyleGallery
+            onClose = viewModel::hideCaptionStyleGallery,
+            installedStyles = remember { viewModel.installedCaptionStyles() },
         )
     }
 

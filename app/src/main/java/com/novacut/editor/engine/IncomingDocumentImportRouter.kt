@@ -32,6 +32,7 @@ class IncomingDocumentImportRouter @Inject constructor(
     private val templateManager: TemplateManager,
     private val effectShareEngine: EffectShareEngine,
     private val timelineImportEngine: TimelineImportEngine,
+    private val stylePackManager: StylePackManager,
 ) {
     suspend fun preview(item: IncomingDocumentItem): IncomingDocumentImportPreview = withContext(Dispatchers.IO) {
         val readability = validateReadable(item)
@@ -40,11 +41,7 @@ class IncomingDocumentImportRouter @Inject constructor(
         when (item.kind) {
             IncomingDocumentKind.TEMPLATE -> previewTemplate(item)
             IncomingDocumentKind.EFFECT_PACK -> previewEffectPack(item)
-            IncomingDocumentKind.STYLE_PACK -> blocked(
-                item = item,
-                body = "NovaCut recognizes this style-pack file, but caption/text style-pack installation is not implemented yet.",
-                warnings = listOf("No project or template data was changed.")
-            )
+            IncomingDocumentKind.STYLE_PACK -> previewStylePack(item)
             IncomingDocumentKind.LUT_CUBE -> previewLut(item) { LutEngine.parseCube(it) }
             IncomingDocumentKind.LUT_3DL -> previewLut(item) { LutEngine.parse3dl(it) }
             IncomingDocumentKind.OPENFX_DESCRIPTOR -> previewOpenFxDescriptor(item)
@@ -85,6 +82,62 @@ class IncomingDocumentImportRouter @Inject constructor(
                 warnings = result.compatibilityReport?.issues.orEmpty().map { it.message },
             )
         }
+    }
+
+    suspend fun importStylePack(item: IncomingDocumentItem): IncomingDocumentImportPreview = withContext(Dispatchers.IO) {
+        if (item.kind != IncomingDocumentKind.STYLE_PACK) {
+            return@withContext invalid(item, "Only .ncstyle files can be imported as style packs.")
+        }
+        val readability = validateReadable(item)
+        if (readability != null) return@withContext readability
+        val result = stylePackManager.importFromUri(item.uri)
+        val pack = result.pack
+        if (pack != null) {
+            IncomingDocumentImportPreview(
+                item = item,
+                status = IncomingDocumentImportStatus.IMPORTED,
+                title = "Style pack installed",
+                body = "\"${pack.name}\" added ${pack.styles.size} styles to the caption gallery.",
+                details = listOf(
+                    "File kind: ${item.kind.displayName}",
+                    "Target action: ${item.kind.targetAction}",
+                    "Pack: ${pack.name} v${pack.version}",
+                    "Author: ${pack.author.ifBlank { "Unknown" }}",
+                    "Styles: ${pack.styles.size}",
+                ),
+                warnings = result.warnings,
+                canImportNow = false,
+            )
+        } else {
+            invalid(
+                item = item,
+                body = stylePackFailureMessage(result.failure),
+                warnings = result.warnings,
+            )
+        }
+    }
+
+    private fun previewStylePack(item: IncomingDocumentItem): IncomingDocumentImportPreview {
+        val json = readText(item) ?: return invalid(item, "NovaCut could not read this style-pack file.")
+        val result = stylePackManager.importFromJson(json)
+        val pack = result.pack
+        if (pack == null) {
+            return invalid(item, stylePackFailureMessage(result.failure), result.warnings)
+        }
+        return IncomingDocumentImportPreview(
+            item = item,
+            status = IncomingDocumentImportStatus.READY,
+            title = "Style pack ready to install",
+            body = "\"${pack.name}\" contains ${pack.styles.size} caption/text styles.",
+            details = baseDetails(item) + listOf(
+                "Pack: ${pack.name} v${pack.version}",
+                "Author: ${pack.author.ifBlank { "Unknown" }}",
+                "License: ${pack.license.ifBlank { "Not specified" }}",
+                "Styles: ${pack.styles.size}",
+            ),
+            warnings = result.warnings.ifEmpty { listOf("No project data was changed during preview.") },
+            canImportNow = true,
+        )
     }
 
     private fun previewTemplate(item: IncomingDocumentItem): IncomingDocumentImportPreview {
@@ -305,6 +358,20 @@ class IncomingDocumentImportRouter @Inject constructor(
             warnings = warnings,
             canImportNow = false,
         )
+    }
+
+    private fun stylePackFailureMessage(failure: StylePackFailure): String {
+        return when (failure) {
+            StylePackFailure.NONE -> "Style pack import failed."
+            StylePackFailure.UNREADABLE -> "NovaCut could not read this file."
+            StylePackFailure.INVALID_JSON -> "File is not valid JSON."
+            StylePackFailure.MISSING_REQUIRED_FIELDS -> "Pack is missing required fields (id, name, or styles)."
+            StylePackFailure.INCOMPATIBLE_VERSION -> "Pack requires a newer version of NovaCut."
+            StylePackFailure.EMPTY_STYLES -> "Pack contains no styles."
+            StylePackFailure.DUPLICATE_ID -> "Pack contains duplicate style IDs."
+            StylePackFailure.OVERSIZED -> "Pack file is too large."
+            StylePackFailure.WRITE_FAILED -> "Could not save pack to device storage."
+        }
     }
 
     private fun templateImportFailureMessage(failure: TemplateImportFailure): String {

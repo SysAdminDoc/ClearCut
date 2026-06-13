@@ -53,9 +53,10 @@ import com.novacut.editor.ui.theme.Mocha
 fun CaptionStyleGallery(
     onStyleSelected: (CaptionStyleTemplate) -> Unit,
     onClose: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    installedStyles: List<CaptionStyleTemplate> = emptyList(),
 ) {
-    val templates = remember { defaultTemplates() }
+    val templates = remember(installedStyles) { defaultTemplates() + installedStyles }
     val accessibilityTemplates = remember(templates) {
         templates.filter { it.isAccessibilityPreset }
     }

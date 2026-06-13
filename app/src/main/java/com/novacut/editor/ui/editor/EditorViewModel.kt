@@ -430,6 +430,7 @@ class EditorViewModel @Inject constructor(
     private val settingsRepo: SettingsRepository,
     private val ttsEngine: com.novacut.editor.engine.TtsEngine,
     private val effectShareEngine: com.novacut.editor.engine.EffectShareEngine,
+    private val stylePackManager: com.novacut.editor.engine.StylePackManager,
     private val noiseReductionEngine: NoiseReductionEngine,
     private val beatDetectionEngine: BeatDetectionEngine,
     private val loudnessEngine: LoudnessEngine,
@@ -2325,6 +2326,8 @@ class EditorViewModel @Inject constructor(
     // --- Caption Style Gallery ---
     fun showCaptionStyleGallery() = showPanel(PanelId.CAPTION_STYLE_GALLERY)
     fun hideCaptionStyleGallery() = hidePanel(PanelId.CAPTION_STYLE_GALLERY)
+    fun installedCaptionStyles(): List<com.novacut.editor.model.CaptionStyleTemplate> =
+        stylePackManager.listInstalledStyles()
     fun applyCaptionStyle(template: com.novacut.editor.model.CaptionStyleTemplate) {
         hideCaptionStyleGallery()
         saveUndoState("Apply caption style")
