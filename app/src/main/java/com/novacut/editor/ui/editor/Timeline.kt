@@ -142,6 +142,19 @@ fun Timeline(
         tracks.firstOrNull { track -> track.clips.any { clip -> clip.id == selectedClipId } }?.id
     }
     val totalClipCount = remember(tracks) { tracks.sumOf { it.clips.size } }
+    val scrubBoundaries = remember(tracks, markers, beatMarkers) {
+        val edges = mutableSetOf<Long>()
+        tracks.forEach { track ->
+            track.clips.forEach { clip ->
+                edges.add(clip.timelineStartMs)
+                edges.add(clip.timelineStartMs + clip.durationMs)
+            }
+        }
+        markers.forEach { edges.add(it.timeMs) }
+        if (snapToBeat) beatMarkers.forEach { edges.add(it) }
+        edges.sorted()
+    }
+    var lastScrubBoundaryIdx by remember { mutableIntStateOf(-1) }
     val fitZoomLevel = remember(timelineWidthPx, totalDurationMs) {
         if (timelineWidthPx <= 0f || totalDurationMs <= 0L) {
             1f
@@ -793,6 +806,7 @@ fun Timeline(
                                     detectDragGestures(
                                         onDragStart = { offset ->
                                             rulerDragX = offset.x
+                                            lastScrubBoundaryIdx = -1
                                             onScrubStart()
                                             val ppm = currentZoomLevel * BASE_SCALE
                                             if (ppm > 0.001f) {
@@ -807,7 +821,32 @@ fun Timeline(
                                             val ppm = currentZoomLevel * BASE_SCALE
                                             if (ppm < 0.001f) return@detectDragGestures
                                             val posMs = currentScrollOffsetMs + (rulerDragX / ppm).toLong()
-                                            onPlayheadMoved(posMs.coerceIn(0L, currentTotalDurationMs))
+                                            val clampedMs = posMs.coerceIn(0L, currentTotalDurationMs)
+                                            onPlayheadMoved(clampedMs)
+                                            val nearIdx = scrubBoundaries.binarySearch(clampedMs).let { idx ->
+                                                if (idx >= 0) idx
+                                                else {
+                                                    val insertionPoint = -(idx + 1)
+                                                    when {
+                                                        insertionPoint >= scrubBoundaries.size -> scrubBoundaries.size - 1
+                                                        insertionPoint == 0 -> 0
+                                                        else -> {
+                                                            val before = scrubBoundaries[insertionPoint - 1]
+                                                            val after = scrubBoundaries[insertionPoint]
+                                                            if (clampedMs - before < after - clampedMs) insertionPoint - 1
+                                                            else insertionPoint
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            if (nearIdx >= 0 && nearIdx < scrubBoundaries.size && nearIdx != lastScrubBoundaryIdx) {
+                                                val boundaryMs = scrubBoundaries[nearIdx]
+                                                val distancePx = kotlin.math.abs((clampedMs - boundaryMs) * ppm)
+                                                if (distancePx < 4.dp.toPx()) {
+                                                    lastScrubBoundaryIdx = nearIdx
+                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                }
+                                            }
                                         }
                                     )
                                 }
