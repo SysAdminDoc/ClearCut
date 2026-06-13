@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.74.90</string>
+    <string name="app_version">v3.74.91</string>
 
     <!-- Common -->
     <string name="close">Close</string>
@@ -939,6 +939,7 @@
     <string name="tool_storyboard">Story\nboard</string>
     <string name="tool_multi_cam">Multi\nCam</string>
     <string name="tool_marker_list">Marker\nList</string>
+    <string name="tool_project_inspector">Project\nInfo</string>
     <string name="tool_add_media">Add Media</string>
     <string name="tool_export">Export</string>
     <string name="tool_undo">Undo</string>
@@ -2208,4 +2209,27 @@
     <!-- Keyframe precision inputs -->
     <string name="keyframe_time_label">Time (s)</string>
     <string name="keyframe_value_label">Value</string>
+
+    <!-- Project Inspector -->
+    <string name="inspector_title">Project Inspector</string>
+    <string name="inspector_section_media">Media</string>
+    <string name="inspector_section_issues">Issues</string>
+    <string name="inspector_section_export">Export Settings</string>
+    <string name="inspector_section_storage">Storage &amp; Recovery</string>
+    <string name="inspector_clips">Clips</string>
+    <string name="inspector_video_tracks">Video tracks</string>
+    <string name="inspector_audio_tracks">Audio tracks</string>
+    <string name="inspector_overlay_tracks">Overlay tracks</string>
+    <string name="inspector_text_overlays">Text overlays</string>
+    <string name="inspector_effects">Effects</string>
+    <string name="inspector_keyframes">Keyframes</string>
+    <string name="inspector_duration">Duration</string>
+    <string name="inspector_missing_media">%1$d missing media file(s)</string>
+    <string name="inspector_resolution">Resolution</string>
+    <string name="inspector_codec">Codec</string>
+    <string name="inspector_frame_rate">Frame rate</string>
+    <string name="inspector_autosave_size">Auto-save size</string>
+    <string name="inspector_last_saved">Last saved</string>
+    <string name="inspector_backup_files">Backup files</string>
+    <string name="inspector_db_version">Schema version</string>
 </resources>

@@ -339,6 +339,22 @@ class ProjectAutoSave @Inject constructor(
         return File(autoSaveDir, "${autoSaveFileStem(projectId)}.bak")
     }
 
+    data class StorageInfo(
+        val autoSaveSizeBytes: Long,
+        val autoSaveLastModifiedMs: Long,
+        val backupFileCount: Int
+    )
+
+    fun getStorageInfo(projectId: String): StorageInfo {
+        val primary = getAutoSaveFile(projectId)
+        val backup = getBackupFile(projectId)
+        return StorageInfo(
+            autoSaveSizeBytes = if (primary.exists()) primary.length() else 0L,
+            autoSaveLastModifiedMs = if (primary.exists()) primary.lastModified() else 0L,
+            backupFileCount = listOf(primary, backup).count { it.exists() }
+        )
+    }
+
     private fun readAutoSaveText(file: File): String {
         if (file.length() > MAX_AUTOSAVE_FILE_BYTES) {
             throw java.io.IOException("Auto-save file exceeds $MAX_AUTOSAVE_FILE_BYTES byte limit")

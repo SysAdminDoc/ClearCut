@@ -594,6 +594,16 @@ fun BoxScope.EditorUtilityPanelHost(
             onClose = viewModel::hideTextTemplates
         )
     }
+
+    BottomSheetSlot(
+        visible = state.panels.isOpen(PanelId.PROJECT_INSPECTOR),
+        modifier = Modifier.align(Alignment.BottomCenter)
+    ) {
+        ProjectInspectorPanel(
+            data = viewModel.collectProjectInspectorData(),
+            onClose = viewModel::hideProjectInspector
+        )
+    }
 }
 
 @Composable

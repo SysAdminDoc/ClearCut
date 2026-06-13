@@ -163,7 +163,8 @@ private val projectToolsSubMenu = listOf(
     SubMenuItem("auto_edit", Icons.Default.AutoFixHigh, R.string.tool_auto_edit),
     SubMenuItem("storyboard", Icons.AutoMirrored.Filled.ViewList, R.string.tool_storyboard),
     SubMenuItem("multi_cam", Icons.Default.Videocam, R.string.tool_multi_cam),
-    SubMenuItem("marker_list", Icons.Default.BookmarkBorder, R.string.tool_marker_list)
+    SubMenuItem("marker_list", Icons.Default.BookmarkBorder, R.string.tool_marker_list),
+    SubMenuItem("project_inspector", Icons.Default.Info, R.string.tool_project_inspector)
 )
 
 // --- Bottom tool area (tab bar + contextual sub-menu grids) ---

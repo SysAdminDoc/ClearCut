@@ -594,6 +594,7 @@ fun EditorScreen(
                 "label" -> showClipLabelPicker = true
                 "multi_cam" -> viewModel.showMultiCam()
                 "marker_list" -> viewModel.showMarkerList()
+                "project_inspector" -> viewModel.showProjectInspector()
                 "ai_hub" -> viewModel.showAiToolsPanel()
                 "cut_assistant" -> viewModel.proposeCutsForReview()
                 "auto_captions" -> viewModel.runAiTool("auto_captions")

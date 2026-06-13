@@ -177,7 +177,8 @@ enum class PanelId {
     CONTENT_ID, DIRECT_PUBLISH, FLASH_SAFETY, COLOR_BLIND_PREVIEW,
     AI_THUMBNAIL, AUDIO_DESCRIPTION,
     COMMAND_PALETTE,
-    STORYBOARD
+    STORYBOARD,
+    PROJECT_INSPECTOR
 }
 
 data class PanelVisibility(
@@ -4757,6 +4758,39 @@ class EditorViewModel @Inject constructor(
         _state.update {
             it.copyPanel { panel -> panel.copy(panels = panel.panels.close(PanelId.SCRATCHPAD)) }
         }
+    }
+
+    fun showProjectInspector() = showPanel(PanelId.PROJECT_INSPECTOR)
+    fun hideProjectInspector() = hidePanel(PanelId.PROJECT_INSPECTOR)
+
+    fun collectProjectInspectorData(): ProjectInspectorData {
+        val s = _state.value
+        val allClips = s.tracks.flatMap { it.clips }
+        val storageInfo = autoSave.getStorageInfo(s.project.id)
+        val missingCount = s.media.relinkReports
+            .values.count { it.state == com.novacut.editor.engine.MediaRelinkProbe.RelinkState.MISSING }
+        return ProjectInspectorData(
+            projectName = s.project.name,
+            clipCount = allClips.size,
+            videoTrackCount = s.tracks.count { it.type == com.novacut.editor.model.TrackType.VIDEO },
+            audioTrackCount = s.tracks.count { it.type == com.novacut.editor.model.TrackType.AUDIO },
+            overlayTrackCount = s.tracks.count {
+                it.type == com.novacut.editor.model.TrackType.OVERLAY ||
+                    it.type == com.novacut.editor.model.TrackType.TEXT
+            },
+            textOverlayCount = s.textOverlays.size,
+            totalDurationMs = s.totalDurationMs,
+            autoSaveSizeBytes = storageInfo.autoSaveSizeBytes,
+            autoSaveLastModifiedMs = storageInfo.autoSaveLastModifiedMs,
+            missingMediaCount = missingCount,
+            exportResolution = s.exportConfig.resolution.name,
+            exportCodec = s.exportConfig.codec.name,
+            exportFrameRate = s.exportConfig.frameRate,
+            dbSchemaVersion = 8,
+            backupFileCount = storageInfo.backupFileCount,
+            effectCount = allClips.sumOf { it.effects.size },
+            keyframeCount = allClips.sumOf { it.keyframes.size }
+        )
     }
 
     fun updateProjectNotes(notes: String) {
