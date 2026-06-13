@@ -13,6 +13,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.CallSplit
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.RotateRight
+import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -160,6 +161,7 @@ private val projectToolsSubMenu = listOf(
     SubMenuItem("proxy_toggle", Icons.Default.Speed, R.string.tool_proxy_edit),
     SubMenuItem("beat_sync", Icons.Default.MusicNote, R.string.tool_beat_sync),
     SubMenuItem("auto_edit", Icons.Default.AutoFixHigh, R.string.tool_auto_edit),
+    SubMenuItem("storyboard", Icons.AutoMirrored.Filled.ViewList, R.string.tool_storyboard),
     SubMenuItem("multi_cam", Icons.Default.Videocam, R.string.tool_multi_cam),
     SubMenuItem("marker_list", Icons.Default.BookmarkBorder, R.string.tool_marker_list)
 )

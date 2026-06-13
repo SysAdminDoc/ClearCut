@@ -402,8 +402,27 @@ fun BoxScope.EditorUtilityPanelHost(
             clipCount = state.tracks.filter { it.type == TrackType.VIDEO }.flatMap { it.clips }.size,
             hasAudio = state.tracks.any { it.type == TrackType.AUDIO && it.clips.isNotEmpty() },
             isProcessing = state.isAutoEditing,
-            onGenerate = { script -> viewModel.runAutoEdit(script) },
+            onGenerate = { script ->
+                val storyboardScript = if (state.storyboardCards.isNotEmpty() && script.isNullOrBlank()) {
+                    state.storyboardCards.sortedBy { it.ordinal }
+                        .joinToString("\n") { "${it.ordinal + 1}. ${it.shotText} (${it.targetDurationMs / 1000}s)" }
+                } else script
+                viewModel.runAutoEdit(storyboardScript)
+            },
             onClose = viewModel::hideAutoEdit
+        )
+    }
+
+    BottomSheetSlot(
+        visible = state.panels.isOpen(PanelId.STORYBOARD),
+        modifier = Modifier.align(Alignment.BottomCenter)
+    ) {
+        StoryboardPanel(
+            cards = state.storyboardCards,
+            onAddCard = viewModel::addStoryboardCard,
+            onUpdateCard = viewModel::updateStoryboardCard,
+            onRemoveCard = viewModel::removeStoryboardCard,
+            onClose = viewModel::hideStoryboard
         )
     }
 

@@ -117,6 +117,7 @@ fun EditorScreen(
         }
     }
     var pendingRelinkUri by remember { mutableStateOf<Uri?>(null) }
+    var pendingBulkRelinkQueue by remember { mutableStateOf(emptyList<Uri>()) }
     val mediaRelinkLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -132,6 +133,18 @@ fun EditorScreen(
                 Log.w("EditorScreen", "Could not persist relink media permission", e)
             }
             viewModel.relinkMedia(oldUri, uri)
+        }
+        if (uri == null) {
+            pendingBulkRelinkQueue = emptyList()
+        }
+    }
+
+    LaunchedEffect(pendingRelinkUri, pendingBulkRelinkQueue) {
+        if (pendingRelinkUri == null && pendingBulkRelinkQueue.isNotEmpty()) {
+            val next = pendingBulkRelinkQueue.first()
+            pendingBulkRelinkQueue = pendingBulkRelinkQueue.drop(1)
+            pendingRelinkUri = next
+            mediaRelinkLauncher.launch(arrayOf("video/*", "audio/*", "image/*"))
         }
     }
 
@@ -567,6 +580,7 @@ fun EditorScreen(
                 "proxy_toggle" -> viewModel.setProxyEnabled(!state.proxySettings.enabled)
                 "beat_sync" -> viewModel.showBeatSync()
                 "auto_edit" -> viewModel.showAutoEdit()
+                "storyboard" -> viewModel.showStoryboard()
                 "smart_reframe" -> viewModel.showSmartReframe()
                 "caption_styles" -> viewModel.showCaptionStyleGallery()
                 "speed_presets" -> viewModel.showSpeedPresets()
@@ -1022,6 +1036,11 @@ fun EditorScreen(
                         onScrubEnd = viewModel::endScrub,
                         onSplitAtPlayhead = viewModel::splitClipAtPlayhead,
                         onDeleteSelectedClip = viewModel::deleteSelectedClip,
+                        missingClipIds = remember(state.media.relinkReports) {
+                            state.media.relinkReports
+                                .filter { it.value.isMissing }
+                                .keys
+                        },
                         engine = viewModel.engine,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1096,6 +1115,14 @@ fun EditorScreen(
             onRelinkMedia = { uri ->
                 pendingRelinkUri = uri
                 mediaRelinkLauncher.launch(arrayOf("video/*", "audio/*", "image/*"))
+            },
+            onBulkRelinkMissing = {
+                val missingSources = viewModel.getMissingSources()
+                if (missingSources.isNotEmpty()) {
+                    pendingRelinkUri = missingSources.first()
+                    pendingBulkRelinkQueue = missingSources.drop(1)
+                    mediaRelinkLauncher.launch(arrayOf("video/*", "audio/*", "image/*"))
+                }
             },
             onImportStickerFromGallery = {
                 stickerImageLauncher.launch(

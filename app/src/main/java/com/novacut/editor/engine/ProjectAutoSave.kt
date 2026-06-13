@@ -379,7 +379,8 @@ data class AutoSaveState(
     // v3.74.75: project-level media asset manifest. Clips still carry sourceUri
     // as the compatibility fallback while new saves can diagnose/repair assets
     // through stable ids.
-    val mediaAssets: List<ProjectMediaAsset> = emptyList()
+    val mediaAssets: List<ProjectMediaAsset> = emptyList(),
+    val storyboardCards: List<com.novacut.editor.model.StoryboardCard> = emptyList()
 ) {
     fun serialize(): String {
         val json = JSONObject().apply {
@@ -521,6 +522,20 @@ data class AutoSaveState(
                     })
                 })
             }
+            if (storyboardCards.isNotEmpty()) {
+                put("storyboardCards", JSONArray().apply {
+                    storyboardCards.forEach { card ->
+                        put(JSONObject().apply {
+                            put("id", card.id)
+                            put("ordinal", card.ordinal)
+                            put("shotText", card.shotText)
+                            put("targetDurationMs", card.targetDurationMs)
+                            put("status", card.status.name)
+                            card.mediaUri?.let { put("mediaUri", it.toString()) }
+                        })
+                    }
+                })
+            }
         }
         return json.toString(2)
     }
@@ -528,6 +543,7 @@ data class AutoSaveState(
     companion object {
         const val FORMAT_VERSION = 1
         private const val MAX_TRANSCRIPT_WORDS = 20_000
+        private const val MAX_STORYBOARD_CARDS = 200
         private const val MAX_TRACKS = 64
         private const val MAX_CLIPS_PER_TRACK = 2_000
         private const val MAX_AUDIO_EFFECTS_PER_SCOPE = 128
@@ -818,6 +834,20 @@ data class AutoSaveState(
                     Log.w(TAG, "Failed to deserialize tracked object $i", e); null
                 }
             }
+            val storyboardArr = json.optJSONArray("storyboardCards") ?: JSONArray()
+            val storyboardCards = (0 until cappedArrayLength(storyboardArr, MAX_STORYBOARD_CARDS, "storyboard cards")).mapNotNull { i ->
+                try {
+                    val card = storyboardArr.getJSONObject(i)
+                    com.novacut.editor.model.StoryboardCard(
+                        id = card.optString("id", java.util.UUID.randomUUID().toString()),
+                        ordinal = card.optInt("ordinal", i),
+                        shotText = boundedText(card.optString("shotText", ""), MAX_SHORT_TEXT_CHARS),
+                        targetDurationMs = card.optLong("targetDurationMs", 5000L).coerceIn(500L, 300_000L),
+                        status = safeValueOf(card.optString("status", "PLANNED"), com.novacut.editor.model.StoryboardCardStatus.PLANNED),
+                        mediaUri = card.optString("mediaUri", "").takeIf { it.isNotEmpty() }?.let { uriParser(it) }
+                    )
+                } catch (e: Exception) { Log.w(TAG, "Failed to deserialize storyboard card $i", e); null }
+            }
             return AutoSaveState(
                 projectId = json.optString("projectId", ""),
                 timestamp = json.optLong("timestamp", System.currentTimeMillis()),
@@ -832,7 +862,8 @@ data class AutoSaveState(
                 transcript = transcript,
                 trackedObjects = trackedObjects,
                 aiUsageLedger = aiUsageLedger,
-                mediaAssets = mediaAssets
+                mediaAssets = mediaAssets,
+                storyboardCards = storyboardCards
             )
         }
 

@@ -110,3 +110,19 @@ data class DrawingPath(
     val color: Long,
     val strokeWidth: Float
 )
+
+enum class StoryboardCardStatus(val displayName: String) {
+    PLANNED("Planned"),
+    FILMED("Filmed"),
+    EDITED("Edited"),
+}
+
+@Immutable
+data class StoryboardCard(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val ordinal: Int,
+    val shotText: String,
+    val targetDurationMs: Long = 5_000L,
+    val status: StoryboardCardStatus = StoryboardCardStatus.PLANNED,
+    val mediaUri: android.net.Uri? = null,
+)

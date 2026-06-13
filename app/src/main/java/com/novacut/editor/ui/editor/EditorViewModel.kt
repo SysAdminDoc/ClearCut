@@ -176,7 +176,8 @@ enum class PanelId {
     TEXT_BASED_EDIT, AUTO_CHAPTER, TALKING_HEAD, KARAOKE_CAPTIONS,
     CONTENT_ID, DIRECT_PUBLISH, FLASH_SAFETY, COLOR_BLIND_PREVIEW,
     AI_THUMBNAIL, AUDIO_DESCRIPTION,
-    COMMAND_PALETTE
+    COMMAND_PALETTE,
+    STORYBOARD
 }
 
 data class PanelVisibility(
@@ -270,6 +271,7 @@ data class EditorState(
     // the timeline can light up tracked-subject lanes the moment a tracker
     // populates them; persistence flows through AutoSaveState.trackedObjects.
     val trackedObjects: List<com.novacut.editor.model.TrackedObject> = emptyList(),
+    val storyboardCards: List<com.novacut.editor.model.StoryboardCard> = emptyList(),
     val media: EditorMediaState = EditorMediaState()
 ) {
     val panels: PanelVisibility get() = panel.panels
@@ -902,6 +904,7 @@ class EditorViewModel @Inject constructor(
                 beatMarkers = recovery.beatMarkers,
                 v369 = current.v369.copy(transcript = recovery.transcript ?: current.v369.transcript),
                 trackedObjects = recovery.trackedObjects.ifEmpty { current.trackedObjects },
+                storyboardCards = recovery.storyboardCards.ifEmpty { current.storyboardCards },
                 ai = current.ai.copy(usageLedger = recovery.aiUsageLedger),
                 media = current.media.copy(healthReport = mediaHealthReport),
                 totalDurationMs = recovery.tracks.maxOfOrNull { t ->
@@ -1950,6 +1953,7 @@ class EditorViewModel @Inject constructor(
                     ai = it.ai.copy(usageLedger = recovery.aiUsageLedger),
                     beatMarkers = recovery.beatMarkers,
                     trackedObjects = recovery.trackedObjects.ifEmpty { it.trackedObjects },
+                    storyboardCards = recovery.storyboardCards.ifEmpty { it.storyboardCards },
                     v369 = it.v369.copy(transcript = recovery.transcript ?: it.v369.transcript)
                 )
             }
@@ -2146,6 +2150,7 @@ class EditorViewModel @Inject constructor(
                                         selectedWordIndices = emptySet()
                                     ),
                                     trackedObjects = state.trackedObjects,
+                                    storyboardCards = state.storyboardCards,
                                     playheadMs = state.playheadMs
                                 )
                             )
@@ -3264,6 +3269,62 @@ class EditorViewModel @Inject constructor(
         updatePreview()
         saveProject()
         showToast("Tracked mosaic applied: ${trackedObject.label}")
+    }
+
+    // --- Storyboard ---
+
+    fun showStoryboard() {
+        pauseIfPlaying()
+        _state.update { it.copyPanel { p -> p.copy(panels = p.panels.open(PanelId.STORYBOARD)) } }
+    }
+
+    fun hideStoryboard() {
+        _state.update { it.copyPanel { p -> p.copy(panels = p.panels.close(PanelId.STORYBOARD)) } }
+    }
+
+    fun addStoryboardCard(shotText: String) {
+        saveUndoState("Add storyboard card")
+        _state.update { s ->
+            val nextOrdinal = (s.storyboardCards.maxOfOrNull { it.ordinal } ?: -1) + 1
+            s.copy(storyboardCards = s.storyboardCards + com.novacut.editor.model.StoryboardCard(
+                ordinal = nextOrdinal,
+                shotText = shotText
+            ))
+        }
+        saveProject()
+    }
+
+    fun updateStoryboardCard(cardId: String, shotText: String? = null, status: com.novacut.editor.model.StoryboardCardStatus? = null, targetDurationMs: Long? = null) {
+        _state.update { s ->
+            s.copy(storyboardCards = s.storyboardCards.map { card ->
+                if (card.id == cardId) card.copy(
+                    shotText = shotText ?: card.shotText,
+                    status = status ?: card.status,
+                    targetDurationMs = targetDurationMs ?: card.targetDurationMs
+                ) else card
+            })
+        }
+        saveProject()
+    }
+
+    fun removeStoryboardCard(cardId: String) {
+        if (_state.value.storyboardCards.none { it.id == cardId }) return
+        saveUndoState("Remove storyboard card")
+        _state.update { s ->
+            s.copy(storyboardCards = s.storyboardCards.filterNot { it.id == cardId })
+        }
+        saveProject()
+    }
+
+    fun reorderStoryboardCards(fromIndex: Int, toIndex: Int) {
+        _state.update { s ->
+            val cards = s.storyboardCards.toMutableList()
+            if (fromIndex !in cards.indices || toIndex !in cards.indices) return@update s
+            val moved = cards.removeAt(fromIndex)
+            cards.add(toIndex, moved)
+            s.copy(storyboardCards = cards.mapIndexed { i, c -> c.copy(ordinal = i) })
+        }
+        saveProject()
     }
 
     // --- Multi-Cam Sync ---
@@ -4591,7 +4652,8 @@ class EditorViewModel @Inject constructor(
             transcript = state.v369.transcript,
             trackedObjects = state.trackedObjects,
             aiUsageLedger = state.aiUsageLedger,
-            mediaAssets = mediaAssets
+            mediaAssets = mediaAssets,
+            storyboardCards = state.storyboardCards
         )
     }
 
