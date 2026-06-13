@@ -208,6 +208,7 @@ fun BoxScope.EditorPrimaryPanelHost(
             exportHistory = state.exportHistory,
             encoderName = state.export.encoderName,
             stallWarning = state.export.stallWarning,
+            lastExportedFilePath = state.lastExportedFilePath,
             presentation = if (useEmbeddedExportPane) {
                 ExportSheetPresentation.EMBEDDED_PANE
             } else {

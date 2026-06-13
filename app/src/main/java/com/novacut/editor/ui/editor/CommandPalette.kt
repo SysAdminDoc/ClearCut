@@ -14,7 +14,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.automirrored.filled.CallSplit
+import androidx.compose.material.icons.automirrored.filled.Redo
+import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -138,8 +143,8 @@ object CommandRegistry {
         val cat = "Project"
         add(CommandEntry("add_media", Icons.Default.Add, R.string.tool_add_media, cat))
         add(CommandEntry("export", Icons.Default.Upload, R.string.tool_export, cat))
-        add(CommandEntry("undo", Icons.Default.Undo, R.string.tool_undo, cat))
-        add(CommandEntry("redo", Icons.Default.Redo, R.string.tool_redo, cat))
+        add(CommandEntry("undo", Icons.AutoMirrored.Filled.Undo, R.string.tool_undo, cat))
+        add(CommandEntry("redo", Icons.AutoMirrored.Filled.Redo, R.string.tool_redo, cat))
         add(CommandEntry("multi_delete", Icons.Default.Delete, R.string.editor_delete, "Batch", requiresClip = true))
         add(CommandEntry("multi_paste_fx", Icons.Default.ContentPaste, R.string.editor_paste_fx, "Batch", requiresClip = true))
     }
