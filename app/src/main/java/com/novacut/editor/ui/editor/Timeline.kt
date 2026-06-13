@@ -127,6 +127,7 @@ fun Timeline(
     onMarkerTapped: (TimelineMarker) -> Unit = {},
     onSplitAtPlayhead: () -> Unit = {},
     onDeleteSelectedClip: () -> Unit = {},
+    missingClipIds: Set<String> = emptySet(),
     engine: VideoEngine
 ) {
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
@@ -1181,9 +1182,14 @@ fun Timeline(
                                     // clip allocates a fresh List + Brush per frame. Keying on the three
                                     // values that actually drive the gradient lets Compose reuse the same
                                     // Brush instance until selection or track-color state changes.
-                                    val clipBackgroundBrush = remember(isSelected, isMultiSelected, clipColor) {
+                                    val isClipMissing = clip.id in missingClipIds
+                                    val clipBackgroundBrush = remember(isSelected, isMultiSelected, isClipMissing, clipColor) {
                                         Brush.horizontalGradient(
                                             when {
+                                                isClipMissing -> listOf(
+                                                    Mocha.Red.copy(alpha = 0.38f),
+                                                    Mocha.Crust.copy(alpha = 0.85f)
+                                                )
                                                 isSelected -> listOf(
                                                     clipColor.copy(alpha = 0.64f),
                                                     Mocha.PanelHighest.copy(alpha = 0.94f)
@@ -1210,8 +1216,9 @@ fun Timeline(
                                             .alpha(if (track.isLocked) 0.7f else 1f)
                                             .then(
                                                 Modifier.border(
-                                                    if (isSelected) 2.dp else 1.dp,
+                                                    if (isClipMissing) 2.dp else if (isSelected) 2.dp else 1.dp,
                                                     when {
+                                                        isClipMissing -> Mocha.Red.copy(alpha = 0.85f)
                                                         isSelected -> clipColor
                                                         isKeyboardFocused -> Mocha.Sky.copy(alpha = 0.95f)
                                                         isMultiSelected -> Mocha.Peach.copy(alpha = 0.85f)
@@ -1460,6 +1467,35 @@ fun Timeline(
                                                 .fillMaxSize()
                                                 .background(clipOverlayBrush)
                                         )
+
+                                        if (isClipMissing) {
+                                            Box(
+                                                modifier = Modifier.fillMaxSize(),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Canvas(modifier = Modifier.fillMaxSize()) {
+                                                    val step = 12f * density.density
+                                                    val stroke = 1.2f * density.density
+                                                    val lineColor = Mocha.Red.copy(alpha = 0.25f)
+                                                    var x = -size.height
+                                                    while (x < size.width + size.height) {
+                                                        drawLine(
+                                                            color = lineColor,
+                                                            start = Offset(x, size.height),
+                                                            end = Offset(x + size.height, 0f),
+                                                            strokeWidth = stroke
+                                                        )
+                                                        x += step
+                                                    }
+                                                }
+                                                Icon(
+                                                    imageVector = Icons.Default.BrokenImage,
+                                                    contentDescription = stringResource(R.string.cd_clip_source_missing),
+                                                    tint = Mocha.Red.copy(alpha = 0.7f),
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        }
 
                                         Column(
                                             modifier = Modifier

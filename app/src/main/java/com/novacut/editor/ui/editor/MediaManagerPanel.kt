@@ -70,6 +70,7 @@ fun MediaManagerPanel(
     mediaHealthReport: MediaHealthReport?,
     onJumpToClip: (String) -> Unit,
     onRelinkMedia: (Uri) -> Unit,
+    onBulkRelinkMissing: () -> Unit,
     onRemoveUnused: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier
@@ -298,6 +299,32 @@ fun MediaManagerPanel(
                         assets.isEmpty() -> Icons.Default.PermMedia
                         else -> Icons.Default.Link
                     }
+                )
+            }
+        }
+
+        if (!isAnalyzing && missingCount > 0) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = onBulkRelinkMissing,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Mocha.Red,
+                    contentColor = Mocha.Base
+                ),
+                shape = RoundedCornerShape(18.dp)
+            ) {
+                androidx.compose.material3.Icon(
+                    imageVector = Icons.Default.Link,
+                    contentDescription = null
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = pluralStringResource(
+                        R.plurals.media_manager_bulk_relink,
+                        missingCount,
+                        missingCount
+                    )
                 )
             }
         }
