@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.LayersClear
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.ViewModule
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -43,6 +44,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -66,6 +68,14 @@ import com.novacut.editor.engine.ExportColorConfidenceEngine
 import com.novacut.editor.engine.ExportHistoryEntry
 import com.novacut.editor.engine.ExportHistoryStatus
 import com.novacut.editor.engine.ExportState
+import android.net.Uri
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
 import com.novacut.editor.engine.ProjectColorPolicy
 import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.model.AspectRatio
@@ -113,6 +123,7 @@ fun ExportSheet(
     exportHistory: List<ExportHistoryEntry> = emptyList(),
     encoderName: String? = null,
     stallWarning: Boolean = false,
+    lastExportedFilePath: String? = null,
     presentation: ExportSheetPresentation = ExportSheetPresentation.BOTTOM_SHEET,
     onConfigChanged: (ExportConfig) -> Unit,
     onStartExport: () -> Unit,
@@ -399,6 +410,10 @@ fun ExportSheet(
         }
 
         if (exportState == ExportState.COMPLETE) {
+            if (lastExportedFilePath != null) {
+                ExportPreviewPlayer(filePath = lastExportedFilePath)
+                Spacer(Modifier.height(Spacing.md))
+            }
             ExportStateCard(
                 icon = Icons.Default.CheckCircle,
                 tint = Mocha.Green,
@@ -2193,4 +2208,44 @@ private fun formatHistoryBytes(bytes: Long): String = when {
     bytes >= 1_048_576L -> "%.0f MB".format(bytes / 1_048_576.0)
     bytes >= 1024L -> "%.0f KB".format(bytes / 1024.0)
     else -> "$bytes B"
+}
+
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+@Composable
+private fun ExportPreviewPlayer(filePath: String) {
+    val context = LocalContext.current
+    val file = remember(filePath) { java.io.File(filePath) }
+    if (!file.exists()) return
+
+    val player = remember(filePath) {
+        ExoPlayer.Builder(context).build().apply {
+            setMediaItem(MediaItem.fromUri(Uri.fromFile(file)))
+            repeatMode = Player.REPEAT_MODE_OFF
+            prepare()
+        }
+    }
+
+    DisposableEffect(filePath) {
+        onDispose { player.release() }
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Mocha.Surface0),
+        shape = RoundedCornerShape(Radius.lg)
+    ) {
+        AndroidView(
+            factory = { ctx ->
+                PlayerView(ctx).apply {
+                    this.player = player
+                    useController = true
+                    setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
+                    controllerAutoShow = true
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(16f / 9f)
+        )
+    }
 }

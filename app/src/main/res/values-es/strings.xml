@@ -869,6 +869,12 @@
     <string name="tool_auto_edit">Auto\nEditar</string>
     <string name="tool_multi_cam">Cámara múltiple\n</string>
     <string name="tool_marker_list">Marcador\nLista</string>
+    <string name="tool_add_media">Add Media</string>
+    <string name="tool_export">Export</string>
+    <string name="tool_undo">Undo</string>
+    <string name="tool_redo">Redo</string>
+    <string name="tool_search">Search tools</string>
+    <string name="editor_paste_fx">Paste FX</string>
     <string name="tool_effects">Efectos</string>
     <string name="tool_close">Cerrar</string>
     <string name="tool_applied">Aplicado</string>
