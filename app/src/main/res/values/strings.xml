@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.74.83</string>
+    <string name="app_version">v3.74.84</string>
 
     <!-- Common -->
     <string name="close">Close</string>
@@ -633,6 +633,8 @@
     <string name="media_picker_importing_capture_title">Saving capture</string>
     <string name="media_picker_importing_capture_description">Moving the recorded clip into your project media.</string>
     <string name="media_picker_insufficient_space">Not enough storage space to import this media.</string>
+    <string name="audio_conformance_mixed_rates">Clips have mixed sample rates. Audio will be resampled to match the export format.</string>
+    <string name="audio_conformance_mixed_channels">Clips have mixed channel layouts. Audio will be normalized for export.</string>
     <string name="media_picker_audio_only">That file isn\'t audio. Pick a .mp3, .m4a, .wav, .ogg, or .flac.</string>
 
     <!-- ProjectListScreen -->

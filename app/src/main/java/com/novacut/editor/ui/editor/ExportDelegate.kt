@@ -63,6 +63,7 @@ class ExportDelegate(
     private val streamCopyEngine: StreamCopyExportEngine? = null,
     private val c2paExportEngine: C2paExportEngine? = null,
     private val mediaHealthPreflight: (EditorState) -> MediaHealthReport? = { it.media.healthReport },
+    private val audioEngine: com.novacut.editor.engine.AudioEngine? = null,
     private val exportIncidentStore: ExportIncidentStore? = null,
     private val appVersion: String = "unknown"
 ) {
@@ -79,6 +80,40 @@ class ExportDelegate(
 
     private inline fun updateExport(transform: (EditorExportDomainState) -> EditorExportDomainState) {
         stateFlow.update { it.copyExport(transform) }
+    }
+
+    private fun buildAudioConformance(state: EditorState): com.novacut.editor.engine.AudioConformanceReport? {
+        val engine = audioEngine ?: return null
+        val allClips = state.tracks.flatMap { it.clips }
+        if (allClips.isEmpty()) return null
+        val formats = mutableMapOf<String, com.novacut.editor.engine.AudioFormatInfo>()
+        for (clip in allClips) {
+            val extractor = android.media.MediaExtractor()
+            try {
+                extractor.setDataSource(appContext, clip.sourceUri, null)
+                for (i in 0 until extractor.trackCount) {
+                    val fmt = extractor.getTrackFormat(i)
+                    val mime = fmt.getString(android.media.MediaFormat.KEY_MIME) ?: continue
+                    if (mime.startsWith("audio/")) {
+                        val sr = if (fmt.containsKey(android.media.MediaFormat.KEY_SAMPLE_RATE))
+                            fmt.getInteger(android.media.MediaFormat.KEY_SAMPLE_RATE) else 0
+                        val ch = if (fmt.containsKey(android.media.MediaFormat.KEY_CHANNEL_COUNT))
+                            fmt.getInteger(android.media.MediaFormat.KEY_CHANNEL_COUNT) else 0
+                        val dur = if (fmt.containsKey(android.media.MediaFormat.KEY_DURATION))
+                            fmt.getLong(android.media.MediaFormat.KEY_DURATION) else 0L
+                        if (sr > 0 && ch > 0) {
+                            formats[clip.id] = com.novacut.editor.engine.AudioFormatInfo(sr, ch, mime, dur)
+                        }
+                        break
+                    }
+                }
+            } catch (_: Exception) {
+            } finally {
+                extractor.release()
+            }
+        }
+        if (formats.isEmpty()) return null
+        return engine.buildConformanceReport(formats)
     }
 
     fun loadExportHistory() {
@@ -446,9 +481,11 @@ class ExportDelegate(
             return
         }
         val healthReport = mediaHealthPreflight(currentState)
+        val audioConformance = buildAudioConformance(currentState)
         val mediaPreflight = ExportMediaPreflight.evaluate(
             healthReport = healthReport,
-            relinkReports = currentState.media.relinkReports
+            relinkReports = currentState.media.relinkReports,
+            audioConformance = audioConformance,
         )
         stateFlow.update { state ->
             state.copyMedia { media -> media.copy(healthReport = healthReport) }

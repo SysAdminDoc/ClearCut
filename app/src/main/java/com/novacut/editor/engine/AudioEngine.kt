@@ -18,6 +18,8 @@ import java.io.DataOutputStream
 import java.io.File
 import java.security.MessageDigest
 import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 
@@ -275,8 +277,19 @@ class AudioEngine @Inject constructor(
 
         for (track in tracks) {
             if (track.isMuted) continue
-            val pcm = decodeToPCM(track.uri)
+            var pcm = decodeToPCM(track.uri)
             val scaledVolume = track.volume
+
+            val srcRate = track.sourceSampleRate
+            val srcCh = track.sourceChannels
+            if (srcRate > 0 && srcCh > 0) {
+                if (srcCh != outputChannels) {
+                    pcm = convertChannels(pcm, srcCh, outputChannels)
+                }
+                if (srcRate != outputSampleRate) {
+                    pcm = resampleLinear(pcm, outputChannels, srcRate, outputSampleRate)
+                }
+            }
 
             for (i in pcm.indices) {
                 if (i < mixBuffer.size) {
@@ -436,6 +449,152 @@ class AudioEngine @Inject constructor(
         }
     }
 
+    suspend fun probeAudioFormat(uri: Uri): AudioFormatInfo? = withContext(Dispatchers.IO) {
+        val extractor = MediaExtractor()
+        try {
+            extractor.setDataSource(context, uri, null)
+            for (i in 0 until extractor.trackCount) {
+                val format = extractor.getTrackFormat(i)
+                val mime = format.getString(MediaFormat.KEY_MIME) ?: continue
+                if (mime.startsWith("audio/")) {
+                    val sampleRate = if (format.containsKey(MediaFormat.KEY_SAMPLE_RATE))
+                        format.getInteger(MediaFormat.KEY_SAMPLE_RATE) else 0
+                    val channels = if (format.containsKey(MediaFormat.KEY_CHANNEL_COUNT))
+                        format.getInteger(MediaFormat.KEY_CHANNEL_COUNT) else 0
+                    val durationUs = if (format.containsKey(MediaFormat.KEY_DURATION))
+                        format.getLong(MediaFormat.KEY_DURATION) else 0L
+                    if (sampleRate <= 0 || channels <= 0) return@withContext null
+                    return@withContext AudioFormatInfo(sampleRate, channels, mime, durationUs)
+                }
+            }
+            null
+        } catch (e: Exception) {
+            Log.w(TAG, "probeAudioFormat failed for $uri", e)
+            null
+        } finally {
+            extractor.release()
+        }
+    }
+
+    fun buildConformanceReport(
+        clipFormats: Map<String, AudioFormatInfo>,
+        outputSampleRate: Int = 48000,
+        outputChannels: Int = 2
+    ): AudioConformanceReport {
+        val issues = mutableListOf<AudioConformanceIssue>()
+        val commonRates = setOf(8000, 11025, 16000, 22050, 32000, 44100, 48000, 88200, 96000)
+
+        val rates = clipFormats.values.map { it.sampleRate }.toSet()
+        val channels = clipFormats.values.map { it.channelCount }.toSet()
+
+        if (rates.size > 1) {
+            issues.add(AudioConformanceIssue(
+                type = AudioConformanceIssueType.MIXED_SAMPLE_RATES,
+                clipId = "",
+                message = "Clips have mixed sample rates (${rates.joinToString()}). Audio will be resampled to ${outputSampleRate} Hz.",
+                isBlocking = false
+            ))
+        }
+
+        if (channels.size > 1) {
+            issues.add(AudioConformanceIssue(
+                type = AudioConformanceIssueType.MIXED_CHANNEL_COUNTS,
+                clipId = "",
+                message = "Clips have mixed channel layouts (${channels.joinToString()}). Audio will be normalized to $outputChannels channels.",
+                isBlocking = false
+            ))
+        }
+
+        for ((clipId, info) in clipFormats) {
+            if (info.sampleRate !in commonRates) {
+                issues.add(AudioConformanceIssue(
+                    type = AudioConformanceIssueType.UNCOMMON_SAMPLE_RATE,
+                    clipId = clipId,
+                    message = "Clip uses uncommon sample rate ${info.sampleRate} Hz.",
+                    isBlocking = false
+                ))
+            }
+        }
+
+        val needsResampling = rates.any { it != outputSampleRate } || channels.any { it != outputChannels }
+
+        return AudioConformanceReport(
+            clipFormats = clipFormats,
+            issues = issues,
+            targetSampleRate = outputSampleRate,
+            targetChannelCount = outputChannels,
+            needsResampling = needsResampling
+        )
+    }
+
+    /**
+     * Linear-interpolation resampler for interleaved 16-bit PCM.
+     * Falls back when OboeResamplerEngine is unavailable.
+     */
+    fun resampleLinear(
+        input: ShortArray,
+        inputChannels: Int,
+        fromRate: Int,
+        toRate: Int,
+    ): ShortArray {
+        if (fromRate == toRate || input.isEmpty() || inputChannels <= 0) return input
+        val inputFrames = input.size / inputChannels
+        if (inputFrames <= 1) return input
+
+        val ratio = fromRate.toDouble() / toRate
+        val outputFrames = ceil(inputFrames / ratio).toInt()
+        val output = ShortArray(outputFrames * inputChannels)
+
+        for (f in 0 until outputFrames) {
+            val srcPos = f * ratio
+            val srcIdx = floor(srcPos).toInt()
+            val frac = (srcPos - srcIdx).toFloat()
+            val idx0 = srcIdx.coerceIn(0, inputFrames - 1)
+            val idx1 = (srcIdx + 1).coerceIn(0, inputFrames - 1)
+            for (ch in 0 until inputChannels) {
+                val s0 = input[idx0 * inputChannels + ch].toFloat()
+                val s1 = input[idx1 * inputChannels + ch].toFloat()
+                val interpolated = s0 + (s1 - s0) * frac
+                output[f * inputChannels + ch] = interpolated
+                    .toInt()
+                    .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
+                    .toShort()
+            }
+        }
+        return output
+    }
+
+    fun convertChannels(
+        input: ShortArray,
+        fromChannels: Int,
+        toChannels: Int,
+    ): ShortArray {
+        if (fromChannels == toChannels || input.isEmpty() || fromChannels <= 0 || toChannels <= 0) return input
+        val frames = input.size / fromChannels
+        val output = ShortArray(frames * toChannels)
+
+        for (f in 0 until frames) {
+            if (fromChannels == 1 && toChannels == 2) {
+                output[f * 2] = input[f]
+                output[f * 2 + 1] = input[f]
+            } else if (fromChannels == 2 && toChannels == 1) {
+                val l = input[f * 2].toInt()
+                val r = input[f * 2 + 1].toInt()
+                output[f] = ((l + r) / 2).toShort()
+            } else if (toChannels < fromChannels) {
+                for (ch in 0 until toChannels) {
+                    output[f * toChannels + ch] = input[f * fromChannels + ch]
+                }
+            } else {
+                for (ch in 0 until toChannels) {
+                    val srcCh = ch.coerceAtMost(fromChannels - 1)
+                    output[f * toChannels + ch] = input[f * fromChannels + srcCh]
+                }
+            }
+        }
+        return output
+    }
+
     private fun readPcmSamples(outputBuffer: ByteBuffer, bufferInfo: MediaCodec.BufferInfo): ShortArray {
         if (bufferInfo.size < 2) return ShortArray(0)
         val buffer = outputBuffer.duplicate()
@@ -459,5 +618,40 @@ data class AudioTrackData(
     val isMuted: Boolean = false,
     val durationMs: Long = 0L,
     val fadeInMs: Long = 0L,
-    val fadeOutMs: Long = 0L
+    val fadeOutMs: Long = 0L,
+    val sourceSampleRate: Int = 0,
+    val sourceChannels: Int = 0,
 )
+
+data class AudioFormatInfo(
+    val sampleRate: Int,
+    val channelCount: Int,
+    val mimeType: String,
+    val durationUs: Long
+)
+
+enum class AudioConformanceIssueType {
+    MIXED_SAMPLE_RATES,
+    MIXED_CHANNEL_COUNTS,
+    MISSING_AUDIO_METADATA,
+    UNCOMMON_SAMPLE_RATE,
+}
+
+data class AudioConformanceIssue(
+    val type: AudioConformanceIssueType,
+    val clipId: String,
+    val message: String,
+    val isBlocking: Boolean
+)
+
+data class AudioConformanceReport(
+    val clipFormats: Map<String, AudioFormatInfo>,
+    val issues: List<AudioConformanceIssue>,
+    val targetSampleRate: Int,
+    val targetChannelCount: Int,
+    val needsResampling: Boolean,
+) {
+    val canExport: Boolean get() = issues.none { it.isBlocking }
+    val warningCount: Int get() = issues.count { !it.isBlocking }
+    val blockingCount: Int get() = issues.count { it.isBlocking }
+}

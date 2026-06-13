@@ -519,6 +519,7 @@ class EditorViewModel @Inject constructor(
         streamCopyEngine = streamCopyEngine,
         c2paExportEngine = c2paExportEngine,
         mediaHealthPreflight = ::analyzeMediaHealthForState,
+        audioEngine = audioEngine,
         exportIncidentStore = exportIncidentStore,
         appVersion = com.novacut.editor.NovaCutApp.VERSION
     )
