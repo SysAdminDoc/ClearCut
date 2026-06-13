@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BrokenImage
+import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -69,7 +70,9 @@ fun PreviewPanel(
     onPreviewTransformEnded: () -> Unit = {},
     onPreviewTransformChanged: (dx: Float, dy: Float, scaleChange: Float, rotationChange: Float) -> Unit = { _, _, _, _ -> },
     showScopesButton: Boolean = false,
-    onToggleScopes: () -> Unit = {}
+    onToggleScopes: () -> Unit = {},
+    showCompositionGuides: Boolean = false,
+    onToggleCompositionGuides: () -> Unit = {}
 ) {
     val currentTimelineUri = currentTimelineClip?.let { it.proxyUri ?: it.sourceUri }
     val currentClipIsStillImage = remember(currentTimelineUri) {
@@ -256,25 +259,55 @@ fun PreviewPanel(
                             }
                         }
 
-                        if (showScopesButton && totalDurationMs > 0 && !showGapState) {
-                            Surface(
-                                color = Mocha.Midnight.copy(alpha = 0.72f),
-                                shape = CircleShape,
-                                border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke),
+                        if (showCompositionGuides && totalDurationMs > 0 && !showGapState) {
+                            CompositionGuidesOverlay()
+                        }
+
+                        if (totalDurationMs > 0 && !showGapState) {
+                            Column(
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
-                                    .padding(10.dp)
+                                    .padding(10.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                IconButton(
-                                    onClick = onToggleScopes,
-                                    modifier = Modifier.size(38.dp)
+                                if (showScopesButton) {
+                                    Surface(
+                                        color = Mocha.Midnight.copy(alpha = 0.72f),
+                                        shape = CircleShape,
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke),
+                                    ) {
+                                        IconButton(
+                                            onClick = onToggleScopes,
+                                            modifier = Modifier.size(38.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Insights,
+                                                stringResource(R.string.preview_scopes),
+                                                tint = Mocha.Subtext0.copy(alpha = 0.9f),
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                                Surface(
+                                    color = if (showCompositionGuides) Mocha.Mauve.copy(alpha = 0.3f) else Mocha.Midnight.copy(alpha = 0.72f),
+                                    shape = CircleShape,
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        1.dp,
+                                        if (showCompositionGuides) Mocha.Mauve.copy(alpha = 0.6f) else Mocha.CardStroke
+                                    ),
                                 ) {
-                                    Icon(
-                                        Icons.Default.Insights,
-                                        stringResource(R.string.preview_scopes),
-                                        tint = Mocha.Subtext0.copy(alpha = 0.9f),
-                                        modifier = Modifier.size(18.dp)
-                                    )
+                                    IconButton(
+                                        onClick = onToggleCompositionGuides,
+                                        modifier = Modifier.size(38.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.GridOn,
+                                            contentDescription = stringResource(R.string.preview_composition_guides),
+                                            tint = if (showCompositionGuides) Mocha.Mauve else Mocha.Subtext0.copy(alpha = 0.9f),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -571,5 +604,50 @@ fun formatTimestamp(ms: Long): String {
         "%d:%02d:%02d.%02d".format(hours, minutes, seconds, millis)
     } else {
         "%02d:%02d.%02d".format(minutes, seconds, millis)
+    }
+}
+
+@Composable
+private fun CompositionGuidesOverlay() {
+    val guideColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.3f)
+    val safeZoneColor = Mocha.Yellow.copy(alpha = 0.25f)
+    androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+        val w = size.width
+        val h = size.height
+
+        // Rule of thirds
+        val thirdX1 = w / 3f
+        val thirdX2 = w * 2f / 3f
+        val thirdY1 = h / 3f
+        val thirdY2 = h * 2f / 3f
+        drawLine(guideColor, Offset(thirdX1, 0f), Offset(thirdX1, h), strokeWidth = 1f)
+        drawLine(guideColor, Offset(thirdX2, 0f), Offset(thirdX2, h), strokeWidth = 1f)
+        drawLine(guideColor, Offset(0f, thirdY1), Offset(w, thirdY1), strokeWidth = 1f)
+        drawLine(guideColor, Offset(0f, thirdY2), Offset(w, thirdY2), strokeWidth = 1f)
+
+        // Title safe zone (80% inner area)
+        val titleInset = 0.1f
+        drawRect(
+            safeZoneColor,
+            topLeft = Offset(w * titleInset, h * titleInset),
+            size = androidx.compose.ui.geometry.Size(w * (1 - 2 * titleInset), h * (1 - 2 * titleInset)),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1f)
+        )
+
+        // Action safe zone (90% inner area)
+        val actionInset = 0.05f
+        drawRect(
+            guideColor.copy(alpha = 0.15f),
+            topLeft = Offset(w * actionInset, h * actionInset),
+            size = androidx.compose.ui.geometry.Size(w * (1 - 2 * actionInset), h * (1 - 2 * actionInset)),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1f)
+        )
+
+        // Center crosshair
+        val cx = w / 2f
+        val cy = h / 2f
+        val crossSize = minOf(w, h) * 0.02f
+        drawLine(guideColor, Offset(cx - crossSize, cy), Offset(cx + crossSize, cy), strokeWidth = 1f)
+        drawLine(guideColor, Offset(cx, cy - crossSize), Offset(cx, cy + crossSize), strokeWidth = 1f)
     }
 }

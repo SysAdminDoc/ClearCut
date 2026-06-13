@@ -407,6 +407,7 @@
     <string name="settings_on">encendido</string>
     <string name="settings_off">Apagado</string>
     <string name="preview_scopes">Alcances</string>
+    <string name="preview_composition_guides">Guías de composición</string>
     <string name="preview_add_media">Agregue medios para comenzar</string>
     <string name="preview_back_5s">Atrás 5</string>
     <string name="preview_previous_frame">Fotograma anterior</string>

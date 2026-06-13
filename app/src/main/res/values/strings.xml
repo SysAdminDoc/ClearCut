@@ -433,6 +433,7 @@
 
     <!-- PreviewPanel -->
     <string name="preview_scopes">Scopes</string>
+    <string name="preview_composition_guides">Composition guides</string>
     <string name="preview_add_media">Add media to get started</string>
     <string name="preview_back_5s">Back 5s</string>
     <string name="preview_previous_frame">Previous frame</string>

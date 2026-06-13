@@ -210,6 +210,7 @@ fun EditorScreen(
     var showRadialMenu by remember { mutableStateOf(false) }
     var radialMenuPosition by remember { mutableStateOf(Offset.Zero) }
     var isToolPanelExpanded by remember { mutableStateOf(false) }
+    var showCompositionGuides by remember { mutableStateOf(false) }
     var isTimelineEditGestureActive by remember { mutableStateOf(false) }
 
     val focusRequester = remember { FocusRequester() }
@@ -779,6 +780,8 @@ fun EditorScreen(
                     },
                     showScopesButton = true,
                     onToggleScopes = viewModel::toggleScopes,
+                    showCompositionGuides = showCompositionGuides,
+                    onToggleCompositionGuides = { showCompositionGuides = !showCompositionGuides },
                     modifier = Modifier.fillMaxSize()
                 )
 
