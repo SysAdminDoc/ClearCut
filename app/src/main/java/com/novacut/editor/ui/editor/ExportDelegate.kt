@@ -90,23 +90,73 @@ class ExportDelegate(
         }
     }
 
+    private var lastProgressTime = 0L
+    private var lastProgressValue = 0f
+
     private fun markExportStarted(startedAtMs: Long = System.currentTimeMillis()): Long {
         progressSamples.clear()
+        lastProgressTime = startedAtMs
+        lastProgressValue = 0f
         updateExport {
             it.copy(
                 startTime = startedAtMs,
                 progress = 0f,
                 state = ExportState.EXPORTING,
                 errorMessage = null,
-                lastExportedFilePath = null
+                lastExportedFilePath = null,
+                encoderName = null,
+                etaMs = null,
+                stallWarning = false
             )
         }
         return startedAtMs
     }
 
+    fun setEncoderName(config: ExportConfig) {
+        val mimeType = if (config.exportAudioOnly || config.exportStemsOnly) {
+            config.audioCodec.mimeType
+        } else config.codec.mimeType
+        val name = try {
+            val codecs = android.media.MediaCodecList(android.media.MediaCodecList.REGULAR_CODECS)
+                .codecInfos.filter { it.isEncoder }
+                .filter { info -> info.supportedTypes.any { it.equals(mimeType, ignoreCase = true) } }
+            val hw = codecs.firstOrNull { !it.name.startsWith("c2.android.") }
+            val sw = codecs.firstOrNull { it.name.startsWith("c2.android.") }
+            when {
+                hw != null -> "HW: ${hw.name}"
+                sw != null -> "SW: ${sw.name}"
+                codecs.isNotEmpty() -> codecs.first().name
+                else -> "Unknown"
+            }
+        } catch (_: Exception) { "Unknown" }
+        updateExport { it.copy(encoderName = name) }
+    }
+
     private fun sampleProgress(progress: Float) {
         synchronized(progressSamples) {
             progressSamples.add(progress.coerceIn(0f, 1f))
+        }
+        val now = System.currentTimeMillis()
+        val clamped = progress.coerceIn(0f, 1f)
+        if (clamped > 0.01f && clamped < 0.99f) {
+            val startTime = stateFlow.value.export.startTime
+            val elapsedMs = now - startTime
+            val estimatedTotalMs = (elapsedMs / clamped).toLong()
+            val remainingMs = (estimatedTotalMs - elapsedMs).coerceAtLeast(0L)
+            updateExport { it.copy(etaMs = remainingMs) }
+        }
+        val stallThresholdMs = 30_000L
+        if (now - lastProgressTime > stallThresholdMs && clamped <= lastProgressValue + 0.001f && clamped > 0f) {
+            updateExport { it.copy(stallWarning = true) }
+        } else {
+            if (clamped > lastProgressValue + 0.001f) {
+                lastProgressTime = now
+                lastProgressValue = clamped
+                val current = stateFlow.value.export
+                if (current.stallWarning) {
+                    updateExport { it.copy(stallWarning = false) }
+                }
+            }
         }
     }
 
@@ -925,6 +975,7 @@ class ExportDelegate(
                     putExtra(ExportService.EXTRA_OUTPUT_PATH, outputFile.absolutePath)
                 }
                 appContext.startForegroundService(serviceIntent)
+                setEncoderName(configWithChapters)
                 val mixedPlan = buildMixedRenderPlan(
                     tracks = tracks,
                     config = configWithChapters,

@@ -206,6 +206,8 @@ fun BoxScope.EditorPrimaryPanelHost(
             projectColorPolicy = ProjectColorPolicy.DEFAULT,
             aiUsageLedger = state.aiUsageLedger,
             exportHistory = state.exportHistory,
+            encoderName = state.export.encoderName,
+            stallWarning = state.export.stallWarning,
             presentation = if (useEmbeddedExportPane) {
                 ExportSheetPresentation.EMBEDDED_PANE
             } else {

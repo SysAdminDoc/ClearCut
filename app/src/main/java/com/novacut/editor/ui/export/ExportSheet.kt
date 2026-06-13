@@ -111,6 +111,8 @@ fun ExportSheet(
     projectColorPolicy: ProjectColorPolicy = ProjectColorPolicy.DEFAULT,
     aiUsageLedger: List<AiUsageLedger.Entry> = emptyList(),
     exportHistory: List<ExportHistoryEntry> = emptyList(),
+    encoderName: String? = null,
+    stallWarning: Boolean = false,
     presentation: ExportSheetPresentation = ExportSheetPresentation.BOTTOM_SHEET,
     onConfigChanged: (ExportConfig) -> Unit,
     onStartExport: () -> Unit,
@@ -373,17 +375,24 @@ fun ExportSheet(
                 null
             }
 
+            val encoderLine = encoderName?.let { "Encoder: $it" }
+            val stallLine = if (stallWarning) "Export appears stalled" else null
+            val bodyParts = listOfNotNull(
+                stringResource(R.string.export_elapsed, elapsedLabel),
+                encoderLine,
+                stallLine
+            ).joinToString("\n")
+
             ExportStateCard(
-                icon = Icons.Default.FileUpload,
-                tint = Mocha.Mauve,
+                icon = if (stallWarning) Icons.Default.Warning else Icons.Default.FileUpload,
+                tint = if (stallWarning) Mocha.Yellow else Mocha.Mauve,
                 title = stringResource(R.string.export_exporting),
-                body = stringResource(R.string.export_elapsed, elapsedLabel),
+                body = bodyParts,
                 progress = exportProgress,
                 progressLabel = "$percent%",
                 secondaryBody = etaLabel,
                 primaryLabel = stringResource(R.string.export_cancel),
                 onPrimary = onCancel,
-                // Cancel during export should not look like a celebrate-the-result CTA.
                 primaryStyle = PrimaryStyle.Destructive
             )
             return
