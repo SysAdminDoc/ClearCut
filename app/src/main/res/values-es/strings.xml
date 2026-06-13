@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.74.77</string>
+    <string name="app_version">v3.74.80</string>
     <string name="close">Cerrar</string>
     <string name="cancel">Cancelar</string>
     <string name="done">Listo</string>
