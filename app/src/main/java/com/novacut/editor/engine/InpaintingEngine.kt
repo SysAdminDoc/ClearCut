@@ -194,6 +194,12 @@ class InpaintingEngine @Inject constructor(
         val startTime = System.currentTimeMillis()
         Log.d(TAG, "Inpainting frame: ${bitmap.width}x${bitmap.height}")
 
+        val pixelBytes = bitmap.byteCount.toLong()
+        if (pixelBytes > NativeProcessingPolicy.MAX_IMAGE_INPUT_BYTES) {
+            Log.w(TAG, "inpaintFrame: bitmap $pixelBytes bytes exceeds limit ${NativeProcessingPolicy.MAX_IMAGE_INPUT_BYTES}")
+            return@withContext null
+        }
+
         if (!isVerifiedModelReady()) {
             Log.w(TAG, "LaMa model not downloaded")
             return@withContext null
@@ -299,6 +305,12 @@ class InpaintingEngine @Inject constructor(
     ): VideoInpaintingResult? = withContext(Dispatchers.IO) {
         val startTime = System.currentTimeMillis()
         Log.d(TAG, "Inpainting video: ${maskFrames.size} masked frames")
+
+        val v = NativeProcessingPolicy.validateVideoUri(context, uri, "inpaintVideo")
+        if (v != null) {
+            NativeProcessingPolicy.logAndReject(v)
+            return@withContext null
+        }
 
         if (!isVerifiedModelReady()) {
             Log.w(TAG, "LaMa model not downloaded")

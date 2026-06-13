@@ -53,6 +53,11 @@ class FFmpegEngine @Inject constructor(
     /**
      * Execute an FFmpeg command.
      * Returns exit code (0 = success, -1 = unavailable).
+     *
+     * Note: raw command execution has no policy gate — callers of this method
+     * are responsible for pre-validating their own inputs. Prefer the typed
+     * entry points (extractAudioToWav, burnSubtitles, etc.) which enforce
+     * size/format/timeout policy.
      */
     suspend fun execute(
         command: String,
@@ -70,6 +75,11 @@ class FFmpegEngine @Inject constructor(
         sampleRate: Int = 16000,
         channels: Int = 1
     ): Boolean = withContext(Dispatchers.IO) {
+        val inputFile = File(inputUri)
+        if (inputFile.isFile) {
+            val v = NativeProcessingPolicy.validateVideoFile(inputFile, "extractAudioToWav")
+            if (v != null) return@withContext NativeProcessingPolicy.logAndReject(v)
+        }
         executeArguments(
             listOf(
                 "-y",
@@ -92,6 +102,8 @@ class FFmpegEngine @Inject constructor(
         sampleRate: Int = 16000,
         channels: Int = 1
     ): Boolean = withContext(Dispatchers.IO) {
+        val v = NativeProcessingPolicy.validateVideoUri(context, inputUri, "extractAudioToWav")
+        if (v != null) return@withContext NativeProcessingPolicy.logAndReject(v)
         executeArguments(
             listOf(
                 "-y",
@@ -112,6 +124,8 @@ class FFmpegEngine @Inject constructor(
         trimEndMs: Long = Long.MAX_VALUE,
         onProgress: (Float) -> Unit = {}
     ): Boolean = withContext(Dispatchers.IO) {
+        val v = NativeProcessingPolicy.validateVideoUri(context, inputUri, "reverseClipToFile")
+        if (v != null) return@withContext NativeProcessingPolicy.logAndReject(v)
         val args = buildList {
             add("-y")
             if (trimStartMs > 0L) {
@@ -144,6 +158,8 @@ class FFmpegEngine @Inject constructor(
         channels: Int = 1,
         onProgress: (Float) -> Unit = {}
     ): Boolean = withContext(Dispatchers.IO) {
+        val v = NativeProcessingPolicy.validateVideoUri(context, inputUri, "extractAudioToPcm16le")
+        if (v != null) return@withContext NativeProcessingPolicy.logAndReject(v)
         executeArguments(
             listOf(
                 "-y",
@@ -170,6 +186,8 @@ class FFmpegEngine @Inject constructor(
         onProgress: (Float) -> Unit = {}
     ): Boolean = withContext(Dispatchers.IO) {
         if (!inputFile.isFile || inputFile.length() <= 0L) return@withContext false
+        val v = NativeProcessingPolicy.validateAudioFile(inputFile, "encodePcm16leToM4a")
+        if (v != null) return@withContext NativeProcessingPolicy.logAndReject(v)
         executeArguments(
             listOf(
                 "-y",
@@ -194,6 +212,10 @@ class FFmpegEngine @Inject constructor(
         outputFile: File,
         onProgress: (Float) -> Unit = {}
     ): Boolean = withContext(Dispatchers.IO) {
+        val vv = NativeProcessingPolicy.validateVideoFile(inputFile, "burnSubtitles")
+        if (vv != null) return@withContext NativeProcessingPolicy.logAndReject(vv)
+        val vs = NativeProcessingPolicy.validateSubtitleFile(subtitleFile, "burnSubtitles")
+        if (vs != null) return@withContext NativeProcessingPolicy.logAndReject(vs)
         val filter = "subtitles=${escapeFilterPath(subtitleFile.absolutePath)}"
         executeArguments(
             listOf(
@@ -220,6 +242,8 @@ class FFmpegEngine @Inject constructor(
         truePeakDb: Float = -1f,
         onProgress: (Float) -> Unit = {}
     ): Boolean = withContext(Dispatchers.IO) {
+        val v = NativeProcessingPolicy.validateVideoFile(inputFile, "normalizeLoudness")
+        if (v != null) return@withContext NativeProcessingPolicy.logAndReject(v)
         executeArguments(
             listOf(
                 "-y",
@@ -280,6 +304,8 @@ class FFmpegEngine @Inject constructor(
         outputPath: String
     ): Boolean = withContext(Dispatchers.IO) {
         if (endMs <= startMs) return@withContext false
+        val v = NativeProcessingPolicy.validateVideoUri(context, inputUri, "streamCopyTrim")
+        if (v != null) return@withContext NativeProcessingPolicy.logAndReject(v)
         executeArguments(
             listOf(
                 "-y",
@@ -302,6 +328,10 @@ class FFmpegEngine @Inject constructor(
         onProgress: (Float) -> Unit = {}
     ): Boolean = withContext(Dispatchers.IO) {
         if (inputFiles.isEmpty()) return@withContext false
+        for (f in inputFiles) {
+            val v = NativeProcessingPolicy.validateVideoFile(f, "concat")
+            if (v != null) return@withContext NativeProcessingPolicy.logAndReject(v)
+        }
         val listFile = File.createTempFile("novacut-ffmpeg-concat-", ".txt", context.cacheDir)
         try {
             listFile.writeText(
@@ -335,6 +365,8 @@ class FFmpegEngine @Inject constructor(
         onProgress: (Float) -> Unit = {}
     ): Boolean = withContext(Dispatchers.IO) {
         if (speedFactor <= 0f) return@withContext false
+        val v = NativeProcessingPolicy.validateVideoFile(inputFile, "changeSpeed")
+        if (v != null) return@withContext NativeProcessingPolicy.logAndReject(v)
         val setPts = String.format(Locale.US, "%.6f", 1f / speedFactor)
         val filter = "[0:v]setpts=${setPts}*PTS[v];[0:a]${buildAtempoChain(speedFactor)}[a]"
         executeArguments(
