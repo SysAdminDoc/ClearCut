@@ -2433,6 +2433,10 @@ class EditorViewModel @Inject constructor(
         if (changed) saveProject()
     }
     fun clearBeatMarkers() {
+        if (_state.value.beatMarkers.isEmpty()) return
+        // Beat markers are captured by the undo snapshot, so make this destructive
+        // clear reversible like every other timeline edit instead of wiping silently.
+        saveUndoState("Clear beat markers")
         _state.update { it.copy(beatMarkers = emptyList()) }
         saveProject()
     }

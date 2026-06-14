@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -305,6 +306,8 @@ private fun RegenerateButton(enabled: Boolean, onClick: () -> Unit) {
         modifier = Modifier
             .clip(RoundedCornerShape(Radius.md))
             .clickable(enabled = enabled, onClick = onClick)
+            // Guarantee a 48dp minimum touch target for the icon+label control.
+            .defaultMinSize(minHeight = 48.dp)
             .padding(horizontal = 8.dp, vertical = 6.dp),
     ) {
         Icon(
