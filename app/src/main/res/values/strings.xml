@@ -1207,6 +1207,7 @@
     <string name="auto_edit_close_cd">Close auto edit</string>
     <string name="auto_edit_description">AI analyzes your clips for quality, motion, and faces, then creates a highlight reel with the best moments.</string>
     <string name="auto_edit_start">Generate Highlight Reel</string>
+    <string name="auto_edit_generate_title">Generate highlight reel</string>
     <string name="auto_edit_subtitle">Turn rough footage into a first-cut highlight reel with a concise creative brief and an AI-assisted timing pass.</string>
     <string name="auto_edit_source_overview_title">Source overview</string>
     <string name="auto_edit_brief_title">Edit brief</string>
@@ -2113,6 +2114,7 @@
     <string name="v369_subtitle">Speech edits, safety checks, publishing prep, and adaptive controls.</string>
     <string name="v369_readiness_clip">Clip</string>
     <string name="v369_readiness_choose_one">Choose one</string>
+    <string name="v369_readiness_clip_selected">Selected</string>
     <string name="v369_readiness_transcript">Transcript</string>
     <string name="v369_readiness_run_captions">Run captions</string>
     <string name="v369_readiness_available">Available</string>

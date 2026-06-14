@@ -1096,6 +1096,7 @@
     <string name="auto_edit_close_cd">Cerrar edición automática</string>
     <string name="auto_edit_description">La IA analiza tus clips en busca de calidad, movimiento y rostros, y luego crea un carrete destacado con los mejores momentos.</string>
     <string name="auto_edit_start">Generar carrete destacado</string>
+    <string name="auto_edit_generate_title">Generar carrete destacado</string>
     <string name="auto_edit_subtitle">Convierta el metraje preliminar en un carrete de lo más destacado del primer montaje con un resumen creativo conciso y un pase de sincronización asistido por IA.</string>
     <string name="auto_edit_source_overview_title">Descripción general de la fuente</string>
     <string name="auto_edit_brief_title">Editar resumen</string>
@@ -1823,6 +1824,7 @@
     <string name="v369_subtitle">Ediciones de voz, controles de seguridad, preparación de publicaciones y controles adaptativos.</string>
     <string name="v369_readiness_clip">Clip</string>
     <string name="v369_readiness_choose_one">Elige uno</string>
+    <string name="v369_readiness_clip_selected">Seleccionado</string>
     <string name="v369_readiness_transcript">Transcripción</string>
     <string name="v369_readiness_run_captions">Ejecutar subtítulos</string>
     <string name="v369_readiness_available">Disponible</string>

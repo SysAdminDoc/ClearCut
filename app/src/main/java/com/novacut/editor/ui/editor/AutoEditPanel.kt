@@ -144,7 +144,7 @@ fun AutoEditPanel(
 
         PremiumPanelCard(accent = if (hasAudio) Mocha.Green else Mocha.Peach) {
             Text(
-                text = stringResource(R.string.cd_auto_edit_generate),
+                text = stringResource(R.string.auto_edit_generate_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = Mocha.Text
             )

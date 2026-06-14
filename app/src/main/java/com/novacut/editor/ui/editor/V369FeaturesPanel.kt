@@ -485,7 +485,7 @@ private fun CreatorReadinessStrip(
     ) {
         ReadinessCard(
             label = stringResource(R.string.v369_readiness_clip),
-            value = if (hasClip) stringResource(R.string.cd_check_mark) else stringResource(R.string.v369_readiness_choose_one),
+            value = if (hasClip) stringResource(R.string.v369_readiness_clip_selected) else stringResource(R.string.v369_readiness_choose_one),
             accent = if (hasClip) Mocha.Green else Mocha.Peach,
             icon = Icons.Default.Movie
         )
