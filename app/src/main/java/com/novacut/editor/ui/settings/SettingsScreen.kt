@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -42,6 +43,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.FileProvider
 import androidx.core.content.ContextCompat
+import com.novacut.editor.BuildConfig
 import com.novacut.editor.NovaCutApp
 import com.novacut.editor.R
 import com.novacut.editor.engine.AppearanceMode
@@ -92,9 +94,11 @@ fun SettingsScreen(
     val aiModelStorage by viewModel.aiModelStorage.collectAsStateWithLifecycle()
     val diagnosticExport by viewModel.diagnosticExport.collectAsStateWithLifecycle()
     val settingsResetNotice by viewModel.settingsResetNotice.collectAsStateWithLifecycle()
+    val updateCheck by viewModel.updateCheck.collectAsStateWithLifecycle()
     val whisperModelState by viewModel.whisperModelState.collectAsStateWithLifecycle()
     val segmentationModelState by viewModel.segmentationModelState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val canRemoveWhisperModel = whisperModelState == WhisperModelState.READY && aiModelStorage.whisperBytes > 0L
     val canRemoveSegmentationModel = segmentationModelState == SegmentationModelState.READY && aiModelStorage.segmentationBytes > 0L
@@ -151,6 +155,13 @@ fun SettingsScreen(
                 accentOverride = Mocha.Peach,
                 iconOverride = Icons.Default.Info,
                 onDismiss = viewModel::dismissSettingsResetNotice
+            )
+        }
+        updateCheck.message?.let { message ->
+            SettingsFeedbackBanner(
+                message = message,
+                isError = updateCheck.isError,
+                onDismiss = viewModel::dismissUpdateCheckMessage
             )
         }
 
@@ -600,6 +611,52 @@ fun SettingsScreen(
                 onClick = { showOpenSourceLicenses = true },
                 modifier = Modifier.testTag(NovaCutTestTags.SETTINGS_LICENSES_OPEN)
             )
+        }
+
+        // Updates (sideload / GitHub-release installs only). Compiled out when
+        // the build opts out via BuildConfig.UPDATE_CHECK_AVAILABLE.
+        if (BuildConfig.UPDATE_CHECK_AVAILABLE) {
+            SettingsSection(
+                title = stringResource(R.string.settings_updates_section_title),
+                description = stringResource(R.string.settings_updates_section_description)
+            ) {
+                SettingsSwitch(
+                    icon = Icons.Default.SystemUpdate,
+                    accent = Mocha.Sky,
+                    label = stringResource(R.string.settings_update_check_label),
+                    description = stringResource(R.string.settings_update_check_description),
+                    checked = settings.updateCheckEnabled,
+                    onChanged = viewModel::setUpdateCheckEnabled
+                )
+                if (settings.updateCheckEnabled) {
+                    if (updateCheck.updateAvailable) {
+                        SettingsActionRow(
+                            icon = Icons.Default.NewReleases,
+                            accent = Mocha.Green,
+                            label = stringResource(
+                                R.string.settings_update_available_label,
+                                updateCheck.latestVersion.orEmpty()
+                            ),
+                            description = stringResource(R.string.settings_update_available_description),
+                            actionLabel = stringResource(R.string.settings_update_view_action),
+                            onClick = { updateCheck.releaseUrl?.let { uriHandler.openUri(it) } }
+                        )
+                    } else {
+                        SettingsActionRow(
+                            icon = Icons.Default.SystemUpdate,
+                            accent = Mocha.Sky,
+                            label = stringResource(R.string.settings_update_check_now_label),
+                            description = stringResource(R.string.settings_update_check_now_description),
+                            actionLabel = if (updateCheck.isChecking) {
+                                stringResource(R.string.settings_update_checking_action)
+                            } else {
+                                stringResource(R.string.settings_update_check_now_action)
+                            },
+                            onClick = { if (!updateCheck.isChecking) viewModel.checkForUpdate() }
+                        )
+                    }
+                }
+            }
         }
 
         // About

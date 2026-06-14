@@ -33,6 +33,7 @@ object PrivacyDashboard {
         CLOUD_GENERATIVE("Cloud generative video calls (consent-gated)"),
         AI_USAGE_LEDGER("AI usage ledger (per-project disclosure history)"),
         OPT_IN_TELEMETRY("Opt-in usage telemetry (Sentry / Glean)"),
+        UPDATE_CHECK("App update check (sideload / GitHub-release version lookup)"),
     }
 
     /**
@@ -182,6 +183,16 @@ object PrivacyDashboard {
             controls = Controls(canExport = false, canDelete = true, hasOptOut = true),
             collectedBy = listOf("(future) SentryAndroid", "(future) Mozilla Glean"),
             retentionPolicy = "Provider retention; disabled by default; toggle in Settings → Privacy.",
+            collectedByDefault = false,
+        ),
+        DashboardEntry(
+            category = Category.UPDATE_CHECK,
+            location = StorageLocation.CLOUD_ON_DEMAND,
+            controls = Controls(canExport = false, canDelete = true, hasOptOut = true),
+            collectedBy = listOf("UpdateChecker"),
+            retentionPolicy = "No data is stored. When enabled, NovaCut makes a single TLS request to the " +
+                "public GitHub releases API to compare the latest tag with the installed version; it never " +
+                "downloads or installs an APK. Off by default; turn it off in Settings → Updates to stop all checks.",
             collectedByDefault = false,
         ),
     )

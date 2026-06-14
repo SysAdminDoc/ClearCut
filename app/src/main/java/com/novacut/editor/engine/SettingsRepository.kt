@@ -52,6 +52,9 @@ data class AppSettings(
     val acoustIdApiKey: String = "",
     val includeDiagnosticTimelineShape: Boolean = false,
     val appearanceMode: AppearanceMode = AppearanceMode.SYSTEM,
+    // Opt-in passive update check for sideload / GitHub-release installs. Off by
+    // default so no network request is ever made without explicit consent.
+    val updateCheckEnabled: Boolean = false,
 )
 
 enum class DesktopOverride { AUTO, FORCE_ON, FORCE_OFF }
@@ -89,6 +92,7 @@ internal object SettingsPreferenceKeys {
     val ACOUSTID_KEY = stringPreferencesKey("acoustid_api_key")
     val INCLUDE_DIAGNOSTIC_TIMELINE_SHAPE = booleanPreferencesKey("include_diagnostic_timeline_shape")
     val APPEARANCE_MODE = stringPreferencesKey("appearance_mode")
+    val UPDATE_CHECK_ENABLED = booleanPreferencesKey("update_check_enabled")
 }
 
 internal fun mapPreferencesToAppSettings(prefs: Preferences): AppSettings = AppSettings(
@@ -125,6 +129,7 @@ internal fun mapPreferencesToAppSettings(prefs: Preferences): AppSettings = AppS
     includeDiagnosticTimelineShape = prefs[SettingsPreferenceKeys.INCLUDE_DIAGNOSTIC_TIMELINE_SHAPE] ?: false,
     appearanceMode = prefs[SettingsPreferenceKeys.APPEARANCE_MODE]?.enumOrNull<AppearanceMode>()
         ?: AppearanceMode.SYSTEM,
+    updateCheckEnabled = prefs[SettingsPreferenceKeys.UPDATE_CHECK_ENABLED] ?: false,
 )
 
 internal fun createNovaCutSettingsDataStore(
@@ -315,6 +320,10 @@ class SettingsRepository internal constructor(
 
     suspend fun updateAppearanceMode(value: AppearanceMode) {
         dataStore.edit { it[SettingsPreferenceKeys.APPEARANCE_MODE] = value.name }
+    }
+
+    suspend fun updateUpdateCheckEnabled(value: Boolean) {
+        dataStore.edit { it[SettingsPreferenceKeys.UPDATE_CHECK_ENABLED] = value }
     }
 
     suspend fun updateOneHandedMode(value: Boolean) {

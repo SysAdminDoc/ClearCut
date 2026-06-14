@@ -23,9 +23,15 @@ android {
         applicationId = "com.novacut.editor"
         minSdk = 26
         targetSdk = 36
-        versionCode = 225
-        versionName = "3.74.92"
+        versionCode = 226
+        versionName = "3.74.93"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Passive, opt-in update check for sideload / GitHub-release installs.
+        // A privacy-store fork (e.g. F-Droid) can override this to `false` to
+        // compile the network version check out entirely; the Settings toggle
+        // then never appears and UpdateChecker short-circuits to Unavailable.
+        buildConfigField("boolean", "UPDATE_CHECK_AVAILABLE", "true")
     }
 
     signingConfigs {

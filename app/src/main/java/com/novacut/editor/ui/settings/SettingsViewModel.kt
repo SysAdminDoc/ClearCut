@@ -8,6 +8,7 @@ import com.novacut.editor.engine.DiagnosticExportEngine
 import com.novacut.editor.engine.ModelDownloadManager
 import com.novacut.editor.engine.ProjectAutoSave
 import com.novacut.editor.engine.SettingsRepository
+import com.novacut.editor.engine.UpdateChecker
 import com.novacut.editor.engine.db.ProjectDao
 import com.novacut.editor.engine.segmentation.SegmentationEngine
 import com.novacut.editor.engine.whisper.WhisperEngine
@@ -54,6 +55,16 @@ data class SettingsResetNoticeUiState(
     val recordedAtEpochMs: Long,
 )
 
+data class UpdateCheckUiState(
+    val isChecking: Boolean = false,
+    val latestVersion: String? = null,
+    val releaseUrl: String? = null,
+    val message: String? = null,
+    val isError: Boolean = false,
+) {
+    val updateAvailable: Boolean get() = latestVersion != null && releaseUrl != null
+}
+
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val repo: SettingsRepository,
@@ -61,7 +72,8 @@ class SettingsViewModel @Inject constructor(
     private val segmentationEngine: SegmentationEngine,
     private val diagnosticExportEngine: DiagnosticExportEngine,
     private val projectDao: ProjectDao,
-    private val autoSave: ProjectAutoSave
+    private val autoSave: ProjectAutoSave,
+    private val updateChecker: UpdateChecker
 ) : ViewModel() {
 
     val settings: StateFlow<AppSettings> = repo.settings
@@ -78,6 +90,9 @@ class SettingsViewModel @Inject constructor(
 
     private val _settingsResetNotice = MutableStateFlow<SettingsResetNoticeUiState?>(null)
     val settingsResetNotice: StateFlow<SettingsResetNoticeUiState?> = _settingsResetNotice.asStateFlow()
+
+    private val _updateCheck = MutableStateFlow(UpdateCheckUiState())
+    val updateCheck: StateFlow<UpdateCheckUiState> = _updateCheck.asStateFlow()
 
     init {
         refreshAiModelStorage()
@@ -106,6 +121,49 @@ class SettingsViewModel @Inject constructor(
     fun setIncludeDiagnosticTimelineShape(v: Boolean) =
         viewModelScope.launch { repo.updateIncludeDiagnosticTimelineShape(v) }
     fun setAppearanceMode(v: AppearanceMode) = viewModelScope.launch { repo.updateAppearanceMode(v) }
+
+    fun setUpdateCheckEnabled(v: Boolean) = viewModelScope.launch {
+        repo.updateUpdateCheckEnabled(v)
+        if (!v) {
+            // Clear any stale notice the moment the user opts out.
+            _updateCheck.value = UpdateCheckUiState()
+        }
+    }
+
+    /**
+     * Run the opt-in passive update check. No-op (other than a feedback
+     * message) when the user has not enabled it — the gate is enforced again
+     * inside [UpdateChecker] so the network is never touched.
+     */
+    fun checkForUpdate() {
+        if (_updateCheck.value.isChecking) return
+        viewModelScope.launch {
+            val enabled = repo.settings.first().updateCheckEnabled
+            _updateCheck.update { it.copy(isChecking = true, message = null, isError = false) }
+            val result = updateChecker.check(userEnabled = enabled)
+            _updateCheck.value = when (result) {
+                is UpdateChecker.Result.UpdateAvailable -> UpdateCheckUiState(
+                    latestVersion = result.latestVersion,
+                    releaseUrl = result.releaseUrl,
+                    message = null,
+                )
+                UpdateChecker.Result.UpToDate -> UpdateCheckUiState(
+                    message = "NovaCut is up to date."
+                )
+                UpdateChecker.Result.Unavailable -> UpdateCheckUiState(
+                    message = "Turn on update checks to look for new releases."
+                )
+                is UpdateChecker.Result.Failed -> UpdateCheckUiState(
+                    message = "Couldn't check for updates. Try again later.",
+                    isError = true,
+                )
+            }
+        }
+    }
+
+    fun dismissUpdateCheckMessage() {
+        _updateCheck.update { it.copy(message = null, isError = false) }
+    }
 
     fun refreshAiModelStorage() {
         viewModelScope.launch {
