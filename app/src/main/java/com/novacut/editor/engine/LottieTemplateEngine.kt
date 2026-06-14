@@ -12,6 +12,7 @@ import com.airbnb.lottie.LottieCompositionFactory
 import com.airbnb.lottie.LottieDrawable
 import com.airbnb.lottie.TextDelegate
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.zip.ZipInputStream
 import javax.inject.Inject
@@ -156,6 +157,8 @@ class LottieTemplateEngine @Inject constructor(
                     if (cont.isActive) cont.resume(null)
                 }
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.w(TAG, "Exception loading Lottie template: $assetPath", e)
             null
@@ -170,23 +173,36 @@ class LottieTemplateEngine @Inject constructor(
     suspend fun loadDotLottie(uri: Uri): LottieComposition? {
         return try {
             val inputStream = context.contentResolver.openInputStream(uri) ?: run {
-                Log.w(TAG, "Failed to open dotLottie URI: $uri")
+                Log.w(TAG, "Failed to open dotLottie URI")
                 return null
             }
-            suspendCancellableCoroutine { cont ->
-                val zipStream = ZipInputStream(inputStream)
-                val task = LottieCompositionFactory.fromZipStream(zipStream, null)
-                task.addListener { composition ->
-                    zipStream.close()
-                    if (cont.isActive) cont.resume(composition)
-                }.addFailureListener { e ->
-                    Log.w(TAG, "Failed to load dotLottie: $uri", e)
-                    zipStream.close()
-                    if (cont.isActive) cont.resume(null)
+            // ZipInputStream.close() closes the wrapped inputStream too. Close it on
+            // every exit path — including coroutine cancellation, where neither Lottie
+            // listener fires — so the file descriptor and buffer never leak.
+            val zipStream = ZipInputStream(inputStream)
+            try {
+                suspendCancellableCoroutine { cont ->
+                    cont.invokeOnCancellation { runCatching { zipStream.close() } }
+                    val task = LottieCompositionFactory.fromZipStream(zipStream, null)
+                    task.addListener { composition ->
+                        runCatching { zipStream.close() }
+                        if (cont.isActive) cont.resume(composition)
+                    }.addFailureListener { e ->
+                        Log.w(TAG, "Failed to load dotLottie", e)
+                        runCatching { zipStream.close() }
+                        if (cont.isActive) cont.resume(null)
+                    }
                 }
+            } catch (e: Throwable) {
+                // Synchronous failure from fromZipStream (or cancellation) — the
+                // listeners never ran, so close here before propagating.
+                runCatching { zipStream.close() }
+                throw e
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            Log.w(TAG, "Exception loading dotLottie: $uri", e)
+            Log.w(TAG, "Exception loading dotLottie", e)
             null
         }
     }
