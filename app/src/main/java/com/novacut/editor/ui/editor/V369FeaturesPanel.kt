@@ -151,7 +151,7 @@ fun V369FeaturesPanel(
                     NovaCutFilterChip(
                         selected = v.karaokeStyle == style,
                         onClick = { viewModel.v369Delegate.setKaraokeStyle(style) },
-                        text = style.displayName,
+                        text = karaokeStyleLabel(style),
                         accent = Mocha.Yellow
                     )
                 }
@@ -253,7 +253,7 @@ fun V369FeaturesPanel(
                         onClick = {
                             viewModel.v369Delegate.publishLastExport(target, title, state.project.notes)
                         },
-                        label = { Text(target.displayName, style = MaterialTheme.typography.labelMedium) },
+                        label = { Text(publishTargetLabel(target), style = MaterialTheme.typography.labelMedium) },
                         enabled = hasExport
                     )
                 }
@@ -297,7 +297,7 @@ fun V369FeaturesPanel(
                     NovaCutFilterChip(
                         selected = v.colorBlindMode == mode,
                         onClick = { viewModel.v369Delegate.setColorBlindMode(mode) },
-                        text = mode.displayName,
+                        text = colorBlindModeLabel(mode),
                         accent = Mocha.Mauve
                     )
                 }
@@ -621,4 +621,35 @@ private fun TinyButton(label: String, enabled: Boolean = true, onClick: () -> Un
     ) {
         Text(label, style = MaterialTheme.typography.labelMedium)
     }
+}
+
+@Composable
+private fun karaokeStyleLabel(style: KaraokeCaptionEngine.KaraokeStyle): String = when (style) {
+    KaraokeCaptionEngine.KaraokeStyle.MRBEAST -> stringResource(R.string.v369_karaoke_mrbeast)
+    KaraokeCaptionEngine.KaraokeStyle.SUBWAY -> stringResource(R.string.v369_karaoke_subway)
+    KaraokeCaptionEngine.KaraokeStyle.HORMOZI -> stringResource(R.string.v369_karaoke_hormozi)
+    KaraokeCaptionEngine.KaraokeStyle.TIKTOK_WHITE -> stringResource(R.string.v369_karaoke_tiktok_white)
+    KaraokeCaptionEngine.KaraokeStyle.POP_SCALE -> stringResource(R.string.v369_karaoke_pop_scale)
+    KaraokeCaptionEngine.KaraokeStyle.TYPEWRITER -> stringResource(R.string.v369_karaoke_typewriter)
+    KaraokeCaptionEngine.KaraokeStyle.NEON -> stringResource(R.string.v369_karaoke_neon)
+    KaraokeCaptionEngine.KaraokeStyle.MINIMAL -> stringResource(R.string.v369_karaoke_minimal)
+}
+
+@Composable
+private fun publishTargetLabel(target: DirectPublishEngine.Target): String = when (target) {
+    DirectPublishEngine.Target.YOUTUBE -> stringResource(R.string.v369_target_youtube)
+    DirectPublishEngine.Target.TIKTOK -> stringResource(R.string.v369_target_tiktok)
+    DirectPublishEngine.Target.INSTAGRAM -> stringResource(R.string.v369_target_instagram)
+    DirectPublishEngine.Target.THREADS -> stringResource(R.string.v369_target_threads)
+    DirectPublishEngine.Target.TWITTER_X -> stringResource(R.string.v369_target_x)
+    DirectPublishEngine.Target.LINKEDIN -> stringResource(R.string.v369_target_linkedin)
+}
+
+@Composable
+private fun colorBlindModeLabel(mode: ColorBlindPreviewEngine.Mode): String = when (mode) {
+    ColorBlindPreviewEngine.Mode.OFF -> stringResource(R.string.v369_cb_off)
+    ColorBlindPreviewEngine.Mode.DEUTERANOPIA -> stringResource(R.string.v369_cb_deuteranopia)
+    ColorBlindPreviewEngine.Mode.PROTANOPIA -> stringResource(R.string.v369_cb_protanopia)
+    ColorBlindPreviewEngine.Mode.TRITANOPIA -> stringResource(R.string.v369_cb_tritanopia)
+    ColorBlindPreviewEngine.Mode.ACHROMATOPSIA -> stringResource(R.string.v369_cb_achromatopsia)
 }
