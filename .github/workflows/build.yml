@@ -18,18 +18,19 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Least-privilege default: read-only. Only the release job elevates to write.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
         with:
           java-version: '17'
           distribution: 'temurin'
@@ -124,7 +125,7 @@ jobs:
           python3 scripts/write_release_checksums.py --check
 
       - name: Upload Debug APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: NovaCut-debug
           path: |
@@ -132,7 +133,7 @@ jobs:
             app/build/outputs/apk/debug/*.sha256
 
       - name: Upload Release APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: NovaCut-release
           path: |
@@ -140,21 +141,38 @@ jobs:
             app/build/outputs/apk/release/*.sha256
 
       - name: Upload Instrumentation APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: NovaCut-androidTest
           path: |
             app/build/outputs/apk/androidTest/debug/*.apk
             app/build/outputs/apk/androidTest/debug/*.sha256
 
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          sparse-checkout: ' '
+
+      - name: Download release artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: NovaCut-release
+          path: release-artifacts
+
       - name: Upload to Release
-        if: startsWith(github.ref, 'refs/tags/v')
         run: |
           gh release create "${{ github.ref_name }}" \
             --title "NovaCut ${{ github.ref_name }}" \
             --generate-notes \
-            app/build/outputs/apk/release/*.apk \
-            app/build/outputs/apk/release/*.sha256
+            release-artifacts/*.apk \
+            release-artifacts/*.sha256
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -163,10 +181,10 @@ jobs:
     timeout-minutes: 45
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
         with:
           java-version: '17'
           distribution: 'temurin'
@@ -176,7 +194,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run Compose smoke suite on emulator
-        uses: reactivecircus/android-emulator-runner@v2
+        uses: reactivecircus/android-emulator-runner@e89f39f1abbbd05b1113a29cf4db69e7540cae5a # v2
         with:
           api-level: 35
           target: google_apis
