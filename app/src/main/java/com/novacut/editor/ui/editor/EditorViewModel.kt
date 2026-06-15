@@ -3610,6 +3610,7 @@ class EditorViewModel @Inject constructor(
     fun showAudioNorm() = audioMixerDelegate.showAudioNorm()
     fun hideAudioNorm() = audioMixerDelegate.hideAudioNorm()
     fun normalizeAudio(targetLufs: Float) = audioMixerDelegate.normalizeAudio(targetLufs)
+    fun normalizeAllClips(targetLufs: Float) = audioMixerDelegate.normalizeAllClips(targetLufs)
 
     // --- Color Match ---
     fun colorMatchToReference(referenceClipId: String) {

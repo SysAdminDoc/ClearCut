@@ -288,4 +288,48 @@ class AudioMixerDelegate(
         }
     }
 
+    fun normalizeAllClips(targetLufs: Float) {
+        val state = stateFlow.value
+        val audioClips = state.tracks
+            .filter { it.type == TrackType.AUDIO || it.type == TrackType.VIDEO }
+            .flatMap { t -> t.clips.map { c -> t.id to c } }
+        if (audioClips.isEmpty()) {
+            showToast("No audio clips to normalize")
+            return
+        }
+        val preset = LoudnessEngine.LoudnessPreset.entries
+            .firstOrNull { it.targetLufs == targetLufs }
+            ?: LoudnessEngine.LoudnessPreset.YOUTUBE
+        scope.launch {
+            showToast("Measuring loudness across ${audioClips.size} clips\u2026")
+            try {
+                val gains = mutableMapOf<String, Float>()
+                for ((_, clip) in audioClips) {
+                    val measurement = withContext(Dispatchers.IO) {
+                        loudnessEngine.measureLoudness(clip.sourceUri)
+                    }
+                    gains[clip.id] = loudnessEngine.calculateNormalizationGain(measurement, preset)
+                }
+                saveUndoState("Normalize all clips")
+                var changed = 0
+                stateFlow.update { s ->
+                    s.copy(tracks = s.tracks.map { track ->
+                        track.copy(clips = track.clips.map { c ->
+                            val gain = gains[c.id]
+                            if (gain != null && gain != 1f) {
+                                changed++
+                                c.copy(volume = (c.volume * gain).coerceIn(0f, 2f))
+                            } else c
+                        })
+                    })
+                }
+                hideAudioNorm()
+                saveProject()
+                showToast("Normalized $changed clips to %.0f LUFS".format(targetLufs))
+            } catch (e: Exception) {
+                showToast("Normalization failed: ${e.message ?: "Unknown error"}")
+            }
+        }
+    }
+
 }

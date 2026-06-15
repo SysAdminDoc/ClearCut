@@ -53,6 +53,8 @@ enum class NormalizationMode(val labelResId: Int, val targetLufs: Float) {
 fun AudioNormPanel(
     currentVolume: Float,
     onNormalize: (Float) -> Unit,
+    onNormalizeAll: (Float) -> Unit,
+    hasSelectedClip: Boolean,
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -216,7 +218,8 @@ fun AudioNormPanel(
                 onClick = { onNormalize(targetLufs) },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve),
-                shape = RoundedCornerShape(18.dp)
+                shape = RoundedCornerShape(18.dp),
+                enabled = hasSelectedClip
             ) {
                 androidx.compose.material3.Icon(
                     imageVector = Icons.Default.Equalizer,
@@ -224,6 +227,22 @@ fun AudioNormPanel(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(text = stringResource(R.string.audio_norm_normalize_button))
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Button(
+                onClick = { onNormalizeAll(targetLufs) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Mocha.Green),
+                shape = RoundedCornerShape(18.dp)
+            ) {
+                androidx.compose.material3.Icon(
+                    imageVector = Icons.Default.Equalizer,
+                    contentDescription = null
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = stringResource(R.string.audio_norm_normalize_all_button))
             }
         }
     }
