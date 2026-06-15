@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.74.94</string>
+    <string name="app_version">v3.74.95</string>
 
     <!-- Common -->
     <string name="close">Close</string>
@@ -17,6 +17,7 @@
     <string name="complete">Complete</string>
     <string name="cancelled">Cancelled</string>
     <string name="error">Error</string>
+    <string name="storyboard_save">Save</string>
 
     <!-- ExportSheet -->
     <string name="export_title">Export</string>
@@ -2239,6 +2240,21 @@
     <string name="trash_delete_forever_title">Delete forever?</string>
     <string name="trash_delete_forever_message">\"%1$s\" will be permanently deleted. This can\'t be undone.</string>
     <string name="trash_delete_forever_action">Delete forever</string>
+    <string name="project_restore_success">Restored "%1$s"</string>
+    <string name="project_restore_failed">Restore failed</string>
+    <string name="project_delete_forever_success">Permanently deleted "%1$s"</string>
+    <string name="project_delete_forever_failed">Delete failed</string>
+    <plurals name="trash_empty_success">
+        <item quantity="one">Emptied trash (%1$d project)</item>
+        <item quantity="other">Emptied trash (%1$d projects)</item>
+    </plurals>
+    <string name="trash_empty_failed">Empty trash failed</string>
+    <string name="storyboard_title">Storyboard</string>
+    <string name="storyboard_subtitle">Plan shots for auto-edit</string>
+    <string name="storyboard_new_shot_hint">Describe a shot...</string>
+    <string name="storyboard_add_shot_cd">Add shot</string>
+    <string name="storyboard_edit_shot_cd">Edit shot</string>
+    <string name="storyboard_delete_shot_cd">Delete shot</string>
 
     <!-- Keyframe precision inputs -->
     <string name="keyframe_time_label">Time (s)</string>

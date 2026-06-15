@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.74.94</string>
+    <string name="app_version">v3.74.95</string>
     <string name="close">Cerrar</string>
     <string name="cancel">Cancelar</string>
     <string name="done">Listo</string>
@@ -15,6 +15,7 @@
     <string name="complete">Completo</string>
     <string name="cancelled">Cancelado</string>
     <string name="error">Error</string>
+    <string name="storyboard_save">Guardar</string>
     <string name="export_title">Exportar</string>
     <string name="export_subtitle">Elija un master de entrega, un render social, una mezcla de audio o una imagen limpia con confianza.</string>
     <string name="export_exporting">Exportando\u2026</string>
@@ -1967,6 +1968,21 @@
     <string name="trash_delete_forever_title">¿Eliminar para siempre?</string>
     <string name="trash_delete_forever_message">\"%1$s\" se eliminará permanentemente. Esto no se puede deshacer.</string>
     <string name="trash_delete_forever_action">Eliminar para siempre</string>
+    <string name="project_restore_success">Restaurado "%1$s"</string>
+    <string name="project_restore_failed">Error al restaurar</string>
+    <string name="project_delete_forever_success">Eliminado permanentemente "%1$s"</string>
+    <string name="project_delete_forever_failed">Error al eliminar</string>
+    <plurals name="trash_empty_success">
+        <item quantity="one">Papelera vaciada (%1$d proyecto)</item>
+        <item quantity="other">Papelera vaciada (%1$d proyectos)</item>
+    </plurals>
+    <string name="trash_empty_failed">Error al vaciar la papelera</string>
+    <string name="storyboard_title">Guion gráfico</string>
+    <string name="storyboard_subtitle">Planifique tomas para edición automática</string>
+    <string name="storyboard_new_shot_hint">Describa una toma...</string>
+    <string name="storyboard_add_shot_cd">Agregar toma</string>
+    <string name="storyboard_edit_shot_cd">Editar toma</string>
+    <string name="storyboard_delete_shot_cd">Eliminar toma</string>
     <string name="keyframe_time_label">Tiempo (s)</string>
     <string name="keyframe_value_label">Valor</string>
 

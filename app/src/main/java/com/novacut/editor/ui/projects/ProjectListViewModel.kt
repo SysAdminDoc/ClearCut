@@ -305,10 +305,10 @@ class ProjectListViewModel @Inject constructor(
                 withContext(Dispatchers.IO) {
                     projectDao.restoreProject(project.id)
                 }
-                showToast("Restored \"${project.name}\"")
+                showToast(appContext.getString(R.string.project_restore_success, project.name))
             } catch (e: Exception) {
                 Log.w("ProjectListVM", "Failed to restore project ${project.id}", e)
-                showToast("Restore failed")
+                showToast(appContext.getString(R.string.project_restore_failed))
             }
         }
     }
@@ -319,10 +319,10 @@ class ProjectListViewModel @Inject constructor(
                 withContext(Dispatchers.IO) {
                     deleteProjectAndCleanup(project)
                 }
-                showToast("Permanently deleted \"${project.name}\"")
+                showToast(appContext.getString(R.string.project_delete_forever_success, project.name))
             } catch (e: Exception) {
                 Log.w("ProjectListVM", "Failed to permanently delete ${project.id}", e)
-                showToast("Delete failed")
+                showToast(appContext.getString(R.string.project_delete_forever_failed))
             }
         }
     }
@@ -334,10 +334,16 @@ class ProjectListViewModel @Inject constructor(
                     projectDao.purgeTrashedOlderThan(Long.MAX_VALUE)
                 }
                 if (count > 0) sweepManagedMediaAfterDeletion()
-                showToast("Emptied trash ($count projects)")
+                showToast(
+                    appContext.resources.getQuantityString(
+                        R.plurals.trash_empty_success,
+                        count,
+                        count
+                    )
+                )
             } catch (e: Exception) {
                 Log.w("ProjectListVM", "Failed to empty trash", e)
-                showToast("Empty trash failed")
+                showToast(appContext.getString(R.string.trash_empty_failed))
             }
         }
     }

@@ -1,0 +1,3 @@
+- Added Room migration coverage for committed project database schemas.
+- Improved storyboard accessibility with 48dp edit/delete targets and localized labels.
+- Localized project trash restore, delete, and empty-trash feedback.

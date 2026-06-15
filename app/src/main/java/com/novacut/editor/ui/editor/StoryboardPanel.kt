@@ -36,11 +36,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.novacut.editor.R
 import com.novacut.editor.model.StoryboardCard
 import com.novacut.editor.model.StoryboardCardStatus
 import com.novacut.editor.ui.theme.Mocha
+import com.novacut.editor.ui.theme.TouchTarget
 
 @Composable
 fun StoryboardPanel(
@@ -56,8 +59,8 @@ fun StoryboardPanel(
     var editText by remember(editingCardId) { mutableStateOf("") }
 
     PremiumEditorPanel(
-        title = "Storyboard",
-        subtitle = "Plan shots for auto-edit",
+        title = stringResource(R.string.storyboard_title),
+        subtitle = stringResource(R.string.storyboard_subtitle),
         icon = Icons.AutoMirrored.Filled.ViewList,
         accent = Mocha.Teal,
         onClose = onClose,
@@ -72,7 +75,7 @@ fun StoryboardPanel(
                 OutlinedTextField(
                     value = newShotText,
                     onValueChange = { newShotText = it },
-                    placeholder = { Text("Describe a shot...", color = Mocha.Overlay0) },
+                    placeholder = { Text(stringResource(R.string.storyboard_new_shot_hint), color = Mocha.Overlay0) },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Mocha.Teal,
@@ -95,7 +98,7 @@ fun StoryboardPanel(
                 ) {
                     Icon(
                         Icons.Default.Add,
-                        contentDescription = "Add shot",
+                        contentDescription = stringResource(R.string.storyboard_add_shot_cd),
                         tint = if (newShotText.isNotBlank()) Mocha.Teal else Mocha.Overlay0
                     )
                 }
@@ -134,7 +137,7 @@ fun StoryboardPanel(
                                         }
                                         editingCardId = null
                                     },
-                                    label = { Text("Save") },
+                                    label = { Text(stringResource(R.string.storyboard_save)) },
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = Mocha.Teal
                                     )
@@ -143,7 +146,7 @@ fun StoryboardPanel(
                                 FilterChip(
                                     selected = false,
                                     onClick = { editingCardId = null },
-                                    label = { Text("Cancel") }
+                                    label = { Text(stringResource(R.string.cancel)) }
                                 )
                             }
                         } else {
@@ -184,15 +187,25 @@ fun StoryboardPanel(
                                         editingCardId = card.id
                                         editText = card.shotText
                                     },
-                                    modifier = Modifier.size(32.dp)
+                                    modifier = Modifier.size(TouchTarget.minimum)
                                 ) {
-                                    Icon(Icons.Default.Edit, contentDescription = "Edit shot", tint = Mocha.Subtext0, modifier = Modifier.size(16.dp))
+                                    Icon(
+                                        Icons.Default.Edit,
+                                        contentDescription = stringResource(R.string.storyboard_edit_shot_cd),
+                                        tint = Mocha.Subtext0,
+                                        modifier = Modifier.size(18.dp)
+                                    )
                                 }
                                 IconButton(
                                     onClick = { onRemoveCard(card.id) },
-                                    modifier = Modifier.size(32.dp)
+                                    modifier = Modifier.size(TouchTarget.minimum)
                                 ) {
-                                    Icon(Icons.Default.Delete, contentDescription = "Delete shot", tint = Mocha.Red, modifier = Modifier.size(16.dp))
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = stringResource(R.string.storyboard_delete_shot_cd),
+                                        tint = Mocha.Red,
+                                        modifier = Modifier.size(18.dp)
+                                    )
                                 }
                             }
                         }
