@@ -1,7 +1,9 @@
 package com.novacut.editor.ui.settings
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.novacut.editor.R
 import com.novacut.editor.engine.AppSettings
 import com.novacut.editor.engine.AppearanceMode
 import com.novacut.editor.engine.DiagnosticExportEngine
@@ -14,6 +16,7 @@ import com.novacut.editor.engine.segmentation.SegmentationEngine
 import com.novacut.editor.engine.whisper.WhisperEngine
 import com.novacut.editor.model.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -67,6 +70,7 @@ data class UpdateCheckUiState(
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
+    @ApplicationContext private val appContext: Context,
     private val repo: SettingsRepository,
     private val whisperEngine: WhisperEngine,
     private val segmentationEngine: SegmentationEngine,
@@ -148,13 +152,13 @@ class SettingsViewModel @Inject constructor(
                     message = null,
                 )
                 UpdateChecker.Result.UpToDate -> UpdateCheckUiState(
-                    message = "NovaCut is up to date."
+                    message = appContext.getString(R.string.settings_update_up_to_date)
                 )
                 UpdateChecker.Result.Unavailable -> UpdateCheckUiState(
-                    message = "Turn on update checks to look for new releases."
+                    message = appContext.getString(R.string.settings_update_enable_prompt)
                 )
                 is UpdateChecker.Result.Failed -> UpdateCheckUiState(
-                    message = "Couldn't check for updates. Try again later.",
+                    message = appContext.getString(R.string.settings_update_check_failed),
                     isError = true,
                 )
             }
@@ -297,11 +301,11 @@ class SettingsViewModel @Inject constructor(
     ): String {
         return when {
             timelineShapeIncluded ->
-                "Diagnostic ZIP saved locally with sanitized timeline shape. Share it only when you choose."
+                appContext.getString(R.string.settings_diagnostic_saved_with_timeline)
             timelineShapeRequested ->
-                "Diagnostic ZIP saved locally. No saved project timeline was available to summarize."
+                appContext.getString(R.string.settings_diagnostic_saved_no_timeline)
             else ->
-                "Diagnostic ZIP saved locally. Share it only when you choose."
+                appContext.getString(R.string.settings_diagnostic_saved_generic)
         }
     }
 
@@ -316,9 +320,9 @@ class SettingsViewModel @Inject constructor(
                     it.copy(
                         whisperBytes = bytes,
                         feedbackMessage = if (success) {
-                            "Whisper installed. Captions can now use local speech-to-text."
+                            appContext.getString(R.string.settings_whisper_installed_feedback)
                         } else {
-                            "Whisper could not be verified. Retry the download before using local speech-to-text."
+                            appContext.getString(R.string.settings_whisper_verify_failed_feedback)
                         }
                     )
                 }
@@ -329,9 +333,9 @@ class SettingsViewModel @Inject constructor(
                     it.copy(
                         feedbackMessage = when (error) {
                             is ModelDownloadManager.MeteredNetworkException ->
-                                "Wi-Fi-only model downloads are on. Connect to Wi-Fi or change the setting."
+                                appContext.getString(R.string.settings_model_wifi_only_feedback)
                             else ->
-                                "Whisper could not be downloaded. Check your connection and try again."
+                                appContext.getString(R.string.settings_whisper_download_failed_feedback)
                         }
                     )
                 }
@@ -350,9 +354,9 @@ class SettingsViewModel @Inject constructor(
                     it.copy(
                         segmentationBytes = bytes,
                         feedbackMessage = if (success) {
-                            "Segmentation installed. Background tools can now run locally."
+                            appContext.getString(R.string.settings_segmentation_installed_feedback)
                         } else {
-                            "Segmentation could not be verified. Retry the download before using AI matte tools."
+                            appContext.getString(R.string.settings_segmentation_verify_failed_feedback)
                         }
                     )
                 }
@@ -363,9 +367,9 @@ class SettingsViewModel @Inject constructor(
                     it.copy(
                         feedbackMessage = when (error) {
                             is ModelDownloadManager.MeteredNetworkException ->
-                                "Wi-Fi-only model downloads are on. Connect to Wi-Fi or change the setting."
+                                appContext.getString(R.string.settings_model_wifi_only_feedback)
                             else ->
-                                "Segmentation could not be downloaded. Check your connection and try again."
+                                appContext.getString(R.string.settings_segmentation_download_failed_feedback)
                         }
                     )
                 }
@@ -386,9 +390,12 @@ class SettingsViewModel @Inject constructor(
                     whisperBytes = after,
                     isRemovingWhisper = false,
                     feedbackMessage = if (success) {
-                        "Whisper removed. Freed ${formatStorageBytes(before - after)}."
+                        appContext.getString(
+                            R.string.settings_whisper_removed_feedback,
+                            formatStorageBytes(before - after)
+                        )
                     } else {
-                        "Whisper could not be removed. Try again from AI Tools."
+                        appContext.getString(R.string.settings_whisper_remove_failed_feedback)
                     }
                 )
             }
@@ -408,9 +415,12 @@ class SettingsViewModel @Inject constructor(
                     segmentationBytes = after,
                     isRemovingSegmentation = false,
                     feedbackMessage = if (success) {
-                        "Segmentation model removed. Freed ${formatStorageBytes(before - after)}."
+                        appContext.getString(
+                            R.string.settings_segmentation_removed_feedback,
+                            formatStorageBytes(before - after)
+                        )
                     } else {
-                        "Segmentation could not be removed. Try again from AI Tools."
+                        appContext.getString(R.string.settings_segmentation_remove_failed_feedback)
                     }
                 )
             }

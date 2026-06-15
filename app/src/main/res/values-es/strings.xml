@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.74.96</string>
+    <string name="app_version">v3.74.97</string>
     <string name="close">Cerrar</string>
     <string name="cancel">Cancelar</string>
     <string name="done">Listo</string>
@@ -395,6 +395,9 @@
     <string name="settings_diagnostic_export_action">Guardar ZIP</string>
     <string name="settings_diagnostic_exporting">Ahorro</string>
     <string name="settings_diagnostic_saved">Guardado localmente</string>
+    <string name="settings_diagnostic_saved_with_timeline">ZIP de diagnóstico guardado localmente con la forma de la línea de tiempo saneada. Compártalo solo cuando usted lo decida.</string>
+    <string name="settings_diagnostic_saved_no_timeline">ZIP de diagnóstico guardado localmente. No había una línea de tiempo guardada disponible para resumir.</string>
+    <string name="settings_diagnostic_saved_generic">ZIP de diagnóstico guardado localmente. Compártalo solo cuando usted lo decida.</string>
     <string name="settings_diagnostic_file_format">%1$s · %2$s</string>
     <string name="settings_diagnostic_share">Compartir</string>
     <string name="settings_diagnostic_rebuild">reconstruir</string>
@@ -408,9 +411,23 @@
     <string name="settings_update_check_now_description">Compara la versión instalada con la última versión de GitHub.</string>
     <string name="settings_update_check_now_action">Buscar</string>
     <string name="settings_update_checking_action">Buscando…</string>
+    <string name="settings_update_up_to_date">NovaCut está actualizado.</string>
+    <string name="settings_update_enable_prompt">Active la búsqueda de actualizaciones para ver nuevas versiones.</string>
+    <string name="settings_update_check_failed">No se pudieron buscar actualizaciones. Inténtelo de nuevo más tarde.</string>
     <string name="settings_update_available_label">Actualización disponible: %1$s</string>
     <string name="settings_update_available_description">Abre la página de versiones de GitHub para que puedas descargar la nueva versión.</string>
     <string name="settings_update_view_action">Ver</string>
+    <string name="settings_whisper_installed_feedback">Whisper instalado. Los subtítulos ya pueden usar voz a texto local.</string>
+    <string name="settings_whisper_verify_failed_feedback">Whisper no se pudo verificar. Reintente la descarga antes de usar voz a texto local.</string>
+    <string name="settings_model_wifi_only_feedback">Las descargas de modelos solo por Wi-Fi están activadas. Conéctese a Wi-Fi o cambie el ajuste.</string>
+    <string name="settings_whisper_download_failed_feedback">Whisper no se pudo descargar. Revise su conexión e inténtelo de nuevo.</string>
+    <string name="settings_segmentation_installed_feedback">Segmentación instalada. Las herramientas de fondo ya pueden ejecutarse localmente.</string>
+    <string name="settings_segmentation_verify_failed_feedback">La segmentación no se pudo verificar. Reintente la descarga antes de usar herramientas de mate con IA.</string>
+    <string name="settings_segmentation_download_failed_feedback">La segmentación no se pudo descargar. Revise su conexión e inténtelo de nuevo.</string>
+    <string name="settings_whisper_removed_feedback">Whisper eliminado. Se liberó %1$s.</string>
+    <string name="settings_whisper_remove_failed_feedback">Whisper no se pudo eliminar. Inténtelo de nuevo desde Herramientas de IA.</string>
+    <string name="settings_segmentation_removed_feedback">Modelo de segmentación eliminado. Se liberó %1$s.</string>
+    <string name="settings_segmentation_remove_failed_feedback">La segmentación no se pudo eliminar. Inténtelo de nuevo desde Herramientas de IA.</string>
     <string name="settings_about">Acerca de</string>
     <string name="settings_about_description">Detalles de compilación y motor para solución de problemas y soporte.</string>
     <string name="settings_version">Versión</string>

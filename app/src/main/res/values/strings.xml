@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.74.96</string>
+    <string name="app_version">v3.74.97</string>
 
     <!-- Common -->
     <string name="close">Close</string>
@@ -419,6 +419,9 @@
     <string name="settings_diagnostic_export_action">Save ZIP</string>
     <string name="settings_diagnostic_exporting">Saving</string>
     <string name="settings_diagnostic_saved">Saved locally</string>
+    <string name="settings_diagnostic_saved_with_timeline">Diagnostic ZIP saved locally with sanitized timeline shape. Share it only when you choose.</string>
+    <string name="settings_diagnostic_saved_no_timeline">Diagnostic ZIP saved locally. No saved project timeline was available to summarize.</string>
+    <string name="settings_diagnostic_saved_generic">Diagnostic ZIP saved locally. Share it only when you choose.</string>
     <string name="settings_diagnostic_file_format">%1$s · %2$s</string>
     <string name="settings_diagnostic_share">Share</string>
     <string name="settings_diagnostic_rebuild">Rebuild</string>
@@ -432,9 +435,23 @@
     <string name="settings_update_check_now_description">Compare the installed version with the latest GitHub release.</string>
     <string name="settings_update_check_now_action">Check</string>
     <string name="settings_update_checking_action">Checking…</string>
+    <string name="settings_update_up_to_date">NovaCut is up to date.</string>
+    <string name="settings_update_enable_prompt">Turn on update checks to look for new releases.</string>
+    <string name="settings_update_check_failed">Couldn\'t check for updates. Try again later.</string>
     <string name="settings_update_available_label">Update available: %1$s</string>
     <string name="settings_update_available_description">Opens the GitHub releases page so you can download the new version.</string>
     <string name="settings_update_view_action">View</string>
+    <string name="settings_whisper_installed_feedback">Whisper installed. Captions can now use local speech-to-text.</string>
+    <string name="settings_whisper_verify_failed_feedback">Whisper could not be verified. Retry the download before using local speech-to-text.</string>
+    <string name="settings_model_wifi_only_feedback">Wi-Fi-only model downloads are on. Connect to Wi-Fi or change the setting.</string>
+    <string name="settings_whisper_download_failed_feedback">Whisper could not be downloaded. Check your connection and try again.</string>
+    <string name="settings_segmentation_installed_feedback">Segmentation installed. Background tools can now run locally.</string>
+    <string name="settings_segmentation_verify_failed_feedback">Segmentation could not be verified. Retry the download before using AI matte tools.</string>
+    <string name="settings_segmentation_download_failed_feedback">Segmentation could not be downloaded. Check your connection and try again.</string>
+    <string name="settings_whisper_removed_feedback">Whisper removed. Freed %1$s.</string>
+    <string name="settings_whisper_remove_failed_feedback">Whisper could not be removed. Try again from AI Tools.</string>
+    <string name="settings_segmentation_removed_feedback">Segmentation model removed. Freed %1$s.</string>
+    <string name="settings_segmentation_remove_failed_feedback">Segmentation could not be removed. Try again from AI Tools.</string>
     <string name="settings_about">About</string>
     <string name="settings_about_description">Build and engine details for troubleshooting and support.</string>
     <string name="settings_version">Version</string>

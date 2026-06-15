@@ -1,0 +1,3 @@
+- Improved keyboard handling for project search and rename flows.
+- Added app-level IME padding so forms avoid the keyboard.
+- Localized Settings update, diagnostic, and model-storage feedback.
