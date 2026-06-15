@@ -166,7 +166,7 @@ class StyleTransferEngine @Inject constructor(
     /** Whether a given style's model is downloaded and ready. */
     fun isStyleReady(style: StylePreset): Boolean {
         if (!style.requiresModel) return true
-        Log.d(TAG, "isStyleReady: stub — requires ONNX Runtime")
+        Log.d(TAG, "isStyleReady: stub — per-style model not yet pinned")
         return false
     }
 
@@ -191,7 +191,7 @@ class StyleTransferEngine @Inject constructor(
         onProgress: (Float) -> Unit = {}
     ): Boolean = withContext(Dispatchers.IO) {
         if (!style.requiresModel) return@withContext true
-        Log.d(TAG, "downloadStyle: stub — requires ONNX Runtime")
+        Log.d(TAG, "downloadStyle: stub — per-style model not yet pinned")
         false
     }
 
@@ -208,7 +208,7 @@ class StyleTransferEngine @Inject constructor(
         style: StylePreset,
         onProgress: (Float) -> Unit = {}
     ): StyleResult? = withContext(Dispatchers.IO) {
-        Log.d(TAG, "applyStyle: stub — requires ONNX Runtime or OpenCV")
+        Log.d(TAG, "applyStyle: stub — per-style model not yet pinned")
         null
     }
 
@@ -227,7 +227,7 @@ class StyleTransferEngine @Inject constructor(
         outputUri: Uri,
         onProgress: (Float) -> Unit = {}
     ): VideoStyleResult? = withContext(Dispatchers.IO) {
-        Log.d(TAG, "applyStyleToVideo: stub — requires ONNX Runtime or OpenCV")
+        Log.d(TAG, "applyStyleToVideo: stub — per-style model not yet pinned")
         null
     }
 }

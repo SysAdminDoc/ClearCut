@@ -10,17 +10,15 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Stub engine -- requires com.google.mediapipe:tasks-vision for face/subject detection.
- * See ROADMAP.md
+ * Stub engine for smart reframing via face/subject detection.
  *
- * Uses face/subject detection to keep important content in frame when
- * auto-cropping video to different aspect ratios.
+ * MediaPipe Tasks Vision (com.google.mediapipe:tasks-vision) is already a
+ * project dependency — used by SegmentationEngine. This engine needs
+ * FaceDetector/PoseLandmarker wiring and per-style model pinning before
+ * [analyzeForReframe] can return real data. See ROADMAP.md.
  *
- * Backend: MediaPipe Face Detection (BlazeFace ~400KB, <1ms/frame)
- *          + BlazePose (~3-8MB) for full body tracking
- *
- * Dependency (add to build.gradle.kts):
- *   implementation("com.google.mediapipe:tasks-vision:0.10.+")
+ * Backend targets: MediaPipe Face Detection (BlazeFace ~400KB, <1ms/frame)
+ *                  + BlazePose (~3-8MB) for full body tracking
  *
  * Algorithm (replicates YouTube Shorts / Instagram Reels auto-crop):
  * 1. Detect faces/poses per frame at low resolution
@@ -60,14 +58,14 @@ class SmartReframeEngine @Inject constructor(
 
     /**
      * Analyze video and compute per-frame crop windows.
-     * Returns null until MediaPipe dependency is added.
+     * Returns null until FaceDetector/PoseLandmarker wiring is complete.
      */
     suspend fun analyzeForReframe(
         uri: Uri,
         config: ReframeConfig = ReframeConfig(),
         onProgress: (Float) -> Unit = {}
     ): ReframeResult? = withContext(Dispatchers.Default) {
-        Log.d(TAG, "analyzeForReframe: stub -- requires com.google.mediapipe:tasks-vision dependency")
+        Log.d(TAG, "analyzeForReframe: stub — face/pose detection not yet wired")
         null
     }
 

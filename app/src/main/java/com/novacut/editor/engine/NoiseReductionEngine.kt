@@ -96,15 +96,14 @@ class NoiseReductionEngine @Inject constructor(
     )
 
     /**
-     * Analyze audio to detect noise characteristics.
-     * Uses first 2 seconds of audio as noise profile sample.
+     * Heuristic noise profile estimate — NOT real spectral or ML analysis.
      *
-     * Currently returns a stub estimate -- real analysis requires
-     * DeepFilterNet or spectral analysis integration.
+     * Returns a fixed broadband assumption. The downstream [reduceNoise]
+     * path applies real DSP (spectral gate or DeepFilterNet when available),
+     * but this analysis method does not measure the input audio.
      */
     suspend fun analyzeNoise(uri: Uri): NoiseProfile = withContext(Dispatchers.IO) {
-        // Stub estimate -- real noise analysis not yet implemented
-        Log.d(TAG, "analyzeNoise: stub estimate for $uri (real analysis requires DeepFilterNet)")
+        Log.d(TAG, "analyzeNoise: heuristic estimate for $uri (not real spectral analysis)")
         NoiseProfile(
             type = "broadband",
             estimatedSnrDb = 20f,
