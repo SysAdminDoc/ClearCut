@@ -77,6 +77,7 @@ class SmartRenderEngineAnalyzeTest {
     private fun track(vararg clips: Clip) = Track(
         id = "t1",
         type = TrackType.VIDEO,
+        index = 0,
         clips = clips.toList()
     )
 
@@ -216,7 +217,7 @@ class SmartRenderEngineAnalyzeTest {
 
     @Test
     fun reEncode_withCaptions() {
-        val c = clip(captions = listOf(Caption(text = "hello", startMs = 0, endMs = 1000)))
+        val c = clip(captions = listOf(Caption(text = "hello", startTimeMs = 0L, endTimeMs = 1000L)))
         val segments = SmartRenderEngine.analyzeTimeline(listOf(track(c)), config)
         assertTrue(segments[0].needsReEncode)
         assertTrue("captions" in segments[0].reason)
@@ -241,7 +242,7 @@ class SmartRenderEngineAnalyzeTest {
 
     @Test
     fun hiddenTrack_excluded() {
-        val t = Track(id = "t1", type = TrackType.VIDEO, clips = listOf(clip()), isVisible = false)
+        val t = Track(id = "t1", type = TrackType.VIDEO, index = 0, clips = listOf(clip()), isVisible = false)
         val segments = SmartRenderEngine.analyzeTimeline(listOf(t), config)
         assertTrue(segments.isEmpty())
     }
