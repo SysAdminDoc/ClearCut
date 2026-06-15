@@ -296,6 +296,7 @@
     <string name="audio_norm_target">Objetivo</string>
     <string name="audio_norm_current_volume">Volumen actual</string>
     <string name="audio_norm_normalize_button">Normalizar audio</string>
+    <string name="audio_norm_normalize_all_button">Normalizar todos los clips</string>
     <string name="audio_norm_youtube">YouTube/Spotify (-14 LUFS)</string>
     <string name="audio_norm_tiktok">Tik Tok (-14 LUFS)</string>
     <string name="audio_norm_podcast">Podcast/Apple (-16 LUFS)</string>

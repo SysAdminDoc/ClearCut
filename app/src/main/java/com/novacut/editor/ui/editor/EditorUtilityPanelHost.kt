@@ -259,6 +259,8 @@ fun BoxScope.EditorUtilityPanelHost(
         AudioNormPanel(
             currentVolume = selectedClip?.volume ?: 1f,
             onNormalize = viewModel::normalizeAudio,
+            onNormalizeAll = viewModel::normalizeAllClips,
+            hasSelectedClip = selectedClip != null,
             onClose = viewModel::hideAudioNorm
         )
     }

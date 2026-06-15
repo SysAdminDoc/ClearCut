@@ -318,6 +318,7 @@
     <string name="audio_norm_target">Target</string>
     <string name="audio_norm_current_volume">Current Volume</string>
     <string name="audio_norm_normalize_button">Normalize Audio</string>
+    <string name="audio_norm_normalize_all_button">Normalize All Clips</string>
     <string name="audio_norm_youtube">YouTube / Spotify (-14 LUFS)</string>
     <string name="audio_norm_tiktok">TikTok (-14 LUFS)</string>
     <string name="audio_norm_podcast">Podcast / Apple (-16 LUFS)</string>
