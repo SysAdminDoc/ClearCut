@@ -15,6 +15,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -33,6 +35,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -637,6 +640,7 @@ private fun ProjectHomeHero(
                     }
                 },
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(Radius.lg),
                 colors = OutlinedTextFieldDefaults.colors(
@@ -1271,6 +1275,15 @@ private fun ProjectCard(
                     onValueChange = { projectName = it.take(PROJECT_RENAME_MAX_CHARS) },
                     singleLine = true,
                     isError = trimmedProjectName.isBlank(),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            if (canSubmitRename) {
+                                onRename(trimmedProjectName)
+                                showRenameDialog = false
+                            }
+                        }
+                    ),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(Radius.lg),
                     placeholder = {
