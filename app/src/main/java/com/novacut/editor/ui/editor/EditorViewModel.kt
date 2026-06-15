@@ -497,6 +497,9 @@ class EditorViewModel @Inject constructor(
 
     val engine get() = videoEngine
 
+    private fun text(resId: Int, vararg args: Any): String =
+        appContext.getString(resId, *args)
+
     // --- Delegates (extracted to reduce ViewModel size) ---
 
     val colorGradingDelegate = ColorGradingDelegate(
@@ -510,6 +513,7 @@ class EditorViewModel @Inject constructor(
     val audioMixerDelegate = AudioMixerDelegate(
         stateFlow = _state, beatDetectionEngine = beatDetectionEngine,
         loudnessEngine = loudnessEngine, audioMasteringEngine = audioMasteringEngine,
+        appContext = appContext,
         scope = viewModelScope,
         saveUndoState = ::saveUndoState, showToast = ::showToast,
         pauseIfPlaying = ::pauseIfPlaying, dismissedPanelState = ::dismissedPanelState,
@@ -550,6 +554,7 @@ class EditorViewModel @Inject constructor(
     val clipEditingDelegate = ClipEditingDelegate(
         stateFlow = _state, videoEngine = videoEngine,
         mediaImportEngine = mediaImportEngine,
+        appContext = appContext,
         scope = viewModelScope, saveUndoState = ::saveUndoState, showToast = ::showToast,
         rebuildPlayerTimeline = ::rebuildPlayerTimeline, saveProject = ::saveProject,
         updatePreview = ::updatePreview, seekPreviewTo = ::seekTo,
@@ -1151,7 +1156,8 @@ class EditorViewModel @Inject constructor(
                     androidx.work.WorkInfo.State.FAILED -> {
                         val error = info.outputData.getString(MediaIngestWorker.KEY_ERROR)
                         removeIngest(workId)
-                        showToast(error ?: "Import failed")
+                        if (error != null) Log.w("EditorViewModel", "Media import failed: $error")
+                        showToast(text(R.string.editor_import_failed_toast))
                         liveData.removeObserver(this)
                     }
                     androidx.work.WorkInfo.State.CANCELLED -> {
@@ -2108,7 +2114,8 @@ class EditorViewModel @Inject constructor(
                     showToast("Backup export failed")
                 }
             } catch (e: Exception) {
-                showToast("Backup failed: ${e.message}")
+                Log.e("EditorViewModel", "Backup export failed", e)
+                showToast(text(R.string.editor_backup_failed_toast))
             } finally {
                 _isExportingBackup.value = false
             }
@@ -2200,10 +2207,11 @@ class EditorViewModel @Inject constructor(
                             )
                         }
                     }
-                    showToast("Failed to import backup: $reason")
+                    showToast(text(R.string.editor_backup_import_failed_toast))
                 }
             } catch (e: Exception) {
-                showToast("Import failed: ${e.message}")
+                Log.e("EditorViewModel", "Backup import failed", e)
+                showToast(text(R.string.editor_import_failed_toast))
             } finally {
                 _isImportingBackup.value = false
             }
@@ -2537,7 +2545,8 @@ class EditorViewModel @Inject constructor(
                 hideSmartReframe()
             } catch (e: Exception) {
                 _state.update { it.copyAi { ai -> ai.copy(isReframing = false) } }
-                showToast("Reframe failed: ${e.message}")
+                Log.e("EditorViewModel", "Smart reframe failed", e)
+                showToast(text(R.string.editor_reframe_failed_toast))
             }
         }
     }
@@ -3066,7 +3075,7 @@ class EditorViewModel @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 Log.e("CutAssistant", "review failed", e)
-                showToast("Cut Assistant failed: ${e.message}")
+                showToast(text(R.string.editor_cut_assistant_failed_toast))
             }
         }
     }
@@ -3384,7 +3393,8 @@ class EditorViewModel @Inject constructor(
                     showToast("Could not find audio sync points")
                 }
             } catch (e: Exception) {
-                showToast("Multi-cam sync failed: ${e.message}")
+                Log.e("EditorViewModel", "Multi-cam sync failed", e)
+                showToast(text(R.string.editor_multicam_sync_failed_toast))
             }
         }
     }
@@ -3756,7 +3766,8 @@ class EditorViewModel @Inject constructor(
                 )
                 showToast(if (success) "Archive saved: ${file.name}" else "Archive export failed")
             } catch (e: Exception) {
-                showToast("Archive export failed: ${e.message}")
+                Log.e("EditorViewModel", "Project archive export failed", e)
+                showToast(text(R.string.editor_archive_export_failed_toast))
             }
         }
     }
@@ -3816,7 +3827,8 @@ class EditorViewModel @Inject constructor(
                     showToast("OTIO exported: ${file.name}$tail")
                 }
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) { showToast("OTIO export failed: ${e.message}") }
+                Log.e("EditorViewModel", "OTIO export failed", e)
+                withContext(Dispatchers.Main) { showToast(text(R.string.editor_otio_export_failed_toast)) }
             }
         }
     }
@@ -3875,7 +3887,8 @@ class EditorViewModel @Inject constructor(
                     showToast("FCPXML exported: ${file.name}$tail")
                 }
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) { showToast("FCPXML export failed: ${e.message}") }
+                Log.e("EditorViewModel", "FCPXML export failed", e)
+                withContext(Dispatchers.Main) { showToast(text(R.string.editor_fcpxml_export_failed_toast)) }
             }
         }
     }
@@ -4318,7 +4331,8 @@ class EditorViewModel @Inject constructor(
                 saveProject()
                 showToast("Ducking applied: ${speechRegions.size} regions")
             } catch (e: Exception) {
-                showToast("Auto-duck failed: ${e.message ?: "Unknown error"}")
+                Log.e("EditorViewModel", "Auto-duck failed", e)
+                showToast(text(R.string.editor_auto_duck_failed_toast))
             }
         }
     }
@@ -4896,7 +4910,8 @@ class EditorViewModel @Inject constructor(
                     showToast("Template export failed")
                 }
             } catch (e: Exception) {
-                showToast("Template export failed: ${e.message}")
+                Log.e("EditorViewModel", "Template export failed", e)
+                showToast(text(R.string.project_template_export_failed))
             }
         }
     }
@@ -4911,7 +4926,8 @@ class EditorViewModel @Inject constructor(
                     showToast("Failed to import template")
                 }
             } catch (e: Exception) {
-                showToast("Import failed: ${e.message}")
+                Log.e("EditorViewModel", "Template import failed", e)
+                showToast(text(R.string.editor_import_failed_toast))
             }
         }
     }
