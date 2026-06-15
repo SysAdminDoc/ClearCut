@@ -515,6 +515,7 @@ class WhisperEngine @Inject constructor(
             extractor.selectTrack(audioIndex)
             val sampleRate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
             val channels = format.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
+            if (sampleRate <= 0 || channels <= 0) return null
             val mime = format.getString(MediaFormat.KEY_MIME) ?: return null
 
             val decoder = MediaCodec.createDecoderByType(mime)

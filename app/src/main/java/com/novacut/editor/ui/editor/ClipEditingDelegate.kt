@@ -75,7 +75,7 @@ class ClipEditingDelegate(
             }
             val (duration, hasVisualTrack, hasAudioTrack, sourceColorMetadata) = mediaInfo
             if (duration <= 0) {
-                showToast("Could not read media file")
+                showToast(text(R.string.editor_media_read_failed_toast))
                 return@launch
             }
 
@@ -752,6 +752,7 @@ class ClipEditingDelegate(
         sourceDurationMs: Long,
         sourceColorMetadata: SourceColorMetadata
     ): Clip {
+        if (sourceDurationMs <= 0L) return copy(sourceUri = newUri, sourceDurationMs = sourceDurationMs, sourceColorMetadata = sourceColorMetadata)
         val safeTrimStart = trimStartMs.coerceIn(0L, sourceDurationMs - 1L)
         val safeTrimEnd = trimEndMs.coerceIn(safeTrimStart + 1L, sourceDurationMs)
         return copy(

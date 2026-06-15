@@ -226,7 +226,9 @@ class ModelDownloadManager @Inject constructor(
             )
             if (digest != null) {
                 val actualHash = digest.digest().toHexString()
-                val expected = request.sha256!!.lowercase()
+                val expected = requireNotNull(request.sha256) {
+                    "sha256 was null but digest was created — logic error"
+                }.lowercase()
                 if (actualHash != expected) {
                     throw IOException(
                         "Checksum mismatch for ${request.displayName}: expected $expected, got $actualHash"

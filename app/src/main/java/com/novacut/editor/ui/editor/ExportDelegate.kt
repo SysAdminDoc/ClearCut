@@ -111,7 +111,8 @@ class ExportDelegate(
                         break
                     }
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w("ExportDelegate", "Audio conformance probe failed for clip ${clip.id}", e)
             } finally {
                 extractor.release()
             }

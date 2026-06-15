@@ -23,8 +23,8 @@ android {
         applicationId = "com.novacut.editor"
         minSdk = 26
         targetSdk = 36
-        versionCode = 232
-        versionName = "3.74.99"
+        versionCode = 233
+        versionName = "3.74.100"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // Passive, opt-in update check for sideload / GitHub-release installs.
