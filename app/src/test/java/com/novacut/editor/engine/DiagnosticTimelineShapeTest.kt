@@ -151,7 +151,7 @@ class DiagnosticTimelineShapeTest {
         durationMs: Long = 1_000L,
         name: String? = null,
         effects: List<Effect> = emptyList(),
-        transition: Transition? = null,
+        headTransition: Transition? = null,
     ): Clip = Clip(
         sourceUri = FakeUri,
         sourceDurationMs = durationMs,
@@ -159,7 +159,7 @@ class DiagnosticTimelineShapeTest {
         trimStartMs = 0L,
         trimEndMs = durationMs,
         effects = effects,
-        transition = transition,
+        headTransition = headTransition,
         name = name,
     )
 
