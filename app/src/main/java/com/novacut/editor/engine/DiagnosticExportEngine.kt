@@ -400,7 +400,11 @@ class DiagnosticExportEngine @Inject constructor(
                         val key = effect.type.name
                         effectCounts[key] = (effectCounts[key] ?: 0) + 1
                     }
-                    clip.transition?.let { t ->
+                    clip.headTransition?.let { t ->
+                        val key = t.type.name
+                        transitionCounts[key] = (transitionCounts[key] ?: 0) + 1
+                    }
+                    clip.tailTransition?.let { t ->
                         val key = t.type.name
                         transitionCounts[key] = (transitionCounts[key] ?: 0) + 1
                     }

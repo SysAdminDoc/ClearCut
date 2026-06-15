@@ -2482,7 +2482,7 @@ class EditorViewModel @Inject constructor(
             // time a long visual clip was selected was noise, not signal.
             // Users can still trigger auto-color from the AI tools panel.
             s.tracks.filter { it.type == TrackType.VIDEO }.flatMap { it.clips }.size > 3 &&
-                s.tracks.flatMap { it.clips }.none { it.transition != null } ->
+                s.tracks.flatMap { it.clips }.none { it.headTransition != null || it.tailTransition != null } ->
                 AiSuggestion(
                     id = "add_transitions_${clip.id}",
                     message = "Add transitions between your clips",
@@ -2970,7 +2970,8 @@ class EditorViewModel @Inject constructor(
                             }
                             add(clip.copy(
                                 trimEndMs = sourcePos,
-                                transition = null,
+                                headTransition = null,
+                                tailTransition = null,
                                 speedCurve = clip.speedCurve?.restrictTo(0f, splitFraction, trimRange)
                             ))
                             add(
@@ -2978,7 +2979,8 @@ class EditorViewModel @Inject constructor(
                                     id = newId,
                                     trimStartMs = sourcePos,
                                     timelineStartMs = positionMs,
-                                    transition = null,
+                                    headTransition = null,
+                                    tailTransition = null,
                                     speedCurve = clip.speedCurve?.restrictTo(splitFraction, 1f, trimRange),
                                     linkedClipId = clip.linkedClipId?.let { linkedId -> newIdsByOldId[linkedId] }
                                 )

@@ -126,7 +126,14 @@ object TemplateCompatibilityEngine {
                     displayName = audioEffect.type.displayName
                 )
             }
-            clip.transition?.let { transition ->
+            clip.headTransition?.let { transition ->
+                add(
+                    type = TemplateFeatureType.TRANSITION,
+                    key = transition.type.name,
+                    displayName = transition.type.displayName
+                )
+            }
+            clip.tailTransition?.let { transition ->
                 add(
                     type = TemplateFeatureType.TRANSITION,
                     key = transition.type.name,

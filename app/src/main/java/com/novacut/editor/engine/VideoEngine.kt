@@ -911,9 +911,10 @@ class VideoEngine @Inject constructor(
                 is TimelineSequenceStep.ClipStep -> {
                     val clip = step.clip
                     val nextClip = sortedClips.getOrNull(clipIndex + 1)
-                    val nextTransition = nextClip
-                        ?.takeIf { it.timelineStartMs <= clip.timelineEndMs }
-                        ?.transition
+                    val nextTransition = clip.tailTransition
+                        ?: nextClip
+                            ?.takeIf { it.timelineStartMs <= clip.timelineEndMs }
+                            ?.headTransition
                     builder.addItem(
                         buildEditedMediaItem(
                             clip = clip,
@@ -1002,8 +1003,7 @@ class VideoEngine @Inject constructor(
                 add(EffectShaders.blendMode(clip.blendMode, clip.opacity))
             }
 
-            clip.transition?.let { add(EffectBuilder.buildTransitionEffect(it)) }
-            // Transition-out if the next clip has a transition
+            clip.headTransition?.let { add(EffectBuilder.buildTransitionEffect(it)) }
             nextClipTransition?.let { add(EffectBuilder.buildTransitionOutEffect(it, clip.durationMs)) }
             addOpacityAndTransformEffects(clip)
 
@@ -1798,9 +1798,7 @@ class VideoEngine @Inject constructor(
         if (clip.blendMode != com.novacut.editor.model.BlendMode.NORMAL) {
             add(EffectShaders.blendMode(clip.blendMode, clip.opacity))
         }
-        // Transition-in for this clip
-        clip.transition?.let { add(EffectBuilder.buildTransitionEffect(it)) }
-        // Transition-out if the next clip has a transition (fade/wipe out at end of this clip)
+        clip.headTransition?.let { add(EffectBuilder.buildTransitionEffect(it)) }
         nextClipTransition?.let {
             add(EffectBuilder.buildTransitionOutEffect(it, clip.durationMs))
         }
@@ -1840,11 +1838,12 @@ class VideoEngine @Inject constructor(
     }
 
     private fun nextPreviewTransitionForClip(clip: Clip): Transition? {
+        if (clip.tailTransition != null) return clip.tailTransition
         val clipIndex = videoClips.indexOfFirst { it.id == clip.id }
         if (clipIndex < 0) return null
         val nextClip = videoClips.getOrNull(clipIndex + 1) ?: return null
         return if (nextClip.timelineStartMs <= clip.timelineEndMs) {
-            nextClip.transition
+            nextClip.headTransition
         } else {
             null
         }

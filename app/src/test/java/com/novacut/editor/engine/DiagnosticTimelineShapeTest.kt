@@ -71,8 +71,8 @@ class DiagnosticTimelineShapeTest {
             track(
                 TrackType.VIDEO,
                 clip(effects = listOf(effect(EffectType.BRIGHTNESS), effect(EffectType.CONTRAST))),
-                clip(effects = listOf(effect(EffectType.BRIGHTNESS)), transition = Transition(TransitionType.DISSOLVE)),
-                clip(transition = Transition(TransitionType.WIPE_LEFT)),
+                clip(effects = listOf(effect(EffectType.BRIGHTNESS)), headTransition = Transition(TransitionType.DISSOLVE)),
+                clip(headTransition = Transition(TransitionType.WIPE_LEFT)),
             ),
         )
         val shape = DiagnosticExportEngine.summarizeTimelineShape(tracks)

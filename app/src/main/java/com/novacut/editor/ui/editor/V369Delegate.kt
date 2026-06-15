@@ -183,7 +183,8 @@ class V369Delegate(
             id = java.util.UUID.randomUUID().toString(),
             trimStartMs = newTrimStart,
             trimEndMs = newTrimEnd,
-            transition = if (isFirst) original.transition else null,
+            headTransition = if (isFirst) original.headTransition else null,
+            tailTransition = if (isFirst) original.tailTransition else null,
             // Speed-curve restricted to the sub-range so preview + export
             // time-stretching stay consistent with the segment's trim window.
             speedCurve = original.speedCurve?.let { curve ->

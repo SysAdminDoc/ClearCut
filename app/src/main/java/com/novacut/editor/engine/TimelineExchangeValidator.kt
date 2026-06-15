@@ -357,7 +357,7 @@ class TimelineExchangeValidator @Inject constructor() {
         }
 
         if (format == TimelineExchangeFormat.EDL_CMX3600) {
-            clip.transition?.let { transition ->
+            listOfNotNull(clip.headTransition, clip.tailTransition).forEach { transition ->
                 if (transition.type !in EDL_SUPPORTED_TRANSITIONS) {
                     issues += Issue(
                         Severity.WARNING,

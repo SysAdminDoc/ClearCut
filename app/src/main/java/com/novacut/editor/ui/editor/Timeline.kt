@@ -1020,7 +1020,7 @@ fun Timeline(
                                 )
                                 val clipStartPx = clipLayout.startPx
                                 val clipWidthPx = clipLayout.widthPx
-                                val nextClipTransition = track.clips.getOrNull(clipIdx + 1)?.transition
+                                val nextClipTransition = clip.tailTransition ?: track.clips.getOrNull(clipIdx + 1)?.headTransition
 
                                 if (clipLayout.isVisibleIn(timelineWidthPx)) {
                                     val isSelected = clip.id == selectedClipId
@@ -1637,8 +1637,8 @@ fun Timeline(
                                         }
 
                                         // Transition-in zone overlay
-                                        if (clip.transition != null) {
-                                            val transWidthPx = clip.transition.durationMs * pixelsPerMs
+                                        if (clip.headTransition != null) {
+                                            val transWidthPx = clip.headTransition.durationMs * pixelsPerMs
                                             Box(
                                                 modifier = Modifier
                                                     .align(Alignment.CenterStart)

@@ -36,7 +36,7 @@ class TemplateCompatibilityEngineTest {
                             sourceDurationMs = 2_000L,
                             timelineStartMs = 0L,
                             effects = listOf(Effect(type = EffectType.TRACKED_MOSAIC)),
-                            transition = Transition(type = TransitionType.DISSOLVE),
+                            headTransition = Transition(type = TransitionType.DISSOLVE),
                             audioEffects = listOf(AudioEffect(type = AudioEffectType.COMPRESSOR))
                         )
                     )

@@ -60,8 +60,8 @@ class EdlExporter @Inject constructor(
                 val recOut = msToTimecode(clip.timelineEndMs, safeFrameRate)
 
                 // Transition
-                val transition = if (clip.transition != null) {
-                    val frames = (clip.transition.durationMs.toDouble() * safeFrameRate / 1000.0)
+                val transition = if (clip.headTransition != null) {
+                    val frames = (clip.headTransition.durationMs.toDouble() * safeFrameRate / 1000.0)
                         .toInt()
                         .coerceAtLeast(0)
                     "D ${String.format(exportLocale, "%03d", frames)}"

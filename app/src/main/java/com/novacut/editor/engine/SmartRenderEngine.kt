@@ -41,7 +41,7 @@ object SmartRenderEngine {
                 if (clip.colorGrade != null && clip.colorGrade.enabled) {
                     reasons.add("color grade")
                 }
-                if (clip.transition != null) {
+                if (clip.headTransition != null || clip.tailTransition != null) {
                     reasons.add("transition")
                 }
                 if (clip.speed != 1f || clip.speedCurve != null) {

@@ -149,7 +149,7 @@ fun BoxScope.EditorPrimaryPanelHost(
                     viewModel.setTransitionEasing(clipId, easing)
                 },
                 onClose = viewModel::hideTransitionPicker,
-                currentTransition = clip?.transition
+                currentTransition = clip?.headTransition
             )
         }
     }

@@ -555,7 +555,8 @@ class ClipEditingDelegate(
                             add(
                                 clip.copy(
                                     trimEndMs = splitPointInSource,
-                                    transition = null,
+                                    headTransition = null,
+                                    tailTransition = null,
                                     linkedClipId = clip.linkedClipId,
                                     speedCurve = firstHalfCurve
                                 )
@@ -565,7 +566,8 @@ class ClipEditingDelegate(
                                     id = newId,
                                     timelineStartMs = playhead,
                                     trimStartMs = splitPointInSource,
-                                    transition = null,
+                                    headTransition = null,
+                                    tailTransition = null,
                                     linkedClipId = clip.linkedClipId?.let { linkedId ->
                                         // If the linked clip was also split, use its new second-half ID.
                                         // If it wasn't split (e.g., on a locked track), preserve the original
@@ -731,7 +733,8 @@ class ClipEditingDelegate(
             id = newId,
             timelineStartMs = clip.timelineEndMs,
             effects = clip.effects.map { it.copy(id = UUID.randomUUID().toString()) },
-            transition = null,
+            headTransition = null,
+            tailTransition = null,
             linkedClipId = linkedClipId
         )
     }

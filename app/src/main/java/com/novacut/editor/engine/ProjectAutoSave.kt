@@ -1026,7 +1026,8 @@ data class AutoSaveState(
                 put("keyframes", JSONArray().apply {
                     clip.keyframes.forEach { put(serializeKeyframe(it)) }
                 })
-                clip.transition?.let { put("transition", serializeTransition(it)) }
+                clip.headTransition?.let { put("headTransition", serializeTransition(it)) }
+                clip.tailTransition?.let { put("tailTransition", serializeTransition(it)) }
                 clip.colorGrade?.let { put("colorGrade", serializeColorGrade(it)) }
                 clip.speedCurve?.let { put("speedCurve", serializeSpeedCurve(it)) }
                 if (clip.masks.isNotEmpty()) {
@@ -1499,7 +1500,8 @@ data class AutoSaveState(
                         Log.w(TAG, "Failed to deserialize keyframe $i", e); null
                     }
                 }.distinctBy { Pair(it.timeOffsetMs, it.property) },
-                transition = json.optJSONObject("transition")?.let { deserializeTransition(it) },
+                headTransition = (json.optJSONObject("headTransition") ?: json.optJSONObject("transition"))?.let { deserializeTransition(it) },
+                tailTransition = json.optJSONObject("tailTransition")?.let { deserializeTransition(it) },
                 colorGrade = json.optJSONObject("colorGrade")?.let { deserializeColorGrade(it) },
                 speedCurve = json.optJSONObject("speedCurve")?.let { deserializeSpeedCurve(it) },
                 masks = (0 until cappedArrayLength(masksArr, MAX_MASKS_PER_CLIP, "clip masks")).mapNotNull { i ->

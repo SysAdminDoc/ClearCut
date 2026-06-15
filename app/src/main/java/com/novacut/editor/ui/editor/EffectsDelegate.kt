@@ -150,13 +150,17 @@ class EffectsDelegate(
     }
 
     // --- Transitions ---
-    fun setTransition(clipId: String, transition: Transition?) {
+    fun setTransition(clipId: String, transition: Transition?, edge: TransitionEdge = TransitionEdge.HEAD) {
         saveUndoState("Set transition")
         stateFlow.update { state ->
             val tracks = state.tracks.map { track ->
                 track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId) clip.copy(transition = transition)
-                    else clip
+                    if (clip.id == clipId) {
+                        when (edge) {
+                            TransitionEdge.HEAD -> clip.copy(headTransition = transition)
+                            TransitionEdge.TAIL -> clip.copy(tailTransition = transition)
+                        }
+                    } else clip
                 })
             }
             recalculateDuration(state.copy(tracks = tracks))
@@ -174,14 +178,19 @@ class EffectsDelegate(
         saveProject()
     }
 
-    fun setTransitionDuration(clipId: String, durationMs: Long) {
+    fun setTransitionDuration(clipId: String, durationMs: Long, edge: TransitionEdge = TransitionEdge.HEAD) {
         stateFlow.update { state ->
             val tracks = state.tracks.map { track ->
                 track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId && clip.transition != null) {
-                        val maxDuration = (clip.durationMs / 2).coerceAtLeast(100L)
-                        val clampedMs = durationMs.coerceIn(100L, maxDuration)
-                        clip.copy(transition = clip.transition.copy(durationMs = clampedMs))
+                    if (clip.id == clipId) {
+                        val t = if (edge == TransitionEdge.HEAD) clip.headTransition else clip.tailTransition
+                        if (t != null) {
+                            val maxDuration = (clip.durationMs / 2).coerceAtLeast(100L)
+                            val clampedMs = durationMs.coerceIn(100L, maxDuration)
+                            val updated = t.copy(durationMs = clampedMs)
+                            if (edge == TransitionEdge.HEAD) clip.copy(headTransition = updated)
+                            else clip.copy(tailTransition = updated)
+                        } else clip
                     } else clip
                 })
             }
@@ -189,13 +198,18 @@ class EffectsDelegate(
         }
     }
 
-    fun setTransitionEasing(clipId: String, easing: TransitionEasing) {
+    fun setTransitionEasing(clipId: String, easing: TransitionEasing, edge: TransitionEdge = TransitionEdge.HEAD) {
         saveUndoState("Change transition easing")
         stateFlow.update { state ->
             val tracks = state.tracks.map { track ->
                 track.copy(clips = track.clips.map { clip ->
-                    if (clip.id == clipId && clip.transition != null) {
-                        clip.copy(transition = clip.transition.copy(easing = easing))
+                    if (clip.id == clipId) {
+                        val t = if (edge == TransitionEdge.HEAD) clip.headTransition else clip.tailTransition
+                        if (t != null) {
+                            val updated = t.copy(easing = easing)
+                            if (edge == TransitionEdge.HEAD) clip.copy(headTransition = updated)
+                            else clip.copy(tailTransition = updated)
+                        } else clip
                     } else clip
                 })
             }
@@ -204,5 +218,7 @@ class EffectsDelegate(
         rebuildPlayerTimeline()
         saveProject()
     }
+
+    enum class TransitionEdge { HEAD, TAIL }
 
 }
