@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.74.97</string>
+    <string name="app_version">v3.74.98</string>
 
     <!-- Common -->
     <string name="close">Close</string>
@@ -222,6 +222,58 @@
     <string name="ai_whisper_removed_toast">Whisper model removed. You can download it again any time.</string>
     <string name="ai_segmentation_removed_toast">Segmentation model removed. You can download it again any time.</string>
     <string name="ai_model_remove_failed_toast">NovaCut couldn\'t remove that model. Try again from AI Tools.</string>
+    <string name="ai_whisper_downloading_toast">Downloading Whisper speech model…</string>
+    <string name="ai_whisper_ready_toast">Whisper model ready.</string>
+    <string name="ai_segmentation_downloading_toast">Downloading segmentation model…</string>
+    <string name="ai_segmentation_ready_toast">Segmentation model ready.</string>
+    <string name="ai_model_download_failed_toast">Model download failed. Check your connection and try again.</string>
+    <string name="ai_template_saved_toast">Saved template: %1$s</string>
+    <string name="ai_template_save_failed_toast">Template could not be saved. Try again from AI Tools.</string>
+    <string name="ai_select_clip_first_toast">Select a clip first.</string>
+    <string name="ai_clip_missing_toast">That clip is no longer on the timeline.</string>
+    <string name="ai_unknown_tool_toast">That AI tool is not available in this build.</string>
+    <string name="ai_tool_cancelled_toast">AI tool cancelled.</string>
+    <string name="ai_tool_failed_toast">AI tool failed. Try again or choose a different clip.</string>
+    <string name="ai_auto_captions_audio_required_toast">Auto Captions needs a clip with audio.</string>
+    <string name="ai_denoise_audio_required_toast">Denoise needs a clip with audio.</string>
+    <string name="ai_video_clip_required_toast">Select a video clip for this AI tool.</string>
+    <string name="ai_visual_clip_required_toast">Select a photo or video clip for this AI tool.</string>
+    <string name="ai_motion_tracking_failed_toast">Motion tracking failed. Try a clearer clip or a shorter range.</string>
+    <string name="ai_style_transfer_failed_toast">Style transfer failed. Try a different clip.</string>
+    <string name="ai_face_tracking_failed_toast">Face tracking failed. Try a clip with a clearer face.</string>
+    <string name="ai_smart_reframe_failed_toast">Smart reframe failed. Try a different clip.</string>
+    <string name="ai_upscale_failed_toast">Upscale failed. Try a different clip or resolution.</string>
+    <string name="audio_mastering_unknown_preset">That mastering preset is not available.</string>
+    <string name="audio_track_not_found">That audio track is no longer available.</string>
+    <string name="audio_mastering_audio_video_only">Mastering presets apply to audio or video tracks only.</string>
+    <string name="audio_no_clips_to_analyze">No audio clips to analyze.</string>
+    <string name="audio_detecting_beats">Detecting beats…</string>
+    <string name="audio_clips_deleted_during_analysis">Audio clips were deleted during analysis.</string>
+    <string name="audio_beats_bpm_suffix"> (%1$.0f BPM)</string>
+    <string name="audio_beats_found">Found %1$d beats%2$s.</string>
+    <string name="audio_beat_detection_failed">Beat detection failed. Try a clip with clearer audio.</string>
+    <string name="audio_measuring_loudness">Measuring loudness…</string>
+    <string name="audio_clip_deleted_during_analysis">Clip was deleted during analysis.</string>
+    <string name="audio_normalized_clip">Normalized: %1$.1f to %2$.0f LUFS.</string>
+    <string name="audio_normalization_failed">Normalization failed. Try a clip with readable audio.</string>
+    <string name="audio_no_clips_to_normalize">No audio clips to normalize.</string>
+    <string name="audio_measuring_loudness_all">Measuring loudness across %1$d clips…</string>
+    <string name="audio_normalized_clips">Normalized %1$d clips to %2$.0f LUFS.</string>
+    <string name="editor_import_failed_toast">Import failed. Check the file and try again.</string>
+    <string name="editor_backup_failed_toast">Backup export failed. Check storage access and try again.</string>
+    <string name="editor_backup_import_failed_toast">Backup import failed. The current project was left unchanged.</string>
+    <string name="editor_reframe_failed_toast">Reframe failed. Try a clearer clip or a shorter range.</string>
+    <string name="editor_cut_assistant_failed_toast">Cut Assistant failed. Try a shorter clip or clearer audio.</string>
+    <string name="editor_archive_export_failed_toast">Archive export failed. Check available storage and try again.</string>
+    <string name="editor_otio_export_failed_toast">OTIO export failed. Review the timeline and try again.</string>
+    <string name="editor_fcpxml_export_failed_toast">FCPXML export failed. Review the timeline and try again.</string>
+    <string name="editor_auto_duck_failed_toast">Auto-duck failed. Check the voice and music tracks, then try again.</string>
+    <string name="editor_multicam_sync_failed_toast">Multi-cam sync failed. Try clips with clearer audio.</string>
+    <string name="editor_media_read_failed_toast">Could not read that media file. Try another source.</string>
+    <string name="color_lut_import_failed_toast">Failed to import LUT. Check the file and try again.</string>
+    <string name="color_lut_too_large_toast">LUT is too large. The limit is 32 MB.</string>
+    <string name="export_video_failed_message">Export failed. Review the timeline and try again.</string>
+    <string name="export_save_failed_toast">Save failed. Check storage access and try again.</string>
     <string name="ai_processing_format">Processing: %1$s\u2026</string>
     <string name="ai_tools_ready_now">Ready Now</string>
     <string name="ai_tools_ready_now_description">These assists can run immediately with the current timeline selection and downloaded models.</string>

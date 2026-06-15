@@ -10,6 +10,7 @@ import android.provider.MediaStore
 import android.util.Log
 import androidx.core.content.FileProvider
 import com.novacut.editor.BuildConfig
+import com.novacut.editor.R
 import com.novacut.editor.engine.AiUsageLedger
 import com.novacut.editor.engine.C2paExportEngine
 import com.novacut.editor.engine.ContactSheetExporter
@@ -67,6 +68,9 @@ class ExportDelegate(
     private val exportIncidentStore: ExportIncidentStore? = null,
     private val appVersion: String = "unknown"
 ) {
+    private fun text(resId: Int, vararg args: Any): String =
+        appContext.getString(resId, *args)
+
     // --- Export ---
     private val progressSamples = mutableListOf<Float>()
     // Holder for the GIF-style / contact-sheet / any other non-Transformer
@@ -952,7 +956,8 @@ class ExportDelegate(
 
             fun handleVideoExportError(e: Exception) {
                 outputFile.delete()
-                val message = e.message ?: "Unknown error"
+                val message = text(R.string.export_video_failed_message)
+                val technicalMessage = e.message ?: e::class.java.simpleName
                 updateExport {
                     it.copy(
                         state = ExportState.ERROR,
@@ -975,7 +980,7 @@ class ExportDelegate(
                     sourceState = currentState,
                     failedPhase = "encoder",
                     error = e,
-                    errorMessage = message,
+                    errorMessage = technicalMessage,
                     config = configWithChapters,
                     timelineDurationMs = totalDurationMs,
                     startedAtMs = startedAtMs,
@@ -1061,7 +1066,8 @@ class ExportDelegate(
                 throw e
             } catch (e: Exception) {
                 outputFile.delete()
-                val message = e.message ?: "Unknown error"
+                val message = text(R.string.export_video_failed_message)
+                val technicalMessage = e.message ?: e::class.java.simpleName
                 updateExport {
                     it.copy(
                         state = ExportState.ERROR,
@@ -1084,7 +1090,7 @@ class ExportDelegate(
                     sourceState = currentState,
                     failedPhase = "setup",
                     error = e,
-                    errorMessage = message,
+                    errorMessage = technicalMessage,
                     config = configWithChapters,
                     timelineDurationMs = totalDurationMs,
                     startedAtMs = startedAtMs,
@@ -1211,7 +1217,8 @@ class ExportDelegate(
                     val savedMessage = saveExportedFile(file)
                     withContext(Dispatchers.Main) { showToast(savedMessage) }
                 } catch (e: Exception) {
-                    withContext(Dispatchers.Main) { showToast("Save failed: ${e.message}") }
+                    Log.e("ExportDelegate", "Save exported media failed", e)
+                    withContext(Dispatchers.Main) { showToast(text(R.string.export_save_failed_toast)) }
                 }
             }
         }

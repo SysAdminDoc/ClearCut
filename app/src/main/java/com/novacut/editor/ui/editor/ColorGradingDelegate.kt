@@ -2,6 +2,8 @@ package com.novacut.editor.ui.editor
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
+import com.novacut.editor.R
 import com.novacut.editor.engine.copyWithLimit
 import com.novacut.editor.engine.sanitizeFileNamePreservingExtension
 import com.novacut.editor.engine.writeFileAtomically
@@ -36,6 +38,9 @@ class ColorGradingDelegate(
 ) {
     private val _showLutPicker = MutableStateFlow(false)
     val showLutPicker: StateFlow<Boolean> = _showLutPicker.asStateFlow()
+
+    private fun text(resId: Int, vararg args: Any): String =
+        appContext.getString(resId, *args)
 
     fun showColorGrading() {
         pauseIfPlaying()
@@ -109,12 +114,16 @@ class ColorGradingDelegate(
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    val message = if (e is IOException && e.message?.contains("byte limit", ignoreCase = true) == true) {
-                        "LUT is too large (32 MB limit)"
+                    val message = if (
+                        e is IOException &&
+                        e.message?.contains("byte limit", ignoreCase = true) == true
+                    ) {
+                        text(R.string.color_lut_too_large_toast)
                     } else {
-                        e.message ?: "Unknown error"
+                        Log.e("ColorGradingDelegate", "Failed to import LUT", e)
+                        text(R.string.color_lut_import_failed_toast)
                     }
-                    showToast("Failed to import LUT: $message")
+                    showToast(message)
                 }
             }
         }

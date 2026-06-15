@@ -1,6 +1,9 @@
 package com.novacut.editor.ui.editor
 
+import android.content.Context
 import android.net.Uri
+import android.util.Log
+import com.novacut.editor.R
 import com.novacut.editor.engine.MediaImportEngine
 import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.model.Clip
@@ -24,6 +27,7 @@ class ClipEditingDelegate(
     private val stateFlow: MutableStateFlow<EditorState>,
     private val videoEngine: VideoEngine,
     private val mediaImportEngine: MediaImportEngine,
+    private val appContext: Context,
     private val scope: CoroutineScope,
     private val saveUndoState: (String) -> Unit,
     private val showToast: (String) -> Unit,
@@ -34,6 +38,9 @@ class ClipEditingDelegate(
     private val recalculateDuration: (EditorState) -> EditorState,
     private val onClipAdded: ((clipId: String, uri: Uri) -> Unit)? = null
 ) {
+    private fun text(resId: Int, vararg args: Any): String =
+        appContext.getString(resId, *args)
+
     private data class ImportedMediaInfo(
         val durationMs: Long,
         val hasVisualTrack: Boolean,
@@ -62,7 +69,8 @@ class ClipEditingDelegate(
                     )
                 }
             } catch (e: Exception) {
-                showToast("Could not read media: ${e.message ?: "Unknown error"}")
+                Log.e("ClipEditingDelegate", "Could not read media", e)
+                showToast(text(R.string.editor_media_read_failed_toast))
                 return@launch
             }
             val (duration, hasVisualTrack, hasAudioTrack, sourceColorMetadata) = mediaInfo

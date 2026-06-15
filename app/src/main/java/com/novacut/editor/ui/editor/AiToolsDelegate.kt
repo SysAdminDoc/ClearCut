@@ -49,6 +49,9 @@ class AiToolsDelegate(
 ) {
     private var aiJob: Job? = null
 
+    private fun text(resId: Int, vararg args: Any): String =
+        appContext.getString(resId, *args)
+
     private val audioRequiredTools = setOf(
         "auto_captions",
         "denoise"
@@ -98,14 +101,22 @@ class AiToolsDelegate(
 
     fun downloadWhisperModel() {
         scope.launch {
-            showToast("Downloading Whisper speech model...")
+            showToast(text(R.string.ai_whisper_downloading_toast))
             try {
                 val success = aiFeatures.whisperEngine.downloadModel(
                     wifiOnly = settingsRepo.settings.first().aiModelWifiOnly
                 )
-                showToast(if (success) "Whisper model ready" else "Model download failed")
+                showToast(
+                    text(
+                        if (success) {
+                            R.string.ai_whisper_ready_toast
+                        } else {
+                            R.string.ai_model_download_failed_toast
+                        }
+                    )
+                )
             } catch (_: ModelDownloadManager.MeteredNetworkException) {
-                showToast("Wi-Fi-only model downloads are on. Connect to Wi-Fi or change the setting.")
+                showToast(text(R.string.settings_model_wifi_only_feedback))
             }
         }
     }
@@ -131,14 +142,22 @@ class AiToolsDelegate(
 
     fun downloadSegmentationModel() {
         scope.launch {
-            showToast("Downloading segmentation model...")
+            showToast(text(R.string.ai_segmentation_downloading_toast))
             try {
                 val success = aiFeatures.segmentationEngine.downloadModel(
                     wifiOnly = settingsRepo.settings.first().aiModelWifiOnly
                 )
-                showToast(if (success) "Segmentation model ready" else "Model download failed")
+                showToast(
+                    text(
+                        if (success) {
+                            R.string.ai_segmentation_ready_toast
+                        } else {
+                            R.string.ai_model_download_failed_toast
+                        }
+                    )
+                )
             } catch (_: ModelDownloadManager.MeteredNetworkException) {
-                showToast("Wi-Fi-only model downloads are on. Connect to Wi-Fi or change the setting.")
+                showToast(text(R.string.settings_model_wifi_only_feedback))
             }
         }
     }
@@ -173,10 +192,10 @@ class AiToolsDelegate(
                     tracks = s.tracks,
                     textOverlays = s.textOverlays
                 )
-                showToast("Saved template: ${template.name}")
+                showToast(text(R.string.ai_template_saved_toast, template.name))
             } catch (e: Exception) {
                 Log.e("AiToolsDelegate", "Failed to save template", e)
-                showToast("Template save failed: ${e.message ?: "Unknown error"}")
+                showToast(text(R.string.ai_template_save_failed_toast))
             }
         }
     }
@@ -197,7 +216,7 @@ class AiToolsDelegate(
     private fun runAiTool(toolId: String, requirePreflight: Boolean) {
         val clip = getSelectedClip()
         if (clip == null) {
-            showToast("Select a clip first")
+            showToast(text(R.string.ai_select_clip_first_toast))
             return
         }
         getToolCompatibilityMessage(toolId, clip)?.let { incompatibilityMessage ->
@@ -227,7 +246,7 @@ class AiToolsDelegate(
                 // Re-validate clip still exists (user may have deleted it)
                 val currentClip = stateFlow.value.tracks.flatMap { it.clips }.firstOrNull { it.id == clipId }
                 if (currentClip == null) {
-                    showToast("Clip no longer exists")
+                    showToast(text(R.string.ai_clip_missing_toast))
                     return@launch
                 }
                 when (toolId) {
@@ -250,13 +269,14 @@ class AiToolsDelegate(
                     "ai_stabilize" -> applyStabilization(currentClip)
                     "ai_style_transfer" -> applyStyleTransfer(currentClip)
                     "bg_replace" -> runBgReplace(currentClip)
-                    else -> showToast("Unknown AI tool: $toolId")
+                    else -> showToast(text(R.string.ai_unknown_tool_toast))
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
-                showToast("AI tool cancelled")
+                showToast(text(R.string.ai_tool_cancelled_toast))
                 throw e
             } catch (e: Exception) {
-                showToast("AI tool failed: ${e.message}")
+                Log.e("AiToolsDelegate", "AI tool failed", e)
+                showToast(text(R.string.ai_tool_failed_toast))
             } finally {
                 // Only clear progress state if we are still the active job — protects against
                 // a stale cancelled job overwriting the newly-launched one's progress indicator.
@@ -285,16 +305,16 @@ class AiToolsDelegate(
         return when {
             toolId in audioRequiredTools && !videoEngine.hasAudioTrack(clip.sourceUri) -> {
                 if (toolId == "auto_captions") {
-                    "Auto Captions needs a clip with audio."
+                    text(R.string.ai_auto_captions_audio_required_toast)
                 } else {
-                    "Denoise needs a clip with audio."
+                    text(R.string.ai_denoise_audio_required_toast)
                 }
             }
             toolId in motionVideoRequiredTools && !videoEngine.isMotionVideo(clip.sourceUri) -> {
-                "Select a video clip for this AI tool."
+                text(R.string.ai_video_clip_required_toast)
             }
             toolId in visualRequiredTools && !videoEngine.hasVisualTrack(clip.sourceUri) -> {
-                "Select a photo or video clip for this AI tool."
+                text(R.string.ai_visual_clip_required_toast)
             }
             else -> null
         }
@@ -621,7 +641,8 @@ class AiToolsDelegate(
             addPositionKeyframes(clip, posKeyframes)
             showToast("Tracked ${results.size} motion points across clip")
         } catch (e: Exception) {
-            showToast("Motion tracking error: ${e.message ?: "Unknown"}")
+            Log.e("AiToolsDelegate", "Motion tracking failed", e)
+            showToast(text(R.string.ai_motion_tracking_failed_toast))
         }
     }
 
@@ -679,7 +700,8 @@ class AiToolsDelegate(
             )
             showToast("Applied '${style.styleName}' style (${newEffects.size} effects)")
         } catch (e: Exception) {
-            showToast("Style transfer error: ${e.message ?: "Unknown"}")
+            Log.e("AiToolsDelegate", "Style transfer failed", e)
+            showToast(text(R.string.ai_style_transfer_failed_toast))
         }
     }
 
@@ -697,7 +719,8 @@ class AiToolsDelegate(
                 showToast("No face detected")
             }
         } catch (e: Exception) {
-            showToast("Face tracking error: ${e.message ?: "Unknown"}")
+            Log.e("AiToolsDelegate", "Face tracking failed", e)
+            showToast(text(R.string.ai_face_tracking_failed_toast))
         }
     }
 
@@ -750,7 +773,8 @@ class AiToolsDelegate(
                 showToast("Could not determine reframe region")
             }
         } catch (e: Exception) {
-            showToast("Smart reframe error: ${e.message ?: "Unknown"}")
+            Log.e("AiToolsDelegate", "Smart reframe failed", e)
+            showToast(text(R.string.ai_smart_reframe_failed_toast))
         }
     }
 
@@ -776,7 +800,8 @@ class AiToolsDelegate(
             )
             showToast("Upscaled to ${result.targetResolution.label} + sharpening applied")
         } catch (e: Exception) {
-            showToast("Upscale error: ${e.message ?: "Unknown"}")
+            Log.e("AiToolsDelegate", "Upscale failed", e)
+            showToast(text(R.string.ai_upscale_failed_toast))
         }
     }
 

@@ -1,0 +1,3 @@
+- Localized AI and audio mixer feedback with clearer failure messages.
+- Removed raw exception details from high-visibility AI/audio/editor failure toasts.
+- Fixed Spanish short-form duration labels that read as years instead of seconds.

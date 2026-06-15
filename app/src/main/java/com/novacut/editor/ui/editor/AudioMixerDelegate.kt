@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import android.content.Context
+import com.novacut.editor.R
 import com.novacut.editor.engine.AudioMasteringEngine
 import com.novacut.editor.engine.BeatDetectionEngine
 import com.novacut.editor.engine.LoudnessEngine
@@ -22,6 +24,7 @@ class AudioMixerDelegate(
     private val beatDetectionEngine: BeatDetectionEngine,
     private val loudnessEngine: LoudnessEngine,
     private val audioMasteringEngine: AudioMasteringEngine,
+    private val appContext: Context,
     private val scope: CoroutineScope,
     private val saveUndoState: (String) -> Unit,
     private val showToast: (String) -> Unit,
@@ -30,6 +33,9 @@ class AudioMixerDelegate(
     private val refreshPreview: () -> Unit,
     private val saveProject: () -> Unit
 ) {
+    private fun text(resId: Int, vararg args: Any): String =
+        appContext.getString(resId, *args)
+
     // --- Audio Mixer ---
     fun showAudioMixer() {
         pauseIfPlaying()
@@ -168,18 +174,18 @@ class AudioMixerDelegate(
      */
     fun applyMasteringPreset(trackId: String, presetId: String): Boolean {
         val preset = audioMasteringEngine.getPreset(presetId) ?: run {
-            showToast("Unknown mastering preset")
+            showToast(text(R.string.audio_mastering_unknown_preset))
             return false
         }
         val targetTrack = stateFlow.value.tracks.firstOrNull { it.id == trackId } ?: run {
-            showToast("Track not found")
+            showToast(text(R.string.audio_track_not_found))
             return false
         }
         // Skip if the target is not an audio-capable track. Video tracks have
         // embedded audio per Composition but mastering chains apply to the
         // explicit audio mix.
         if (targetTrack.type != TrackType.AUDIO && targetTrack.type != TrackType.VIDEO) {
-            showToast("Mastering presets apply to audio or video tracks only")
+            showToast(text(R.string.audio_mastering_audio_video_only))
             return false
         }
         saveUndoState("Apply ${preset.displayName}")
@@ -200,7 +206,7 @@ class AudioMixerDelegate(
             .filter { it.type == TrackType.AUDIO || it.type == TrackType.VIDEO }
             .flatMap { it.clips }
         if (audioClips.isEmpty()) {
-            showToast("No audio clips to analyze")
+            showToast(text(R.string.audio_no_clips_to_analyze))
             return
         }
         val sourceUri = audioClips.first().sourceUri
@@ -209,7 +215,7 @@ class AudioMixerDelegate(
         saveUndoState("Detect beats")
         scope.launch {
             stateFlow.update { it.copy(isAnalyzingBeats = true) }
-            showToast("Detecting beats...")
+            showToast(text(R.string.audio_detecting_beats))
             try {
                 val analysis = withContext(Dispatchers.IO) { beatDetectionEngine.detectBeats(sourceUri) }
 
@@ -219,18 +225,22 @@ class AudioMixerDelegate(
                     .flatMap { it.clips }
                 if (currentClips.isEmpty()) {
                     stateFlow.update { it.copy(isAnalyzingBeats = false) }
-                    showToast("Audio clips were deleted during analysis")
+                    showToast(text(R.string.audio_clips_deleted_during_analysis))
                     return@launch
                 }
 
                 val beatTimestamps = analysis.beats.map { it.timestampMs }
                 stateFlow.update { it.copy(beatMarkers = beatTimestamps, isAnalyzingBeats = false) }
                 saveProject()
-                val bpmText = if (analysis.bpm > 0f) " (%.0f BPM)".format(analysis.bpm) else ""
-                showToast("Found ${analysis.beats.size} beats$bpmText")
+                val bpmText = if (analysis.bpm > 0f) {
+                    text(R.string.audio_beats_bpm_suffix, analysis.bpm)
+                } else {
+                    ""
+                }
+                showToast(text(R.string.audio_beats_found, analysis.beats.size, bpmText))
             } catch (e: Exception) {
                 stateFlow.update { it.copy(isAnalyzingBeats = false) }
-                showToast("Beat detection failed: ${e.message ?: "Unknown error"}")
+                showToast(text(R.string.audio_beat_detection_failed))
             }
         }
     }
@@ -255,14 +265,14 @@ class AudioMixerDelegate(
         val clipId = stateFlow.value.selectedClipId ?: return
         val clip = stateFlow.value.tracks.flatMap { it.clips }.find { it.id == clipId } ?: return
         scope.launch {
-            showToast("Measuring loudness...")
+            showToast(text(R.string.audio_measuring_loudness))
             try {
                 val measurement = withContext(Dispatchers.IO) { loudnessEngine.measureLoudness(clip.sourceUri) }
 
                 // Re-validate clip still exists after async work
                 val currentClip = stateFlow.value.tracks.flatMap { it.clips }.find { it.id == clipId }
                 if (currentClip == null) {
-                    showToast("Clip was deleted during analysis")
+                    showToast(text(R.string.audio_clip_deleted_during_analysis))
                     return@launch
                 }
 
@@ -281,9 +291,9 @@ class AudioMixerDelegate(
                 }
                 hideAudioNorm()
                 saveProject()
-                showToast("Normalized: %.1f \u2192 %.0f LUFS".format(measurement.integratedLufs, targetLufs))
+                showToast(text(R.string.audio_normalized_clip, measurement.integratedLufs, targetLufs))
             } catch (e: Exception) {
-                showToast("Normalization failed: ${e.message ?: "Unknown error"}")
+                showToast(text(R.string.audio_normalization_failed))
             }
         }
     }
@@ -294,14 +304,14 @@ class AudioMixerDelegate(
             .filter { it.type == TrackType.AUDIO || it.type == TrackType.VIDEO }
             .flatMap { t -> t.clips.map { c -> t.id to c } }
         if (audioClips.isEmpty()) {
-            showToast("No audio clips to normalize")
+            showToast(text(R.string.audio_no_clips_to_normalize))
             return
         }
         val preset = LoudnessEngine.LoudnessPreset.entries
             .firstOrNull { it.targetLufs == targetLufs }
             ?: LoudnessEngine.LoudnessPreset.YOUTUBE
         scope.launch {
-            showToast("Measuring loudness across ${audioClips.size} clips\u2026")
+            showToast(text(R.string.audio_measuring_loudness_all, audioClips.size))
             try {
                 val gains = mutableMapOf<String, Float>()
                 for ((_, clip) in audioClips) {
@@ -325,9 +335,9 @@ class AudioMixerDelegate(
                 }
                 hideAudioNorm()
                 saveProject()
-                showToast("Normalized $changed clips to %.0f LUFS".format(targetLufs))
+                showToast(text(R.string.audio_normalized_clips, changed, targetLufs))
             } catch (e: Exception) {
-                showToast("Normalization failed: ${e.message ?: "Unknown error"}")
+                showToast(text(R.string.audio_normalization_failed))
             }
         }
     }
