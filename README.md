@@ -433,8 +433,7 @@ Media access uses the system Photo Picker (`ActivityResultContracts.PickVisualMe
 ## Known Limitations
 - Multi-sequence export now honors track opacity through Media3 compositor settings, and all 18 fallback blend modes render distinctly; true source-over-destination blend math still needs a custom programmable compositor because Media3's public settings only expose alpha/transform
 - Reversed clip export pre-renders through FFmpeg (clips over 5 minutes export forward; FFmpeg unavailable falls back to forward playback)
-- SmartRenderEngine analysis results not used for actual export bypass
-- Android Lint is not yet a release gate because the current AGP/Kotlin/Compose lint stack crashes in Compose runtime detectors before reporting findings
+- Android Lint runs in CI but is non-blocking until the baseline is populated from a full local lint pass
 - 11 AI/ML engine stubs awaiting dependency integration (see ROADMAP.md)
 
 ## License
