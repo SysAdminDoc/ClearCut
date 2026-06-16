@@ -9,6 +9,8 @@ import com.novacut.editor.engine.AppearanceMode
 import com.novacut.editor.engine.DiagnosticExportEngine
 import com.novacut.editor.engine.ModelDownloadManager
 import com.novacut.editor.engine.ProjectAutoSave
+import com.novacut.editor.engine.ProxyEngine
+import com.novacut.editor.engine.managedMediaDir
 import com.novacut.editor.engine.SettingsRepository
 import com.novacut.editor.engine.UpdateChecker
 import com.novacut.editor.engine.db.ProjectDao
@@ -46,6 +48,15 @@ data class DiagnosticExportBundleUi(
     val sizeBytes: Long
 )
 
+data class ProjectStorageUiState(
+    val managedMediaBytes: Long = 0L,
+    val proxyCacheBytes: Long = 0L,
+    val isClearingProxies: Boolean = false,
+    val feedbackMessage: String? = null
+) {
+    val totalBytes: Long get() = managedMediaBytes + proxyCacheBytes
+}
+
 data class DiagnosticExportUiState(
     val isExporting: Boolean = false,
     val bundle: DiagnosticExportBundleUi? = null,
@@ -77,7 +88,8 @@ class SettingsViewModel @Inject constructor(
     private val diagnosticExportEngine: DiagnosticExportEngine,
     private val projectDao: ProjectDao,
     private val autoSave: ProjectAutoSave,
-    private val updateChecker: UpdateChecker
+    private val updateChecker: UpdateChecker,
+    private val proxyEngine: ProxyEngine
 ) : ViewModel() {
 
     val settings: StateFlow<AppSettings> = repo.settings
@@ -88,6 +100,9 @@ class SettingsViewModel @Inject constructor(
 
     private val _aiModelStorage = MutableStateFlow(AiModelStorageUiState())
     val aiModelStorage: StateFlow<AiModelStorageUiState> = _aiModelStorage.asStateFlow()
+
+    private val _projectStorage = MutableStateFlow(ProjectStorageUiState())
+    val projectStorage: StateFlow<ProjectStorageUiState> = _projectStorage.asStateFlow()
 
     private val _diagnosticExport = MutableStateFlow(DiagnosticExportUiState())
     val diagnosticExport: StateFlow<DiagnosticExportUiState> = _diagnosticExport.asStateFlow()
@@ -187,6 +202,40 @@ class SettingsViewModel @Inject constructor(
 
     fun dismissAiModelStorageFeedback() {
         _aiModelStorage.update { it.copy(feedbackMessage = null) }
+    }
+
+    fun refreshProjectStorage() {
+        viewModelScope.launch {
+            val (mediaBytes, proxyBytes) = withContext(Dispatchers.IO) {
+                val media = managedMediaDir(appContext).let { dir ->
+                    if (dir.isDirectory) dir.walkTopDown().filter { it.isFile }.sumOf { it.length() } else 0L
+                }
+                val proxy = proxyEngine.getCacheSize()
+                media to proxy
+            }
+            _projectStorage.update {
+                it.copy(managedMediaBytes = mediaBytes, proxyCacheBytes = proxyBytes)
+            }
+        }
+    }
+
+    fun clearProxyCache() {
+        _projectStorage.update { it.copy(isClearingProxies = true) }
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { proxyEngine.clearProxies() }
+            val proxyBytes = withContext(Dispatchers.IO) { proxyEngine.getCacheSize() }
+            _projectStorage.update {
+                it.copy(
+                    proxyCacheBytes = proxyBytes,
+                    isClearingProxies = false,
+                    feedbackMessage = appContext.getString(R.string.settings_proxy_cleared_toast)
+                )
+            }
+        }
+    }
+
+    fun dismissProjectStorageFeedback() {
+        _projectStorage.update { it.copy(feedbackMessage = null) }
     }
 
     fun exportDiagnosticBundle() {

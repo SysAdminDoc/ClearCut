@@ -108,8 +108,10 @@ fun SettingsScreen(
     var showOpenSourceLicenses by remember { mutableStateOf(false) }
     var notificationStatusRefreshKey by remember { mutableIntStateOf(0) }
 
+    val projectStorage by viewModel.projectStorage.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) {
         viewModel.refreshAiModelStorage()
+        viewModel.refreshProjectStorage()
     }
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -423,6 +425,43 @@ fun SettingsScreen(
                     )
                 }
             }
+        }
+
+        // Project Storage
+        SettingsSection(
+            title = stringResource(R.string.settings_project_storage_title),
+            description = stringResource(
+                R.string.settings_project_storage_media,
+                formatStorageBytes(projectStorage.managedMediaBytes)
+            )
+        ) {
+            SettingsTile(
+                icon = Icons.Default.Storage,
+                accent = Mocha.Peach,
+                label = stringResource(R.string.settings_project_storage_title),
+                description = stringResource(
+                    R.string.settings_project_storage_proxy,
+                    formatStorageBytes(projectStorage.proxyCacheBytes)
+                )
+            ) {
+                SettingsStatusBadge(
+                    text = formatStorageBytes(projectStorage.totalBytes),
+                    accent = if (projectStorage.totalBytes > 0L) Mocha.Peach else Mocha.Overlay0
+                )
+            }
+            if (projectStorage.proxyCacheBytes > 0L) {
+                SettingsActionRow(
+                    icon = Icons.Default.DeleteSweep,
+                    accent = Mocha.Peach,
+                    label = stringResource(R.string.settings_clear_proxy_cache),
+                    description = formatStorageBytes(projectStorage.proxyCacheBytes),
+                    actionLabel = if (projectStorage.isClearingProxies) "…" else stringResource(R.string.settings_clear_proxy_cache),
+                    onClick = viewModel::clearProxyCache
+                )
+            }
+        }
+        projectStorage.feedbackMessage?.let { message ->
+            SettingsFeedbackBanner(message = message, onDismiss = viewModel::dismissProjectStorageFeedback)
         }
 
         // Appearance

@@ -2282,6 +2282,12 @@
     <string name="vm_fcpxml_blocked_toast">Exportación FCPXML bloqueada: %1$s — %2$s</string>
     <string name="vm_fcpxml_exported_toast">FCPXML exportado: %1$s%2$s</string>
     <string name="vm_autosave_kept_toast">Los datos guardados automáticamente se conservaron para no perder esta edición.</string>
+    <!-- Project storage -->
+    <string name="settings_project_storage_title">Almacenamiento del proyecto</string>
+    <string name="settings_project_storage_media">Medios gestionados: %1$s</string>
+    <string name="settings_project_storage_proxy">Caché de proxy: %1$s</string>
+    <string name="settings_clear_proxy_cache">Limpiar caché de proxy</string>
+    <string name="settings_proxy_cleared_toast">Caché de proxy limpiada</string>
     <!-- V369Delegate toasts -->
     <string name="v369_no_words_selected_toast">No hay palabras seleccionadas</string>
     <string name="v369_nothing_to_cut_toast">Nada que cortar</string>
