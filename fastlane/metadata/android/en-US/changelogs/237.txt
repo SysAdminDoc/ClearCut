@@ -1,0 +1,4 @@
+- Stock Assets
+- Added provider capability metadata for Pexels, Pixabay, Freesound, and Free Music Archive so stock search remains disabled until provider prerequisites are configured.
+- Added per-provider terms for source branding, attribution, cache TTL, hotlinking, commercial-use, and derivative-use policy.
+- Expanded stock asset metadata with source URL, license URL, fetched timestamp, and reuse constraints, plus export-use decisions that block noncommercial and no-derivatives assets whe...
