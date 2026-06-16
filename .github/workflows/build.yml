@@ -67,6 +67,11 @@ jobs:
           name: compose-metrics
           path: app/build/compose_metrics/
 
+      - name: Submit Gradle dependency graph
+        uses: gradle/actions/dependency-submission@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4
+        with:
+          dependency-graph: generate-and-submit
+
       - name: Build Instrumentation APK
         run: ./gradlew assembleDebugAndroidTest
 
