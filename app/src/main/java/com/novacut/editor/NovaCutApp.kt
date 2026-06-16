@@ -7,8 +7,12 @@ import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.novacut.editor.BuildConfig
 import com.novacut.editor.engine.CrashRecordStore
+import com.novacut.editor.engine.HealthEvent
 import com.novacut.editor.engine.MemoryTrimDispatcher
 import com.novacut.editor.engine.ProcessExitRecorder
+import com.novacut.editor.engine.ProductHealthLedger
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
@@ -23,6 +27,9 @@ class NovaCutApp : Application(), Configuration.Provider {
 
     @Inject
     lateinit var processExitRecorder: ProcessExitRecorder
+
+    @Inject
+    lateinit var productHealthLedger: ProductHealthLedger
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
@@ -42,6 +49,9 @@ class NovaCutApp : Application(), Configuration.Provider {
         CrashRecordStore(this).installGlobalHandler(VERSION)
         processExitRecorder.recordStartupExitReasons()
         createNotificationChannels()
+        GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            productHealthLedger.record(HealthEvent.COLD_START)
+        }
     }
 
     override fun onTrimMemory(level: Int) {
