@@ -10,6 +10,7 @@ import android.net.Uri
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.nio.FloatBuffer
@@ -64,7 +65,8 @@ import javax.inject.Singleton
 @Singleton
 class InpaintingEngine @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val modelDownloadManager: ModelDownloadManager
+    private val modelDownloadManager: ModelDownloadManager,
+    private val ffmpegEngine: FFmpegEngine
 ) {
     companion object {
         private const val TAG = "InpaintingEngine"
@@ -317,51 +319,87 @@ class InpaintingEngine @Inject constructor(
             return@withContext null
         }
 
+        val retriever = android.media.MediaMetadataRetriever()
         try {
-            // TODO: Video inpainting pipeline
-            //
-            // val decoder = MediaCodecDecoder(context, uri)
-            // val encoder = MediaCodecEncoder(outputUri, decoder.width, decoder.height, decoder.frameRate)
-            //
-            // var frameIndex = 0
-            // val totalFrames = decoder.frameCount
-            // var inpaintedCount = 0
-            //
-            // while (decoder.hasNextFrame()) {
-            //     val frame = decoder.nextFrame()
-            //     val mask = maskFrames[frameIndex]
-            //
-            //     if (mask != null) {
-            //         val result = inpaintFrame(frame, mask)
-            //         if (result != null) {
-            //             encoder.encodeFrame(result.outputBitmap)
-            //             result.outputBitmap.recycle()
-            //             inpaintedCount++
-            //         } else {
-            //             encoder.encodeFrame(frame) // fallback: use original
-            //         }
-            //     } else {
-            //         encoder.encodeFrame(frame) // no mask for this frame
-            //     }
-            //
-            //     frame.recycle()
-            //     frameIndex++
-            //     onProgress(frameIndex.toFloat() / totalFrames)
-            // }
-            //
-            // encoder.finish()
-            // decoder.release()
-            //
-            // return@withContext VideoInpaintingResult(
-            //     outputUri = outputUri,
-            //     framesProcessed = inpaintedCount,
-            //     totalProcessingTimeMs = System.currentTimeMillis() - startTime,
-            //     averageFrameTimeMs = if (inpaintedCount > 0) (System.currentTimeMillis() - startTime) / inpaintedCount else 0
-            // )
+            retriever.setDataSource(context, uri)
+            val durationMs = retriever.extractMetadata(
+                android.media.MediaMetadataRetriever.METADATA_KEY_DURATION
+            )?.toLongOrNull() ?: return@withContext null
+            val videoWidth = retriever.extractMetadata(
+                android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH
+            )?.toIntOrNull() ?: return@withContext null
+            val videoHeight = retriever.extractMetadata(
+                android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT
+            )?.toIntOrNull() ?: return@withContext null
+            val fps = retriever.extractMetadata(
+                android.media.MediaMetadataRetriever.METADATA_KEY_CAPTURE_FRAMERATE
+            )?.toFloatOrNull() ?: 30f
 
-            Log.d(TAG, "inpaintVideo stub — video pipeline not yet implemented")
-            onProgress(1f)
-            null
+            if (durationMs <= 0 || videoWidth <= 0 || videoHeight <= 0) return@withContext null
+
+            val frameIntervalMs = (1000f / fps.coerceIn(1f, 120f)).toLong().coerceAtLeast(16L)
+            val totalFrames = ((durationMs / frameIntervalMs) + 1).toInt().coerceIn(1, 9000)
+
+            val tempDir = File(context.cacheDir, "inpaint-frames-${System.currentTimeMillis()}")
+            tempDir.mkdirs()
+            var inpaintedCount = 0
+
+            try {
+                for (frameIndex in 0 until totalFrames) {
+                    ensureActive()
+                    val timeMs = (frameIndex.toLong() * frameIntervalMs).coerceAtMost(durationMs)
+                    val frame = retriever.getFrameAtTime(
+                        timeMs * 1000L,
+                        android.media.MediaMetadataRetriever.OPTION_CLOSEST
+                    ) ?: continue
+
+                    val mask = maskFrames[frameIndex]
+                    val outputFrame = if (mask != null) {
+                        val result = inpaintFrame(frame, mask)
+                        if (result != null) {
+                            inpaintedCount++
+                            result.outputBitmap
+                        } else frame
+                    } else frame
+
+                    val frameFile = File(tempDir, "frame_%05d.png".format(frameIndex))
+                    frameFile.outputStream().use { out ->
+                        outputFrame.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out)
+                    }
+                    if (outputFrame !== frame) outputFrame.recycle()
+                    frame.recycle()
+
+                    onProgress(frameIndex.toFloat() / totalFrames)
+                }
+
+                onProgress(0.95f)
+
+                val outputFile = outputUri.path?.let(::File) ?: return@withContext null
+                val pattern = File(tempDir, "frame_%05d.png").absolutePath
+                val encodeOk = if (!ffmpegEngine.isAvailable()) false else {
+                    ffmpegEngine.execute(
+                        "-y -framerate ${fps.toInt().coerceIn(1, 120)} " +
+                            "-i \"$pattern\" " +
+                            "-c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p " +
+                            "\"${outputFile.absolutePath}\""
+                    ) == 0
+                }
+
+                if (!encodeOk || !outputFile.isFile || outputFile.length() <= 0L) {
+                    Log.w(TAG, "FFmpeg encode of inpainted frames failed")
+                    return@withContext null
+                }
+
+                onProgress(1f)
+                VideoInpaintingResult(
+                    outputUri = outputUri,
+                    framesProcessed = inpaintedCount,
+                    totalProcessingTimeMs = System.currentTimeMillis() - startTime,
+                    averageFrameTimeMs = if (inpaintedCount > 0) (System.currentTimeMillis() - startTime) / inpaintedCount else 0L
+                )
+            } finally {
+                tempDir.deleteRecursively()
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Video inpainting failed", e)
             null

@@ -154,7 +154,7 @@ Planning files are local-only in the development checkout:
 | **Auto Captions** | ONNX Runtime Whisper tiny.en (English; multilingual Sherpa/Whisper path gated) | Yes |
 | **Background Removal** | MediaPipe Selfie Segmentation (~1-7MB, ~30fps) | Yes |
 | **AI Green Screen** | Planned -- RobustVideoMatting (requires model integration) | Planned |
-| **Object Removal** | LaMa-Dilated inpainting (40ms/frame @ 512x512 on flagship devices) | Yes |
+| **Object Removal** | LaMa-Dilated inpainting; per-frame + full-video pipeline via FFmpeg encode | Yes |
 | **Video Upscaling** | Planned -- Real-ESRGAN (requires model integration) | Planned |
 | **Frame Interpolation** | Planned -- RIFE v4.6 (requires NCNN dependency) | Planned |
 | **Style Transfer** | Planned -- AnimeGANv2 + Fast NST (requires model integration) | Planned |
