@@ -367,7 +367,7 @@ If release credentials are not configured, `assembleRelease` falls back to debug
 CI publishes a `.sha256` checksum, `.signing-cert-sha256` certificate-fingerprint sidecar, and GitHub artifact attestation next to every uploaded APK. To verify a downloaded release APK:
 
 ```powershell
-gh attestation verify .\app-release.apk -R SysAdminDoc/NovaCut --source-ref refs/tags/v3.74.102 --signer-workflow SysAdminDoc/NovaCut/.github/workflows/build.yml
+gh attestation verify .\app-release.apk -R SysAdminDoc/NovaCut --source-ref refs/tags/v3.74.103 --signer-workflow SysAdminDoc/NovaCut/.github/workflows/build.yml
 python scripts\write_release_checksums.py --root . --check
 python scripts\write_apk_signing_fingerprints.py --root . --check
 ```

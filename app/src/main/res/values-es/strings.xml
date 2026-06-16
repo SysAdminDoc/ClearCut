@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.74.102</string>
+    <string name="app_version">v3.74.103</string>
     <string name="close">Cerrar</string>
     <string name="cancel">Cancelar</string>
     <string name="done">Listo</string>
@@ -697,7 +697,7 @@
     <string name="state_on">encendido</string>
     <string name="state_off">Apagado</string>
     <string name="media_picker_title">Agregar medios</string>
-    <string name="media_picker_subtitle">Incorpore metraje, fotografías y audio o capture algo nuevo sin salir de la edición.</string>
+    <string name="media_picker_subtitle">Incorpore metraje, fotografías, audio o un clip devuelto por la app de cámara.</string>
     <string name="media_picker_video">Vídeo</string>
     <string name="media_picker_image">Imagen</string>
     <string name="media_picker_audio">Audio</string>
@@ -708,15 +708,16 @@
     <string name="media_picker_audio_description">Agregue música, voz en off, ambiente o efectos de sonido.</string>
     <string name="media_picker_select_multiple">Seleccionar varios archivos</string>
     <string name="media_picker_multi_description">Seleccione varias fotos o vídeos de una sola vez.</string>
-    <string name="media_picker_record_video">Grabar vídeo</string>
-    <string name="media_picker_capture_title">Captura en dispositivo</string>
-    <string name="media_picker_capture_description">Abra la cámara de su dispositivo, luego NovaCut mantendrá el clip grabado disponible en esta edición.</string>
+    <string name="media_picker_record_video">Abrir app de cámara</string>
+    <string name="media_picker_capture_title">Transferencia a cámara externa</string>
+    <string name="media_picker_capture_description">NovaCut abre la app de cámara del dispositivo, recibe solo el clip devuelto y no solicita permiso de cámara para esta transferencia.</string>
     <string name="media_picker_source_photo_picker">Selector de fotos del sistema</string>
     <string name="media_picker_source_files">selector de archivos</string>
     <string name="media_picker_source_audio">Archivos de audio</string>
     <string name="media_picker_source_kept_local">Las importaciones permanecen disponibles sin conexión</string>
     <string name="media_picker_local_copy_failed">NovaCut no pudo mantener ese medio disponible localmente. Intente elegirlo nuevamente.</string>
-    <string name="media_picker_camera_handoff_failed">NovaCut no pudo abrir la cámara del dispositivo. En su lugar, intente importar un clip de su biblioteca.</string>
+    <string name="media_picker_camera_handoff_failed">NovaCut no pudo abrir una app de cámara. En su lugar, intente importar un clip de su biblioteca.</string>
+    <string name="media_picker_camera_empty_capture">La app de cámara devolvió un clip vacío. Intente grabar de nuevo o importe un clip de su biblioteca.</string>
     <string name="media_picker_some_imports_failed">Algunos medios no se pudieron guardar localmente. Se agregaron las importaciones exitosas.</string>
     <string name="media_picker_importing_batch_title">Preparando medios</string>
     <string name="media_picker_importing_batch_description">Mantener los archivos seleccionados disponibles en esta edición.</string>
@@ -725,7 +726,7 @@
     <string name="media_picker_importing_image_title">Preparando imagen</string>
     <string name="media_picker_importing_image_description">Manteniendo esto todavía disponible en el proyecto.</string>
     <string name="media_picker_importing_capture_title">Guardando captura</string>
-    <string name="media_picker_importing_capture_description">Mover el clip grabado al medio de su proyecto.</string>
+    <string name="media_picker_importing_capture_description">Mover el clip devuelto a los medios de su proyecto.</string>
     <string name="media_picker_insufficient_space">No hay suficiente espacio de almacenamiento para importar este medio.</string>
     <string name="audio_conformance_mixed_rates">Los clips tienen frecuencias de muestreo mixtas. El audio se volverá a muestrear para coincidir con el formato de exportación.</string>
     <string name="audio_conformance_mixed_channels">Los clips tienen configuraciones de canales mixtas. El audio se normalizará para la exportación.</string>

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.74.102</string>
+    <string name="app_version">v3.74.103</string>
 
     <!-- Common -->
     <string name="close">Close</string>
@@ -739,7 +739,7 @@
 
     <!-- MediaPicker -->
     <string name="media_picker_title">Add Media</string>
-    <string name="media_picker_subtitle">Bring in footage, photos, and audio or capture something new without leaving the edit.</string>
+    <string name="media_picker_subtitle">Bring in footage, photos, audio, or a clip returned from your camera app.</string>
     <string name="media_picker_video">Video</string>
     <string name="media_picker_image">Image</string>
     <string name="media_picker_audio">Audio</string>
@@ -750,15 +750,16 @@
     <string name="media_picker_audio_description">Add music, voiceover, ambience, or sound effects.</string>
     <string name="media_picker_select_multiple">Select Multiple Files</string>
     <string name="media_picker_multi_description">Select multiple photos or videos in one pass.</string>
-    <string name="media_picker_record_video">Record Video</string>
-    <string name="media_picker_capture_title">Capture on Device</string>
-    <string name="media_picker_capture_description">Open your device camera, then NovaCut will keep the recorded clip available in this edit.</string>
+    <string name="media_picker_record_video">Open Camera App</string>
+    <string name="media_picker_capture_title">External Camera Handoff</string>
+    <string name="media_picker_capture_description">NovaCut opens your device camera app, receives only the returned clip, and does not request camera permission for this handoff.</string>
     <string name="media_picker_source_photo_picker">System photo picker</string>
     <string name="media_picker_source_files">File picker</string>
     <string name="media_picker_source_audio">Audio files</string>
     <string name="media_picker_source_kept_local">Imports stay available offline</string>
     <string name="media_picker_local_copy_failed">NovaCut couldn\'t keep that media available locally. Try choosing it again.</string>
-    <string name="media_picker_camera_handoff_failed">NovaCut couldn\'t open the device camera. Try importing a clip from your library instead.</string>
+    <string name="media_picker_camera_handoff_failed">NovaCut couldn\'t open a camera app. Try importing a clip from your library instead.</string>
+    <string name="media_picker_camera_empty_capture">The camera app returned an empty clip. Try recording again or import a clip from your library.</string>
     <string name="media_picker_some_imports_failed">Some media couldn\'t be kept locally. The successful imports were added.</string>
     <string name="media_picker_importing_batch_title">Preparing media</string>
     <string name="media_picker_importing_batch_description">Keeping selected files available in this edit.</string>
@@ -767,7 +768,7 @@
     <string name="media_picker_importing_image_title">Preparing image</string>
     <string name="media_picker_importing_image_description">Keeping this still available in the project.</string>
     <string name="media_picker_importing_capture_title">Saving capture</string>
-    <string name="media_picker_importing_capture_description">Moving the recorded clip into your project media.</string>
+    <string name="media_picker_importing_capture_description">Moving the returned clip into your project media.</string>
     <string name="media_picker_insufficient_space">Not enough storage space to import this media.</string>
     <string name="audio_conformance_mixed_rates">Clips have mixed sample rates. Audio will be resampled to match the export format.</string>
     <string name="audio_conformance_mixed_channels">Clips have mixed channel layouts. Audio will be normalized for export.</string>

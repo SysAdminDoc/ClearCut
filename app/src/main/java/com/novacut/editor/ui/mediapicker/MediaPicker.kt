@@ -326,7 +326,7 @@ fun MediaPickerSheet(
                     if (finalizedUri != null) {
                         onMediaSelected(finalizedUri, "video")
                     } else {
-                        permissionMessage = context.getString(R.string.media_picker_local_copy_failed)
+                        permissionMessage = context.getString(R.string.media_picker_camera_empty_capture)
                         withContext(Dispatchers.IO) { capturedFile?.delete() }
                     }
                 } finally {

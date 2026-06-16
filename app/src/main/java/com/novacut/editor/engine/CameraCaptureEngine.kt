@@ -12,11 +12,12 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Stub engine -- requires androidx.camera + teleprompter UI. See ROADMAP.md Tier C.8.
+ * In-app recorder stub -- requires androidx.camera + teleprompter UI. See ROADMAP.md Tier C.8.
  *
- * In-app video capture with optional scrolling teleprompter overlay. Captured
- * clips drop directly onto the current timeline without a round trip through
- * MediaStore.
+ * The shipped capture button uses an external camera-app handoff through
+ * ActivityResultContracts.CaptureVideo. This engine models the separate future
+ * in-app recorder, where NovaCut would own CameraX, runtime CAMERA permission,
+ * and optional scrolling teleprompter overlay.
  *
  * Dependencies to add when wiring the real UI:
  *   implementation("androidx.camera:camera-core:1.4.+")
@@ -65,6 +66,8 @@ class CameraCaptureEngine @Inject constructor(
     val recordingState: StateFlow<RecordingState> = _recordingState
 
     enum class RecordingState { IDLE, PREPARING, RECORDING, PAUSED, STOPPING }
+
+    fun captureCapability(): CameraCaptureCapability = cameraCaptureCapability(isCameraAvailable())
 
     /**
      * Reflection probe for the CameraX VideoCapture entry point. Flips
@@ -128,4 +131,40 @@ class CameraCaptureEngine @Inject constructor(
     companion object {
         private const val TAG = "CameraCapture"
     }
+}
+
+data class CameraCaptureCapability(
+    val externalHandoff: ExternalCameraHandoffCapability,
+    val inAppRecorder: InAppCameraRecorderCapability
+)
+
+data class ExternalCameraHandoffCapability(
+    val available: Boolean,
+    val label: String,
+    val requiresNovaCutCameraPermission: Boolean
+)
+
+data class InAppCameraRecorderCapability(
+    val available: Boolean,
+    val unavailableReason: String?,
+    val requiresRuntimeCameraPermission: Boolean
+)
+
+internal fun cameraCaptureCapability(cameraXAvailable: Boolean): CameraCaptureCapability {
+    return CameraCaptureCapability(
+        externalHandoff = ExternalCameraHandoffCapability(
+            available = true,
+            label = "Open camera app",
+            requiresNovaCutCameraPermission = false
+        ),
+        inAppRecorder = InAppCameraRecorderCapability(
+            available = cameraXAvailable,
+            unavailableReason = if (cameraXAvailable) {
+                null
+            } else {
+                "CameraX VideoCapture is not bundled; use the external camera-app handoff."
+            },
+            requiresRuntimeCameraPermission = true
+        )
+    )
 }
