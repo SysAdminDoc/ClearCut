@@ -2544,4 +2544,16 @@
     <string name="vm_tracked_mosaic_applied_toast">Tracked mosaic applied: %1$s</string>
     <string name="vm_snapshot_saved_toast">Snapshot saved: %1$s</string>
     <string name="vm_restored_toast">Restored: %1$s</string>
+    <string name="vm_cut_add_clip_first_toast">Add a clip before running Cut Assistant</string>
+    <string name="vm_cut_scanning_toast">Cut Assistant: scanning %1$d clip(s)…</string>
+    <string name="vm_cut_source_missing_toast">Cut Assistant: source clips no longer on timeline</string>
+    <string name="vm_cut_none_selected_toast">No proposed cuts selected</string>
+    <string name="vm_cut_no_change_toast">No cuts applied — endpoints fell on clip boundaries</string>
+    <string name="vm_cut_applied_toast">Applied %1$d cut(s) — reclaimed %2$ds</string>
+    <string name="vm_exporting_archive_toast">Exporting project archive…</string>
+    <string name="vm_otio_blocked_toast">OTIO export blocked: %1$s — %2$s</string>
+    <string name="vm_otio_exported_toast">OTIO exported: %1$s%2$s</string>
+    <string name="vm_fcpxml_blocked_toast">FCPXML export blocked: %1$s — %2$s</string>
+    <string name="vm_fcpxml_exported_toast">FCPXML exported: %1$s%2$s</string>
+    <string name="vm_autosave_kept_toast">Autosaved project data was kept to avoid losing this edit.</string>
 </resources>

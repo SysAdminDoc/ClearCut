@@ -2270,4 +2270,16 @@
     <string name="vm_tracked_mosaic_applied_toast">Mosaico rastreado aplicado: %1$s</string>
     <string name="vm_snapshot_saved_toast">Instantánea guardada: %1$s</string>
     <string name="vm_restored_toast">Restaurado: %1$s</string>
+    <string name="vm_cut_add_clip_first_toast">Agrega un clip antes de ejecutar el Asistente de corte</string>
+    <string name="vm_cut_scanning_toast">Asistente de corte: escaneando %1$d clip(s)…</string>
+    <string name="vm_cut_source_missing_toast">Asistente de corte: clips de origen ya no están en la línea de tiempo</string>
+    <string name="vm_cut_none_selected_toast">No se seleccionaron cortes propuestos</string>
+    <string name="vm_cut_no_change_toast">No se aplicaron cortes — los puntos coinciden con los límites del clip</string>
+    <string name="vm_cut_applied_toast">%1$d corte(s) aplicados — %2$ds recuperados</string>
+    <string name="vm_exporting_archive_toast">Exportando archivo del proyecto…</string>
+    <string name="vm_otio_blocked_toast">Exportación OTIO bloqueada: %1$s — %2$s</string>
+    <string name="vm_otio_exported_toast">OTIO exportado: %1$s%2$s</string>
+    <string name="vm_fcpxml_blocked_toast">Exportación FCPXML bloqueada: %1$s — %2$s</string>
+    <string name="vm_fcpxml_exported_toast">FCPXML exportado: %1$s%2$s</string>
+    <string name="vm_autosave_kept_toast">Los datos guardados automáticamente se conservaron para no perder esta edición.</string>
 </resources>

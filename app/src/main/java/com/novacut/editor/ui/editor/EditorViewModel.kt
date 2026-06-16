@@ -3049,7 +3049,7 @@ class EditorViewModel @Inject constructor(
             .flatMap { it.clips }
             .filter { it.sourceDurationMs > 0L }
         if (initialAudioClips.isEmpty()) {
-            showToast("Add a clip before running Cut Assistant")
+            showToast(text(R.string.vm_cut_add_clip_first_toast))
             return
         }
         // Capture only the ids we plan to scan — by the time the IO scan returns
@@ -3058,7 +3058,7 @@ class EditorViewModel @Inject constructor(
         // hand the engine a stale Track snapshot.
         val targetClipIds = initialAudioClips.map { it.id }.toSet()
         viewModelScope.launch {
-            showToast("Cut Assistant: scanning ${initialAudioClips.size} clip(s)…")
+            showToast(text(R.string.vm_cut_scanning_toast, initialAudioClips.size))
             try {
                 val perClipAudio = withContext(Dispatchers.IO) {
                     initialAudioClips.associate { clip ->
@@ -3084,7 +3084,7 @@ class EditorViewModel @Inject constructor(
                 val liveClipIds = liveTracks.flatMap { it.clips }.map { it.id }.toSet()
                 val validIds = targetClipIds intersect liveClipIds intersect perClipAudio.keys
                 if (validIds.isEmpty()) {
-                    showToast("Cut Assistant: source clips no longer on timeline")
+                    showToast(text(R.string.vm_cut_source_missing_toast))
                     return@launch
                 }
                 val filteredTracks = liveTracks.map { track ->
@@ -3140,7 +3140,7 @@ class EditorViewModel @Inject constructor(
         val review = _state.value.cutAssistantReview ?: return
         val ops = cutAssistantEngine.planAcceptedOperations(review)
         if (ops.isEmpty()) {
-            showToast("No proposed cuts selected")
+            showToast(text(R.string.vm_cut_none_selected_toast))
             return
         }
         saveUndoState("Apply Cut Assistant")
@@ -3216,9 +3216,9 @@ class EditorViewModel @Inject constructor(
         rebuildPlayerTimeline()
         saveProject()
         if (appliedCount == 0) {
-            showToast("No cuts applied — endpoints fell on clip boundaries")
+            showToast(text(R.string.vm_cut_no_change_toast))
         } else {
-            showToast("Applied $appliedCount cut(s) — reclaimed ${appliedSecondsReclaimed / 1000}s")
+            showToast(text(R.string.vm_cut_applied_toast, appliedCount, appliedSecondsReclaimed / 1000))
         }
     }
 
@@ -3417,7 +3417,7 @@ class EditorViewModel @Inject constructor(
                     }
                     rebuildTimeline()
                     saveProject()
-                    showToast("Synced ${offsets.size} clips by audio")
+                    showToast(text(R.string.vm_synced_clips_toast, offsets.size))
                 } else {
                     showToast(text(R.string.vm_sync_failed_toast))
                 }
@@ -3632,7 +3632,7 @@ class EditorViewModel @Inject constructor(
             .mapIndexed { i, t -> t.copy(index = i) }
         _state.update { recalculateDuration(it.copy(tracks = kept)) }
         val removed = currentTracks.size - kept.size
-        showToast("Removed $removed empty track${if (removed != 1) "s" else ""}")
+        showToast(text(R.string.vm_removed_tracks_toast, removed))
         saveProject()
     }
 
@@ -3782,7 +3782,7 @@ class EditorViewModel @Inject constructor(
     // --- Project Archive ---
     fun exportProjectArchive() {
         viewModelScope.launch {
-            showToast("Exporting project archive...")
+            showToast(text(R.string.vm_exporting_archive_toast))
             try {
                 val s = _state.value
                 val dir = java.io.File(appContext.getExternalFilesDir(null), "archives")
@@ -3827,7 +3827,7 @@ class EditorViewModel @Inject constructor(
                                 )
                             }
                         }
-                        showToast("OTIO export blocked: ${first.path} — ${first.message}")
+                        showToast(text(R.string.vm_otio_blocked_toast, first.path, first.message))
                     }
                     return@launch
                 }
@@ -3853,7 +3853,7 @@ class EditorViewModel @Inject constructor(
                             }
                         }
                     }
-                    showToast("OTIO exported: ${file.name}$tail")
+                    showToast(text(R.string.vm_otio_exported_toast, file.name, tail))
                 }
             } catch (e: Exception) {
                 Log.e("EditorViewModel", "OTIO export failed", e)
@@ -3887,7 +3887,7 @@ class EditorViewModel @Inject constructor(
                                 )
                             }
                         }
-                        showToast("FCPXML export blocked: ${first.path} — ${first.message}")
+                        showToast(text(R.string.vm_fcpxml_blocked_toast, first.path, first.message))
                     }
                     return@launch
                 }
@@ -3913,7 +3913,7 @@ class EditorViewModel @Inject constructor(
                             }
                         }
                     }
-                    showToast("FCPXML exported: ${file.name}$tail")
+                    showToast(text(R.string.vm_fcpxml_exported_toast, file.name, tail))
                 }
             } catch (e: Exception) {
                 Log.e("EditorViewModel", "FCPXML export failed", e)
@@ -3973,7 +3973,7 @@ class EditorViewModel @Inject constructor(
             s.copy(chapterMarkers = updated)
         }
         saveProject()
-        showToast("Chapter added at ${formatTime(clampedMarker.timeMs)}")
+        showToast(text(R.string.vm_chapter_added_toast, formatTime(clampedMarker.timeMs)))
     }
 
     fun updateChapterMarker(index: Int, marker: ChapterMarker) {
@@ -4081,7 +4081,7 @@ class EditorViewModel @Inject constructor(
             })
         }
         saveProject()
-        showToast("Grouped ${ids.size} clips")
+        showToast(text(R.string.vm_clips_grouped_toast, ids.size))
     }
 
     fun ungroupSelectedClips() {
@@ -4130,7 +4130,7 @@ class EditorViewModel @Inject constructor(
         }
         rebuildPlayerTimeline()
         saveProject()
-        showToast("Deleted ${clipIds.size} clips")
+        showToast(text(R.string.vm_multi_deleted_toast, clipIds.size))
     }
 
     fun applyEffectToSelectedClips(effect: Effect) {
@@ -4150,7 +4150,7 @@ class EditorViewModel @Inject constructor(
         }
         rebuildPlayerTimeline()
         saveProject()
-        showToast("Applied ${effect.type.name} to ${ids.size} clips")
+        showToast(text(R.string.vm_multi_effect_applied_toast, effect.type.name, ids.size))
     }
 
     fun applySpeedToSelectedClips(speed: Float) {
@@ -4167,7 +4167,7 @@ class EditorViewModel @Inject constructor(
         }
         rebuildPlayerTimeline()
         saveProject()
-        showToast("Set ${clampedSpeed}x speed on ${ids.size} clips")
+        showToast(text(R.string.vm_multi_speed_applied_toast, clampedSpeed, ids.size))
     }
 
     fun applyVolumeToSelectedClips(volume: Float) {
@@ -4183,7 +4183,7 @@ class EditorViewModel @Inject constructor(
             })
         }
         saveProject()
-        showToast("Set volume on ${ids.size} clips")
+        showToast(text(R.string.vm_multi_volume_applied_toast, ids.size))
     }
 
     fun copyEffectsToSelectedClips() {
@@ -4208,7 +4208,7 @@ class EditorViewModel @Inject constructor(
         }
         rebuildPlayerTimeline()
         saveProject()
-        showToast("Pasted effects to ${ids.size} clips")
+        showToast(text(R.string.vm_multi_effects_pasted_toast, ids.size))
     }
 
     // --- Subtitle Export ---
@@ -4232,9 +4232,9 @@ class EditorViewModel @Inject constructor(
             )
             val success = SubtitleExporter.export(captions, format, file)
             if (success) {
-                showToast("Exported to ${file.name}")
+                showToast(text(R.string.vm_subtitle_exported_toast, file.name))
             } else {
-                showToast("Export failed")
+                showToast(text(R.string.vm_subtitle_export_failed_toast))
             }
         }
     }
@@ -4358,7 +4358,7 @@ class EditorViewModel @Inject constructor(
                     })
                 }
                 saveProject()
-                showToast("Ducking applied: ${speechRegions.size} regions")
+                showToast(text(R.string.vm_ducking_applied_toast, speechRegions.size))
             } catch (e: Exception) {
                 Log.e("EditorViewModel", "Auto-duck failed", e)
                 showToast(text(R.string.editor_auto_duck_failed_toast))
@@ -4674,7 +4674,7 @@ class EditorViewModel @Inject constructor(
                         )
                     }
                 }
-                showToast("Frame saved: ${file.name}")
+                showToast(text(R.string.vm_frame_saved_toast, file.name))
             } catch (e: Exception) {
                 Log.w("EditorVM", "Frame capture failed", e)
                 _state.update {
@@ -4685,7 +4685,7 @@ class EditorViewModel @Inject constructor(
                         )
                     }
                 }
-                showToast("Frame capture failed")
+                showToast(text(R.string.vm_frame_capture_failed_toast))
             }
         }
     }
@@ -4863,14 +4863,14 @@ class EditorViewModel @Inject constructor(
             it.copyPanel { panel -> panel.copy(panels = panel.panels.close(PanelId.RECOVERY_DIALOG)) }
         }
         if (!recover) {
-            showToast("Autosaved project data was kept to avoid losing this edit.", ToastSeverity.Warning)
+            showToast(text(R.string.vm_autosave_kept_toast), ToastSeverity.Warning)
         }
     }
 
     fun updateProjectAspect(aspect: AspectRatio) {
         _state.update { it.copy(project = it.project.copy(aspectRatio = aspect)) }
         saveProject()
-        showToast("Aspect ratio: ${aspect.label}")
+        showToast(text(R.string.vm_aspect_ratio_toast, aspect.label))
     }
 
     private fun saveUndoState(description: String) {
@@ -4913,7 +4913,7 @@ class EditorViewModel @Inject constructor(
                 }
                 if (exportResult != null) {
                     val (_, outputFile) = exportResult
-                    showToast("Template exported: ${outputFile.name}")
+                    showToast(text(R.string.vm_template_exported_toast, outputFile.name))
                     val uri = runCatching {
                         androidx.core.content.FileProvider.getUriForFile(
                             appContext,
@@ -4950,7 +4950,7 @@ class EditorViewModel @Inject constructor(
             try {
                 val template = templateManager.importTemplateFromUri(uri)
                 if (template != null) {
-                    showToast("Imported template: ${template.name}")
+                    showToast(text(R.string.vm_template_imported_toast, template.name))
                 } else {
                     showToast(text(R.string.vm_template_import_failed_toast))
                 }
