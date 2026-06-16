@@ -159,7 +159,7 @@ Planning files are local-only in the development checkout:
 | **Frame Interpolation** | Planned -- RIFE v4.6 (requires NCNN dependency) | Planned |
 | **Style Transfer** | Planned -- AnimeGANv2 + Fast NST (requires model integration) | Planned |
 | **Stabilization** | Planned -- OpenCV (requires dependency) | Planned |
-| **Smart Reframe** | EMA-smoothed crop trajectory, 3 strategies (face/pose detection is stub) | Partial |
+| **Smart Reframe** | MediaPipe BlazeFace detection, EMA-smoothed crop trajectory, 3 strategies (stationary/pan/track) | Yes |
 | **Tap-to-Segment** | Planned -- SAM 2.1 Hiera Tiny target with MobileSAM fallback | Planned |
 | **Scene Detection** | Content-aware frame difference analysis with auto-split | Yes |
 | **Auto Color** | Histogram-based brightness/contrast/saturation/temperature | Yes |

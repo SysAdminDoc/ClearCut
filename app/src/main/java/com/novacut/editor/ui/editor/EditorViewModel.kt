@@ -2520,17 +2520,45 @@ class EditorViewModel @Inject constructor(
         _state.update { it.copyAi { ai -> ai.copy(isReframing = true) } }
         viewModelScope.launch {
             try {
-                // Analyze video for subject positions
                 val reframeSourceClip = getSelectedClip()?.takeIf(::clipHasVisual)
                     ?: _state.value.tracks
                         .flatMap { it.clips }
                         .firstOrNull(::clipHasVisual)
-                if (reframeSourceClip != null) {
+
+                if (reframeSourceClip != null && smartReframeEngine.isReady()) {
                     val config = SmartReframeEngine.ReframeConfig(
                         targetAspectRatio = targetAspect.toFloat()
                     )
-                    smartReframeEngine.analyzeForReframe(reframeSourceClip.sourceUri, config) { progress ->
-                        // Progress tracked via isReframing state
+                    val result = smartReframeEngine.analyzeForReframe(
+                        reframeSourceClip.sourceUri, config
+                    ) { /* progress tracked via isReframing state */ }
+
+                    if (result != null && result.cropWindows.size >= 2) {
+                        saveUndoState("Smart reframe")
+                        val clipDurationMs = reframeSourceClip.durationMs
+                        val intervalMs = clipDurationMs / (result.cropWindows.size - 1).coerceAtLeast(1)
+                        val posKeyframes = result.cropWindows.flatMapIndexed { i, window ->
+                            val timeMs = (i.toLong() * intervalMs).coerceAtMost(clipDurationMs)
+                            listOf(
+                                Keyframe(
+                                    timeOffsetMs = timeMs,
+                                    property = KeyframeProperty.POSITION_X,
+                                    value = (window.centerX - 0.5f) * 2f
+                                ),
+                                Keyframe(
+                                    timeOffsetMs = timeMs,
+                                    property = KeyframeProperty.POSITION_Y,
+                                    value = (0.5f - window.centerY) * 2f
+                                )
+                            )
+                        }
+                        val existingKf = reframeSourceClip.keyframes.filter {
+                            it.property != KeyframeProperty.POSITION_X &&
+                            it.property != KeyframeProperty.POSITION_Y
+                        }
+                        updateSelectedClip {
+                            it.copy(keyframes = existingKf + posKeyframes)
+                        }
                     }
                 }
 
