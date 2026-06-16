@@ -550,22 +550,18 @@ class FFmpegEngine @Inject constructor(
         return null
     }
 
-    private fun escapeFilterPath(path: String): String {
+    internal fun escapeFilterPath(path: String): String {
         return path
             .replace("\\", "\\\\")
             .replace(":", "\\:")
             .replace("'", "\\'")
     }
 
-    private fun escapeConcatPath(path: String): String = path.replace("'", "'\\''")
+    internal fun escapeConcatPath(path: String): String = path.replace("'", "'\\''")
 
-    private fun msToSeconds(ms: Long): String = String.format(Locale.US, "%.3f", ms / 1000.0)
+    internal fun msToSeconds(ms: Long): String = String.format(Locale.US, "%.3f", ms / 1000.0)
 
-    /**
-     * Build atempo filter chain -- FFmpeg atempo only supports 0.5-100.0 per instance,
-     * so chain multiple for extreme values.
-     */
-    private fun buildAtempoChain(speed: Float): String {
+    internal fun buildAtempoChain(speed: Float): String {
         val parts = mutableListOf<String>()
         var remaining = speed.toDouble().coerceIn(0.25, 16.0)
         while (remaining > 2.0) {
