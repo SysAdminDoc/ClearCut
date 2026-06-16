@@ -2,6 +2,7 @@ package com.novacut.editor.ui.editor
 
 import android.content.Context
 import android.util.Log
+import com.novacut.editor.R
 import com.novacut.editor.engine.AiUsageLedger
 import com.novacut.editor.engine.AiThumbnailEngine
 import com.novacut.editor.engine.AudioDescriptionEngine
@@ -105,12 +106,12 @@ class V369Delegate(
     fun applyDeletions(clipId: String) {
         val t = stateFlow.value.v369.transcript ?: return
         val selected = stateFlow.value.v369.selectedWordIndices
-        if (selected.isEmpty()) { showToast("No words selected"); return }
+        if (selected.isEmpty()) { showToast(appContext.getString(R.string.v369_no_words_selected_toast)); return }
         val state = stateFlow.value
         val target = state.tracks.flatMap { it.clips }.firstOrNull { it.id == clipId } ?: return
         jobs += scope.launch {
             val ranges = textBased.computeCutRanges(target, t.words, selected)
-            if (ranges.isEmpty()) { showToast("Nothing to cut"); return@launch }
+            if (ranges.isEmpty()) { showToast(appContext.getString(R.string.v369_nothing_to_cut_toast)); return@launch }
             saveUndoState("Text-based edit")
             val originalDuration = target.durationMs
             val segments = splitAroundRanges(target, ranges)
@@ -127,7 +128,7 @@ class V369Delegate(
             }
             rebuildPlayerTimeline()
             saveProject()
-            showToast("Removed ${ranges.size} segment${if (ranges.size == 1) "" else "s"} (-${rippleMs / 1000f}s)")
+            showToast(appContext.getString(R.string.v369_removed_segments_toast, ranges.size, rippleMs / 1000f))
         }
     }
 
@@ -295,13 +296,13 @@ class V369Delegate(
     fun generateKaraokeCaptions() {
         val t = stateFlow.value.v369.transcript
         if (t == null || t.words.isEmpty()) {
-            showToast("Transcribe audio first (AI Tools → Auto Captions)")
+            showToast(appContext.getString(R.string.v369_transcribe_first_toast))
             return
         }
         saveUndoState("Karaoke captions")
         val existing = stateFlow.value.textOverlays
         val overlays: List<TextOverlay> = karaoke.generate(t.words, stateFlow.value.v369.karaokeStyle)
-        if (overlays.isEmpty()) { showToast("No captions generated"); return }
+        if (overlays.isEmpty()) { showToast(appContext.getString(R.string.v369_no_captions_toast)); return }
         stateFlow.update { it.copy(textOverlays = existing + overlays) }
         saveProject()
         showToast("${overlays.size} caption cue${if (overlays.size == 1) "" else "s"} added")
@@ -379,7 +380,7 @@ class V369Delegate(
      */
     fun runContentIdOnLastExport(apiKey: String? = null) {
         val path = stateFlow.value.lastExportedFilePath
-        if (path == null) { showToast("Export something first"); return }
+        if (path == null) { showToast(appContext.getString(R.string.v369_export_first_toast)); return }
         jobs += scope.launch {
             val pcm = try {
                 audioEngine.decodeToPCM(android.net.Uri.fromFile(java.io.File(path)))
@@ -387,7 +388,7 @@ class V369Delegate(
                 Log.w(TAG, "pcm decode failed", e); null
             }
             if (pcm == null || pcm.isEmpty()) {
-                showToast("Could not decode exported audio")
+                showToast(appContext.getString(R.string.v369_audio_decode_failed_toast))
                 return@launch
             }
             val match = contentId.analyze(pcm, apiKey)
@@ -404,7 +405,7 @@ class V369Delegate(
     fun publishLastExport(target: DirectPublishEngine.Target, title: String, description: String) {
         val state = stateFlow.value
         val path = state.lastExportedFilePath
-        if (path == null) { showToast("Export something first"); return }
+        if (path == null) { showToast(appContext.getString(R.string.v369_export_first_toast)); return }
         jobs += scope.launch {
             val aiDisclosureSummary = state.aiUsageLedger
                 .takeIf { it.isNotEmpty() }
@@ -425,7 +426,7 @@ class V369Delegate(
                     appContext.startActivity(intent)
                 } catch (e: Exception) {
                     Log.w(TAG, "publish intent failed", e)
-                    showToast("Unable to open ${target.displayName}")
+                    showToast(appContext.getString(R.string.v369_unable_to_open_toast, target.displayName))
                 }
             }
         }

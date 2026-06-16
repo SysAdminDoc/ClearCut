@@ -2282,4 +2282,13 @@
     <string name="vm_fcpxml_blocked_toast">Exportación FCPXML bloqueada: %1$s — %2$s</string>
     <string name="vm_fcpxml_exported_toast">FCPXML exportado: %1$s%2$s</string>
     <string name="vm_autosave_kept_toast">Los datos guardados automáticamente se conservaron para no perder esta edición.</string>
+    <!-- V369Delegate toasts -->
+    <string name="v369_no_words_selected_toast">No hay palabras seleccionadas</string>
+    <string name="v369_nothing_to_cut_toast">Nada que cortar</string>
+    <string name="v369_removed_segments_toast">%1$d segmento(s) eliminados (-%2$ss)</string>
+    <string name="v369_transcribe_first_toast">Transcribe el audio primero (Herramientas IA → Subtítulos automáticos)</string>
+    <string name="v369_no_captions_toast">No se generaron subtítulos</string>
+    <string name="v369_export_first_toast">Exporta algo primero</string>
+    <string name="v369_audio_decode_failed_toast">No se pudo decodificar el audio exportado</string>
+    <string name="v369_unable_to_open_toast">No se pudo abrir %1$s</string>
 </resources>

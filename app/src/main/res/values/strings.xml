@@ -2556,4 +2556,13 @@
     <string name="vm_fcpxml_blocked_toast">FCPXML export blocked: %1$s — %2$s</string>
     <string name="vm_fcpxml_exported_toast">FCPXML exported: %1$s%2$s</string>
     <string name="vm_autosave_kept_toast">Autosaved project data was kept to avoid losing this edit.</string>
+    <!-- V369Delegate toasts -->
+    <string name="v369_no_words_selected_toast">No words selected</string>
+    <string name="v369_nothing_to_cut_toast">Nothing to cut</string>
+    <string name="v369_removed_segments_toast">Removed %1$d segment(s) (-%2$ss)</string>
+    <string name="v369_transcribe_first_toast">Transcribe audio first (AI Tools → Auto Captions)</string>
+    <string name="v369_no_captions_toast">No captions generated</string>
+    <string name="v369_export_first_toast">Export something first</string>
+    <string name="v369_audio_decode_failed_toast">Could not decode exported audio</string>
+    <string name="v369_unable_to_open_toast">Unable to open %1$s</string>
 </resources>
