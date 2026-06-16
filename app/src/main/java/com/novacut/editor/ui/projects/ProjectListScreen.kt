@@ -176,8 +176,8 @@ fun ProjectListScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .weight(1f)
-                        .padding(horizontal = Spacing.lg, vertical = Spacing.xl),
-                    contentAlignment = Alignment.Center
+                        .padding(horizontal = Spacing.lg, vertical = Spacing.lg),
+                    contentAlignment = Alignment.TopCenter
                 ) {
                     ProjectEmptyState(
                         projectTotalCount = projectTotalCount,

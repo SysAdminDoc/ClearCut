@@ -1732,10 +1732,14 @@ private fun SettingsTile(
     semanticState: String? = null,
     trailing: @Composable RowScope.() -> Unit
 ) {
+    val colors = LocalNovaCutColors.current
     Surface(
-        color = Mocha.PanelHighest,
+        color = colors.panelHighest,
         shape = RoundedCornerShape(Radius.md),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f))
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            if (colors.highContrast) colors.cardStrokeStrong else colors.cardStroke.copy(alpha = 0.9f)
+        )
     ) {
         Row(
             modifier = Modifier
@@ -1761,7 +1765,7 @@ private fun SettingsTile(
             ) {
                 Text(
                     label,
-                    color = Mocha.Text,
+                    color = colors.text,
                     style = MaterialTheme.typography.titleSmall,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
@@ -1769,7 +1773,7 @@ private fun SettingsTile(
                 description?.let {
                     Text(
                         it,
-                        color = Mocha.Subtext0,
+                        color = colors.subtext,
                         style = MaterialTheme.typography.bodySmall,
                         maxLines = 3,
                         overflow = TextOverflow.Ellipsis

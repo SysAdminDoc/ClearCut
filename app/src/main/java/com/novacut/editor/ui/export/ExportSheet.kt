@@ -57,7 +57,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -91,7 +97,9 @@ import com.novacut.editor.model.VideoCodec
 import com.novacut.editor.model.Watermark
 import com.novacut.editor.model.WatermarkPosition
 import com.novacut.editor.ui.NovaCutTestTags
+import com.novacut.editor.ui.theme.LocalNovaCutColors
 import com.novacut.editor.ui.theme.Mocha
+import com.novacut.editor.ui.theme.Motion
 import com.novacut.editor.ui.theme.NovaCutDialogIcon
 import com.novacut.editor.ui.theme.NovaCutPrimaryButton
 import com.novacut.editor.ui.theme.NovaCutSecondaryButton
@@ -1340,10 +1348,14 @@ private fun ExportSectionCard(
     accent: Color,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val colors = LocalNovaCutColors.current
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Mocha.PanelHighest),
-        border = BorderStroke(1.dp, Mocha.CardStrokeStrong.copy(alpha = 0.92f)),
+        colors = CardDefaults.cardColors(containerColor = colors.panelHighest),
+        border = BorderStroke(
+            1.dp,
+            if (colors.highContrast) colors.cardStrokeStrong else colors.cardStrokeStrong.copy(alpha = 0.92f)
+        ),
         shape = RoundedCornerShape(Radius.xl)
     ) {
         Box(
@@ -1351,8 +1363,8 @@ private fun ExportSectionCard(
                 Brush.verticalGradient(
                     listOf(
                         accent.copy(alpha = 0.12f),
-                        Mocha.PanelHighest,
-                        Mocha.PanelRaised.copy(alpha = 0.96f)
+                        colors.panelHighest,
+                        colors.panelRaised.copy(alpha = 0.96f)
                     )
                 )
             )
@@ -1364,12 +1376,12 @@ private fun ExportSectionCard(
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
                         text = title,
-                        color = Mocha.Text,
+                        color = colors.text,
                         style = MaterialTheme.typography.titleMedium
                     )
                     Text(
                         text = description,
-                        color = Mocha.Subtext0,
+                        color = colors.subtext,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -1914,19 +1926,22 @@ private fun ExportToggleRow(
     onCheckedChange: (Boolean) -> Unit,
     accent: Color
 ) {
+    val colors = LocalNovaCutColors.current
     val contentAlpha = if (enabled) 1f else 0.52f
+    val semanticState = stringResource(if (checked && enabled) R.string.state_on else R.string.state_off)
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = if (checked && enabled) accent.copy(alpha = 0.08f) else Mocha.PanelRaised.copy(alpha = 0.7f),
-        shape = RoundedCornerShape(18.dp),
+        color = if (checked && enabled) accent.copy(alpha = 0.08f) else colors.panelRaised.copy(alpha = 0.7f),
+        shape = RoundedCornerShape(Radius.lg),
         border = BorderStroke(
             1.dp,
-            if (checked && enabled) accent.copy(alpha = 0.24f) else Mocha.CardStroke
+            if (checked && enabled) accent.copy(alpha = 0.24f) else colors.cardStroke
         )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .semantics { stateDescription = semanticState }
                 .toggleable(
                     value = checked,
                     enabled = enabled,
@@ -1950,7 +1965,7 @@ private fun ExportToggleRow(
                 ) {
                     Icon(
                         imageVector = icon,
-                        contentDescription = title,
+                        contentDescription = null,
                         tint = accent.copy(alpha = contentAlpha),
                         modifier = Modifier.size(20.dp)
                     )
@@ -1963,24 +1978,24 @@ private fun ExportToggleRow(
             ) {
                 Text(
                     text = title,
-                    color = Mocha.Text.copy(alpha = contentAlpha),
+                    color = colors.text.copy(alpha = contentAlpha),
                     style = MaterialTheme.typography.titleSmall
                 )
                 Text(
                     text = description,
-                    color = Mocha.Subtext0.copy(alpha = contentAlpha),
+                    color = colors.subtext.copy(alpha = contentAlpha),
                     style = MaterialTheme.typography.bodySmall
                 )
             }
 
             Surface(
-                color = if (checked && enabled) accent.copy(alpha = 0.14f) else Mocha.Panel,
+                color = if (checked && enabled) accent.copy(alpha = 0.14f) else colors.panel,
                 shape = RoundedCornerShape(10.dp),
-                border = BorderStroke(1.dp, if (checked && enabled) accent.copy(alpha = 0.26f) else Mocha.CardStroke)
+                border = BorderStroke(1.dp, if (checked && enabled) accent.copy(alpha = 0.26f) else colors.cardStroke)
             ) {
                 Text(
-                    text = stringResource(if (checked && enabled) R.string.state_on else R.string.state_off),
-                    color = if (checked && enabled) accent else Mocha.Subtext0.copy(alpha = contentAlpha),
+                    text = semanticState,
+                    color = if (checked && enabled) accent else colors.subtext.copy(alpha = contentAlpha),
                     style = MaterialTheme.typography.labelMedium,
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)
                 )
@@ -1994,7 +2009,7 @@ private fun ExportToggleRow(
                     checkedTrackColor = accent,
                     checkedThumbColor = Mocha.Crust,
                     uncheckedTrackColor = Mocha.Surface1,
-                    uncheckedThumbColor = Mocha.Subtext0
+                    uncheckedThumbColor = colors.subtext
                 )
             )
         }
@@ -2025,10 +2040,20 @@ private fun ExportStateCard(
     onTertiary: (() -> Unit)? = null,
     primaryStyle: PrimaryStyle = PrimaryStyle.Filled
 ) {
+    val colors = LocalNovaCutColors.current
+    val statusDescription = listOfNotNull(title, progressLabel, secondaryBody).joinToString(". ")
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Mocha.Panel),
-        border = BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics {
+                liveRegion = LiveRegionMode.Polite
+                stateDescription = statusDescription
+            },
+        colors = CardDefaults.cardColors(containerColor = colors.panel),
+        border = BorderStroke(
+            1.dp,
+            if (colors.highContrast) colors.cardStrokeStrong else colors.cardStroke.copy(alpha = 0.9f)
+        ),
         shape = RoundedCornerShape(Radius.xxl)
     ) {
         Box(
@@ -2036,8 +2061,8 @@ private fun ExportStateCard(
                 Brush.verticalGradient(
                     listOf(
                         tint.copy(alpha = 0.12f),
-                        Mocha.PanelHighest.copy(alpha = 0.82f),
-                        Mocha.Panel
+                        colors.panelHighest.copy(alpha = 0.82f),
+                        colors.panel
                     )
                 )
             )
@@ -2067,7 +2092,7 @@ private fun ExportStateCard(
                         ) {
                             Icon(
                                 icon,
-                                contentDescription = title,
+                                contentDescription = null,
                                 tint = tint,
                                 modifier = Modifier.size(24.dp)
                             )
@@ -2076,11 +2101,11 @@ private fun ExportStateCard(
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
-                Text(title, color = Mocha.Text, style = MaterialTheme.typography.headlineMedium)
+                Text(title, color = colors.text, style = MaterialTheme.typography.headlineMedium)
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = body,
-                    color = Mocha.Subtext0,
+                    color = colors.subtext,
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center
                 )
@@ -2090,7 +2115,7 @@ private fun ExportStateCard(
                     // Smoothly animate the bar so it doesn't snap on each Transformer progress tick.
                     val animatedProgress by androidx.compose.animation.core.animateFloatAsState(
                         targetValue = progress.coerceIn(0f, 1f),
-                        animationSpec = androidx.compose.animation.core.tween(durationMillis = 220),
+                        animationSpec = Motion.standard(),
                         label = "exportProgress"
                     )
                     LinearProgressIndicator(
@@ -2098,16 +2123,19 @@ private fun ExportStateCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(10.dp)
-                            .clip(RoundedCornerShape(com.novacut.editor.ui.theme.Radius.sm)),
+                            .clip(RoundedCornerShape(Radius.sm))
+                            .semantics {
+                                progressBarRangeInfo = ProgressBarRangeInfo(animatedProgress, 0f..1f)
+                            },
                         color = tint,
-                        trackColor = Mocha.PanelHighest.copy(alpha = 0.8f)
+                        trackColor = colors.panelHighest.copy(alpha = 0.8f)
                     )
                 }
                 if (progressLabel != null) {
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
                         progressLabel,
-                        color = Mocha.Text,
+                        color = colors.text,
                         style = MaterialTheme.typography.headlineMedium.copy(
                             fontWeight = FontWeight.SemiBold
                         )
@@ -2129,7 +2157,7 @@ private fun ExportStateCard(
                                 .height(48.dp),
                             border = BorderStroke(1.dp, tint.copy(alpha = 0.6f)),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = tint),
-                            shape = RoundedCornerShape(com.novacut.editor.ui.theme.Radius.lg)
+                            shape = RoundedCornerShape(Radius.lg)
                         ) {
                             Text(primaryLabel, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
                         }
@@ -2140,9 +2168,9 @@ private fun ExportStateCard(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(48.dp),
-                            border = BorderStroke(1.dp, Mocha.CardStrokeStrong),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Text),
-                            shape = RoundedCornerShape(com.novacut.editor.ui.theme.Radius.lg)
+                            border = BorderStroke(1.dp, colors.cardStrokeStrong),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.text),
+                            shape = RoundedCornerShape(Radius.lg)
                         ) {
                             Text(primaryLabel, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
                         }
@@ -2157,7 +2185,7 @@ private fun ExportStateCard(
                                 containerColor = if (tint == Mocha.Red) Mocha.Red else Mocha.Rosewater,
                                 contentColor = if (tint == Mocha.Red) Mocha.Crust else Mocha.Midnight
                             ),
-                            shape = RoundedCornerShape(com.novacut.editor.ui.theme.Radius.lg)
+                            shape = RoundedCornerShape(Radius.lg)
                         ) {
                             Text(primaryLabel, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
                         }
@@ -2169,17 +2197,17 @@ private fun ExportStateCard(
                     OutlinedButton(
                         onClick = onSecondary,
                         modifier = Modifier.fillMaxWidth(),
-                        border = BorderStroke(1.dp, Mocha.CardStrokeStrong),
-                        shape = RoundedCornerShape(18.dp)
+                        border = BorderStroke(1.dp, colors.cardStrokeStrong),
+                        shape = RoundedCornerShape(Radius.lg)
                     ) {
-                        Text(secondaryLabel, color = Mocha.Text, style = MaterialTheme.typography.labelLarge)
+                        Text(secondaryLabel, color = colors.text, style = MaterialTheme.typography.labelLarge)
                     }
                 }
 
                 if (tertiaryLabel != null && onTertiary != null) {
                     Spacer(modifier = Modifier.height(6.dp))
                     TextButton(onClick = onTertiary) {
-                        Text(tertiaryLabel, color = Mocha.Subtext0, style = MaterialTheme.typography.labelLarge)
+                        Text(tertiaryLabel, color = colors.subtext, style = MaterialTheme.typography.labelLarge)
                     }
                 }
             }

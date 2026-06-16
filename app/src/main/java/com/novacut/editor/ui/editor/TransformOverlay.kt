@@ -2,17 +2,23 @@ package com.novacut.editor.ui.editor
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateCentroidSize
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateRotation
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.ui.theme.Mocha
 import kotlin.math.*
@@ -47,49 +53,54 @@ fun TransformOverlay(
     var isDragging by remember { mutableStateOf(false) }
     var activeHandle by remember { mutableStateOf(HandleType.NONE) }
     var dragStartOffset by remember { mutableStateOf(Offset.Zero) }
+    var dragStartCenter by remember { mutableStateOf(Offset.Zero) }
     var startScaleX by remember { mutableFloatStateOf(1f) }
     var startScaleY by remember { mutableFloatStateOf(1f) }
     var startRotation by remember { mutableFloatStateOf(0f) }
 
-    // Compute bounding box in screen space
-    val baseWidth = previewWidth * 0.6f * scaleX
-    val baseHeight = previewHeight * 0.6f * scaleY
-    val centerX = previewWidth / 2f + positionX * previewWidth / 2f
-    val centerY = previewHeight / 2f + positionY * previewHeight / 2f
-
     Canvas(
         modifier = modifier
             .fillMaxSize()
-            .pointerInput(positionX, positionY, scaleX, scaleY, rotation) {
-                detectTransformGestures { _, pan, zoom, gestureRotation ->
-                    if (!isDragging) {
+            .pointerInput(positionX, positionY, scaleX, scaleY, rotation, previewWidth, previewHeight) {
+                detectTransformGesturesWithLifecycle(
+                    onGestureStart = {
                         isDragging = true
+                        activeHandle = HandleType.TRANSFORM
                         onTransformStarted()
-                    }
-
-                    // Apply pan (move)
-                    val dx = pan.x / (size.width / 2f)
-                    val dy = pan.y / (size.height / 2f)
-                    onPositionChanged(
-                        (positionX + dx).coerceIn(-1f, 1f),
-                        (positionY + dy).coerceIn(-1f, 1f)
-                    )
-
-                    // Apply pinch zoom
-                    if (abs(zoom - 1f) > 0.001f) {
-                        onScaleChanged(
-                            (scaleX * zoom).coerceIn(0.1f, 5f),
-                            (scaleY * zoom).coerceIn(0.1f, 5f)
+                    },
+                    onGesture = { pan, zoom, gestureRotation, pointerCount ->
+                        if (!shouldHandleTransformGesture(pointerCount, zoom, gestureRotation, pan)) {
+                            return@detectTransformGesturesWithLifecycle
+                        }
+                        val (dx, dy) = transformOverlayPanToNormalizedDelta(
+                            pan = pan,
+                            width = size.width.toFloat(),
+                            height = size.height.toFloat()
                         )
+                        if (dx != 0f || dy != 0f) {
+                            onPositionChanged(
+                                (positionX + dx).coerceIn(-1f, 1f),
+                                (positionY + dy).coerceIn(-1f, 1f)
+                            )
+                        }
+                        if (abs(zoom - 1f) > 0.001f) {
+                            onScaleChanged(
+                                (scaleX * zoom).coerceIn(0.1f, 5f),
+                                (scaleY * zoom).coerceIn(0.1f, 5f)
+                            )
+                        }
+                        if (abs(gestureRotation) > 0.1f) {
+                            onRotationChanged(rotation + gestureRotation)
+                        }
+                    },
+                    onGestureEnd = {
+                        isDragging = false
+                        activeHandle = HandleType.NONE
+                        onTransformEnded()
                     }
-
-                    // Apply rotation
-                    if (abs(gestureRotation) > 0.1f) {
-                        onRotationChanged(rotation + gestureRotation)
-                    }
-                }
+                )
             }
-            .pointerInput(positionX, positionY, scaleX, scaleY, rotation) {
+            .pointerInput(positionX, positionY, scaleX, scaleY, rotation, previewWidth, previewHeight) {
                 detectDragGestures(
                     onDragStart = { offset ->
                         onTransformStarted()
@@ -99,9 +110,21 @@ fun TransformOverlay(
                         startScaleY = scaleY
                         startRotation = rotation
 
-                        // Determine which handle was hit
-                        val hw = baseWidth / 2f
-                        val hh = baseHeight / 2f
+                        val geometry = transformOverlayGeometry(
+                            positionX = positionX,
+                            positionY = positionY,
+                            scaleX = scaleX,
+                            scaleY = scaleY,
+                            actualWidth = size.width.toFloat(),
+                            actualHeight = size.height.toFloat(),
+                            previewWidthFallback = previewWidth,
+                            previewHeightFallback = previewHeight
+                        )
+                        val hw = geometry.halfWidth
+                        val hh = geometry.halfHeight
+                        val centerX = geometry.centerX
+                        val centerY = geometry.centerY
+                        dragStartCenter = Offset(centerX, centerY)
                         val corners = listOf(
                             Offset(centerX - hw, centerY - hh), // TL
                             Offset(centerX + hw, centerY - hh), // TR
@@ -155,12 +178,12 @@ fun TransformOverlay(
                                 // not the absolute finger angle — otherwise the clip snaps
                                 // to the finger position on the first drag frame.
                                 val startAngle = atan2(
-                                    dragStartOffset.x - centerX,
-                                    -(dragStartOffset.y - centerY)
+                                    dragStartOffset.x - dragStartCenter.x,
+                                    -(dragStartOffset.y - dragStartCenter.y)
                                 ) * 180f / PI.toFloat()
                                 val currentAngle = atan2(
-                                    change.position.x - centerX,
-                                    -(change.position.y - centerY)
+                                    change.position.x - dragStartCenter.x,
+                                    -(change.position.y - dragStartCenter.y)
                                 ) * 180f / PI.toFloat()
                                 onRotationChanged(startRotation + (currentAngle - startAngle))
                             }
@@ -169,7 +192,8 @@ fun TransformOverlay(
                                 val ny = (change.position.y / size.height).coerceIn(0f, 1f)
                                 onAnchorChanged(nx, ny)
                             }
-                            HandleType.NONE -> {}
+                            HandleType.NONE,
+                            HandleType.TRANSFORM -> {}
                         }
                     },
                     onDragEnd = {
@@ -185,6 +209,20 @@ fun TransformOverlay(
                 )
             }
     ) {
+        val geometry = transformOverlayGeometry(
+            positionX = positionX,
+            positionY = positionY,
+            scaleX = scaleX,
+            scaleY = scaleY,
+            actualWidth = size.width,
+            actualHeight = size.height,
+            previewWidthFallback = previewWidth,
+            previewHeightFallback = previewHeight
+        )
+        val baseWidth = geometry.width
+        val baseHeight = geometry.height
+        val centerX = geometry.centerX
+        val centerY = geometry.centerY
         val hw = baseWidth / 2f
         val hh = baseHeight / 2f
 
@@ -277,6 +315,7 @@ fun TransformOverlay(
                 HandleType.ROTATE -> "%.1f°".format(rotation)
                 HandleType.SCALE_TL, HandleType.SCALE_TR, HandleType.SCALE_BR, HandleType.SCALE_BL ->
                     "%.0f%% x %.0f%%".format(scaleX * 100, scaleY * 100)
+                HandleType.TRANSFORM -> "%.0f%% / %.1f deg".format(scaleX * 100, rotation)
                 else -> ""
             }
             // Info rendered via drawContext if needed (keeping simple for now)
@@ -285,9 +324,112 @@ fun TransformOverlay(
 }
 
 private enum class HandleType {
-    NONE, MOVE, SCALE_TL, SCALE_TR, SCALE_BR, SCALE_BL, ROTATE, ANCHOR;
+    NONE, MOVE, SCALE_TL, SCALE_TR, SCALE_BR, SCALE_BL, ROTATE, ANCHOR, TRANSFORM;
 
     fun isScale() = this == SCALE_TL || this == SCALE_TR || this == SCALE_BR || this == SCALE_BL
+}
+
+internal data class TransformOverlayGeometry(
+    val width: Float,
+    val height: Float,
+    val centerX: Float,
+    val centerY: Float
+) {
+    val halfWidth: Float = width / 2f
+    val halfHeight: Float = height / 2f
+}
+
+internal fun transformOverlayGeometry(
+    positionX: Float,
+    positionY: Float,
+    scaleX: Float,
+    scaleY: Float,
+    actualWidth: Float,
+    actualHeight: Float,
+    previewWidthFallback: Float,
+    previewHeightFallback: Float
+): TransformOverlayGeometry {
+    val width = actualWidth.takeIf { it > 0f } ?: previewWidthFallback.coerceAtLeast(1f)
+    val height = actualHeight.takeIf { it > 0f } ?: previewHeightFallback.coerceAtLeast(1f)
+    return TransformOverlayGeometry(
+        width = width * 0.6f * scaleX,
+        height = height * 0.6f * scaleY,
+        centerX = width / 2f + positionX * width / 2f,
+        centerY = height / 2f + positionY * height / 2f
+    )
+}
+
+internal fun transformOverlayPanToNormalizedDelta(
+    pan: Offset,
+    width: Float,
+    height: Float
+): Pair<Float, Float> {
+    val safeWidth = width.coerceAtLeast(1f)
+    val safeHeight = height.coerceAtLeast(1f)
+    return (pan.x / (safeWidth / 2f)) to (pan.y / (safeHeight / 2f))
+}
+
+internal fun shouldHandleTransformGesture(
+    pointerCount: Int,
+    zoom: Float,
+    rotation: Float,
+    pan: Offset
+): Boolean {
+    return pointerCount >= 2 &&
+        (abs(zoom - 1f) > 0.001f || abs(rotation) > 0.1f || pan.getDistance() > 0.001f)
+}
+
+private suspend fun PointerInputScope.detectTransformGesturesWithLifecycle(
+    onGestureStart: () -> Unit,
+    onGesture: (pan: Offset, zoom: Float, rotation: Float, pointerCount: Int) -> Unit,
+    onGestureEnd: () -> Unit
+) {
+    awaitEachGesture {
+        awaitFirstDown(requireUnconsumed = false)
+        var pastTouchSlop = false
+        var accumulatedZoom = 1f
+        var accumulatedRotation = 0f
+        var accumulatedPan = Offset.Zero
+        val touchSlop = viewConfiguration.touchSlop
+        var pressed = true
+        while (pressed) {
+            val event = awaitPointerEvent()
+            pressed = event.changes.any { it.pressed }
+            val pointerCount = event.changes.count { it.pressed }
+            if (pointerCount < 2) {
+                continue
+            }
+            val zoomChange = event.calculateZoom()
+            val rotationChange = event.calculateRotation()
+            val panChange = event.calculatePan()
+            if (!pastTouchSlop) {
+                accumulatedZoom *= zoomChange
+                accumulatedRotation += rotationChange
+                accumulatedPan += panChange
+                val centroidSize = event.calculateCentroidSize(useCurrent = false)
+                val zoomMotion = abs(1f - accumulatedZoom) * centroidSize
+                val rotationMotion = abs(accumulatedRotation * PI.toFloat() * centroidSize / 180f)
+                val panMotion = accumulatedPan.getDistance()
+                pastTouchSlop = zoomMotion > touchSlop ||
+                    rotationMotion > touchSlop ||
+                    panMotion > touchSlop
+                if (pastTouchSlop) {
+                    onGestureStart()
+                }
+            }
+            if (pastTouchSlop) {
+                onGesture(panChange, zoomChange, rotationChange, pointerCount)
+                event.changes.forEach { change ->
+                    if (change.positionChanged()) {
+                        change.consume()
+                    }
+                }
+            }
+        }
+        if (pastTouchSlop) {
+            onGestureEnd()
+        }
+    }
 }
 
 private fun Offset.distTo(other: Offset): Float {
