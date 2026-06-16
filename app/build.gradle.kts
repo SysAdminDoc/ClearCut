@@ -115,6 +115,10 @@ android {
         // the current Kotlin 2.1 / AGP 8.7 lint stack, and NovaCut has no
         // LiveData call sites for this detector to inspect.
         disable += "NullSafeMutableLiveData"
+        baseline = file("lint-baseline.xml")
+        abortOnError = true
+        htmlReport = true
+        sarifReport = true
     }
 }
 
