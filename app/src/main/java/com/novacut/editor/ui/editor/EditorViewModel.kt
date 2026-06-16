@@ -737,7 +737,7 @@ class EditorViewModel @Inject constructor(
             videoEngine.exportState.collect { exportState ->
                 _state.update { it.copyExport { export -> export.copy(state = exportState) } }
                 if (exportState == ExportState.CANCELLED) {
-                    showToast("Export cancelled")
+                    showToast(text(R.string.vm_export_cancelled_toast))
                 }
             }
         }
@@ -1175,7 +1175,7 @@ class EditorViewModel @Inject constructor(
     fun cancelMediaIngest(workId: String) {
         WorkManager.getInstance(appContext).cancelWorkById(java.util.UUID.fromString(workId))
         removeIngest(workId)
-        showToast("Import cancelled")
+        showToast(text(R.string.vm_import_cancelled_toast))
     }
 
     private fun updateIngestProgress(workId: String, progress: Float) {
@@ -1293,7 +1293,7 @@ class EditorViewModel @Inject constructor(
             if (result != null) {
                 showToast("Imported \"${result.displayName}\"")
             } else {
-                showToast("Invalid font file")
+                showToast(text(R.string.vm_invalid_font_toast))
             }
         }
     }
@@ -1323,13 +1323,13 @@ class EditorViewModel @Inject constructor(
     fun jumpToNextMarker() {
         val current = _playheadMs.value
         val next = _state.value.timelineMarkers.firstOrNull { it.timeMs > current + 50 }
-        if (next != null) seekTo(next.timeMs) else showToast("No next marker")
+        if (next != null) seekTo(next.timeMs) else showToast(text(R.string.vm_no_next_marker_toast))
     }
 
     fun jumpToPrevMarker() {
         val current = _playheadMs.value
         val prev = _state.value.timelineMarkers.lastOrNull { it.timeMs < current - 50 }
-        if (prev != null) seekTo(prev.timeMs) else showToast("No previous marker")
+        if (prev != null) seekTo(prev.timeMs) else showToast(text(R.string.vm_no_prev_marker_toast))
     }
 
     fun addTrack(type: TrackType) {
@@ -1990,14 +1990,14 @@ class EditorViewModel @Inject constructor(
         } else {
             proxyEngine.clearProxies()
             rebuildPlayerTimeline()
-            showToast("Proxy editing disabled")
+            showToast(text(R.string.vm_proxy_disabled_toast))
         }
     }
 
     private fun generateProxiesForAllClips() {
         val clips = _state.value.tracks.flatMap { it.clips }
         if (clips.isEmpty()) {
-            showToast("No clips to generate proxies for")
+            showToast(text(R.string.vm_no_clips_for_proxy_toast))
             return
         }
         showToast("Generating proxies for ${clips.size} clips...")
@@ -2085,7 +2085,7 @@ class EditorViewModel @Inject constructor(
 
     fun exportProjectBackup() {
         if (_isExportingBackup.value || _isImportingBackup.value) {
-            showToast("Backup action already in progress")
+            showToast(text(R.string.vm_backup_in_progress_toast))
             return
         }
         _isExportingBackup.value = true
@@ -2112,7 +2112,7 @@ class EditorViewModel @Inject constructor(
                     _lastBackupTime.value = System.currentTimeMillis()
                     showToast("Backup saved: $savedName")
                 } else {
-                    showToast("Backup export failed")
+                    showToast(text(R.string.vm_backup_export_failed_toast))
                 }
             } catch (e: Exception) {
                 Log.e("EditorViewModel", "Backup export failed", e)
@@ -2125,13 +2125,13 @@ class EditorViewModel @Inject constructor(
 
     fun importProjectBackup(uri: Uri) {
         if (_isExportingBackup.value || _isImportingBackup.value) {
-            showToast("Backup action already in progress")
+            showToast(text(R.string.vm_backup_in_progress_toast))
             return
         }
         _isImportingBackup.value = true
         viewModelScope.launch {
             try {
-                showToast("Importing backup...")
+                showToast(text(R.string.vm_importing_backup_toast))
                 val targetDir = File(appContext.filesDir, "imported_${System.currentTimeMillis()}")
                 val existingProjectIds = runCatching {
                     projectDao.getAllProjectsSnapshot().map { it.id }.toSet()
@@ -2383,7 +2383,7 @@ class EditorViewModel @Inject constructor(
             .filter { it.type == TrackType.AUDIO }
             .flatMap { it.clips }
             .firstOrNull() ?: run {
-            showToast("Add an audio track first")
+            showToast(text(R.string.vm_add_audio_track_first_toast))
             return
         }
         _state.update { it.copy(isAnalyzingBeats = true) }
@@ -2397,17 +2397,17 @@ class EditorViewModel @Inject constructor(
                 val effectiveSampleRate = if (clipDurationSec > 0) (waveform.size / clipDurationSec).toInt().coerceAtLeast(1) else 4000
                 val beats = com.novacut.editor.engine.AudioEffectsEngine.detectBeats(pcm, effectiveSampleRate, 1)
                 _state.update { it.copy(beatMarkers = beats, isAnalyzingBeats = false) }
-                showToast("Detected ${beats.size} beats")
+                showToast(text(R.string.vm_beats_detected_toast, beats.size))
             } catch (e: Exception) {
                 _state.update { it.copy(isAnalyzingBeats = false) }
-                showToast("Beat detection failed")
+                showToast(text(R.string.vm_beat_detection_failed_toast))
             }
         }
     }
     fun applyBeatSync() {
         val beats = _state.value.beatMarkers
         if (beats.isEmpty()) {
-            showToast("Detect beats first")
+            showToast(text(R.string.vm_detect_beats_first_toast))
             return
         }
         saveUndoState("Beat sync")
@@ -2570,7 +2570,7 @@ class EditorViewModel @Inject constructor(
                     ai = it.ai.copy(isReframing = false)
                 ) }
                 saveProject()
-                showToast("Reframed to ${targetAspect.label}")
+                showToast(text(R.string.vm_reframed_toast, targetAspect.label))
                 hideSmartReframe()
             } catch (e: Exception) {
                 _state.update { it.copyAi { ai -> ai.copy(isReframing = false) } }
@@ -2589,7 +2589,7 @@ class EditorViewModel @Inject constructor(
         updateSelectedClip { it.copy(speedCurve = curve) }
         rebuildTimeline()
         saveProject()
-        showToast("Speed preset applied")
+        showToast(text(R.string.vm_speed_preset_applied_toast))
         hideSpeedPresets()
     }
 
@@ -2601,7 +2601,7 @@ class EditorViewModel @Inject constructor(
         val clips = _state.value.tracks
             .filter { it.type == TrackType.VIDEO }
             .flatMap { it.clips }
-        if (clips.isEmpty()) { showToast("Add video clips first"); return }
+        if (clips.isEmpty()) { showToast(text(R.string.vm_add_video_clips_first_toast)); return }
 
         _state.update { it.copyAi { ai -> ai.copy(isAutoEditing = true) } }
         viewModelScope.launch {
@@ -2653,12 +2653,12 @@ class EditorViewModel @Inject constructor(
                     showToast("Auto-edit created ${result.segments.size} segments")
                 } else {
                     _state.update { it.copyAi { ai -> ai.copy(isAutoEditing = false) } }
-                    showToast("Could not generate auto-edit")
+                    showToast(text(R.string.vm_auto_edit_failed_toast))
                 }
                 hideAutoEdit()
             } catch (e: Exception) {
                 _state.update { it.copyAi { ai -> ai.copy(isAutoEditing = false) } }
-                showToast("Auto-edit failed")
+                showToast(text(R.string.vm_auto_edit_error_toast))
             }
         }
     }
@@ -2701,10 +2701,10 @@ class EditorViewModel @Inject constructor(
                     aiUsageKind = AiUsageLedger.EffectKind.TTS_LOCAL,
                     aiUsageModelName = "Android TextToSpeech ${style.name.lowercase()}"
                 )
-                showToast("Voice added to audio track")
+                showToast(text(R.string.vm_tts_added_toast))
                 hideTts()
             } else {
-                showToast("TTS synthesis failed")
+                showToast(text(R.string.vm_tts_failed_toast))
             }
         }
     }
@@ -2842,7 +2842,7 @@ class EditorViewModel @Inject constructor(
     fun analyzeAndReduceNoise() {
         val clip = getSelectedClip() ?: return
         if (!clipHasAudio(clip)) {
-            showToast("Selected clip has no audio to analyze")
+            showToast(text(R.string.vm_no_audio_to_analyze_toast))
             return
         }
         _state.update {
@@ -2894,7 +2894,7 @@ class EditorViewModel @Inject constructor(
                     showToast("Applied ${mode.displayName} noise reduction")
                 } else {
                     _state.update { it.copyAi { ai -> ai.copy(isAnalyzingNoise = false) } }
-                    showToast("Audio is clean — no noise reduction needed")
+                    showToast(text(R.string.vm_audio_clean_toast))
                 }
             } catch (e: Exception) {
                 _state.update {
@@ -2905,7 +2905,7 @@ class EditorViewModel @Inject constructor(
                         )
                     }
                 }
-                showToast("Noise analysis failed")
+                showToast(text(R.string.vm_noise_analysis_failed_toast))
             }
         }
     }
@@ -3624,7 +3624,7 @@ class EditorViewModel @Inject constructor(
         val defaultTrackCount = 2 // VIDEO + AUDIO
         val currentTracks = _state.value.tracks
         if (currentTracks.size <= defaultTrackCount) {
-            showToast("No unused tracks to remove")
+            showToast(text(R.string.vm_no_unused_tracks_toast))
             return
         }
         saveUndoState("Remove unused tracks")
@@ -3661,10 +3661,10 @@ class EditorViewModel @Inject constructor(
             val refClip = _state.value.tracks.flatMap { it.clips }.find { it.id == referenceClipId }
             val targetClip = _state.value.tracks.flatMap { it.clips }.find { it.id == targetClipId }
             if (refClip == null || targetClip == null) {
-                showToast("Clip no longer exists")
+                showToast(text(R.string.vm_clip_no_longer_exists_toast))
                 return@launch
             }
-            showToast("Analyzing colors...")
+            showToast(text(R.string.vm_analyzing_colors_toast))
             // Frame analysis uses a blocking MediaMetadataRetriever — keep it off the
             // main thread so the UI doesn't ANR on long/large source files.
             val (refStats, targetStats) = withContext(Dispatchers.IO) {
@@ -3681,7 +3681,7 @@ class EditorViewModel @Inject constructor(
                 // Apply to the clip captured when the action started, not whatever is
                 // selected now — selection can change during the async analysis above.
                 if (_state.value.tracks.flatMap { it.clips }.none { it.id == targetClipId }) {
-                    showToast("Clip no longer exists")
+                    showToast(text(R.string.vm_clip_no_longer_exists_toast))
                     return@launch
                 }
                 saveUndoState("Color match")
@@ -3689,9 +3689,9 @@ class EditorViewModel @Inject constructor(
                 updateClipById(targetClipId) { it.copy(colorGrade = grade) }
                 updatePreview()
                 saveProject()
-                showToast("Color matched to reference clip")
+                showToast(text(R.string.vm_color_matched_toast))
             } else {
-                showToast("Could not analyze frames")
+                showToast(text(R.string.vm_color_analysis_failed_toast))
             }
         }
     }
@@ -3700,7 +3700,7 @@ class EditorViewModel @Inject constructor(
     fun createCompoundClip() {
         val selectedIds = _state.value.selectedClipIds
         if (selectedIds.size < 2) {
-            showToast("Select at least 2 clips to create compound")
+            showToast(text(R.string.vm_compound_select_clips_toast))
             return
         }
         saveUndoState("Create compound clip")
@@ -3756,7 +3756,7 @@ class EditorViewModel @Inject constructor(
         }
         rebuildPlayerTimeline()
         saveProject()
-        showToast("Compound clip created")
+        showToast(text(R.string.vm_compound_created_toast))
     }
 
     // --- Text Templates ---
@@ -3930,7 +3930,7 @@ class EditorViewModel @Inject constructor(
                 track.isLocked && track.clips.any { it.id in linkedIds }
             }
         ) {
-            showToast("Track is locked")
+            showToast(text(R.string.vm_track_locked_toast))
             return
         }
         saveUndoState("Unlink A/V")
@@ -3942,7 +3942,7 @@ class EditorViewModel @Inject constructor(
             })
         }
         saveProject()
-        showToast("Audio/video unlinked")
+        showToast(text(R.string.vm_av_unlinked_toast))
     }
 
     // --- Captions ---
@@ -3955,7 +3955,7 @@ class EditorViewModel @Inject constructor(
     fun generateAutoCaption() {
         val clipId = _state.value.selectedClipId ?: return
         viewModelScope.launch {
-            showToast("Generating captions...")
+            showToast(text(R.string.vm_generating_captions_toast))
             runAiTool("auto_captions")
         }
     }
@@ -4070,7 +4070,7 @@ class EditorViewModel @Inject constructor(
 
     fun groupSelectedClips() {
         val ids = _state.value.selectedClipIds
-        if (ids.size < 2) { showToast("Select 2+ clips to group"); return }
+        if (ids.size < 2) { showToast(text(R.string.vm_select_clips_to_group_toast)); return }
         val groupId = java.util.UUID.randomUUID().toString()
         saveUndoState("Group clips")
         _state.update { s ->
@@ -4095,7 +4095,7 @@ class EditorViewModel @Inject constructor(
             })
         }
         saveProject()
-        showToast("Clips ungrouped")
+        showToast(text(R.string.vm_clips_ungrouped_toast))
     }
 
     fun deleteMultiSelectedClips() {
@@ -4135,7 +4135,7 @@ class EditorViewModel @Inject constructor(
 
     fun applyEffectToSelectedClips(effect: Effect) {
         val ids = _state.value.selectedClipIds
-        if (ids.isEmpty()) { showToast("No clips selected"); return }
+        if (ids.isEmpty()) { showToast(text(R.string.vm_no_clips_selected_toast)); return }
         saveUndoState("Apply ${effect.type.name} to ${ids.size} clips")
         _state.update { s ->
             s.copy(tracks = s.tracks.map { track ->
@@ -4155,7 +4155,7 @@ class EditorViewModel @Inject constructor(
 
     fun applySpeedToSelectedClips(speed: Float) {
         val ids = _state.value.selectedClipIds
-        if (ids.isEmpty()) { showToast("No clips selected"); return }
+        if (ids.isEmpty()) { showToast(text(R.string.vm_no_clips_selected_toast)); return }
         val clampedSpeed = speed.coerceIn(0.1f, 100f)
         saveUndoState("Set speed ${clampedSpeed}x on ${ids.size} clips")
         _state.update { s ->
@@ -4172,7 +4172,7 @@ class EditorViewModel @Inject constructor(
 
     fun applyVolumeToSelectedClips(volume: Float) {
         val ids = _state.value.selectedClipIds
-        if (ids.isEmpty()) { showToast("No clips selected"); return }
+        if (ids.isEmpty()) { showToast(text(R.string.vm_no_clips_selected_toast)); return }
         val clampedVolume = volume.coerceIn(0f, 3f)
         saveUndoState("Set volume on ${ids.size} clips")
         _state.update { s ->
@@ -4189,9 +4189,9 @@ class EditorViewModel @Inject constructor(
     fun copyEffectsToSelectedClips() {
         val state = _state.value
         val sourceEffects = state.copiedEffects
-        if (sourceEffects.isEmpty()) { showToast("No effects copied"); return }
+        if (sourceEffects.isEmpty()) { showToast(text(R.string.effects_none_copied_toast)); return }
         val ids = state.selectedClipIds
-        if (ids.isEmpty()) { showToast("No clips selected"); return }
+        if (ids.isEmpty()) { showToast(text(R.string.vm_no_clips_selected_toast)); return }
         saveUndoState("Paste effects to ${ids.size} clips")
         _state.update { s ->
             s.copy(tracks = s.tracks.map { track ->
@@ -4220,7 +4220,7 @@ class EditorViewModel @Inject constructor(
             ) }
         }
         if (captions.isEmpty()) {
-            showToast("No captions to export")
+            showToast(text(R.string.vm_no_captions_to_export_toast))
             return
         }
         viewModelScope.launch {
@@ -4312,7 +4312,7 @@ class EditorViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            showToast("Analyzing speech regions...")
+            showToast(text(R.string.vm_analyzing_speech_toast))
             try {
                 val voiceClip = voiceTracks
                     .flatMap { it.clips }
@@ -4332,7 +4332,7 @@ class EditorViewModel @Inject constructor(
                 }
 
                 if (speechRegions.isEmpty()) {
-                    showToast("No speech detected")
+                    showToast(text(R.string.vm_no_speech_detected_toast))
                     return@launch
                 }
 
@@ -4375,7 +4375,7 @@ class EditorViewModel @Inject constructor(
         ttsEngine.stopPreview()
         val file = voiceoverEngine.startRecording()
         if (file == null) {
-            showToast("Microphone access failed")
+            showToast(text(R.string.vm_mic_access_failed_toast))
             return
         }
         _state.update { it.copy(isRecordingVoiceover = true, voiceoverDurationMs = 0L) }
@@ -4393,9 +4393,9 @@ class EditorViewModel @Inject constructor(
         _state.update { it.copy(isRecordingVoiceover = false) }
         if (uri != null) {
             addClipToTrack(uri, TrackType.AUDIO)
-            showToast("Voiceover added to audio track")
+            showToast(text(R.string.vm_voiceover_added_toast))
         } else {
-            showToast("Voiceover recording failed")
+            showToast(text(R.string.vm_voiceover_failed_toast))
         }
     }
 
@@ -4936,7 +4936,7 @@ class EditorViewModel @Inject constructor(
                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     )
                 } else {
-                    showToast("Template export failed")
+                    showToast(text(R.string.vm_template_export_failed_toast))
                 }
             } catch (e: Exception) {
                 Log.e("EditorViewModel", "Template export failed", e)
@@ -4952,7 +4952,7 @@ class EditorViewModel @Inject constructor(
                 if (template != null) {
                     showToast("Imported template: ${template.name}")
                 } else {
-                    showToast("Failed to import template")
+                    showToast(text(R.string.vm_template_import_failed_toast))
                 }
             } catch (e: Exception) {
                 Log.e("EditorViewModel", "Template import failed", e)
@@ -5213,7 +5213,7 @@ class EditorViewModel @Inject constructor(
         val clip = getSelectedClip() ?: return
         val playheadMs = _state.value.playheadMs
         if (playheadMs < clip.timelineStartMs || playheadMs >= clip.timelineEndMs) {
-            showToast("Move playhead over the selected clip")
+            showToast(text(R.string.vm_move_playhead_toast))
             return
         }
 
@@ -5221,12 +5221,12 @@ class EditorViewModel @Inject constructor(
         val sourceTimeMs = clip.timelineOffsetToSourceMs(relativeMs)
 
         viewModelScope.launch {
-            showToast("Extracting frame...")
+            showToast(text(R.string.vm_extracting_frame_toast))
             val frameFile = withContext(Dispatchers.IO) {
                 videoEngine.extractFrameToFile(clip.sourceUri, sourceTimeMs)
             }
             if (frameFile == null) {
-                showToast("Failed to extract frame")
+                showToast(text(R.string.vm_frame_extract_failed_toast))
                 return@launch
             }
 
@@ -5293,7 +5293,7 @@ class EditorViewModel @Inject constructor(
             }
             rebuildPlayerTimeline()
             saveProject()
-            showToast("Freeze frame inserted (2s)")
+            showToast(text(R.string.vm_freeze_frame_inserted_toast))
         }
     }
 
