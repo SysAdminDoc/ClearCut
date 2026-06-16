@@ -43,13 +43,20 @@ internal class ExportTextOverlay(
         computeAnimationState(timeMs)
 
         val fullText = overlay.text
-        val rawDisplay = if (overlay.animationIn == TextAnimation.TYPEWRITER) {
-            val elapsed = timeMs - relStartMs
-            val charCount = ((elapsed.toFloat() / animDurationMs) * fullText.length)
-                .toInt().coerceIn(0, fullText.length)
-            fullText.substring(0, charCount)
-        } else {
-            fullText
+        val rawDisplay = when {
+            overlay.animationIn == TextAnimation.TYPEWRITER -> {
+                val elapsed = timeMs - relStartMs
+                val charCount = ((elapsed.toFloat() / animDurationMs) * fullText.length)
+                    .toInt().coerceIn(0, fullText.length)
+                fullText.substring(0, charCount)
+            }
+            overlay.wordStaggerMs > 0L -> {
+                val elapsed = timeMs - relStartMs
+                val words = fullText.split(" ")
+                val visibleWordCount = ((elapsed / overlay.wordStaggerMs) + 1).toInt().coerceIn(0, words.size)
+                words.take(visibleWordCount).joinToString(" ")
+            }
+            else -> fullText
         }
         // R5.4b — apply Unicode bidi reordering for any caption that carries
         // an RTL strong character; pure-ASCII captions skip the wrap so the
@@ -110,6 +117,22 @@ internal class ExportTextOverlay(
                 AlignmentSpan.Standard(alignment),
                 0, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
             )
+
+            if (overlay.gradientStartColor != null && overlay.gradientEndColor != null && displayText.length > 1) {
+                val startColor = overlay.gradientStartColor.toInt()
+                val endColor = overlay.gradientEndColor.toInt()
+                for (i in displayText.indices) {
+                    val t = i.toFloat() / (displayText.length - 1).coerceAtLeast(1)
+                    val r = ((1 - t) * ((startColor shr 16) and 0xFF) + t * ((endColor shr 16) and 0xFF)).toInt()
+                    val g = ((1 - t) * ((startColor shr 8) and 0xFF) + t * ((endColor shr 8) and 0xFF)).toInt()
+                    val b = ((1 - t) * (startColor and 0xFF) + t * (endColor and 0xFF)).toInt()
+                    val charColor = (alphaInt shl 24) or (r shl 16) or (g shl 8) or b
+                    text.setSpan(
+                        ForegroundColorSpan(charColor),
+                        i, i + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                    )
+                }
+            }
         }
         return text
     }

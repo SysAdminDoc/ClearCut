@@ -36,7 +36,11 @@ data class TextOverlay(
     val lineHeight: Float = 1.2f,
     val textPath: TextPath? = null,
     val templateId: String? = null,
-    val keyframes: List<Keyframe> = emptyList()
+    val keyframes: List<Keyframe> = emptyList(),
+    val gradientStartColor: Long? = null,
+    val gradientEndColor: Long? = null,
+    val gradientAngle: Float = 0f,
+    val wordStaggerMs: Long = 0L
 ) {
     init {
         require(fontSize > 0f) { "Font size must be positive" }

@@ -1367,6 +1367,10 @@ data class AutoSaveState(
                     })
                 }
                 t.templateId?.let { put("templateId", it) }
+                t.gradientStartColor?.let { put("gradientStartColor", it) }
+                t.gradientEndColor?.let { put("gradientEndColor", it) }
+                if (t.gradientAngle != 0f) putSafeFloat("gradientAngle", t.gradientAngle)
+                if (t.wordStaggerMs > 0L) put("wordStaggerMs", t.wordStaggerMs)
                 if (t.keyframes.isNotEmpty()) {
                     put("keyframes", JSONArray().apply {
                         t.keyframes.forEach { put(serializeKeyframe(it)) }
@@ -1915,7 +1919,11 @@ data class AutoSaveState(
                             Log.w(TAG, "Failed to deserialize text overlay keyframe $i", e); null
                         }
                     }.distinctBy { Pair(it.timeOffsetMs, it.property) }
-                } ?: emptyList()
+                } ?: emptyList(),
+                gradientStartColor = if (json.has("gradientStartColor")) json.optLong("gradientStartColor") else null,
+                gradientEndColor = if (json.has("gradientEndColor")) json.optLong("gradientEndColor") else null,
+                gradientAngle = safeFloat(json.optDouble("gradientAngle", 0.0), 0f),
+                wordStaggerMs = json.optLong("wordStaggerMs", 0L).coerceAtLeast(0L)
             )
         }
     }
