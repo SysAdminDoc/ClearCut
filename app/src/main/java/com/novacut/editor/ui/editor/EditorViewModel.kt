@@ -84,6 +84,7 @@ import kotlinx.coroutines.withContext
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import com.novacut.editor.engine.MediaHashWorker
 import com.novacut.editor.engine.ProxyGenerationWorker
 import java.io.File
 import java.util.UUID
@@ -951,7 +952,14 @@ class EditorViewModel @Inject constructor(
                     "Backfilled ${result.sidecarsCreated} media asset sidecar(s) from ${result.referencesScanned} restored reference(s)"
                 )
             }
+            enqueueMediaHashJob()
         }
+    }
+
+    private fun enqueueMediaHashJob() {
+        val request = OneTimeWorkRequestBuilder<MediaHashWorker>().build()
+        WorkManager.getInstance(appContext)
+            .enqueueUniqueWork(MediaHashWorker.WORK_NAME, ExistingWorkPolicy.KEEP, request)
     }
 
     private fun applyAutoSaveSettings(settings: AppSettings? = latestSettings) {
