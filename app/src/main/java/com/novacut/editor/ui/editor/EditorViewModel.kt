@@ -23,6 +23,7 @@ import com.novacut.editor.engine.ProjectArchive
 import com.novacut.editor.engine.ProxyEngine
 import com.novacut.editor.engine.SettingsRepository
 import com.novacut.editor.engine.SmartRenderEngine
+import com.novacut.editor.engine.SpeakerSwitchPlanner
 import com.novacut.editor.engine.SubtitleExporter
 import com.novacut.editor.engine.TextBasedEditEngine
 import com.novacut.editor.engine.AutoChapterEngine
@@ -3437,6 +3438,76 @@ class EditorViewModel @Inject constructor(
                 showToast(text(R.string.editor_multicam_sync_failed_toast))
             }
         }
+    }
+
+    fun applySpeakerAutoSwitch(
+        speakerTurns: List<SpeakerSwitchPlanner.SpeakerTurn>,
+        speakerToAngle: Map<String, Int> = emptyMap(),
+        minDwellMs: Long = 2000L
+    ) {
+        val videoTracks = _state.value.tracks.filter { it.type == TrackType.VIDEO && it.isVisible }
+        if (videoTracks.size < 2) {
+            showToast("Need at least 2 synced video tracks")
+            return
+        }
+        if (speakerTurns.isEmpty()) {
+            showToast("No speaker turns available — transcribe first")
+            return
+        }
+
+        val angles = videoTracks.mapIndexed { i, _ ->
+            val assignedSpeaker = speakerToAngle.entries.firstOrNull { it.value == i }?.key
+            SpeakerSwitchPlanner.Angle(angleIndex = i, assignedSpeakerId = assignedSpeaker)
+        }
+        val policy = SpeakerSwitchPlanner.SwitchPolicy(minDwellMs = minDwellMs)
+        val plan = SpeakerSwitchPlanner.plan(speakerTurns, angles, policy)
+
+        if (plan.cuts.isEmpty()) {
+            showToast("No angle switches produced")
+            return
+        }
+
+        saveUndoState("Speaker auto-switch")
+
+        val primaryTrack = videoTracks.first()
+        val primaryClips = primaryTrack.clips.sortedBy { it.timelineStartMs }
+        if (primaryClips.isEmpty()) return
+
+        val newClips = mutableListOf<Clip>()
+        for ((i, cut) in plan.cuts.withIndex()) {
+            val nextCutMs = if (i + 1 < plan.cuts.size) plan.cuts[i + 1].timelineMs else
+                primaryClips.maxOf { it.timelineEndMs }
+            val sourceTrack = videoTracks.getOrNull(cut.angleIndex) ?: continue
+            val sourceClip = sourceTrack.clips.firstOrNull {
+                it.timelineStartMs <= cut.timelineMs && it.timelineEndMs > cut.timelineMs
+            } ?: continue
+
+            val trimStart = (cut.timelineMs - sourceClip.timelineStartMs + sourceClip.trimStartMs)
+                .coerceIn(sourceClip.trimStartMs, sourceClip.trimEndMs - 100L)
+            val trimEnd = ((nextCutMs - sourceClip.timelineStartMs) + sourceClip.trimStartMs)
+                .coerceIn(trimStart + 100L, sourceClip.trimEndMs)
+
+            newClips += sourceClip.copy(
+                id = java.util.UUID.randomUUID().toString(),
+                timelineStartMs = cut.timelineMs,
+                trimStartMs = trimStart,
+                trimEndMs = trimEnd
+            )
+        }
+
+        if (newClips.isEmpty()) return
+
+        _state.update { s ->
+            val updatedTracks = s.tracks.map { track ->
+                if (track.id == primaryTrack.id) {
+                    track.copy(clips = newClips.sortedBy { it.timelineStartMs })
+                } else track
+            }
+            recalculateDuration(s.copy(tracks = updatedTracks))
+        }
+        rebuildPlayerTimeline()
+        saveProject()
+        showToast("Applied ${plan.cuts.size} speaker-based angle switches")
     }
 
     // --- Slip/Slide Edit ---
