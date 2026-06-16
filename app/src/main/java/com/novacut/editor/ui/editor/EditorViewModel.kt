@@ -214,6 +214,7 @@ data class EditorState(
     val textOverlays: List<TextOverlay> = emptyList(),
     val imageOverlays: List<ImageOverlay> = emptyList(),
     val timelineMarkers: List<TimelineMarker> = emptyList(),
+    val globalTransitions: List<GlobalTransition> = emptyList(),
     val waveforms: Map<String, List<Float>> = emptyMap(),
     val undoStack: List<UndoAction> = emptyList(),
     val redoStack: List<UndoAction> = emptyList(),
@@ -908,6 +909,7 @@ class EditorViewModel @Inject constructor(
                 textOverlays = recovery.textOverlays,
                 imageOverlays = recovery.imageOverlays,
                 timelineMarkers = recovery.timelineMarkers,
+                globalTransitions = recovery.globalTransitions,
                 drawingPaths = recovery.drawingPaths,
                 playheadMs = recovery.playheadMs,
                 chapterMarkers = recovery.chapterMarkers,
@@ -4014,6 +4016,46 @@ class EditorViewModel @Inject constructor(
         return "%d:%02d".format(m, s % 60)
     }
 
+    // --- Global Transitions ---
+
+    fun addGlobalTransition(type: GlobalTransitionType) {
+        saveUndoState("Add global transition")
+        val totalDuration = _state.value.totalDurationMs
+        val anchorMs = when (type) {
+            GlobalTransitionType.FADE_FROM_BLACK, GlobalTransitionType.FADE_FROM_WHITE -> 0L
+            GlobalTransitionType.FADE_TO_BLACK, GlobalTransitionType.FADE_TO_WHITE ->
+                (totalDuration - 1000L).coerceAtLeast(0L)
+        }
+        val transition = GlobalTransition(
+            type = type,
+            durationMs = 1000L,
+            timelineAnchorMs = anchorMs
+        )
+        _state.update { s ->
+            s.copy(globalTransitions = s.globalTransitions + transition)
+        }
+        saveProject()
+        showToast(type.displayName)
+    }
+
+    fun removeGlobalTransition(id: String) {
+        saveUndoState("Remove global transition")
+        _state.update { s ->
+            s.copy(globalTransitions = s.globalTransitions.filter { it.id != id })
+        }
+        saveProject()
+    }
+
+    fun updateGlobalTransitionDuration(id: String, durationMs: Long) {
+        val clamped = durationMs.coerceIn(100L, 5000L)
+        _state.update { s ->
+            s.copy(globalTransitions = s.globalTransitions.map {
+                if (it.id == id) it.copy(durationMs = clamped) else it
+            })
+        }
+        saveProject()
+    }
+
     // --- Snapshot History ---
     fun showSnapshotHistory() = showPanel(PanelId.SNAPSHOT_HISTORY)
     fun hideSnapshotHistory() = hidePanel(PanelId.SNAPSHOT_HISTORY)
@@ -4719,7 +4761,8 @@ class EditorViewModel @Inject constructor(
             trackedObjects = state.trackedObjects,
             aiUsageLedger = state.aiUsageLedger,
             mediaAssets = mediaAssets,
-            storyboardCards = state.storyboardCards
+            storyboardCards = state.storyboardCards,
+            globalTransitions = state.globalTransitions
         )
     }
 

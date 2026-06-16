@@ -1051,6 +1051,7 @@ class ExportDelegate(
                     textOverlays = textOverlays,
                     imageOverlays = currentState.imageOverlays,
                     trackedObjects = currentState.trackedObjects,
+                    globalTransitions = currentState.globalTransitions,
                     onProgress = { progress ->
                         sampleProgress(progress)
                         updateExport { it.copy(progress = progress) }

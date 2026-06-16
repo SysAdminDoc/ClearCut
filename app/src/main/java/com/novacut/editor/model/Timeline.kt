@@ -95,6 +95,24 @@ data class TimelineMarker(
     val notes: String = ""
 )
 
+enum class GlobalTransitionType(val displayName: String) {
+    FADE_FROM_BLACK("Fade from Black"),
+    FADE_TO_BLACK("Fade to Black"),
+    FADE_FROM_WHITE("Fade from White"),
+    FADE_TO_WHITE("Fade to White"),
+}
+
+@Immutable
+data class GlobalTransition(
+    val id: String = UUID.randomUUID().toString(),
+    val type: GlobalTransitionType,
+    val durationMs: Long = 1000L,
+    val timelineAnchorMs: Long,
+    val easing: TransitionEasing = TransitionEasing.EASE_IN_OUT
+) {
+    val endMs: Long get() = timelineAnchorMs + durationMs
+}
+
 enum class MarkerColor(val argb: Long) {
     RED(0xFFE78284), ORANGE(0xFFEF9F76), YELLOW(0xFFE5C890),
     GREEN(0xFFA6D189), BLUE(0xFF8CAAEE), PURPLE(0xFFCA9EE6)

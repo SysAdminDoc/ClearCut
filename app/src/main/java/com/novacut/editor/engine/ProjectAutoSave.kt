@@ -380,6 +380,7 @@ data class AutoSaveState(
     val chapterMarkers: List<ChapterMarker> = emptyList(),
     val imageOverlays: List<ImageOverlay> = emptyList(),
     val timelineMarkers: List<TimelineMarker> = emptyList(),
+    val globalTransitions: List<com.novacut.editor.model.GlobalTransition> = emptyList(),
     val drawingPaths: List<com.novacut.editor.model.DrawingPath> = emptyList(),
     val beatMarkers: List<Long> = emptyList(),
     // v3.69: transcript cached from Auto Captions. Persisted so text-based
@@ -451,6 +452,19 @@ data class AutoSaveState(
                             put("label", m.label)
                             put("color", m.color.name)
                             put("notes", m.notes)
+                        })
+                    }
+                })
+            }
+            if (globalTransitions.isNotEmpty()) {
+                put("globalTransitions", JSONArray().apply {
+                    globalTransitions.forEach { gt ->
+                        put(JSONObject().apply {
+                            put("id", gt.id)
+                            put("type", gt.type.name)
+                            put("durationMs", gt.durationMs)
+                            put("timelineAnchorMs", gt.timelineAnchorMs)
+                            put("easing", gt.easing.name)
                         })
                     }
                 })
@@ -718,6 +732,19 @@ data class AutoSaveState(
                     )
                 } catch (e: Exception) { Log.w(TAG, "Failed to deserialize timeline marker $i", e); null }
             }
+            val globalTransitionsArr = json.optJSONArray("globalTransitions") ?: JSONArray()
+            val globalTransitions = (0 until globalTransitionsArr.length().coerceAtMost(20)).mapNotNull { i ->
+                try {
+                    val gt = globalTransitionsArr.getJSONObject(i)
+                    com.novacut.editor.model.GlobalTransition(
+                        id = gt.optString("id", java.util.UUID.randomUUID().toString()),
+                        type = safeValueOf(gt.optString("type"), com.novacut.editor.model.GlobalTransitionType.FADE_TO_BLACK),
+                        durationMs = gt.optLong("durationMs", 1000L).coerceIn(100L, 10000L),
+                        timelineAnchorMs = gt.optLong("timelineAnchorMs", 0L).coerceAtLeast(0L),
+                        easing = safeValueOf(gt.optString("easing", "EASE_IN_OUT"), TransitionEasing.EASE_IN_OUT)
+                    )
+                } catch (e: Exception) { Log.w(TAG, "Failed to deserialize global transition $i", e); null }
+            }
             val drawingPathsArr = json.optJSONArray("drawingPaths") ?: JSONArray()
             val drawingPaths = (0 until cappedArrayLength(drawingPathsArr, MAX_DRAWING_PATHS, "drawing paths")).mapNotNull { i ->
                 try {
@@ -873,6 +900,7 @@ data class AutoSaveState(
                 chapterMarkers = chapters,
                 imageOverlays = imageOverlays,
                 timelineMarkers = timelineMarkers,
+                globalTransitions = globalTransitions,
                 drawingPaths = drawingPaths,
                 beatMarkers = beatMarkers,
                 transcript = transcript,

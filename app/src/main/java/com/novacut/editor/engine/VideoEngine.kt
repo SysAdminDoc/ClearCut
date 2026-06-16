@@ -382,6 +382,7 @@ class VideoEngine @Inject constructor(
         imageOverlays: List<ImageOverlay> = emptyList(),
         lottieOverlays: List<LottieOverlaySpec> = emptyList(),
         trackedObjects: List<TrackedObject> = emptyList(),
+        globalTransitions: List<GlobalTransition> = emptyList(),
         onProgress: (Float) -> Unit = {},
         onComplete: () -> Unit = {},
         onError: (Exception) -> Unit = {}
@@ -409,7 +410,8 @@ class VideoEngine @Inject constructor(
                 textOverlays = textOverlays,
                 imageOverlays = imageOverlays,
                 lottieOverlays = lottieOverlays,
-                trackedObjects = trackedObjects
+                trackedObjects = trackedObjects,
+                globalTransitions = globalTransitions
             )
 
             startTransformerWithPolling(
@@ -747,7 +749,8 @@ class VideoEngine @Inject constructor(
         textOverlays: List<com.novacut.editor.model.TextOverlay>,
         imageOverlays: List<ImageOverlay>,
         lottieOverlays: List<LottieOverlaySpec>,
-        trackedObjects: List<TrackedObject>
+        trackedObjects: List<TrackedObject>,
+        globalTransitions: List<GlobalTransition> = emptyList()
     ): TransformerExportPlan {
         val visibleVideoTracks = tracks
             .sortedBy { it.index }
@@ -781,6 +784,7 @@ class VideoEngine @Inject constructor(
             totalTimelineDurationMs = totalTimelineDurationMs,
             config = config,
             targetW = targetW,
+            globalTransitions = globalTransitions,
             targetH = targetH,
             textOverlays = textOverlays,
             imageOverlays = imageOverlays,
@@ -836,6 +840,7 @@ class VideoEngine @Inject constructor(
         totalTimelineDurationMs: Long,
         config: ExportConfig,
         targetW: Int,
+        globalTransitions: List<GlobalTransition> = emptyList(),
         targetH: Int,
         textOverlays: List<com.novacut.editor.model.TextOverlay>,
         imageOverlays: List<ImageOverlay>,
@@ -865,7 +870,8 @@ class VideoEngine @Inject constructor(
                     textOverlays = textOverlays,
                     imageOverlays = imageOverlays,
                     lottieOverlays = lottieOverlays,
-                    trackedObjects = trackedObjects
+                    trackedObjects = trackedObjects,
+                    globalTransitions = globalTransitions
                 ),
                 hasEmbeddedAudio = hasEmbeddedAudio,
                 compositorLayer = NovaCutCompositorLayer(
@@ -892,7 +898,8 @@ class VideoEngine @Inject constructor(
         textOverlays: List<com.novacut.editor.model.TextOverlay>,
         imageOverlays: List<ImageOverlay>,
         lottieOverlays: List<LottieOverlaySpec>,
-        trackedObjects: List<TrackedObject>
+        trackedObjects: List<TrackedObject>,
+        globalTransitions: List<GlobalTransition> = emptyList()
     ): EditedMediaItemSequence {
         val sortedClips = clips.filter { it.durationMs > 0L }.sortedBy { it.timelineStartMs }
         val trackTypes = if (videoMuted) {
@@ -928,7 +935,8 @@ class VideoEngine @Inject constructor(
                             imageOverlays = imageOverlays,
                             lottieOverlays = lottieOverlays,
                             trackedObjects = trackedObjects,
-                            nextClipTransition = nextTransition
+                            nextClipTransition = nextTransition,
+                            globalTransitions = globalTransitions
                         )
                     )
                     clipIndex++
@@ -952,7 +960,8 @@ class VideoEngine @Inject constructor(
         imageOverlays: List<ImageOverlay>,
         lottieOverlays: List<LottieOverlaySpec>,
         trackedObjects: List<TrackedObject>,
-        nextClipTransition: Transition? = null
+        nextClipTransition: Transition? = null,
+        globalTransitions: List<GlobalTransition> = emptyList()
     ): EditedMediaItem {
         val mediaItem = buildMediaItemForClip(clip, clip.sourceUri)
         val linkedAudioTrackPresent = clip.linkedClipId?.let { linkedId ->
@@ -1005,6 +1014,10 @@ class VideoEngine @Inject constructor(
 
             clip.headTransition?.let { add(EffectBuilder.buildTransitionEffect(it)) }
             nextClipTransition?.let { add(EffectBuilder.buildTransitionOutEffect(it, clip.durationMs)) }
+
+            GlobalTransitionEffect.forClip(globalTransitions, clip.timelineStartMs, clip.timelineEndMs)
+                ?.let { add(it) }
+
             addOpacityAndTransformEffects(clip)
 
             val clipStart = clip.timelineStartMs
