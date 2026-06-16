@@ -19,6 +19,7 @@ data class ExportConfig(
     val includeChapterMarkers: Boolean = false,
     val chapters: List<ChapterMarker> = emptyList(),
     val subtitleFormat: SubtitleFormat? = null,
+    val burnSubtitles: Boolean = false,
     val transparentBackground: Boolean = false,
     val exportAsGif: Boolean = false,
     val gifFrameRate: Int = 15,

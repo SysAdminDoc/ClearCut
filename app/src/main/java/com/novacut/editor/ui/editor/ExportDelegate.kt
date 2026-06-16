@@ -66,7 +66,8 @@ class ExportDelegate(
     private val mediaHealthPreflight: (EditorState) -> MediaHealthReport? = { it.media.healthReport },
     private val audioEngine: com.novacut.editor.engine.AudioEngine? = null,
     private val exportIncidentStore: ExportIncidentStore? = null,
-    private val appVersion: String = "unknown"
+    private val appVersion: String = "unknown",
+    private val ffmpegEngine: com.novacut.editor.engine.FFmpegEngine? = null
 ) {
     private fun text(resId: Int, vararg args: Any): String =
         appContext.getString(resId, *args)
@@ -929,6 +930,43 @@ class ExportDelegate(
                         android.util.Log.w("ExportDelegate", "Subtitle sidecar write failed", e)
                     }
                 }
+
+                if (configWithChapters.burnSubtitles && ffmpegEngine != null && ffmpegEngine.isAvailable()) {
+                    val burnCaptions = tracks.flatMap { t -> t.clips }.flatMap { clip ->
+                        clip.captions.map { c ->
+                            c.copy(
+                                startTimeMs = c.startTimeMs + clip.timelineStartMs,
+                                endTimeMs = c.endTimeMs + clip.timelineStartMs
+                            )
+                        }
+                    }
+                    if (burnCaptions.isNotEmpty()) {
+                        try {
+                            val assFile = java.io.File(
+                                outputFile.parentFile,
+                                "${outputFile.nameWithoutExtension}_burn.ass"
+                            )
+                            com.novacut.editor.engine.SubtitleExporter.export(
+                                burnCaptions, com.novacut.editor.model.SubtitleFormat.ASS, assFile
+                            )
+                            val burnedFile = java.io.File(
+                                outputFile.parentFile,
+                                "${outputFile.nameWithoutExtension}_burned.mp4"
+                            )
+                            kotlinx.coroutines.runBlocking {
+                                val ok = ffmpegEngine.burnSubtitles(outputFile, assFile, burnedFile)
+                                if (ok && burnedFile.isFile && burnedFile.length() > 0L) {
+                                    outputFile.delete()
+                                    burnedFile.renameTo(outputFile)
+                                }
+                            }
+                            assFile.delete()
+                        } catch (e: Exception) {
+                            android.util.Log.w("ExportDelegate", "Subtitle burn-in failed, keeping original", e)
+                        }
+                    }
+                }
+
                 // Finalize the `{sizeMB}` filename token (if used) by
                 // renaming the output to include the actual MB count.
                 // No-op when the template didn't reference the token,
