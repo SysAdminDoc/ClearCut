@@ -148,6 +148,7 @@ tasks.configureEach {
 dependencies {
     // Core
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.exifinterface)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.window)
     implementation(libs.kotlinx.coroutines.android)
