@@ -1,0 +1,4 @@
+- Release Trust
+- Added GitHub artifact attestations for APKs, checksum sidecars, and signing-certificate fingerprint sidecars.
+- Release CI now verifies downloaded APK checksums, signing fingerprints, and artifact attestations before uploading tag assets.
+- Documented direct APK verification with gh attestation verify, checksum validation, and APK signing-certificate fingerprint checks.

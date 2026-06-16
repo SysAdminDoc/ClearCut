@@ -72,6 +72,20 @@ def verify_repository_metadata(version_code: int, version_name: str) -> None:
         if private_input not in gitignore:
             raise VerificationError(f".gitignore must keep {private_input} out of the repository")
 
+    workflow = read_text(ROOT / ".github" / "workflows" / "build.yml")
+    for expected in (
+        "id-token: write",
+        "attestations: write",
+        "artifact-metadata: write",
+        "actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26",
+        "scripts/write_apk_signing_fingerprints.py --self-test",
+        ".signing-cert-sha256",
+        "gh attestation verify",
+        "--source-ref \"${{ github.ref }}\"",
+    ):
+        if expected not in workflow:
+            raise VerificationError(f"release workflow is missing trust control: {expected}")
+
 
 def verify_github_tag(version_name: str) -> None:
     ref_type = os.environ.get("GITHUB_REF_TYPE")

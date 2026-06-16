@@ -362,13 +362,16 @@ Or via environment variables: `NOVACUT_STORE_FILE`, `NOVACUT_STORE_PASSWORD`, `N
 
 If release credentials are not configured, `assembleRelease` falls back to debug signing so CI and local verification can still produce a testable release artifact without relying on an embedded keystore.
 
-### Release Checksums
-CI publishes a `.sha256` file next to every uploaded APK. To reproduce the release checksum locally after a build:
+### Release Verification
+CI publishes a `.sha256` checksum, `.signing-cert-sha256` certificate-fingerprint sidecar, and GitHub artifact attestation next to every uploaded APK. To verify a downloaded release APK:
 
 ```powershell
-python scripts\write_release_checksums.py --check
-Get-FileHash app\build\outputs\apk\release\app-release.apk -Algorithm SHA256
+gh attestation verify .\app-release.apk -R SysAdminDoc/NovaCut --source-ref refs/tags/v3.74.101 --signer-workflow SysAdminDoc/NovaCut/.github/workflows/build.yml
+python scripts\write_release_checksums.py --root . --check
+python scripts\write_apk_signing_fingerprints.py --root . --check
 ```
+
+The fingerprint sidecar contains the APK signing-certificate SHA-256 digest reported by Android build-tools `apksigner`.
 
 ### APK Size Budget
 CI checks debug, release, and androidTest APK sizes against `scripts/apk_size_baseline.json` with a 2 MB per-output growth allowance. After an intentional dependency or asset-size change, refresh the baseline from a verified build:

@@ -25,6 +25,11 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -124,6 +129,26 @@ jobs:
           python3 scripts/write_release_checksums.py
           python3 scripts/write_release_checksums.py --check
 
+      - name: Write APK signing certificate fingerprints
+        run: |
+          python3 scripts/write_apk_signing_fingerprints.py --self-test
+          python3 scripts/write_apk_signing_fingerprints.py --apksigner "${{ steps.build-tools.outputs.dir }}/apksigner"
+          python3 scripts/write_apk_signing_fingerprints.py --apksigner "${{ steps.build-tools.outputs.dir }}/apksigner" --check
+
+      - name: Generate APK provenance attestations
+        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
+        with:
+          subject-path: |
+            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/debug/*.sha256
+            app/build/outputs/apk/debug/*.signing-cert-sha256
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/release/*.sha256
+            app/build/outputs/apk/release/*.signing-cert-sha256
+            app/build/outputs/apk/androidTest/debug/*.apk
+            app/build/outputs/apk/androidTest/debug/*.sha256
+            app/build/outputs/apk/androidTest/debug/*.signing-cert-sha256
+
       - name: Upload Debug APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -131,6 +156,7 @@ jobs:
           path: |
             app/build/outputs/apk/debug/*.apk
             app/build/outputs/apk/debug/*.sha256
+            app/build/outputs/apk/debug/*.signing-cert-sha256
 
       - name: Upload Release APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -139,6 +165,7 @@ jobs:
           path: |
             app/build/outputs/apk/release/*.apk
             app/build/outputs/apk/release/*.sha256
+            app/build/outputs/apk/release/*.signing-cert-sha256
 
       - name: Upload Instrumentation APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -147,6 +174,7 @@ jobs:
           path: |
             app/build/outputs/apk/androidTest/debug/*.apk
             app/build/outputs/apk/androidTest/debug/*.sha256
+            app/build/outputs/apk/androidTest/debug/*.signing-cert-sha256
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -154,11 +182,12 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      attestations: read
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          sparse-checkout: ' '
+          sparse-checkout: scripts
 
       - name: Download release artifacts
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
@@ -166,13 +195,44 @@ jobs:
           name: NovaCut-release
           path: release-artifacts
 
+      - name: Locate Android build tools
+        id: build-tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          build_tools_dir="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          if [ -z "$build_tools_dir" ]; then
+            echo "No Android build-tools directory found under $ANDROID_HOME/build-tools" >&2
+            exit 1
+          fi
+          echo "dir=$build_tools_dir" >> "$GITHUB_OUTPUT"
+
+      - name: Verify release checksums and signing fingerprints
+        run: |
+          python3 scripts/write_release_checksums.py --root release-artifacts --check
+          python3 scripts/write_apk_signing_fingerprints.py --root release-artifacts --apksigner "${{ steps.build-tools.outputs.dir }}/apksigner" --check
+
+      - name: Verify APK artifact attestations
+        shell: bash
+        run: |
+          set -euo pipefail
+          for asset in release-artifacts/*.apk release-artifacts/*.sha256 release-artifacts/*.signing-cert-sha256; do
+            gh attestation verify "$asset" \
+              --repo "${{ github.repository }}" \
+              --source-ref "${{ github.ref }}" \
+              --signer-workflow "${{ github.repository }}/.github/workflows/build.yml"
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Upload to Release
         run: |
           gh release create "${{ github.ref_name }}" \
             --title "NovaCut ${{ github.ref_name }}" \
             --generate-notes \
             release-artifacts/*.apk \
-            release-artifacts/*.sha256
+            release-artifacts/*.sha256 \
+            release-artifacts/*.signing-cert-sha256
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

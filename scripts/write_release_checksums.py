@@ -93,6 +93,12 @@ def run_self_tests() -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--root",
+        type=Path,
+        default=APK_ROOT,
+        help="directory to search recursively for APK files",
+    )
     parser.add_argument("--check", action="store_true", help="verify existing .sha256 sidecars without rewriting them")
     parser.add_argument("--self-test", action="store_true", help="run built-in checksum fixture checks")
     args = parser.parse_args()
@@ -101,7 +107,7 @@ def main() -> int:
             run_self_tests()
             print("release checksum self-tests passed.")
             return 0
-        sidecars = verify_checksums() if args.check else write_checksums()
+        sidecars = verify_checksums(args.root) if args.check else write_checksums(args.root)
     except ChecksumError as error:
         print(f"release checksum validation failed: {error}", file=sys.stderr)
         return 1
