@@ -160,6 +160,7 @@ fun DrawingCanvas(
     modifier: Modifier = Modifier
 ) {
     var currentPoints by remember { mutableStateOf(listOf<Pair<Float, Float>>()) }
+    var currentPressure by remember { mutableFloatStateOf(0f) }
 
     Canvas(
         modifier = modifier
@@ -169,10 +170,6 @@ fun DrawingCanvas(
                 if (isDrawingMode) Modifier.pointerInput(drawingColor, drawingStrokeWidth) {
                     detectDragGestures(
                         onDragStart = { offset ->
-                            // Filter non-finite touch coordinates — a single NaN makes the
-                            // Compose Path silently abort rendering for the entire drawing
-                            // layer, so every subsequent stroke is invisible until the user
-                            // reloads the editor.
                             currentPoints = if (offset.x.isFinite() && offset.y.isFinite()) {
                                 listOf(offset.x to offset.y)
                             } else emptyList()
@@ -184,14 +181,22 @@ fun DrawingCanvas(
                             if (x.isFinite() && y.isFinite()) {
                                 currentPoints = currentPoints + (x to y)
                             }
+                            val pressure = change.pressure
+                            if (pressure.isFinite() && pressure > 0f && change.type == androidx.compose.ui.input.pointer.PointerType.Stylus) {
+                                currentPressure = pressure.coerceIn(0f, 1f)
+                            }
                         },
                         onDragEnd = {
+                            val effectiveStroke = if (currentPressure > 0f) {
+                                drawingStrokeWidth * (0.3f + 0.7f * currentPressure)
+                            } else drawingStrokeWidth
+                            currentPressure = 0f
                             if (currentPoints.size >= 2) {
                                 onPathAdded(
                                     DrawingPath(
                                         points = currentPoints,
                                         color = drawingColor,
-                                        strokeWidth = drawingStrokeWidth
+                                        strokeWidth = effectiveStroke
                                     )
                                 )
                             }
