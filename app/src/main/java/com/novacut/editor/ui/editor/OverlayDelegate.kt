@@ -1,6 +1,8 @@
 package com.novacut.editor.ui.editor
 
+import android.content.Context
 import android.net.Uri
+import com.novacut.editor.R
 import com.novacut.editor.model.ImageOverlay
 import com.novacut.editor.model.ImageOverlayType
 import com.novacut.editor.model.MarkerColor
@@ -8,27 +10,24 @@ import com.novacut.editor.model.TextOverlay
 import com.novacut.editor.model.TimelineMarker
 import kotlinx.coroutines.flow.MutableStateFlow
 
-/**
- * Delegate handling text overlays, image/sticker overlays, and timeline markers.
- * Extracted from EditorViewModel to reduce its size.
- */
 class OverlayDelegate(
     private val stateFlow: MutableStateFlow<EditorState>,
     private val saveUndoState: (String) -> Unit,
     private val showToast: (String) -> Unit,
-    private val saveProject: () -> Unit
+    private val saveProject: () -> Unit,
+    private val appContext: Context
 ) {
     // --- Text Overlays ---
 
     fun addTextOverlay(text: TextOverlay) {
-        if (text.startTimeMs >= text.endTimeMs) { showToast("Invalid text overlay duration"); return }
+        if (text.startTimeMs >= text.endTimeMs) { showToast(appContext.getString(R.string.overlay_invalid_duration_toast)); return }
         saveUndoState("Add text")
         stateFlow.update { it.copy(textOverlays = it.textOverlays + text) }
         saveProject()
     }
 
     fun updateTextOverlay(textOverlay: TextOverlay) {
-        if (textOverlay.startTimeMs >= textOverlay.endTimeMs) { showToast("Invalid text overlay duration"); return }
+        if (textOverlay.startTimeMs >= textOverlay.endTimeMs) { showToast(appContext.getString(R.string.overlay_invalid_duration_toast)); return }
         saveUndoState("Edit text")
         stateFlow.update { state ->
             state.copy(
@@ -71,7 +70,7 @@ class OverlayDelegate(
         )
         stateFlow.update { it.copy(imageOverlays = it.imageOverlays + overlay) }
         saveProject()
-        showToast("Sticker added")
+        showToast(appContext.getString(R.string.overlay_sticker_added_toast))
     }
 
     fun beginImageOverlayAdjust() {
@@ -109,7 +108,7 @@ class OverlayDelegate(
         val marker = TimelineMarker(timeMs = stateFlow.value.playheadMs, label = label, color = color)
         stateFlow.update { it.copy(timelineMarkers = (it.timelineMarkers + marker).sortedBy { m -> m.timeMs }) }
         saveProject()
-        showToast("Marker added")
+        showToast(appContext.getString(R.string.overlay_marker_added_toast))
     }
 
     fun deleteTimelineMarker(id: String) {

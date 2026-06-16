@@ -1,16 +1,13 @@
 package com.novacut.editor.ui.editor
 
+import android.content.Context
+import com.novacut.editor.R
 import com.novacut.editor.model.Effect
 import com.novacut.editor.model.Transition
 import com.novacut.editor.model.TransitionEasing
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.util.UUID
 
-/**
- * Delegate handling effect and transition management: add, update, toggle, remove,
- * copy/paste effects, set/update transitions.
- * Extracted from EditorViewModel to reduce its size.
- */
 class EffectsDelegate(
     private val stateFlow: MutableStateFlow<EditorState>,
     private val saveUndoState: (String) -> Unit,
@@ -19,14 +16,15 @@ class EffectsDelegate(
     private val rebuildPlayerTimeline: () -> Unit,
     private val saveProject: () -> Unit,
     private val getSelectedClip: () -> com.novacut.editor.model.Clip?,
-    private val recalculateDuration: (EditorState) -> EditorState
+    private val recalculateDuration: (EditorState) -> EditorState,
+    private val appContext: Context
 ) {
     // --- Effects ---
     fun addEffect(clipId: String, effect: Effect) {
         // Guard against duplicate effect types
         val clip = stateFlow.value.tracks.flatMap { it.clips }.firstOrNull { it.id == clipId }
         if (clip?.effects?.any { it.type == effect.type } == true) {
-            showToast("${effect.type.displayName} already applied")
+            showToast(appContext.getString(R.string.effects_already_applied_toast, effect.type.displayName))
             return
         }
         saveUndoState("Add effect")
@@ -112,25 +110,25 @@ class EffectsDelegate(
     fun copyEffects() {
         val clip = getSelectedClip() ?: return
         if (clip.effects.isEmpty()) {
-            showToast("No effects to copy")
+            showToast(appContext.getString(R.string.effects_none_to_copy_toast))
             return
         }
         stateFlow.update { it.copy(copiedEffects = clip.effects) }
-        showToast("Copied ${clip.effects.size} effects")
+        showToast(appContext.getString(R.string.effects_copied_toast, clip.effects.size))
     }
 
     fun pasteEffects() {
         val clipId = stateFlow.value.selectedClipId ?: return
         val toPaste = stateFlow.value.copiedEffects
         if (toPaste.isEmpty()) {
-            showToast("No effects copied")
+            showToast(appContext.getString(R.string.effects_none_copied_toast))
             return
         }
         val targetClip = stateFlow.value.tracks.flatMap { it.clips }.firstOrNull { it.id == clipId } ?: return
         val existingTypes = targetClip.effects.map { it.type }.toSet()
         val filtered = toPaste.filter { it.type !in existingTypes }
         if (filtered.isEmpty()) {
-            showToast("Effects already present on clip")
+            showToast(appContext.getString(R.string.effects_already_present_toast))
             return
         }
         saveUndoState("Paste effects")
@@ -144,7 +142,7 @@ class EffectsDelegate(
             }
             state.copy(tracks = tracks)
         }
-        showToast("Pasted ${filtered.size} effects")
+        showToast(appContext.getString(R.string.effects_pasted_toast, filtered.size))
         updatePreview()
         saveProject()
     }

@@ -579,12 +579,13 @@ class EditorViewModel @Inject constructor(
         stateFlow = _state, saveUndoState = ::saveUndoState, showToast = ::showToast,
         updatePreview = ::updatePreview, rebuildPlayerTimeline = ::rebuildPlayerTimeline,
         saveProject = ::saveProject, getSelectedClip = ::getSelectedClip,
-        recalculateDuration = ::recalculateDuration
+        recalculateDuration = ::recalculateDuration,
+        appContext = appContext
     )
 
     val overlayDelegate = OverlayDelegate(
         stateFlow = _state, saveUndoState = ::saveUndoState, showToast = ::showToast,
-        saveProject = ::saveProject
+        saveProject = ::saveProject, appContext = appContext
     )
 
     val v369Delegate = V369Delegate(

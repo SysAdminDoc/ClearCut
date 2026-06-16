@@ -110,7 +110,7 @@ class ColorGradingDelegate(
                 }
                 withContext(Dispatchers.Main) {
                     setClipLut(destFile.absolutePath)
-                    showToast("LUT applied: $fileName")
+                    showToast(appContext.getString(R.string.color_lut_applied_toast, fileName))
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {

@@ -184,12 +184,12 @@ class ClipEditingDelegate(
                     )
                 }
             } catch (e: Exception) {
-                showToast("Could not read replacement media")
+                showToast(appContext.getString(R.string.clip_read_media_failed_toast))
                 return@launch
             }
             val (duration, hasVisualTrack, hasAudioTrack, sourceColorMetadata) = mediaInfo
             if (duration <= 0L) {
-                showToast("Could not read replacement media")
+                showToast(appContext.getString(R.string.clip_read_media_failed_toast))
                 return@launch
             }
 
@@ -201,13 +201,13 @@ class ClipEditingDelegate(
                     .map { clip -> track to clip }
             }
             if (affected.isEmpty()) {
-                showToast("Media is no longer used")
+                showToast(appContext.getString(R.string.clip_media_unused_toast))
                 return@launch
             }
 
             val affectedClipIds = affected.map { it.second.id }.toSet()
             if (tracksContainLockedClip(affectedClipIds)) {
-                showToast("Track is locked")
+                showToast(appContext.getString(R.string.clip_track_locked_toast))
                 return@launch
             }
 
@@ -252,7 +252,7 @@ class ClipEditingDelegate(
             affectedClipIds.forEach { clipId ->
                 onClipAdded?.invoke(clipId, newUri)
             }
-            showToast("Relinked ${affectedClipIds.size} timeline clip${if (affectedClipIds.size == 1) "" else "s"}")
+            showToast(appContext.getString(R.string.clip_relinked_toast, affectedClipIds.size))
         }
     }
 
@@ -301,7 +301,7 @@ class ClipEditingDelegate(
         val exists = stateFlow.value.tracks.any { it.clips.any { c -> c.id in clipIdsToDelete } }
         if (!exists) return
         if (tracksContainLockedClip(clipIdsToDelete)) {
-            showToast("Track is locked")
+            showToast(appContext.getString(R.string.clip_track_locked_toast))
             return
         }
         saveUndoState("Delete clip")
@@ -381,7 +381,7 @@ class ClipEditingDelegate(
         val exists = stateFlow.value.tracks.any { it.clips.any { c -> c.id in duplicateIds } }
         if (!exists) return
         if (tracksContainLockedClip(duplicateIds)) {
-            showToast("Track is locked")
+            showToast(appContext.getString(R.string.clip_track_locked_toast))
             return
         }
         saveUndoState("Duplicate clip")
@@ -433,7 +433,7 @@ class ClipEditingDelegate(
         }
         rebuildPlayerTimeline()
         saveProject()
-        showToast("Clip duplicated")
+        showToast(appContext.getString(R.string.clip_duplicated_toast))
     }
 
     // --- Merge Clips ---
@@ -447,30 +447,30 @@ class ClipEditingDelegate(
             state.tracks.findClipLocation(linkedId)
         }
         if (tracksContainLockedClip(linkedClipIds(state.tracks, clipId))) {
-            showToast("Track is locked")
+            showToast(appContext.getString(R.string.clip_track_locked_toast))
             return
         }
         val vTrack = primaryLocation.track
         val vClipIndex = primaryLocation.clipIndex
         if (vClipIndex >= vTrack.clips.lastIndex) {
-            showToast("No next clip to merge")
+            showToast(appContext.getString(R.string.clip_no_next_merge_toast))
             return
         }
         val vClip = primaryLocation.clip
         val vNextClip = vTrack.clips[vClipIndex + 1]
         if (!canMergeAdjacentClips(vClip, vNextClip)) {
-            showToast("Clips must come from the same source and touch end-to-end")
+            showToast(appContext.getString(R.string.clip_merge_source_mismatch_toast))
             return
         }
 
         linkedLocation?.let { linked ->
             if (linked.clipIndex >= linked.track.clips.lastIndex) {
-                showToast("Linked audio is not ready to merge")
+                showToast(appContext.getString(R.string.clip_linked_audio_not_ready_toast))
                 return
             }
             val linkedNextClip = linked.track.clips[linked.clipIndex + 1]
             if (vNextClip.linkedClipId != linkedNextClip.id || !canMergeAdjacentClips(linked.clip, linkedNextClip)) {
-                showToast("Linked audio is out of sync")
+                showToast(appContext.getString(R.string.clip_linked_audio_out_of_sync_toast))
                 return
             }
         }
@@ -500,7 +500,7 @@ class ClipEditingDelegate(
         }
         rebuildPlayerTimeline()
         saveProject()
-        showToast("Clips merged")
+        showToast(appContext.getString(R.string.clip_merged_toast))
     }
 
     // --- Split Clip ---
@@ -516,7 +516,7 @@ class ClipEditingDelegate(
             .flatMap { linkedClipIds(state.tracks, it) }
             .toSet()
         if (tracksContainLockedClip(splitIds)) {
-            showToast("Track is locked")
+            showToast(appContext.getString(R.string.clip_track_locked_toast))
             return
         }
         val splitCandidates = splitIds.mapNotNull { candidateId ->
@@ -527,7 +527,7 @@ class ClipEditingDelegate(
                 canSplitClipAt(location.clip, playhead)
         }
         if (splitCandidates.isEmpty()) {
-            showToast("Clip too short to split here")
+            showToast(appContext.getString(R.string.clip_too_short_to_split_toast))
             return
         }
 
@@ -615,7 +615,7 @@ class ClipEditingDelegate(
         val selectedClipId = stateFlow.value.selectedClipId ?: return
         val targetIds = linkedClipIds(stateFlow.value.tracks, selectedClipId)
         if (tracksContainLockedClip(targetIds)) {
-            showToast("Track is locked")
+            showToast(appContext.getString(R.string.clip_track_locked_toast))
             return
         }
         saveUndoState("Trim clip")
@@ -830,12 +830,12 @@ class ClipEditingDelegate(
         val targetTrack = state.tracks.firstOrNull { it.id == targetTrackId }
 
         if (movedClip == null || targetTrack == null) {
-            showToast("Could not move clip")
+            showToast(appContext.getString(R.string.clip_move_failed_toast))
             return
         }
 
         if (sourceTrack.id == targetTrackId) {
-            showToast("Clip is already on that track")
+            showToast(appContext.getString(R.string.clip_already_on_track_toast))
             return
         }
 
@@ -883,7 +883,7 @@ class ClipEditingDelegate(
         }
         rebuildPlayerTimeline()
         saveProject()
-        showToast("Clip moved to track")
+        showToast(appContext.getString(R.string.clip_moved_toast))
     }
 
     // --- Reverse ---

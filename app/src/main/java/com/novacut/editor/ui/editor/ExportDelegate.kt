@@ -414,7 +414,7 @@ class ExportDelegate(
             diagnosticSummary = "Stream-copy export completed without transcoding.",
             healthReport = healthReport
         )
-        showToast("Stream-copy export complete: ${finalizedFile.name}")
+        showToast(appContext.getString(R.string.export_stream_copy_complete_toast, finalizedFile.name))
         return true
     }
 
@@ -478,11 +478,11 @@ class ExportDelegate(
     fun startExport(outputDir: File, preferredOutputName: String? = null) {
         val currentState = stateFlow.value
         if (currentState.exportState == ExportState.EXPORTING) {
-            showToast("Export already in progress")
+            showToast(appContext.getString(R.string.export_already_in_progress_toast))
             return
         }
         if (currentState.tracks.flatMap { it.clips }.isEmpty()) {
-            showToast("No clips to export")
+            showToast(appContext.getString(R.string.export_no_clips_toast))
             return
         }
         val healthReport = mediaHealthPreflight(currentState)
@@ -604,7 +604,7 @@ class ExportDelegate(
                             diagnosticSummary = "Contact sheet export completed.",
                             healthReport = healthReport
                         )
-                        showToast("Contact sheet exported: ${targetSheetFile.name}")
+                        showToast(appContext.getString(R.string.export_contact_sheet_toast, targetSheetFile.name))
                     } else {
                         val message = "Contact sheet render failed"
                         updateExport {
@@ -809,7 +809,7 @@ class ExportDelegate(
                         diagnosticSummary = "GIF export completed with $frameCount sampled frame(s).",
                         healthReport = healthReport
                     )
-                    showToast("GIF exported: ${targetGifFile.name}")
+                    showToast(appContext.getString(R.string.export_gif_complete_toast, targetGifFile.name))
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     android.util.Log.d("ExportDelegate", "GIF export cancelled")
                     gifFile?.delete()
@@ -952,7 +952,7 @@ class ExportDelegate(
                     diagnosticSummary = "Video export completed.",
                     healthReport = healthReport
                 )
-                showToast("Export complete: ${finalizedFile.name}")
+                showToast(appContext.getString(R.string.export_complete_toast, finalizedFile.name))
             }
 
             fun handleVideoExportError(e: Exception) {
@@ -1176,12 +1176,12 @@ class ExportDelegate(
     fun getShareIntent(): Intent? {
         val state = stateFlow.value
         val filePath = state.lastExportedFilePath ?: run {
-            showToast("No exported media to share")
+            showToast(appContext.getString(R.string.export_no_media_share_toast))
             return null
         }
         val file = File(filePath)
         if (!file.exists()) {
-            showToast("Export file no longer available")
+            showToast(appContext.getString(R.string.export_file_unavailable_toast))
             return null
         }
         val uri = runCatching {
@@ -1203,12 +1203,12 @@ class ExportDelegate(
 
     fun saveToGallery() {
         val filePath = stateFlow.value.lastExportedFilePath ?: run {
-            showToast("No exported media")
+            showToast(appContext.getString(R.string.export_no_media_toast))
             return
         }
         val file = File(filePath)
         if (!file.exists()) {
-            showToast("Export file not found")
+            showToast(appContext.getString(R.string.export_file_not_found_toast))
             return
         }
 
@@ -1255,7 +1255,7 @@ class ExportDelegate(
         // changes that happen while exports are running can't corrupt the batch.
         val queue = stateFlow.value.batchExportQueue.toList()
         if (queue.isEmpty()) {
-            showToast("Add export items first")
+            showToast(appContext.getString(R.string.export_add_items_first_toast))
             return
         }
         hideBatchExport()
@@ -1276,7 +1276,7 @@ class ExportDelegate(
                             )
                         }
                     }
-                    showToast("Exporting ${index + 1}/${queue.size}: ${item.outputName}")
+                    showToast(appContext.getString(R.string.export_batch_progress_toast, index + 1, queue.size, item.outputName))
                     videoEngine.resetExportState()
                     // Reset exportState to IDLE in the delegate state as well. Without this,
                     // the wait loop below immediately sees the previous item's COMPLETE/ERROR
@@ -1507,7 +1507,7 @@ class ExportDelegate(
         }
         hideRenderPreview()
         showExportSheet()
-        showToast("Rendering preview at 480p...")
+        showToast(appContext.getString(R.string.export_rendering_preview_toast))
     }
 
     // --- GIF Encoder ---
