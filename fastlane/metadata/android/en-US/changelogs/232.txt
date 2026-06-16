@@ -1,3 +1,3 @@
-- Localized remaining AI tool status and result messages.
-- Replaced unfinished AI tool fallback copy with release-safe messages.
-- Bumped release metadata to version 3.74.99.
+- Accessibility / UX
+- Localized the remaining AI tool status/result toasts, including scene detection, captions, crop/color, stabilization, denoise, background tools, tracking, style transfer, reframe, and upscale feedback.
+- Replaced unfinished AI tool feedback such as pending object-removal painting and OpenCV stabilization implementation copy with releasable fallback messages.

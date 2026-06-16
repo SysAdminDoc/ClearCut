@@ -1,0 +1,4 @@
+- Editor layout balance
+- Let the phone editor timeline use remaining vertical space so linked video and audio tracks render as distinct, readable layers instead of compressing the audio waveform into a thin strip.
+- Increased selected-clip preview allocation and reduced preview chrome padding so the canvas has more usable room.
+- Tightened the bottom tool tab bar to remove excess empty toolbar space while preserving accessible tap targets.

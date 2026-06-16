@@ -1,0 +1,5 @@
+- Transition easing controls
+- Added per-transition easing selection (Linear, Ease In, Ease Out, Ease In/Out) with FilterChip selector in the transition picker panel.
+- Easing curves apply to both transition-in and transition-out effects via Kotlin-level time remapping in ShaderProgram, avoiding GLSL shader changes.
+- Easing persisted in project autosave and survives round-trip.
+- Added numeric time (seconds) and value input fields when a keyframe is selected, enabling exact positioning to m...

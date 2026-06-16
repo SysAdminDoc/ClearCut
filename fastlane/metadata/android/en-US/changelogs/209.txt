@@ -1,0 +1,3 @@
+- Saved-project media playback
+- OpenDocument media picks now copy into NovaCut's managed media directory before they are added to the timeline, matching Photo Picker and drag/drop behavior so saved projects do not depend on a provider grant that can vanish after edits or process restarts.
+- Preview playback now validates a restored proxy URI before using it. If the proxy cache file was cleaned up, truncated, or otherwise unreadable, the player falls back to the original source URI instead o...

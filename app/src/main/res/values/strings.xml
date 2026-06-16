@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.74.101</string>
+    <string name="app_version">v3.74.102</string>
 
     <!-- Common -->
     <string name="close">Close</string>
@@ -2273,9 +2273,11 @@
     <string name="v369_content_id_hash">Local hash: %1$s...</string>
     <string name="v369_content_id_hint">Local hashing works now. Online lookup can be enabled when the fingerprint service is configured.</string>
     <string name="v369_check_last_export">Check last export</string>
-    <string name="v369_direct_publish_title">Direct Publish</string>
-    <string name="v369_direct_publish_subtitle">Prepare the last export for platform handoff with a clean title.</string>
+    <string name="v369_direct_publish_title">Platform Handoff</string>
+    <string name="v369_direct_publish_subtitle">Open the last export in another app with suggested post text.</string>
+    <string name="v369_direct_publish_handoff_hint">NovaCut shares the file and suggested text. Posting, visibility, scheduling, and platform AI-disclosure controls stay in the selected app.</string>
     <string name="v369_publish_title_label">Title</string>
+    <string name="v369_open_target_format">Open %1$s</string>
     <string name="v369_flash_safety_title">Flash Safety (WCAG)</string>
     <string name="v369_flash_safety_subtitle">Scan high-contrast flash patterns before publishing.</string>
     <plurals name="v369_flash_risky_segments">

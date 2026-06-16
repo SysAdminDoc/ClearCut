@@ -1,5 +1,6 @@
 package com.novacut.editor.engine
 
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -13,7 +14,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Direct publish facade for YouTube / TikTok / Instagram / Threads.
+ * Platform handoff facade for YouTube / TikTok / Instagram / Threads.
  *
  * Strategy:
  *   1. When the OAuth creds are configured AND a native SDK/library is present,
@@ -56,14 +57,34 @@ class DirectPublishEngine @Inject constructor(
 
     enum class Visibility { PUBLIC, UNLISTED, PRIVATE }
 
-    data class Result(val intent: Intent?, val used: Method, val message: String)
+    data class PlatformCapability(
+        val target: Target,
+        val shareHandoffLabel: String,
+        val apiUpload: ApiUploadCapability,
+        val requiresManualDisclosureReview: Boolean
+    )
+
+    data class ApiUploadCapability(
+        val available: Boolean,
+        val unavailableReason: String
+    )
+
+    data class Result(
+        val intent: Intent?,
+        val used: Method,
+        val message: String,
+        val capability: PlatformCapability? = null
+    )
     enum class Method { API_UPLOAD, SHARE_INTENT, NONE }
+
+    fun capabilityFor(target: Target): PlatformCapability = platformCapabilityFor(target)
 
     suspend fun publish(
         filePath: String,
         target: Target,
         meta: PublishMeta
     ): Result = withContext(Dispatchers.IO) {
+        val capability = capabilityFor(target)
         val file = File(filePath)
         validatePublishableFile(file)?.let { message ->
             return@withContext Result(null, Method.NONE, message)
@@ -75,10 +96,23 @@ class DirectPublishEngine @Inject constructor(
             return@withContext Result(null, Method.NONE, "Export is not in a shareable NovaCut location")
         }
         val intent = buildShareIntent(uri, target, meta)
-        if (target.packageName != null && isInstalled(target.packageName)) {
+        val targetInstalled = target.packageName != null && isInstalled(target.packageName)
+        if (targetInstalled) {
             intent.setPackage(target.packageName)
         }
-        Result(intent, Method.SHARE_INTENT, "Opening ${target.displayName}…")
+        val launchIntent = if (targetInstalled) {
+            intent
+        } else {
+            Intent.createChooser(intent, capability.shareHandoffLabel).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        }
+        Result(
+            intent = launchIntent,
+            used = Method.SHARE_INTENT,
+            message = "Opening ${target.displayName} for user-controlled posting...",
+            capability = capability
+        )
     }
 
     private fun buildShareIntent(uri: Uri, target: Target, meta: PublishMeta): Intent {
@@ -86,6 +120,7 @@ class DirectPublishEngine @Inject constructor(
         val body = buildPublishShareText(safeMeta, target)
         return Intent(Intent.ACTION_SEND).apply {
             type = "video/mp4"
+            clipData = ClipData.newUri(context.contentResolver, safeMeta.title, uri)
             putExtra(Intent.EXTRA_STREAM, uri)
             putExtra(Intent.EXTRA_TITLE, safeMeta.title)
             putExtra(Intent.EXTRA_SUBJECT, safeMeta.title)
@@ -100,6 +135,20 @@ class DirectPublishEngine @Inject constructor(
     } catch (_: Exception) { false }
 
     companion object { private const val TAG = "DirectPublishEngine" }
+}
+
+internal fun platformCapabilityFor(
+    target: DirectPublishEngine.Target
+): DirectPublishEngine.PlatformCapability {
+    return DirectPublishEngine.PlatformCapability(
+        target = target,
+        shareHandoffLabel = "Open in ${target.displayName}",
+        apiUpload = DirectPublishEngine.ApiUploadCapability(
+            available = false,
+            unavailableReason = "API upload requires OAuth consent, credential storage, platform approval, and resumable upload adapters."
+        ),
+        requiresManualDisclosureReview = target.hasAiDisclosureControl
+    )
 }
 
 private const val MAX_SHARE_TITLE_CHARS = 120
@@ -128,12 +177,14 @@ internal fun buildPublishShareText(
         append(safeMeta.title)
         if (safeMeta.description.isNotBlank()) append("\n\n").append(safeMeta.description)
         if (safeMeta.aiDisclosureSummary.isNotBlank()) {
-            val prefix = if (target?.hasAiDisclosureControl == true) {
-                "AI disclosure selected"
-            } else {
-                "AI disclosure"
+            append("\n\n")
+                .append("AI disclosure reminder: ")
+                .append(safeMeta.aiDisclosureSummary)
+            if (target?.hasAiDisclosureControl == true) {
+                append(" Review ")
+                    .append(target.displayName)
+                    .append("'s AI disclosure controls before posting.")
             }
-            append("\n\n").append(prefix).append(": ").append(safeMeta.aiDisclosureSummary)
         }
         if (safeMeta.chapters.isNotBlank()) append("\n\n").append(safeMeta.chapters)
         if (safeMeta.tags.isNotEmpty()) {

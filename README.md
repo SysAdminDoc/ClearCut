@@ -186,6 +186,7 @@ Planning files are local-only in the development checkout:
 ### Export
 - **GIF export** — Self-contained GIF89a encoder with LZW compression, configurable frame rate (10/15/20fps) and max width (320/480/640px)
 - **Frame capture** — PNG/JPEG single-frame export from current playhead position
+- **Platform handoff** — open completed exports in platform apps with suggested post text and manual AI-disclosure reminders
 - 480p to 4K Ultra HD
 - **4 codecs** — H.264, H.265 (HEVC), AV1, VP9 with hardware capability detection via `MediaCodecList`
 - **HDR export confidence** — HEVC, AV1, and VP9 preflight reports HDR10+, Dolby Vision Profile 10, Ultra HDR source gain maps, and device-tier hardware encode support before render
@@ -366,7 +367,7 @@ If release credentials are not configured, `assembleRelease` falls back to debug
 CI publishes a `.sha256` checksum, `.signing-cert-sha256` certificate-fingerprint sidecar, and GitHub artifact attestation next to every uploaded APK. To verify a downloaded release APK:
 
 ```powershell
-gh attestation verify .\app-release.apk -R SysAdminDoc/NovaCut --source-ref refs/tags/v3.74.101 --signer-workflow SysAdminDoc/NovaCut/.github/workflows/build.yml
+gh attestation verify .\app-release.apk -R SysAdminDoc/NovaCut --source-ref refs/tags/v3.74.102 --signer-workflow SysAdminDoc/NovaCut/.github/workflows/build.yml
 python scripts\write_release_checksums.py --root . --check
 python scripts\write_apk_signing_fingerprints.py --root . --check
 ```

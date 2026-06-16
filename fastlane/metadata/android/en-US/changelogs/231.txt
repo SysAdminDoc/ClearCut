@@ -1,3 +1,4 @@
-- Localized AI and audio mixer feedback with clearer failure messages.
-- Removed raw exception details from high-visibility AI/audio/editor failure toasts.
-- Fixed Spanish short-form duration labels that read as years instead of seconds.
+- Accessibility / UX
+- Replaced high-visibility AI and audio mixer error toasts with localized, user-safe feedback that avoids raw exception text.
+- Replaced raw exception text in media import, LUT import, video export/save, backup import/export, project archive, OTIO/FCPXML, multi-cam sync, smart reframe, Cut Assistant, auto-duck, and template import/export failure messages with safer localized copy.
+- Localized AI model download/template dispatch feedback and audio beat/normalization/maste...

@@ -214,7 +214,7 @@ fun V369FeaturesPanel(
             }
         }
 
-        // 7. Direct publish
+        // 7. Platform share handoff
         FeatureCard(
             title = stringResource(R.string.v369_direct_publish_title),
             subtitle = stringResource(R.string.v369_direct_publish_subtitle),
@@ -241,6 +241,11 @@ fun V369FeaturesPanel(
                 ),
                 textStyle = MaterialTheme.typography.bodyMedium
             )
+            Text(
+                stringResource(R.string.v369_direct_publish_handoff_hint),
+                color = Mocha.Overlay1,
+                style = MaterialTheme.typography.labelMedium
+            )
             val hasExport = state.lastExportedFilePath != null
             Row(
                 modifier = Modifier
@@ -253,7 +258,12 @@ fun V369FeaturesPanel(
                         onClick = {
                             viewModel.v369Delegate.publishLastExport(target, title, state.project.notes)
                         },
-                        label = { Text(publishTargetLabel(target), style = MaterialTheme.typography.labelMedium) },
+                        label = {
+                            Text(
+                                stringResource(R.string.v369_open_target_format, publishTargetLabel(target)),
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        },
                         enabled = hasExport
                     )
                 }

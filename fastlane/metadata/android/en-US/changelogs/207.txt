@@ -1,0 +1,3 @@
+- Spanish locale
+- Added a complete Spanish (es) string resource set mirroring the base UI strings and registered it in Android's per-app language configuration.
+- Added JVM coverage to prevent the Spanish locale from missing future string or plural resources and falling back to English silently.

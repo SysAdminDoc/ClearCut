@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NovaCut</string>
-    <string name="app_version">v3.74.101</string>
+    <string name="app_version">v3.74.102</string>
     <string name="close">Cerrar</string>
     <string name="cancel">Cancelar</string>
     <string name="done">Listo</string>
@@ -2003,9 +2003,11 @@
     <string name="v369_content_id_hash">Hash local: %1$s...</string>
     <string name="v369_content_id_hint">El hash local funciona ahora. La búsqueda en línea se puede habilitar cuando se configura el servicio de huellas digitales.</string>
     <string name="v369_check_last_export">Consultar la última exportación</string>
-    <string name="v369_direct_publish_title">Publicación directa</string>
-    <string name="v369_direct_publish_subtitle">Prepare la última exportación para la transferencia de plataforma con un título limpio.</string>
+    <string name="v369_direct_publish_title">Transferencia a plataforma</string>
+    <string name="v369_direct_publish_subtitle">Abra la última exportación en otra app con texto sugerido.</string>
+    <string name="v369_direct_publish_handoff_hint">NovaCut comparte el archivo y el texto sugerido. La publicación, visibilidad, programación y controles de divulgación de IA quedan en la app seleccionada.</string>
     <string name="v369_publish_title_label">Título</string>
+    <string name="v369_open_target_format">Abrir %1$s</string>
     <string name="v369_flash_safety_title">Seguridad contra destellos (WCAG)</string>
     <string name="v369_flash_safety_subtitle">Escanee patrones de destellos de alto contraste antes de publicarlos.</string>
     <plurals name="v369_flash_risky_segments">

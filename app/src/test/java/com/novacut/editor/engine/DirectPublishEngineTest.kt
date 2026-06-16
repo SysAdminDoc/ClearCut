@@ -85,7 +85,8 @@ class DirectPublishEngineTest {
 
         assertTrue(body.length <= 8_000)
         assertTrue(body.startsWith("My Export"))
-        assertTrue(body.contains("AI disclosure selected: AI assistance recorded"))
+        assertTrue(body.contains("AI disclosure reminder: AI assistance recorded"))
+        assertTrue(body.contains("Review YouTube's AI disclosure controls before posting."))
         assertTrue(body.contains("00:00 Intro\n00:10 Main"))
         assertTrue(body.contains("#good_tag"))
         assertTrue(body.contains("#badtag"))
@@ -97,5 +98,20 @@ class DirectPublishEngineTest {
         assertTrue(DirectPublishEngine.Target.YOUTUBE.hasAiDisclosureControl)
         assertTrue(DirectPublishEngine.Target.TIKTOK.hasAiDisclosureControl)
         assertFalse(DirectPublishEngine.Target.INSTAGRAM.hasAiDisclosureControl)
+    }
+
+    @Test
+    fun platformCapabilitiesKeepApiUploadUnavailableUntilAdaptersExist() {
+        val capabilities = DirectPublishEngine.Target.entries.map(::platformCapabilityFor)
+
+        assertTrue(capabilities.all { it.shareHandoffLabel.startsWith("Open in ") })
+        assertTrue(capabilities.all { !it.apiUpload.available })
+        assertTrue(capabilities.all { "OAuth" in it.apiUpload.unavailableReason })
+        assertEquals(
+            listOf(DirectPublishEngine.Target.YOUTUBE, DirectPublishEngine.Target.TIKTOK),
+            capabilities
+                .filter { it.requiresManualDisclosureReview }
+                .map { it.target }
+        )
     }
 }

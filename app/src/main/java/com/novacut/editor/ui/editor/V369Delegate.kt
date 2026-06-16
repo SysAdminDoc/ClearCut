@@ -399,7 +399,7 @@ class V369Delegate(
         }
     }
 
-    // ---- Direct publish --------------------------------------------------
+    // ---- Platform share handoff -----------------------------------------
 
     fun publishLastExport(target: DirectPublishEngine.Target, title: String, description: String) {
         val state = stateFlow.value

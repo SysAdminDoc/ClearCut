@@ -1,0 +1,4 @@
+- Premium creator workflow polish
+- Reworked the Creator Intelligence hub with premium sheet chrome, readiness status cards, consistent feature-card anatomy, calmer microcopy, and tokenized typography/buttons.
+- Upgraded project trash from a bare row into a recovery panel with retention copy, clearer empty-trash affordance, and distinct restore/permanent-delete icon states.
+- Renamed the phone overflow/sidebar hub entry to Creator Intelligence so the navigation label matches the destination.

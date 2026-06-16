@@ -13,7 +13,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 APK_ROOT = ROOT / "app" / "build" / "outputs" / "apk"
-FINGERPRINT_RE = re.compile(r"Signer #(\d+) certificate SHA-256 digest:\s*([0-9A-Fa-f:]+)")
+FINGERPRINT_RE = re.compile(
+    r"(?:Signer #\d+\s+|V\d+ Signer:\s*)certificate SHA-256 digest:\s*([0-9A-Fa-f:]+)"
+)
 
 
 class FingerprintError(RuntimeError):
@@ -39,10 +41,14 @@ def normalize_fingerprint(raw: str) -> str:
 
 
 def parse_fingerprints(apksigner_output: str) -> list[str]:
-    fingerprints = [
-        normalize_fingerprint(match.group(2))
-        for match in FINGERPRINT_RE.finditer(apksigner_output)
-    ]
+    fingerprints: list[str] = []
+    seen: set[str] = set()
+    for match in FINGERPRINT_RE.finditer(apksigner_output):
+        fingerprint = normalize_fingerprint(match.group(1))
+        if fingerprint in seen:
+            continue
+        fingerprints.append(fingerprint)
+        seen.add(fingerprint)
     if not fingerprints:
         raise FingerprintError("apksigner output did not include a signer certificate SHA-256 digest")
     return fingerprints
@@ -120,6 +126,7 @@ Verifies
 Verified using v1 scheme (JAR signing): true
 Signer #1 certificate SHA-256 digest: AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99
 Signer #2 certificate SHA-256 digest: 00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff
+V2 Signer: certificate SHA-256 digest: 00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff
 """
     parsed = parse_fingerprints(sample)
     if parsed != [

@@ -1,0 +1,4 @@
+- Platform Handoff
+- Reframed the former Direct Publish creator card as Platform Handoff so the UI says NovaCut opens another app with suggested post text instead of implying API-backed publishing.
+- Added explicit share-only platform capability metadata to DirectPublishEngine; API upload now remains visibly unavailable until OAuth consent, credential storage, platform approval, and resumable upload adapters exist.
+- Added Android Sharesheet fallback behavior when a target app is not install...

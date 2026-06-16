@@ -1,0 +1,2 @@
+- Export reliability
+- Added export failure incident bundles: failed, timed-out, and blocked exports now record a bounded, redacted JSON incident with app version, device model, encoder path (hardware vs software), codec, resolution, progress samples, elapsed time, media health summary, and error class/message. Incidents are stored locally under filesDir/diagnostics/export-incidents/, pruned at 10, included in user-triggered diagnostic ZIPs, and never uploaded.

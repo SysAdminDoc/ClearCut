@@ -1,0 +1,3 @@
+- Trim layout: no more dead panel space
+- Fixed the bottom tool rail appearing to take over half the screen during edge-drag trims: the timeline card was force-stretched to fill all leftover height while its tracks wrap top-aligned, rendering the slack as a giant empty panel directly above the same-colored rail.
+- The preview is now the only flexible element on the editor screen - it absorbs leftover height while the timeline wraps its track stack between min/max bounds and the tool rail hug...

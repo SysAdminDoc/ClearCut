@@ -1,0 +1,4 @@
+- Editor phone layout
+- Reserved a usable preview height during compact phone clip editing so edge trim/slide gestures no longer collapse the video into a tiny strip while a tall timeline and bottom tool rail consume the screen.
+- Fixed the bottom tool area measuring at its expanded 236dp height when no submenu was open, which left a large empty block under the buttons.
+- While dragging clip edges, the preview now seeks to the active trim boundary: left edge shows the new in-frame and right...
