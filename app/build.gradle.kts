@@ -225,6 +225,10 @@ dependencies {
 
     testImplementation(libs.junit4)
     testImplementation(libs.org.json)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.roborazzi.core)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.roborazzi.junit.rule)
 
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
