@@ -311,8 +311,8 @@
     <string name="audio_measuring_loudness_all">Measuring loudness across %1$d clips…</string>
     <string name="audio_normalized_clips">Normalized %1$d clips to %2$.0f LUFS.</string>
     <string name="editor_import_failed_toast">Import failed. Check the file and try again.</string>
-    <string name="editor_backup_failed_toast">Backup export failed. Check storage access and try again.</string>
-    <string name="editor_backup_import_failed_toast">Backup import failed. The current project was left unchanged.</string>
+    <string name="editor_backup_failed_toast">Archive export failed. Check storage access and try again.</string>
+    <string name="editor_backup_import_failed_toast">Archive import failed. The current project was left unchanged.</string>
     <string name="editor_reframe_failed_toast">Reframe failed. Try a clearer clip or a shorter range.</string>
     <string name="editor_cut_assistant_failed_toast">Cut Assistant failed. Try a shorter clip or clearer audio.</string>
     <string name="editor_archive_export_failed_toast">Archive export failed. Check available storage and try again.</string>
@@ -1078,7 +1078,7 @@
     <string name="tool_export_srt">Export\nSRT</string>
     <string name="tool_media_manager">Media\nManager</string>
     <string name="tool_render_analysis">Render\nAnalysis</string>
-    <string name="tool_cloud_backup">Cloud\nBackup</string>
+    <string name="tool_cloud_backup">Archive\nTransfer</string>
     <string name="tool_project_archive">Project\nArchive</string>
     <string name="tool_batch_export">Batch\nExport</string>
     <string name="tool_proxy_edit">Proxy\nEdit</string>
@@ -1247,16 +1247,16 @@
     <string name="caption_delete_cd">Delete caption</string>
 
     <!-- CloudBackupPanel -->
-    <string name="cloud_backup_title">Cloud Backup</string>
-    <string name="cloud_backup_sign_in">Sign in with Google to back up your projects</string>
-    <string name="cloud_backup_sign_in_google">Sign In</string>
-    <string name="cloud_backup_last_backup">Last backup: %1$s</string>
+    <string name="cloud_backup_title">Project Archive</string>
+    <string name="cloud_backup_sign_in">Export a local project archive before moving devices</string>
+    <string name="cloud_backup_sign_in_google">Choose Archive</string>
+    <string name="cloud_backup_last_backup">Last archive: %1$s</string>
     <string name="cloud_backup_never">Never</string>
-    <string name="cloud_backup_auto">Auto-Backup</string>
-    <string name="cloud_backup_auto_desc">Back up after each save</string>
-    <string name="cloud_backup_now">Backup Now</string>
-    <string name="cloud_backup_restore">Restore from Cloud</string>
-    <string name="cloud_backup_no_backups">No cloud backups found</string>
+    <string name="cloud_backup_auto">Auto-archive</string>
+    <string name="cloud_backup_auto_desc">Create a local archive after each save</string>
+    <string name="cloud_backup_now">Export Archive</string>
+    <string name="cloud_backup_restore">Import Archive</string>
+    <string name="cloud_backup_no_backups">No project archives found</string>
 
     <!-- SnapshotHistoryPanel -->
     <string name="snapshot_title">Version History</string>
@@ -1527,26 +1527,26 @@
     <string name="panel_audio_mixer_fx">FX</string>
 
     <!-- CloudBackupPanel -->
-    <string name="panel_cloud_backup_title">Project Backup</string>
-    <string name="panel_cloud_backup_description">Export your project as a backup archive to Downloads/NovaCut/. Import to restore on any device.</string>
+    <string name="panel_cloud_backup_title">Archive Transfer</string>
+    <string name="panel_cloud_backup_description">Export a portable project archive to Downloads/NovaCut/. Import it later to restore this edit on a device you control.</string>
     <string name="panel_cloud_backup_estimated_size">Estimated Size</string>
-    <string name="panel_cloud_backup_last_backup">Last Backup</string>
+    <string name="panel_cloud_backup_last_backup">Last Archive</string>
     <string name="panel_cloud_backup_never">Never</string>
     <string name="panel_cloud_backup_exporting">Exporting\u2026</string>
     <string name="panel_cloud_backup_importing">Importing\u2026</string>
-    <string name="panel_cloud_backup_export">Export Backup</string>
-    <string name="panel_cloud_backup_import">Import Backup</string>
-    <string name="panel_cloud_backup_subtitle">Package the project into a portable archive or restore a previous backup without leaving the edit.</string>
-    <string name="panel_cloud_backup_status_title">Backup status</string>
+    <string name="panel_cloud_backup_export">Export Archive</string>
+    <string name="panel_cloud_backup_import">Import Archive</string>
+    <string name="panel_cloud_backup_subtitle">Package the project into a portable archive or restore a previous archive without leaving the edit.</string>
+    <string name="panel_cloud_backup_status_title">Archive status</string>
     <string name="panel_cloud_backup_ready">Ready</string>
-    <string name="panel_cloud_backup_status_empty_title">No backup saved yet</string>
+    <string name="panel_cloud_backup_status_empty_title">No archive saved yet</string>
     <string name="panel_cloud_backup_status_empty_body">Create a project archive before risky changes so you have a clean rollback point that travels with the edit.</string>
-    <string name="panel_cloud_backup_status_exporting_title">Preparing backup archive</string>
+    <string name="panel_cloud_backup_status_exporting_title">Preparing project archive</string>
     <string name="panel_cloud_backup_status_exporting_body">NovaCut is packaging the timeline, linked media references, and current project state into a portable archive.</string>
     <string name="panel_cloud_backup_status_importing_title">Restoring project archive</string>
     <string name="panel_cloud_backup_status_importing_body">NovaCut is unpacking the archive, reconnecting bundled media, and rebuilding the timeline state.</string>
     <string name="panel_cloud_backup_status_ready_title">Portable archive ready</string>
-    <string name="panel_cloud_backup_status_ready_body">Keep a recent backup on hand before major revisions, device transfers, or client review notes.</string>
+    <string name="panel_cloud_backup_status_ready_body">Keep a recent archive on hand before major revisions, device transfers, or client review notes.</string>
     <string name="panel_cloud_backup_archive_title">Portable project archive</string>
     <string name="panel_cloud_backup_archive_body">Exports land in Downloads/NovaCut so they are easy to share, move to another device, or keep as rollback points before major edits.</string>
     <string name="panel_cloud_backup_archive_include_title">What gets packed</string>
@@ -1554,11 +1554,11 @@
     <string name="panel_cloud_backup_include_timeline">Timeline structure</string>
     <string name="panel_cloud_backup_include_links">Media links</string>
     <string name="panel_cloud_backup_include_state">Project state</string>
-    <string name="panel_cloud_backup_actions_title">Backup actions</string>
+    <string name="panel_cloud_backup_actions_title">Archive actions</string>
     <string name="panel_cloud_backup_actions_body">Create a fresh archive before risky changes, or import one to restore the whole project on this device.</string>
-    <string name="panel_cloud_backup_actions_busy">Backup actions unlock again as soon as the current archive operation finishes.</string>
+    <string name="panel_cloud_backup_actions_busy">Archive actions unlock again as soon as the current operation finishes.</string>
     <string name="panel_cloud_backup_import_confirm_title">Replace current timeline?</string>
-    <string name="panel_cloud_backup_import_confirm_body">This imports the selected backup into the open project and replaces the current timeline, overlays, markers, drawings, beats, and transcript. NovaCut saves an undo point before restoring.</string>
+    <string name="panel_cloud_backup_import_confirm_body">This imports the selected archive into the open project and replaces the current timeline, overlays, markers, drawings, beats, and transcript. NovaCut saves an undo point before restoring.</string>
     <string name="panel_cloud_backup_import_confirm_action">Replace Timeline</string>
 
     <!-- PipPresetsPanel (ChromaKey section) -->
@@ -2478,10 +2478,10 @@
     <string name="vm_no_clips_for_proxy_toast">No clips to generate proxies for</string>
     <string name="vm_generating_proxies_toast">Generating proxies for %1$d clips…</string>
     <string name="vm_proxy_enabled_toast">Proxy editing enabled (%1$d proxies generated)</string>
-    <string name="vm_backup_in_progress_toast">Backup action already in progress</string>
-    <string name="vm_backup_saved_toast">Backup saved: %1$s</string>
-    <string name="vm_backup_export_failed_toast">Backup export failed</string>
-    <string name="vm_importing_backup_toast">Importing backup…</string>
+    <string name="vm_backup_in_progress_toast">Archive action already in progress</string>
+    <string name="vm_backup_saved_toast">Archive saved: %1$s</string>
+    <string name="vm_backup_export_failed_toast">Archive export failed</string>
+    <string name="vm_importing_backup_toast">Importing archive…</string>
     <string name="vm_caption_style_applied_toast">Caption style applied: %1$s</string>
     <string name="vm_add_audio_track_first_toast">Add an audio track first</string>
     <string name="vm_beats_detected_toast">Detected %1$d beats</string>

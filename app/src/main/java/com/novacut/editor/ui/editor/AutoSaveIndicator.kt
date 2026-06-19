@@ -120,7 +120,7 @@ fun AutoSaveIndicator(
                             SaveIndicatorState.SAVED -> {
                                 Icon(
                                     imageVector = Icons.Default.Check,
-                                    contentDescription = label,
+                                    contentDescription = null,
                                     tint = accent,
                                     modifier = Modifier.size(14.dp)
                                 )
@@ -129,7 +129,7 @@ fun AutoSaveIndicator(
                             SaveIndicatorState.ERROR -> {
                                 Icon(
                                     imageVector = Icons.Default.Warning,
-                                    contentDescription = label,
+                                    contentDescription = null,
                                     tint = accent,
                                     modifier = Modifier.size(14.dp)
                                 )

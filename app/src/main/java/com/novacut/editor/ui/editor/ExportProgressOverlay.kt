@@ -100,7 +100,7 @@ fun ExportProgressOverlay(
             shape = RoundedCornerShape(Radius.xl),
             border = BorderStroke(1.dp, Mocha.CardStrokeStrong.copy(alpha = 0.92f)),
             shadowElevation = Elevation.toast,
-            modifier = Modifier.semantics(mergeDescendants = true) {
+            modifier = Modifier.semantics {
                 contentDescription = statusDescription
                 liveRegion = LiveRegionMode.Polite
                 progressBarRangeInfo = ProgressBarRangeInfo(progressValue, 0f..1f)

@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -1706,10 +1707,7 @@ private fun SettingsSwitchTile(
         Switch(
             checked = checked,
             onCheckedChange = null,
-            modifier = Modifier.semantics {
-                contentDescription = label
-                stateDescription = switchState
-            },
+            modifier = Modifier.clearAndSetSemantics { },
             colors = SwitchDefaults.colors(
                 checkedTrackColor = accent.copy(alpha = 0.8f),
                 checkedThumbColor = Mocha.Crust,

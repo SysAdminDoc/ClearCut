@@ -11,8 +11,8 @@
     <include domain="file" path="tts" />
     <include domain="file" path="noise_reduced" />
     <include domain="file" path="stabilized" />
-    <!-- Legacy full-backup-content cannot split cloud backup from device
-         transfer, so managed imports stay out here. Android 12+
+    <!-- Legacy full-backup-content cannot separate archive-transfer imports
+         from device transfer, so managed imports stay out here. Android 12+
          data_extraction_rules includes them for device transfer only. -->
     <exclude domain="file" path="autosave/*.tmp" />
     <exclude domain="file" path="freeze_frames/*.partial.jpg" />
