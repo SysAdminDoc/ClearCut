@@ -265,7 +265,13 @@ class DiagnosticExportEngine @Inject constructor(
         try {
             val pkg = context.packageManager.getPackageInfo(context.packageName, 0)
             appendLine("versionName: ${pkg.versionName}")
-            appendLine("versionCode: ${pkg.longVersionCode}")
+            val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                pkg.longVersionCode
+            } else {
+                @Suppress("DEPRECATION")
+                pkg.versionCode.toLong()
+            }
+            appendLine("versionCode: $versionCode")
         } catch (_: Throwable) {
             appendLine("versionName: <unavailable>")
             appendLine("versionCode: <unavailable>")

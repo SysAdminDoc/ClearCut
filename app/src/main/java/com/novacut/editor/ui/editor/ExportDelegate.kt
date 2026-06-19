@@ -1315,7 +1315,14 @@ class ExportDelegate(
                             )
                         }
                     }
-                    showToast(appContext.getString(R.string.export_batch_progress_toast, index + 1, queue.size, item.outputName))
+                    showToast(
+                        appContext.getString(
+                            R.string.export_batch_progress_toast,
+                            (index + 1).toString(),
+                            queue.size.toString(),
+                            item.outputName
+                        )
+                    )
                     videoEngine.resetExportState()
                     // Reset exportState to IDLE in the delegate state as well. Without this,
                     // the wait loop below immediately sees the previous item's COMPLETE/ERROR

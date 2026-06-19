@@ -86,6 +86,24 @@ class TrackedFilesAuditTest {
         )
     }
 
+    @Test
+    fun applicationSourcesDoNotUseGlobalScope() {
+        val repoRoot = locateRepoRoot() ?: return
+        val sourceRoot = File(repoRoot, "app/src/main/java")
+        val offenders = sourceRoot
+            .walkTopDown()
+            .filter { it.isFile && it.extension == "kt" }
+            .filter { file -> file.readText().contains("GlobalScope") }
+            .map { file -> file.relativeTo(repoRoot).invariantSeparatorsPath }
+            .toList()
+
+        assertTrue(
+            "Application source must use lifecycle-owned CoroutineScope instances " +
+                "instead of GlobalScope. Offenders: $offenders",
+            offenders.isEmpty()
+        )
+    }
+
     private fun gitLsFiles(repoRoot: File): List<String>? {
         return try {
             val process = ProcessBuilder("git", "ls-files")

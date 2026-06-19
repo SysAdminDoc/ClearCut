@@ -2464,7 +2464,7 @@
     <string name="export_no_media_toast">No exported media</string>
     <string name="export_file_not_found_toast">Export file not found</string>
     <string name="export_add_items_first_toast">Add export items first</string>
-    <string name="export_batch_progress_toast">Exporting %1$d/%2$d: %3$s</string>
+    <string name="export_batch_progress_toast">Exporting %1$s/%2$s: %3$s</string>
     <string name="export_rendering_preview_toast">Rendering preview at 480p...</string>
 
     <!-- EditorViewModel toasts -->

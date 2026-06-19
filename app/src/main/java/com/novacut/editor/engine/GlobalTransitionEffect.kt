@@ -131,6 +131,7 @@ private class GlobalTransitionShaderProgram(
     }
 
     override fun release() {
+        super.release()
         if (programId != 0) {
             GLES20.glDeleteProgram(programId)
             programId = 0
