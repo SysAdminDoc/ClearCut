@@ -237,7 +237,7 @@ class IncomingDocumentImportRouter @Inject constructor(
                 item = item,
                 status = IncomingDocumentImportStatus.READY,
                 title = "Project archive validated",
-                body = "Open an editor project and use Cloud Backup import to restore this archive intentionally.",
+                body = "Open an editor project and use Archive Transfer import to restore this archive intentionally.",
                 details = baseDetails(item) + listOf(
                     "Archive report: ${report.summary}",
                     "Media: ${report.mediaResolved}/${report.mediaTotal} resolved",

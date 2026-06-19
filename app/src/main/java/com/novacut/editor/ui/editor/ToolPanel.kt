@@ -26,6 +26,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -155,7 +158,7 @@ private val projectToolsSubMenu = listOf(
     SubMenuItem("export_srt", Icons.Default.Subtitles, R.string.tool_export_srt),
     SubMenuItem("media_manager", Icons.Default.FolderOpen, R.string.tool_media_manager),
     SubMenuItem("render_preview", Icons.Default.Preview, R.string.tool_render_analysis),
-    SubMenuItem("cloud_backup", Icons.Default.Cloud, R.string.tool_cloud_backup),
+    SubMenuItem("cloud_backup", Icons.Default.ImportExport, R.string.tool_cloud_backup),
     SubMenuItem("archive", Icons.Default.Archive, R.string.tool_project_archive),
     SubMenuItem("batch_export", Icons.Default.DynamicFeed, R.string.tool_batch_export),
     SubMenuItem("proxy_toggle", Icons.Default.Speed, R.string.tool_proxy_edit),
@@ -435,6 +438,7 @@ private fun BottomTabBarItem(
 ) {
     val isBack = tab.id == "back"
     val tabLabel = if (tab.labelRes != 0) stringResource(tab.labelRes) else ""
+    val itemDescription = if (isBack) stringResource(R.string.back) else tabLabel
     val itemShape = RoundedCornerShape(Radius.md)
     val iconShape = RoundedCornerShape(Radius.sm)
     val iconBoxSize = if (compact) 32.dp else 34.dp
@@ -494,6 +498,7 @@ private fun BottomTabBarItem(
                 onClick = onClick,
                 role = Role.Tab
             )
+            .semantics { contentDescription = itemDescription }
             .height(itemHeight)
             .background(itemContainerColor)
             .border(BorderStroke(1.dp, itemBorderColor), itemShape)
@@ -510,7 +515,7 @@ private fun BottomTabBarItem(
         ) {
             Icon(
                 tab.icon,
-                contentDescription = tabLabel.ifEmpty { tab.id },
+                contentDescription = null,
                 tint = iconTint,
                 modifier = Modifier.size(iconSize)
             )
@@ -582,12 +587,17 @@ private fun SubMenuGrid(
                         ) {
                             rowItems.forEach { item ->
                                 val isDisabled = item.id in disabledIds
+                                val itemLabel = stringResource(item.labelRes)
                                 val itemAccent = if (isDisabled) Mocha.Overlay0 else Mocha.Mauve
                                 Column(
                                     modifier = Modifier
                                         .size(width = tileWidth, height = tileHeight)
                                         .clip(tileShape)
                                         .clickable(enabled = !isDisabled) { onItemSelected(item.id) }
+                                        .semantics {
+                                            contentDescription = itemLabel
+                                            if (isDisabled) disabled()
+                                        }
                                         .background(
                                             Brush.verticalGradient(
                                                 listOf(
@@ -607,7 +617,6 @@ private fun SubMenuGrid(
                                         .alpha(if (isDisabled) 0.45f else 1f),
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    val itemLabel = stringResource(item.labelRes)
                                     Box(
                                         modifier = Modifier
                                             .size(iconBoxSize)
@@ -617,7 +626,7 @@ private fun SubMenuGrid(
                                     ) {
                                         Icon(
                                             item.icon,
-                                            contentDescription = itemLabel,
+                                            contentDescription = null,
                                             tint = if (isDisabled) Mocha.Subtext0 else itemAccent,
                                             modifier = Modifier.size(iconSize)
                                         )
