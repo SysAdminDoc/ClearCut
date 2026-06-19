@@ -1,5 +1,6 @@
 package com.novacut.editor
 
+import com.novacut.editor.engine.TimelineExchangeEngine
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -35,6 +36,7 @@ class PublicFeatureClaimsTest {
 
     @Test
     fun archiveTransferCopyDoesNotPromiseCloudSync() {
+        val readme = locate("README.md").readText()
         val strings = stringResources(locate("app/src/main/res/values/strings.xml"))
         val archiveTransferKeys = listOf(
             "tool_cloud_backup",
@@ -63,6 +65,50 @@ class PublicFeatureClaimsTest {
         val legacyFeatureName = "Cloud " + "Backup"
         assertFalse(importRouter.contains(legacyFeatureName, ignoreCase = true))
         assertTrue(importRouter.contains("Archive Transfer import"))
+
+        val editorViewModel = locate("app/src/main/java/com/novacut/editor/ui/editor/EditorViewModel.kt").readText()
+        assertFalse(editorViewModel.contains("\"Archive saved:"))
+        assertFalse(editorViewModel.contains("\"Archive export failed\""))
+        assertTrue(editorViewModel.contains("R.string.vm_backup_saved_toast"))
+
+        assertFalse(readme.contains("Cloud backup", ignoreCase = true))
+        assertFalse(readme.contains("backend pending", ignoreCase = true))
+        assertTrue(readme.contains("Archive Transfer"))
+    }
+
+    @Test
+    fun readmeTimelineImportCopyMatchesRuntimeGate() {
+        val readme = locate("README.md").readText()
+        val timelineInterchangeLine = readme
+            .lineSequence()
+            .first { it.contains("Timeline interchange") }
+        val timelineImportEngine =
+            locate("app/src/main/java/com/novacut/editor/engine/TimelineImportEngine.kt").readText()
+
+        if (timelineImportEngine.contains("not yet implemented", ignoreCase = true)) {
+            assertFalse(
+                "README must not advertise active timeline import while TimelineImportEngine is gated",
+                timelineInterchangeLine.contains("export/import", ignoreCase = true)
+            )
+            assertFalse(
+                "README must not promise NLE round-tripping while import is gated",
+                timelineInterchangeLine.contains("round-tripping", ignoreCase = true)
+            )
+            assertTrue(
+                "README should explain that incoming timeline files are preview-gated",
+                timelineInterchangeLine.contains("guarded import preview", ignoreCase = true)
+            )
+        }
+    }
+
+    @Test
+    fun timelineExchangeCapabilityDoesNotAdvertiseGatedImport() {
+        val timelineImportEngine =
+            locate("app/src/main/java/com/novacut/editor/engine/TimelineImportEngine.kt").readText()
+
+        if (timelineImportEngine.contains("not yet implemented", ignoreCase = true)) {
+            assertFalse(TimelineExchangeEngine.TimelineExchangeFormat.OTIO.canImport)
+        }
     }
 
     private fun locate(relativePath: String): File {

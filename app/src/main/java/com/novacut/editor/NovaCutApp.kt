@@ -11,9 +11,12 @@ import com.novacut.editor.engine.HealthEvent
 import com.novacut.editor.engine.MemoryTrimDispatcher
 import com.novacut.editor.engine.ProcessExitRecorder
 import com.novacut.editor.engine.ProductHealthLedger
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltAndroidApp
@@ -30,6 +33,8 @@ class NovaCutApp : Application(), Configuration.Provider {
 
     @Inject
     lateinit var productHealthLedger: ProductHealthLedger
+
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
@@ -49,9 +54,14 @@ class NovaCutApp : Application(), Configuration.Provider {
         CrashRecordStore(this).installGlobalHandler(VERSION)
         processExitRecorder.recordStartupExitReasons()
         createNotificationChannels()
-        GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+        applicationScope.launch {
             productHealthLedger.record(HealthEvent.COLD_START)
         }
+    }
+
+    override fun onTerminate() {
+        applicationScope.cancel()
+        super.onTerminate()
     }
 
     override fun onTrimMemory(level: Int) {

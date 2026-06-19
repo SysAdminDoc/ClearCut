@@ -194,7 +194,7 @@ Planning files are local-only in the development checkout:
 - Multi-sequence Media3 Composition export for visible video and overlay tracks, with dedicated audio-track mixdown
 - Batch export with multiple presets simultaneously
 - Background export with progress notification, ETA display, and cancel
-- **Timeline interchange** — OTIO (OpenTimelineIO) JSON export/import + FCPXML export for desktop NLE round-tripping (DaVinci Resolve, Premiere Pro, Final Cut Pro)
+- **Timeline interchange** — OTIO (OpenTimelineIO), FCPXML, and EDL export for desktop NLE handoff; incoming OTIO/FCPXML/EDL files show a guarded import preview until parsers are active
 - EDL export (CMX 3600) with sanitized reel names and proper timecodes
 - Chapter markers and subtitle export (SRT, VTT with word-level cues, ASS/SSA with full styling)
 - **Burned-in subtitle rendering** — Canvas-based with ASS/SSA file generation for FFmpeg integration
@@ -209,12 +209,12 @@ Planning files are local-only in the development checkout:
 ### Project Management
 - User template system (save/load/delete project templates, preserves non-media track clips)
 - Project snapshots with version history and auto-generated default names
-- Project archive (ZIP export)
+- Project archive (ZIP export/import through Archive Transfer)
 - **Auto-save** with configurable interval, format versioning, rotating backups
   - Full serialization: all clip fields, compound clips, 9 caption style properties, mask bezier handles, clip group IDs
 - **Command-based undo/redo** foundation — sealed class with AddClip, RemoveClip, TrimClip, MoveClip, SetClipSpeed, ApplyEffect, CompoundCommand
 - **3-tier proxy workflow** — thumbnail (scrubbing) / proxy (540p editing) / original (export) with auto-switch and storage management
-- Cloud backup UI (backend pending)
+- Archive Transfer for local project rollback and device moves; remote sync remains planned behind explicit backend gates
 - **First-run tutorial** — auto-shows on first launch, dismissable, resettable from Settings
 
 ### Settings
@@ -400,7 +400,7 @@ Key external dependencies currently in `build.gradle.kts`:
 | MediaPipe | 0.10.35 | Selfie segmentation |
 | Lottie Compose | 6.7.1 | Animated title templates |
 | AndroidX Benchmark/ProfileInstaller | 1.4.1 / 1.4.1 | Baseline Profile generation and release profile install |
-| OkHttp | 5.3.2 | Future opt-in cloud APIs |
+| OkHttp | 5.3.2 | Model downloads and future opt-in provider calls |
 | FFmpegKit 16 KB | 6.1.1 | FFmpeg-backed fallback export paths not covered by Media3 Transformer |
 | Android DeepFilterNet | 0.0.8 | On-device voiceover noise reduction |
 
@@ -424,7 +424,7 @@ Open-source notices are available in **Settings > Third-party notices > Open sou
 | `FOREGROUND_SERVICE` | Background export processing |
 | `FOREGROUND_SERVICE_MEDIA_PROCESSING` | Android 14+ foreground export classification |
 | `POST_NOTIFICATIONS` | Export progress notifications |
-| `INTERNET` | Model downloads (Whisper), cloud inpainting API |
+| `INTERNET` | Model downloads and future opt-in provider APIs |
 | `ACCESS_NETWORK_STATE` | Respect Wi-Fi-only model download settings |
 | `VIBRATE` | Haptic feedback |
 
@@ -433,7 +433,7 @@ Media access uses the system Photo Picker (`ActivityResultContracts.PickVisualMe
 ## Known Limitations
 - Multi-sequence export now honors track opacity through Media3 compositor settings, and all 18 fallback blend modes render distinctly; true source-over-destination blend math still needs a custom programmable compositor because Media3's public settings only expose alpha/transform
 - Reversed clip export pre-renders through FFmpeg (clips over 5 minutes export forward; FFmpeg unavailable falls back to forward playback)
-- Android Lint runs in CI but is non-blocking until the baseline is populated from a full local lint pass
+- Android Lint runs locally with current Kotlin/AGP detector-crash workarounds; warning debt remains before it should become release-blocking
 - 11 AI/ML engine stubs awaiting dependency integration (see ROADMAP.md)
 
 ## License

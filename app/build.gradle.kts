@@ -113,8 +113,16 @@ android {
     lint {
         // androidx.lifecycle's NullSafeMutableLiveData detector crashes under
         // the current Kotlin 2.1 / AGP 8.7 lint stack, and NovaCut has no
-        // LiveData call sites for this detector to inspect.
-        disable += "NullSafeMutableLiveData"
+        // LiveData call sites for this detector to inspect. The Compose
+        // detectors below currently crash in UAST with the same stack rather
+        // than reporting actionable source findings.
+        disable += listOf(
+            "NullSafeMutableLiveData",
+            "FrequentlyChangingValue",
+            "FlowOperatorInvokedInComposition",
+            "RememberInComposition",
+            "AutoboxingStateCreation"
+        )
         baseline = file("lint-baseline.xml")
         abortOnError = true
         htmlReport = true

@@ -3875,7 +3875,13 @@ class EditorViewModel @Inject constructor(
                     state = buildAutoSaveState(s),
                     outputFile = file
                 )
-                showToast(if (success) "Archive saved: ${file.name}" else "Archive export failed")
+                showToast(
+                    if (success) {
+                        text(R.string.vm_backup_saved_toast, file.name)
+                    } else {
+                        text(R.string.vm_backup_export_failed_toast)
+                    }
+                )
             } catch (e: Exception) {
                 Log.e("EditorViewModel", "Project archive export failed", e)
                 showToast(text(R.string.editor_archive_export_failed_toast))

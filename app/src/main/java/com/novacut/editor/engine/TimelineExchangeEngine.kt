@@ -8,9 +8,9 @@ import javax.inject.Singleton
 import kotlin.math.roundToLong
 
 /**
- * Timeline interchange engine supporting OTIO, FCPXML, EDL, and AAF formats.
+ * Timeline interchange engine for OTIO, FCPXML, EDL, and AAF formats.
  *
- * Enables round-tripping NovaCut projects to/from desktop NLEs:
+ * Enables export handoff from NovaCut projects to desktop NLEs:
  * - OpenTimelineIO (OTIO): Universal interchange format by Pixar/ASWF
  * - FCPXML: Final Cut Pro XML (also importable by DaVinci Resolve)
  * - EDL CMX 3600: Legacy edit decision list (Avid, Premiere, Resolve)
@@ -19,7 +19,9 @@ import kotlin.math.roundToLong
  * OTIO Java bindings: github.com/OpenTimelineIO/OpenTimelineIO-Java-Bindings
  * The JNI library provides arm64-v8a .so for Android.
  * Until native bindings are integrated, this engine uses a pure-Kotlin JSON
- * serializer that produces valid OTIO JSON (schema version 0.15).
+ * serializer that produces valid OTIO JSON (schema version 0.15). Parser helper
+ * methods remain non-product paths until [TimelineImportEngine] can commit an
+ * imported timeline safely.
  */
 @Singleton
 class TimelineExchangeEngine @Inject constructor(
@@ -35,7 +37,7 @@ class TimelineExchangeEngine @Inject constructor(
         val canImport: Boolean,
         val canExport: Boolean
     ) {
-        OTIO("OpenTimelineIO", ".otio", canImport = true, canExport = true),
+        OTIO("OpenTimelineIO", ".otio", canImport = false, canExport = true),
         FCPXML("Final Cut Pro XML", ".fcpxml", canImport = false, canExport = true),
         EDL_CMX3600("EDL (CMX 3600)", ".edl", canImport = false, canExport = true),
         AAF("Advanced Authoring Format", ".aaf", canImport = false, canExport = false)
