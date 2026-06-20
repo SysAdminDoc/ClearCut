@@ -41,9 +41,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
-import coil.decode.VideoFrameDecoder
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.video.VideoFrameDecoder
 import com.novacut.editor.R
 import com.novacut.editor.engine.IncomingDocumentImportPreview
 import com.novacut.editor.engine.IncomingDocumentImportStatus
@@ -1520,7 +1520,6 @@ private fun ProjectThumbnail(project: Project) {
                 model = ImageRequest.Builder(context)
                     .data(android.net.Uri.parse(project.thumbnailUri))
                     .decoderFactory(VideoFrameDecoder.Factory())
-                    .crossfade(true)
                     .build(),
                 contentDescription = stringResource(R.string.projects_thumbnail_cd),
                 contentScale = ContentScale.Crop,

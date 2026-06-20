@@ -48,7 +48,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
-import coil.compose.SubcomposeAsyncImage
+import coil3.compose.SubcomposeAsyncImage
 import com.novacut.editor.R
 import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.model.AspectRatio
