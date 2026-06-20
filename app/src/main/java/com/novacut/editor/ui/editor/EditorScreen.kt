@@ -594,6 +594,7 @@ fun EditorScreen(
                 "undo_history" -> viewModel.showUndoHistory()
                 "draw" -> viewModel.showDrawingMode()
                 "label" -> showClipLabelPicker = true
+                "transcript_edit" -> viewModel.showPanel(PanelId.TEXT_BASED_EDIT)
                 "multi_cam" -> viewModel.showMultiCam()
                 "marker_list" -> viewModel.showMarkerList()
                 "project_inspector" -> viewModel.showProjectInspector()

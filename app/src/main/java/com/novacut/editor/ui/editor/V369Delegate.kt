@@ -88,6 +88,10 @@ class V369Delegate(
         }
     }
 
+    fun clearWordSelection() {
+        stateFlow.update { it.copy(v369 = it.v369.copy(selectedWordIndices = emptySet())) }
+    }
+
     fun selectFillerWords() {
         val t = stateFlow.value.v369.transcript ?: return
         val idx = textBased.fillerWordIndices(t.words)

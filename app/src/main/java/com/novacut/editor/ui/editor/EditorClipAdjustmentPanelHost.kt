@@ -359,4 +359,30 @@ fun BoxScope.EditorClipAdjustmentPanelHost(
             onClose = viewModel::hideCaptionEditor
         )
     }
+
+    BottomSheetSlot(
+        visible = state.panels.isOpen(PanelId.TEXT_BASED_EDIT),
+        modifier = Modifier.align(Alignment.BottomCenter)
+    ) {
+        val clip = selectedClip
+        TranscriptEditorPanel(
+            transcript = state.v369.transcript,
+            selectedWordIndices = state.v369.selectedWordIndices,
+            clipId = state.selectedClipId,
+            onWordTapped = viewModel.v369Delegate::toggleWordSelection,
+            onWordSeek = { sourceMs ->
+                if (clip != null) {
+                    val timelineMs = clip.timelineStartMs + (sourceMs - clip.trimStartMs)
+                        .coerceAtLeast(0L)
+                    viewModel.seekTo(timelineMs)
+                }
+            },
+            onSelectFillers = viewModel.v369Delegate::selectFillerWords,
+            onClearSelection = { viewModel.v369Delegate.clearWordSelection() },
+            onApplyDeletions = {
+                state.selectedClipId?.let { viewModel.v369Delegate.applyDeletions(it) }
+            },
+            onClose = { viewModel.hidePanel(PanelId.TEXT_BASED_EDIT) }
+        )
+    }
 }
