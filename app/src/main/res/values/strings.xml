@@ -232,6 +232,7 @@
     <string name="ai_select_clip_first_toast">Select a clip first.</string>
     <string name="ai_clip_missing_toast">That clip is no longer on the timeline.</string>
     <string name="ai_unknown_tool_toast">That AI tool is not available in this build.</string>
+    <string name="ai_disclosure_notice">This tool uses on-device AI to modify your video.</string>
     <string name="ai_tool_cancelled_toast">AI tool cancelled.</string>
     <string name="ai_tool_failed_toast">AI tool failed. Try again or choose a different clip.</string>
     <string name="ai_auto_captions_audio_required_toast">Auto Captions needs a clip with audio.</string>

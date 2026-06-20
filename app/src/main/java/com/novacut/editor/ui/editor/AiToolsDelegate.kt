@@ -234,6 +234,13 @@ class AiToolsDelegate(
             }
         }
 
+        // EU AI Act Article 50: show a one-time per-session disclosure notice before the
+        // first in-scope AI tool use. Exempt tools (captions, colour, denoise) skip this.
+        if (AiDisclosurePolicy.isInScope(toolId) && !stateFlow.value.ai.hasShownArticle50Disclosure) {
+            stateFlow.update { it.copyAi { ai -> ai.copy(hasShownArticle50Disclosure = true) } }
+            showToast(text(R.string.ai_disclosure_notice))
+        }
+
         // Cancel the previous job FIRST so its finally block (which clears aiProcessingTool)
         // runs before we publish our new state — otherwise a trailing `aiProcessingTool = null`
         // from the cancelled job could race-overwrite our own update and hide the progress indicator.

@@ -89,7 +89,9 @@ data class EditorAiState(
     val isSynthesizingTts: Boolean = false,
     val isTtsAvailable: Boolean = false,
     val isAnalyzingNoise: Boolean = false,
-    val noiseAnalysisResult: String? = null
+    val noiseAnalysisResult: String? = null,
+    /** Whether the EU AI Act Article 50 pre-use disclosure has been shown this session. */
+    val hasShownArticle50Disclosure: Boolean = false
 ) : EditorDomainState {
     override val kind: EditorDomainState.Kind = EditorDomainState.Kind.AI
 }

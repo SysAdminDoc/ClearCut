@@ -100,12 +100,14 @@ class AiUsageLedgerTest {
             generatedAtEpochMs = 123L
         )
 
-        assertEquals("com.novacut.ai-use.v1", declaration.getString("schema"))
+        assertEquals("com.novacut.ai-use.v2", declaration.getString("schema"))
         assertEquals("Launch cut", declaration.getString("projectName"))
         assertEquals("launch.mp4", declaration.getString("exportedFileName"))
         assertEquals(123L, declaration.getLong("generatedAtEpochMs"))
         assertEquals(AiUsageLedger.Severity.DISCLOSURE_REQUIRED.name, declaration.getString("aggregateSeverity"))
         assertTrue(declaration.getBoolean("disclosureRecommended"))
+        assertTrue(declaration.getBoolean("article50InScope"))
+        assertTrue(declaration.has("iptcDigitSourceType"))
         assertEquals(1, declaration.getJSONArray("entries").length())
         assertTrue(declaration.getString("summary").contains("auto edit local"))
     }

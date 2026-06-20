@@ -216,6 +216,7 @@
     <string name="ai_select_clip_first_toast">Seleccione un clip primero.</string>
     <string name="ai_clip_missing_toast">Ese clip ya no está en la línea de tiempo.</string>
     <string name="ai_unknown_tool_toast">Esa herramienta de IA no está disponible en esta compilación.</string>
+    <string name="ai_disclosure_notice">Esta herramienta usa IA en el dispositivo para modificar tu video.</string>
     <string name="ai_tool_cancelled_toast">Herramienta de IA cancelada.</string>
     <string name="ai_tool_failed_toast">La herramienta de IA falló. Inténtelo de nuevo o elija otro clip.</string>
     <string name="ai_auto_captions_audio_required_toast">Subtítulos automáticos necesita un clip con audio.</string>

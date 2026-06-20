@@ -99,7 +99,8 @@ private val clipEditSubMenu = listOf(
     SubMenuItem("draw", Icons.Default.Draw, R.string.tool_draw),
     @Suppress("DEPRECATION")
     SubMenuItem("label", Icons.Default.Label, R.string.tool_color_label),
-    SubMenuItem("transcript_edit", Icons.AutoMirrored.Filled.Subject, R.string.v369_text_edit_title)
+    @Suppress("DEPRECATION")
+    SubMenuItem("transcript_edit", Icons.Default.Subject, R.string.v369_text_edit_title)
 )
 
 // Clip mode — Motion tab sub-menu (replaces simple Transform panel)
