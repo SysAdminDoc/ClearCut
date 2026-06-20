@@ -121,6 +121,11 @@ class PublicFeatureClaimsTest {
             "StockAssetEngine" to listOf("stock library", "stock footage", "Pexels integration", "Pixabay integration"),
             "CameraCaptureEngine" to listOf("in-app camera", "CameraX recorder", "built-in recorder"),
             "CaptionTranslationEngine" to listOf("caption translation ready", "translate captions automatically", "real-time translation"),
+            "StemSeparationEngine" to listOf("stem separation ready", "isolate vocals", "Demucs integration"),
+            "VoiceCloneEngine" to listOf("voice cloning ready", "clone your voice", "XTTS integration"),
+            "LipSyncEngine" to listOf("lip sync ready", "automatic lip sync", "Wav2Lip integration"),
+            "EquirectangularEngine" to listOf("360 video editing", "VR editing ready", "equirectangular projection"),
+            "ContentIdEngine" to listOf("content ID ready", "AcoustID fingerprint", "music identification"),
         )
 
         for ((engineName, forbiddenClaims) in stubbedEngines) {
