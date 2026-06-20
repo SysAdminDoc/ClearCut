@@ -297,13 +297,18 @@ object AiUsageLedger {
         generatedAtEpochMs: Long
     ): JSONObject {
         val merged = mergeOverlaps(entries)
+        val hasArticle50Content = AiDisclosurePolicy.requiresMachineReadableLabel(merged)
         return JSONObject().apply {
-            put("schema", "com.novacut.ai-use.v1")
+            put("schema", "com.novacut.ai-use.v2")
             put("projectName", projectName.trim().take(MAX_PROJECT_NAME_CHARS))
             put("exportedFileName", exportedFileName.trim().take(MAX_FILE_NAME_CHARS))
             put("generatedAtEpochMs", generatedAtEpochMs)
             put("aggregateSeverity", aggregateSeverity(merged).name)
             put("disclosureRecommended", discloseToggleDefaultOn(merged))
+            put("article50InScope", hasArticle50Content)
+            if (hasArticle50Content) {
+                put("iptcDigitSourceType", AiDisclosurePolicy.IPTC_DIGIT_SOURCE_TYPE_COMPOSITE_WITH_AI)
+            }
             put("summary", summaryLine(merged))
             put("entries", toJsonArray(merged))
         }
