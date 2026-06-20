@@ -28,11 +28,14 @@ import androidx.compose.material.icons.filled.CropSquare
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Gesture
 import androidx.compose.material.icons.filled.Gradient
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
@@ -48,6 +51,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -354,6 +360,13 @@ fun MaskEditorPanel(
                     onChanged = { onMaskUpdated(selectedMask.copy(expansion = it)) }
                 )
 
+                if (selectedMask.type != MaskType.FREEHAND && selectedMask.points.isNotEmpty()) {
+                    MaskPointCoordinateEditor(
+                        mask = selectedMask,
+                        onMaskUpdated = onMaskUpdated
+                    )
+                }
+
                 MaskToggleRow(
                     label = stringResource(R.string.mask_invert),
                     subtitle = stringResource(R.string.mask_invert_description),
@@ -546,6 +559,93 @@ private fun MaskToggleRow(
                 onCheckedChange = onCheckedChange,
                 colors = SwitchDefaults.colors(checkedTrackColor = accent)
             )
+        }
+    }
+}
+
+@Composable
+private fun MaskPointCoordinateEditor(
+    mask: Mask,
+    onMaskUpdated: (Mask) -> Unit
+) {
+    val pointLabels = when (mask.type) {
+        MaskType.RECTANGLE -> if (mask.points.size >= 2) listOf("Top-Left", "Bottom-Right") else emptyList()
+        MaskType.ELLIPSE -> if (mask.points.size >= 2) listOf("Center", "Radius") else emptyList()
+        MaskType.LINEAR_GRADIENT, MaskType.RADIAL_GRADIENT -> if (mask.points.size >= 2) listOf("Start", "End") else emptyList()
+        else -> emptyList()
+    }
+    if (pointLabels.isEmpty()) return
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            text = "Control Points",
+            style = MaterialTheme.typography.labelMedium,
+            color = Mocha.Subtext0
+        )
+        pointLabels.forEachIndexed { index, label ->
+            if (index >= mask.points.size) return@forEachIndexed
+            val point = mask.points[index]
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Mocha.Mauve,
+                    modifier = Modifier.width(72.dp)
+                )
+                OutlinedTextField(
+                    value = formatEditorDecimal(point.x.toDouble() * 100.0, 1),
+                    onValueChange = { text ->
+                        val parsed = parseEditorDecimal(text) ?: return@OutlinedTextField
+                        val newX = (parsed / 100.0).toFloat().coerceIn(0f, 1f)
+                        val updatedPoints = mask.points.toMutableList()
+                        updatedPoints[index] = updatedPoints[index].copy(x = newX)
+                        onMaskUpdated(mask.copy(points = updatedPoints))
+                    },
+                    label = { Text("X%") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                        .semantics { contentDescription = "$label X coordinate percent" },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Mocha.Text,
+                        unfocusedTextColor = Mocha.Subtext0,
+                        focusedBorderColor = Mocha.Mauve,
+                        unfocusedBorderColor = Mocha.Surface1
+                    )
+                )
+                OutlinedTextField(
+                    value = formatEditorDecimal(point.y.toDouble() * 100.0, 1),
+                    onValueChange = { text ->
+                        val parsed = parseEditorDecimal(text) ?: return@OutlinedTextField
+                        val newY = (parsed / 100.0).toFloat().coerceIn(0f, 1f)
+                        val updatedPoints = mask.points.toMutableList()
+                        updatedPoints[index] = updatedPoints[index].copy(y = newY)
+                        onMaskUpdated(mask.copy(points = updatedPoints))
+                    },
+                    label = { Text("Y%") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                        .semantics { contentDescription = "$label Y coordinate percent" },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Mocha.Text,
+                        unfocusedTextColor = Mocha.Subtext0,
+                        focusedBorderColor = Mocha.Mauve,
+                        unfocusedBorderColor = Mocha.Surface1
+                    )
+                )
+            }
         }
     }
 }
