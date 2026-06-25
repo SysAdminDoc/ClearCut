@@ -111,7 +111,7 @@ fun TranscriptEditorPanel(
                             contentColor = Mocha.Subtext0
                         )
                     ) {
-                        Text("Clear")
+                        Text(stringResource(R.string.transcript_clear))
                     }
                 }
             }
@@ -152,7 +152,7 @@ fun TranscriptEditorPanel(
                 )
             ) {
                 Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
-                Text("Remove ${selectedWordIndices.size} selected words")
+                Text(stringResource(R.string.transcript_remove_selected, selectedWordIndices.size))
             }
         }
     }

@@ -2312,4 +2312,18 @@
     <string name="v369_export_first_toast">Exporta algo primero</string>
     <string name="v369_audio_decode_failed_toast">No se pudo decodificar el audio exportado</string>
     <string name="v369_unable_to_open_toast">No se pudo abrir %1$s</string>
+    <!-- Multicam / speaker switch -->
+    <string name="multicam_need_synced_tracks_toast">Se necesitan al menos 2 pistas de vídeo sincronizadas</string>
+    <string name="multicam_no_speaker_turns_toast">No hay turnos de hablante — transcribe primero</string>
+    <string name="multicam_no_switches_toast">No se produjeron cambios de ángulo</string>
+    <string name="multicam_applied_switches_toast">Se aplicaron %1$d cambios de ángulo por hablante</string>
+    <!-- V369 filler/chapter/caption -->
+    <string name="v369_filler_words_selected_toast">%1$d muletilla(s) seleccionada(s)</string>
+    <string name="v369_chapters_added_toast">%1$d capítulos añadidos</string>
+    <string name="v369_caption_cues_added_toast">%1$d línea(s) de subtítulo añadida(s)</string>
+    <!-- Transcript editor -->
+    <string name="transcript_clear">Limpiar</string>
+    <string name="transcript_remove_selected">Eliminar %1$d palabras seleccionadas</string>
+    <!-- Command palette -->
+    <string name="command_palette_search_hint">Buscar herramientas, efectos, IA…</string>
 </resources>

@@ -96,7 +96,7 @@ class V369Delegate(
         val t = stateFlow.value.v369.transcript ?: return
         val idx = textBased.fillerWordIndices(t.words)
         stateFlow.update { it.copy(v369 = it.v369.copy(selectedWordIndices = idx)) }
-        showToast("${idx.size} filler word${if (idx.size == 1) "" else "s"} selected")
+        showToast(appContext.getString(R.string.v369_filler_words_selected_toast, idx.size))
     }
 
     /**
@@ -261,7 +261,7 @@ class V369Delegate(
             it.copy(chapterMarkers = markers)
         }
         saveProject()
-        showToast("${cands.size} chapters added")
+        showToast(appContext.getString(R.string.v369_chapters_added_toast, cands.size))
     }
 
     fun youtubeChapterClipboard(): String =
@@ -309,7 +309,7 @@ class V369Delegate(
         if (overlays.isEmpty()) { showToast(appContext.getString(R.string.v369_no_captions_toast)); return }
         stateFlow.update { it.copy(textOverlays = existing + overlays) }
         saveProject()
-        showToast("${overlays.size} caption cue${if (overlays.size == 1) "" else "s"} added")
+        showToast(appContext.getString(R.string.v369_caption_cues_added_toast, overlays.size))
     }
 
     // ---- Stream-copy eligibility ----------------------------------------

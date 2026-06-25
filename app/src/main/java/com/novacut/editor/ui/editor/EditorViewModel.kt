@@ -3452,11 +3452,11 @@ class EditorViewModel @Inject constructor(
     ) {
         val videoTracks = _state.value.tracks.filter { it.type == TrackType.VIDEO && it.isVisible }
         if (videoTracks.size < 2) {
-            showToast("Need at least 2 synced video tracks")
+            showToast(text(R.string.multicam_need_synced_tracks_toast))
             return
         }
         if (speakerTurns.isEmpty()) {
-            showToast("No speaker turns available — transcribe first")
+            showToast(text(R.string.multicam_no_speaker_turns_toast))
             return
         }
 
@@ -3468,7 +3468,7 @@ class EditorViewModel @Inject constructor(
         val plan = SpeakerSwitchPlanner.plan(speakerTurns, angles, policy)
 
         if (plan.cuts.isEmpty()) {
-            showToast("No angle switches produced")
+            showToast(text(R.string.multicam_no_switches_toast))
             return
         }
 
@@ -3512,7 +3512,7 @@ class EditorViewModel @Inject constructor(
         }
         rebuildPlayerTimeline()
         saveProject()
-        showToast("Applied ${plan.cuts.size} speaker-based angle switches")
+        showToast(text(R.string.multicam_applied_switches_toast, plan.cuts.size))
     }
 
     // --- Slip/Slide Edit ---

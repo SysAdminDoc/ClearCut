@@ -2586,4 +2586,18 @@
     <string name="v369_export_first_toast">Export something first</string>
     <string name="v369_audio_decode_failed_toast">Could not decode exported audio</string>
     <string name="v369_unable_to_open_toast">Unable to open %1$s</string>
+    <!-- Multicam / speaker switch -->
+    <string name="multicam_need_synced_tracks_toast">Need at least 2 synced video tracks</string>
+    <string name="multicam_no_speaker_turns_toast">No speaker turns available — transcribe first</string>
+    <string name="multicam_no_switches_toast">No angle switches produced</string>
+    <string name="multicam_applied_switches_toast">Applied %1$d speaker-based angle switches</string>
+    <!-- V369 filler/chapter/caption -->
+    <string name="v369_filler_words_selected_toast">%1$d filler word(s) selected</string>
+    <string name="v369_chapters_added_toast">%1$d chapters added</string>
+    <string name="v369_caption_cues_added_toast">%1$d caption cue(s) added</string>
+    <!-- Transcript editor -->
+    <string name="transcript_clear">Clear</string>
+    <string name="transcript_remove_selected">Remove %1$d selected words</string>
+    <!-- Command palette -->
+    <string name="command_palette_search_hint">Search tools, effects, AI…</string>
 </resources>
