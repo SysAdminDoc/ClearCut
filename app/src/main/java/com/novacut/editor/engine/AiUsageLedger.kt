@@ -1,5 +1,6 @@
 package com.novacut.editor.engine
 
+import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -314,10 +315,13 @@ object AiUsageLedger {
         }
     }
 
+    private const val TAG = "AiUsageLedger"
+
     fun fromJson(raw: String, maxEntries: Int = DEFAULT_MAX_ENTRIES): List<Entry> {
         return try {
             fromJsonArray(JSONArray(raw), maxEntries)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to parse AI usage ledger JSON", e)
             emptyList()
         }
     }
@@ -343,7 +347,8 @@ object AiUsageLedger {
                     rangeEndMs = end,
                     recordedAtEpochMs = recordedAt
                 )
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w(TAG, "Skipping corrupt AI ledger entry at index $index", e)
                 null
             }
         }

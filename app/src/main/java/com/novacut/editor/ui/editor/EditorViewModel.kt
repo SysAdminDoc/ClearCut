@@ -478,6 +478,7 @@ class EditorViewModel @Inject constructor(
     private val captionTranslationEngine: com.novacut.editor.engine.CaptionTranslationEngine,
     private val fontRegistry: FontRegistry,
     private val exportIncidentStore: ExportIncidentStore,
+    private val ffmpegEngine: com.novacut.editor.engine.FFmpegEngine,
     @ApplicationContext private val appContext: Context,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -537,7 +538,8 @@ class EditorViewModel @Inject constructor(
         mediaHealthPreflight = ::analyzeMediaHealthForState,
         audioEngine = audioEngine,
         exportIncidentStore = exportIncidentStore,
-        appVersion = com.novacut.editor.NovaCutApp.VERSION
+        appVersion = com.novacut.editor.NovaCutApp.VERSION,
+        ffmpegEngine = ffmpegEngine
     )
 
     val aiToolsDelegate = AiToolsDelegate(
@@ -1756,6 +1758,7 @@ class EditorViewModel @Inject constructor(
 
     fun updateClipKeyframes(keyframes: List<Keyframe>) {
         updateSelectedClip { it.copy(keyframes = keyframes) }
+        saveProject()
     }
 
     fun addKeyframe(property: KeyframeProperty, timeOffsetMs: Long, value: Float) {
@@ -1824,6 +1827,7 @@ class EditorViewModel @Inject constructor(
         updateSelectedClip { clip ->
             clip.copy(masks = clip.masks.map { if (it.id == mask.id) mask else it })
         }
+        saveProject()
     }
 
     fun deleteMask(maskId: String) {
@@ -1844,6 +1848,7 @@ class EditorViewModel @Inject constructor(
                 } else mask
             })
         }
+        saveProject()
     }
 
     fun setFreehandMaskPoints(maskId: String, points: List<MaskPoint>) {
