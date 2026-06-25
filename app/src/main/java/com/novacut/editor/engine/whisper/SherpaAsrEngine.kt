@@ -145,7 +145,7 @@ class SherpaAsrEngine @Inject constructor(
     /**
      * Target model policy for the future native Sherpa-ONNX path.
      *
-     * The active runtime still falls back to [WhisperEngine] until NovaCut has a
+     * The active runtime still falls back to [WhisperEngine] until ClearCut has a
      * deliberate packaging decision for the 50+ MB Android AAR/native payload,
      * but callers and settings surfaces should converge on this model order.
      *

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate NovaCut's committed Google Play listing package."""
+"""Validate ClearCut's committed Google Play listing package."""
 from __future__ import annotations
 
 import argparse
@@ -86,7 +86,7 @@ def require_screenshots(kind: str, expected_size: tuple[int, int], minimum: int 
 def require_inventory(image_paths: list[Path]) -> None:
     path = IMAGES / "asset_inventory.json"
     inventory = json.loads(read_text(path))
-    if inventory.get("schema") != "com.novacut.play-listing-assets.v1":
+    if inventory.get("schema") != "com.clearcut.play-listing-assets.v1":
         raise ListingError("asset_inventory.json has an unexpected schema")
     entries = inventory.get("assets")
     if not isinstance(entries, list):
@@ -113,7 +113,7 @@ def require_privacy_docs() -> None:
         raise ListingError("privacy_policy_url.txt must contain an https URL")
 
     privacy = read_text(ROOT / "docs" / "privacy-policy.md").lower()
-    for required in ("novacut", "contact", "deletion", "retention"):
+    for required in ("clearcut", "contact", "deletion", "retention"):
         if required not in privacy:
             raise ListingError(f"docs/privacy-policy.md must mention {required}")
 

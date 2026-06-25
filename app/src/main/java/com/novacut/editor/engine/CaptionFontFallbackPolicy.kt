@@ -9,7 +9,7 @@ import java.util.Locale
  * carry CJK / Arabic / Devanagari / Thai content, the system default may not
  * have glyph coverage and characters render as tofu (□). This policy maps a
  * language tag (BCP-47 or ISO-639-1) to the recommended Noto subset family
- * NovaCut should bundle and select for that locale's caption rendering.
+ * ClearCut should bundle and select for that locale's caption rendering.
  *
  * The actual font files are not bundled by this commit — bundling Noto CJK
  * alone is ~20 MB per writing system. The policy lives in code so the
@@ -20,7 +20,7 @@ import java.util.Locale
 object CaptionFontFallbackPolicy {
 
     /**
-     * The Noto subset families NovaCut intends to bundle. Each entry maps to
+     * The Noto subset families ClearCut intends to bundle. Each entry maps to
      * a `<font>` family name the renderer can resolve via `Typeface.create`
      * after the asset bundle is installed. Defaults to system sans-serif for
      * Latin-script languages where the platform already has coverage.

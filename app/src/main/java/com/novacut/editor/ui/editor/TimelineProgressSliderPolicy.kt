@@ -3,7 +3,7 @@ package com.novacut.editor.ui.editor
 /**
  * R6.10d decision guard for Media3's Material3 ProgressSlider.
  *
- * The official ProgressSlider is a player-position control. NovaCut's ruler
+ * The official ProgressSlider is a player-position control. ClearCut's ruler
  * and mini-player are project-timeline controls whose source of truth is
  * playheadMs / totalDurationMs plus editor callbacks.
  */
@@ -15,7 +15,7 @@ object TimelineProgressSliderPolicy {
         ZOOMED_SCROLL_WINDOW,
         MARKER_AND_SNAP_OVERLAYS,
         CLIP_HIT_TARGETS,
-        NOVACUT_COLORS,
+        CLEARCUT_COLORS,
     }
 
     enum class AdoptionDecision {
@@ -62,13 +62,13 @@ object TimelineProgressSliderPolicy {
         Requirement.ZOOMED_SCROLL_WINDOW,
         Requirement.MARKER_AND_SNAP_OVERLAYS,
         Requirement.CLIP_HIT_TARGETS,
-        Requirement.NOVACUT_COLORS,
+        Requirement.CLEARCUT_COLORS,
     )
 
     val miniPlayerRequirements: Set<Requirement> = setOf(
         Requirement.EXTERNAL_TIMELINE_VALUE,
         Requirement.EXTERNAL_SEEK_CALLBACK,
-        Requirement.NOVACUT_COLORS,
+        Requirement.CLEARCUT_COLORS,
     )
 
     fun evaluateTimelineRuler(
@@ -106,6 +106,6 @@ object TimelineProgressSliderPolicy {
         Requirement.ZOOMED_SCROLL_WINDOW -> supportsZoomedScrollWindow
         Requirement.MARKER_AND_SNAP_OVERLAYS -> supportsMarkerAndSnapOverlays
         Requirement.CLIP_HIT_TARGETS -> supportsClipHitTargets
-        Requirement.NOVACUT_COLORS -> supportsThemeColors
+        Requirement.CLEARCUT_COLORS -> supportsThemeColors
     }
 }

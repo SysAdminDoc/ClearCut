@@ -79,7 +79,7 @@ object SubtitleExporter {
     private fun generateAss(captions: List<Caption>): String {
         return buildString {
             appendLine("[Script Info]")
-            appendLine("Title: NovaCut Export")
+            appendLine("Title: ClearCut Export")
             appendLine("ScriptType: v4.00+")
             appendLine("WrapStyle: 0")
             appendLine("ScaledBorderAndShadow: yes")

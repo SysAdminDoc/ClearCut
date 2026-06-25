@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Write or verify SHA-256 sidecar files for generated NovaCut APKs."""
+"""Write or verify SHA-256 sidecar files for generated ClearCut APKs."""
 from __future__ import annotations
 
 import argparse
@@ -80,10 +80,10 @@ def run_self_tests() -> None:
         root = Path(temp)
         apk = root / "release" / "app-release.apk"
         apk.parent.mkdir(parents=True)
-        apk.write_bytes(b"novacut-test-apk")
+        apk.write_bytes(b"clearcut-test-apk")
         write_checksums(root)
         verify_checksums(root)
-        apk.write_bytes(b"novacut-test-apk-tampered")
+        apk.write_bytes(b"clearcut-test-apk-tampered")
         try:
             verify_checksums(root)
         except ChecksumError:

@@ -1,4 +1,4 @@
 - CI instrumentation smoke gate
-- Added a dedicated instrumentation-smoke GitHub Actions job that boots a hosted Android emulator and runs the existing NovaCutSmokeTest through connectedDebugAndroidTest.
-- Filtered the instrumentation run to com.novacut.editor.NovaCutSmokeTest so the gate covers project gallery, blank editor open, media picker, export sheet, Settings, and privacy dashboard surfaces without accidentally expanding to unrelated future androidTests.
+- Added a dedicated instrumentation-smoke GitHub Actions job that boots a hosted Android emulator and runs the existing ClearCutSmokeTest through connectedDebugAndroidTest.
+- Filtered the instrumentation run to com.novacut.editor.ClearCutSmokeTest so the gate covers project gallery, blank editor open, media picker, export sheet, Settings, and privacy dashboard surfaces without accidentally expanding to unrelated future androidTests.
 - Disabled emulator animation...

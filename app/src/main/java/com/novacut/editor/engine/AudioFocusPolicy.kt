@@ -8,7 +8,7 @@ import androidx.annotation.RequiresApi
 import androidx.media3.common.C
 import androidx.media3.common.AudioAttributes as Media3AudioAttributes
 
-internal object NovaCutAudioFocusPolicy {
+internal object ClearCutAudioFocusPolicy {
     const val PREVIEW_USAGE: Int = C.USAGE_MEDIA
     const val PREVIEW_CONTENT_TYPE: Int = C.AUDIO_CONTENT_TYPE_MOVIE
     const val TTS_PREVIEW_FOCUS_GAIN: Int = AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK

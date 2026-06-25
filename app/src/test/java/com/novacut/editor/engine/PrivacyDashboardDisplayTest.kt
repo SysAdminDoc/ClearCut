@@ -14,7 +14,7 @@ import org.junit.Test
  *
  * The dashboard's risk-ordered presentation is a privacy UX promise:
  * cloud and telemetry rows must read first so users are never surprised by
- * what data leaves the device, even if NovaCut is mostly on-device today.
+ * what data leaves the device, even if ClearCut is mostly on-device today.
  */
 class PrivacyDashboardDisplayTest {
 

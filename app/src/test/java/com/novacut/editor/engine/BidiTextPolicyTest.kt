@@ -38,7 +38,7 @@ class BidiTextPolicyTest {
     @Test
     fun classify_englishIsLtr() {
         assertEquals(Direction.LTR, BidiTextPolicy.classify("Hello, world."))
-        assertEquals(Direction.LTR, BidiTextPolicy.classify("NovaCut"))
+        assertEquals(Direction.LTR, BidiTextPolicy.classify("ClearCut"))
     }
 
     @Test

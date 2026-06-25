@@ -45,7 +45,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.FileProvider
 import androidx.core.content.ContextCompat
 import com.novacut.editor.BuildConfig
-import com.novacut.editor.NovaCutApp
+import com.novacut.editor.ClearCutApp
 import com.novacut.editor.R
 import com.novacut.editor.engine.AppearanceMode
 import com.novacut.editor.engine.AppSettings
@@ -53,18 +53,18 @@ import com.novacut.editor.engine.ProjectColorPolicy
 import com.novacut.editor.engine.segmentation.SegmentationModelState
 import com.novacut.editor.engine.whisper.WhisperModelState
 import com.novacut.editor.model.*
-import com.novacut.editor.ui.NovaCutTestTags
+import com.novacut.editor.ui.ClearCutTestTags
 import com.novacut.editor.ui.theme.Mocha
-import com.novacut.editor.ui.theme.NovaCutChromeIconButton
-import com.novacut.editor.ui.theme.NovaCutDialogIcon
-import com.novacut.editor.ui.theme.NovaCutFilterChip
-import com.novacut.editor.ui.theme.NovaCutHeroCard
-import com.novacut.editor.ui.theme.LocalNovaCutColors
-import com.novacut.editor.ui.theme.NovaCutMetricPill
-import com.novacut.editor.ui.theme.NovaCutPrimaryButton
-import com.novacut.editor.ui.theme.NovaCutScreenBackground
-import com.novacut.editor.ui.theme.NovaCutSectionHeader
-import com.novacut.editor.ui.theme.NovaCutSecondaryButton
+import com.novacut.editor.ui.theme.ClearCutChromeIconButton
+import com.novacut.editor.ui.theme.ClearCutDialogIcon
+import com.novacut.editor.ui.theme.ClearCutFilterChip
+import com.novacut.editor.ui.theme.ClearCutHeroCard
+import com.novacut.editor.ui.theme.LocalClearCutColors
+import com.novacut.editor.ui.theme.ClearCutMetricPill
+import com.novacut.editor.ui.theme.ClearCutPrimaryButton
+import com.novacut.editor.ui.theme.ClearCutScreenBackground
+import com.novacut.editor.ui.theme.ClearCutSectionHeader
+import com.novacut.editor.ui.theme.ClearCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
 import com.novacut.editor.ui.theme.TouchTarget
@@ -124,10 +124,10 @@ fun SettingsScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    NovaCutScreenBackground(
+    ClearCutScreenBackground(
         modifier = modifier
             .fillMaxSize()
-            .testTag(NovaCutTestTags.SETTINGS_SCREEN)
+            .testTag(ClearCutTestTags.SETTINGS_SCREEN)
     ) {
         Column(
             modifier = Modifier
@@ -328,7 +328,7 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 listOf(48, 64, 80, 96).forEach { height ->
-                    NovaCutFilterChip(
+                    ClearCutFilterChip(
                         selected = settings.defaultTrackHeight == height,
                         onClick = { viewModel.setDefaultTrackHeight(height) },
                         text = "${height}dp",
@@ -526,7 +526,7 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 listOf(64 to "64 MB", 128 to "128 MB", 256 to "256 MB").forEach { (size, label) ->
-                    NovaCutFilterChip(
+                    ClearCutFilterChip(
                         selected = settings.thumbnailCacheSizeMb == size,
                         onClick = { viewModel.setThumbnailCacheSize(size) },
                         text = label,
@@ -554,7 +554,7 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 qualityLabels.forEach { (key, label) ->
-                    NovaCutFilterChip(
+                    ClearCutFilterChip(
                         selected = settings.defaultExportQuality == key,
                         onClick = { viewModel.setDefaultExportQuality(key) },
                         text = label,
@@ -578,7 +578,7 @@ fun SettingsScreen(
                 description = stringResource(R.string.settings_reset_tutorial_row_description),
                 onClick = { showResetConfirm = true }
             ) {
-                NovaCutMetricPill(
+                ClearCutMetricPill(
                     text = stringResource(R.string.settings_reset_tutorial_action),
                     accent = Mocha.Sapphire
                 )
@@ -634,7 +634,7 @@ fun SettingsScreen(
                 description = stringResource(R.string.settings_privacy_open_description),
                 actionLabel = stringResource(R.string.settings_privacy_open_action),
                 onClick = { showPrivacyDashboard = true },
-                modifier = Modifier.testTag(NovaCutTestTags.SETTINGS_PRIVACY_OPEN)
+                modifier = Modifier.testTag(ClearCutTestTags.SETTINGS_PRIVACY_OPEN)
             )
         }
 
@@ -650,7 +650,7 @@ fun SettingsScreen(
                 description = stringResource(R.string.settings_open_source_licenses_description),
                 actionLabel = stringResource(R.string.settings_open_source_licenses_action),
                 onClick = { showOpenSourceLicenses = true },
-                modifier = Modifier.testTag(NovaCutTestTags.SETTINGS_LICENSES_OPEN)
+                modifier = Modifier.testTag(ClearCutTestTags.SETTINGS_LICENSES_OPEN)
             )
         }
 
@@ -705,7 +705,7 @@ fun SettingsScreen(
             title = stringResource(R.string.settings_about),
             description = stringResource(R.string.settings_about_description)
         ) {
-            SettingsInfo(Icons.Default.Info, stringResource(R.string.settings_version), NovaCutApp.VERSION, Mocha.Sapphire)
+            SettingsInfo(Icons.Default.Info, stringResource(R.string.settings_version), ClearCutApp.VERSION, Mocha.Sapphire)
             SettingsInfo(Icons.Default.Movie, stringResource(R.string.settings_engine), stringResource(R.string.settings_engine_value), Mocha.Peach)
             SettingsInfo(Icons.Default.AutoAwesome, stringResource(R.string.settings_ai_models), stringResource(R.string.settings_ai_models_value), Mocha.Mauve)
         }
@@ -741,7 +741,7 @@ fun SettingsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(max = 640.dp)
-                        .testTag(NovaCutTestTags.SETTINGS_PRIVACY_DASHBOARD)
+                        .testTag(ClearCutTestTags.SETTINGS_PRIVACY_DASHBOARD)
                 ) {
                     Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                         PrivacyDashboardPanel()
@@ -751,10 +751,10 @@ fun SettingsScreen(
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
                             horizontalArrangement = Arrangement.End
                         ) {
-                            NovaCutSecondaryButton(
+                            ClearCutSecondaryButton(
                                 text = stringResource(R.string.settings_privacy_close),
                                 onClick = { showPrivacyDashboard = false },
-                                modifier = Modifier.testTag(NovaCutTestTags.SETTINGS_PRIVACY_CLOSE)
+                                modifier = Modifier.testTag(ClearCutTestTags.SETTINGS_PRIVACY_CLOSE)
                             )
                         }
                     }
@@ -772,7 +772,7 @@ fun SettingsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(max = 640.dp)
-                        .testTag(NovaCutTestTags.SETTINGS_LICENSES_DIALOG)
+                        .testTag(ClearCutTestTags.SETTINGS_LICENSES_DIALOG)
                 ) {
                     Column {
                         Box(
@@ -788,10 +788,10 @@ fun SettingsScreen(
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
                             horizontalArrangement = Arrangement.End
                         ) {
-                            NovaCutSecondaryButton(
+                            ClearCutSecondaryButton(
                                 text = stringResource(R.string.settings_open_source_licenses_close),
                                 onClick = { showOpenSourceLicenses = false },
-                                modifier = Modifier.testTag(NovaCutTestTags.SETTINGS_LICENSES_CLOSE)
+                                modifier = Modifier.testTag(ClearCutTestTags.SETTINGS_LICENSES_CLOSE)
                             )
                         }
                     }
@@ -809,7 +809,7 @@ private fun ResetTutorialConfirmDialog(
     AlertDialog(
         onDismissRequest = onDismissRequest,
         icon = {
-            NovaCutDialogIcon(
+            ClearCutDialogIcon(
                 icon = Icons.Default.School,
                 accent = Mocha.Sapphire
             )
@@ -829,14 +829,14 @@ private fun ResetTutorialConfirmDialog(
             )
         },
         confirmButton = {
-            NovaCutPrimaryButton(
+            ClearCutPrimaryButton(
                 text = stringResource(R.string.settings_reset_tutorial_action),
                 onClick = onConfirm,
                 icon = Icons.Default.Check
             )
         },
         dismissButton = {
-            NovaCutSecondaryButton(
+            ClearCutSecondaryButton(
                 text = stringResource(R.string.cancel),
                 onClick = onDismissRequest
             )
@@ -867,7 +867,7 @@ private fun SettingsAiModelRemovalConfirmDialog(
     AlertDialog(
         onDismissRequest = onDismissRequest,
         icon = {
-            NovaCutDialogIcon(
+            ClearCutDialogIcon(
                 icon = Icons.Default.Delete,
                 accent = Mocha.Red
             )
@@ -887,7 +887,7 @@ private fun SettingsAiModelRemovalConfirmDialog(
             )
         },
         confirmButton = {
-            NovaCutSecondaryButton(
+            ClearCutSecondaryButton(
                 text = stringResource(R.string.ai_model_remove_confirm),
                 onClick = onConfirm,
                 icon = Icons.Default.Delete,
@@ -895,7 +895,7 @@ private fun SettingsAiModelRemovalConfirmDialog(
             )
         },
         dismissButton = {
-            NovaCutSecondaryButton(
+            ClearCutSecondaryButton(
                 text = stringResource(R.string.cancel),
                 onClick = onDismissRequest
             )
@@ -919,7 +919,7 @@ private fun SettingsHero(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        NovaCutHeroCard(
+        ClearCutHeroCard(
             accent = Mocha.Sapphire,
             shape = RoundedCornerShape(Radius.xxl)
         ) {
@@ -927,11 +927,11 @@ private fun SettingsHero(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                NovaCutChromeIconButton(
+                ClearCutChromeIconButton(
                     icon = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = stringResource(R.string.back),
                     onClick = onBack,
-                    modifier = Modifier.testTag(NovaCutTestTags.SETTINGS_BACK)
+                    modifier = Modifier.testTag(ClearCutTestTags.SETTINGS_BACK)
                 )
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
@@ -1025,7 +1025,7 @@ private fun SettingsFeedbackBanner(
     iconOverride: ImageVector? = null,
     onDismiss: () -> Unit
 ) {
-    val colors = LocalNovaCutColors.current
+    val colors = LocalClearCutColors.current
     val accent = accentOverride ?: if (isError) Mocha.Red else Mocha.Green
     val icon = iconOverride ?: if (isError) Icons.Default.Error else Icons.Default.CheckCircle
     Surface(
@@ -1122,13 +1122,13 @@ private fun SettingsDiagnosticExportRow(
                         overflow = TextOverflow.Ellipsis
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                        NovaCutSecondaryButton(
+                        ClearCutSecondaryButton(
                             text = stringResource(R.string.settings_diagnostic_share),
                             onClick = { onShare(state.bundle) },
                             icon = Icons.Default.Share,
                             contentColor = Mocha.Green
                         )
-                        NovaCutSecondaryButton(
+                        ClearCutSecondaryButton(
                             text = stringResource(R.string.settings_diagnostic_rebuild),
                             onClick = onExport,
                             icon = Icons.Default.Refresh,
@@ -1138,7 +1138,7 @@ private fun SettingsDiagnosticExportRow(
                     }
                 }
                 else -> {
-                    NovaCutSecondaryButton(
+                    ClearCutSecondaryButton(
                         text = stringResource(R.string.settings_diagnostic_export_action),
                         onClick = onExport,
                         icon = Icons.Default.Save,
@@ -1332,7 +1332,7 @@ private fun SettingsAiModelRow(
                     }
                 )
             }
-            NovaCutSecondaryButton(
+            ClearCutSecondaryButton(
                 text = actionLabel,
                 onClick = onAction,
                 enabled = !isBusy,
@@ -1402,9 +1402,9 @@ private fun SettingsSection(
     description: String? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val colors = LocalNovaCutColors.current
+    val colors = LocalClearCutColors.current
     Column(modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm)) {
-        NovaCutSectionHeader(
+        ClearCutSectionHeader(
             title = title,
             description = description,
             modifier = Modifier.padding(bottom = Spacing.sm)
@@ -1450,7 +1450,7 @@ private fun SettingsDropdown(
     options: List<String>,
     onSelected: (Int) -> Unit
 ) {
-    val colors = LocalNovaCutColors.current
+    val colors = LocalClearCutColors.current
     var expanded by remember { mutableStateOf(false) }
     Box {
         SettingsTile(
@@ -1730,7 +1730,7 @@ private fun SettingsTile(
     semanticState: String? = null,
     trailing: @Composable RowScope.() -> Unit
 ) {
-    val colors = LocalNovaCutColors.current
+    val colors = LocalClearCutColors.current
     Surface(
         color = colors.panelHighest,
         shape = RoundedCornerShape(Radius.md),

@@ -4,7 +4,7 @@ import java.io.File
 import java.io.IOException
 import java.util.UUID
 
-private const val STILL_IMAGE_PARTIAL_MARKER = ".novacut-partial-"
+private const val STILL_IMAGE_PARTIAL_MARKER = ".clearcut-partial-"
 private const val ABANDONED_STILL_IMAGE_PARTIAL_MAX_AGE_MS = 10 * 60 * 1000L
 
 internal data class StillImageOutputFiles(

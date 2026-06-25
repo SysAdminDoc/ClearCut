@@ -16,7 +16,7 @@ import javax.inject.Singleton
  *
  * The shipped capture button uses an external camera-app handoff through
  * ActivityResultContracts.CaptureVideo. This engine models the separate future
- * in-app recorder, where NovaCut would own CameraX, runtime CAMERA permission,
+ * in-app recorder, where ClearCut would own CameraX, runtime CAMERA permission,
  * and optional scrolling teleprompter overlay.
  *
  * Dependencies to add when wiring the real UI:
@@ -141,7 +141,7 @@ data class CameraCaptureCapability(
 data class ExternalCameraHandoffCapability(
     val available: Boolean,
     val label: String,
-    val requiresNovaCutCameraPermission: Boolean
+    val requiresClearCutCameraPermission: Boolean
 )
 
 data class InAppCameraRecorderCapability(
@@ -155,7 +155,7 @@ internal fun cameraCaptureCapability(cameraXAvailable: Boolean): CameraCaptureCa
         externalHandoff = ExternalCameraHandoffCapability(
             available = true,
             label = "Open camera app",
-            requiresNovaCutCameraPermission = false
+            requiresClearCutCameraPermission = false
         ),
         inAppRecorder = InAppCameraRecorderCapability(
             available = cameraXAvailable,

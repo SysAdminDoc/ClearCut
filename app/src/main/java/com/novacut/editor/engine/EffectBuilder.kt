@@ -6,7 +6,7 @@ import com.novacut.editor.engine.segmentation.SegmentationEngine
 import com.novacut.editor.model.*
 
 /**
- * Pure mapping from NovaCut model types to Media3 Effect instances.
+ * Pure mapping from ClearCut model types to Media3 Effect instances.
  * Stateless — all dependencies are passed as parameters.
  */
 @UnstableApi
@@ -29,7 +29,7 @@ internal object EffectBuilder {
     }
 
     /**
-     * Convert a NovaCut Effect to a Media3 Effect.
+     * Convert a ClearCut Effect to a Media3 Effect.
      * Returns null for effect types handled outside the visual pipeline (speed, reverse).
      */
     fun buildVideoEffect(

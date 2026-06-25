@@ -1,7 +1,7 @@
 {
   "assets": [
     {
-      "altText": "NovaCut app icon",
+      "altText": "ClearCut app icon",
       "caption": "High-resolution Play Store icon.",
       "height": 512,
       "path": "icon.png",
@@ -9,7 +9,7 @@
       "width": 512
     },
     {
-      "altText": "NovaCut feature graphic",
+      "altText": "ClearCut feature graphic",
       "caption": "Feature graphic for the main store listing.",
       "height": 500,
       "path": "featureGraphic.png",
@@ -81,6 +81,6 @@
       "width": 1920
     }
   ],
-  "schema": "com.novacut.play-listing-assets.v1",
+  "schema": "com.clearcut.play-listing-assets.v1",
   "updated": "2026-06-04"
 }

@@ -15,7 +15,7 @@ import javax.inject.Singleton
 
 /**
  * Engine for exporting and importing effect chains, color grades, and LUTs
- * as shareable .ncfx (NovaCut Effects) JSON files.
+ * as shareable .ncfx (ClearCut Effects) JSON files.
  */
 @Singleton
 class EffectShareEngine @Inject constructor(
@@ -40,7 +40,7 @@ class EffectShareEngine @Inject constructor(
             val json = JSONObject().apply {
                 put("name", name)
                 put("version", 1)
-                put("type", "novacut_effects")
+                put("type", "clearcut_effects")
 
                 // Effects
                 val effectsArr = JSONArray()
@@ -137,7 +137,7 @@ class EffectShareEngine @Inject constructor(
     private fun parseEffectsJson(jsonStr: String): ImportedEffects? {
         return try {
             val json = JSONObject(jsonStr)
-            if (json.optString("type") != "novacut_effects") return null
+            if (json.optString("type") != "clearcut_effects") return null
 
             val name = json.optString("name", "Imported")
 

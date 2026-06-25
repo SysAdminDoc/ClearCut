@@ -1,4 +1,4 @@
 - App-level memory trim policy
-- Added NovaCutApp.onTrimMemory(...) dispatch through a tested MemoryTrimPolicy, mapping UI-hidden, running-low, running-critical, background, moderate, and complete trim levels into explicit editor-cache actions.
+- Added ClearCutApp.onTrimMemory(...) dispatch through a tested MemoryTrimPolicy, mapping UI-hidden, running-low, running-critical, background, moderate, and complete trim levels into explicit editor-cache actions.
 - Added a lightweight MemoryTrimRegistry so VideoEngine, AudioEngine, and ProxyEngine register cache-trim callbacks only after those engines exist, avoiding eager media-engine construction from the application object.
 - Wired thumbnail, waveform, and...

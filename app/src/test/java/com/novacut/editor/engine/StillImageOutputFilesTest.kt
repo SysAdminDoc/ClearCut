@@ -15,7 +15,7 @@ class StillImageOutputFilesTest {
         val dir = Files.createTempDirectory("still-image-").toFile()
         try {
             val output = File(dir, "poster.jpg").apply { writeBytes(byteArrayOf(9)) }
-            val partial = File(dir, ".poster.jpg.novacut-partial-1").apply {
+            val partial = File(dir, ".poster.jpg.clearcut-partial-1").apply {
                 writeBytes(byteArrayOf(1, 2, 3, 4))
             }
 
@@ -36,7 +36,7 @@ class StillImageOutputFilesTest {
         val dir = Files.createTempDirectory("still-image-empty-").toFile()
         try {
             val output = File(dir, "poster.jpg").apply { writeBytes(byteArrayOf(9, 8, 7)) }
-            val partial = File(dir, ".poster.jpg.novacut-partial-1").apply { writeBytes(ByteArray(0)) }
+            val partial = File(dir, ".poster.jpg.clearcut-partial-1").apply { writeBytes(ByteArray(0)) }
 
             val result = finalizeStillImageOutputFile(partial, output)
 
@@ -59,7 +59,7 @@ class StillImageOutputFilesTest {
 
             assertEquals(output.absoluteFile, files.outputFile)
             assertEquals(dir.absoluteFile, files.partialFile.parentFile)
-            assertTrue(files.partialFile.name.startsWith(".contact sheet.png.novacut-partial-"))
+            assertTrue(files.partialFile.name.startsWith(".contact sheet.png.clearcut-partial-"))
         } finally {
             dir.deleteRecursively()
         }

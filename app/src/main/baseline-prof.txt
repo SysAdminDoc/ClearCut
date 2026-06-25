@@ -1,7 +1,7 @@
 Lcom/novacut/editor/MainActivity;
-Lcom/novacut/editor/NovaCutApp;
+Lcom/novacut/editor/ClearCutApp;
 HSPLcom/novacut/editor/MainActivity;->**(**)**
-HSPLcom/novacut/editor/NovaCutApp;->**(**)**
+HSPLcom/novacut/editor/ClearCutApp;->**(**)**
 HSPLcom/novacut/editor/ui/theme/**->**(**)**
 HSPLcom/novacut/editor/ui/projects/**->**(**)**
 HSPLcom/novacut/editor/ui/editor/**->**(**)**

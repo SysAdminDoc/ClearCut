@@ -12,7 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 APK_ROOT = ROOT / "app" / "build" / "outputs" / "apk"
 BASELINE = ROOT / "scripts" / "apk_size_baseline.json"
-SCHEMA = "com.novacut.apk-size-budget.v1"
+SCHEMA = "com.clearcut.apk-size-budget.v1"
 
 
 class SizeBudgetError(RuntimeError):

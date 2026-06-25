@@ -96,13 +96,13 @@ import com.novacut.editor.model.TargetSizePreset
 import com.novacut.editor.model.VideoCodec
 import com.novacut.editor.model.Watermark
 import com.novacut.editor.model.WatermarkPosition
-import com.novacut.editor.ui.NovaCutTestTags
-import com.novacut.editor.ui.theme.LocalNovaCutColors
+import com.novacut.editor.ui.ClearCutTestTags
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.Motion
-import com.novacut.editor.ui.theme.NovaCutDialogIcon
-import com.novacut.editor.ui.theme.NovaCutPrimaryButton
-import com.novacut.editor.ui.theme.NovaCutSecondaryButton
+import com.novacut.editor.ui.theme.ClearCutDialogIcon
+import com.novacut.editor.ui.theme.ClearCutPrimaryButton
+import com.novacut.editor.ui.theme.ClearCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
 import java.text.DateFormat
@@ -273,7 +273,7 @@ fun ExportSheet(
         AlertDialog(
             onDismissRequest = { showClearAiLedgerConfirm = false },
             icon = {
-                NovaCutDialogIcon(
+                ClearCutDialogIcon(
                     icon = Icons.Default.AutoAwesome,
                     accent = Mocha.Mauve
                 )
@@ -303,7 +303,7 @@ fun ExportSheet(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .testTag(NovaCutTestTags.EXPORT_SHEET)
+            .testTag(ClearCutTestTags.EXPORT_SHEET)
             .background(Mocha.Panel, containerShape)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = Spacing.lg, vertical = 14.dp)
@@ -368,7 +368,7 @@ fun ExportSheet(
                         onClick = onClose,
                         modifier = Modifier
                             .size(40.dp)
-                            .testTag(NovaCutTestTags.EXPORT_CLOSE)
+                            .testTag(ClearCutTestTags.EXPORT_CLOSE)
                     ) {
                         Icon(
                             Icons.Default.Close,
@@ -1289,7 +1289,7 @@ fun ExportSheet(
             description = stringResource(R.string.export_ready_to_export_description),
             accent = Mocha.Rosewater
         ) {
-            NovaCutPrimaryButton(
+            ClearCutPrimaryButton(
                 text = primaryButtonLabel,
                 onClick = {
                     if (config.captureFrameOnly) {
@@ -1324,13 +1324,13 @@ fun ExportSheet(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
-                NovaCutSecondaryButton(
+                ClearCutSecondaryButton(
                     text = stringResource(R.string.export_otio),
                     onClick = onExportOtio,
                     modifier = Modifier.weight(1f),
                     contentColor = Mocha.Sapphire
                 )
-                NovaCutSecondaryButton(
+                ClearCutSecondaryButton(
                     text = stringResource(R.string.export_fcpxml),
                     onClick = onExportFcpxml,
                     modifier = Modifier.weight(1f),
@@ -1348,7 +1348,7 @@ private fun ExportSectionCard(
     accent: Color,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val colors = LocalNovaCutColors.current
+    val colors = LocalClearCutColors.current
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = colors.panelHighest),
@@ -1926,7 +1926,7 @@ private fun ExportToggleRow(
     onCheckedChange: (Boolean) -> Unit,
     accent: Color
 ) {
-    val colors = LocalNovaCutColors.current
+    val colors = LocalClearCutColors.current
     val contentAlpha = if (enabled) 1f else 0.52f
     val semanticState = stringResource(if (checked && enabled) R.string.state_on else R.string.state_off)
     Surface(
@@ -2040,7 +2040,7 @@ private fun ExportStateCard(
     onTertiary: (() -> Unit)? = null,
     primaryStyle: PrimaryStyle = PrimaryStyle.Filled
 ) {
-    val colors = LocalNovaCutColors.current
+    val colors = LocalClearCutColors.current
     val statusDescription = listOfNotNull(title, progressLabel, secondaryBody).joinToString(". ")
     Card(
         modifier = Modifier

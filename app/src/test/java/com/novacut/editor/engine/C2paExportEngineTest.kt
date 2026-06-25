@@ -17,7 +17,7 @@ class C2paExportEngineTest {
     private fun ledgerEntry(
         clip: String = "clip-1",
         kind: AiUsageLedger.EffectKind = AiUsageLedger.EffectKind.AUTO_EDIT_LOCAL,
-        model: String = "novacut.auto-edit.v1",
+        model: String = "clearcut.auto-edit.v1",
         start: Long = 0L,
         end: Long = 1_000L,
         recorded: Long = 1_700_000_000_000L
@@ -78,7 +78,7 @@ class C2paExportEngineTest {
             ledger = emptyList(),
             exporterCreationTimeMs = 0L
         )
-        assertEquals("NovaCut/3.74.9", m.claimGenerator)
+        assertEquals("ClearCut/3.74.9", m.claimGenerator)
         assertEquals("3.74.9", m.claimGeneratorInfoVersion)
         assertNull(m.title)
         assertEquals(C2paExportEngine.SigningMode.ANDROID_KEYSTORE, m.signingMode)
@@ -161,7 +161,7 @@ class C2paExportEngineTest {
     fun aiActionsAssertion_autoEditBecomesEditedCompositeWithTrained() {
         val a = engine.aiActionsAssertion(
             listOf(
-                ledgerEntry(kind = AiUsageLedger.EffectKind.AUTO_EDIT_LOCAL, model = "novacut.auto-edit.v1")
+                ledgerEntry(kind = AiUsageLedger.EffectKind.AUTO_EDIT_LOCAL, model = "clearcut.auto-edit.v1")
             )
         )
         @Suppress("UNCHECKED_CAST")
@@ -226,7 +226,7 @@ class C2paExportEngineTest {
             novaCutVersionName = "3.74.9",
             signingMode = C2paExportEngine.SigningMode.ANDROID_KEYSTORE,
             ledger = listOf(
-                ledgerEntry(kind = AiUsageLedger.EffectKind.AUTO_EDIT_LOCAL, model = "NovaCut Auto Edit")
+                ledgerEntry(kind = AiUsageLedger.EffectKind.AUTO_EDIT_LOCAL, model = "ClearCut Auto Edit")
             ),
             exporterCreationTimeMs = 1_700_000_000_000L
         )
@@ -239,8 +239,8 @@ class C2paExportEngineTest {
             .getJSONObject("data")
             .getJSONArray("actions")
 
-        assertEquals("NovaCut/3.74.9", json.getString("claim_generator"))
-        assertEquals("NovaCut", json.getJSONArray("claim_generator_info").getJSONObject(0).getString("name"))
+        assertEquals("ClearCut/3.74.9", json.getString("claim_generator"))
+        assertEquals("ClearCut", json.getJSONArray("claim_generator_info").getJSONObject(0).getString("name"))
         assertEquals("3.74.9", json.getJSONArray("claim_generator_info").getJSONObject(0).getString("version"))
         assertEquals("Project", json.getString("title"))
         assertEquals("c2pa.edited", aiActions.getJSONObject(0).getString("action"))
@@ -282,14 +282,14 @@ class C2paExportEngineTest {
             exportedFileName = "project.mp4"
         )
 
-        assertEquals("com.novacut.c2pa-draft-manifest.v2", json.getString("schema"))
+        assertEquals("com.clearcut.c2pa-draft-manifest.v2", json.getString("schema"))
         assertEquals("2.4", json.getString("c2paSpecification"))
         assertEquals("video/mp4", json.getString("format"))
         assertFalse(json.getBoolean("embeddedManifestStore"))
         assertFalse(json.getBoolean("hardBinding"))
         assertFalse(json.getBoolean("isVerifiableContentCredential"))
         assertEquals("project.mp4", json.getString("exportedFileName"))
-        assertEquals("NovaCut/3.74.9", json.getJSONObject("manifestDefinition").getString("claim_generator"))
+        assertEquals("ClearCut/3.74.9", json.getJSONObject("manifestDefinition").getString("claim_generator"))
     }
 
     @Test

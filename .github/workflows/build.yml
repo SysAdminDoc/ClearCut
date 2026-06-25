@@ -139,7 +139,7 @@ jobs:
       - name: 16 KB page-size alignment check (Play Store gate)
         # Google Play blocks uploads of apps targeting Android 15+ (API 35+) that
         # bundle native libraries whose ELF LOAD segments are not 16 KB aligned.
-        # NovaCut targets API 36; non-compliance is a hard upload gate.
+        # ClearCut targets API 36; non-compliance is a hard upload gate.
         # See docs/models.md §2 and ROADMAP.md R6.1.
         shell: bash
         run: |
@@ -177,7 +177,7 @@ jobs:
       - name: Upload Debug APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: NovaCut-debug
+          name: ClearCut-debug
           path: |
             app/build/outputs/apk/debug/*.apk
             app/build/outputs/apk/debug/*.sha256
@@ -186,7 +186,7 @@ jobs:
       - name: Upload Release APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: NovaCut-release
+          name: ClearCut-release
           path: |
             app/build/outputs/apk/release/*.apk
             app/build/outputs/apk/release/*.sha256
@@ -195,7 +195,7 @@ jobs:
       - name: Upload Instrumentation APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: NovaCut-androidTest
+          name: ClearCut-androidTest
           path: |
             app/build/outputs/apk/androidTest/debug/*.apk
             app/build/outputs/apk/androidTest/debug/*.sha256
@@ -217,7 +217,7 @@ jobs:
       - name: Download release artifacts
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: NovaCut-release
+          name: ClearCut-release
           path: release-artifacts
 
       - name: Locate Android build tools
@@ -253,7 +253,7 @@ jobs:
       - name: Upload to Release
         run: |
           gh release create "${{ github.ref_name }}" \
-            --title "NovaCut ${{ github.ref_name }}" \
+            --title "ClearCut ${{ github.ref_name }}" \
             --generate-notes \
             release-artifacts/*.apk \
             release-artifacts/*.sha256 \
@@ -286,4 +286,4 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disable-animations: true
-          script: ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.novacut.editor.NovaCutSmokeTest
+          script: ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.novacut.editor.ClearCutSmokeTest

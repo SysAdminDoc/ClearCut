@@ -125,7 +125,7 @@ internal fun recoveryOpenFeedbackFor(
 ): RecoveryOpenFeedback? = when (outcome) {
     is ProjectAutoSave.LoadOutcome.Loaded -> null
     is ProjectAutoSave.LoadOutcome.FutureSchema -> RecoveryOpenFeedback(
-        message = "Autosave was made by a newer NovaCut version. It was left untouched to avoid losing edits.",
+        message = "Autosave was made by a newer ClearCut version. It was left untouched to avoid losing edits.",
         severity = ToastSeverity.Error,
     )
     is ProjectAutoSave.LoadOutcome.Corrupt -> RecoveryOpenFeedback(
@@ -538,7 +538,7 @@ class EditorViewModel @Inject constructor(
         mediaHealthPreflight = ::analyzeMediaHealthForState,
         audioEngine = audioEngine,
         exportIncidentStore = exportIncidentStore,
-        appVersion = com.novacut.editor.NovaCutApp.VERSION,
+        appVersion = com.novacut.editor.ClearCutApp.VERSION,
         ffmpegEngine = ffmpegEngine
     )
 
@@ -2079,7 +2079,7 @@ class EditorViewModel @Inject constructor(
                 put(android.provider.MediaStore.Downloads.MIME_TYPE, "application/zip")
                 put(
                     android.provider.MediaStore.Downloads.RELATIVE_PATH,
-                    "${android.os.Environment.DIRECTORY_DOWNLOADS}/NovaCut"
+                    "${android.os.Environment.DIRECTORY_DOWNLOADS}/ClearCut"
                 )
                 put(android.provider.MediaStore.Downloads.IS_PENDING, 1)
             }
@@ -2102,7 +2102,7 @@ class EditorViewModel @Inject constructor(
         } else {
             val downloadsRoot = appContext.getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS)
                 ?: File(appContext.filesDir, "downloads")
-            val backupDir = File(downloadsRoot, "NovaCut").apply { mkdirs() }
+            val backupDir = File(downloadsRoot, "ClearCut").apply { mkdirs() }
             val destination = File(backupDir, fileName)
             sourceFile.copyTo(destination, overwrite = true)
             destination.name
@@ -2118,7 +2118,7 @@ class EditorViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val s = _state.value
-                val fileName = "${sanitizedProjectFileStem(s.project.name)}.novacut"
+                val fileName = "${sanitizedProjectFileStem(s.project.name)}.clearcut"
                 val savedName = withContext(Dispatchers.IO) {
                     val tempDir = File(appContext.cacheDir, "backup_exports").apply { mkdirs() }
                     val tempFile = File(tempDir, fileName)
@@ -2211,7 +2211,7 @@ class EditorViewModel @Inject constructor(
                                     backupImportFeedback = BackupImportFeedback(
                                         succeeded = true,
                                         title = "Backup imported with notes",
-                                        body = "NovaCut restored the timeline, but this archive needs review before you export or hand it off.",
+                                        body = "ClearCut restored the timeline, but this archive needs review before you export or hand it off.",
                                         report = report
                                     )
                                 )
@@ -2227,7 +2227,7 @@ class EditorViewModel @Inject constructor(
                                 backupImportFeedback = BackupImportFeedback(
                                     succeeded = false,
                                     title = "Backup import failed",
-                                    body = "NovaCut left the current project unchanged.",
+                                    body = "ClearCut left the current project unchanged.",
                                     report = result.report,
                                     errorMessage = reason
                                 )
@@ -2638,7 +2638,7 @@ class EditorViewModel @Inject constructor(
                         AiUsageRecordFactory.forClip(
                             clip = newClip,
                             effectKind = AiUsageLedger.EffectKind.AUTO_EDIT_LOCAL,
-                            modelName = "NovaCut Auto Edit",
+                            modelName = "ClearCut Auto Edit",
                             recordedAtEpochMs = recordedAt
                         )
                     }
@@ -3713,7 +3713,7 @@ class EditorViewModel @Inject constructor(
 
     fun removeUnusedMedia() {
         val usedUris = _state.value.tracks.flatMap { it.clips }.map { it.sourceUri.toString() }.toSet()
-        // In NovaCut, all media is referenced by clips — there's no separate media pool.
+        // In ClearCut, all media is referenced by clips — there's no separate media pool.
         // "Unused" means tracks with zero clips. Remove empty non-default tracks.
         val defaultTrackCount = 2 // VIDEO + AUDIO
         val currentTracks = _state.value.tracks
@@ -3881,7 +3881,7 @@ class EditorViewModel @Inject constructor(
                 val s = _state.value
                 val dir = java.io.File(appContext.getExternalFilesDir(null), "archives")
                 dir.mkdirs()
-                val file = java.io.File(dir, "${sanitizedProjectFileStem(s.project.name)}.novacut")
+                val file = java.io.File(dir, "${sanitizedProjectFileStem(s.project.name)}.clearcut")
                 val success = com.novacut.editor.engine.ProjectArchive.exportArchive(
                     context = appContext,
                     state = buildAutoSaveState(s),
@@ -3920,7 +3920,7 @@ class EditorViewModel @Inject constructor(
                                     timelineExchangeFeedback = TimelineExchangeFeedback(
                                         succeeded = false,
                                         title = "OTIO export blocked",
-                                        body = "NovaCut found a timeline issue that would make the handoff unreliable.",
+                                        body = "ClearCut found a timeline issue that would make the handoff unreliable.",
                                         outputFileName = null,
                                         report = report
                                     )
@@ -3980,7 +3980,7 @@ class EditorViewModel @Inject constructor(
                                     timelineExchangeFeedback = TimelineExchangeFeedback(
                                         succeeded = false,
                                         title = "FCPXML export blocked",
-                                        body = "NovaCut found a timeline issue that would make the handoff unreliable.",
+                                        body = "ClearCut found a timeline issue that would make the handoff unreliable.",
                                         outputFileName = null,
                                         report = report
                                     )
@@ -4899,7 +4899,7 @@ class EditorViewModel @Inject constructor(
     }
 
     private fun sanitizedProjectFileStem(name: String): String {
-        return sanitizeFileName(name, fallback = "NovaCut")
+        return sanitizeFileName(name, fallback = "ClearCut")
     }
 
     fun saveProject() {
@@ -5047,7 +5047,7 @@ class EditorViewModel @Inject constructor(
                     val template = templateManager.getTemplate(templateId) ?: return@withContext null
                     val dir = File(appContext.getExternalFilesDir(null) ?: appContext.filesDir, "templates").apply { mkdirs() }
                     val sanitized = sanitizeFileName(template.name, fallback = "template")
-                    val outputFile = File(dir, "$sanitized.novacut-template")
+                    val outputFile = File(dir, "$sanitized.clearcut-template")
                     val success = templateManager.exportTemplateToFile(template.id, outputFile)
                     if (!success) return@withContext null
                     template to outputFile

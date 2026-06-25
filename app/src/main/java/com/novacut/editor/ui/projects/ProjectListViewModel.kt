@@ -492,7 +492,7 @@ class ProjectListViewModel @Inject constructor(
                     val template = templateManager.getTemplate(templateId) ?: return@withContext null
                     val dir = File(appContext.getExternalFilesDir(null) ?: appContext.filesDir, "archives/templates").apply { mkdirs() }
                     val sanitized = sanitizeFileName(template.name, fallback = "template")
-                    val outputFile = File(dir, "$sanitized.novacut-template")
+                    val outputFile = File(dir, "$sanitized.clearcut-template")
                     val success = templateManager.exportTemplateToFile(template.id, outputFile)
                     if (!success) return@withContext null
 

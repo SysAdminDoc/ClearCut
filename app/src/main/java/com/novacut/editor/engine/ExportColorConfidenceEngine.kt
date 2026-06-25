@@ -96,7 +96,7 @@ object ExportColorConfidenceEngine {
                 detail = "${config.codec.label} exports are treated as SDR.",
                 tone = Tone.WARNING
             )
-            warnings += "${config.codec.label} cannot carry HDR in NovaCut exports. Switch to HEVC, AV1, or VP9 before preserving HDR metadata."
+            warnings += "${config.codec.label} cannot carry HDR in ClearCut exports. Switch to HEVC, AV1, or VP9 before preserving HDR metadata."
             addProjectColorPolicyChips(projectColorPolicy, config, chips, warnings)
             return Report(chips = chips, warnings = warnings)
         }

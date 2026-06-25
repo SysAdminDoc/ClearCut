@@ -1,4 +1,4 @@
 - Fatal-crash diagnostic breadcrumbs
 - Added CrashRecordStore, a local-only fatal-crash recorder that writes bounded JSON records under filesDir/diagnostics/crashes.
-- Installed the recorder from NovaCutApp.onCreate() as the global uncaught-exception handler while chaining to the previous platform handler so normal Android crash handling still runs.
+- Installed the recorder from ClearCutApp.onCreate() as the global uncaught-exception handler while chaining to the previous platform handler so normal Android crash handling still runs.
 - Kept crash records privacy-safe by omitting raw throwable messages, recording only message presence plus SHA-256 fingerprints, limiting cause/...

@@ -2,7 +2,7 @@
   <rect width="1080" height="1920" fill="#14161f"/>
   <rect x="46" y="56" width="988" height="1808" rx="54" fill="#14161f" stroke="#384052" stroke-width="2"/>
 <rect x="46" y="56" width="988" height="104" rx="54" fill="#1f2430"/>
-<text x="86" y="124" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="34" font-weight="700">NovaCut</text>
+<text x="86" y="124" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="34" font-weight="700">ClearCut</text>
 <text x="816" y="124" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="500">Projects</text>
 <rect x="502" y="92" width="76" height="10" rx="5" fill="#384052"/>
 <text x="86" y="252" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="58" font-weight="750">Projects</text>

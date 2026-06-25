@@ -100,7 +100,7 @@ class AiUsageLedgerTest {
             generatedAtEpochMs = 123L
         )
 
-        assertEquals("com.novacut.ai-use.v2", declaration.getString("schema"))
+        assertEquals("com.clearcut.ai-use.v2", declaration.getString("schema"))
         assertEquals("Launch cut", declaration.getString("projectName"))
         assertEquals("launch.mp4", declaration.getString("exportedFileName"))
         assertEquals(123L, declaration.getLong("generatedAtEpochMs"))

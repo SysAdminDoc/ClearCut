@@ -117,10 +117,15 @@ class ProcessExitRecorder private constructor(
     }
 
     private fun ProcessExitSnapshot.toJson(): JSONObject {
+        val resolvedReason = if (reasonCode == REASON_OTHER && isMemoryLimiterKill(description)) {
+            "MEMORY_LIMITER"
+        } else {
+            reasonName(reasonCode)
+        }
         return JSONObject()
             .put("timestampEpochMs", timestampEpochMs.coerceAtLeast(0L))
             .put("reasonCode", reasonCode)
-            .put("reason", reasonName(reasonCode))
+            .put("reason", resolvedReason)
             .put("status", status)
             .put("pid", pid)
             .put("processName", sanitizeShort(processName))
@@ -202,7 +207,7 @@ class ProcessExitRecorder private constructor(
 
     companion object {
         const val BUNDLE_ENTRY = "process-exit-history.json"
-        const val SCHEMA = "com.novacut.process-exit-history.v1"
+        const val SCHEMA = "com.clearcut.process-exit-history.v1"
         const val DEFAULT_SOURCE_RECORDS = 16
         const val DEFAULT_RETAIN_COUNT = 16
         private const val MAX_SHORT_TEXT_CHARS = 180
@@ -233,6 +238,15 @@ class ProcessExitRecorder private constructor(
 
         internal fun forFile(historyFile: File, source: ProcessExitSource): ProcessExitRecorder =
             ProcessExitRecorder(historyFile, source)
+
+        /**
+         * Android 17 introduces per-app memory limits on a subset of devices.
+         * When the limit is exceeded, the app is killed with REASON_OTHER and
+         * the description contains "MemoryLimiter:AnonSwap". Detecting this
+         * surfaces memory-pressure kills in diagnostic ZIPs.
+         */
+        internal fun isMemoryLimiterKill(description: String?): Boolean =
+            description?.contains("MemoryLimiter:AnonSwap") == true
 
         internal fun reasonName(reason: Int): String = when (reason) {
             REASON_EXIT_SELF -> "EXIT_SELF"

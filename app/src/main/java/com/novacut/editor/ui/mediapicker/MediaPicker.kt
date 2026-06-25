@@ -1,10 +1,14 @@
 package com.novacut.editor.ui.mediapicker
 
+import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.provider.MediaStore
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
@@ -39,14 +43,14 @@ import com.novacut.editor.engine.importUriToManagedMediaWithProgress
 import com.novacut.editor.engine.pendingCameraCaptureDir
 import com.novacut.editor.engine.querySourceSize
 import com.novacut.editor.engine.resolveManagedMediaExtension
-import com.novacut.editor.ui.NovaCutTestTags
+import com.novacut.editor.ui.ClearCutTestTags
 import com.novacut.editor.ui.editor.PremiumEditorPanel
 import com.novacut.editor.ui.editor.PremiumPanelCard
 import com.novacut.editor.ui.editor.PremiumPanelPill
 import com.novacut.editor.ui.editor.PremiumSnackbarHost
 import com.novacut.editor.ui.editor.ToastSeverity
 import com.novacut.editor.ui.theme.Mocha
-import com.novacut.editor.ui.theme.NovaCutSecondaryButton
+import com.novacut.editor.ui.theme.ClearCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
 import com.novacut.editor.ui.theme.TouchTarget
@@ -55,6 +59,25 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+/**
+ * [CaptureVideo] replacement that explicitly grants read+write URI permissions.
+ * Android 18 will stop auto-granting these for ACTION_VIDEO_CAPTURE / ACTION_IMAGE_CAPTURE
+ * intents. Adding the flags now is a no-op on current versions but future-proofs
+ * the camera handoff. See Android 17 behavior-changes-all → "Restrict implicit URI grants".
+ */
+private class CaptureVideoWithGrant : ActivityResultContract<Uri, Boolean>() {
+    override fun createIntent(context: Context, input: Uri): Intent =
+        Intent(MediaStore.ACTION_VIDEO_CAPTURE)
+            .putExtra(MediaStore.EXTRA_OUTPUT, input)
+            .addFlags(
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+
+    override fun parseResult(resultCode: Int, intent: Intent?): Boolean =
+        resultCode == android.app.Activity.RESULT_OK
+}
 
 private data class MediaPickerOperationState(
     val title: String,
@@ -308,7 +331,7 @@ fun MediaPickerSheet(
     }
 
     val cameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CaptureVideo()
+        contract = CaptureVideoWithGrant()
     ) { success ->
         val capturedFile = cameraVideoFile
         cameraVideoUri = null
@@ -342,7 +365,7 @@ fun MediaPickerSheet(
 
     fun startCameraCapture() {
         val cameraDir = pendingCameraCaptureDir(context).apply { mkdirs() }
-        val videoFile = File(cameraDir, "novacut_${System.currentTimeMillis()}.mp4")
+        val videoFile = File(cameraDir, "clearcut_${System.currentTimeMillis()}.mp4")
         val uri = runCatching {
             FileProvider.getUriForFile(
                 context,
@@ -401,7 +424,7 @@ fun MediaPickerSheet(
         icon = Icons.Default.PermMedia,
         accent = Mocha.Blue,
         onClose = onClose,
-        closeButtonTestTag = NovaCutTestTags.MEDIA_PICKER_CLOSE,
+        closeButtonTestTag = ClearCutTestTags.MEDIA_PICKER_CLOSE,
         modifier = modifier
             .heightIn(min = 240.dp, max = 560.dp)
             .dragAndDropTarget(
@@ -500,7 +523,7 @@ fun MediaPickerSheet(
                 }
             )
 
-            NovaCutSecondaryButton(
+            ClearCutSecondaryButton(
                 text = stringResource(R.string.media_picker_select_multiple),
                 icon = Icons.Default.LibraryAdd,
                 onClick = {
@@ -538,7 +561,7 @@ fun MediaPickerSheet(
                 style = MaterialTheme.typography.bodyMedium,
                 color = Mocha.Subtext0
             )
-            NovaCutSecondaryButton(
+            ClearCutSecondaryButton(
                 text = stringResource(R.string.media_picker_record_video),
                 icon = Icons.Default.CameraAlt,
                 onClick = {

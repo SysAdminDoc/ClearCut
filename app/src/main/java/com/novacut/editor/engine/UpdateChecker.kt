@@ -13,7 +13,7 @@ import javax.inject.Singleton
 /**
  * Passive, opt-in update check for sideload / GitHub-release installs.
  *
- * GitHub-release users are NovaCut's only current distribution channel and
+ * GitHub-release users are ClearCut's only current distribution channel and
  * otherwise have no way to learn about fixes. This makes a single, TLS-only
  * request to the public GitHub releases API and compares the latest tag with
  * the installed version. It never downloads or installs an APK — the UI only
@@ -91,9 +91,9 @@ class UpdateChecker @Inject constructor() {
     }
 
     companion object {
-        const val RELEASES_PAGE = "https://github.com/SysAdminDoc/NovaCut/releases"
+        const val RELEASES_PAGE = "https://github.com/SysAdminDoc/ClearCut/releases"
         const val LATEST_RELEASE_ENDPOINT =
-            "https://api.github.com/repos/SysAdminDoc/NovaCut/releases/latest"
+            "https://api.github.com/repos/SysAdminDoc/ClearCut/releases/latest"
 
         private const val CALL_TIMEOUT_SECONDS = 15L
         private const val CONNECT_TIMEOUT_SECONDS = 10L

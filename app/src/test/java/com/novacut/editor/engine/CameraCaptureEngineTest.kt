@@ -14,7 +14,7 @@ class CameraCaptureEngineTest {
 
         assertTrue(capability.externalHandoff.available)
         assertEquals("Open camera app", capability.externalHandoff.label)
-        assertFalse(capability.externalHandoff.requiresNovaCutCameraPermission)
+        assertFalse(capability.externalHandoff.requiresClearCutCameraPermission)
         assertFalse(capability.inAppRecorder.available)
         assertTrue(capability.inAppRecorder.requiresRuntimeCameraPermission)
         assertEquals(
@@ -28,7 +28,7 @@ class CameraCaptureEngineTest {
         val capability = cameraCaptureCapability(cameraXAvailable = true)
 
         assertTrue(capability.externalHandoff.available)
-        assertFalse(capability.externalHandoff.requiresNovaCutCameraPermission)
+        assertFalse(capability.externalHandoff.requiresClearCutCameraPermission)
         assertTrue(capability.inAppRecorder.available)
         assertTrue(capability.inAppRecorder.requiresRuntimeCameraPermission)
         assertNull(capability.inAppRecorder.unavailableReason)

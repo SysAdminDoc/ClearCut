@@ -8,11 +8,11 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 @androidx.annotation.OptIn(UnstableApi::class)
-class NovaCutVideoCompositorSettingsTest {
+class ClearCutVideoCompositorSettingsTest {
 
     @Test
     fun getOutputSize_usesExportTargetSize() {
-        val settings = NovaCutVideoCompositorSettings(
+        val settings = ClearCutVideoCompositorSettings(
             outputWidth = 1920,
             outputHeight = 1080,
             layers = emptyList()
@@ -26,7 +26,7 @@ class NovaCutVideoCompositorSettingsTest {
 
     @Test
     fun getOutputSize_guardsInvalidTargetSize() {
-        val settings = NovaCutVideoCompositorSettings(
+        val settings = ClearCutVideoCompositorSettings(
             outputWidth = 0,
             outputHeight = -1,
             layers = emptyList()
@@ -40,18 +40,18 @@ class NovaCutVideoCompositorSettingsTest {
 
     @Test
     fun getOverlaySettings_mapsTrackOpacityByInputId() {
-        val settings = NovaCutVideoCompositorSettings(
+        val settings = ClearCutVideoCompositorSettings(
             outputWidth = 1920,
             outputHeight = 1080,
             layers = listOf(
-                NovaCutCompositorLayer(
+                ClearCutCompositorLayer(
                     inputId = 0,
                     trackId = "base",
                     trackIndex = 0,
                     opacity = 1f,
                     blendMode = BlendMode.NORMAL
                 ),
-                NovaCutCompositorLayer(
+                ClearCutCompositorLayer(
                     inputId = 1,
                     trackId = "overlay",
                     trackIndex = 1,
@@ -68,25 +68,25 @@ class NovaCutVideoCompositorSettingsTest {
 
     @Test
     fun getOverlaySettings_clampsUnsafeOpacityAndDefaultsUnknownInput() {
-        val settings = NovaCutVideoCompositorSettings(
+        val settings = ClearCutVideoCompositorSettings(
             outputWidth = 1920,
             outputHeight = 1080,
             layers = listOf(
-                NovaCutCompositorLayer(
+                ClearCutCompositorLayer(
                     inputId = 0,
                     trackId = "bad",
                     trackIndex = 0,
                     opacity = Float.NaN,
                     blendMode = BlendMode.NORMAL
                 ),
-                NovaCutCompositorLayer(
+                ClearCutCompositorLayer(
                     inputId = 1,
                     trackId = "too-high",
                     trackIndex = 1,
                     opacity = 2f,
                     blendMode = BlendMode.NORMAL
                 ),
-                NovaCutCompositorLayer(
+                ClearCutCompositorLayer(
                     inputId = 2,
                     trackId = "too-low",
                     trackIndex = 2,

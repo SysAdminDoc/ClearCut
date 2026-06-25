@@ -1,4 +1,4 @@
 - Camera Capture
-- Reframed Add Media camera capture as an external camera-app handoff: the UI now says NovaCut opens the camera app, receives only the returned clip, and does not request camera permission for this path.
+- Reframed Add Media camera capture as an external camera-app handoff: the UI now says ClearCut opens the camera app, receives only the returned clip, and does not request camera permission for this path.
 - Added CameraCaptureCapability metadata that keeps the shipped external handoff separate from the future CameraX in-app recorder capability.
 - Added focused JVM tests for camera-handoff copy, the absent CAMERA permission, optional camera feature policy, and the CameraX reco...

@@ -19,7 +19,7 @@ import javax.inject.Singleton
  *  - **Fast Neural Style Transfer** (Johnson 2016) for painterly transfers
  *    (https://github.com/yakhyo/fast-neural-style-transfer). 6-7 MB per style.
  *
- * Both run through the ONNX Runtime that already ships with NovaCut. Each
+ * Both run through the ONNX Runtime that already ships with ClearCut. Each
  * style is an opt-in download via `ModelDownloadManager`; users tap a style
  * card → "Download ~9 MB?" sheet → model is fetched and the engine is
  * activated for that style only.

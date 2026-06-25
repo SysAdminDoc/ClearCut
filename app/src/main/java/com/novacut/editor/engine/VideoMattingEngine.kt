@@ -15,7 +15,7 @@ import javax.inject.Singleton
  * Stub engine for true alpha-matte video matting. See ROADMAP.md Tier A.6.
  *
  * Target: RobustVideoMatting (RVM, https://github.com/PeterL1n/RobustVideoMatting)
- * via the ONNX Runtime that already ships with NovaCut. Replaces the binary
+ * via the ONNX Runtime that already ships with ClearCut. Replaces the binary
  * MediaPipe selfie segmentation mask with a true alpha matte that preserves
  * hair detail and is temporally coherent across frames (RVM threads a
  * recurrent state through the per-frame inference, so adjacent outputs don't

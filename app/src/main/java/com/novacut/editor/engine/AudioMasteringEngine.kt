@@ -12,7 +12,7 @@ import javax.inject.Singleton
  * for common distribution targets. Each preset returns a [MasteringChain] the
  * [AudioEffectsEngine] applies in order during export.
  *
- * These are not stubs -- the underlying DSP already exists in NovaCut. The value
+ * These are not stubs -- the underlying DSP already exists in ClearCut. The value
  * this engine adds is the curated chain recipes plus the [buildEffectChain]
  * adapter that converts a [MasteringChain] into the [AudioEffect] list a track
  * can apply directly.

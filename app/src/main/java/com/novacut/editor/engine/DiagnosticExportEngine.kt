@@ -19,7 +19,7 @@ import javax.inject.Singleton
  * R5.5d — Local-only diagnostic export.
  *
  * Bundles a small, **on-device-only** ZIP a user can attach to a GitHub issue
- * for support without NovaCut shipping any telemetry pipe of its own. The ZIP
+ * for support without ClearCut shipping any telemetry pipe of its own. The ZIP
  * contains:
  *
  *  - `app-info.txt`       — app version, build type, applicationId, target SDK
@@ -122,7 +122,7 @@ class DiagnosticExportEngine @Inject constructor(
             // rolling is safer than reaching for a JSON library.
             val sb = StringBuilder()
             sb.append("{\n")
-            sb.append("  \"schema\": \"com.novacut.timeline-shape.v1\",\n")
+            sb.append("  \"schema\": \"com.clearcut.timeline-shape.v1\",\n")
             sb.append("  \"trackCount\": ").append(trackCount).append(",\n")
             sb.append("  \"totalDurationMs\": ").append(totalDurationMs).append(",\n")
             sb.append("  \"perTrackClipCount\": [")
@@ -257,9 +257,9 @@ class DiagnosticExportEngine @Inject constructor(
     // --- Section builders (each returns plain text for the ZIP entry) ---
 
     private fun buildAppInfo(now: Long): String = buildString {
-        appendLine("# NovaCut diagnostic bundle")
+        appendLine("# ClearCut diagnostic bundle")
         appendLine("# Generated: ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date(now))}")
-        appendLine("# This bundle is generated on-device. NovaCut does not upload it anywhere.")
+        appendLine("# This bundle is generated on-device. ClearCut does not upload it anywhere.")
         appendLine()
         appendLine("applicationId: ${context.packageName}")
         try {
@@ -367,7 +367,7 @@ class DiagnosticExportEngine @Inject constructor(
         private const val LOGCAT_LINES = 200
 
         fun buildPermissionState(snapshots: List<PermissionSnapshot>): String = buildString {
-            appendLine("NovaCut permission state")
+            appendLine("ClearCut permission state")
             snapshots.sortedBy { it.permissionName }.forEach { snapshot ->
                 append(snapshot.permissionName)
                 append("; granted=").append(snapshot.granted)

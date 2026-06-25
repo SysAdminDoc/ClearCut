@@ -38,9 +38,9 @@ import com.novacut.editor.model.ImageOverlayType
 import com.novacut.editor.model.TrackType
 import com.novacut.editor.ui.export.BatchExportPanel
 import com.novacut.editor.ui.theme.Mocha
-import com.novacut.editor.ui.theme.NovaCutDialogIcon
-import com.novacut.editor.ui.theme.NovaCutPrimaryButton
-import com.novacut.editor.ui.theme.NovaCutSecondaryButton
+import com.novacut.editor.ui.theme.ClearCutDialogIcon
+import com.novacut.editor.ui.theme.ClearCutPrimaryButton
+import com.novacut.editor.ui.theme.ClearCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
 
 @Composable
@@ -86,7 +86,7 @@ fun BoxScope.EditorUtilityPanelHost(
         AlertDialog(
             onDismissRequest = { viewModel.dismissRecoveryDialog(recover = true) },
             icon = {
-                NovaCutDialogIcon(
+                ClearCutDialogIcon(
                     icon = Icons.Default.Restore,
                     accent = Mocha.Green
                 )
@@ -111,7 +111,7 @@ fun BoxScope.EditorUtilityPanelHost(
                 }
             },
             confirmButton = {
-                NovaCutPrimaryButton(
+                ClearCutPrimaryButton(
                     text = stringResource(R.string.recovery_keep),
                     onClick = { viewModel.dismissRecoveryDialog(recover = true) },
                     icon = Icons.Default.Check
@@ -147,7 +147,7 @@ fun BoxScope.EditorUtilityPanelHost(
         AlertDialog(
             onDismissRequest = viewModel::dismissAiRequirementPrompt,
             icon = {
-                NovaCutDialogIcon(
+                ClearCutDialogIcon(
                     icon = Icons.Default.Download,
                     accent = Mocha.Mauve
                 )
@@ -186,7 +186,7 @@ fun BoxScope.EditorUtilityPanelHost(
                 }
             },
             confirmButton = {
-                NovaCutPrimaryButton(
+                ClearCutPrimaryButton(
                     text = prompt.actionLabel,
                     onClick = {
                         viewModel.dismissAiRequirementPrompt()
@@ -196,7 +196,7 @@ fun BoxScope.EditorUtilityPanelHost(
                 )
             },
             dismissButton = {
-                NovaCutSecondaryButton(
+                ClearCutSecondaryButton(
                     text = stringResource(R.string.ai_requirement_not_now),
                     onClick = viewModel::dismissAiRequirementPrompt,
                     icon = Icons.Default.Close
@@ -542,7 +542,7 @@ fun BoxScope.EditorUtilityPanelHost(
             AlertDialog(
                 onDismissRequest = { pendingBackupImportUri = null },
                 icon = {
-                    NovaCutDialogIcon(
+                    ClearCutDialogIcon(
                         icon = Icons.Default.Restore,
                         accent = Mocha.Blue
                     )
@@ -562,7 +562,7 @@ fun BoxScope.EditorUtilityPanelHost(
                     )
                 },
                 confirmButton = {
-                    NovaCutPrimaryButton(
+                    ClearCutPrimaryButton(
                         text = stringResource(R.string.panel_cloud_backup_import_confirm_action),
                         onClick = {
                             pendingBackupImportUri = null
@@ -572,7 +572,7 @@ fun BoxScope.EditorUtilityPanelHost(
                     )
                 },
                 dismissButton = {
-                    NovaCutSecondaryButton(
+                    ClearCutSecondaryButton(
                         text = stringResource(R.string.editor_cancel),
                         onClick = { pendingBackupImportUri = null },
                         icon = Icons.Default.Close

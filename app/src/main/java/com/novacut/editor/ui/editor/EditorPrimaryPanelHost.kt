@@ -24,7 +24,7 @@ import com.novacut.editor.model.Effect
 import com.novacut.editor.model.EffectType
 import com.novacut.editor.model.TrackType
 import com.novacut.editor.model.Transition
-import com.novacut.editor.ui.NovaCutTestTags
+import com.novacut.editor.ui.ClearCutTestTags
 import com.novacut.editor.ui.export.ExportSheet
 import com.novacut.editor.ui.export.ExportSheetPresentation
 import com.novacut.editor.ui.mediapicker.MediaPickerSheet
@@ -55,7 +55,7 @@ fun BoxScope.EditorPrimaryPanelHost(
                 viewModel.addClipToTrack(uri, trackType)
             },
             onClose = viewModel::hideMediaPicker,
-            modifier = Modifier.testTag(NovaCutTestTags.MEDIA_PICKER_SHEET)
+            modifier = Modifier.testTag(ClearCutTestTags.MEDIA_PICKER_SHEET)
         )
     }
 
@@ -220,7 +220,7 @@ fun BoxScope.EditorPrimaryPanelHost(
             onConfigChanged = viewModel::updateExportConfig,
             onStartExport = {
                 val moviesDir = context.getExternalFilesDir(android.os.Environment.DIRECTORY_MOVIES)
-                val outputDir = File(moviesDir ?: context.filesDir, "NovaCut").apply { mkdirs() }
+                val outputDir = File(moviesDir ?: context.filesDir, "ClearCut").apply { mkdirs() }
                 onStartExportRequested(outputDir)
             },
             onShare = {

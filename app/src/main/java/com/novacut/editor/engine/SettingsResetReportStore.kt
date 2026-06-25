@@ -112,7 +112,7 @@ class SettingsResetReportStore internal constructor(
     companion object {
         const val FILE_NAME = "settings-reset-report.jsonl"
         const val BUNDLE_ENTRY = "settings-reset-report.jsonl"
-        const val SCHEMA = "com.novacut.settings-reset.v1"
+        const val SCHEMA = "com.clearcut.settings-reset.v1"
         const val DEFAULT_REASON = "Preferences DataStore corruption recovery"
         const val DEFAULT_RETAIN_COUNT = 16
         private const val MAX_MESSAGE_CHARS = 240

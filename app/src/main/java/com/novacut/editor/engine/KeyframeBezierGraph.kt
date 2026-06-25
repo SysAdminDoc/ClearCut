@@ -5,7 +5,7 @@ import com.novacut.editor.model.Easing
 /**
  * C.12 — Keyframe graph editor data model.
  *
- * Adds a visual bezier-curve editor on top of NovaCut's existing
+ * Adds a visual bezier-curve editor on top of ClearCut's existing
  * [com.novacut.editor.model.Keyframe] / [Easing] system. The model already
  * supports 12 easings; this module adds the per-segment cubic bezier
  * description the visual editor needs (two control points + two value

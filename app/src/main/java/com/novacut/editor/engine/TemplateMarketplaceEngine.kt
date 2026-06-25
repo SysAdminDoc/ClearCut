@@ -14,7 +14,7 @@ import javax.inject.Singleton
 /**
  * Stub engine -- community template marketplace. See ROADMAP.md Tier C.15.
  *
- * The `.novacut-template` format already exists (v3.8 export/import + share
+ * The `.clearcut-template` format already exists (v3.8 export/import + share
  * intent); this engine adds discovery and distribution via a self-hostable
  * registry. Default registry URL targets a GitHub-Releases-backed index; users
  * can point at their own in Settings.
@@ -26,7 +26,7 @@ import javax.inject.Singleton
  *       { "id": "...", "name": "...", "author": "...",
  *         "downloadUrl": "...", "previewUrl": "...",
  *         "tags": [...], "downloads": 0, "rating": null,
- *         "novacutMinVersion": "3.8.0" }
+ *         "clearcutMinVersion": "3.8.0" }
  *     ]
  *   }
  */
@@ -45,7 +45,7 @@ class TemplateMarketplaceEngine @Inject constructor(
         val tags: List<String>,
         val downloadCount: Int,
         val rating: Float?,
-        val novacutMinVersion: String,
+        val clearcutMinVersion: String,
         val sizeBytes: Long
     )
 
@@ -81,6 +81,6 @@ class TemplateMarketplaceEngine @Inject constructor(
 
     companion object {
         private const val TAG = "TemplateMarket"
-        const val DEFAULT_REGISTRY_URL = "https://novacut.dev/marketplace/index.json"
+        const val DEFAULT_REGISTRY_URL = "https://clearcut.dev/marketplace/index.json"
     }
 }

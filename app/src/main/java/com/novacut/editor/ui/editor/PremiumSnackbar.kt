@@ -41,7 +41,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.ui.theme.Elevation
-import com.novacut.editor.ui.theme.LocalNovaCutColors
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.Motion
 import com.novacut.editor.ui.theme.Radius
@@ -55,7 +55,7 @@ fun PremiumSnackbar(
     severity: ToastSeverity = ToastSeverity.Info,
     modifier: Modifier = Modifier
 ) {
-    val colors = LocalNovaCutColors.current
+    val colors = LocalClearCutColors.current
     val accent = when (severity) {
         ToastSeverity.Info -> Mocha.Lavender
         ToastSeverity.Success -> Mocha.Green

@@ -21,7 +21,7 @@ object AppModule {
         return Room.databaseBuilder(
             context,
             ProjectDatabase::class.java,
-            "novacut.db"
+            "clearcut.db"
         )
             .addMigrations(*ProjectDatabase.ALL_MIGRATIONS)
             .build()

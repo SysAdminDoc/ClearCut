@@ -40,11 +40,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun NovaCutScreenBackground(
+fun ClearCutScreenBackground(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit
 ) {
-    val colors = LocalNovaCutColors.current
+    val colors = LocalClearCutColors.current
     Box(
         modifier = modifier
             .background(colors.background)
@@ -94,14 +94,14 @@ fun NovaCutScreenBackground(
 }
 
 @Composable
-fun NovaCutHeroCard(
+fun ClearCutHeroCard(
     modifier: Modifier = Modifier,
     shape: Shape = RoundedCornerShape(Radius.xxl),
     accent: Color = Mocha.Mauve,
     contentPadding: PaddingValues = PaddingValues(horizontal = Spacing.xl, vertical = Spacing.xl),
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val colors = LocalNovaCutColors.current
+    val colors = LocalClearCutColors.current
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = colors.panel,
@@ -130,14 +130,14 @@ fun NovaCutHeroCard(
 }
 
 @Composable
-fun NovaCutPrimaryButton(
+fun ClearCutPrimaryButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
     enabled: Boolean = true
 ) {
-    val colors = LocalNovaCutColors.current
+    val colors = LocalClearCutColors.current
     Button(
         onClick = onClick,
         enabled = enabled,
@@ -173,7 +173,7 @@ fun NovaCutPrimaryButton(
 }
 
 @Composable
-fun NovaCutSecondaryButton(
+fun ClearCutSecondaryButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -181,7 +181,7 @@ fun NovaCutSecondaryButton(
     contentColor: Color = Mocha.Text,
     enabled: Boolean = true
 ) {
-    val colors = LocalNovaCutColors.current
+    val colors = LocalClearCutColors.current
     OutlinedButton(
         onClick = onClick,
         enabled = enabled,
@@ -215,13 +215,13 @@ fun NovaCutSecondaryButton(
 }
 
 @Composable
-fun NovaCutMetricPill(
+fun ClearCutMetricPill(
     text: String,
     accent: Color,
     modifier: Modifier = Modifier,
     icon: ImageVector? = null
 ) {
-    val colors = LocalNovaCutColors.current
+    val colors = LocalClearCutColors.current
     Surface(
         modifier = modifier,
         color = accent.copy(alpha = if (colors.highContrast) 0.26f else 0.12f),
@@ -253,7 +253,7 @@ fun NovaCutMetricPill(
 }
 
 @Composable
-fun NovaCutFilterChip(
+fun ClearCutFilterChip(
     text: String,
     selected: Boolean,
     onClick: () -> Unit,
@@ -262,7 +262,7 @@ fun NovaCutFilterChip(
     enabled: Boolean = true,
     icon: ImageVector? = null
 ) {
-    val colors = LocalNovaCutColors.current
+    val colors = LocalClearCutColors.current
     FilterChip(
         selected = selected,
         enabled = enabled,
@@ -305,7 +305,7 @@ fun NovaCutFilterChip(
 }
 
 @Composable
-fun NovaCutChromeIconButton(
+fun ClearCutChromeIconButton(
     icon: ImageVector,
     contentDescription: String,
     onClick: () -> Unit,
@@ -317,7 +317,7 @@ fun NovaCutChromeIconButton(
     size: Dp = TouchTarget.minimum,
     enabled: Boolean = true
 ) {
-    val colors = LocalNovaCutColors.current
+    val colors = LocalClearCutColors.current
     Surface(
         modifier = modifier,
         color = if (enabled) containerColor else colors.panelRaised.copy(alpha = 0.46f),
@@ -349,12 +349,12 @@ fun NovaCutChromeIconButton(
 }
 
 @Composable
-fun NovaCutDialogIcon(
+fun ClearCutDialogIcon(
     icon: ImageVector,
     accent: Color,
     modifier: Modifier = Modifier
 ) {
-    val colors = LocalNovaCutColors.current
+    val colors = LocalClearCutColors.current
     Surface(
         modifier = modifier,
         color = accent.copy(alpha = if (colors.highContrast) 0.26f else 0.14f),
@@ -373,13 +373,13 @@ fun NovaCutDialogIcon(
 }
 
 @Composable
-fun NovaCutSectionHeader(
+fun ClearCutSectionHeader(
     title: String,
     modifier: Modifier = Modifier,
     description: String? = null,
     trailing: @Composable RowScope.() -> Unit = {}
 ) {
-    val colors = LocalNovaCutColors.current
+    val colors = LocalClearCutColors.current
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),

@@ -3,7 +3,7 @@ package com.novacut.editor.engine
 /**
  * R5.5c — Privacy dashboard data model.
  *
- * Single source of truth for every category of data NovaCut collects, where
+ * Single source of truth for every category of data ClearCut collects, where
  * the data lives, what user controls exist, and how the user can export or
  * delete it. The Settings → Privacy dashboard Composable consumes this
  * model directly so the displayed surface is automatically in sync with
@@ -190,7 +190,7 @@ object PrivacyDashboard {
             location = StorageLocation.CLOUD_ON_DEMAND,
             controls = Controls(canExport = false, canDelete = true, hasOptOut = true),
             collectedBy = listOf("UpdateChecker"),
-            retentionPolicy = "No data is stored. When enabled, NovaCut makes a single TLS request to the " +
+            retentionPolicy = "No data is stored. When enabled, ClearCut makes a single TLS request to the " +
                 "public GitHub releases API to compare the latest tag with the installed version; it never " +
                 "downloads or installs an APK. Off by default; turn it off in Settings → Updates to stop all checks.",
             collectedByDefault = false,

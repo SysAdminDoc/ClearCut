@@ -28,13 +28,13 @@ import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.engine.UserTemplate
 import com.novacut.editor.model.*
-import com.novacut.editor.ui.NovaCutTestTags
+import com.novacut.editor.ui.ClearCutTestTags
 import com.novacut.editor.ui.theme.Mocha
-import com.novacut.editor.ui.theme.NovaCutChromeIconButton
-import com.novacut.editor.ui.theme.NovaCutDialogIcon
-import com.novacut.editor.ui.theme.NovaCutMetricPill
-import com.novacut.editor.ui.theme.NovaCutSectionHeader
-import com.novacut.editor.ui.theme.NovaCutSecondaryButton
+import com.novacut.editor.ui.theme.ClearCutChromeIconButton
+import com.novacut.editor.ui.theme.ClearCutDialogIcon
+import com.novacut.editor.ui.theme.ClearCutMetricPill
+import com.novacut.editor.ui.theme.ClearCutSectionHeader
+import com.novacut.editor.ui.theme.ClearCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
 import com.novacut.editor.ui.theme.TouchTarget
@@ -134,7 +134,7 @@ fun ProjectTemplateSheet(
         modifier = modifier
             .fillMaxWidth()
             .fillMaxHeight(0.92f)
-            .testTag(NovaCutTestTags.TEMPLATE_SHEET)
+            .testTag(ClearCutTestTags.TEMPLATE_SHEET)
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
             .background(Mocha.Panel, RoundedCornerShape(topStart = Radius.xxl, topEnd = Radius.xxl))
@@ -173,7 +173,7 @@ fun ProjectTemplateSheet(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            NovaCutChromeIconButton(
+            ClearCutChromeIconButton(
                 icon = Icons.Default.Close,
                 contentDescription = stringResource(R.string.close),
                 onClick = onDismiss
@@ -195,13 +195,13 @@ fun ProjectTemplateSheet(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            NovaCutMetricPill(
+            ClearCutMetricPill(
                 text = stringResource(R.string.projects_templates_count, projectTemplates.size),
                 accent = Mocha.Mauve,
                 icon = Icons.Default.DashboardCustomize
             )
             if (userTemplates.isNotEmpty()) {
-                NovaCutMetricPill(
+                ClearCutMetricPill(
                     text = stringResource(R.string.template_saved_count, userTemplates.size),
                     accent = Mocha.Sapphire,
                     icon = Icons.Default.BookmarkAdded
@@ -351,7 +351,7 @@ private fun UserTemplateCard(
             .background(Mocha.PanelHighest)
             .border(1.dp, Mocha.CardStrokeStrong, RoundedCornerShape(Radius.xl))
             .then(
-                if (template.id == "blank") Modifier.testTag(NovaCutTestTags.TEMPLATE_BLANK) else Modifier
+                if (template.id == "blank") Modifier.testTag(ClearCutTestTags.TEMPLATE_BLANK) else Modifier
             )
             .clickable(role = Role.Button, onClick = onClick)
             .semantics { contentDescription = templateDescription }
@@ -555,7 +555,7 @@ private fun TemplateSectionHeader(
     title: String,
     description: String
 ) {
-    NovaCutSectionHeader(
+    ClearCutSectionHeader(
         title = title,
         description = description
     )
@@ -597,7 +597,7 @@ private fun DeleteUserTemplateDialog(
     AlertDialog(
         onDismissRequest = onDismissRequest,
         icon = {
-            NovaCutDialogIcon(
+            ClearCutDialogIcon(
                 icon = Icons.Default.Delete,
                 accent = Mocha.Red
             )
@@ -617,7 +617,7 @@ private fun DeleteUserTemplateDialog(
             )
         },
         confirmButton = {
-            NovaCutSecondaryButton(
+            ClearCutSecondaryButton(
                 text = stringResource(R.string.template_delete_confirm_action),
                 onClick = onConfirm,
                 icon = Icons.Default.Delete,
@@ -625,7 +625,7 @@ private fun DeleteUserTemplateDialog(
             )
         },
         dismissButton = {
-            NovaCutSecondaryButton(
+            ClearCutSecondaryButton(
                 text = stringResource(R.string.cancel),
                 onClick = onDismissRequest
             )

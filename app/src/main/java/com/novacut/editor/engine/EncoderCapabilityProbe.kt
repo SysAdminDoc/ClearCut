@@ -35,7 +35,7 @@ object EncoderCapabilityProbe {
      * APV (Advanced Professional Video) codec MIME type. Android 16 native;
      * Galaxy S26 Ultra is the first phone with hardware support. APV is an
      * intra-frame codec designed for pro post-production with 4:2:2 10-bit
-     * at up to 2 Gbps. NovaCut treats APV as ingest-only — see R6.11.
+     * at up to 2 Gbps. ClearCut treats APV as ingest-only — see R6.11.
      */
     const val MIME_APV = "video/apv"
 
@@ -155,7 +155,7 @@ object EncoderCapabilityProbe {
     /**
      * Returns the HDR profiles the device advertises for the selected export codec.
      *
-     * Dolby Vision Profile 10 is AV1-based on Android (`dav1.10`), so NovaCut
+     * Dolby Vision Profile 10 is AV1-based on Android (`dav1.10`), so ClearCut
      * reports it with AV1 rather than HEVC. This is still an advisory: Media3
      * and the platform encoder perform the authoritative negotiation at export
      * time.
@@ -284,7 +284,7 @@ object EncoderCapabilityProbe {
     /**
      * Probe APV (Advanced Professional Video) decoder availability.
      *
-     * NovaCut treats APV as **ingest-only** (R6.11c): APV is intra-frame
+     * ClearCut treats APV as **ingest-only** (R6.11c): APV is intra-frame
      * coding designed for pro post-production; encoded files are 10–50×
      * larger than HEVC equivalents. We surface a "Source is APV — large
      * file" chip on import when this returns `hasDecoder = true`, and we

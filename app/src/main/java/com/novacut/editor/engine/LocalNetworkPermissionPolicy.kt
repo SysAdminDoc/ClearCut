@@ -66,7 +66,7 @@ object LocalNetworkPermissionPolicy {
             permissionName = permission,
             rationaleTitle = "Local network access needed",
             rationaleBody = "This destination is on your local network. " +
-                "Allow Nearby devices so NovaCut can connect to LAN streaming targets " +
+                "Allow Nearby devices so ClearCut can connect to LAN streaming targets " +
                 "like OBS, RTMP/SRT boxes, RTSP cameras, or multicast receivers.",
             deniedMessage = "Local network permission is required for this LAN streaming destination. " +
                 "Public internet destinations still work without it.",

@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private const val SETTINGS_DATASTORE_NAME = "novacut_settings"
+private const val SETTINGS_DATASTORE_NAME = "clearcut_settings"
 
 data class AppSettings(
     val defaultResolution: Resolution = Resolution.FHD_1080P,
@@ -132,17 +132,17 @@ internal fun mapPreferencesToAppSettings(prefs: Preferences): AppSettings = AppS
     updateCheckEnabled = prefs[SettingsPreferenceKeys.UPDATE_CHECK_ENABLED] ?: false,
 )
 
-internal fun createNovaCutSettingsDataStore(
+internal fun createClearCutSettingsDataStore(
     context: Context,
     resetReportStore: SettingsResetReportStore,
     scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
-): DataStore<Preferences> = createNovaCutSettingsDataStore(
+): DataStore<Preferences> = createClearCutSettingsDataStore(
     produceFile = { context.preferencesDataStoreFile(SETTINGS_DATASTORE_NAME) },
     resetReportStore = resetReportStore,
     scope = scope,
 )
 
-internal fun createNovaCutSettingsDataStore(
+internal fun createClearCutSettingsDataStore(
     produceFile: () -> java.io.File,
     resetReportStore: SettingsResetReportStore,
     scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
@@ -172,7 +172,7 @@ class SettingsRepository internal constructor(
         @ApplicationContext context: Context,
         resetReportStore: SettingsResetReportStore,
     ) : this(
-        dataStore = createNovaCutSettingsDataStore(context, resetReportStore),
+        dataStore = createClearCutSettingsDataStore(context, resetReportStore),
         resetReportStore = resetReportStore,
     )
 

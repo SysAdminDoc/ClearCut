@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltAndroidApp
-class NovaCutApp : Application(), Configuration.Provider {
+class ClearCutApp : Application(), Configuration.Provider {
 
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
@@ -42,7 +42,7 @@ class NovaCutApp : Application(), Configuration.Provider {
             .build()
 
     companion object {
-        const val CHANNEL_EXPORT = "novacut_export"
+        const val CHANNEL_EXPORT = "clearcut_export"
         // Source from BuildConfig so the constant can never drift from the gradle versionName.
         // Consumed by model-download User-Agent headers, crash reports, and the about dialog —
         // a stale value here would misreport the user's actual build.

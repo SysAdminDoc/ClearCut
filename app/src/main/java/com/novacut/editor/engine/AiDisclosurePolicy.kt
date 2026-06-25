@@ -1,7 +1,7 @@
 package com.novacut.editor.engine
 
 /**
- * EU AI Act Article 50 disclosure classification for NovaCut's AI tools.
+ * EU AI Act Article 50 disclosure classification for ClearCut's AI tools.
  *
  * Article 50 (effective 2026-08-02) requires:
  * (a) users must be clearly informed they are interacting with an AI system

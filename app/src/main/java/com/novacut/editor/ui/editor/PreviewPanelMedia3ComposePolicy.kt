@@ -16,7 +16,7 @@ object PreviewPanelMedia3ComposePolicy {
         STILL_IMAGE_FALLBACK,
         TRANSFORM_GESTURES,
         SCOPES_TOGGLE,
-        NOVACUT_CHROME
+        CLEARCUT_CHROME
     }
 
     enum class AdoptionDecision {
@@ -36,7 +36,7 @@ object PreviewPanelMedia3ComposePolicy {
         val supportsStillImageFallback: Boolean,
         val supportsTransformGestures: Boolean,
         val supportsScopesToggle: Boolean,
-        val supportsNovaCutChrome: Boolean,
+        val supportsClearCutChrome: Boolean,
     ) {
         companion object {
             val MEDIA3_1_10_1 = Media3ComposeProfile(
@@ -50,7 +50,7 @@ object PreviewPanelMedia3ComposePolicy {
                 supportsStillImageFallback = false,
                 supportsTransformGestures = false,
                 supportsScopesToggle = false,
-                supportsNovaCutChrome = false,
+                supportsClearCutChrome = false,
             )
         }
     }
@@ -70,7 +70,7 @@ object PreviewPanelMedia3ComposePolicy {
         Requirement.STILL_IMAGE_FALLBACK,
         Requirement.TRANSFORM_GESTURES,
         Requirement.SCOPES_TOGGLE,
-        Requirement.NOVACUT_CHROME,
+        Requirement.CLEARCUT_CHROME,
     )
 
     fun evaluate(
@@ -86,7 +86,7 @@ object PreviewPanelMedia3ComposePolicy {
             profile.hasMaterial3PlaybackControls && profile.hasContentFrameSurface
         val decision = when {
             missing.isEmpty() && progressSliderCanReplaceTimelineSeek -> AdoptionDecision.ADOPT_FULL_PLAYER
-            missing.all { it == Requirement.NOVACUT_CHROME } && targetedControlsWorthRevisiting ->
+            missing.all { it == Requirement.CLEARCUT_CHROME } && targetedControlsWorthRevisiting ->
                 AdoptionDecision.ADOPT_TARGETED_CONTROLS_ONLY
             else -> AdoptionDecision.KEEP_PREVIEW_PANEL
         }
@@ -110,6 +110,6 @@ object PreviewPanelMedia3ComposePolicy {
         Requirement.STILL_IMAGE_FALLBACK -> supportsStillImageFallback
         Requirement.TRANSFORM_GESTURES -> supportsTransformGestures
         Requirement.SCOPES_TOGGLE -> supportsScopesToggle
-        Requirement.NOVACUT_CHROME -> supportsNovaCutChrome
+        Requirement.CLEARCUT_CHROME -> supportsClearCutChrome
     }
 }

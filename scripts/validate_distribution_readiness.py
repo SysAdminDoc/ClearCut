@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate NovaCut distribution-channel readiness copy and metadata."""
+"""Validate ClearCut distribution-channel readiness copy and metadata."""
 from __future__ import annotations
 
 import argparse
@@ -151,7 +151,7 @@ def write_minimal_repo(root: Path, readme: str, full_description: str, workflow:
         'android { defaultConfig { versionCode = 200\nversionName = "3.74.63" } }\n',
     )
     write_fixture(root, "README.md", readme)
-    write_fixture(root, "fastlane/metadata/android/en-US/title.txt", "NovaCut\n")
+    write_fixture(root, "fastlane/metadata/android/en-US/title.txt", "ClearCut\n")
     write_fixture(
         root,
         "fastlane/metadata/android/en-US/short_description.txt",

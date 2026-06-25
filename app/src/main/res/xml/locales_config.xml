@@ -3,7 +3,7 @@
     Per-app language preferences locale config (R8.7).
 
     Declaring this resource via android:localeConfig in AndroidManifest
-    lights up NovaCut in Settings -> System -> Languages & Input ->
+    lights up ClearCut in Settings -> System -> Languages & Input ->
     App Languages on Android 13+ devices. The default locale is the
     system default; users can override per-app from that screen.
 

@@ -184,8 +184,8 @@ class CrashRecordStore private constructor(
     companion object {
         const val CRASH_SUBDIR = "crashes"
         const val CRASH_BUNDLE_ENTRY = "crash-records.json"
-        const val RECORD_SCHEMA = "com.novacut.crash-record.v1"
-        const val BUNDLE_SCHEMA = "com.novacut.crash-records.v1"
+        const val RECORD_SCHEMA = "com.clearcut.crash-record.v1"
+        const val BUNDLE_SCHEMA = "com.clearcut.crash-records.v1"
         const val DEFAULT_RETAIN_COUNT = 8
         private const val MAX_CAUSE_DEPTH = 4
         private const val MAX_STACK_FRAMES = 32

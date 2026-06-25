@@ -14,7 +14,7 @@ import javax.inject.Singleton
 private const val TAG = "EdlExporter"
 
 /**
- * Exports NovaCut project timeline as industry-standard EDL (CMX 3600)
+ * Exports ClearCut project timeline as industry-standard EDL (CMX 3600)
  * for import into desktop editors (Premiere, Resolve, FCPX).
  * FCPXML export is handled by [TimelineExchangeEngine].
  */
@@ -37,7 +37,7 @@ class EdlExporter @Inject constructor(
         try {
             val safeFrameRate = frameRate.coerceIn(1, 240)
             val sb = StringBuilder()
-            sb.appendLine("TITLE: ${edlSafeText(projectName, fallback = "NovaCut Project")}")
+            sb.appendLine("TITLE: ${edlSafeText(projectName, fallback = "ClearCut Project")}")
             sb.appendLine("FCM: NON-DROP FRAME")
             sb.appendLine()
 
@@ -100,7 +100,7 @@ class EdlExporter @Inject constructor(
 
             val outputDir = File(context.getExternalFilesDir(null) ?: context.filesDir, "exports")
             outputDir.mkdirs()
-            val sanitized = sanitizeFileName(projectName, fallback = "NovaCut", maxLength = 50)
+            val sanitized = sanitizeFileName(projectName, fallback = "ClearCut", maxLength = 50)
             val file = File(outputDir, "${sanitized}.edl")
             writeUtf8TextAtomically(file, sb.toString())
             Log.d(TAG, "EDL exported: ${file.absolutePath}")

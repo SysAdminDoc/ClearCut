@@ -11,10 +11,10 @@ private val repeatedWhitespace = Regex("""\s+""")
 
 fun sanitizeFileName(
     raw: String,
-    fallback: String = "NovaCut",
+    fallback: String = "ClearCut",
     maxLength: Int = 80
 ): String {
-    val fallbackCandidate = fallback.trim().ifBlank { "NovaCut" }
+    val fallbackCandidate = fallback.trim().ifBlank { "ClearCut" }
     val normalized = raw
         .trim()
         .replace(invalidFileNameChars, "_")
@@ -40,7 +40,7 @@ fun sanitizeFileName(
 
 fun sanitizeFileNamePreservingExtension(
     raw: String,
-    fallbackStem: String = "NovaCut",
+    fallbackStem: String = "ClearCut",
     maxLength: Int = 80
 ): String {
     val trimmed = raw.trim()

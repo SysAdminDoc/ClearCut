@@ -1,4 +1,4 @@
-package com.novacut.baselineprofile
+package com.clearcut.baselineprofile
 
 import androidx.benchmark.macro.junit4.BaselineProfileRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -14,7 +14,7 @@ class BaselineProfileGenerator {
 
     @Test
     fun generateBaselineProfile() {
-        baselineProfileRule.collect(packageName = NOVACUT_PACKAGE) {
+        baselineProfileRule.collect(packageName = CLEARCUT_PACKAGE) {
             openProjectGallery()
             openBlankEditor()
             openExportSheet()

@@ -53,7 +53,7 @@ object Mocha {
     val Rosewater = Color(0xFFF5E0DC)
 }
 
-private val NovaCutDarkColorScheme = darkColorScheme(
+private val ClearCutDarkColorScheme = darkColorScheme(
     primary = Mocha.Mauve,
     onPrimary = Mocha.Crust,
     primaryContainer = Mocha.Mauve.copy(alpha = 0.3f),
@@ -90,7 +90,7 @@ private val NovaCutDarkColorScheme = darkColorScheme(
     surfaceContainerHighest = Mocha.PanelHighest
 )
 
-private val NovaCutHighContrastColorScheme = darkColorScheme(
+private val ClearCutHighContrastColorScheme = darkColorScheme(
     primary = Mocha.Sky,
     onPrimary = Mocha.Crust,
     primaryContainer = Mocha.Sky,
@@ -127,7 +127,7 @@ private val NovaCutHighContrastColorScheme = darkColorScheme(
     surfaceContainerHighest = Color(0xFF172033)
 )
 
-data class NovaCutSemanticColors(
+data class ClearCutSemanticColors(
     val mode: AppearanceMode,
     val highContrast: Boolean,
     val background: Color,
@@ -142,14 +142,14 @@ data class NovaCutSemanticColors(
     val disabledText: Color,
 )
 
-val LocalNovaCutColors = staticCompositionLocalOf {
-    NovaCutThemeDefaults.colorsFor(AppearanceMode.DARK)
+val LocalClearCutColors = staticCompositionLocalOf {
+    ClearCutThemeDefaults.colorsFor(AppearanceMode.DARK)
 }
 
-object NovaCutThemeDefaults {
+object ClearCutThemeDefaults {
     fun resolveMode(mode: AppearanceMode, systemDark: Boolean): AppearanceMode = when (mode) {
         AppearanceMode.SYSTEM -> {
-            // NovaCut deliberately keeps the editing canvas dark until a video-neutral
+            // ClearCut deliberately keeps the editing canvas dark until a video-neutral
             // light palette has a full screenshot/contrast audit.
             if (systemDark) AppearanceMode.DARK else AppearanceMode.DARK
         }
@@ -158,13 +158,13 @@ object NovaCutThemeDefaults {
     }
 
     fun colorSchemeFor(resolvedMode: AppearanceMode) = when (resolvedMode) {
-        AppearanceMode.HIGH_CONTRAST_DARK -> NovaCutHighContrastColorScheme
+        AppearanceMode.HIGH_CONTRAST_DARK -> ClearCutHighContrastColorScheme
         AppearanceMode.SYSTEM,
-        AppearanceMode.DARK -> NovaCutDarkColorScheme
+        AppearanceMode.DARK -> ClearCutDarkColorScheme
     }
 
-    fun colorsFor(resolvedMode: AppearanceMode): NovaCutSemanticColors = when (resolvedMode) {
-        AppearanceMode.HIGH_CONTRAST_DARK -> NovaCutSemanticColors(
+    fun colorsFor(resolvedMode: AppearanceMode): ClearCutSemanticColors = when (resolvedMode) {
+        AppearanceMode.HIGH_CONTRAST_DARK -> ClearCutSemanticColors(
             mode = resolvedMode,
             highContrast = true,
             background = Color(0xFF05070D),
@@ -179,7 +179,7 @@ object NovaCutThemeDefaults {
             disabledText = Color(0xFFBAC2DE),
         )
         AppearanceMode.SYSTEM,
-        AppearanceMode.DARK -> NovaCutSemanticColors(
+        AppearanceMode.DARK -> ClearCutSemanticColors(
             mode = AppearanceMode.DARK,
             highContrast = false,
             background = Mocha.Midnight,
@@ -220,7 +220,7 @@ object NovaCutThemeDefaults {
     }
 }
 
-private val NovaCutTypography = Typography(
+private val ClearCutTypography = Typography(
     displayLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.SemiBold,
@@ -306,18 +306,18 @@ private val NovaCutTypography = Typography(
 )
 
 @Composable
-fun NovaCutTheme(
+fun ClearCutTheme(
     appearanceMode: AppearanceMode = AppearanceMode.SYSTEM,
     content: @Composable () -> Unit
 ) {
-    val resolvedMode = NovaCutThemeDefaults.resolveMode(
+    val resolvedMode = ClearCutThemeDefaults.resolveMode(
         mode = appearanceMode,
         systemDark = isSystemInDarkTheme(),
     )
-    CompositionLocalProvider(LocalNovaCutColors provides NovaCutThemeDefaults.colorsFor(resolvedMode)) {
+    CompositionLocalProvider(LocalClearCutColors provides ClearCutThemeDefaults.colorsFor(resolvedMode)) {
         MaterialTheme(
-            colorScheme = NovaCutThemeDefaults.colorSchemeFor(resolvedMode),
-            typography = NovaCutTypography,
+            colorScheme = ClearCutThemeDefaults.colorSchemeFor(resolvedMode),
+            typography = ClearCutTypography,
             content = content
         )
     }

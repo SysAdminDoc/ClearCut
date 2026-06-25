@@ -23,7 +23,7 @@ class Media3LottieTextureOverlayTest {
             compositionDurationUs = 3_000_000L
         )
 
-        assertEquals(LottieOverlayBackend.NOVACUT_SHADER, decision.backend)
+        assertEquals(LottieOverlayBackend.CLEARCUT_SHADER, decision.backend)
     }
 
     @Test
@@ -34,7 +34,7 @@ class Media3LottieTextureOverlayTest {
             compositionDurationUs = 3_000_000L
         )
 
-        assertEquals(LottieOverlayBackend.NOVACUT_SHADER, decision.backend)
+        assertEquals(LottieOverlayBackend.CLEARCUT_SHADER, decision.backend)
     }
 
     @Test

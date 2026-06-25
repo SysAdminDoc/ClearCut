@@ -106,7 +106,7 @@ class TapSegmentEngine @Inject constructor(
          * Placeholder for SAM 3 / SAM 3.1 (R6.4). Behaviour-disabled today because:
          *  - There is no Tiny-class ONNX export of SAM 3 / SAM 3.1 as of 2026-05.
          *  - The full 848M-parameter model targets H100 GPUs, not mobile NPUs.
-         *  - The text-prompt concept-segmentation surface area is the part NovaCut
+         *  - The text-prompt concept-segmentation surface area is the part ClearCut
          *    most wants; it has no equivalent in SAM 2.1.
          * Sizes below are placeholder estimates derived from the SAM 2.1 Hiera Tiny
          * working set. Update both numbers and `canRunOnDevice()` policy when a
@@ -223,7 +223,7 @@ class TapSegmentEngine @Inject constructor(
      * Segment by natural-language concept prompt (R6.4b).
      *
      * SAM 3 introduces text-prompted concept segmentation ("dog", "the person
-     * in the red jacket", "the basketball"). NovaCut exposes this API shape now
+     * in the red jacket", "the basketball"). ClearCut exposes this API shape now
      * so consumers and UI can integrate without waiting for the model export.
      * Today this method:
      *  - Returns null on the SAM 2.1 path (the default model) because SAM 2.1

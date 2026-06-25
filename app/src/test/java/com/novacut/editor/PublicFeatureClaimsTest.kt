@@ -59,7 +59,7 @@ class PublicFeatureClaimsTest {
             assertFalse("$key should use archive language instead of backup branding", value.contains("backup", ignoreCase = true))
         }
         assertTrue(strings.getValue("tool_cloud_backup").contains("Archive"))
-        assertTrue(strings.getValue("panel_cloud_backup_description").contains("Downloads/NovaCut"))
+        assertTrue(strings.getValue("panel_cloud_backup_description").contains("Downloads/ClearCut"))
 
         val importRouter = locate("app/src/main/java/com/novacut/editor/engine/IncomingDocumentImportRouter.kt").readText()
         val legacyFeatureName = "Cloud " + "Backup"

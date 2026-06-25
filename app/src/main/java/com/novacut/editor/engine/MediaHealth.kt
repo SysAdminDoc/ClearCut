@@ -178,7 +178,7 @@ object MediaHealth {
                             severity = MediaHealthSeverity.WARNING,
                             subjectId = reference.id,
                             uri = proxyUri.toString(),
-                            message = "Preview proxy exists but is empty; NovaCut should fall back to source media."
+                            message = "Preview proxy exists but is empty; ClearCut should fall back to source media."
                         )
                         LocalFileState.MISSING,
                         LocalFileState.INVALID -> issues += MediaHealthIssue(
@@ -186,7 +186,7 @@ object MediaHealth {
                             severity = MediaHealthSeverity.WARNING,
                             subjectId = reference.id,
                             uri = proxyUri.toString(),
-                            message = "Preview proxy is missing; NovaCut should fall back to source media."
+                            message = "Preview proxy is missing; ClearCut should fall back to source media."
                         )
                     }
                 }

@@ -142,9 +142,9 @@ class VoiceoverRecorderEngine @Inject constructor(
     private fun requestVoiceoverAudioFocus(): Boolean {
         val manager = audioManager ?: return true
         val result = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val request = NovaCutAudioFocusPolicy.buildFocusRequest(
-                gainType = NovaCutAudioFocusPolicy.VOICEOVER_FOCUS_GAIN,
-                attributes = NovaCutAudioFocusPolicy.buildVoiceoverCaptureAttributes(),
+            val request = ClearCutAudioFocusPolicy.buildFocusRequest(
+                gainType = ClearCutAudioFocusPolicy.VOICEOVER_FOCUS_GAIN,
+                attributes = ClearCutAudioFocusPolicy.buildVoiceoverCaptureAttributes(),
                 listener = focusChangeListener,
             )
             activeFocusRequest = request
@@ -154,7 +154,7 @@ class VoiceoverRecorderEngine @Inject constructor(
             manager.requestAudioFocus(
                 focusChangeListener,
                 AudioManager.STREAM_MUSIC,
-                NovaCutAudioFocusPolicy.VOICEOVER_FOCUS_GAIN,
+                ClearCutAudioFocusPolicy.VOICEOVER_FOCUS_GAIN,
             )
         }
         return result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED

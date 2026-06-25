@@ -19,10 +19,10 @@ import javax.inject.Singleton
  * timeline.
  *
  * The Android `content://` per-URI grant model is the recommended way for
- * NovaCut to access user media — but those grants can disappear at any time
+ * ClearCut to access user media — but those grants can disappear at any time
  * (user clears the system Photo Picker grant, the source content provider
  * revokes, the underlying file is moved, the app process restarts after the
- * one-time grant lapses). When that happens NovaCut today silently fails to
+ * one-time grant lapses). When that happens ClearCut today silently fails to
  * decode the clip. This probe is the static-analysis half of fixing that:
  * surface "missing" before the user hits play and gets a black frame.
  *

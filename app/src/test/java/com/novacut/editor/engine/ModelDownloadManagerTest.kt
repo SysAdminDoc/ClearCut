@@ -12,7 +12,7 @@ class ModelDownloadManagerTest {
 
     @Test
     fun isValidModelFile_requiresFileAtMinimumSize() {
-        val dir = Files.createTempDirectory("novacut-model-test").toFile()
+        val dir = Files.createTempDirectory("clearcut-model-test").toFile()
         val model = File(dir, "model.onnx")
         try {
             model.writeBytes(ByteArray(16))
@@ -27,7 +27,7 @@ class ModelDownloadManagerTest {
 
     @Test
     fun validateDownloadedFile_rejectsEmptyIncompleteAndUndersizedFiles() {
-        val dir = Files.createTempDirectory("novacut-model-validation").toFile()
+        val dir = Files.createTempDirectory("clearcut-model-validation").toFile()
         val model = File(dir, "model.onnx")
         try {
             model.writeBytes(ByteArray(0))
@@ -53,7 +53,7 @@ class ModelDownloadManagerTest {
 
     @Test
     fun isValidModelFile_requireChecksumWithNoSha256_returnsFalse() {
-        val dir = Files.createTempDirectory("novacut-r59b-no-hash").toFile()
+        val dir = Files.createTempDirectory("clearcut-r59b-no-hash").toFile()
         val model = File(dir, "model.onnx").apply { writeBytes(ByteArray(32)) }
         try {
             // Legacy lenient mode: null sha + minimum met → true.
@@ -81,7 +81,7 @@ class ModelDownloadManagerTest {
 
     @Test
     fun verifyChecksumOrDelete_failsClosedOnMissingHash() {
-        val dir = Files.createTempDirectory("novacut-r59b-explicit").toFile()
+        val dir = Files.createTempDirectory("clearcut-r59b-explicit").toFile()
         val model = File(dir, "model.onnx").apply { writeBytes(ByteArray(64)) }
         try {
             assertFalse(
@@ -103,7 +103,7 @@ class ModelDownloadManagerTest {
 
     @Test
     fun verifyChecksumOrDelete_acceptsMatchingHash() {
-        val dir = Files.createTempDirectory("novacut-r59b-match").toFile()
+        val dir = Files.createTempDirectory("clearcut-r59b-match").toFile()
         val model = File(dir, "model.onnx").apply { writeBytes("hello".toByteArray()) }
         // sha256("hello") = 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
         try {
@@ -121,7 +121,7 @@ class ModelDownloadManagerTest {
 
     @Test
     fun verifyChecksumOrDelete_deletesOnMismatch() {
-        val dir = Files.createTempDirectory("novacut-r59b-mismatch").toFile()
+        val dir = Files.createTempDirectory("clearcut-r59b-mismatch").toFile()
         val model = File(dir, "model.onnx").apply { writeBytes("world".toByteArray()) }
         try {
             val ok = ModelDownloadManager.verifyChecksumOrDelete(

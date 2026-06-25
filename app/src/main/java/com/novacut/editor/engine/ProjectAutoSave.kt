@@ -83,12 +83,12 @@ class ProjectAutoSave @Inject constructor(
 
     /**
      * Schema-aware load result for callers that need to distinguish a corrupt
-     * autosave from one written by a newer NovaCut build (R5/AS-Schema gate).
+     * autosave from one written by a newer ClearCut build (R5/AS-Schema gate).
      *
      * `loadRecoveryData` keeps its `AutoSaveState?` return for back-compat —
      * future-schema files fall through to `null` there, which existing call
      * sites already handle as "no recovery available." UI surfaces that want
-     * to render a "Project needs newer NovaCut" dialog should call
+     * to render a "Project needs newer ClearCut" dialog should call
      * [loadRecoveryDataWithOutcome] instead.
      */
     sealed class LoadOutcome {
@@ -129,7 +129,7 @@ class ProjectAutoSave @Inject constructor(
             if (peek != null && peek > AutoSaveState.FORMAT_VERSION) {
                 Log.w(
                     TAG,
-                    "Auto-save for $projectId was written by a newer NovaCut " +
+                    "Auto-save for $projectId was written by a newer ClearCut " +
                         "(schema $peek > supported ${AutoSaveState.FORMAT_VERSION}); " +
                         "refusing to load to avoid data loss"
                 )

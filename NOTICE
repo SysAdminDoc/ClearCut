@@ -1,11 +1,11 @@
-NovaCut third-party notices
+ClearCut third-party notices
 
 FFmpegKit / FFmpeg
 
-NovaCut may bundle com.moizhassan.ffmpeg:ffmpeg-kit-16kb:6.1.1 for FFmpeg-backed export paths that AndroidX Media3 Transformer does not cover. The resolved Maven POM declares LGPL-3.0, while the packaged AAR includes GPLv3 license text and a GPLv3 source-offer resource. Treat redistributed NovaCut builds that include this AAR as carrying FFmpegKit / FFmpeg GPLv3 notice and source-offer obligations unless the dependency is replaced by a verified LGPL-only build flavor.
+ClearCut may bundle com.moizhassan.ffmpeg:ffmpeg-kit-16kb:6.1.1 for FFmpeg-backed export paths that AndroidX Media3 Transformer does not cover. The resolved Maven POM declares LGPL-3.0, while the packaged AAR includes GPLv3 license text and a GPLv3 source-offer resource. Treat redistributed ClearCut builds that include this AAR as carrying FFmpegKit / FFmpeg GPLv3 notice and source-offer obligations unless the dependency is replaced by a verified LGPL-only build flavor.
 
 The Android package includes FFmpegKit's upstream license resources under res/raw/license*.txt and res/raw/source.txt. Keep those resources in any redistributed build, and provide source access or a written source offer for the FFmpegKit / FFmpeg components according to those bundled terms.
 
 DeepFilterNet
 
-NovaCut may bundle io.github.kaleyravideo:android-deepfilternet:0.0.8 for on-device audio noise reduction. The Kaleyra Android AAR is licensed under Apache License 2.0 and is built on the upstream DeepFilterNet project, whose code and model weights are available under MIT or Apache License 2.0 at the user's option. Keep the relevant Apache/MIT notices with redistributed builds that include the DeepFilterNet native library and bundled model.
+ClearCut may bundle io.github.kaleyravideo:android-deepfilternet:0.0.8 for on-device audio noise reduction. The Kaleyra Android AAR is licensed under Apache License 2.0 and is built on the upstream DeepFilterNet project, whose code and model weights are available under MIT or Apache License 2.0 at the user's option. Keep the relevant Apache/MIT notices with redistributed builds that include the DeepFilterNet native library and bundled model.

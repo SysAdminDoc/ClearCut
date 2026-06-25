@@ -98,7 +98,7 @@ class MemoryTrimBreadcrumbStore internal constructor(
     companion object {
         const val FILE_NAME = "memory-trim.jsonl"
         const val BUNDLE_ENTRY = "memory-trim.jsonl"
-        const val SCHEMA = "com.novacut.memory-trim.v1"
+        const val SCHEMA = "com.clearcut.memory-trim.v1"
         const val DEFAULT_RETAIN_COUNT = 64
 
         fun forDiagnosticsDir(diagnosticsDir: File): MemoryTrimBreadcrumbStore =

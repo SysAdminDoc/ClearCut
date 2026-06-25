@@ -12,11 +12,11 @@ class PluginRegistryTest {
     fun template_extensionDetectedCaseInsensitive() {
         assertEquals(
             PluginRegistry.Kind.TEMPLATE,
-            PluginRegistry.kindForFileName("VlogIntro.novacut-template")
+            PluginRegistry.kindForFileName("VlogIntro.clearcut-template")
         )
         assertEquals(
             PluginRegistry.Kind.TEMPLATE,
-            PluginRegistry.kindForFileName("VLOGINTRO.NOVACUT-TEMPLATE")
+            PluginRegistry.kindForFileName("VLOGINTRO.CLEARCUT-TEMPLATE")
         )
     }
 
@@ -81,7 +81,7 @@ class PluginRegistryTest {
     fun whitespaceAndCaseHandled() {
         assertEquals(
             PluginRegistry.Kind.TEMPLATE,
-            PluginRegistry.kindForFileName("  Spaces.novacut-template  ")
+            PluginRegistry.kindForFileName("  Spaces.clearcut-template  ")
         )
     }
 

@@ -51,10 +51,10 @@ android {
                     keyPassword = keyPass
                 }
             } else {
-                val storePath = resolveSigningSecret("NOVACUT_STORE_FILE")
-                val storePass = resolveSigningSecret("NOVACUT_STORE_PASSWORD", "NOVACUT_KS_PASS")
-                val alias = resolveSigningSecret("NOVACUT_KEY_ALIAS")
-                val keyPass = resolveSigningSecret("NOVACUT_KEY_PASSWORD", "NOVACUT_KEY_PASS")
+                val storePath = resolveSigningSecret("CLEARCUT_STORE_FILE")
+                val storePass = resolveSigningSecret("CLEARCUT_STORE_PASSWORD", "CLEARCUT_KS_PASS")
+                val alias = resolveSigningSecret("CLEARCUT_KEY_ALIAS")
+                val keyPass = resolveSigningSecret("CLEARCUT_KEY_PASSWORD", "CLEARCUT_KEY_PASS")
                 if (!storePath.isNullOrBlank() && !storePass.isNullOrBlank() && !alias.isNullOrBlank() && !keyPass.isNullOrBlank()) {
                     storeFile = file(storePath)
                     storePassword = storePass
@@ -112,7 +112,7 @@ android {
 
     lint {
         // androidx.lifecycle's NullSafeMutableLiveData detector crashes under
-        // the current Kotlin 2.1 / AGP 8.7 lint stack, and NovaCut has no
+        // the current Kotlin 2.1 / AGP 8.7 lint stack, and ClearCut has no
         // LiveData call sites for this detector to inspect. The Compose
         // detectors below currently crash in UAST with the same stack rather
         // than reporting actionable source findings.

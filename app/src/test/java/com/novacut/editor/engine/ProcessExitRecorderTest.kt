@@ -103,6 +103,47 @@ class ProcessExitRecorderTest {
     }
 
     @Test
+    fun memoryLimiterAnonSwapDetectedAsDistinctReason() {
+        val recorder = ProcessExitRecorder.forFile(
+            historyFile = temp.newFile("process-exit-history.json"),
+            source = FakeProcessExitSource(
+                records = listOf(
+                    snapshot(
+                        timestamp = 7_000L,
+                        reason = 13, // REASON_OTHER
+                        pid = 50,
+                        processName = "com.novacut.editor",
+                        description = "MemoryLimiter:AnonSwap limit=2048000 used=2100000"
+                    ),
+                    snapshot(
+                        timestamp = 8_000L,
+                        reason = 13, // REASON_OTHER — not MemoryLimiter
+                        pid = 51,
+                        processName = "com.novacut.editor",
+                        description = "Unknown other reason"
+                    )
+                )
+            )
+        )
+
+        recorder.recordStartupExitReasons(nowEpochMs = 9_000L)
+        val json = JSONObject(recorder.buildDiagnosticJson())
+        val records = json.getJSONArray("records")
+
+        assertEquals("MEMORY_LIMITER", records.getJSONObject(0).getString("reason"))
+        assertEquals("OTHER", records.getJSONObject(1).getString("reason"))
+    }
+
+    @Test
+    fun isMemoryLimiterKillDetectsPattern() {
+        assertTrue(ProcessExitRecorder.isMemoryLimiterKill("MemoryLimiter:AnonSwap limit=2048000 used=2100000"))
+        assertTrue(ProcessExitRecorder.isMemoryLimiterKill("some prefix MemoryLimiter:AnonSwap suffix"))
+        assertFalse(ProcessExitRecorder.isMemoryLimiterKill("Some other reason"))
+        assertFalse(ProcessExitRecorder.isMemoryLimiterKill(null))
+        assertFalse(ProcessExitRecorder.isMemoryLimiterKill(""))
+    }
+
+    @Test
     fun traceExcerptIsBounded() {
         val longTrace = (0 until 100).joinToString("\n") { index ->
             "line-$index ${"x".repeat(400)}"

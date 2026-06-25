@@ -20,6 +20,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "NovaCut"
+rootProject.name = "ClearCut"
 include(":app")
 include(":baselineprofile")

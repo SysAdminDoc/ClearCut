@@ -1307,7 +1307,7 @@ class ExportDelegate(
         scope.launch {
             val outputDir = File(
                 appContext.getExternalFilesDir(Environment.DIRECTORY_MOVIES) ?: appContext.filesDir,
-                "NovaCut"
+                "ClearCut"
             ).apply { mkdirs() }
             val originalConfig = stateFlow.value.exportConfig
             try {
@@ -1418,7 +1418,7 @@ class ExportDelegate(
         val baseName = trimmedOutputName
             .substringBeforeLast('.', missingDelimiterValue = trimmedOutputName)
             .takeIf { it.isNotBlank() }
-            ?: "NovaCut"
+            ?: "ClearCut"
         val template = stateFlow.value.exportConfig.filenameTemplate.ifBlank { "{name}" }
         val templated = applyFilenameTemplate(template, baseName, stateFlow.value.exportConfig)
         // Reserve space for an auto-increment suffix like ` (999)` so repeated
@@ -1427,7 +1427,7 @@ class ExportDelegate(
         // miss a previously-created number by hopping across lengths).
         val suffixReserve = 6
         val baseBudget = 64 - suffixReserve
-        val sanitizedBase = sanitizeFileName(templated, fallback = "NovaCut", maxLength = baseBudget)
+        val sanitizedBase = sanitizeFileName(templated, fallback = "ClearCut", maxLength = baseBudget)
         var candidate = File(outputDir, "$sanitizedBase.$extension")
         if (!candidate.exists()) {
             return candidate
@@ -1452,7 +1452,7 @@ class ExportDelegate(
             val values = ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, file.name)
                 put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
-                put(MediaStore.MediaColumns.RELATIVE_PATH, "$relativeDirectory/NovaCut")
+                put(MediaStore.MediaColumns.RELATIVE_PATH, "$relativeDirectory/ClearCut")
                 put(MediaStore.MediaColumns.IS_PENDING, 1)
             }
             val collection = if (usesImageCollection) {
@@ -1495,7 +1495,7 @@ class ExportDelegate(
         } else {
             val externalRoot = appContext.getExternalFilesDir(relativeDirectory)
                 ?: File(appContext.filesDir, relativeDirectory.lowercase())
-            val destinationDir = File(externalRoot, "NovaCut").apply { mkdirs() }
+            val destinationDir = File(externalRoot, "ClearCut").apply { mkdirs() }
             val destinationFile = createOutputFile(
                 destinationDir,
                 file.extension.ifBlank { if (usesImageCollection) "png" else "mp4" },

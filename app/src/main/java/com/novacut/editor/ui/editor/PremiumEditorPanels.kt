@@ -36,7 +36,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
-import com.novacut.editor.ui.theme.LocalNovaCutColors
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
 import com.novacut.editor.ui.theme.TouchTarget
@@ -55,7 +55,7 @@ fun PremiumEditorPanel(
     headerActions: @Composable RowScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val colors = LocalNovaCutColors.current
+    val colors = LocalClearCutColors.current
     val scrollModifier = if (scrollable) {
         Modifier.verticalScroll(rememberScrollState())
     } else {
@@ -155,7 +155,7 @@ fun PremiumPanelCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val colors = LocalNovaCutColors.current
+    val colors = LocalClearCutColors.current
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -191,7 +191,7 @@ fun PremiumHairlineDivider(
     modifier: Modifier = Modifier,
     color: Color = Color.Unspecified
 ) {
-    val colors = LocalNovaCutColors.current
+    val colors = LocalClearCutColors.current
     val resolvedColor = if (color == Color.Unspecified) colors.cardStroke else color
 
     Box(
@@ -208,7 +208,7 @@ fun PremiumPanelPill(
     accent: Color,
     modifier: Modifier = Modifier
 ) {
-    val colors = LocalNovaCutColors.current
+    val colors = LocalClearCutColors.current
 
     Surface(
         modifier = modifier.defaultMinSize(minHeight = 30.dp),
@@ -237,7 +237,7 @@ fun PremiumPanelIconButton(
     containerColor: Color = Color.Unspecified,
     enabled: Boolean = true
 ) {
-    val colors = LocalNovaCutColors.current
+    val colors = LocalClearCutColors.current
     val resolvedContainer = if (containerColor == Color.Unspecified) colors.panelHighest else containerColor
     val resolvedTint = if (tint == Color.Unspecified) colors.subtext else tint
 

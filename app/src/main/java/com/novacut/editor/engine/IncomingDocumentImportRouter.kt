@@ -54,7 +54,7 @@ class IncomingDocumentImportRouter @Inject constructor(
 
     suspend fun importTemplate(item: IncomingDocumentItem): IncomingDocumentImportPreview = withContext(Dispatchers.IO) {
         if (item.kind != IncomingDocumentKind.TEMPLATE) {
-            return@withContext invalid(item, "Only NovaCut template files can be imported from this preview.")
+            return@withContext invalid(item, "Only ClearCut template files can be imported from this preview.")
         }
         val readability = validateReadable(item)
         if (readability != null) return@withContext readability
@@ -118,7 +118,7 @@ class IncomingDocumentImportRouter @Inject constructor(
     }
 
     private fun previewStylePack(item: IncomingDocumentItem): IncomingDocumentImportPreview {
-        val json = readText(item) ?: return invalid(item, "NovaCut could not read this style-pack file.")
+        val json = readText(item) ?: return invalid(item, "ClearCut could not read this style-pack file.")
         val result = stylePackManager.importFromJson(json)
         val pack = result.pack
         if (pack == null) {
@@ -145,7 +145,7 @@ class IncomingDocumentImportRouter @Inject constructor(
             item = item,
             status = IncomingDocumentImportStatus.READY,
             title = "Template ready for review",
-            body = "NovaCut can run the existing template compatibility checks before saving this file to Templates.",
+            body = "ClearCut can run the existing template compatibility checks before saving this file to Templates.",
             details = baseDetails(item),
             warnings = emptyList(),
             canImportNow = true,
@@ -154,7 +154,7 @@ class IncomingDocumentImportRouter @Inject constructor(
 
     private suspend fun previewEffectPack(item: IncomingDocumentItem): IncomingDocumentImportPreview {
         val imported = effectShareEngine.importEffects(item.uri)
-            ?: return invalid(item, "This .ncfx file did not match NovaCut's effect-pack schema.")
+            ?: return invalid(item, "This .ncfx file did not match ClearCut's effect-pack schema.")
         return IncomingDocumentImportPreview(
             item = item,
             status = IncomingDocumentImportStatus.READY,
@@ -175,7 +175,7 @@ class IncomingDocumentImportRouter @Inject constructor(
         item: IncomingDocumentItem,
         parse: (File) -> LutEngine.Lut3D?,
     ): IncomingDocumentImportPreview {
-        val tempFile = copyToPreviewFile(item) ?: return invalid(item, "NovaCut could not copy this LUT for validation.")
+        val tempFile = copyToPreviewFile(item) ?: return invalid(item, "ClearCut could not copy this LUT for validation.")
         return try {
             val lut = parse(tempFile)
                 ?: return invalid(item, "This LUT is malformed or uses an unsupported table shape.")
@@ -197,16 +197,16 @@ class IncomingDocumentImportRouter @Inject constructor(
     }
 
     private fun previewOpenFxDescriptor(item: IncomingDocumentItem): IncomingDocumentImportPreview {
-        val json = readText(item) ?: return invalid(item, "NovaCut could not read this descriptor.")
+        val json = readText(item) ?: return invalid(item, "ClearCut could not read this descriptor.")
         val descriptor = OpenFxDescriptor.fromJson(json)
-            ?: return invalid(item, "This .ncfxd file did not match NovaCut's OpenFX descriptor schema.")
+            ?: return invalid(item, "This .ncfxd file did not match ClearCut's OpenFX descriptor schema.")
         return IncomingDocumentImportPreview(
             item = item,
             status = IncomingDocumentImportStatus.READY,
             title = "OpenFX descriptor validated",
-            body = "NovaCut can carry this metadata alongside effect packs for future timeline interchange.",
+            body = "ClearCut can carry this metadata alongside effect packs for future timeline interchange.",
             details = baseDetails(item) + listOf(
-                "NovaCut effect: ${descriptor.novaCutEffectId}",
+                "ClearCut effect: ${descriptor.novaCutEffectId}",
                 "OpenFX effect: ${descriptor.openfxId}",
                 "Parameters: ${descriptor.parameters.size}",
             ),
@@ -264,7 +264,7 @@ class IncomingDocumentImportRouter @Inject constructor(
             item = item,
             status = IncomingDocumentImportStatus.BLOCKED,
             title = "${format.displayName} import is not active yet",
-            body = "NovaCut recognized the file and checked the target parser status without mutating project state.",
+            body = "ClearCut recognized the file and checked the target parser status without mutating project state.",
             details = baseDetails(item) + listOf(
                 "Expected fidelity: ${fidelity.displayName}",
                 fidelity.warningCopy,
@@ -280,14 +280,14 @@ class IncomingDocumentImportRouter @Inject constructor(
         }
         val knownSize = item.sizeBytes
         if (knownSize != null && knownSize > item.kind.maxBytes) {
-            return invalid(item, "This file is larger than NovaCut's ${item.kind.displayName} import limit.")
+            return invalid(item, "This file is larger than ClearCut's ${item.kind.displayName} import limit.")
         }
         val readable = runCatching {
             context.contentResolver.openAssetFileDescriptor(item.uri, "r")?.use { descriptor ->
                 descriptor.length != 0L
             } ?: false
         }.getOrDefault(false)
-        return if (readable) null else invalid(item, "NovaCut could not read this document grant.")
+        return if (readable) null else invalid(item, "ClearCut could not read this document grant.")
     }
 
     private fun copyToPreviewFile(item: IncomingDocumentItem): File? {
@@ -363,10 +363,10 @@ class IncomingDocumentImportRouter @Inject constructor(
     private fun stylePackFailureMessage(failure: StylePackFailure): String {
         return when (failure) {
             StylePackFailure.NONE -> "Style pack import failed."
-            StylePackFailure.UNREADABLE -> "NovaCut could not read this file."
+            StylePackFailure.UNREADABLE -> "ClearCut could not read this file."
             StylePackFailure.INVALID_JSON -> "File is not valid JSON."
             StylePackFailure.MISSING_REQUIRED_FIELDS -> "Pack is missing required fields (id, name, or styles)."
-            StylePackFailure.INCOMPATIBLE_VERSION -> "Pack requires a newer version of NovaCut."
+            StylePackFailure.INCOMPATIBLE_VERSION -> "Pack requires a newer version of ClearCut."
             StylePackFailure.EMPTY_STYLES -> "Pack contains no styles."
             StylePackFailure.DUPLICATE_ID -> "Pack contains duplicate style IDs."
             StylePackFailure.OVERSIZED -> "Pack file is too large."
@@ -376,7 +376,7 @@ class IncomingDocumentImportRouter @Inject constructor(
 
     private fun templateImportFailureMessage(failure: TemplateImportFailure): String {
         return when (failure) {
-            TemplateImportFailure.INCOMPATIBLE -> "Template needs a newer NovaCut version or unsupported tools."
+            TemplateImportFailure.INCOMPATIBLE -> "Template needs a newer ClearCut version or unsupported tools."
             TemplateImportFailure.OVERSIZED_FILE -> "Template file is too large."
             TemplateImportFailure.INVALID_JSON,
             TemplateImportFailure.INVALID_STATE -> "Template file is not readable."

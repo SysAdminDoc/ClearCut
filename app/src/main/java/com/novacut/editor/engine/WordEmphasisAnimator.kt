@@ -7,7 +7,7 @@ import kotlin.math.sin
 /**
  * R6.15 — AI Animated Subtitles per-word emphasis animator.
  *
- * Extends NovaCut's existing karaoke caption pipeline with per-word emphasis
+ * Extends ClearCut's existing karaoke caption pipeline with per-word emphasis
  * styles. Whisper word timestamps already drive the karaoke highlight; this
  * animator maps `(animation, wordProgress, baseStyle)` → render-time
  * `WordRenderState` (scale, offsetX, offsetY, alpha, color blend) the caption

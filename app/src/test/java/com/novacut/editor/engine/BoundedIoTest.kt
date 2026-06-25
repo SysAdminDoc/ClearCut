@@ -11,11 +11,11 @@ class BoundedIoTest {
 
     @Test
     fun readUtf8WithByteLimit_readsUtf8TextWithinLimit() {
-        val input = ByteArrayInputStream("NovaCut".toByteArray(Charsets.UTF_8))
+        val input = ByteArrayInputStream("ClearCut".toByteArray(Charsets.UTF_8))
 
         val result = readUtf8WithByteLimit(input, maxBytes = 16)
 
-        assertEquals("NovaCut", result)
+        assertEquals("ClearCut", result)
     }
 
     @Test

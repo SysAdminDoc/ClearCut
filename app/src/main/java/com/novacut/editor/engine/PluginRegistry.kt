@@ -7,13 +7,13 @@ import java.util.Locale
 /**
  * R5.7a — Plugin registry.
  *
- * NovaCut's first plugin format was `.novacut-template`, defined by
+ * ClearCut's first plugin format was `.clearcut-template`, defined by
  * [TemplateManager] + [TemplateCompatibility]. This registry promotes the
  * concept to a small family of share-able assets so they all flow through
  * one share-intent path and one compatibility-check entry point:
  *
- *   - `.novacut-template`  — project templates (existing).
- *   - `.ncfx`              — effect packs (chains of NovaCut effects,
+ *   - `.clearcut-template`  — project templates (existing).
+ *   - `.ncfx`              — effect packs (chains of ClearCut effects,
  *                            including portable LUT references that are
  *                            filename-based not absolute-path-based).
  *   - `.ncstyle`           — caption + text style packs.
@@ -21,7 +21,7 @@ import java.util.Locale
  *                            promoted to first-class plugin so the share
  *                            sheet treats them like the others).
  *   - `.ncfxd`             — OpenFX descriptor JSON (R5.7b). Carries metadata
- *                            that maps a NovaCut effect's parameters to the
+ *                            that maps a ClearCut effect's parameters to the
  *                            OpenFX-named parameters, so NLE round-trip
  *                            (C.14) can preserve effect intent across
  *                            DaVinci Resolve / Premiere imports.
@@ -38,7 +38,7 @@ object PluginRegistry {
         val fileExtension: String,
         val mimeType: String,
     ) {
-        TEMPLATE("Project template", ".novacut-template", "application/octet-stream"),
+        TEMPLATE("Project template", ".clearcut-template", "application/octet-stream"),
         EFFECT_PACK("Effect pack", ".ncfx", "application/octet-stream"),
         STYLE_PACK("Caption / text style pack", ".ncstyle", "application/octet-stream"),
         LUT_CUBE("LUT (.cube)", ".cube", "text/plain"),
@@ -52,7 +52,7 @@ object PluginRegistry {
      */
     fun kindForFileName(fileName: String): Kind? {
         val lower = fileName.trim().lowercase(Locale.US)
-        // Sort by longest extension first so `.novacut-template` wins over
+        // Sort by longest extension first so `.clearcut-template` wins over
         // any shorter false-positive substring match.
         return Kind.entries
             .sortedByDescending { it.fileExtension.length }

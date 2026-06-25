@@ -1,4 +1,4 @@
-package com.novacut.baselineprofile
+package com.clearcut.baselineprofile
 
 import androidx.benchmark.macro.BaselineProfileMode
 import androidx.benchmark.macro.CompilationMode
@@ -25,7 +25,7 @@ class StartupAndEditorMacrobenchmark {
     @Test
     fun aColdStartupDefaultCompilation() {
         benchmarkRule.measureRepeated(
-            packageName = NOVACUT_PACKAGE,
+            packageName = CLEARCUT_PACKAGE,
             metrics = listOf(StartupTimingMetric()),
             compilationMode = CompilationMode.Ignore(),
             startupMode = StartupMode.COLD,
@@ -38,7 +38,7 @@ class StartupAndEditorMacrobenchmark {
     @Test
     fun bColdStartupWithBaselineProfile() {
         benchmarkRule.measureRepeated(
-            packageName = NOVACUT_PACKAGE,
+            packageName = CLEARCUT_PACKAGE,
             metrics = listOf(StartupTimingMetric()),
             compilationMode = CompilationMode.Partial(
                 baselineProfileMode = BaselineProfileMode.Require
@@ -53,7 +53,7 @@ class StartupAndEditorMacrobenchmark {
     @Test
     fun cWarmStartupWithBaselineProfile() {
         benchmarkRule.measureRepeated(
-            packageName = NOVACUT_PACKAGE,
+            packageName = CLEARCUT_PACKAGE,
             metrics = listOf(StartupTimingMetric()),
             compilationMode = CompilationMode.Partial(
                 baselineProfileMode = BaselineProfileMode.Require
@@ -68,7 +68,7 @@ class StartupAndEditorMacrobenchmark {
     @Test
     fun dBlankEditorEntryAndTimelineScrubFrames() {
         benchmarkRule.measureRepeated(
-            packageName = NOVACUT_PACKAGE,
+            packageName = CLEARCUT_PACKAGE,
             metrics = listOf(FrameTimingMetric()),
             compilationMode = CompilationMode.Partial(
                 baselineProfileMode = BaselineProfileMode.Require

@@ -35,9 +35,9 @@ import com.novacut.editor.engine.AiToolRequirements.Availability
 import com.novacut.editor.engine.AiToolRequirements.Runtime
 import com.novacut.editor.engine.AiToolRequirements.ToolRequirement
 import com.novacut.editor.ui.theme.Mocha
-import com.novacut.editor.ui.theme.NovaCutDialogIcon
-import com.novacut.editor.ui.theme.NovaCutPrimaryButton
-import com.novacut.editor.ui.theme.NovaCutSecondaryButton
+import com.novacut.editor.ui.theme.ClearCutDialogIcon
+import com.novacut.editor.ui.theme.ClearCutPrimaryButton
+import com.novacut.editor.ui.theme.ClearCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
 
 /**
@@ -83,7 +83,7 @@ fun AiModelRequirementSheet(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        icon = { NovaCutDialogIcon(icon = icon, accent = accent) },
+        icon = { ClearCutDialogIcon(icon = icon, accent = accent) },
         title = {
             Text(
                 text = title,
@@ -147,7 +147,7 @@ fun AiModelRequirementSheet(
         },
         confirmButton = {
             if (requirement.availability == Availability.DEPENDENCY_MISSING) {
-                NovaCutSecondaryButton(
+                ClearCutSecondaryButton(
                     text = stringResource(R.string.ai_requirement_review_models),
                     onClick = onReviewModels,
                 )
@@ -161,7 +161,7 @@ fun AiModelRequirementSheet(
                         stringResource(R.string.ai_requirement_cloud_action) to { onRun(requirement) }
                     Availability.DEPENDENCY_MISSING -> "" to {} // handled above
                 }
-                NovaCutPrimaryButton(
+                ClearCutPrimaryButton(
                     text = label,
                     onClick = action,
                     enabled = primaryEnabled,
@@ -169,7 +169,7 @@ fun AiModelRequirementSheet(
             }
         },
         dismissButton = {
-            NovaCutSecondaryButton(
+            ClearCutSecondaryButton(
                 text = stringResource(R.string.ai_requirement_not_now),
                 onClick = onDismiss,
             )

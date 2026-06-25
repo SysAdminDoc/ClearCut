@@ -7,7 +7,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.ui.unit.dp
 
 /**
- * NovaCut design tokens.
+ * ClearCut design tokens.
  *
  * Centralized spacing / radius / motion / elevation values so the editor surfaces have a
  * single, coherent rhythm instead of every panel inventing its own scale. Use these in place

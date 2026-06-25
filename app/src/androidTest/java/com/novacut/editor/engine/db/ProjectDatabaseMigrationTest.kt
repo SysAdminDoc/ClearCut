@@ -14,7 +14,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Locks NovaCut's committed Room schema chain.
+ * Locks ClearCut's committed Room schema chain.
  *
  * Historical schemas are only present from version 4 onward, so versions 1-3
  * cannot be validated by MigrationTestHelper until those JSON snapshots are
@@ -34,7 +34,7 @@ class ProjectDatabaseMigrationTest {
     @Test
     fun committedSchemaVersionsMigrateToCurrentWithoutProjectLoss() {
         for (startVersion in COMMITTED_SCHEMA_START_VERSION until CURRENT_SCHEMA_VERSION) {
-            val dbName = "novacut-migration-$startVersion"
+            val dbName = "clearcut-migration-$startVersion"
             helper.createDatabase(dbName, startVersion).use { db ->
                 insertProject(db, startVersion)
             }

@@ -21,7 +21,7 @@ import javax.inject.Singleton
  *      perform a resumable upload through the platform API.
  *   2. Otherwise fall back to a platform-branded share intent targeting the
  *      installed client app (requires the user to have it installed). This
- *      works offline and preserves user privacy with no NovaCut-side upload.
+ *      works offline and preserves user privacy with no ClearCut-side upload.
  *
  * Today only the share-intent fallback is wired. The OAuth resumable-upload
  * path requires platform partner approval (TikTok) or API-key setup (YT Data
@@ -93,7 +93,7 @@ class DirectPublishEngine @Inject constructor(
             FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
         } catch (e: Exception) {
             Log.w(TAG, "FileProvider failed for $filePath", e)
-            return@withContext Result(null, Method.NONE, "Export is not in a shareable NovaCut location")
+            return@withContext Result(null, Method.NONE, "Export is not in a shareable ClearCut location")
         }
         val intent = buildShareIntent(uri, target, meta)
         val targetInstalled = target.packageName != null && isInstalled(target.packageName)
@@ -198,7 +198,7 @@ internal fun normalizePublishMeta(
     meta: DirectPublishEngine.PublishMeta
 ): DirectPublishEngine.PublishMeta {
     return meta.copy(
-        title = normalizeShareText(meta.title, fallback = "NovaCut export", maxChars = MAX_SHARE_TITLE_CHARS),
+        title = normalizeShareText(meta.title, fallback = "ClearCut export", maxChars = MAX_SHARE_TITLE_CHARS),
         description = normalizeShareText(
             raw = meta.description,
             fallback = "",

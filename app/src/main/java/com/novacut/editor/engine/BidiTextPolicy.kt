@@ -3,7 +3,7 @@ package com.novacut.editor.engine
 /**
  * R5.4b — Bidirectional text policy for overlay rendering.
  *
- * NovaCut's text-overlay path (`StrokedTextBitmapOverlay`, `ExportTextOverlay`)
+ * ClearCut's text-overlay path (`StrokedTextBitmapOverlay`, `ExportTextOverlay`)
  * draws Canvas text directly, which gives correct glyph shaping for Arabic
  * / Hebrew / Persian / Urdu / Yiddish at the typeface level but does **not**
  * apply Unicode Bidi reordering before draw. That means a mixed-direction

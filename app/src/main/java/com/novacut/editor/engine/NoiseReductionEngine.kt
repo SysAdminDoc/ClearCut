@@ -33,7 +33,7 @@ import kotlin.coroutines.resume
  *
  * ## Activation path (Tier A.2)
  *
- * NovaCut pins `io.github.kaleyravideo:android-deepfilternet:0.0.8`, whose
+ * ClearCut pins `io.github.kaleyravideo:android-deepfilternet:0.0.8`, whose
  * bundled-model AAR ships an ~8 MB `deep_filter_mobile_model`, `libdf.so`
  * for Android ABIs, and the `NativeDeepFilterNet` JNI surface. `processAudio`
  * decodes source audio once to 48 kHz mono signed 16-bit PCM via [FFmpegEngine],
@@ -312,8 +312,8 @@ class NoiseReductionEngine @Inject constructor(
     ): NoiseReductionResult {
         val workDir = partialFile.parentFile ?: context.cacheDir
         workDir.mkdirs()
-        val sourcePcm = File.createTempFile("novacut-nr-source-", ".pcm", workDir)
-        val cleanedPcm = File.createTempFile("novacut-nr-clean-", ".pcm", workDir)
+        val sourcePcm = File.createTempFile("clearcut-nr-source-", ".pcm", workDir)
+        val cleanedPcm = File.createTempFile("clearcut-nr-clean-", ".pcm", workDir)
         var deepFilterNet: DeepFilterNet? = null
         try {
             val extracted = ffmpegEngine.extractAudioToPcm16le(

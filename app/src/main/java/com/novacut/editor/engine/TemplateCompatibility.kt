@@ -239,14 +239,14 @@ object TemplateCompatibilityEngine {
         if (metadata.schemaVersion > currentSchemaVersion) {
             issues += TemplateCompatibilityIssue(
                 code = "future_schema",
-                message = "Template schema ${metadata.schemaVersion} requires a newer NovaCut template parser.",
+                message = "Template schema ${metadata.schemaVersion} requires a newer ClearCut template parser.",
                 blocking = true
             )
         }
         if (metadata.minVersionCode > currentVersionCode) {
             issues += TemplateCompatibilityIssue(
                 code = "future_app_version",
-                message = "Template requires NovaCut ${metadata.minVersionName}.",
+                message = "Template requires ClearCut ${metadata.minVersionName}.",
                 blocking = true
             )
         }

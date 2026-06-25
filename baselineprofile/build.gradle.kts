@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.novacut.baselineprofile"
+    namespace = "com.clearcut.baselineprofile"
     compileSdk = 36
     targetProjectPath = ":app"
 

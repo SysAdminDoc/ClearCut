@@ -63,7 +63,7 @@ class DirectPublishEngineTest {
             )
         )
 
-        assertEquals("NovaCut export", normalized.title)
+        assertEquals("ClearCut export", normalized.title)
         assertTrue(normalized.description.length <= 4_000)
         assertTrue(normalized.chapters.length <= 4_000)
         assertTrue(normalized.aiDisclosureSummary.length <= 1_000)
@@ -77,7 +77,7 @@ class DirectPublishEngineTest {
                 title = "My Export",
                 description = "d".repeat(7_700),
                 chapters = "00:00 Intro\n00:10 Main",
-                aiDisclosureSummary = "AI assistance recorded: 1 × auto edit local (NovaCut Auto Edit).",
+                aiDisclosureSummary = "AI assistance recorded: 1 × auto edit local (ClearCut Auto Edit).",
                 tags = listOf("good_tag", "bad tag!", "---")
             ),
             target = DirectPublishEngine.Target.YOUTUBE

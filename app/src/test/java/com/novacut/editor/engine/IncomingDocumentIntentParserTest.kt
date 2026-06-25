@@ -62,8 +62,8 @@ class IncomingDocumentIntentParserTest {
 
     @Test
     fun actionSendMultiplePreservesOrderAndDropsDuplicateUris() {
-        val template = contentUri("intro.novacut-template")
-        val archive = contentUri("project.novacut")
+        val template = contentUri("intro.clearcut-template")
+        val archive = contentUri("project.clearcut")
         val otio = contentUri("cut.otio")
 
         val parsed = IncomingDocumentIntentParser.parse(
@@ -75,8 +75,8 @@ class IncomingDocumentIntentParserTest {
             hasReadGrant = true,
             resolveMetadata = { uri ->
                 when (uri.toString()) {
-                    template.toString() -> metadata("intro.novacut-template", "application/octet-stream", 400L)
-                    archive.toString() -> metadata("project.novacut", "application/octet-stream", 2_000L)
+                    template.toString() -> metadata("intro.clearcut-template", "application/octet-stream", 400L)
+                    archive.toString() -> metadata("project.clearcut", "application/octet-stream", 2_000L)
                     else -> metadata("cut.otio", "application/json", 2_000L)
                 }
             }

@@ -10,10 +10,10 @@ class AudioFocusPolicyTest {
 
     @Test
     fun previewPlayback_usesMediaMovieAttributes() {
-        val attributes = NovaCutAudioFocusPolicy.buildPreviewAttributes()
+        val attributes = ClearCutAudioFocusPolicy.buildPreviewAttributes()
 
-        assertEquals(C.USAGE_MEDIA, NovaCutAudioFocusPolicy.PREVIEW_USAGE)
-        assertEquals(C.AUDIO_CONTENT_TYPE_MOVIE, NovaCutAudioFocusPolicy.PREVIEW_CONTENT_TYPE)
+        assertEquals(C.USAGE_MEDIA, ClearCutAudioFocusPolicy.PREVIEW_USAGE)
+        assertEquals(C.AUDIO_CONTENT_TYPE_MOVIE, ClearCutAudioFocusPolicy.PREVIEW_CONTENT_TYPE)
         assertEquals(C.USAGE_MEDIA, attributes.usage)
         assertEquals(C.AUDIO_CONTENT_TYPE_MOVIE, attributes.contentType)
     }
@@ -22,15 +22,15 @@ class AudioFocusPolicyTest {
     fun ttsPreview_usesTransientDuckFocus() {
         assertEquals(
             AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK,
-            NovaCutAudioFocusPolicy.TTS_PREVIEW_FOCUS_GAIN,
+            ClearCutAudioFocusPolicy.TTS_PREVIEW_FOCUS_GAIN,
         )
         assertEquals(
             AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY,
-            NovaCutAudioFocusPolicy.TTS_PREVIEW_USAGE,
+            ClearCutAudioFocusPolicy.TTS_PREVIEW_USAGE,
         )
         assertEquals(
             AudioAttributes.CONTENT_TYPE_SPEECH,
-            NovaCutAudioFocusPolicy.TTS_PREVIEW_CONTENT_TYPE,
+            ClearCutAudioFocusPolicy.TTS_PREVIEW_CONTENT_TYPE,
         )
     }
 
@@ -38,15 +38,15 @@ class AudioFocusPolicyTest {
     fun voiceover_usesExclusiveTransientFocus() {
         assertEquals(
             AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE,
-            NovaCutAudioFocusPolicy.VOICEOVER_FOCUS_GAIN,
+            ClearCutAudioFocusPolicy.VOICEOVER_FOCUS_GAIN,
         )
         assertEquals(
             AudioAttributes.USAGE_VOICE_COMMUNICATION,
-            NovaCutAudioFocusPolicy.VOICEOVER_USAGE,
+            ClearCutAudioFocusPolicy.VOICEOVER_USAGE,
         )
         assertEquals(
             AudioAttributes.CONTENT_TYPE_SPEECH,
-            NovaCutAudioFocusPolicy.VOICEOVER_CONTENT_TYPE,
+            ClearCutAudioFocusPolicy.VOICEOVER_CONTENT_TYPE,
         )
     }
 }

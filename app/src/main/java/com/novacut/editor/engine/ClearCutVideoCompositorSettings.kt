@@ -8,7 +8,7 @@ import androidx.media3.effect.StaticOverlaySettings
 import com.novacut.editor.model.BlendMode
 
 @UnstableApi
-internal data class NovaCutCompositorLayer(
+internal data class ClearCutCompositorLayer(
     val inputId: Int,
     val trackId: String,
     val trackIndex: Int,
@@ -17,17 +17,17 @@ internal data class NovaCutCompositorLayer(
 )
 
 /**
- * Carries NovaCut timeline-layer intent into Media3's multi-sequence compositor.
+ * Carries ClearCut timeline-layer intent into Media3's multi-sequence compositor.
  *
  * Media3 1.10's public compositor API exposes output size plus per-input
  * overlay alpha/transform settings. It does not expose a programmable blend
  * function, so non-normal track blend modes are still guarded in VideoEngine.
  */
 @UnstableApi
-internal class NovaCutVideoCompositorSettings(
+internal class ClearCutVideoCompositorSettings(
     outputWidth: Int,
     outputHeight: Int,
-    layers: List<NovaCutCompositorLayer>
+    layers: List<ClearCutCompositorLayer>
 ) : VideoCompositorSettings {
     private val outputSize = Size(outputWidth.coerceAtLeast(1), outputHeight.coerceAtLeast(1))
     private val layersByInputId = layers.associateBy { it.inputId }
@@ -43,7 +43,7 @@ internal class NovaCutVideoCompositorSettings(
         return overlaySettingsByInputId[inputId] ?: DEFAULT_OVERLAY_SETTINGS
     }
 
-    fun layerForInput(inputId: Int): NovaCutCompositorLayer? = layersByInputId[inputId]
+    fun layerForInput(inputId: Int): ClearCutCompositorLayer? = layersByInputId[inputId]
 
     private fun Float.safeOpacity(): Float {
         return if (isFinite()) coerceIn(0f, 1f) else 1f

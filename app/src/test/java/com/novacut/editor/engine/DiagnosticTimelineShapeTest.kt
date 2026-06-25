@@ -110,7 +110,7 @@ class DiagnosticTimelineShapeTest {
         val json = shape.toJsonString()
         // Parseable JSON.
         val obj = JSONObject(json)
-        assertEquals("com.novacut.timeline-shape.v1", obj.optString("schema"))
+        assertEquals("com.clearcut.timeline-shape.v1", obj.optString("schema"))
         assertEquals(1, obj.optInt("trackCount"))
         // Confidential clip name must NOT appear anywhere in the serialised form.
         assertFalse(

@@ -250,7 +250,7 @@ class ModelDownloadManager @Inject constructor(
     companion object {
         private const val BUFFER_SIZE = 8192
         private const val STORAGE_HEADROOM_BYTES = 16L * 1024L * 1024L
-        private val USER_AGENT = "NovaCut/${com.novacut.editor.NovaCutApp.VERSION.removePrefix("v")}"
+        private val USER_AGENT = "ClearCut/${com.novacut.editor.ClearCutApp.VERSION.removePrefix("v")}"
 
         internal fun estimateTotalBytes(files: List<ModelFile>): Long {
             return files.sumOf { it.estimatedBytes.coerceAtLeast(it.minimumBytes).coerceAtLeast(1L) }

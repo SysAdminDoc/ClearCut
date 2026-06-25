@@ -53,20 +53,20 @@ import com.novacut.editor.model.ExportConfig
 import com.novacut.editor.model.Project
 import com.novacut.editor.model.ProjectFilterMode
 import com.novacut.editor.model.SortMode
-import com.novacut.editor.ui.NovaCutTestTags
+import com.novacut.editor.ui.ClearCutTestTags
 import com.novacut.editor.ui.editor.PremiumSnackbarHost
 import com.novacut.editor.ui.editor.ToastSeverity
 import com.novacut.editor.ui.editor.inferSeverity
 import com.novacut.editor.ui.theme.Mocha
-import com.novacut.editor.ui.theme.NovaCutChromeIconButton
-import com.novacut.editor.ui.theme.NovaCutDialogIcon
-import com.novacut.editor.ui.theme.NovaCutFilterChip
-import com.novacut.editor.ui.theme.NovaCutHeroCard
-import com.novacut.editor.ui.theme.NovaCutMetricPill
-import com.novacut.editor.ui.theme.NovaCutPrimaryButton
-import com.novacut.editor.ui.theme.NovaCutScreenBackground
-import com.novacut.editor.ui.theme.NovaCutSectionHeader
-import com.novacut.editor.ui.theme.NovaCutSecondaryButton
+import com.novacut.editor.ui.theme.ClearCutChromeIconButton
+import com.novacut.editor.ui.theme.ClearCutDialogIcon
+import com.novacut.editor.ui.theme.ClearCutFilterChip
+import com.novacut.editor.ui.theme.ClearCutHeroCard
+import com.novacut.editor.ui.theme.ClearCutMetricPill
+import com.novacut.editor.ui.theme.ClearCutPrimaryButton
+import com.novacut.editor.ui.theme.ClearCutScreenBackground
+import com.novacut.editor.ui.theme.ClearCutSectionHeader
+import com.novacut.editor.ui.theme.ClearCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
 import com.novacut.editor.ui.theme.TouchTarget
@@ -122,10 +122,10 @@ fun ProjectListScreen(
         }
     }
 
-    NovaCutScreenBackground(
+    ClearCutScreenBackground(
         modifier = Modifier
             .fillMaxSize()
-            .testTag(NovaCutTestTags.PROJECTS_SCREEN)
+            .testTag(ClearCutTestTags.PROJECTS_SCREEN)
     ) {
         val importTemplate = { templateImportLauncher.launch(arrayOf("*/*")) }
         val showCollectionControls = projectTotalCount > 1 ||
@@ -209,7 +209,7 @@ fun ProjectListScreen(
                 val hasActiveFilter = filterMode != ProjectFilterMode.ALL
                 val sortLabel = sortMode.localizedLabel()
                 val filterLabel = filterMode.localizedLabel()
-                NovaCutSectionHeader(
+                ClearCutSectionHeader(
                     title = if (hasActiveSearch) {
                         if (projects.size == 1) {
                             stringResource(R.string.projects_results_count_one)
@@ -244,7 +244,7 @@ fun ProjectListScreen(
                     },
                     modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, top = 14.dp, bottom = Spacing.sm),
                     trailing = {
-                        NovaCutMetricPill(
+                        ClearCutMetricPill(
                             text = sortLabel,
                             accent = Mocha.Sapphire,
                             icon = Icons.Default.FilterList
@@ -302,7 +302,7 @@ fun ProjectListScreen(
                 if (confirmEmptyTrash) {
                     AlertDialog(
                         onDismissRequest = { confirmEmptyTrash = false },
-                        icon = { NovaCutDialogIcon(icon = Icons.Default.DeleteForever, accent = Mocha.Red) },
+                        icon = { ClearCutDialogIcon(icon = Icons.Default.DeleteForever, accent = Mocha.Red) },
                         title = {
                             Text(
                                 text = stringResource(R.string.trash_empty_confirm_title),
@@ -322,7 +322,7 @@ fun ProjectListScreen(
                             )
                         },
                         confirmButton = {
-                            NovaCutSecondaryButton(
+                            ClearCutSecondaryButton(
                                 text = stringResource(R.string.trash_empty_confirm_action),
                                 onClick = {
                                     viewModel.emptyTrash()
@@ -333,7 +333,7 @@ fun ProjectListScreen(
                             )
                         },
                         dismissButton = {
-                            NovaCutSecondaryButton(
+                            ClearCutSecondaryButton(
                                 text = stringResource(R.string.cancel),
                                 onClick = { confirmEmptyTrash = false }
                             )
@@ -348,7 +348,7 @@ fun ProjectListScreen(
                 pendingDeleteForever?.let { doomed ->
                     AlertDialog(
                         onDismissRequest = { pendingDeleteForever = null },
-                        icon = { NovaCutDialogIcon(icon = Icons.Default.DeleteForever, accent = Mocha.Red) },
+                        icon = { ClearCutDialogIcon(icon = Icons.Default.DeleteForever, accent = Mocha.Red) },
                         title = {
                             Text(
                                 text = stringResource(R.string.trash_delete_forever_title),
@@ -364,7 +364,7 @@ fun ProjectListScreen(
                             )
                         },
                         confirmButton = {
-                            NovaCutSecondaryButton(
+                            ClearCutSecondaryButton(
                                 text = stringResource(R.string.trash_delete_forever_action),
                                 onClick = {
                                     viewModel.deleteProjectForever(doomed)
@@ -375,7 +375,7 @@ fun ProjectListScreen(
                             )
                         },
                         dismissButton = {
-                            NovaCutSecondaryButton(
+                            ClearCutSecondaryButton(
                                 text = stringResource(R.string.cancel),
                                 onClick = { pendingDeleteForever = null }
                             )
@@ -451,7 +451,7 @@ private fun IncomingDocumentImportDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = {
-            NovaCutDialogIcon(
+            ClearCutDialogIcon(
                 icon = when (preview.status) {
                     IncomingDocumentImportStatus.READY -> Icons.Default.Description
                     IncomingDocumentImportStatus.IMPORTED -> Icons.Default.TaskAlt
@@ -543,7 +543,7 @@ private fun ProjectHomeHero(
     showSortControls: Boolean,
     actionsEnabled: Boolean
 ) {
-    NovaCutHeroCard(
+    ClearCutHeroCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(bottomStart = Radius.xl, bottomEnd = Radius.xl),
         accent = Mocha.Mauve
@@ -552,17 +552,17 @@ private fun ProjectHomeHero(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            NovaCutMetricPill(
+            ClearCutMetricPill(
                 text = stringResource(R.string.projects_app_title),
                 accent = Mocha.Mauve,
                 icon = Icons.Default.Movie
             )
             Spacer(modifier = Modifier.weight(1f))
-            NovaCutChromeIconButton(
+            ClearCutChromeIconButton(
                 icon = Icons.Default.Settings,
                 contentDescription = stringResource(R.string.projects_settings),
                 onClick = onSettings,
-                modifier = Modifier.testTag(NovaCutTestTags.PROJECTS_SETTINGS)
+                modifier = Modifier.testTag(ClearCutTestTags.PROJECTS_SETTINGS)
             )
         }
 
@@ -617,7 +617,7 @@ private fun ProjectHomeHero(
                 secondaryIcon = Icons.Default.FileOpen,
                 onSecondary = onImportTemplate,
                 enabled = actionsEnabled,
-                primaryTestTag = NovaCutTestTags.PROJECTS_CREATE_PROJECT
+                primaryTestTag = ClearCutTestTags.PROJECTS_CREATE_PROJECT
             )
         }
 
@@ -673,7 +673,7 @@ private fun ProjectHomeHero(
         if (showSortControls) {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 items(SortMode.entries.toList()) { mode ->
-                    NovaCutFilterChip(
+                    ClearCutFilterChip(
                         onClick = { onSortModeChanged(mode) },
                         text = mode.localizedLabel(),
                         selected = sortMode == mode,
@@ -692,7 +692,7 @@ private fun HeroMetricPill(
     accent: androidx.compose.ui.graphics.Color,
     icon: androidx.compose.ui.graphics.vector.ImageVector? = null
 ) {
-    NovaCutMetricPill(text = label, accent = accent, icon = icon)
+    ClearCutMetricPill(text = label, accent = accent, icon = icon)
 }
 
 @Composable
@@ -902,7 +902,7 @@ private fun ProjectFilterChipsRow(
         contentPadding = PaddingValues(horizontal = 0.dp)
     ) {
         items(ProjectFilterMode.entries.toList()) { mode ->
-            NovaCutFilterChip(
+            ClearCutFilterChip(
                 onClick = { onFilterModeChanged(mode) },
                 text = mode.localizedLabel(),
                 selected = filterMode == mode,
@@ -1007,7 +1007,7 @@ private fun ProjectEmptyState(
                         secondaryIcon = Icons.Default.Add,
                         onSecondary = onCreateProject,
                         enabled = actionsEnabled,
-                        secondaryTestTag = NovaCutTestTags.PROJECTS_CREATE_PROJECT
+                        secondaryTestTag = ClearCutTestTags.PROJECTS_CREATE_PROJECT
                     )
                 } else {
                     ProjectEmptyStateActions(
@@ -1060,7 +1060,7 @@ private fun ProjectEmptyStateActions(
         secondaryIcon = Icons.Default.FileOpen,
         onSecondary = onImportTemplate,
         enabled = enabled,
-        primaryTestTag = NovaCutTestTags.PROJECTS_CREATE_PROJECT
+        primaryTestTag = ClearCutTestTags.PROJECTS_CREATE_PROJECT
     )
 }
 
@@ -1080,7 +1080,7 @@ private fun ProjectActionRow(
         val stackActions = maxWidth < 360.dp
         if (stackActions) {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                NovaCutPrimaryButton(
+                ClearCutPrimaryButton(
                     text = primaryLabel,
                     icon = primaryIcon,
                     onClick = onPrimary,
@@ -1089,7 +1089,7 @@ private fun ProjectActionRow(
                         .fillMaxWidth()
                         .then(primaryTestTag?.let { Modifier.testTag(it) } ?: Modifier)
                 )
-                NovaCutSecondaryButton(
+                ClearCutSecondaryButton(
                     text = secondaryLabel,
                     icon = secondaryIcon,
                     onClick = onSecondary,
@@ -1102,7 +1102,7 @@ private fun ProjectActionRow(
             }
         } else {
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                NovaCutPrimaryButton(
+                ClearCutPrimaryButton(
                     text = primaryLabel,
                     icon = primaryIcon,
                     onClick = onPrimary,
@@ -1111,7 +1111,7 @@ private fun ProjectActionRow(
                         .weight(1.15f)
                         .then(primaryTestTag?.let { Modifier.testTag(it) } ?: Modifier)
                 )
-                NovaCutSecondaryButton(
+                ClearCutSecondaryButton(
                     text = secondaryLabel,
                     icon = secondaryIcon,
                     onClick = onSecondary,
@@ -1351,7 +1351,7 @@ private fun ProjectCard(
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
             icon = {
-                NovaCutDialogIcon(
+                ClearCutDialogIcon(
                     icon = Icons.Default.Delete,
                     accent = Mocha.Red
                 )
@@ -1371,7 +1371,7 @@ private fun ProjectCard(
                 )
             },
             confirmButton = {
-                NovaCutSecondaryButton(
+                ClearCutSecondaryButton(
                     text = stringResource(R.string.projects_delete),
                     onClick = {
                         onDelete()
@@ -1382,7 +1382,7 @@ private fun ProjectCard(
                 )
             },
             dismissButton = {
-                NovaCutSecondaryButton(
+                ClearCutSecondaryButton(
                     text = stringResource(R.string.cancel),
                     onClick = { showDeleteConfirm = false }
                 )
@@ -1406,7 +1406,7 @@ private fun ProjectCard(
         AlertDialog(
             onDismissRequest = { showRenameDialog = false },
             icon = {
-                NovaCutDialogIcon(
+                ClearCutDialogIcon(
                     icon = Icons.Default.Edit,
                     accent = Mocha.Rosewater
                 )
@@ -1474,7 +1474,7 @@ private fun ProjectCard(
                 )
             },
             confirmButton = {
-                NovaCutPrimaryButton(
+                ClearCutPrimaryButton(
                     text = stringResource(R.string.done),
                     onClick = {
                         onRename(trimmedProjectName)
@@ -1485,7 +1485,7 @@ private fun ProjectCard(
                 )
             },
             dismissButton = {
-                NovaCutSecondaryButton(
+                ClearCutSecondaryButton(
                     text = stringResource(R.string.cancel),
                     onClick = { showRenameDialog = false }
                 )
@@ -1746,7 +1746,7 @@ private fun TrashedProjectCard(
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                NovaCutChromeIconButton(
+                ClearCutChromeIconButton(
                     icon = Icons.Default.RestoreFromTrash,
                     contentDescription = stringResource(R.string.trash_restore_cd),
                     onClick = onRestore,
@@ -1754,7 +1754,7 @@ private fun TrashedProjectCard(
                     containerColor = Mocha.Green.copy(alpha = 0.08f),
                     borderColor = Mocha.Green.copy(alpha = 0.18f)
                 )
-                NovaCutChromeIconButton(
+                ClearCutChromeIconButton(
                     icon = Icons.Default.DeleteForever,
                     contentDescription = stringResource(R.string.trash_delete_forever_cd),
                     onClick = onDeleteForever,

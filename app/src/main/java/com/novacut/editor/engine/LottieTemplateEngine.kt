@@ -65,7 +65,7 @@ import kotlin.coroutines.resume
  *
  * **Rive status** — REMAINS INACTIVE. dotLottie covers static + text +
  * color animated templates today. State-machine interactivity is the only
- * gap, and it is an upstream blocker (not a NovaCut limitation). Rive adds
+ * gap, and it is an upstream blocker (not a ClearCut limitation). Rive adds
  * ~2.5 MB native library per ABI; deferring avoids that cost until Lottie
  * state machines are confirmed unavailable in a stable 7.x release.
  */

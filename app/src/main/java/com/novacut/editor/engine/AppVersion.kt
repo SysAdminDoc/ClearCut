@@ -3,7 +3,7 @@ package com.novacut.editor.engine
 /**
  * Pure semantic-version parsing and comparison for the passive update check.
  *
- * NovaCut versions are `vX.Y.Z` (for example `v3.74.92`). The GitHub releases
+ * ClearCut versions are `vX.Y.Z` (for example `v3.74.92`). The GitHub releases
  * API reports a `tag_name` in the same shape. This object keeps the comparison
  * logic free of Android and network types so the opt-in gate and the
  * "is a newer release available" decision are fully unit-testable on the JVM.

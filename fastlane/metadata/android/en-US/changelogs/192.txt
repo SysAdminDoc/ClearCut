@@ -1,5 +1,5 @@
 - FileProvider grant-path contract
 - Added a narrow camera_captures FileProvider cache root for Record Video handoff files under cacheDir/camera-captures.
-- Removed the broad managed-media FileProvider exposure and kept imported media private to NovaCut-managed storage.
+- Removed the broad managed-media FileProvider exposure and kept imported media private to ClearCut-managed storage.
 - Added an internal template FileProvider root and made editor template export use the same external-or-internal fallback behavior as project template sharing.
 - Wrapped camera, template, export-share, and export-notification...

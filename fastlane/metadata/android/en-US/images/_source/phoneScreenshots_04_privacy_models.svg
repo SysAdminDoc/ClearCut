@@ -2,11 +2,11 @@
   <rect width="1080" height="1920" fill="#14161f"/>
   <rect x="46" y="56" width="988" height="1808" rx="54" fill="#14161f" stroke="#384052" stroke-width="2"/>
 <rect x="46" y="56" width="988" height="104" rx="54" fill="#1f2430"/>
-<text x="86" y="124" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="34" font-weight="700">NovaCut</text>
+<text x="86" y="124" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="34" font-weight="700">ClearCut</text>
 <text x="816" y="124" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="500">Privacy</text>
 <rect x="502" y="92" width="76" height="10" rx="5" fill="#384052"/>
 <text x="86" y="254" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="48" font-weight="750">Privacy dashboard</text>
-<text x="86" y="304" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="500">What NovaCut stores and how to clear it</text>
+<text x="86" y="304" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="500">What ClearCut stores and how to clear it</text>
 <rect x="86" y="370" width="908" height="132" rx="24" fill="#1f2430" stroke="#384052" stroke-width="2"/>
 <rect x="124" y="408" width="56" height="56" rx="16" fill="#89dceb"/>
 <text x="208" y="442" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="28" font-weight="700">Project content</text>

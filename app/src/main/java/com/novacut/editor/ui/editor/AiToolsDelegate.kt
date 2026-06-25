@@ -613,7 +613,7 @@ class AiToolsDelegate(
         recordAiUsageForClip(
             clip = clip,
             effectKind = AiUsageLedger.EffectKind.BACKGROUND_REMOVAL_LOCAL,
-            modelName = "NovaCut background analyzer"
+            modelName = "ClearCut background analyzer"
         )
         val bgType = when {
             analysis.isGreenScreen -> text(R.string.ai_bg_type_green_screen)
@@ -711,7 +711,7 @@ class AiToolsDelegate(
             recordAiUsageForClip(
                 clip = clip,
                 effectKind = AiUsageLedger.EffectKind.STYLE_TRANSFER_LOCAL,
-                modelName = "NovaCut style analyzer"
+                modelName = "ClearCut style analyzer"
             )
             showToast(text(R.string.ai_style_applied_toast, style.styleName, newEffects.size))
         } catch (e: Exception) {
@@ -811,7 +811,7 @@ class AiToolsDelegate(
             recordAiUsageForClip(
                 clip = clip,
                 effectKind = AiUsageLedger.EffectKind.UPSCALING_LOCAL,
-                modelName = "NovaCut upscale assistant"
+                modelName = "ClearCut upscale assistant"
             )
             showToast(text(R.string.ai_upscale_applied_toast, result.targetResolution.label))
         } catch (e: Exception) {
@@ -911,7 +911,7 @@ class AiToolsDelegate(
         showAiRequirementPrompt(
             toolId = "frame_interp",
             title = "Frame interpolation needs a model pack",
-            body = "Install the RIFE frame interpolation model before generating in-between frames. Until then, NovaCut avoids duplicating frames so motion remains predictable.",
+            body = "Install the RIFE frame interpolation model before generating in-between frames. Until then, ClearCut avoids duplicating frames so motion remains predictable.",
             modelName = "RIFE v4.6",
             estimatedSize = "~10 MB"
         )
@@ -945,7 +945,7 @@ class AiToolsDelegate(
         showAiRequirementPrompt(
             toolId = "ai_background",
             title = "AI background generation is model-gated",
-            body = "Background generation needs the compositing model workflow before NovaCut can synthesize a replacement safely. Use Remove BG or Replace BG when the segmentation model is ready.",
+            body = "Background generation needs the compositing model workflow before ClearCut can synthesize a replacement safely. Use Remove BG or Replace BG when the segmentation model is ready.",
             modelName = "Background composer",
             estimatedSize = text(R.string.ai_model_size_not_available)
         )

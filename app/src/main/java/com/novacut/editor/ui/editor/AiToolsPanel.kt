@@ -54,9 +54,9 @@ import com.novacut.editor.R
 import com.novacut.editor.engine.segmentation.SegmentationModelState
 import com.novacut.editor.engine.whisper.WhisperModelState
 import com.novacut.editor.ui.theme.Mocha
-import com.novacut.editor.ui.theme.NovaCutDialogIcon
-import com.novacut.editor.ui.theme.NovaCutPrimaryButton
-import com.novacut.editor.ui.theme.NovaCutSecondaryButton
+import com.novacut.editor.ui.theme.ClearCutDialogIcon
+import com.novacut.editor.ui.theme.ClearCutPrimaryButton
+import com.novacut.editor.ui.theme.ClearCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
 import kotlin.math.roundToInt
 
@@ -386,7 +386,7 @@ fun AiToolsPanel(
                             color = Mocha.Subtext0
                         )
                     }
-                    NovaCutSecondaryButton(
+                    ClearCutSecondaryButton(
                         text = stringResource(R.string.cancel),
                         onClick = onCancelProcessing,
                         contentColor = Mocha.Red,
@@ -505,7 +505,7 @@ private fun AiModelRemovalConfirmDialog(
     AlertDialog(
         onDismissRequest = onDismissRequest,
         icon = {
-            NovaCutDialogIcon(
+            ClearCutDialogIcon(
                 icon = Icons.Default.Delete,
                 accent = Mocha.Red
             )
@@ -525,7 +525,7 @@ private fun AiModelRemovalConfirmDialog(
             )
         },
         confirmButton = {
-            NovaCutSecondaryButton(
+            ClearCutSecondaryButton(
                 text = stringResource(R.string.ai_model_remove_confirm),
                 onClick = onConfirm,
                 icon = Icons.Default.Delete,
@@ -533,7 +533,7 @@ private fun AiModelRemovalConfirmDialog(
             )
         },
         dismissButton = {
-            NovaCutSecondaryButton(
+            ClearCutSecondaryButton(
                 text = stringResource(R.string.cancel),
                 onClick = onDismissRequest
             )
@@ -641,7 +641,7 @@ private fun ModelStatusCard(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (hasPrimaryAction) {
-                    NovaCutPrimaryButton(
+                    ClearCutPrimaryButton(
                         text = primaryActionLabel,
                         onClick = onPrimaryAction,
                         icon = Icons.Default.Download,
@@ -650,7 +650,7 @@ private fun ModelStatusCard(
                 }
 
                 if (hasSecondaryAction) {
-                    NovaCutSecondaryButton(
+                    ClearCutSecondaryButton(
                         text = secondaryActionLabel,
                         onClick = onSecondaryAction,
                         contentColor = Mocha.Red,

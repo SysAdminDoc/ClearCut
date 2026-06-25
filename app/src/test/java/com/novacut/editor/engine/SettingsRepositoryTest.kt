@@ -24,12 +24,12 @@ class SettingsRepositoryTest {
 
     @Test
     fun corruptPreferencesFile_replacedWithDefaultsAndAllowsWrites() = runBlocking {
-        val settingsFile = temp.newFile("novacut_settings.preferences_pb")
+        val settingsFile = temp.newFile("clearcut_settings.preferences_pb")
         settingsFile.writeBytes(byteArrayOf(0x7f, 0x45, 0x4c, 0x46, 0x00))
         val reportStore = SettingsResetReportStore.forFile(temp.newFile("settings-reset-report.jsonl"))
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         try {
-            val dataStore = createNovaCutSettingsDataStore(
+            val dataStore = createClearCutSettingsDataStore(
                 produceFile = { settingsFile },
                 resetReportStore = reportStore,
                 scope = scope,
@@ -86,11 +86,11 @@ class SettingsRepositoryTest {
 
     @Test
     fun validUpdatesSurviveRecoveredStore() = runBlocking {
-        val settingsFile = temp.root.resolve("novacut_settings_valid.preferences_pb")
+        val settingsFile = temp.root.resolve("clearcut_settings_valid.preferences_pb")
         val reportStore = SettingsResetReportStore.forFile(temp.newFile("settings-reset-valid.jsonl"))
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         try {
-            val dataStore = createNovaCutSettingsDataStore(
+            val dataStore = createClearCutSettingsDataStore(
                 produceFile = { settingsFile },
                 resetReportStore = reportStore,
                 scope = scope,

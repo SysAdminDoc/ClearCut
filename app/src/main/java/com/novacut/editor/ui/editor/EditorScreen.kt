@@ -52,11 +52,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import com.novacut.editor.engine.ExportState
 import com.novacut.editor.model.*
-import com.novacut.editor.ui.NovaCutTestTags
+import com.novacut.editor.ui.ClearCutTestTags
 import com.novacut.editor.ui.theme.Mocha
-import com.novacut.editor.ui.theme.NovaCutDialogIcon
-import com.novacut.editor.ui.theme.NovaCutPrimaryButton
-import com.novacut.editor.ui.theme.NovaCutSecondaryButton
+import com.novacut.editor.ui.theme.ClearCutDialogIcon
+import com.novacut.editor.ui.theme.ClearCutPrimaryButton
+import com.novacut.editor.ui.theme.ClearCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
 import com.novacut.editor.ui.theme.TouchTarget
@@ -419,7 +419,7 @@ fun EditorScreen(
     CompositionLocalProvider(LocalLayoutMode provides layoutMode) {
     Box(modifier = Modifier
         .fillMaxSize()
-        .testTag(NovaCutTestTags.EDITOR_SCREEN)
+        .testTag(ClearCutTestTags.EDITOR_SCREEN)
         .background(Mocha.Base)
         .focusRequester(focusRequester)
         .focusable()
@@ -745,7 +745,7 @@ fun EditorScreen(
                                         .clip(RoundedCornerShape(Radius.md))
                                         .background(Mocha.Rosewater)
                                         .clickable(onClick = viewModel::showMediaPicker)
-                                        .testTag(NovaCutTestTags.EDITOR_EMPTY_ADD_MEDIA),
+                                        .testTag(ClearCutTestTags.EDITOR_EMPTY_ADD_MEDIA),
                                     horizontalArrangement = Arrangement.Center,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
@@ -1412,7 +1412,7 @@ private fun EditorTopBar(
         AlertDialog(
             onDismissRequest = { showDeleteConfirmation = false },
             icon = {
-                NovaCutDialogIcon(
+                ClearCutDialogIcon(
                     icon = Icons.Default.Delete,
                     accent = Mocha.Red
                 )
@@ -1432,7 +1432,7 @@ private fun EditorTopBar(
                 )
             },
             confirmButton = {
-                NovaCutSecondaryButton(
+                ClearCutSecondaryButton(
                     text = stringResource(R.string.editor_delete),
                     onClick = {
                         showDeleteConfirmation = false
@@ -1443,7 +1443,7 @@ private fun EditorTopBar(
                 )
             },
             dismissButton = {
-                NovaCutSecondaryButton(
+                ClearCutSecondaryButton(
                     text = stringResource(R.string.editor_cancel),
                     onClick = { showDeleteConfirmation = false }
                 )
@@ -1462,7 +1462,7 @@ private fun EditorTopBar(
         AlertDialog(
             onDismissRequest = { showSaveTemplateDialog = false },
             icon = {
-                NovaCutDialogIcon(
+                ClearCutDialogIcon(
                     icon = Icons.Default.Save,
                     accent = Mocha.Mauve
                 )
@@ -1496,7 +1496,7 @@ private fun EditorTopBar(
                 )
             },
             confirmButton = {
-                NovaCutPrimaryButton(
+                ClearCutPrimaryButton(
                     text = stringResource(R.string.editor_save),
                     onClick = {
                         onSaveTemplate(trimmedTemplateName)
@@ -1507,7 +1507,7 @@ private fun EditorTopBar(
                 )
             },
             dismissButton = {
-                NovaCutSecondaryButton(
+                ClearCutSecondaryButton(
                     text = stringResource(R.string.editor_cancel),
                     onClick = { showSaveTemplateDialog = false }
                 )
@@ -1526,7 +1526,7 @@ private fun EditorTopBar(
         AlertDialog(
             onDismissRequest = { showRenameDialog = false },
             icon = {
-                NovaCutDialogIcon(
+                ClearCutDialogIcon(
                     icon = Icons.Default.Edit,
                     accent = Mocha.Rosewater
                 )
@@ -1562,7 +1562,7 @@ private fun EditorTopBar(
                 )
             },
             confirmButton = {
-                NovaCutPrimaryButton(
+                ClearCutPrimaryButton(
                     text = stringResource(R.string.editor_save),
                     onClick = {
                         onRename(trimmedNameText)
@@ -1573,7 +1573,7 @@ private fun EditorTopBar(
                 )
             },
             dismissButton = {
-                NovaCutSecondaryButton(
+                ClearCutSecondaryButton(
                     text = stringResource(R.string.editor_cancel),
                     onClick = { showRenameDialog = false }
                 )
@@ -1619,7 +1619,7 @@ private fun EditorTopBar(
                         onClick = onBack,
                         modifier = Modifier
                             .size(if (isCompactBar) 36.dp else 38.dp)
-                            .testTag(NovaCutTestTags.EDITOR_BACK)
+                            .testTag(ClearCutTestTags.EDITOR_BACK)
                     ) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
@@ -1920,7 +1920,7 @@ private fun EditorTopBar(
                     contentPadding = PaddingValues(horizontal = if (isCompactBar) 12.dp else 14.dp, vertical = 0.dp),
                     modifier = Modifier
                         .height(if (isCompactBar) 36.dp else 38.dp)
-                        .testTag(NovaCutTestTags.EDITOR_EXPORT)
+                        .testTag(ClearCutTestTags.EDITOR_EXPORT)
                 ) {
                     Icon(
                         Icons.Default.Upload,

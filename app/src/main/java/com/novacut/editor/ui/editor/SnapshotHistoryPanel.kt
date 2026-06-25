@@ -45,9 +45,9 @@ import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.model.ProjectSnapshot
 import com.novacut.editor.ui.theme.Mocha
-import com.novacut.editor.ui.theme.NovaCutDialogIcon
-import com.novacut.editor.ui.theme.NovaCutPrimaryButton
-import com.novacut.editor.ui.theme.NovaCutSecondaryButton
+import com.novacut.editor.ui.theme.ClearCutDialogIcon
+import com.novacut.editor.ui.theme.ClearCutPrimaryButton
+import com.novacut.editor.ui.theme.ClearCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
 import com.novacut.editor.ui.theme.TouchTarget
@@ -147,7 +147,7 @@ fun SnapshotHistoryPanel(
         AlertDialog(
             onDismissRequest = { pendingRestoreSnapshot = null },
             icon = {
-                NovaCutDialogIcon(
+                ClearCutDialogIcon(
                     icon = Icons.Default.Restore,
                     accent = Mocha.Green
                 )
@@ -170,7 +170,7 @@ fun SnapshotHistoryPanel(
                 )
             },
             confirmButton = {
-                NovaCutPrimaryButton(
+                ClearCutPrimaryButton(
                     text = stringResource(R.string.snapshot_restore_confirm),
                     onClick = {
                         onRestoreSnapshot(snapshot.id)
@@ -180,7 +180,7 @@ fun SnapshotHistoryPanel(
                 )
             },
             dismissButton = {
-                NovaCutSecondaryButton(
+                ClearCutSecondaryButton(
                     text = stringResource(R.string.panel_snapshot_cancel),
                     onClick = { pendingRestoreSnapshot = null }
                 )

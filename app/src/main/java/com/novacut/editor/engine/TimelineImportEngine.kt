@@ -14,10 +14,10 @@ import javax.inject.Singleton
  * Stub engine -- NLE round-trip import. See ROADMAP.md Tier C.14.
  *
  * Closes the export-only gap on [TimelineExchangeEngine]: parses FCPXML,
- * OpenTimelineIO, and CMX 3600 EDL into a NovaCut [Project] so users can polish
+ * OpenTimelineIO, and CMX 3600 EDL into a ClearCut [Project] so users can polish
  * on mobile projects started in DaVinci Resolve / Premiere Pro / Final Cut Pro.
  *
- * Lossy conversions (NLE-specific metadata that NovaCut can't represent) are
+ * Lossy conversions (NLE-specific metadata that ClearCut can't represent) are
  * collected into [ImportResult.warnings] and surfaced to the user so they know
  * what was dropped.
  */

@@ -5,7 +5,7 @@ import com.novacut.editor.model.Clip
 /**
  * C.13 — Compound clip / nested-sequence navigation stack.
  *
- * NovaCut's [Clip] model already supports `isCompound` + `compoundClips`
+ * ClearCut's [Clip] model already supports `isCompound` + `compoundClips`
  * (a clip can carry an ordered list of child clips that act as its
  * "sub-timeline"). What's missing from the editor UX is the navigation
  * affordance: tap a compound clip → enter its sub-timeline → edit

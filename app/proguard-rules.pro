@@ -1,6 +1,6 @@
 -keepattributes *Annotation*
 
-# NovaCut models (Room entities + serialization)
+# ClearCut models (Room entities + serialization)
 -keep class com.novacut.editor.model.** { *; }
 
 # Room

@@ -41,7 +41,7 @@ enum class IncomingDocumentKind(
         maxBytes = 1_000_000L,
     ),
     PROJECT_ARCHIVE(
-        displayName = "NovaCut project archive",
+        displayName = "ClearCut project archive",
         targetAction = "Validate project archive",
         maxBytes = 4L * 1024L * 1024L * 1024L,
     ),
@@ -168,7 +168,7 @@ internal object IncomingDocumentIntentParser {
 
         val lower = normalizedName.lowercase(Locale.US)
         return when {
-            lower.endsWith(".novacut") -> IncomingDocumentKind.PROJECT_ARCHIVE
+            lower.endsWith(".clearcut") -> IncomingDocumentKind.PROJECT_ARCHIVE
             lower.endsWith(".zip") && mimeType.isZipMimeType() -> IncomingDocumentKind.PROJECT_ARCHIVE
             lower.endsWith(".otio") -> IncomingDocumentKind.TIMELINE_OTIO
             lower.endsWith(".fcpxml") -> IncomingDocumentKind.TIMELINE_FCPXML

@@ -48,7 +48,7 @@ object OpenSourceLicenses {
                 shipping costs. Your request must be sent within the first three years of the
                 date you received "FFmpegKit" with "GPL v3.0" license.
             """.trimIndent(),
-            complianceNote = "NovaCut treats this AAR as carrying FFmpegKit / FFmpeg GPLv3 " +
+            complianceNote = "ClearCut treats this AAR as carrying FFmpegKit / FFmpeg GPLv3 " +
                 "notice and source-offer obligations unless it is replaced by a verified " +
                 "LGPL-only build flavor. The matching packaged resources are " +
                 "res/raw/license.txt, res/raw/license_*.txt, and res/raw/source.txt.",

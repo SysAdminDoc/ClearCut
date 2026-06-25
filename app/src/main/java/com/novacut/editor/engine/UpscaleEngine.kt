@@ -14,7 +14,7 @@ import javax.inject.Singleton
  * Stub engine for video upscaling. See ROADMAP.md Tier A.5.
  *
  * Target: Real-ESRGAN x4plus and general-x4v3 via the ONNX Runtime that
- * already ships with NovaCut. The architecture is identical to
+ * already ships with ClearCut. The architecture is identical to
  * InpaintingEngine — same `OrtEnvironment` / `OrtSession` setup, same
  * tile-and-blend strategy for inputs larger than the model's expected size.
  *

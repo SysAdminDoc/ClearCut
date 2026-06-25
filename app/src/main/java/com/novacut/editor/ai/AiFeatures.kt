@@ -37,7 +37,7 @@ import kotlin.math.sqrt
 private const val TAG = "AiFeatures"
 
 /**
- * AI-powered features for NovaCut.
+ * AI-powered features for ClearCut.
  * Uses on-device analysis algorithms for real-time video/audio intelligence.
  *
  * Implemented:

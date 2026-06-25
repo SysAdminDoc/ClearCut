@@ -21,15 +21,15 @@ import kotlin.coroutines.resume
  *
  * ## Dependency path (Tier A.9, refreshed in Round 6 R6.5)
  *
- * NovaCut pins `com.moizhassan.ffmpeg:ffmpeg-kit-16kb:6.1.1`, the 16 KB
+ * ClearCut pins `com.moizhassan.ffmpeg:ffmpeg-kit-16kb:6.1.1`, the 16 KB
  * page-size rebuilt FFmpegKit successor used by R6.5. The AAR is verified by
  * the local `scripts/check_16kb_alignment.py` gate after every native dep
  * change and carries GPLv3/source-offer license resources in the packaged APK.
  *
  * ## License note
  *
- * NovaCut itself is MIT-licensed; bundling an AAR whose packaged license
- * resources carry GPLv3 text does not relicense NovaCut's Kotlin source, but it
+ * ClearCut itself is MIT-licensed; bundling an AAR whose packaged license
+ * resources carry GPLv3 text does not relicense ClearCut's Kotlin source, but it
  * does require shipping the FFmpeg license addendum and source offer with
  * release artifacts. If we need a no-GPL distribution channel, use a separate
  * LGPL-only/no-FFmpeg flavor and keep Media3 Transformer as the H.264/HEVC path.
@@ -57,7 +57,7 @@ import kotlin.coroutines.resume
  *
  * ### API compatibility matrix
  *
- * | NovaCut call site                       | FFmpegKit (current)              | ffmpeg-kt (zt64)                  |
+ * | ClearCut call site                       | FFmpegKit (current)              | ffmpeg-kt (zt64)                  |
  * |-----------------------------------------|----------------------------------|-----------------------------------|
  * | `execute(command)`                       | `FFmpegKit.executeAsync(cmd,…)`  | No equivalent — raw libav* only   |
  * | `executeArguments(args)`                 | `FFmpegKit.executeWithArgumentsAsync(…)` | No equivalent              |
@@ -80,7 +80,7 @@ import kotlin.coroutines.resume
  *
  * Not documented. No published native .so artifacts to verify. The project
  * does not mention Android 16 / API 35+ 16KB page alignment anywhere.
- * NovaCut's current fork (`com.moizhassan.ffmpeg:ffmpeg-kit-16kb:6.1.1`)
+ * ClearCut's current fork (`com.moizhassan.ffmpeg:ffmpeg-kit-16kb:6.1.1`)
  * was specifically rebuilt for 16KB alignment and is verified by the local
  * `scripts/check_16kb_alignment.py` gate.
  *
@@ -92,10 +92,10 @@ import kotlin.coroutines.resume
  *
  * ### License analysis
  *
- * ffmpeg-kt is GPL v3.0. Same as NovaCut's current FFmpegKit fork, so no
+ * ffmpeg-kt is GPL v3.0. Same as ClearCut's current FFmpegKit fork, so no
  * license improvement. The alternative JamaisMagic fork
  * (`io.github.jamaismagic.ffmpeg:ffmpeg-kit-lts-16kb:6.1.7`) offers an
- * LGPL-3.0 variant, which would be a license improvement if NovaCut ever
+ * LGPL-3.0 variant, which would be a license improvement if ClearCut ever
  * needs a no-GPL distribution channel.
  *
  * ### Adopt / defer criteria
@@ -109,7 +109,7 @@ import kotlin.coroutines.resume
  * with no functional benefit over the current fork.
  *
  * The real supply-chain risk (upstream FFmpegKit archived, binaries removed
- * from Maven Central) is already mitigated by NovaCut's pinned 16KB fork.
+ * from Maven Central) is already mitigated by ClearCut's pinned 16KB fork.
  * If the moizhassankh fork goes stale, the JamaisMagic fork
  * (`io.github.jamaismagic.ffmpeg`, 740 commits, NDK r27d, Maven Central,
  * LGPL option) is a drop-in replacement with 100% API compatibility —
@@ -404,7 +404,7 @@ class FFmpegEngine @Inject constructor(
             val v = NativeProcessingPolicy.validateVideoFile(f, "concat")
             if (v != null) return@withContext NativeProcessingPolicy.logAndReject(v)
         }
-        val listFile = File.createTempFile("novacut-ffmpeg-concat-", ".txt", context.cacheDir)
+        val listFile = File.createTempFile("clearcut-ffmpeg-concat-", ".txt", context.cacheDir)
         try {
             listFile.writeText(
                 inputFiles.joinToString(separator = "\n") { file ->

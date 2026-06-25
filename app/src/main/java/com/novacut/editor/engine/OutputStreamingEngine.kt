@@ -45,7 +45,7 @@ import javax.inject.Singleton
  * ## License + bundle size
  *
  * Stream-Pack is Apache-2.0. Larix SDK is proprietary and may require a
- * license fee. LibSRT is MPL-2.0 and pairs cleanly with NovaCut's MIT
+ * license fee. LibSRT is MPL-2.0 and pairs cleanly with ClearCut's MIT
  * license. Whichever native blob lands must pass the R6.1 16 KB alignment
  * gate.
  */
@@ -155,7 +155,7 @@ class OutputStreamingEngine @Inject constructor(
      *
      * This is a pure URL inspection so it can run before any streaming
      * library is wired. The UI uses it to decide whether to show the
-     * one-time "NovaCut needs Local Network access" consent sheet before
+     * one-time "ClearCut needs Local Network access" consent sheet before
      * attempting the connection.
      */
     enum class LocalNetworkScope {

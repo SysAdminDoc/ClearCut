@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate public release copy against NovaCut's shipped capability gates."""
+"""Validate public release copy against ClearCut's shipped capability gates."""
 from __future__ import annotations
 
 import argparse
@@ -249,7 +249,7 @@ def write_fixture(root: Path, relative: str, text: str) -> None:
 
 def write_minimal_sources(root: Path, readme: str, full_description: str, svg_text: str = "") -> None:
     write_fixture(root, "README.md", readme)
-    write_fixture(root, "fastlane/metadata/android/en-US/title.txt", "NovaCut\n")
+    write_fixture(root, "fastlane/metadata/android/en-US/title.txt", "ClearCut\n")
     write_fixture(root, "fastlane/metadata/android/en-US/short_description.txt", "Private Android video editor.\n")
     write_fixture(root, "fastlane/metadata/android/en-US/full_description.txt", full_description)
     write_fixture(root, "fastlane/metadata/android/en-US/images/asset_inventory.json", '{"assets": []}\n')
@@ -281,7 +281,7 @@ def run_self_tests() -> None:
         write_minimal_sources(
             root,
             readme="| **Auto Captions** | ONNX Runtime Whisper (multilingual, 99 languages) | Yes |\n",
-            full_description="- On-device AI tools: video stabilization, style transfer\nNovaCut requires no internet connection for editing.\n",
+            full_description="- On-device AI tools: video stabilization, style transfer\nClearCut requires no internet connection for editing.\n",
             svg_text="<text>Disclosure metadata ready for share targets</text>\n",
         )
         rule_ids = {violation.rule.rule_id for violation in validate(root)}

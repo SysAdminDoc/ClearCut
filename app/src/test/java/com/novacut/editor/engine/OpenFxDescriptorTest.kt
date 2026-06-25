@@ -50,7 +50,7 @@ class OpenFxDescriptorTest {
     }
 
     @Test
-    fun fromOpenFx_zeroScaleFallsBackToNovaCutStart() {
+    fun fromOpenFx_zeroScaleFallsBackToClearCutStart() {
         val p = OpenFxDescriptor.ParameterMapping(
             novaCutName = "x",
             openfxName = "x",

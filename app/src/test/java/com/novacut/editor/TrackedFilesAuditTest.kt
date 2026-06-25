@@ -39,7 +39,7 @@ class TrackedFilesAuditTest {
 
         assertTrue(
             "Tracked files include cross-project pollution. The following paths " +
-                "must not be committed to NovaCut — they belong to a sibling project " +
+                "must not be committed to ClearCut — they belong to a sibling project " +
                 "(HostShield) and are blocked by .gitignore for that reason. Either " +
                 "delete the file from the working tree or run `git rm --cached <path>`. " +
                 "Offenders: $offenders",

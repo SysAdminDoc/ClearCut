@@ -9,7 +9,7 @@ import org.junit.Test
 
 class PreviewPanelMedia3ComposePolicyTest {
     @Test
-    fun defaultMedia3ProfileKeepsNovaCutPreviewPanel() {
+    fun defaultMedia3ProfileKeepsClearCutPreviewPanel() {
         val evaluation = PreviewPanelMedia3ComposePolicy.evaluate()
 
         assertEquals(AdoptionDecision.KEEP_PREVIEW_PANEL, evaluation.decision)
@@ -48,7 +48,7 @@ class PreviewPanelMedia3ComposePolicyTest {
             supportsStillImageFallback = true,
             supportsTransformGestures = true,
             supportsScopesToggle = true,
-            supportsNovaCutChrome = true,
+            supportsClearCutChrome = true,
         )
 
         val evaluation = PreviewPanelMedia3ComposePolicy.evaluate(profile = futureProfile)

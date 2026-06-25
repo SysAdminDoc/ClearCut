@@ -115,6 +115,6 @@ class MediaHashWorker @AssistedInject constructor(
 
     companion object {
         private const val TAG = "MediaHashWorker"
-        const val WORK_NAME = "novacut-media-hash"
+        const val WORK_NAME = "clearcut-media-hash"
     }
 }

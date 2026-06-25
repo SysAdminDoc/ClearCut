@@ -205,7 +205,7 @@ object MixedRenderComposer {
             .map { c -> if (c.isLetterOrDigit() || c in ALLOWED_STEM_CHARS) c else '_' }
             .joinToString("")
             .trim('_')
-            .ifEmpty { "novacut" }
+            .ifEmpty { "clearcut" }
         return cleaned.take(MAX_STEM_CHARS)
     }
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Validate NovaCut release inputs and generated APK metadata.
+Validate ClearCut release inputs and generated APK metadata.
 
 This script intentionally uses only repository files plus AGP output metadata
 so CI does not rely on local-only signing files or workstation state.
@@ -155,7 +155,7 @@ def main() -> int:
         print(f"release verification failed: {error}", file=sys.stderr)
         return 1
 
-    print(f"NovaCut v{version_name} (versionCode {version_code}) release metadata verified.")
+    print(f"ClearCut v{version_name} (versionCode {version_code}) release metadata verified.")
     for apk in outputs:
         print(f"  - {apk.relative_to(ROOT)} ({apk.stat().st_size} bytes)")
     return 0

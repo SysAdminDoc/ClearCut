@@ -230,7 +230,7 @@ class TemplateManager @Inject constructor(
         fallbackId: String,
         defaultCreatedAt: Long
     ): TemplateParseResult {
-        val schemaVersion = json.optInt("novacut_template_version", 1).coerceAtLeast(1)
+        val schemaVersion = json.optInt("clearcut_template_version", 1).coerceAtLeast(1)
         if (schemaVersion > templateSchemaVersion) {
             val report = TemplateCompatibilityEngine.validate(
                 metadata = TemplateCompatibilityMetadata(schemaVersion = schemaVersion),
@@ -305,7 +305,7 @@ class TemplateManager @Inject constructor(
 
     private fun templateToJson(template: UserTemplate): JSONObject {
         return JSONObject().apply {
-            put("novacut_template_version", templateSchemaVersion)
+            put("clearcut_template_version", templateSchemaVersion)
             put("id", template.id)
             put("name", template.name)
             put("description", template.description)
@@ -340,7 +340,7 @@ class TemplateManager @Inject constructor(
         val existingIds = existingTemplates.asSequence().map { it.id }.toHashSet()
         val existingNames = existingTemplates.asSequence().map { it.name.lowercase() }.toHashSet()
         // Sanitize the imported template id BEFORE the collision check, otherwise an id like
-        // "../../etc/passwd" from a hostile .novacut-template would land in the file system as
+        // "../../etc/passwd" from a hostile .clearcut-template would land in the file system as
         // `templateDir/../../etc/passwd.json` (path traversal). Allow only [A-Za-z0-9_-]; if
         // sanitization changes anything, mint a fresh UUID rather than collide silently.
         val sanitizedId = sanitizeFilenameSafe(template.id)

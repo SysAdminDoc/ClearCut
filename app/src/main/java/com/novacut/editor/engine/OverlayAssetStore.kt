@@ -61,7 +61,7 @@ data class OverlayAssetDecision(
 )
 
 /**
- * Imports sticker/image overlay sources into NovaCut-owned storage before the
+ * Imports sticker/image overlay sources into ClearCut-owned storage before the
  * project state is mutated. This avoids saving Photo Picker one-shot grants or
  * synthetic shelf URIs that cannot survive process death, reboot, archive, or
  * export.

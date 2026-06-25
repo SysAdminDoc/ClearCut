@@ -23,7 +23,7 @@ import java.nio.ByteOrder
  *
  * ## Future migration to `media3-effect-lottie` (R6.10a)
  *
- * Media3 1.10 (which NovaCut already pulls) introduced an official
+ * Media3 1.10 (which ClearCut already pulls) introduced an official
  * `androidx.media3:media3-effect-lottie` module that bundles a `LottieOverlay`
  * effect. Before swapping this custom implementation, verify that the official
  * module supports:
@@ -33,7 +33,7 @@ import java.nio.ByteOrder
  *    alpha control is exposed in 1.10.x.
  *  - Dynamic text substitution via Lottie `TextDelegate` (this class uses
  *    `textReplacements: Map<String, String>` for caption / lower-third templates).
- *    If the official module only renders a static composition, NovaCut must
+ *    If the official module only renders a static composition, ClearCut must
  *    either subclass it or keep this engine for text-driven templates.
  *  - HDR-aware sampling (this class accepts `useHdr` from the GlEffect contract).
  *

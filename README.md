@@ -1,9 +1,9 @@
-# NovaCut
+# ClearCut
 
 A professional Android video editor built with Kotlin and Jetpack Compose. Open alternative to CapCut, PowerDirector, and DaVinci Resolve -- with AI-assisted tools, GPU-accelerated effects, and desktop NLE interoperability.
 
 
-![novacut-logo](https://github.com/user-attachments/assets/5187e84f-e9e7-4dc6-b7f5-0c990049f31f)<svg width="1800" height="560" viewBox="0 0 1800 560" fill="none" xmlns="http://www.w3.org/2000/svg">
+![clearcut-logo](https://github.com/user-attachments/assets/5187e84f-e9e7-4dc6-b7f5-0c990049f31f)<svg width="1800" height="560" viewBox="0 0 1800 560" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="panel" x1="84" y1="66" x2="1718" y2="512" gradientUnits="userSpaceOnUse">
       <stop stop-color="#0A0C12"/>
@@ -49,7 +49,7 @@ A professional Android video editor built with Kotlin and Jetpack Compose. Open 
   <path d="M548 112V448" stroke="#F1DEBC" stroke-opacity="0.18" stroke-width="1.5"/>
   <path d="M566 140H1694" stroke="#F1DEBC" stroke-opacity="0.07" stroke-width="1.5"/>
 
-  <text x="618" y="270" fill="url(#word)" font-family="'Georgia', 'Times New Roman', serif" font-size="172" font-weight="700" letter-spacing="-2">NovaCut</text>
+  <text x="618" y="270" fill="url(#word)" font-family="'Georgia', 'Times New Roman', serif" font-size="172" font-weight="700" letter-spacing="-2">ClearCut</text>
   <text x="626" y="340" fill="#A9B0BC" font-family="'Segoe UI', Arial, sans-serif" font-size="38" font-weight="600" letter-spacing="7">PREMIUM MOBILE VIDEO EDITING</text>
   <path d="M626 382H1118" stroke="#D2B17B" stroke-opacity="0.7" stroke-width="3"/>
   <path d="M1142 382H1242" stroke="#EDE3CF" stroke-opacity="0.28" stroke-width="3"/>
@@ -305,7 +305,7 @@ com.novacut.editor/
 │   ├── settings/           # SettingsScreen, SettingsViewModel
 │   └── theme/              # Catppuccin Mocha theme
 ├── MainActivity.kt         # Single activity, Compose navigation, permission handling
-└── NovaCutApp.kt           # Application class, notification channels
+└── ClearCutApp.kt           # Application class, notification channels
 ```
 
 ## Build
@@ -325,9 +325,9 @@ com.novacut.editor/
 
 Before release, verify audio focus on a physical device:
 
-- Start music in another app, open NovaCut, and play timeline preview. The
-  external app should pause or duck while NovaCut plays.
-- Connect headphones, start preview playback, then unplug them. NovaCut preview
+- Start music in another app, open ClearCut, and play timeline preview. The
+  external app should pause or duck while ClearCut plays.
+- Connect headphones, start preview playback, then unplug them. ClearCut preview
   should pause instead of continuing through the speaker.
 - Start timeline preview, then start a voiceover recording. Preview should pause
   before recording starts and focus should release when recording stops.
@@ -359,7 +359,7 @@ keyAlias=youralias
 keyPassword=yourpass
 ```
 
-Or via environment variables: `NOVACUT_STORE_FILE`, `NOVACUT_STORE_PASSWORD`, `NOVACUT_KEY_ALIAS`, `NOVACUT_KEY_PASSWORD`
+Or via environment variables: `CLEARCUT_STORE_FILE`, `CLEARCUT_STORE_PASSWORD`, `CLEARCUT_KEY_ALIAS`, `CLEARCUT_KEY_PASSWORD`
 
 If release credentials are not configured, `assembleRelease` falls back to debug signing so CI and local verification can still produce a testable release artifact without relying on an embedded keystore.
 
@@ -367,7 +367,7 @@ If release credentials are not configured, `assembleRelease` falls back to debug
 CI publishes a `.sha256` checksum, `.signing-cert-sha256` certificate-fingerprint sidecar, and GitHub artifact attestation next to every uploaded APK. To verify a downloaded release APK:
 
 ```powershell
-gh attestation verify .\app-release.apk -R SysAdminDoc/NovaCut --source-ref refs/tags/v3.74.104 --signer-workflow SysAdminDoc/NovaCut/.github/workflows/build.yml
+gh attestation verify .\app-release.apk -R SysAdminDoc/ClearCut --source-ref refs/tags/v3.74.104 --signer-workflow SysAdminDoc/ClearCut/.github/workflows/build.yml
 python scripts\write_release_checksums.py --root . --check
 python scripts\write_apk_signing_fingerprints.py --root . --check
 ```
@@ -387,7 +387,7 @@ GitHub Releases are the direct APK distribution channel for this checkout. Googl
 
 F-Droid-compatible Fastlane metadata is present in the same source tree. F-Droid publication still needs a final reproducible-build metadata pass, including `AllowedAPKSigningKeys` after the release signing key policy is fixed.
 
-Android developer verification is not complete. Starting in September 2026, Google requires apps installed on certified Android devices in initial regions to be registered by a verified developer, and package names must be registered with a signed APK. NovaCut can keep shipping direct APKs locally, but broad sideload/F-Droid continuity depends on completing that account/package-name step or documenting a limited-distribution fallback.
+Android developer verification is not complete. Starting in September 2026, Google requires apps installed on certified Android devices in initial regions to be registered by a verified developer, and package names must be registered with a signed APK. ClearCut can keep shipping direct APKs locally, but broad sideload/F-Droid continuity depends on completing that account/package-name step or documenting a limited-distribution fallback.
 
 ### Dependencies
 Key external dependencies currently in `build.gradle.kts`:
@@ -428,7 +428,7 @@ Open-source notices are available in **Settings > Third-party notices > Open sou
 | `ACCESS_NETWORK_STATE` | Respect Wi-Fi-only model download settings |
 | `VIBRATE` | Haptic feedback |
 
-Media access uses the system Photo Picker (`ActivityResultContracts.PickVisualMedia`) and `ACTION_OPEN_DOCUMENT` exclusively — NovaCut requests **no** broad `READ_MEDIA_VIDEO` / `READ_MEDIA_IMAGES` / `READ_MEDIA_AUDIO` / `READ_EXTERNAL_STORAGE` / `WRITE_EXTERNAL_STORAGE` permissions, so the per-URI grant model survives background kill without the Android 14 Selected Photos compatibility-mode loss.
+Media access uses the system Photo Picker (`ActivityResultContracts.PickVisualMedia`) and `ACTION_OPEN_DOCUMENT` exclusively — ClearCut requests **no** broad `READ_MEDIA_VIDEO` / `READ_MEDIA_IMAGES` / `READ_MEDIA_AUDIO` / `READ_EXTERNAL_STORAGE` / `WRITE_EXTERNAL_STORAGE` permissions, so the per-URI grant model survives background kill without the Android 14 Selected Photos compatibility-mode loss.
 
 ## Known Limitations
 - Multi-sequence export now honors track opacity through Media3 compositor settings, and all 18 fallback blend modes render distinctly; true source-over-destination blend math still needs a custom programmable compositor because Media3's public settings only expose alpha/transform

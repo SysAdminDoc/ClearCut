@@ -15,7 +15,7 @@ import kotlin.math.roundToLong
 
 internal enum class LottieOverlayBackend {
     MEDIA3_LOTTIE,
-    NOVACUT_SHADER
+    CLEARCUT_SHADER
 }
 
 internal data class LottieOverlayBackendDecision(
@@ -30,20 +30,20 @@ internal fun chooseLottieOverlayBackend(
 ): LottieOverlayBackendDecision {
     if (preserveHdr) {
         return LottieOverlayBackendDecision(
-            LottieOverlayBackend.NOVACUT_SHADER,
-            "Media3 OverlayEffect treats Lottie bitmaps as Ultra HDR overlays on HDR input; NovaCut shader preserves the existing SDR-over-HDR fallback."
+            LottieOverlayBackend.CLEARCUT_SHADER,
+            "Media3 OverlayEffect treats Lottie bitmaps as Ultra HDR overlays on HDR input; ClearCut shader preserves the existing SDR-over-HDR fallback."
         )
     }
     if (compositionDurationUs <= 0L) {
         return LottieOverlayBackendDecision(
-            LottieOverlayBackend.NOVACUT_SHADER,
+            LottieOverlayBackend.CLEARCUT_SHADER,
             "composition duration is unavailable"
         )
     }
     if (overlayDurationUs > compositionDurationUs) {
         return LottieOverlayBackendDecision(
-            LottieOverlayBackend.NOVACUT_SHADER,
-            "Media3 LottieOverlay loops animations; NovaCut shader holds the final frame for over-long title windows."
+            LottieOverlayBackend.CLEARCUT_SHADER,
+            "Media3 LottieOverlay loops animations; ClearCut shader holds the final frame for over-long title windows."
         )
     }
     return LottieOverlayBackendDecision(
@@ -83,10 +83,10 @@ internal fun lottieScaleToFrame(
 }
 
 /**
- * Adapts Media3's first-party Lottie renderer to NovaCut's timeline semantics.
+ * Adapts Media3's first-party Lottie renderer to ClearCut's timeline semantics.
  *
  * Media3 owns the Lottie canvas drawing and texture upload path. This wrapper keeps
- * the existing NovaCut behaviors that the export timeline depends on:
+ * the existing ClearCut behaviors that the export timeline depends on:
  * - animation time is relative to the overlay start, not the clip start;
  * - alpha is zero outside the overlay window;
  * - the Lottie canvas is sized to the current video frame so old full-frame

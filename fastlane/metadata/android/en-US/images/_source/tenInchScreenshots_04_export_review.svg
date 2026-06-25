@@ -2,7 +2,7 @@
   <rect width="1920" height="1080" fill="#14161f"/>
   <rect x="42" y="42" width="1836" height="996" rx="38" fill="#14161f" stroke="#384052" stroke-width="2"/>
 <rect x="42" y="42" width="1836" height="86" rx="38" fill="#1f2430"/>
-<text x="82" y="98" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="30" font-weight="700">NovaCut</text>
+<text x="82" y="98" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="30" font-weight="700">ClearCut</text>
 <text x="1520" y="98" fill="#a9b2c3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="22" font-weight="500">Export review</text>
 <rect x="82" y="164" width="520" height="804" rx="24" fill="#1f2430" stroke="#384052" stroke-width="2"/>
 <text x="126" y="226" fill="#f4f7fb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="34" font-weight="750">Presets</text>

@@ -69,7 +69,7 @@ class VideoEngine @Inject constructor(
     private data class VisualTrackSequence(
         val sequence: EditedMediaItemSequence,
         val hasEmbeddedAudio: Boolean,
-        val compositorLayer: NovaCutCompositorLayer
+        val compositorLayer: ClearCutCompositorLayer
     )
 
     private data class LottieBackendPlan(
@@ -152,7 +152,7 @@ class VideoEngine @Inject constructor(
                 .build()
             val renderersFactory = DefaultRenderersFactory(context)
                 .setEnableDecoderFallback(true)
-            val previewAudioAttributes = NovaCutAudioFocusPolicy.buildPreviewAttributes()
+            val previewAudioAttributes = ClearCutAudioFocusPolicy.buildPreviewAttributes()
             player = ExoPlayer.Builder(context)
                 .setLoadControl(loadControl)
                 .setRenderersFactory(renderersFactory)
@@ -570,7 +570,7 @@ class VideoEngine @Inject constructor(
         val parentDir = outputFile.parentFile ?: context.cacheDir
         val tempDir = File(
             parentDir,
-            ".novacut-mixed-${MixedRenderComposer.sanitiseStem(outputFile.nameWithoutExtension)}-" +
+            ".clearcut-mixed-${MixedRenderComposer.sanitiseStem(outputFile.nameWithoutExtension)}-" +
                 System.currentTimeMillis()
         )
         val runWeightSum = plan.runs.sumOf { it.run.durationMs.coerceAtLeast(1L) }
@@ -874,7 +874,7 @@ class VideoEngine @Inject constructor(
                     globalTransitions = globalTransitions
                 ),
                 hasEmbeddedAudio = hasEmbeddedAudio,
-                compositorLayer = NovaCutCompositorLayer(
+                compositorLayer = ClearCutCompositorLayer(
                     inputId = inputId,
                     trackId = track.id,
                     trackIndex = track.index,
@@ -1111,7 +1111,7 @@ class VideoEngine @Inject constructor(
                             )
                         )
                     )
-                    LottieOverlayBackend.NOVACUT_SHADER -> {
+                    LottieOverlayBackend.CLEARCUT_SHADER -> {
                         Log.d(TAG, "Export: keeping custom Lottie shader path (${plan.decision.reason})")
                         add(LottieOverlayEffect(
                             lottieEngine = lo.engine,
@@ -1499,13 +1499,13 @@ class VideoEngine @Inject constructor(
         targetHeight: Int,
         hasMultipleVideoSequences: Boolean = false,
         preserveHdr: Boolean = false,
-        compositorLayers: List<NovaCutCompositorLayer> = emptyList()
+        compositorLayers: List<ClearCutCompositorLayer> = emptyList()
     ): Composition {
         val builder = Composition.Builder(sequences)
             .setTransmuxAudio(!hasAudioTracks && hasEmbeddedVisualAudio && !hasMultipleVideoSequences)
         if (hasMultipleVideoSequences) {
             builder.setVideoCompositorSettings(
-                NovaCutVideoCompositorSettings(
+                ClearCutVideoCompositorSettings(
                     outputWidth = targetWidth,
                     outputHeight = targetHeight,
                     layers = compositorLayers

@@ -18,11 +18,11 @@ class FileProviderPathsTest {
             ProviderRoot("cache-path", "camera_captures", "camera-captures/"),
             ProviderRoot("files-path", "frame_captures", "frame_captures/"),
             ProviderRoot("files-path", "freeze_frames", "freeze_frames/"),
-            ProviderRoot("files-path", "internal_exports", "NovaCut/"),
+            ProviderRoot("files-path", "internal_exports", "ClearCut/"),
             ProviderRoot("files-path", "internal_archives", "archives/"),
             ProviderRoot("files-path", "diagnostics", "diagnostics/"),
             ProviderRoot("files-path", "internal_templates", "templates/"),
-            ProviderRoot("external-files-path", "exports", "Movies/NovaCut/"),
+            ProviderRoot("external-files-path", "exports", "Movies/ClearCut/"),
             ProviderRoot("external-files-path", "external_archives", "archives/"),
             ProviderRoot("external-files-path", "timeline_exports", "exports/"),
             ProviderRoot("external-files-path", "templates", "templates/"),
@@ -164,8 +164,8 @@ class FileProviderPathsTest {
 
     private fun shareableExportRoots(): Set<ProviderRoot> {
         return setOf(
-            ProviderRoot("files-path", "internal_exports", "NovaCut/"),
-            ProviderRoot("external-files-path", "exports", "Movies/NovaCut/"),
+            ProviderRoot("files-path", "internal_exports", "ClearCut/"),
+            ProviderRoot("external-files-path", "exports", "Movies/ClearCut/"),
             ProviderRoot("external-files-path", "timeline_exports", "exports/")
         )
     }

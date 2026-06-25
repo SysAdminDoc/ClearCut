@@ -283,9 +283,9 @@ class TtsEngine @Inject constructor(
     private fun requestPreviewAudioFocus(): Boolean {
         val manager = audioManager ?: return true
         val result = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val request = NovaCutAudioFocusPolicy.buildFocusRequest(
-                gainType = NovaCutAudioFocusPolicy.TTS_PREVIEW_FOCUS_GAIN,
-                attributes = NovaCutAudioFocusPolicy.buildSpeechAttributes(),
+            val request = ClearCutAudioFocusPolicy.buildFocusRequest(
+                gainType = ClearCutAudioFocusPolicy.TTS_PREVIEW_FOCUS_GAIN,
+                attributes = ClearCutAudioFocusPolicy.buildSpeechAttributes(),
                 listener = focusChangeListener,
             )
             activePreviewFocusRequest = request
@@ -295,7 +295,7 @@ class TtsEngine @Inject constructor(
             manager.requestAudioFocus(
                 focusChangeListener,
                 AudioManager.STREAM_MUSIC,
-                NovaCutAudioFocusPolicy.TTS_PREVIEW_FOCUS_GAIN,
+                ClearCutAudioFocusPolicy.TTS_PREVIEW_FOCUS_GAIN,
             )
         }
         return result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED

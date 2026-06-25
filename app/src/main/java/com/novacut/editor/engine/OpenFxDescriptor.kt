@@ -6,15 +6,15 @@ import org.json.JSONObject
 /**
  * R5.7b — Read-only OpenFX effect descriptor.
  *
- * NovaCut does **not** host the full OpenFX runtime on Android (that would
+ * ClearCut does **not** host the full OpenFX runtime on Android (that would
  * mean embedding C++ plugin loading, which is out of scope for mobile). The
- * goal is narrower: define a small JSON descriptor that maps a NovaCut effect's
+ * goal is narrower: define a small JSON descriptor that maps a ClearCut effect's
  * parameters to OpenFX-named parameters so a future NLE round-trip pass
  * (C.14 — FCPXML / OTIO import) can preserve effect intent across imports
  * into DaVinci Resolve / Premiere / Final Cut.
  *
  * The descriptor is *one file per effect*. It is referenced by name from a
- * NovaCut effect chain (`.ncfx`, see [PluginRegistry.Kind.EFFECT_PACK]) and
+ * ClearCut effect chain (`.ncfx`, see [PluginRegistry.Kind.EFFECT_PACK]) and
  * carried alongside it in the same share container.
  *
  * ## File shape (`.ncfxd`)
@@ -35,10 +35,10 @@ import org.json.JSONObject
  *
  * ## What this class is not
  *
- *  - Not a runtime loader. The actual effect runs through NovaCut's existing
+ *  - Not a runtime loader. The actual effect runs through ClearCut's existing
  *    GLSL shader pipeline; the descriptor is metadata only.
  *  - Not a way to install third-party effects. We control the effect set;
- *    descriptors map an existing NovaCut effect to its OpenFX equivalent.
+ *    descriptors map an existing ClearCut effect to its OpenFX equivalent.
  *  - Not a substitute for full FCPXML compatibility. It complements C.14 by
  *    carrying effect-intent metadata across the round trip.
  */
@@ -51,9 +51,9 @@ data class OpenFxDescriptor(
 ) {
 
     /**
-     * Maps a single NovaCut effect parameter to its OpenFX equivalent.
+     * Maps a single ClearCut effect parameter to its OpenFX equivalent.
      *
-     * @param scale linear gain applied to the NovaCut value before passing
+     * @param scale linear gain applied to the ClearCut value before passing
      *   to OpenFX: `openfx = novaCut * scale + offset`.
      * @param type OpenFX parameter type: "double", "integer", "boolean",
      *   "rgba", "string", "choice". Mirrors OpenFX kOfxParamTypeXxx constants.
@@ -67,10 +67,10 @@ data class OpenFxDescriptor(
         val offset: Double = 0.0,
         val type: String = "double",
     ) {
-        /** Convert a NovaCut parameter value into the OpenFX equivalent. */
+        /** Convert a ClearCut parameter value into the OpenFX equivalent. */
         fun toOpenFx(novaCutValue: Double): Double = novaCutValue * scale + offset
 
-        /** Convert an OpenFX value back into the NovaCut equivalent. */
+        /** Convert an OpenFX value back into the ClearCut equivalent. */
         fun fromOpenFx(openFxValue: Double): Double =
             if (scale == 0.0) novaCutRange.start else (openFxValue - offset) / scale
     }

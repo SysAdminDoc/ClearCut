@@ -30,8 +30,8 @@ import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.engine.TimelineExchangeValidator
 import com.novacut.editor.ui.theme.Mocha
-import com.novacut.editor.ui.theme.NovaCutDialogIcon
-import com.novacut.editor.ui.theme.NovaCutPrimaryButton
+import com.novacut.editor.ui.theme.ClearCutDialogIcon
+import com.novacut.editor.ui.theme.ClearCutPrimaryButton
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
 
@@ -77,7 +77,7 @@ internal fun BackupImportReportDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = {
-            NovaCutDialogIcon(
+            ClearCutDialogIcon(
                 icon = if (feedback.succeeded) Icons.Default.TaskAlt else Icons.Default.Error,
                 accent = accent
             )
@@ -93,7 +93,7 @@ internal fun BackupImportReportDialog(
             BackupImportReportBody(feedback = feedback, accent = accent)
         },
         confirmButton = {
-            NovaCutPrimaryButton(
+            ClearCutPrimaryButton(
                 text = stringResource(R.string.done),
                 onClick = onDismiss,
                 icon = Icons.Default.Check
@@ -187,7 +187,7 @@ internal fun TimelineExchangeReportDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = {
-            NovaCutDialogIcon(
+            ClearCutDialogIcon(
                 icon = if (feedback.succeeded) Icons.Default.IosShare else Icons.Default.ReportProblem,
                 accent = accent
             )
@@ -203,7 +203,7 @@ internal fun TimelineExchangeReportDialog(
             TimelineExchangeReportBody(feedback = feedback, accent = accent)
         },
         confirmButton = {
-            NovaCutPrimaryButton(
+            ClearCutPrimaryButton(
                 text = stringResource(R.string.done),
                 onClick = onDismiss,
                 icon = Icons.Default.Check

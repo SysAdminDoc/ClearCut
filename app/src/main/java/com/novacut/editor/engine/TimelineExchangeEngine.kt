@@ -10,7 +10,7 @@ import kotlin.math.roundToLong
 /**
  * Timeline interchange engine for OTIO, FCPXML, EDL, and AAF formats.
  *
- * Enables export handoff from NovaCut projects to desktop NLEs:
+ * Enables export handoff from ClearCut projects to desktop NLEs:
  * - OpenTimelineIO (OTIO): Universal interchange format by Pixar/ASWF
  * - FCPXML: Final Cut Pro XML (also importable by DaVinci Resolve)
  * - EDL CMX 3600: Legacy edit decision list (Avid, Premiere, Resolve)
@@ -71,9 +71,9 @@ class TimelineExchangeEngine @Inject constructor(
      * Export tracks and text overlays to OpenTimelineIO JSON format.
      *
      * Produces a valid OTIO JSON document following schema version 0.15.
-     * Maps NovaCut's Track/Clip model to OTIO's Timeline → Stack → Track → Clip hierarchy.
+     * Maps ClearCut's Track/Clip model to OTIO's Timeline → Stack → Track → Clip hierarchy.
      *
-     * @param tracks List of NovaCut tracks to export.
+     * @param tracks List of ClearCut tracks to export.
      * @param textOverlays Text overlays to include (exported as OTIO markers on a separate track).
      * @param projectName Name for the timeline.
      * @param frameRate Frame rate for time conversions (default 30).
@@ -82,7 +82,7 @@ class TimelineExchangeEngine @Inject constructor(
     fun exportToOtio(
         tracks: List<Track>,
         textOverlays: List<TextOverlay> = emptyList(),
-        projectName: String = "NovaCut Project",
+        projectName: String = "ClearCut Project",
         frameRate: Int = 30
     ): String {
         val safeFrameRate = normalizedFrameRate(frameRate)
@@ -90,7 +90,7 @@ class TimelineExchangeEngine @Inject constructor(
             put("OTIO_SCHEMA", "Timeline.1")
             put("name", projectName)
             put("metadata", JSONObject().apply {
-                put("novacut_version", "3.0.0")
+                put("clearcut_version", "3.0.0")
                 put("export_format", "otio")
             })
             put("tracks", buildOtioStack(tracks, textOverlays, safeFrameRate))
@@ -154,7 +154,7 @@ class TimelineExchangeEngine @Inject constructor(
             put("kind", kind)
             put("children", children)
             put("metadata", JSONObject().apply {
-                put("novacut_track_id", track.id)
+                put("clearcut_track_id", track.id)
                 put("locked", track.isLocked)
                 put("visible", track.isVisible)
                 put("muted", track.isMuted)
@@ -186,7 +186,7 @@ class TimelineExchangeEngine @Inject constructor(
                 put("effects", effects)
             }
             put("metadata", JSONObject().apply {
-                put("novacut_clip_id", clip.id)
+                put("clearcut_clip_id", clip.id)
                 putSafeFloat("opacity", clip.opacity, default = 1f)
                 putSafeFloat("volume", clip.volume, default = 1f)
             })
@@ -238,7 +238,7 @@ class TimelineExchangeEngine @Inject constructor(
             put("kind", "Video")
             put("children", children)
             put("metadata", JSONObject().apply {
-                put("novacut_track_type", "TEXT")
+                put("clearcut_track_type", "TEXT")
             })
         }
     }
@@ -317,7 +317,7 @@ class TimelineExchangeEngine @Inject constructor(
     // ──────────────────────────────────────────────
 
     /**
-     * Import an OpenTimelineIO JSON document into NovaCut tracks and text overlays.
+     * Import an OpenTimelineIO JSON document into ClearCut tracks and text overlays.
      *
      * @param json OTIO JSON string.
      * @return ExchangeResult with imported tracks, text overlays, and any warnings.
@@ -352,7 +352,7 @@ class TimelineExchangeEngine @Inject constructor(
 
                 // Check if this is a text overlay track
                 val metadata = trackJson.optJSONObject("metadata")
-                if (metadata?.optString("novacut_track_type") == "TEXT") {
+                if (metadata?.optString("clearcut_track_type") == "TEXT") {
                     parseTextOverlayTrack(trackJson, textOverlays, warnings)
                     continue
                 }
@@ -540,14 +540,14 @@ class TimelineExchangeEngine @Inject constructor(
      * This improves on the existing EdlExporter by supporting multiple tracks,
      * transitions, and richer metadata.
      *
-     * @param tracks List of NovaCut tracks.
+     * @param tracks List of ClearCut tracks.
      * @param projectName Project name.
      * @param frameRate Frame rate (e.g., 24, 30, 60).
      * @return FCPXML string.
      */
     fun exportToFcpxml(
         tracks: List<Track>,
-        projectName: String = "NovaCut Project",
+        projectName: String = "ClearCut Project",
         frameRate: Int = 30
     ): String {
         val safeFrameRate = normalizedFrameRate(frameRate)
@@ -562,7 +562,7 @@ class TimelineExchangeEngine @Inject constructor(
         sb.appendLine("""<!DOCTYPE fcpxml>""")
         sb.appendLine("""<fcpxml version="1.11">""")
         sb.appendLine("""  <resources>""")
-        sb.appendLine("""    <format id="r0" name="NovaCut ${safeFrameRate}p" frameDuration="$frameDuration" width="1920" height="1080"/>""")
+        sb.appendLine("""    <format id="r0" name="ClearCut ${safeFrameRate}p" frameDuration="$frameDuration" width="1920" height="1080"/>""")
 
         // Collect media references
         val mediaRefs = mutableMapOf<String, Clip>()

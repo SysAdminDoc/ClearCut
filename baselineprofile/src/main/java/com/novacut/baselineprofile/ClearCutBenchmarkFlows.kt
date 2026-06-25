@@ -1,4 +1,4 @@
-package com.novacut.baselineprofile
+package com.clearcut.baselineprofile
 
 import android.os.SystemClock
 import androidx.benchmark.macro.MacrobenchmarkScope
@@ -8,7 +8,7 @@ import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
 
-internal const val NOVACUT_PACKAGE = "com.novacut.editor"
+internal const val CLEARCUT_PACKAGE = "com.novacut.editor"
 private const val WAIT_TIMEOUT_MS = 10_000L
 private const val PROJECTS_CREATE_PROJECT = "projects.createProject"
 private const val PROJECTS_SCREEN = "projects.screen"
@@ -100,7 +100,7 @@ private val projectCreateButtonSelectors = listOf(
 
 private val projectGallerySelectors = projectCreateButtonSelectors + listOf(
     testTag(PROJECTS_SCREEN),
-    By.text("NovaCut"),
+    By.text("ClearCut"),
     By.text("Create sharper edits with less friction.")
 )
 

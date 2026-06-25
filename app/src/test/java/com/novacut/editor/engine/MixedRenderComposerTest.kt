@@ -149,8 +149,8 @@ class MixedRenderComposerTest {
 
     @Test
     fun sanitiseStem_handlesEmptyAndExoticInput() {
-        assertEquals("novacut", MixedRenderComposer.sanitiseStem(""))
-        assertEquals("novacut", MixedRenderComposer.sanitiseStem("   "))
+        assertEquals("clearcut", MixedRenderComposer.sanitiseStem(""))
+        assertEquals("clearcut", MixedRenderComposer.sanitiseStem("   "))
         // Path separators / colons / slashes collapse to underscores; runs
         // of underscores collapse cosmetically.
         assertEquals(

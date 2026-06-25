@@ -31,11 +31,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.novacut.editor.R
-import com.novacut.editor.ui.NovaCutTestTags
+import com.novacut.editor.ui.ClearCutTestTags
 import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.Motion
-import com.novacut.editor.ui.theme.NovaCutPrimaryButton
-import com.novacut.editor.ui.theme.NovaCutSecondaryButton
+import com.novacut.editor.ui.theme.ClearCutPrimaryButton
+import com.novacut.editor.ui.theme.ClearCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
 import com.novacut.editor.ui.theme.TouchTarget
@@ -84,7 +84,7 @@ fun FirstRunTutorial(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .testTag(NovaCutTestTags.TUTORIAL_SCREEN)
+            .testTag(ClearCutTestTags.TUTORIAL_SCREEN)
             .pointerInput(Unit) {
                 awaitPointerEventScope {
                     while (true) {
@@ -112,7 +112,7 @@ fun FirstRunTutorial(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(Spacing.lg)
-                .testTag(NovaCutTestTags.TUTORIAL_SKIP)
+                .testTag(ClearCutTestTags.TUTORIAL_SKIP)
                 .defaultMinSize(minHeight = TouchTarget.minimum)
                 .clickable(role = Role.Button, onClick = onComplete)
         ) {
@@ -277,7 +277,7 @@ fun FirstRunTutorial(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         if (!isFirstStep) {
-                            NovaCutSecondaryButton(
+                            ClearCutSecondaryButton(
                                 text = stringResource(R.string.tutorial_back),
                                 onClick = { currentStep-- },
                                 modifier = Modifier
@@ -287,7 +287,7 @@ fun FirstRunTutorial(
                             )
                         }
 
-                        NovaCutPrimaryButton(
+                        ClearCutPrimaryButton(
                             text = stringResource(if (isLastStep) R.string.tutorial_get_started else R.string.tutorial_next),
                             onClick = {
                                 if (isLastStep) {

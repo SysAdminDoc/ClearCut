@@ -15,12 +15,12 @@ import javax.inject.Singleton
  * hardware-backed signing at C2PA Assurance Level 2.
  *
  * This engine owns the pure manifest construction and availability layer:
- * given the project name, export config, NovaCut version, and per-project
+ * given the project name, export config, ClearCut version, and per-project
  * [AiUsageLedger], it builds a structured [C2paManifest] that can be passed
  * to c2pa-android's `Builder.fromJson(...)` once a signing library and
  * certificate enrollment path are configured.
  *
- * NovaCut deliberately separates draft manifest generation from verifiable
+ * ClearCut deliberately separates draft manifest generation from verifiable
  * Content Credentials. A `.c2pa-draft-manifest.json` sidecar is useful audit
  * data, but it is not a signed C2PA manifest store and does not create a BMFF
  * hard binding to the exported MP4. [signingAvailability] is the gate the UI
@@ -204,7 +204,7 @@ class C2paExportEngine @Inject constructor() {
             "exporterCreationTimeMs must be >= 0"
         }
         val assertions = buildList {
-            // Always emit the CAWG training-mining opt-out. NovaCut's privacy
+            // Always emit the CAWG training-mining opt-out. ClearCut's privacy
             // posture is that exports can be marked do-not-train.
             add(
                 Assertion(
@@ -224,7 +224,7 @@ class C2paExportEngine @Inject constructor() {
                     label = "c2pa.thumbnail.claim.jpeg",
                     data = mapOf(
                         "claimGeneratorInfo" to mapOf(
-                            "name" to "NovaCut",
+                            "name" to "ClearCut",
                             "version" to novaCutVersionName
                         )
                     )
@@ -236,7 +236,7 @@ class C2paExportEngine @Inject constructor() {
                     label = "c2pa.actions.created",
                     data = mapOf(
                         "action" to "c2pa.created",
-                        "softwareAgent" to "NovaCut/$novaCutVersionName",
+                        "softwareAgent" to "ClearCut/$novaCutVersionName",
                         "when" to exporterCreationTimeMs
                     )
                 )
@@ -245,7 +245,7 @@ class C2paExportEngine @Inject constructor() {
             aiActionsAssertion(ledger)?.let { add(it) }
         }
         return C2paManifest(
-            claimGenerator = "NovaCut/$novaCutVersionName",
+            claimGenerator = "ClearCut/$novaCutVersionName",
             claimGeneratorInfoVersion = novaCutVersionName,
             title = projectTitle?.takeIf { it.isNotBlank() },
             signingMode = signingMode,
@@ -258,7 +258,7 @@ class C2paExportEngine @Inject constructor() {
             put("claim_generator", manifest.claimGenerator)
             put("claim_generator_info", JSONArray().apply {
                 put(JSONObject().apply {
-                    put("name", "NovaCut")
+                    put("name", "ClearCut")
                     put("version", manifest.claimGeneratorInfoVersion)
                 })
             })
@@ -288,7 +288,7 @@ class C2paExportEngine @Inject constructor() {
         exportedFileName: String?
     ): JSONObject {
         return JSONObject().apply {
-            put("schema", "com.novacut.c2pa-draft-manifest.v2")
+            put("schema", "com.clearcut.c2pa-draft-manifest.v2")
             put("c2paSpecification", "2.4")
             put("format", "video/mp4")
             put("embeddedManifestStore", false)

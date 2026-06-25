@@ -1,4 +1,4 @@
-NovaCut is a full-featured, open-source video editor for Android. Built with Kotlin, Jetpack Compose, and Media3 Transformer, it delivers professional editing with clear local, optional-download, and planned-tool gates.
+ClearCut is a full-featured, open-source video editor for Android. Built with Kotlin, Jetpack Compose, and Media3 Transformer, it delivers professional editing with clear local, optional-download, and planned-tool gates.
 
 Features:
 - Multi-track timeline with magnetic snapping, slip/slide editing, and clip grouping

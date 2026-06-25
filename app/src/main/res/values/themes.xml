@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.NovaCut" parent="android:Theme.Material.NoActionBar">
+    <style name="Theme.ClearCut" parent="android:Theme.Material.NoActionBar">
         <item name="android:colorBackground">@color/base</item>
         <item name="android:statusBarColor">@color/crust</item>
         <item name="android:navigationBarColor">@color/crust</item>

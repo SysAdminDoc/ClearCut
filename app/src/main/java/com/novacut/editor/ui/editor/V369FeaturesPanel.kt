@@ -32,7 +32,7 @@ import com.novacut.editor.engine.ColorBlindPreviewEngine
 import com.novacut.editor.engine.DirectPublishEngine
 import com.novacut.editor.engine.KaraokeCaptionEngine
 import com.novacut.editor.ui.theme.Mocha
-import com.novacut.editor.ui.theme.NovaCutFilterChip
+import com.novacut.editor.ui.theme.ClearCutFilterChip
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
 import com.novacut.editor.ui.theme.TouchTarget
@@ -148,7 +148,7 @@ fun V369FeaturesPanel(
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 for (style in KaraokeCaptionEngine.KaraokeStyle.entries) {
-                    NovaCutFilterChip(
+                    ClearCutFilterChip(
                         selected = v.karaokeStyle == style,
                         onClick = { viewModel.v369Delegate.setKaraokeStyle(style) },
                         text = karaokeStyleLabel(style),
@@ -304,7 +304,7 @@ fun V369FeaturesPanel(
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 for (mode in ColorBlindPreviewEngine.Mode.entries) {
-                    NovaCutFilterChip(
+                    ClearCutFilterChip(
                         selected = v.colorBlindMode == mode,
                         onClick = { viewModel.v369Delegate.setColorBlindMode(mode) },
                         text = colorBlindModeLabel(mode),
@@ -428,7 +428,7 @@ fun V369FeaturesPanel(
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 for (opt in com.novacut.editor.engine.DesktopOverride.entries) {
-                    NovaCutFilterChip(
+                    ClearCutFilterChip(
                         selected = override == opt,
                         onClick = { viewModel.setDesktopOverride(opt) },
                         text = when (opt) {

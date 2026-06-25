@@ -53,8 +53,8 @@ import com.novacut.editor.engine.SilenceDetectionEngine.ProposalCategory
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.Track
 import com.novacut.editor.ui.theme.Mocha
-import com.novacut.editor.ui.theme.NovaCutPrimaryButton
-import com.novacut.editor.ui.theme.NovaCutSecondaryButton
+import com.novacut.editor.ui.theme.ClearCutPrimaryButton
+import com.novacut.editor.ui.theme.ClearCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
 import java.util.Locale
 
@@ -230,19 +230,19 @@ fun CutAssistantReviewPanel(
                     horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    NovaCutSecondaryButton(
+                    ClearCutSecondaryButton(
                         text = stringResource(R.string.cut_assistant_reject_all),
                         onClick = onRejectAll,
                         icon = Icons.Default.Close,
                         modifier = Modifier.widthIn(min = 128.dp)
                     )
-                    NovaCutSecondaryButton(
+                    ClearCutSecondaryButton(
                         text = stringResource(R.string.cut_assistant_accept_all),
                         onClick = onAcceptAll,
                         icon = Icons.Default.Check,
                         modifier = Modifier.widthIn(min = 128.dp)
                     )
-                    NovaCutPrimaryButton(
+                    ClearCutPrimaryButton(
                         text = stringResource(R.string.cut_assistant_apply_selected, acceptedCount),
                         onClick = onApply,
                         icon = Icons.Default.ContentCut,
@@ -302,7 +302,7 @@ private fun CutAssistantEmptyState(
                 )
             }
         }
-        NovaCutSecondaryButton(
+        ClearCutSecondaryButton(
             text = stringResource(R.string.done),
             onClick = onClose,
             modifier = Modifier.fillMaxWidth()

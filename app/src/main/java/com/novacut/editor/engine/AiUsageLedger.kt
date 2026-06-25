@@ -136,7 +136,7 @@ object AiUsageLedger {
      * Whether the export sheet's "Disclose AI use" toggle should default to
      * on for the given ledger. R8.9 requires the default for any non-empty
      * ledger entry so users can consciously turn disclosure off instead of
-     * NovaCut silently hiding low-stakes AI assistance.
+     * ClearCut silently hiding low-stakes AI assistance.
      */
     fun discloseToggleDefaultOn(entries: List<Entry>): Boolean = entries.isNotEmpty()
 
@@ -300,7 +300,7 @@ object AiUsageLedger {
         val merged = mergeOverlaps(entries)
         val hasArticle50Content = AiDisclosurePolicy.requiresMachineReadableLabel(merged)
         return JSONObject().apply {
-            put("schema", "com.novacut.ai-use.v2")
+            put("schema", "com.clearcut.ai-use.v2")
             put("projectName", projectName.trim().take(MAX_PROJECT_NAME_CHARS))
             put("exportedFileName", exportedFileName.trim().take(MAX_FILE_NAME_CHARS))
             put("generatedAtEpochMs", generatedAtEpochMs)

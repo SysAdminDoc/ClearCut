@@ -1,6 +1,6 @@
 package com.novacut.editor.ui
 
-object NovaCutTestTags {
+object ClearCutTestTags {
     const val PROJECTS_SCREEN = "projects.screen"
     const val PROJECTS_CREATE_PROJECT = "projects.createProject"
     const val PROJECTS_SETTINGS = "projects.settings"

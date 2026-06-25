@@ -8,7 +8,7 @@ import java.io.File
 /**
  * R7.2 model registry closure guard.
  *
- * Active rows in docs/models.md describe model bytes NovaCut may load at
+ * Active rows in docs/models.md describe model bytes ClearCut may load at
  * runtime. A planning row can be incomplete, but an active row cannot carry a
  * floating URL or a placeholder checksum.
  */

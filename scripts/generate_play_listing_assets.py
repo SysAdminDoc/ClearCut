@@ -88,7 +88,7 @@ def phone_chrome(title: str, body: str) -> str:
         [
             rect(46, 56, 988, 1808, "bg", 54, "line"),
             rect(46, 56, 988, 104, "panel", 54),
-            text(86, 124, "NovaCut", 34, "text", 700),
+            text(86, 124, "ClearCut", 34, "text", 700),
             text(816, 124, title, 24, "muted", 500),
             rect(502, 92, 76, 10, "line", 5),
             body,
@@ -101,7 +101,7 @@ def tablet_chrome(title: str, body: str) -> str:
         [
             rect(42, 42, 1836, 996, "bg", 38, "line"),
             rect(42, 42, 1836, 86, "panel", 38),
-            text(82, 98, "NovaCut", 30, "text", 700),
+            text(82, 98, "ClearCut", 30, "text", 700),
             text(1520, 98, title, 22, "muted", 500),
             body,
         ]
@@ -229,7 +229,7 @@ def privacy_phone() -> str:
             "\n".join(
                 [
                     text(86, 254, "Privacy dashboard", 48, "text", 750),
-                    text(86, 304, "What NovaCut stores and how to clear it", 24, "muted", 500),
+                    text(86, 304, "What ClearCut stores and how to clear it", 24, "muted", 500),
                     *rows,
                     rect(86, 1212, 908, 256, "panel", 24),
                     text(126, 1280, "Model downloads are optional", 32, "text", 700),
@@ -381,7 +381,7 @@ def feature_graphic() -> str:
                 '<circle cx="810" cy="88" r="176" fill="#123848"/>',
                 '<circle cx="104" cy="430" r="180" fill="#35263d"/>',
                 logo_mark(188, 250, 0.92),
-                text(352, 176, "NovaCut", 60, "text", 800),
+                text(352, 176, "ClearCut", 60, "text", 800),
                 text(356, 230, "Private Android video editing", 28, "cyan", 700),
                 rect(356, 274, 164, 52, "cyan", 18),
                 rect(540, 274, 188, 52, "coral", 18),
@@ -415,8 +415,8 @@ def icon_svg() -> str:
 
 
 ASSETS = [
-    ("icon.png", (512, 512), icon_svg, "PNG32", "NovaCut app icon", "High-resolution Play Store icon."),
-    ("featureGraphic.png", (1024, 500), feature_graphic, "PNG24", "NovaCut feature graphic", "Feature graphic for the main store listing."),
+    ("icon.png", (512, 512), icon_svg, "PNG32", "ClearCut app icon", "High-resolution Play Store icon."),
+    ("featureGraphic.png", (1024, 500), feature_graphic, "PNG24", "ClearCut feature graphic", "Feature graphic for the main store listing."),
     ("phoneScreenshots/01_project_gallery.png", (1080, 1920), gallery_phone, "PNG24", "Project gallery screen", "Project gallery with local autosaved projects."),
     ("phoneScreenshots/02_editor_timeline.png", (1080, 1920), editor_phone, "PNG24", "Editor timeline screen", "Preview, editing tools, and multi-track timeline."),
     ("phoneScreenshots/03_export_confidence.png", (1080, 1920), export_phone, "PNG24", "Export settings screen", "Export confidence and platform settings."),
@@ -440,7 +440,7 @@ def render(source: Path, target: Path, png_type: str) -> None:
 def main() -> int:
     SOURCE.mkdir(parents=True, exist_ok=True)
     inventory = {
-        "schema": "com.novacut.play-listing-assets.v1",
+        "schema": "com.clearcut.play-listing-assets.v1",
         "updated": "2026-06-04",
         "assets": [],
     }

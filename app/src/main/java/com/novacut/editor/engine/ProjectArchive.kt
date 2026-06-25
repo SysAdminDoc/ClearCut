@@ -17,7 +17,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Bundles a NovaCut project (state + media files) into a zip archive for backup/transfer.
+ * Bundles a ClearCut project (state + media files) into a zip archive for backup/transfer.
  */
 object ProjectArchive {
 
@@ -87,7 +87,7 @@ object ProjectArchive {
     )
 
     /**
-     * Export a project as a .novacut zip archive.
+     * Export a project as a .clearcut zip archive.
      * Includes the project JSON + all source media files.
      */
     suspend fun exportArchive(
@@ -173,7 +173,7 @@ object ProjectArchive {
     ).state
 
     /**
-     * Import a .novacut zip archive and produce a structured [ImportResult]
+     * Import a .clearcut zip archive and produce a structured [ImportResult]
      * with diagnostics for the UI.
      *
      * @param existingProjectIds caller-supplied set used to detect ID
