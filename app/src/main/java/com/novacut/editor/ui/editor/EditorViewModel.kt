@@ -652,7 +652,7 @@ class EditorViewModel @Inject constructor(
     // Stored outside EditorState to avoid recomposition on every resize
     @Volatile
     private var timelineWidthPx: Float = 0f
-    private val waveformLoadJobs = mutableMapOf<String, Job>()
+    private val waveformLoadJobs = java.util.concurrent.ConcurrentHashMap<String, Job>()
     private var gapPlaybackJob: Job? = null
 
     private fun visibleTimelineDurationMs(state: EditorState = _state.value): Long? {

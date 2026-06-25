@@ -324,9 +324,8 @@ class SettingsViewModel @Inject constructor(
                 repo.settings.first()
             } catch (error: CancellationException) {
                 throw error
-            } catch (_: Exception) {
-                // The settings screen still opens with AppSettings defaults; the
-                // reset-report store is independent of the damaged DataStore.
+            } catch (e: Exception) {
+                android.util.Log.e("SettingsViewModel", "DataStore read failed, using defaults", e)
             }
             val latest = withContext(Dispatchers.IO) { repo.latestSettingsResetReport() }
             _settingsResetNotice.value = latest?.let {

@@ -87,39 +87,41 @@ class ExportDelegate(
         stateFlow.update { it.copyExport(transform) }
     }
 
-    private fun buildAudioConformance(state: EditorState): com.novacut.editor.engine.AudioConformanceReport? {
+    private suspend fun buildAudioConformance(state: EditorState): com.novacut.editor.engine.AudioConformanceReport? {
         val engine = audioEngine ?: return null
         val allClips = state.tracks.flatMap { it.clips }
         if (allClips.isEmpty()) return null
-        val formats = mutableMapOf<String, com.novacut.editor.engine.AudioFormatInfo>()
-        for (clip in allClips) {
-            val extractor = android.media.MediaExtractor()
-            try {
-                extractor.setDataSource(appContext, clip.sourceUri, null)
-                for (i in 0 until extractor.trackCount) {
-                    val fmt = extractor.getTrackFormat(i)
-                    val mime = fmt.getString(android.media.MediaFormat.KEY_MIME) ?: continue
-                    if (mime.startsWith("audio/")) {
-                        val sr = if (fmt.containsKey(android.media.MediaFormat.KEY_SAMPLE_RATE))
-                            fmt.getInteger(android.media.MediaFormat.KEY_SAMPLE_RATE) else 0
-                        val ch = if (fmt.containsKey(android.media.MediaFormat.KEY_CHANNEL_COUNT))
-                            fmt.getInteger(android.media.MediaFormat.KEY_CHANNEL_COUNT) else 0
-                        val dur = if (fmt.containsKey(android.media.MediaFormat.KEY_DURATION))
-                            fmt.getLong(android.media.MediaFormat.KEY_DURATION) else 0L
-                        if (sr > 0 && ch > 0) {
-                            formats[clip.id] = com.novacut.editor.engine.AudioFormatInfo(sr, ch, mime, dur)
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val formats = mutableMapOf<String, com.novacut.editor.engine.AudioFormatInfo>()
+            for (clip in allClips) {
+                val extractor = android.media.MediaExtractor()
+                try {
+                    extractor.setDataSource(appContext, clip.sourceUri, null)
+                    for (i in 0 until extractor.trackCount) {
+                        val fmt = extractor.getTrackFormat(i)
+                        val mime = fmt.getString(android.media.MediaFormat.KEY_MIME) ?: continue
+                        if (mime.startsWith("audio/")) {
+                            val sr = if (fmt.containsKey(android.media.MediaFormat.KEY_SAMPLE_RATE))
+                                fmt.getInteger(android.media.MediaFormat.KEY_SAMPLE_RATE) else 0
+                            val ch = if (fmt.containsKey(android.media.MediaFormat.KEY_CHANNEL_COUNT))
+                                fmt.getInteger(android.media.MediaFormat.KEY_CHANNEL_COUNT) else 0
+                            val dur = if (fmt.containsKey(android.media.MediaFormat.KEY_DURATION))
+                                fmt.getLong(android.media.MediaFormat.KEY_DURATION) else 0L
+                            if (sr > 0 && ch > 0) {
+                                formats[clip.id] = com.novacut.editor.engine.AudioFormatInfo(sr, ch, mime, dur)
+                            }
+                            break
                         }
-                        break
                     }
+                } catch (e: Exception) {
+                    Log.w("ExportDelegate", "Audio conformance probe failed for clip ${clip.id}", e)
+                } finally {
+                    extractor.release()
                 }
-            } catch (e: Exception) {
-                Log.w("ExportDelegate", "Audio conformance probe failed for clip ${clip.id}", e)
-            } finally {
-                extractor.release()
             }
+            if (formats.isEmpty()) return@withContext null
+            engine.buildConformanceReport(formats)
         }
-        if (formats.isEmpty()) return null
-        return engine.buildConformanceReport(formats)
     }
 
     fun loadExportHistory() {
@@ -486,6 +488,10 @@ class ExportDelegate(
             showToast(appContext.getString(R.string.export_no_clips_toast))
             return
         }
+        scope.launch { startExportAsync(outputDir, preferredOutputName, currentState) }
+    }
+
+    private suspend fun startExportAsync(outputDir: File, preferredOutputName: String?, currentState: EditorState) {
         val healthReport = mediaHealthPreflight(currentState)
         val audioConformance = buildAudioConformance(currentState)
         val mediaPreflight = ExportMediaPreflight.evaluate(
@@ -1436,7 +1442,7 @@ class ExportDelegate(
         return candidate
     }
 
-    private fun saveExportedFile(file: File): String {
+    private suspend fun saveExportedFile(file: File): String {
         val usesImageCollection = exportUsesImageCollection(file.name)
         val relativeDirectory = if (usesImageCollection) Environment.DIRECTORY_PICTURES else Environment.DIRECTORY_MOVIES
         val mimeType = exportMimeTypeFor(file.name)
@@ -1473,10 +1479,7 @@ class ExportDelegate(
                 val backoffsMs = longArrayOf(0L, 100L, 400L)
                 for (delayMs in backoffsMs) {
                     if (delayMs > 0L) {
-                        try { Thread.sleep(delayMs) } catch (_: InterruptedException) {
-                            Thread.currentThread().interrupt()
-                            break
-                        }
+                        kotlinx.coroutines.delay(delayMs)
                     }
                     updated = resolver.update(contentUri, values, null, null)
                     if (updated >= 1) break
