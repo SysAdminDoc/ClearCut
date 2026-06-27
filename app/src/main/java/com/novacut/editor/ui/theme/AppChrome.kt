@@ -254,6 +254,7 @@ fun ClearCutSecondaryButton(
                 scaleX = buttonScale
                 scaleY = buttonScale
             }
+            .semantics { contentDescription = text }
             .defaultMinSize(minHeight = TouchTarget.minimum)
     ) {
         if (icon != null) {
@@ -378,30 +379,60 @@ fun ClearCutChromeIconButton(
     enabled: Boolean = true
 ) {
     val colors = LocalClearCutColors.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val resolvedContainer = if (containerColor == Mocha.PanelHighest) colors.panelHighest else containerColor
+    val resolvedBorder = if (borderColor == Mocha.CardStroke) colors.cardStroke else borderColor
+    val resolvedTint = if (tint == Mocha.Subtext1) colors.subtext else tint
+    val animatedContainer by animateColorAsState(
+        targetValue = when {
+            !enabled -> colors.panelRaised.copy(alpha = 0.46f)
+            pressed -> resolvedContainer.copy(alpha = if (colors.highContrast) 1f else 0.88f)
+            else -> resolvedContainer
+        },
+        animationSpec = tween(durationMillis = Motion.DurationFast, easing = Motion.StandardEasing),
+        label = "chromeIconButtonContainer"
+    )
+    val animatedBorder by animateColorAsState(
+        targetValue = when {
+            !enabled -> colors.cardStroke.copy(alpha = 0.46f)
+            pressed -> if (colors.highContrast) colors.cardStrokeStrong else resolvedTint.copy(alpha = 0.48f)
+            colors.highContrast && borderColor == Mocha.CardStroke -> colors.cardStrokeStrong
+            else -> resolvedBorder
+        },
+        animationSpec = tween(durationMillis = Motion.DurationFast, easing = Motion.StandardEasing),
+        label = "chromeIconButtonBorder"
+    )
+    val animatedTint by animateColorAsState(
+        targetValue = if (enabled) resolvedTint else colors.disabledText.copy(alpha = 0.72f),
+        animationSpec = tween(durationMillis = Motion.DurationFast, easing = Motion.StandardEasing),
+        label = "chromeIconButtonTint"
+    )
+    val buttonScale by animateFloatAsState(
+        targetValue = if (enabled && pressed) 0.965f else 1f,
+        animationSpec = Motion.fast(),
+        label = "chromeIconButtonScale"
+    )
     Surface(
-        modifier = modifier,
-        color = if (enabled) containerColor else colors.panelRaised.copy(alpha = 0.46f),
+        modifier = modifier
+            .graphicsLayer {
+                scaleX = buttonScale
+                scaleY = buttonScale
+            },
+        color = animatedContainer,
         shape = shape,
-        border = BorderStroke(
-            1.dp,
-            if (!enabled) {
-                colors.cardStroke.copy(alpha = 0.46f)
-            } else if (colors.highContrast && borderColor == Mocha.CardStroke) {
-                colors.cardStrokeStrong
-            } else {
-                borderColor
-            }
-        )
+        border = BorderStroke(1.dp, animatedBorder)
     ) {
         IconButton(
             onClick = onClick,
             enabled = enabled,
+            interactionSource = interactionSource,
             modifier = Modifier.size(size)
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = contentDescription,
-                tint = if (enabled) tint else colors.disabledText.copy(alpha = 0.72f),
+                tint = animatedTint,
                 modifier = Modifier.size(18.dp)
             )
         }

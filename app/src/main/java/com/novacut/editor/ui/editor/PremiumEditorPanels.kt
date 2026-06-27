@@ -22,7 +22,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -39,10 +38,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
+import com.novacut.editor.ui.theme.ClearCutChromeIconButton
 import com.novacut.editor.ui.theme.LocalClearCutColors
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
-import com.novacut.editor.ui.theme.TouchTarget
 
 @Composable
 fun PremiumEditorPanel(
@@ -247,23 +246,14 @@ fun PremiumPanelIconButton(
     val resolvedContainer = if (containerColor == Color.Unspecified) colors.panelHighest else containerColor
     val resolvedTint = if (tint == Color.Unspecified) colors.subtext else tint
 
-    Surface(
+    ClearCutChromeIconButton(
+        icon = icon,
+        contentDescription = contentDescription,
+        onClick = onClick,
         modifier = modifier,
-        color = resolvedContainer,
-        shape = RoundedCornerShape(Radius.md),
-        border = BorderStroke(1.dp, if (colors.highContrast) colors.cardStrokeStrong else colors.cardStroke)
-    ) {
-        IconButton(
-            onClick = onClick,
-            enabled = enabled,
-            modifier = Modifier.size(TouchTarget.minimum)
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = if (enabled) resolvedTint else colors.disabledText.copy(alpha = 0.72f),
-                modifier = Modifier.size(18.dp)
-            )
-        }
-    }
+        tint = resolvedTint,
+        containerColor = resolvedContainer,
+        borderColor = if (colors.highContrast) colors.cardStrokeStrong else colors.cardStroke,
+        enabled = enabled
+    )
 }

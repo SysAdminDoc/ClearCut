@@ -70,7 +70,6 @@ import com.novacut.editor.ui.theme.ClearCutSecondaryButton
 import com.novacut.editor.ui.theme.LocalClearCutColors
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
-import com.novacut.editor.ui.theme.TouchTarget
 import java.util.Locale
 
 private const val PROJECT_RENAME_MAX_CHARS = 80
@@ -646,14 +645,12 @@ private fun ProjectHomeHero(
                 },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = onClearSearch) {
-                            Icon(
-                                imageVector = Icons.Default.Clear,
-                                contentDescription = stringResource(R.string.projects_clear),
-                                tint = Mocha.Subtext0,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
+                        ClearCutChromeIconButton(
+                            icon = Icons.Default.Clear,
+                            contentDescription = stringResource(R.string.projects_clear),
+                            onClick = onClearSearch,
+                            size = 40.dp
+                        )
                     }
                 },
                 singleLine = true,
@@ -1279,23 +1276,12 @@ private fun ProjectCard(
                     }
 
                     Box {
-                        Surface(
-                            color = Mocha.PanelHighest,
-                            shape = RoundedCornerShape(Radius.lg),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke)
-                        ) {
-                            IconButton(
-                                onClick = { showOverflowMenu = true },
-                                modifier = Modifier.size(TouchTarget.minimum)
-                            ) {
-                                Icon(
-                                    Icons.Default.MoreVert,
-                                    contentDescription = stringResource(R.string.projects_more_cd),
-                                    tint = Mocha.Subtext0,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
+                        ClearCutChromeIconButton(
+                            icon = Icons.Default.MoreVert,
+                            contentDescription = stringResource(R.string.projects_more_cd),
+                            onClick = { showOverflowMenu = true },
+                            shape = RoundedCornerShape(Radius.lg)
+                        )
                         DropdownMenu(
                             expanded = showOverflowMenu,
                             onDismissRequest = { showOverflowMenu = false },

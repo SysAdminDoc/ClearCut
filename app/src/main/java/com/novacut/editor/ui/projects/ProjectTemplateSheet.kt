@@ -37,7 +37,6 @@ import com.novacut.editor.ui.theme.ClearCutSectionHeader
 import com.novacut.editor.ui.theme.ClearCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
-import com.novacut.editor.ui.theme.TouchTarget
 
 data class ProjectTemplateUI(
     val id: String,
@@ -644,20 +643,15 @@ private fun TemplateActionButton(
     tint: Color,
     onClick: () -> Unit
 ) {
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = tint.copy(alpha = 0.12f),
-        border = androidx.compose.foundation.BorderStroke(1.dp, tint.copy(alpha = 0.18f))
-    ) {
-        IconButton(onClick = onClick, modifier = Modifier.size(TouchTarget.minimum)) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = tint,
-                modifier = Modifier.size(16.dp)
-            )
-        }
-    }
+    ClearCutChromeIconButton(
+        icon = icon,
+        contentDescription = contentDescription,
+        onClick = onClick,
+        tint = tint,
+        containerColor = tint.copy(alpha = 0.12f),
+        borderColor = tint.copy(alpha = 0.18f),
+        shape = RoundedCornerShape(Radius.md)
+    )
 }
 
 private fun formatCategory(category: TemplateCategory): String {

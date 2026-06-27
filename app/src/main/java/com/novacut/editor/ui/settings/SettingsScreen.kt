@@ -7,8 +7,13 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings as AndroidSettings
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -20,6 +25,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -65,9 +71,9 @@ import com.novacut.editor.ui.theme.ClearCutPrimaryButton
 import com.novacut.editor.ui.theme.ClearCutScreenBackground
 import com.novacut.editor.ui.theme.ClearCutSectionHeader
 import com.novacut.editor.ui.theme.ClearCutSecondaryButton
+import com.novacut.editor.ui.theme.Motion
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
-import com.novacut.editor.ui.theme.TouchTarget
 import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.math.roundToInt
@@ -1063,13 +1069,11 @@ private fun SettingsFeedbackBanner(
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis
             )
-            IconButton(onClick = onDismiss, modifier = Modifier.size(TouchTarget.minimum)) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = stringResource(R.string.close),
-                    tint = Mocha.Subtext0
-                )
-            }
+            ClearCutChromeIconButton(
+                icon = Icons.Default.Close,
+                contentDescription = stringResource(R.string.close),
+                onClick = onDismiss
+            )
         }
     }
 }
@@ -1738,20 +1742,57 @@ private fun SettingsTile(
     trailing: @Composable RowScope.() -> Unit
 ) {
     val colors = LocalClearCutColors.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val tileContainer by animateColorAsState(
+        targetValue = if (onClick != null && pressed) {
+            colors.panelHighest.copy(alpha = if (colors.highContrast) 1f else 0.88f)
+        } else {
+            colors.panelHighest
+        },
+        animationSpec = tween(durationMillis = Motion.DurationFast, easing = Motion.StandardEasing),
+        label = "settingsTileContainer"
+    )
+    val tileBorder by animateColorAsState(
+        targetValue = when {
+            onClick != null && pressed -> accent.copy(alpha = if (colors.highContrast) 0.82f else 0.42f)
+            colors.highContrast -> colors.cardStrokeStrong
+            else -> colors.cardStroke.copy(alpha = 0.9f)
+        },
+        animationSpec = tween(durationMillis = Motion.DurationFast, easing = Motion.StandardEasing),
+        label = "settingsTileBorder"
+    )
+    val tileScale by animateFloatAsState(
+        targetValue = if (onClick != null && pressed) 0.992f else 1f,
+        animationSpec = Motion.fast(),
+        label = "settingsTileScale"
+    )
     Surface(
-        color = colors.panelHighest,
+        modifier = Modifier.graphicsLayer {
+            scaleX = tileScale
+            scaleY = tileScale
+        },
+        color = tileContainer,
         shape = RoundedCornerShape(Radius.md),
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            if (colors.highContrast) colors.cardStrokeStrong else colors.cardStroke.copy(alpha = 0.9f)
-        )
+        border = androidx.compose.foundation.BorderStroke(1.dp, tileBorder)
     ) {
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
                 .then(modifier)
                 .defaultMinSize(minHeight = 72.dp)
-                .then(if (onClick != null) Modifier.clickable(role = role, onClick = onClick) else Modifier)
+                .then(
+                    if (onClick != null) {
+                        Modifier.clickable(
+                            interactionSource = interactionSource,
+                            indication = LocalIndication.current,
+                            role = role,
+                            onClick = onClick
+                        )
+                    } else {
+                        Modifier
+                    }
+                )
                 .then(
                     if (semanticState != null) {
                         Modifier.semantics { stateDescription = semanticState }
