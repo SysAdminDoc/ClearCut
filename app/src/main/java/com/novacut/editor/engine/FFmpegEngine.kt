@@ -147,11 +147,8 @@ class FFmpegEngine @Inject constructor(
         sampleRate: Int = 16000,
         channels: Int = 1
     ): Boolean = withContext(Dispatchers.IO) {
-        val inputFile = File(inputUri)
-        if (inputFile.isFile) {
-            val v = NativeProcessingPolicy.validateVideoFile(inputFile, "extractAudioToWav")
-            if (v != null) return@withContext NativeProcessingPolicy.logAndReject(v)
-        }
+        val v = validateInputPath(inputUri, "extractAudioToWav")
+        if (v != null) return@withContext NativeProcessingPolicy.logAndReject(v)
         executeArguments(
             listOf(
                 "-y",
@@ -540,6 +537,18 @@ class FFmpegEngine @Inject constructor(
         "content" -> FFmpegKitConfig.getSafParameterForRead(context, uri)
         "file" -> uri.path ?: uri.toString()
         else -> uri.toString()
+    }
+
+    private fun validateInputPath(
+        inputUri: String,
+        operation: String
+    ): NativeProcessingPolicy.PolicyViolation? {
+        val inputFile = File(inputUri)
+        return if (inputFile.isFile) {
+            NativeProcessingPolicy.validateVideoFile(inputFile, operation)
+        } else {
+            NativeProcessingPolicy.validateVideoPath(inputUri, operation)
+        }
     }
 
     private fun mediaDurationMs(file: File): Long? {

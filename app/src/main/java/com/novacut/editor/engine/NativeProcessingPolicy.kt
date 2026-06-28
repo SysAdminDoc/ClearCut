@@ -11,6 +11,7 @@ import java.io.File
 object NativeProcessingPolicy {
 
     private const val TAG = "NativeProcessingPolicy"
+    const val FFMPEG_MAGIC_YUV_ADVISORY = "CVE-2026-8461"
 
     const val MAX_VIDEO_INPUT_BYTES = 4L * 1024 * 1024 * 1024 // 4 GB
     const val MAX_AUDIO_INPUT_BYTES = 512L * 1024 * 1024      // 512 MB
@@ -29,7 +30,7 @@ object NativeProcessingPolicy {
 
     private val SUPPORTED_VIDEO_MIMES = setOf(
         "video/mp4", "video/3gpp", "video/webm", "video/x-matroska",
-        "video/quicktime", "video/avi", "video/x-msvideo"
+        "video/quicktime"
     )
     private val SUPPORTED_AUDIO_MIMES = setOf(
         "audio/mpeg", "audio/mp4", "audio/wav", "audio/x-wav",
@@ -44,14 +45,18 @@ object NativeProcessingPolicy {
     )
 
     private val SUPPORTED_VIDEO_EXTENSIONS = setOf(
-        "mp4", "3gp", "webm", "mkv", "mov", "avi"
+        "mp4", "3gp", "webm", "mkv", "mov"
     )
     private val SUPPORTED_AUDIO_EXTENSIONS = setOf(
-        "mp3", "m4a", "wav", "ogg", "flac", "aac", "opus"
+        "mp3", "m4a", "wav", "ogg", "flac", "aac", "opus", "pcm"
     )
     private val SUPPORTED_SUBTITLE_EXTENSIONS = setOf(
         "srt", "ssa", "ass", "vtt"
     )
+    private val BLOCKED_NATIVE_VIDEO_MIMES = setOf(
+        "video/avi", "video/msvideo", "video/x-msvideo", "application/x-troff-msvideo"
+    )
+    private val BLOCKED_NATIVE_VIDEO_EXTENSIONS = setOf("avi")
 
     sealed class PolicyViolation(val operation: String) {
         class Oversized(
@@ -66,14 +71,26 @@ object NativeProcessingPolicy {
             operation: String
         ) : PolicyViolation(operation)
 
+        class BlockedNativeDecoderInput(
+            val advisory: String,
+            val detectedMime: String?,
+            val detectedExtension: String?,
+            val detail: String,
+            operation: String
+        ) : PolicyViolation(operation)
+
         fun userMessage(): String = when (this) {
             is Oversized -> "File is too large for $operation"
             is UnsupportedFormat -> "Unsupported file format for $operation"
+            is BlockedNativeDecoderInput ->
+                "This media container is blocked for native processing until the bundled decoder is updated. Convert it to MP4 or WebM and try again."
         }
 
         fun diagnosticMessage(): String = when (this) {
             is Oversized -> "$operation: input $actualBytes bytes exceeds limit $maxBytes"
             is UnsupportedFormat -> "$operation: unsupported mime=$detectedMime ext=$detectedExtension"
+            is BlockedNativeDecoderInput ->
+                "$operation: blocked native decoder input advisory=$advisory mime=$detectedMime ext=$detectedExtension detail=$detail"
         }
     }
 
@@ -87,8 +104,21 @@ object NativeProcessingPolicy {
         if (size > maxBytes) {
             return PolicyViolation.Oversized(size, maxBytes, operation)
         }
-        val ext = file.extension.lowercase()
+        val ext = normalizeExtension(file.extension)
+        blockedNativeDecoderViolation(null, ext, operation)?.let { return it }
         if (ext.isNotEmpty() && ext !in SUPPORTED_VIDEO_EXTENSIONS && ext !in SUPPORTED_AUDIO_EXTENSIONS) {
+            return PolicyViolation.UnsupportedFormat(null, ext, operation)
+        }
+        return null
+    }
+
+    fun validateVideoPath(
+        pathOrName: String,
+        operation: String
+    ): PolicyViolation? {
+        val ext = extensionFromName(pathOrName)
+        blockedNativeDecoderViolation(null, ext, operation)?.let { return it }
+        if (ext != null && ext !in SUPPORTED_VIDEO_EXTENSIONS && ext !in SUPPORTED_AUDIO_EXTENSIONS) {
             return PolicyViolation.UnsupportedFormat(null, ext, operation)
         }
         return null
@@ -104,7 +134,7 @@ object NativeProcessingPolicy {
         if (size > maxBytes) {
             return PolicyViolation.Oversized(size, maxBytes, operation)
         }
-        val ext = file.extension.lowercase()
+        val ext = normalizeExtension(file.extension)
         if (ext.isNotEmpty() && ext !in SUPPORTED_AUDIO_EXTENSIONS) {
             return PolicyViolation.UnsupportedFormat(null, ext, operation)
         }
@@ -121,7 +151,7 @@ object NativeProcessingPolicy {
         if (size > maxBytes) {
             return PolicyViolation.Oversized(size, maxBytes, operation)
         }
-        val ext = file.extension.lowercase()
+        val ext = normalizeExtension(file.extension)
         if (ext.isNotEmpty() && ext !in SUPPORTED_SUBTITLE_EXTENSIONS) {
             return PolicyViolation.UnsupportedFormat(null, ext, operation)
         }
@@ -140,13 +170,14 @@ object NativeProcessingPolicy {
         if (size != null && size > maxBytes) {
             return PolicyViolation.Oversized(size, maxBytes, operation)
         }
-        val mime = resolver.getType(uri)
-        val ext = extensionFromUri(uri)
+        val mime = normalizeMime(resolver.getType(uri))
+        val ext = extensionFromUri(resolver, uri)
+        blockedNativeDecoderViolation(mime, ext, operation)?.let { return it }
         if (mime != null && mime !in supportedMimes) {
             return PolicyViolation.UnsupportedFormat(mime, ext, operation)
         }
         if (mime == null && ext != null) {
-            val mimeFromExt = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext)
+            val mimeFromExt = normalizeMime(MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext))
             if (mimeFromExt != null && mimeFromExt !in supportedMimes) {
                 return PolicyViolation.UnsupportedFormat(mimeFromExt, ext, operation)
             }
@@ -177,6 +208,30 @@ object NativeProcessingPolicy {
         return false
     }
 
+    fun isBlockedNativeDecoderInput(
+        detectedMime: String?,
+        detectedExtension: String?
+    ): Boolean {
+        val mime = normalizeMime(detectedMime)
+        val ext = normalizeExtension(detectedExtension)
+        return mime in BLOCKED_NATIVE_VIDEO_MIMES || ext in BLOCKED_NATIVE_VIDEO_EXTENSIONS
+    }
+
+    private fun blockedNativeDecoderViolation(
+        detectedMime: String?,
+        detectedExtension: String?,
+        operation: String
+    ): PolicyViolation? {
+        if (!isBlockedNativeDecoderInput(detectedMime, detectedExtension)) return null
+        return PolicyViolation.BlockedNativeDecoderInput(
+            advisory = FFMPEG_MAGIC_YUV_ADVISORY,
+            detectedMime = normalizeMime(detectedMime),
+            detectedExtension = normalizeExtension(detectedExtension).ifEmpty { null },
+            detail = "AVI native decode is blocked because the bundled FFmpegKit fork is below the FFmpeg 8.1.2 MagicYUV parser fix.",
+            operation = operation
+        )
+    }
+
     private fun queryUriSize(resolver: ContentResolver, uri: Uri): Long? {
         if (uri.scheme == "file") {
             val path = uri.path ?: return null
@@ -195,10 +250,52 @@ object NativeProcessingPolicy {
         }
     }
 
-    private fun extensionFromUri(uri: Uri): String? {
-        val path = uri.path ?: return null
-        val dot = path.lastIndexOf('.')
-        if (dot < 0 || dot == path.lastIndex) return null
-        return path.substring(dot + 1).lowercase()
+    private fun extensionFromUri(resolver: ContentResolver, uri: Uri): String? {
+        return extensionFromName(uri.path)
+            ?: extensionFromName(uri.lastPathSegment)
+            ?: extensionFromName(queryDisplayName(resolver, uri))
+    }
+
+    private fun queryDisplayName(resolver: ContentResolver, uri: Uri): String? {
+        if (uri.scheme == "file") return uri.path?.let { File(it).name }
+        return try {
+            resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (idx >= 0 && !cursor.isNull(idx)) cursor.getString(idx) else null
+                } else null
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun extensionFromName(name: String?): String? {
+        val cleaned = name
+            ?.substringBefore('?')
+            ?.substringBefore('#')
+            ?.takeIf { it.isNotBlank() }
+            ?: return null
+        val separator = maxOf(cleaned.lastIndexOf('/'), cleaned.lastIndexOf('\\'))
+        val fileName = cleaned.substring(separator + 1)
+        val dot = fileName.lastIndexOf('.')
+        if (dot < 0 || dot == fileName.lastIndex) return null
+        return normalizeExtension(fileName.substring(dot + 1))
+    }
+
+    private fun normalizeMime(mime: String?): String? {
+        return mime
+            ?.substringBefore(';')
+            ?.trim()
+            ?.lowercase()
+            ?.takeIf { it.isNotEmpty() }
+    }
+
+    private fun normalizeExtension(extension: String?): String {
+        return extension
+            ?.trim()
+            ?.removePrefix(".")
+            ?.lowercase()
+            .orEmpty()
     }
 }
