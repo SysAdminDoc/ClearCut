@@ -1463,6 +1463,13 @@
     <string name="panel_drawing_title">Dibujar</string>
     <string name="panel_drawing_done">hecho</string>
     <string name="panel_drawing_size">Tamaño</string>
+    <string name="drawing_color_red">Rojo</string>
+    <string name="drawing_color_blue">Azul</string>
+    <string name="drawing_color_green">Verde</string>
+    <string name="drawing_color_yellow">Amarillo</string>
+    <string name="drawing_color_peach">Melocotón</string>
+    <string name="drawing_color_mauve">Malva</string>
+    <string name="cd_drawing_color">Color de dibujo: %1$s</string>
     <string name="panel_effect_library_subtitle">Guarde, intercambie y reutilice cadenas de efectos para que su apariencia se mantenga consistente en todos los clips y proyectos.</string>
     <string name="panel_effect_library_description">Guarde, comparta y reutilice cadenas de efectos en clips y proyectos.</string>
     <string name="panel_effect_library_workflow_title">Flujo de trabajo en cadena</string>

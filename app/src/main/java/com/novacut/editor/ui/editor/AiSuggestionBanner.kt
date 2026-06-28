@@ -15,16 +15,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.novacut.editor.R
+import com.novacut.editor.ui.theme.ClearCutChromeIconButton
+import com.novacut.editor.ui.theme.ClearCutPrimaryButton
 import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.Motion
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
-import com.novacut.editor.ui.theme.TouchTarget
 
 @Composable
 fun AiSuggestionBanner(
@@ -94,33 +94,17 @@ fun AiSuggestionBanner(
                         modifier = Modifier.weight(1f)
                     )
                     Spacer(modifier = Modifier.width(Spacing.sm))
-                    Surface(
-                        onClick = { onApply(s.actionId) },
-                        color = Mocha.Rosewater,
-                        contentColor = Mocha.Midnight,
-                        shape = RoundedCornerShape(Radius.md),
-                        modifier = Modifier.defaultMinSize(minHeight = 40.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.ai_apply),
-                            color = Mocha.Midnight,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm)
-                        )
-                    }
+                    ClearCutPrimaryButton(
+                        text = stringResource(R.string.ai_apply),
+                        onClick = { onApply(s.actionId) }
+                    )
                     Spacer(modifier = Modifier.width(Spacing.xs))
-                    IconButton(
+                    ClearCutChromeIconButton(
+                        icon = Icons.Default.Close,
+                        contentDescription = stringResource(R.string.cd_dismiss_suggestion),
                         onClick = onDismiss,
-                        modifier = Modifier.size(TouchTarget.minimum)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = stringResource(R.string.cd_dismiss_suggestion),
-                            tint = Mocha.Subtext0,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
+                        size = 40.dp
+                    )
                 }
             }
         }

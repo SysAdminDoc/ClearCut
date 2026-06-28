@@ -27,12 +27,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.novacut.editor.R
 import com.novacut.editor.engine.ExportState
+import com.novacut.editor.ui.theme.ClearCutChromeIconButton
 import com.novacut.editor.ui.theme.Elevation
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.Motion
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
-import com.novacut.editor.ui.theme.TouchTarget
 import kotlinx.coroutines.delay
 
 /**
@@ -47,6 +48,7 @@ fun ExportProgressOverlay(
     onCancel: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = LocalClearCutColors.current
     val isExporting = exportState == ExportState.EXPORTING
     val progressValue = exportProgress.coerceIn(0f, 1f)
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -96,9 +98,12 @@ fun ExportProgressOverlay(
         modifier = modifier
     ) {
         Surface(
-            color = Mocha.PanelHighest.copy(alpha = 0.98f),
+            color = colors.panelHighest.copy(alpha = 0.98f),
             shape = RoundedCornerShape(Radius.xl),
-            border = BorderStroke(1.dp, Mocha.CardStrokeStrong.copy(alpha = 0.92f)),
+            border = BorderStroke(
+                1.dp,
+                if (colors.highContrast) colors.cardStrokeStrong else colors.cardStrokeStrong.copy(alpha = 0.92f)
+            ),
             shadowElevation = Elevation.toast,
             modifier = Modifier.semantics {
                 contentDescription = statusDescription
@@ -112,8 +117,8 @@ fun ExportProgressOverlay(
                         Brush.horizontalGradient(
                             listOf(
                                 Mocha.Mauve.copy(alpha = 0.12f),
-                                Mocha.PanelHighest,
-                                Mocha.PanelHighest
+                                colors.panelHighest,
+                                colors.panelHighest
                             )
                         )
                     )
@@ -148,7 +153,7 @@ fun ExportProgressOverlay(
                 ) {
                     Text(
                         text = title,
-                        color = Mocha.Text,
+                        color = colors.text,
                         style = MaterialTheme.typography.titleSmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -157,40 +162,32 @@ fun ExportProgressOverlay(
                     if (remaining > 0L) {
                         Text(
                             text = stringResource(R.string.export_eta_remaining, formatEta(remaining)),
-                            color = Mocha.Subtext1,
+                            color = colors.subtext,
                             style = MaterialTheme.typography.bodySmall
                         )
                         Text(
                             text = stringResource(R.string.export_elapsed, formatEta(elapsed)),
-                            color = Mocha.Subtext0,
+                            color = colors.subtext,
                             style = MaterialTheme.typography.labelMedium
                         )
                     } else if (elapsed > 0L) {
                         Text(
                             text = stringResource(R.string.export_elapsed, formatEta(elapsed)),
-                            color = Mocha.Subtext0,
+                            color = colors.subtext,
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
                 }
 
-                Surface(
-                    color = Mocha.Red.copy(alpha = 0.12f),
+                ClearCutChromeIconButton(
+                    icon = Icons.Default.Close,
+                    contentDescription = stringResource(R.string.cd_export_cancel),
+                    onClick = onCancel,
+                    tint = Mocha.Red,
+                    containerColor = Mocha.Red.copy(alpha = 0.12f),
+                    borderColor = Mocha.Red.copy(alpha = 0.24f),
                     shape = RoundedCornerShape(Radius.lg),
-                    border = BorderStroke(1.dp, Mocha.Red.copy(alpha = 0.24f))
-                ) {
-                    IconButton(
-                        onClick = onCancel,
-                        modifier = Modifier.size(TouchTarget.minimum)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = stringResource(R.string.cd_export_cancel),
-                            tint = Mocha.Red,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
+                )
             }
         }
     }

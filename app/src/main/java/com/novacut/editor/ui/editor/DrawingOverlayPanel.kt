@@ -21,20 +21,29 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import com.novacut.editor.R
 import com.novacut.editor.model.DrawingPath
+import com.novacut.editor.ui.theme.ClearCutChromeIconButton
+import com.novacut.editor.ui.theme.ClearCutPrimaryButton
 import com.novacut.editor.ui.theme.Mocha
+import com.novacut.editor.ui.theme.Radius
+import com.novacut.editor.ui.theme.Spacing
+import com.novacut.editor.ui.theme.TouchTarget
 
 private val drawingColors = listOf(
-    0xFFF38BA8L to "Red",
-    0xFF89B4FAL to "Blue",
-    0xFFA6E3A1L to "Green",
-    0xFFF9E2AFL to "Yellow",
-    0xFFFAB387L to "Peach",
-    0xFFCBA6F7L to "Mauve"
+    0xFFF38BA8L to R.string.drawing_color_red,
+    0xFF89B4FAL to R.string.drawing_color_blue,
+    0xFFA6E3A1L to R.string.drawing_color_green,
+    0xFFF9E2AFL to R.string.drawing_color_yellow,
+    0xFFFAB387L to R.string.drawing_color_peach,
+    0xFFCBA6F7L to R.string.drawing_color_mauve
 )
 
 @Composable
@@ -52,8 +61,8 @@ fun DrawingOverlayPanel(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Mocha.Mantle, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .padding(16.dp)
+            .background(Mocha.Mantle, RoundedCornerShape(topStart = Radius.xxl, topEnd = Radius.xxl))
+            .padding(Spacing.lg)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -61,73 +70,82 @@ fun DrawingOverlayPanel(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(stringResource(R.string.panel_drawing_title), color = Mocha.Text, fontSize = 16.sp)
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                IconButton(onClick = onUndo, modifier = Modifier.size(36.dp)) {
-                    @Suppress("DEPRECATION")
-                    Icon(Icons.Default.Undo, contentDescription = stringResource(R.string.cd_drawing_undo), tint = Mocha.Subtext0, modifier = Modifier.size(20.dp))
-                }
-                IconButton(onClick = onClear, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Default.DeleteSweep, contentDescription = stringResource(R.string.cd_drawing_clear), tint = Mocha.Subtext0, modifier = Modifier.size(20.dp))
-                }
-                FilledTonalButton(
-                    onClick = onDone,
-                    colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = Mocha.Mauve,
-                        contentColor = Mocha.Crust
-                    ),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
-                ) {
-                    Text(stringResource(R.string.panel_drawing_done), fontSize = 13.sp)
-                }
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                @Suppress("DEPRECATION")
+                ClearCutChromeIconButton(
+                    icon = Icons.Default.Undo,
+                    contentDescription = stringResource(R.string.cd_drawing_undo),
+                    onClick = onUndo,
+                    iconSize = 20.dp
+                )
+                ClearCutChromeIconButton(
+                    icon = Icons.Default.DeleteSweep,
+                    contentDescription = stringResource(R.string.cd_drawing_clear),
+                    onClick = onClear,
+                    tint = Mocha.Red,
+                    containerColor = Mocha.Red.copy(alpha = 0.10f),
+                    borderColor = Mocha.Red.copy(alpha = 0.20f),
+                    iconSize = 20.dp
+                )
+                ClearCutPrimaryButton(
+                    text = stringResource(R.string.panel_drawing_done),
+                    onClick = onDone
+                )
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(Spacing.md))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            drawingColors.forEach { (color, name) ->
+            drawingColors.forEach { (color, nameRes) ->
                 val isSelected = drawingColor == color && !isEraser
+                val colorName = stringResource(nameRes)
+                val swatchDescription = stringResource(R.string.cd_drawing_color, colorName)
+                val swatchState = stringResource(if (isSelected) R.string.state_on else R.string.state_off)
                 Box(
+                    contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(Color(color.toULong()), CircleShape)
-                        .then(
-                            if (isSelected) Modifier.border(2.dp, Mocha.Text, CircleShape)
-                            else Modifier
-                        )
-                        .clickable {
+                        .size(TouchTarget.minimum)
+                        .semantics {
+                            contentDescription = swatchDescription
+                            stateDescription = swatchState
+                        }
+                        .clickable(role = Role.Button) {
                             isEraser = false
                             onColorChanged(color)
                         }
-                )
-            }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            IconButton(
-                onClick = { isEraser = !isEraser },
-                modifier = Modifier
-                    .size(36.dp)
-                    .then(
-                        if (isEraser) Modifier.background(Mocha.Surface1, CircleShape)
-                        else Modifier
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(Color(color.toULong()), CircleShape)
+                            .then(
+                                if (isSelected) Modifier.border(2.dp, Mocha.Text, CircleShape)
+                                else Modifier.border(1.dp, Mocha.CardStroke.copy(alpha = 0.55f), CircleShape)
+                            )
                     )
-            ) {
-                Icon(
-                    Icons.Default.SquareFoot,
-                    contentDescription = stringResource(R.string.cd_drawing_eraser),
-                    tint = if (isEraser) Mocha.Text else Mocha.Subtext0,
-                    modifier = Modifier.size(20.dp)
-                )
+                }
             }
+
+            Spacer(modifier = Modifier.width(Spacing.xs))
+
+            ClearCutChromeIconButton(
+                icon = Icons.Default.SquareFoot,
+                contentDescription = stringResource(R.string.cd_drawing_eraser),
+                onClick = { isEraser = !isEraser },
+                tint = if (isEraser) Mocha.Text else Mocha.Subtext0,
+                containerColor = if (isEraser) Mocha.Surface1 else Mocha.PanelHighest,
+                borderColor = if (isEraser) Mocha.Mauve.copy(alpha = 0.55f) else Mocha.CardStroke,
+                iconSize = 20.dp
+            )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(Spacing.md))
 
         Row(
             modifier = Modifier.fillMaxWidth(),

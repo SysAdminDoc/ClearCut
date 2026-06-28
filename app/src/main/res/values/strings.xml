@@ -1585,6 +1585,13 @@
     <string name="panel_drawing_title">Draw</string>
     <string name="panel_drawing_done">Done</string>
     <string name="panel_drawing_size">Size</string>
+    <string name="drawing_color_red">Red</string>
+    <string name="drawing_color_blue">Blue</string>
+    <string name="drawing_color_green">Green</string>
+    <string name="drawing_color_yellow">Yellow</string>
+    <string name="drawing_color_peach">Peach</string>
+    <string name="drawing_color_mauve">Mauve</string>
+    <string name="cd_drawing_color">Drawing color: %1$s</string>
 
     <!-- EffectLibraryPanel -->
     <string name="panel_effect_library_subtitle">Save, swap, and reuse effect chains so your look stays consistent across clips and projects.</string>
