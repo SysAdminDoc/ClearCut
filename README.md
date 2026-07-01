@@ -30,6 +30,8 @@ Release history is maintained in git tags and the development checkout's local
 Planning files are local-only in the development checkout:
 
 - `ROADMAP.md` is the only source of truth for incomplete actionable work.
+- `Roadmap_Blocked.md` records blocked or operator-gated work until it can be
+  implemented locally.
 - `RESEARCH.md` stores consolidated product, platform, and ecosystem research.
 - Shipped work lives in git history and the local `CHANGELOG.md`.
 
@@ -154,6 +156,7 @@ Planning files are local-only in the development checkout:
 - Copy/paste effects between clips
 - Export effects to `.ncfx` file for sharing
 - Import effects from `.ncfx` with portable LUT references (filename-based, not absolute paths)
+- Import `.ncstyle` caption/text style packs — validates schema, installs to local registry, merges into style gallery
 
 ### Project Management
 - User template system (save/load/delete project templates, preserves non-media track clips)
@@ -310,21 +313,21 @@ keyPassword=yourpass
 
 Or via environment variables: `CLEARCUT_STORE_FILE`, `CLEARCUT_STORE_PASSWORD`, `CLEARCUT_KEY_ALIAS`, `CLEARCUT_KEY_PASSWORD`
 
-If release credentials are not configured, `assembleRelease` falls back to debug signing so CI and local verification can still produce a testable release artifact without relying on an embedded keystore.
+If release credentials are not configured, `assembleRelease` falls back to debug signing so local verification can still produce a testable release artifact without relying on an embedded keystore.
 
 ### Release Verification
-CI publishes a `.sha256` checksum, `.signing-cert-sha256` certificate-fingerprint sidecar, and GitHub artifact attestation next to every uploaded APK. To verify a downloaded release APK:
+Local release builds publish a `.sha256` checksum and `.signing-cert-sha256` certificate-fingerprint sidecar next to every APK. After building `debug`, `release`, and `androidTest` APKs, write or refresh the sidecars, then run the single local release gate:
 
 ```powershell
-gh attestation verify .\app-release.apk -R SysAdminDoc/ClearCut --source-ref refs/tags/v3.74.104 --signer-workflow SysAdminDoc/ClearCut/.github/workflows/build.yml
-python scripts\write_release_checksums.py --root . --check
-python scripts\write_apk_signing_fingerprints.py --root . --check
+python scripts\write_release_checksums.py --root app\build\outputs\apk
+python scripts\write_apk_signing_fingerprints.py --root app\build\outputs\apk
+python scripts\verify_release_artifacts.py
 ```
 
-The fingerprint sidecar contains the APK signing-certificate SHA-256 digest reported by Android build-tools `apksigner`.
+`verify_release_artifacts.py` checks Gradle/APK version metadata, checksum sidecars, APK signing fingerprints, 16 KB native-library alignment, APK size budget, and Play listing metadata. The fingerprint sidecar contains the APK signing-certificate SHA-256 digest reported by Android build-tools `apksigner`.
 
 ### APK Size Budget
-CI checks debug, release, and androidTest APK sizes against `scripts/apk_size_baseline.json` with a 2 MB per-output growth allowance. After an intentional dependency or asset-size change, refresh the baseline from a verified build:
+Local release verification checks debug, release, and androidTest APK sizes against `scripts/apk_size_baseline.json` with a 2 MB per-output growth allowance. After an intentional dependency or asset-size change, refresh the baseline from a verified build:
 
 ```powershell
 python scripts\check_apk_size.py --update-baseline
@@ -332,7 +335,7 @@ python scripts\check_apk_size.py
 ```
 
 ### Distribution Readiness
-GitHub Releases are the direct APK distribution channel for this checkout. Google Play listing metadata, privacy disclosures, Data safety worksheet, and screenshot assets are committed under `fastlane/metadata/android/en-US/` and validated in CI.
+GitHub Releases are the direct APK distribution channel for this checkout. Google Play listing metadata, privacy disclosures, Data safety worksheet, and screenshot assets are committed under `fastlane/metadata/android/en-US/` and validated by the local release gate.
 
 F-Droid-compatible Fastlane metadata is present in the same source tree. F-Droid publication still needs a final reproducible-build metadata pass, including `AllowedAPKSigningKeys` after the release signing key policy is fixed.
 
