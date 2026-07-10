@@ -1,0 +1,3 @@
+- Rebuilt the mobile editor around a larger preview and calmer timeline.
+- Added compact editing tools, clearer primary actions, and sharper premium styling.
+- Simplified project, settings, recovery, and export surfaces.

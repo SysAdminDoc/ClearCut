@@ -4,6 +4,10 @@
 
 <h1 align="center">ClearCut</h1>
 
+[![Version](https://img.shields.io/badge/version-3.74.110-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
+![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
 <p align="center">A professional Android video editor built with Kotlin and Jetpack Compose.<br>Open alternative to CapCut, PowerDirector, and DaVinci Resolve — with AI-assisted tools, GPU-accelerated effects, and desktop NLE interoperability.</p>
 
 
@@ -24,6 +28,16 @@
 
 Release history is maintained in git tags and the development checkout's local
 `CHANGELOG.md`.
+
+## Premium mobile workspace
+
+The phone-first editing workspace keeps the preview dominant, exposes the most
+important transport and timeline controls without burying the canvas, and uses
+a compact six-category tool rail for fast clip and project editing.
+
+<p align="center">
+  <img src="artifacts/clearcut-premium-editor.png" alt="ClearCut premium Android editing workspace" width="360" />
+</p>
 
 ## Project planning
 
