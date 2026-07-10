@@ -1,7 +1,9 @@
 package com.novacut.editor.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
@@ -54,18 +56,18 @@ object Mocha {
 }
 
 private val ClearCutDarkColorScheme = darkColorScheme(
-    primary = Mocha.Mauve,
+    primary = Mocha.Sky,
     onPrimary = Mocha.Crust,
-    primaryContainer = Mocha.Mauve.copy(alpha = 0.3f),
-    onPrimaryContainer = Mocha.Mauve,
-    secondary = Mocha.Sapphire,
+    primaryContainer = Mocha.Sky.copy(alpha = 0.18f),
+    onPrimaryContainer = Mocha.Sky,
+    secondary = Mocha.Peach,
     onSecondary = Mocha.Crust,
-    secondaryContainer = Mocha.Sapphire.copy(alpha = 0.24f),
-    onSecondaryContainer = Mocha.Sky,
-    tertiary = Mocha.Rosewater,
+    secondaryContainer = Mocha.Peach.copy(alpha = 0.16f),
+    onSecondaryContainer = Mocha.Peach,
+    tertiary = Mocha.Mauve,
     onTertiary = Mocha.Crust,
-    tertiaryContainer = Mocha.Rosewater.copy(alpha = 0.2f),
-    onTertiaryContainer = Mocha.Rosewater,
+    tertiaryContainer = Mocha.Mauve.copy(alpha = 0.16f),
+    onTertiaryContainer = Mocha.Mauve,
     error = Mocha.Red,
     onError = Mocha.Crust,
     errorContainer = Mocha.Red.copy(alpha = 0.3f),
@@ -140,6 +142,15 @@ data class ClearCutSemanticColors(
     val text: Color,
     val subtext: Color,
     val disabledText: Color,
+    val accent: Color,
+    val accentSecondary: Color,
+    val success: Color,
+    val warning: Color,
+    val danger: Color,
+    val focusRing: Color,
+    val canvas: Color,
+    val selectedSurface: Color,
+    val disabledSurface: Color,
 )
 
 val LocalClearCutColors = staticCompositionLocalOf {
@@ -177,6 +188,15 @@ object ClearCutThemeDefaults {
             text = Color(0xFFFFFFFF),
             subtext = Color(0xFFF4F7FF),
             disabledText = Color(0xFFBAC2DE),
+            accent = Mocha.Sky,
+            accentSecondary = Mocha.Peach,
+            success = Mocha.Green,
+            warning = Mocha.Peach,
+            danger = Mocha.Red,
+            focusRing = Color(0xFFFFFFFF),
+            canvas = Color(0xFF000000),
+            selectedSurface = Mocha.Sky,
+            disabledSurface = Color(0xFF111827),
         )
         AppearanceMode.SYSTEM,
         AppearanceMode.DARK -> ClearCutSemanticColors(
@@ -192,6 +212,15 @@ object ClearCutThemeDefaults {
             text = Mocha.Text,
             subtext = Mocha.Subtext0,
             disabledText = Mocha.Subtext0,
+            accent = Mocha.Sky,
+            accentSecondary = Mocha.Peach,
+            success = Mocha.Green,
+            warning = Mocha.Peach,
+            danger = Mocha.Red,
+            focusRing = Mocha.Sky,
+            canvas = Color(0xFF000000),
+            selectedSurface = Mocha.Sky.copy(alpha = 0.14f),
+            disabledSurface = Mocha.PanelHighest.copy(alpha = 0.48f),
         )
     }
 
@@ -305,6 +334,14 @@ private val ClearCutTypography = Typography(
     )
 )
 
+private val ClearCutShapes = Shapes(
+    extraSmall = RoundedCornerShape(Radius.xs),
+    small = RoundedCornerShape(Radius.sm),
+    medium = RoundedCornerShape(Radius.md),
+    large = RoundedCornerShape(Radius.xl),
+    extraLarge = RoundedCornerShape(Radius.xxl),
+)
+
 @Composable
 fun ClearCutTheme(
     appearanceMode: AppearanceMode = AppearanceMode.SYSTEM,
@@ -318,6 +355,7 @@ fun ClearCutTheme(
         MaterialTheme(
             colorScheme = ClearCutThemeDefaults.colorSchemeFor(resolvedMode),
             typography = ClearCutTypography,
+            shapes = ClearCutShapes,
             content = content
         )
     }

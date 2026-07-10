@@ -76,10 +76,10 @@ fun ClearCutScreenBackground(
                 .background(
                     Brush.verticalGradient(
                         colorStops = arrayOf(
-                            0f to Mocha.Rosewater.copy(alpha = if (colors.highContrast) 0.12f else 0.055f),
+                            0f to colors.accent.copy(alpha = if (colors.highContrast) 0.12f else 0.055f),
                             0.18f to Color.Transparent,
                             0.76f to Color.Transparent,
-                            1f to Mocha.Teal.copy(alpha = if (colors.highContrast) 0.10f else 0.045f)
+                            1f to colors.accentSecondary.copy(alpha = if (colors.highContrast) 0.10f else 0.045f)
                         )
                     )
                 )
@@ -105,11 +105,12 @@ fun ClearCutScreenBackground(
 fun ClearCutHeroCard(
     modifier: Modifier = Modifier,
     shape: Shape = RoundedCornerShape(Radius.xxl),
-    accent: Color = Mocha.Mauve,
+    accent: Color = Color.Unspecified,
     contentPadding: PaddingValues = PaddingValues(horizontal = Spacing.xl, vertical = Spacing.xl),
     content: @Composable ColumnScope.() -> Unit
 ) {
     val colors = LocalClearCutColors.current
+    val resolvedAccent = if (accent == Color.Unspecified) colors.accent else accent
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = colors.panel,
@@ -120,7 +121,7 @@ fun ClearCutHeroCard(
             modifier = Modifier.background(
                 Brush.verticalGradient(
                     colorStops = arrayOf(
-                        0f to accent.copy(alpha = 0.075f),
+                        0f to resolvedAccent.copy(alpha = 0.075f),
                         0.2f to colors.panelHighest.copy(alpha = 0.92f),
                         0.68f to colors.panel.copy(alpha = 0.98f),
                         1f to colors.panelRaised.copy(alpha = 0.98f)
@@ -150,9 +151,9 @@ fun ClearCutPrimaryButton(
     val pressed by interactionSource.collectIsPressedAsState()
     val containerColor by animateColorAsState(
         targetValue = when {
-            !enabled -> Mocha.Surface1.copy(alpha = 0.5f)
-            pressed -> Mocha.Flamingo
-            else -> Mocha.Rosewater
+            !enabled -> colors.disabledSurface
+            pressed -> colors.accentSecondary
+            else -> colors.accent
         },
         animationSpec = tween(durationMillis = Motion.DurationFast, easing = Motion.StandardEasing),
         label = "primaryButtonContainer"
@@ -169,7 +170,7 @@ fun ClearCutPrimaryButton(
         shape = RoundedCornerShape(Radius.md),
         colors = ButtonDefaults.buttonColors(
             containerColor = containerColor,
-            contentColor = Mocha.Midnight,
+            contentColor = colors.canvas,
             disabledContainerColor = containerColor,
             disabledContentColor = colors.disabledText
         ),
@@ -186,14 +187,14 @@ fun ClearCutPrimaryButton(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (enabled) Mocha.Midnight else colors.disabledText,
+                tint = if (enabled) colors.canvas else colors.disabledText,
                 modifier = Modifier.size(18.dp)
             )
             androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(Spacing.sm))
         }
         Text(
             text = text,
-            color = if (enabled) Mocha.Midnight else colors.disabledText,
+            color = if (enabled) colors.canvas else colors.disabledText,
             style = MaterialTheme.typography.labelLarge,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -207,10 +208,11 @@ fun ClearCutSecondaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
-    contentColor: Color = Mocha.Text,
+    contentColor: Color = Color.Unspecified,
     enabled: Boolean = true
 ) {
     val colors = LocalClearCutColors.current
+    val resolvedContentColor = if (contentColor == Color.Unspecified) colors.text else contentColor
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val containerColor by animateColorAsState(
@@ -225,7 +227,7 @@ fun ClearCutSecondaryButton(
     val borderColor by animateColorAsState(
         targetValue = when {
             !enabled -> colors.cardStroke.copy(alpha = 0.55f)
-            pressed -> contentColor.copy(alpha = if (colors.highContrast) 0.86f else 0.42f)
+            pressed -> resolvedContentColor.copy(alpha = if (colors.highContrast) 0.86f else 0.42f)
             else -> colors.cardStrokeStrong
         },
         animationSpec = tween(durationMillis = Motion.DurationFast, easing = Motion.StandardEasing),
@@ -244,7 +246,7 @@ fun ClearCutSecondaryButton(
         border = BorderStroke(1.dp, borderColor),
         colors = ButtonDefaults.outlinedButtonColors(
             containerColor = containerColor,
-            contentColor = contentColor,
+            contentColor = resolvedContentColor,
             disabledContainerColor = containerColor,
             disabledContentColor = colors.disabledText
         ),
@@ -261,7 +263,7 @@ fun ClearCutSecondaryButton(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (enabled) contentColor else colors.disabledText,
+                tint = if (enabled) resolvedContentColor else colors.disabledText,
                 modifier = Modifier.size(18.dp)
             )
             androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(Spacing.sm))
@@ -276,7 +278,7 @@ fun ClearCutSecondaryButton(
 }
 
 @Composable
-fun ClearCutMetricPill(
+fun ClearCutStatusTag(
     text: String,
     accent: Color,
     modifier: Modifier = Modifier,
@@ -313,17 +315,27 @@ fun ClearCutMetricPill(
     }
 }
 
+@Deprecated("Use ClearCutStatusTag for compact rectangular status metadata.")
+@Composable
+fun ClearCutMetricPill(
+    text: String,
+    accent: Color,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null
+) = ClearCutStatusTag(text = text, accent = accent, modifier = modifier, icon = icon)
+
 @Composable
 fun ClearCutFilterChip(
     text: String,
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    accent: Color = Mocha.Mauve,
+    accent: Color = Color.Unspecified,
     enabled: Boolean = true,
     icon: ImageVector? = null
 ) {
     val colors = LocalClearCutColors.current
+    val resolvedAccent = if (accent == Color.Unspecified) colors.accent else accent
     FilterChip(
         selected = selected,
         enabled = enabled,
@@ -352,15 +364,15 @@ fun ClearCutFilterChip(
         colors = FilterChipDefaults.filterChipColors(
             containerColor = colors.panelHighest,
             labelColor = colors.subtext,
-            selectedContainerColor = if (colors.highContrast) accent else accent.copy(alpha = 0.16f),
-            selectedLabelColor = if (colors.highContrast) Mocha.Crust else accent,
-            selectedLeadingIconColor = if (colors.highContrast) Mocha.Crust else accent
+            selectedContainerColor = if (colors.highContrast) resolvedAccent else resolvedAccent.copy(alpha = 0.16f),
+            selectedLabelColor = if (colors.highContrast) Mocha.Crust else resolvedAccent,
+            selectedLeadingIconColor = if (colors.highContrast) Mocha.Crust else resolvedAccent
         ),
         border = FilterChipDefaults.filterChipBorder(
             enabled = enabled,
             selected = selected,
             borderColor = colors.cardStroke,
-            selectedBorderColor = if (colors.highContrast) colors.cardStrokeStrong else accent.copy(alpha = 0.34f)
+            selectedBorderColor = if (colors.highContrast) colors.cardStrokeStrong else resolvedAccent.copy(alpha = 0.34f)
         )
     )
 }
@@ -371,9 +383,9 @@ fun ClearCutChromeIconButton(
     contentDescription: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    tint: Color = Mocha.Subtext1,
-    containerColor: Color = Mocha.PanelHighest,
-    borderColor: Color = Mocha.CardStroke,
+    tint: Color = Color.Unspecified,
+    containerColor: Color = Color.Unspecified,
+    borderColor: Color = Color.Unspecified,
     shape: Shape = RoundedCornerShape(Radius.md),
     size: Dp = TouchTarget.minimum,
     iconSize: Dp = 18.dp,
@@ -382,9 +394,9 @@ fun ClearCutChromeIconButton(
     val colors = LocalClearCutColors.current
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
-    val resolvedContainer = if (containerColor == Mocha.PanelHighest) colors.panelHighest else containerColor
-    val resolvedBorder = if (borderColor == Mocha.CardStroke) colors.cardStroke else borderColor
-    val resolvedTint = if (tint == Mocha.Subtext1) colors.subtext else tint
+    val resolvedContainer = if (containerColor == Color.Unspecified) colors.panelHighest else containerColor
+    val resolvedBorder = if (borderColor == Color.Unspecified) colors.cardStroke else borderColor
+    val resolvedTint = if (tint == Color.Unspecified) colors.subtext else tint
     val animatedContainer by animateColorAsState(
         targetValue = when {
             !enabled -> colors.panelRaised.copy(alpha = 0.46f)
@@ -398,7 +410,7 @@ fun ClearCutChromeIconButton(
         targetValue = when {
             !enabled -> colors.cardStroke.copy(alpha = 0.46f)
             pressed -> if (colors.highContrast) colors.cardStrokeStrong else resolvedTint.copy(alpha = 0.48f)
-            colors.highContrast && borderColor == Mocha.CardStroke -> colors.cardStrokeStrong
+            colors.highContrast && borderColor == Color.Unspecified -> colors.cardStrokeStrong
             else -> resolvedBorder
         },
         animationSpec = tween(durationMillis = Motion.DurationFast, easing = Motion.StandardEasing),

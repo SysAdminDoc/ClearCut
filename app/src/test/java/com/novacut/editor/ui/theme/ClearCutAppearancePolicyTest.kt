@@ -72,4 +72,11 @@ class ClearCutAppearancePolicyTest {
         assertTrue(ClearCutThemeDefaults.contrastRatio(colors.text, colors.panel) >= 4.5)
         assertTrue(ClearCutThemeDefaults.contrastRatio(colors.subtext, colors.panel) >= 4.5)
     }
+
+    @Test
+    fun radiusTokensStayWithinProfessionalGeometryCap() {
+        listOf(Radius.xs, Radius.sm, Radius.md, Radius.lg, Radius.xl, Radius.xxl).forEach { radius ->
+            assertTrue("Radius token exceeded 12dp: $radius", radius.value <= 12f)
+        }
+    }
 }

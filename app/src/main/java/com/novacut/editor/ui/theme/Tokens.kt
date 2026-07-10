@@ -43,22 +43,22 @@ object Spacing {
 
 object Radius {
     /** 6dp — tags, status labels, single-letter badges. */
-    val xs = 6.dp
+    val xs = 4.dp
 
     /** 10dp — tight buttons and slim rectangular chips. */
-    val sm = 10.dp
+    val sm = 6.dp
 
     /** 12dp — text fields, default control surfaces. */
-    val md = 12.dp
+    val md = 8.dp
 
     /** 16dp — primary buttons, prominent chips. */
-    val lg = 16.dp
+    val lg = 10.dp
 
     /** 20dp — cards inside panels. */
-    val xl = 20.dp
+    val xl = 12.dp
 
     /** 24dp — top-level panel/sheet corners. */
-    val xxl = 24.dp
+    val xxl = 12.dp
 
     /** 10dp — legacy alias retained for older call sites; do not use for capsule shapes. */
     @Deprecated("Use Radius.sm for compact rectangular badges.")
