@@ -56,6 +56,7 @@ import com.novacut.editor.model.Clip
 import com.novacut.editor.model.ImageOverlay
 import com.novacut.editor.ui.theme.ClearCutChromeIconButton
 import com.novacut.editor.ui.theme.Mocha
+import com.novacut.editor.ui.theme.Radius
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -127,7 +128,7 @@ fun PreviewPanel(
                 .weight(1f),
             colors = CardDefaults.cardColors(containerColor = Mocha.Panel),
             border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
-            shape = RoundedCornerShape(24.dp)
+            shape = RoundedCornerShape(Radius.xxl)
         ) {
             Box(
                 modifier = Modifier
@@ -150,7 +151,7 @@ fun PreviewPanel(
                     Box(
                         modifier = Modifier
                             .size(frameWidth, frameHeight)
-                            .clip(RoundedCornerShape(20.dp))
+                            .clip(RoundedCornerShape(Radius.lg))
                             .background(Mocha.Crust)
                             .then(
                                 // `awaitEachGesture` lets us bracket each gesture so we can
@@ -305,17 +306,17 @@ fun PreviewPanel(
                                         tint = Mocha.Subtext0.copy(alpha = 0.9f),
                                         containerColor = Mocha.Midnight.copy(alpha = 0.72f),
                                         borderColor = Mocha.CardStroke,
-                                        shape = CircleShape
+                                        shape = RoundedCornerShape(Radius.md)
                                     )
                                 }
                                 ClearCutChromeIconButton(
                                     icon = Icons.Default.GridOn,
                                     contentDescription = stringResource(R.string.preview_composition_guides),
                                     onClick = onToggleCompositionGuides,
-                                    tint = if (showCompositionGuides) Mocha.Mauve else Mocha.Subtext0.copy(alpha = 0.9f),
-                                    containerColor = if (showCompositionGuides) Mocha.Mauve.copy(alpha = 0.3f) else Mocha.Midnight.copy(alpha = 0.72f),
-                                    borderColor = if (showCompositionGuides) Mocha.Mauve.copy(alpha = 0.6f) else Mocha.CardStroke,
-                                    shape = CircleShape,
+                                    tint = if (showCompositionGuides) Mocha.Sky else Mocha.Subtext0.copy(alpha = 0.9f),
+                                    containerColor = if (showCompositionGuides) Mocha.Sky.copy(alpha = 0.22f) else Mocha.Midnight.copy(alpha = 0.72f),
+                                    borderColor = if (showCompositionGuides) Mocha.Sky.copy(alpha = 0.6f) else Mocha.CardStroke,
+                                    shape = RoundedCornerShape(Radius.md),
                                 )
                                 if (hasActiveEffects) {
                                     ClearCutChromeIconButton(
@@ -325,7 +326,7 @@ fun PreviewPanel(
                                         tint = if (isSplitPreviewEnabled) Mocha.Teal else Mocha.Subtext0.copy(alpha = 0.9f),
                                         containerColor = if (isSplitPreviewEnabled) Mocha.Teal.copy(alpha = 0.3f) else Mocha.Midnight.copy(alpha = 0.72f),
                                         borderColor = if (isSplitPreviewEnabled) Mocha.Teal.copy(alpha = 0.6f) else Mocha.CardStroke,
-                                        shape = CircleShape,
+                                        shape = RoundedCornerShape(Radius.md),
                                     )
                                 }
                             }
@@ -334,7 +335,7 @@ fun PreviewPanel(
                         if (isBuffering && totalDurationMs > 0 && !showGapState) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(36.dp),
-                                color = Mocha.Mauve,
+                                color = Mocha.Sky,
                                 strokeWidth = 3.dp
                             )
                         }
@@ -343,7 +344,7 @@ fun PreviewPanel(
                             Card(
                                 colors = CardDefaults.cardColors(containerColor = Mocha.Panel.copy(alpha = 0.86f)),
                                 border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
-                                shape = RoundedCornerShape(22.dp)
+                                shape = RoundedCornerShape(Radius.xl)
                             ) {
                                 Column(
                                     modifier = Modifier.padding(horizontal = 22.dp, vertical = 20.dp),
@@ -351,14 +352,14 @@ fun PreviewPanel(
                                     verticalArrangement = Arrangement.Center
                                 ) {
                                     Surface(
-                                        color = Mocha.Mauve.copy(alpha = 0.14f),
-                                        shape = CircleShape,
-                                        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Mauve.copy(alpha = 0.22f))
+                                        color = Mocha.Sky.copy(alpha = 0.12f),
+                                        shape = RoundedCornerShape(Radius.md),
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Sky.copy(alpha = 0.22f))
                                     ) {
                                         Icon(
                                             Icons.Default.VideoLibrary,
                                             contentDescription = stringResource(R.string.cd_preview_empty),
-                                            tint = Mocha.Rosewater,
+                                            tint = Mocha.Sky,
                                             modifier = Modifier
                                                 .padding(16.dp)
                                                 .size(24.dp)
@@ -382,7 +383,7 @@ fun PreviewPanel(
 
         Surface(
             color = Mocha.Panel,
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(Radius.xl),
             border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -417,9 +418,9 @@ fun PreviewPanel(
                     },
                     onClick = onTogglePlayback,
                     tint = Mocha.Midnight,
-                    containerColor = Mocha.Rosewater,
-                    borderColor = Mocha.Rosewater.copy(alpha = 0.72f),
-                    shape = CircleShape,
+                    containerColor = Mocha.Sky,
+                    borderColor = Mocha.Sky.copy(alpha = 0.72f),
+                    shape = RoundedCornerShape(Radius.md),
                     iconSize = 22.dp
                 )
             }

@@ -150,14 +150,6 @@ fun ProjectListScreen(
                 actionsEnabled = actionsEnabled
             )
 
-            ProjectHomeReadinessRow(
-                projectCount = projectTotalCount,
-                savedTemplateCount = userTemplates.size,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
-            )
-
             if (showCollectionControls) {
                 ProjectFilterChipsRow(
                     filterMode = filterMode,
@@ -546,7 +538,7 @@ private fun ProjectHomeHero(
     ClearCutHeroCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(bottomStart = Radius.xl, bottomEnd = Radius.xl),
-        accent = Mocha.Mauve
+        accent = Mocha.Sky
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -569,7 +561,7 @@ private fun ProjectHomeHero(
         Text(
             text = stringResource(R.string.projects_headline),
             color = Mocha.Text,
-            style = MaterialTheme.typography.displayMedium,
+            style = MaterialTheme.typography.headlineLarge,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
@@ -577,8 +569,8 @@ private fun ProjectHomeHero(
         Text(
             text = stringResource(R.string.projects_subtitle),
             color = Mocha.Subtext0,
-            style = MaterialTheme.typography.bodyLarge,
-            maxLines = 3,
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
 

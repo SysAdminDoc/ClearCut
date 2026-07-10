@@ -315,7 +315,6 @@ fun ClearCutStatusTag(
     }
 }
 
-@Deprecated("Use ClearCutStatusTag for compact rectangular status metadata.")
 @Composable
 fun ClearCutMetricPill(
     text: String,
@@ -426,21 +425,31 @@ fun ClearCutChromeIconButton(
         animationSpec = Motion.fast(),
         label = "chromeIconButtonScale"
     )
-    Surface(
-        modifier = modifier
-            .graphicsLayer {
-                scaleX = buttonScale
-                scaleY = buttonScale
-            },
-        color = animatedContainer,
-        shape = shape,
-        border = BorderStroke(1.dp, animatedBorder)
+    Box(
+        modifier = modifier.defaultMinSize(
+            minWidth = TouchTarget.minimum,
+            minHeight = TouchTarget.minimum,
+        ),
+        contentAlignment = Alignment.Center,
     ) {
+        Surface(
+            modifier = Modifier
+                .size(size)
+                .graphicsLayer {
+                    scaleX = buttonScale
+                    scaleY = buttonScale
+                },
+            color = animatedContainer,
+            shape = shape,
+            border = BorderStroke(1.dp, animatedBorder)
+        ) {
+            Box(Modifier.size(size))
+        }
         IconButton(
             onClick = onClick,
             enabled = enabled,
             interactionSource = interactionSource,
-            modifier = Modifier.size(size)
+            modifier = Modifier.size(TouchTarget.minimum)
         ) {
             Icon(
                 imageVector = icon,

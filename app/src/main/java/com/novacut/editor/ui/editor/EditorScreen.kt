@@ -55,6 +55,7 @@ import com.novacut.editor.model.*
 import com.novacut.editor.ui.ClearCutTestTags
 import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.ClearCutDialogIcon
+import com.novacut.editor.ui.theme.ClearCutChromeIconButton
 import com.novacut.editor.ui.theme.ClearCutPrimaryButton
 import com.novacut.editor.ui.theme.ClearCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
@@ -687,10 +688,14 @@ fun EditorScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(0.45f),
+                        .weight(1f)
+                        .padding(horizontal = Spacing.md, vertical = Spacing.sm),
                     contentAlignment = Alignment.Center
                 ) {
                     Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 210.dp),
                         colors = CardDefaults.cardColors(containerColor = Mocha.Panel),
                         border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
                         shape = RoundedCornerShape(Radius.xxl)
@@ -706,35 +711,37 @@ fun EditorScreen(
                             )
                         ) {
                             Column(
-                                modifier = Modifier.padding(horizontal = 28.dp, vertical = 30.dp),
+                                modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.md),
                             horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Surface(
-                                    color = Mocha.Mauve.copy(alpha = 0.14f),
-                                    shape = CircleShape,
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Mauve.copy(alpha = 0.22f))
+                                    color = Mocha.Sky.copy(alpha = 0.12f),
+                                    shape = RoundedCornerShape(Radius.md),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Sky.copy(alpha = 0.24f))
                                 ) {
                                     Icon(
                                         Icons.Default.VideoLibrary,
                                         contentDescription = null,
-                                        tint = Mocha.Rosewater,
+                                        tint = Mocha.Sky,
                                         modifier = Modifier
-                                            .padding(16.dp)
-                                            .size(28.dp)
+                                            .padding(10.dp)
+                                            .size(22.dp)
                                     )
                                 }
-                                Spacer(Modifier.height(14.dp))
+                                Spacer(Modifier.height(Spacing.sm))
                                 Text(
                                     stringResource(R.string.editor_empty_title),
                                     color = Mocha.Text,
-                                    style = MaterialTheme.typography.headlineMedium
+                                    style = MaterialTheme.typography.titleLarge
                                 )
-                                Spacer(Modifier.height(6.dp))
+                                Spacer(Modifier.height(Spacing.xs))
                                 Text(
                                     stringResource(R.string.editor_empty_body),
                                     color = Mocha.Subtext0,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    textAlign = TextAlign.Center
+                                    style = MaterialTheme.typography.bodySmall,
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                                 Spacer(Modifier.height(Spacing.lg))
                                 val emptyAddMediaLabel = stringResource(R.string.editor_add_media)
@@ -743,7 +750,7 @@ fun EditorScreen(
                                         .widthIn(min = 180.dp)
                                         .height(TouchTarget.minimum)
                                         .clip(RoundedCornerShape(Radius.md))
-                                        .background(Mocha.Rosewater)
+                                        .background(Mocha.Sky)
                                         .clickable(onClick = viewModel::showMediaPicker)
                                         .testTag(ClearCutTestTags.EDITOR_EMPTY_ADD_MEDIA),
                                     horizontalArrangement = Arrangement.Center,
@@ -1179,64 +1186,6 @@ fun EditorScreen(
 }
 
 @Composable
-private fun EditorTopBarChip(
-    label: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    accent: Color,
-    contentDescription: String,
-    onClick: (() -> Unit)? = null
-) {
-    val chipModifier = Modifier.semantics {
-        this.contentDescription = contentDescription
-    }
-    val chipContent: @Composable RowScope.() -> Unit = {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = accent,
-            modifier = Modifier.size(12.dp)
-        )
-        Text(
-            text = label,
-            color = accent,
-            style = MaterialTheme.typography.labelSmall,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-    if (onClick != null) {
-        Surface(
-            onClick = onClick,
-            modifier = chipModifier,
-            color = accent.copy(alpha = 0.13f),
-            shape = RoundedCornerShape(10.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, accent.copy(alpha = 0.24f))
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                content = chipContent
-            )
-        }
-    } else {
-        Surface(
-            modifier = chipModifier,
-            color = accent.copy(alpha = 0.10f),
-            shape = RoundedCornerShape(10.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, accent.copy(alpha = 0.20f))
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                content = chipContent
-            )
-        }
-    }
-}
-
-@Composable
 private fun EditConfidenceRail(
     status: EditConfidenceStatus,
     onOpenHistory: () -> Unit,
@@ -1281,87 +1230,50 @@ private fun EditConfidenceRail(
     Surface(
         color = Mocha.Mantle,
         border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Surface0.copy(alpha = 0.72f)),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp)
     ) {
         Row(
-            modifier = Modifier
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 10.dp, vertical = 7.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(horizontal = Spacing.md),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            EditConfidenceChip(
-                label = undoLabel,
-                icon = Icons.Default.History,
-                accent = if (status.hasUndoHistory) Mocha.Mauve else Mocha.Overlay0,
-                onClick = onOpenHistory
+            Icon(
+                imageVector = if (status.saveNeedsAttention) Icons.Default.Warning else Icons.Default.CheckCircle,
+                contentDescription = null,
+                tint = saveAccent,
+                modifier = Modifier.size(16.dp)
             )
-            EditConfidenceChip(
-                label = snapshotLabel,
-                icon = Icons.Default.Restore,
-                accent = if (status.hasRestorePoints) Mocha.Green else Mocha.Overlay0,
-                onClick = onOpenSnapshots
+            Text(
+                text = saveLabel,
+                color = if (status.saveNeedsAttention) saveAccent else Mocha.Subtext1,
+                style = MaterialTheme.typography.labelMedium,
+                maxLines = 1,
             )
-            EditConfidenceChip(
-                label = saveLabel,
-                icon = if (status.saveNeedsAttention) Icons.Default.Warning else Icons.Default.CheckCircle,
-                accent = saveAccent,
-                onClick = null
-            )
-        }
-    }
-}
-
-@Composable
-private fun EditConfidenceChip(
-    label: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    accent: Color,
-    onClick: (() -> Unit)?
-) {
-    val chipColor = accent.copy(alpha = if (accent == Mocha.Overlay0) 0.1f else 0.14f)
-    val borderColor = accent.copy(alpha = if (accent == Mocha.Overlay0) 0.22f else 0.28f)
-    val content: @Composable RowScope.() -> Unit = {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = accent,
-            modifier = Modifier.size(14.dp)
-        )
-        Text(
-            text = label,
-            color = if (accent == Mocha.Overlay0) Mocha.Subtext0 else Mocha.Text,
-            style = MaterialTheme.typography.labelMedium,
-            maxLines = 1
-        )
-    }
-
-    if (onClick != null) {
-        Surface(
-            onClick = onClick,
-            color = chipColor,
-            shape = RoundedCornerShape(14.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, borderColor)
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                content = content
-            )
-        }
-    } else {
-        Surface(
-            color = chipColor,
-            shape = RoundedCornerShape(14.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, borderColor)
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                content = content
-            )
+            Spacer(Modifier.weight(1f))
+            if (status.hasUndoHistory) {
+                ClearCutChromeIconButton(
+                    icon = Icons.Default.History,
+                    contentDescription = undoLabel,
+                    onClick = onOpenHistory,
+                    tint = Mocha.Mauve,
+                    containerColor = Color.Transparent,
+                    borderColor = Color.Transparent,
+                    size = 40.dp,
+                )
+            }
+            if (status.hasRestorePoints) {
+                ClearCutChromeIconButton(
+                    icon = Icons.Default.Restore,
+                    contentDescription = snapshotLabel,
+                    onClick = onOpenSnapshots,
+                    tint = Mocha.Green,
+                    containerColor = Color.Transparent,
+                    borderColor = Color.Transparent,
+                    size = 40.dp,
+                )
+            }
         }
     }
 }
@@ -1612,13 +1524,13 @@ private fun EditorTopBar(
             ) {
                 Surface(
                     color = Mocha.PanelHighest,
-                    shape = RoundedCornerShape(if (isCompactBar) 16.dp else 18.dp),
+                    shape = RoundedCornerShape(Radius.md),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke)
                 ) {
                     IconButton(
                         onClick = onBack,
                         modifier = Modifier
-                            .size(if (isCompactBar) 36.dp else 38.dp)
+                            .size(if (isCompactBar) 40.dp else 44.dp)
                             .testTag(ClearCutTestTags.EDITOR_BACK)
                     ) {
                         Icon(
@@ -1648,6 +1560,7 @@ private fun EditorTopBar(
                     stringResource(R.string.editor_timeline_status_empty)
                 }
                 val timelineStatusAccent = if (clipCount > 0 && timelineDurationMs > 0L) Mocha.Green else Mocha.Subtext0
+                val modeChipDescription = stringResource(R.string.editor_mode_chip_cd, modeLabel)
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -1659,32 +1572,23 @@ private fun EditorTopBar(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        EditorTopBarChip(
-                            label = modeLabel,
-                            icon = Icons.Default.Tune,
-                            accent = modeAccent,
-                            onClick = onToggleEditorMode,
-                            contentDescription = stringResource(R.string.editor_mode_chip_cd, modeLabel)
-                        )
-                        if (!isCompactBar) {
-                            EditorTopBarChip(
-                                label = timelineStatusLabel,
-                                icon = if (clipCount > 0) Icons.Default.Movie else Icons.Default.Add,
-                                accent = timelineStatusAccent,
-                                contentDescription = stringResource(R.string.editor_timeline_status_cd, timelineStatusLabel)
-                            )
-                        }
-                    }
+                    Text(
+                        text = "$modeLabel  •  $timelineStatusLabel",
+                        color = if (clipCount > 0) timelineStatusAccent else modeAccent,
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .clickable(onClick = onToggleEditorMode)
+                            .semantics {
+                                contentDescription = modeChipDescription
+                            }
+                    )
                 }
 
                 Surface(
                     color = Mocha.PanelHighest,
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(Radius.md),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1715,35 +1619,12 @@ private fun EditorTopBar(
                     }
                 }
 
-                if (selectedClipId != null) {
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Surface(
-                        color = Mocha.Red.copy(alpha = 0.12f),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        IconButton(
-                            onClick = {
-                                if (confirmBeforeDelete) showDeleteConfirmation = true
-                                else onDelete()
-                            },
-                            modifier = Modifier.size(if (isCompactBar) 32.dp else 34.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Delete,
-                                contentDescription = stringResource(R.string.editor_delete),
-                                tint = Mocha.Red,
-                                modifier = Modifier.size(if (isCompactBar) 16.dp else 18.dp)
-                            )
-                        }
-                    }
-                }
-
                 Spacer(modifier = Modifier.width(6.dp))
 
                 Box {
                     Surface(
                         color = Mocha.PanelHighest,
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(Radius.md),
                         border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke)
                     ) {
                         IconButton(
@@ -1764,6 +1645,16 @@ private fun EditorTopBar(
                         containerColor = Mocha.PanelHighest
                     ) {
                         if (selectedClipId != null) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.editor_delete), color = Mocha.Red) },
+                                onClick = {
+                                    showOverflow = false
+                                    if (confirmBeforeDelete) showDeleteConfirmation = true else onDelete()
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Delete, contentDescription = null, tint = Mocha.Red)
+                                }
+                            )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.tool_duplicate)) },
                                 onClick = {
@@ -1913,13 +1804,13 @@ private fun EditorTopBar(
                 Button(
                     onClick = onExport,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Mocha.Rosewater,
+                        containerColor = Mocha.Sky,
                         contentColor = Mocha.Midnight
                     ),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(Radius.md),
                     contentPadding = PaddingValues(horizontal = if (isCompactBar) 12.dp else 14.dp, vertical = 0.dp),
                     modifier = Modifier
-                        .height(if (isCompactBar) 36.dp else 38.dp)
+                        .height(if (isCompactBar) 40.dp else 44.dp)
                         .testTag(ClearCutTestTags.EDITOR_EXPORT)
                 ) {
                     Icon(

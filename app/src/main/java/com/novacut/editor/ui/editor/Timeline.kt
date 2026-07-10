@@ -56,6 +56,7 @@ import com.novacut.editor.R
 import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.model.*
 import com.novacut.editor.ui.theme.Mocha
+import com.novacut.editor.ui.theme.Radius
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
@@ -223,8 +224,6 @@ private fun TimelineToolbarControls(
     onZoomChanged: (Float) -> Unit,
     onScrollChanged: (Long) -> Unit,
     onSplitAtPlayhead: () -> Unit,
-    onDeleteSelectedClip: () -> Unit,
-    onAddMarker: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -258,20 +257,8 @@ private fun TimelineToolbarControls(
             contentDescription = stringResource(R.string.cd_split_at_playhead),
             compact = compact,
             highlight = true,
-            onClick = onSplitAtPlayhead
-        )
-        TimelineToolbarButton(
-            icon = Icons.Default.DeleteSweep,
-            contentDescription = stringResource(R.string.cd_delete_selected),
-            compact = compact,
             enabled = selectedClipId != null,
-            onClick = onDeleteSelectedClip
-        )
-        TimelineToolbarButton(
-            icon = Icons.Default.BookmarkAdd,
-            contentDescription = stringResource(R.string.cd_add_marker),
-            compact = compact,
-            onClick = onAddMarker
+            onClick = onSplitAtPlayhead
         )
     }
 }
@@ -353,6 +340,7 @@ fun Timeline(
         edges.sorted()
     }
     var lastScrubBoundaryIdx by remember { mutableIntStateOf(-1) }
+    var timelineOptionsExpanded by remember { mutableStateOf(false) }
     val fitZoomLevel = remember(timelineWidthPx, totalDurationMs) {
         if (timelineWidthPx <= 0f || totalDurationMs <= 0L) {
             1f
@@ -367,7 +355,7 @@ fun Timeline(
             (timelineWidthPx / pixelsPerMs).toLong().coerceAtLeast(0L)
         }
     }
-    val headerWidth = if (isCompactTimeline) 132.dp else 140.dp
+    val headerWidth = if (isCompactTimeline) 118.dp else 128.dp
     val chromePadding = if (isCompactTimeline) 12.dp else 16.dp
     val contentPadding = if (isCompactTimeline) 10.dp else 12.dp
     val trimHandleVisualWidth = 14.dp
@@ -510,7 +498,7 @@ fun Timeline(
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = Mocha.Panel,
-        shape = RoundedCornerShape(28.dp),
+        shape = RoundedCornerShape(Radius.xxl),
         border = BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.92f))
     ) {
         Column(
@@ -546,8 +534,6 @@ fun Timeline(
                         onZoomChanged = onZoomChanged,
                         onScrollChanged = onScrollChanged,
                         onSplitAtPlayhead = onSplitAtPlayhead,
-                        onDeleteSelectedClip = onDeleteSelectedClip,
-                        onAddMarker = onAddMarker,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 10.dp)
@@ -573,68 +559,84 @@ fun Timeline(
                         selectedClipId = selectedClipId,
                         onZoomChanged = onZoomChanged,
                         onScrollChanged = onScrollChanged,
-                        onSplitAtPlayhead = onSplitAtPlayhead,
-                        onDeleteSelectedClip = onDeleteSelectedClip,
-                        onAddMarker = onAddMarker
+                        onSplitAtPlayhead = onSplitAtPlayhead
                     )
                 }
             }
 
-            FlowRow(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = chromePadding, vertical = if (isCompactTimeline) 10.dp else 12.dp),
+                    .padding(horizontal = chromePadding, vertical = if (isCompactTimeline) 5.dp else 7.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                TimelineInfoChip(
-                    text = if (isTrimMode) {
-                        stringResource(R.string.timeline_mode_trim)
-                    } else {
-                        stringResource(R.string.timeline_mode_arrange)
+                val modeLabel = if (isTrimMode) {
+                    stringResource(R.string.timeline_mode_trim)
+                } else {
+                    stringResource(R.string.timeline_mode_arrange)
+                }
+                val snapLabel = when {
+                    snapToBeat -> stringResource(R.string.settings_snap_beat)
+                    snapToMarker -> stringResource(R.string.settings_snap_markers)
+                    else -> null
+                }
+                Text(
+                    text = buildString {
+                        append(modeLabel)
+                        append("  •  ")
+                        append((zoomLevel * 100f).roundToInt())
+                        append("%  •  ")
+                        append(markerCountLabel)
+                        if (snapLabel != null) {
+                            append("  •  ")
+                            append(snapLabel)
+                        }
                     },
-                    accent = if (isTrimMode) Mocha.Peach else Mocha.Sky,
-                    compact = isCompactTimeline
+                    color = if (isTrimMode) Mocha.Peach else Mocha.Subtext0,
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
                 )
-                TimelineInfoChip(
-                    text = stringResource(R.string.timeline_zoom_value, (zoomLevel * 100f).roundToInt()),
-                    accent = Mocha.Blue,
-                    compact = isCompactTimeline
-                )
-                TimelineInfoChip(
-                    text = stringResource(R.string.timeline_visible_value, formatTimelineTime(visibleDurationMs)),
-                    accent = Mocha.Lavender,
-                    compact = isCompactTimeline
-                )
-                TimelineInfoChip(
-                    text = markerCountLabel,
-                    accent = Mocha.Yellow,
-                    compact = isCompactTimeline
-                )
-                if (snapToBeat) {
-                    TimelineInfoChip(
-                        text = stringResource(R.string.settings_snap_beat),
-                        accent = Mocha.Green,
-                        compact = isCompactTimeline
+                Box {
+                    TimelineToolbarButton(
+                        icon = Icons.Default.MoreHoriz,
+                        contentDescription = stringResource(R.string.editor_more),
+                        compact = isCompactTimeline,
+                        onClick = { timelineOptionsExpanded = true }
                     )
+                    DropdownMenu(
+                        expanded = timelineOptionsExpanded,
+                        onDismissRequest = { timelineOptionsExpanded = false },
+                        containerColor = Mocha.PanelHighest,
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.cd_add_marker)) },
+                            leadingIcon = { Icon(Icons.Default.BookmarkAdd, contentDescription = null) },
+                            onClick = {
+                                timelineOptionsExpanded = false
+                                onAddMarker()
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.collapse_all_tracks)) },
+                            leadingIcon = { Icon(Icons.Default.UnfoldLess, contentDescription = null) },
+                            onClick = {
+                                timelineOptionsExpanded = false
+                                onCollapseAllTracks()
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.expand_all_tracks)) },
+                            leadingIcon = { Icon(Icons.Default.UnfoldMore, contentDescription = null) },
+                            onClick = {
+                                timelineOptionsExpanded = false
+                                onExpandAllTracks()
+                            },
+                        )
+                    }
                 }
-                if (snapToMarker) {
-                    TimelineInfoChip(
-                        text = stringResource(R.string.settings_snap_markers),
-                        accent = Mocha.Mauve,
-                        compact = isCompactTimeline
-                    )
-                }
-                TimelineTextActionChip(
-                    text = stringResource(R.string.collapse_all_tracks),
-                    compact = isCompactTimeline,
-                    onClick = onCollapseAllTracks
-                )
-                TimelineTextActionChip(
-                    text = stringResource(R.string.expand_all_tracks),
-                    compact = isCompactTimeline,
-                    onClick = onExpandAllTracks
-                )
             }
 
             if (isTrimMode && selectedClipId != null) {
@@ -643,9 +645,9 @@ fun Timeline(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = chromePadding)
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(RoundedCornerShape(Radius.lg))
                         .background(Mocha.Peach.copy(alpha = 0.12f))
-                        .border(1.dp, Mocha.Peach.copy(alpha = 0.18f), RoundedCornerShape(16.dp))
+                        .border(1.dp, Mocha.Peach.copy(alpha = 0.18f), RoundedCornerShape(Radius.lg))
                         .padding(horizontal = 12.dp, vertical = 7.dp),
                     contentAlignment = Alignment.Center
                 ) {

@@ -38,6 +38,7 @@ import androidx.annotation.StringRes
 import com.novacut.editor.R
 import com.novacut.editor.model.*
 import com.novacut.editor.ui.theme.Mocha
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.TouchTarget
 import java.util.Locale
@@ -54,21 +55,17 @@ val projectTabs = listOf(
     TabItem("text", Icons.Default.Title, R.string.tool_tab_text),
     TabItem("effects", Icons.Default.AutoFixHigh, R.string.tool_tab_effects),
     TabItem("aspect", Icons.Default.AspectRatio, R.string.tool_tab_aspect),
-    TabItem("project_tools", Icons.Default.Build, R.string.tool_tab_tools)
+    TabItem("project_tools", Icons.Default.GridView, R.string.editor_more)
 )
 
 // Clip mode tabs (clip selected)
 val clipTabs = listOf(
-    TabItem("back", Icons.AutoMirrored.Filled.ArrowBack, 0),
     TabItem("edit", Icons.Default.Edit, R.string.tool_tab_edit),
     TabItem("audio", Icons.Default.MusicNote, R.string.tool_tab_audio),
     TabItem("text", Icons.Default.Title, R.string.tool_tab_text),
-    TabItem("speed", Icons.Default.Speed, R.string.tool_tab_speed),
-    TabItem("transform", Icons.Default.Transform, R.string.tool_tab_motion),
-    TabItem("effects", Icons.Default.AutoFixHigh, R.string.tool_tab_fx),
-    TabItem("transition", Icons.Default.SwapHoriz, R.string.tool_tab_trans),
     TabItem("color", Icons.Default.Palette, R.string.tool_tab_color),
-    TabItem("ai", Icons.Default.AutoAwesome, R.string.tool_tab_ai)
+    TabItem("effects", Icons.Default.AutoFixHigh, R.string.tool_tab_fx),
+    TabItem("more", Icons.Default.GridView, R.string.editor_more)
 )
 
 // Project mode — Text tab sub-menu
@@ -118,6 +115,18 @@ private val clipColorSubMenu = listOf(
     SubMenuItem("color_grade", Icons.Default.Palette, R.string.tool_color_grade),
     SubMenuItem("effects", Icons.Default.AutoFixHigh, R.string.tool_submenu_effects),
     SubMenuItem("audio_norm", Icons.AutoMirrored.Filled.VolumeUp, R.string.tool_normalize_audio)
+)
+
+// Secondary clip workflows live behind one deliberate More workbench so the
+// persistent rail stays stable and scannable at six categories.
+private val clipMoreSubMenu = listOf(
+    SubMenuItem("back", Icons.AutoMirrored.Filled.ArrowBack, R.string.back),
+    SubMenuItem("speed", Icons.Default.Speed, R.string.tool_tab_speed),
+    SubMenuItem("transform", Icons.Default.Transform, R.string.tool_submenu_transform),
+    SubMenuItem("transition", Icons.Default.SwapHoriz, R.string.tool_transitions),
+    SubMenuItem("aspect", Icons.Default.AspectRatio, R.string.tool_tab_aspect),
+    SubMenuItem("ai_hub", Icons.Default.AutoAwesome, R.string.tool_ai_hub),
+    SubMenuItem("command_palette", Icons.Default.Search, R.string.tool_search),
 )
 
 // Clip mode — AI Magic tab sub-menu (expanded)
@@ -215,6 +224,7 @@ fun BottomToolArea(
         isClipMode && activeTabId == "transform" -> clipMotionSubMenu
         isClipMode && activeTabId == "color" -> clipColorSubMenu
         isClipMode && activeTabId == "ai" -> clipAiSubMenu
+        isClipMode && activeTabId == "more" -> clipMoreSubMenu
         else -> null
     }
 
@@ -323,6 +333,9 @@ fun BottomToolArea(
                         // Project mode: show Tools sub-menu (Audio Mixer, Beat Detect, etc.)
                         activeTabId = if (activeTabId == "project_tools") null else "project_tools"
                     }
+                    "more" -> {
+                        activeTabId = if (activeTabId == "more") null else "more"
+                    }
                 }
             }
         )
@@ -336,8 +349,9 @@ private fun BottomTabBar(
     onTabTapped: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = LocalClearCutColors.current
     Surface(
-        color = Mocha.Panel,
+        color = colors.panel,
         shape = RoundedCornerShape(topStart = Radius.xl, topEnd = Radius.xl),
         modifier = modifier.fillMaxWidth()
     ) {
@@ -438,57 +452,40 @@ private fun BottomTabBarItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = LocalClearCutColors.current
     val isBack = tab.id == "back"
     val tabLabel = if (tab.labelRes != 0) stringResource(tab.labelRes) else ""
     val itemDescription = if (isBack) stringResource(R.string.back) else tabLabel
     val itemShape = RoundedCornerShape(Radius.md)
-    val iconShape = RoundedCornerShape(Radius.sm)
-    val iconBoxSize = if (compact) 32.dp else 34.dp
-    val iconSize = if (compact) 17.dp else 18.dp
+    val iconSize = if (compact) 20.dp else 22.dp
     val labelSlotHeight = if (compact) 18.dp else 20.dp
     val itemHeight = if (compact) 58.dp else 62.dp
     val itemBorderColor by animateColorAsState(
         targetValue = when {
-            isActive && !isBack -> Mocha.Mauve.copy(alpha = 0.22f)
+            isActive && !isBack -> colors.accent.copy(alpha = 0.58f)
             isBack -> Mocha.CardStroke.copy(alpha = 0.46f)
-            else -> Mocha.CardStroke.copy(alpha = 0.34f)
+            else -> Color.Transparent
         },
         label = "toolTabItemBorder"
     )
     val itemContainerColor by animateColorAsState(
         targetValue = when {
-            isActive && !isBack -> Mocha.Mauve.copy(alpha = 0.10f)
+            isActive && !isBack -> colors.selectedSurface
             isBack -> Mocha.PanelRaised.copy(alpha = 0.42f)
-            else -> Mocha.PanelRaised.copy(alpha = 0.28f)
+            else -> Color.Transparent
         },
         label = "toolTabItemContainer"
     )
-    val iconBorderColor by animateColorAsState(
-        targetValue = when {
-            isActive && !isBack -> Mocha.Mauve.copy(alpha = 0.22f)
-            isBack -> Mocha.CardStroke.copy(alpha = 0.72f)
-            else -> Mocha.CardStroke.copy(alpha = 0.38f)
-        },
-        label = "toolTabIconBorder"
-    )
-    val iconContainerColor by animateColorAsState(
-        targetValue = when {
-            isActive && !isBack -> Mocha.Mauve.copy(alpha = 0.16f)
-            isBack -> Mocha.PanelHighest
-            else -> Mocha.PanelHighest
-        },
-        label = "toolTabIconContainer"
-    )
     val iconTint by animateColorAsState(
         targetValue = when {
-            isActive && !isBack -> Mocha.Rosewater
+            isActive && !isBack -> colors.accent
             isBack -> Mocha.Text
             else -> Mocha.Subtext0
         },
         label = "toolTabIconTint"
     )
     val labelColor by animateColorAsState(
-        targetValue = if (isActive && !isBack) Mocha.Rosewater else Mocha.Subtext0,
+        targetValue = if (isActive && !isBack) colors.accent else Mocha.Subtext0,
         label = "toolTabLabelColor"
     )
 
@@ -504,15 +501,13 @@ private fun BottomTabBarItem(
             .height(itemHeight)
             .background(itemContainerColor)
             .border(BorderStroke(1.dp, itemBorderColor), itemShape)
-            .padding(vertical = 3.dp, horizontal = 4.dp),
+            .padding(vertical = 5.dp, horizontal = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
             modifier = Modifier
-                .size(iconBoxSize)
-                .clip(iconShape)
-                .background(iconContainerColor)
-                .border(BorderStroke(1.dp, iconBorderColor), iconShape),
+                .height(28.dp)
+                .fillMaxWidth(),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -531,11 +526,11 @@ private fun BottomTabBarItem(
             if (tabLabel.isNotEmpty()) {
                 Text(
                     text = tabLabel,
-                    fontSize = if (compact) 9.sp else 10.sp,
+                    fontSize = if (compact) 11.sp else 12.sp,
                     color = labelColor,
                     textAlign = TextAlign.Center,
                     maxLines = 2,
-                    lineHeight = if (compact) 10.sp else 11.sp,
+                    lineHeight = if (compact) 12.sp else 13.sp,
                     overflow = TextOverflow.Ellipsis
                 )
             }
@@ -550,8 +545,8 @@ private fun SubMenuGrid(
     modifier: Modifier = Modifier,
     disabledIds: Set<String> = emptySet()
 ) {
-    val itemsPerRow = 5
-    val preferredTileWidth = 76.dp
+    val itemsPerRow = 4
+    val preferredTileWidth = 88.dp
     val tileHeight = 74.dp
     val tileShape = RoundedCornerShape(Radius.md)
     val iconBoxSize = 32.dp
@@ -590,7 +585,7 @@ private fun SubMenuGrid(
                             rowItems.forEach { item ->
                                 val isDisabled = item.id in disabledIds
                                 val itemLabel = stringResource(item.labelRes)
-                                val itemAccent = if (isDisabled) Mocha.Overlay0 else Mocha.Mauve
+                                val itemAccent = if (isDisabled) Mocha.Overlay0 else LocalClearCutColors.current.accent
                                 Column(
                                     modifier = Modifier
                                         .size(width = tileWidth, height = tileHeight)
@@ -642,11 +637,11 @@ private fun SubMenuGrid(
                                     ) {
                                         Text(
                                             text = itemLabel,
-                                            fontSize = 10.sp,
+                                            fontSize = 11.sp,
                                             color = Mocha.Subtext0,
                                             textAlign = TextAlign.Center,
                                             maxLines = 2,
-                                            lineHeight = 12.sp,
+                                            lineHeight = 13.sp,
                                             overflow = TextOverflow.Ellipsis
                                         )
                                     }

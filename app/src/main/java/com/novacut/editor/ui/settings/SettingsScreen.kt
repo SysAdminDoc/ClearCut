@@ -15,6 +15,7 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -962,30 +963,36 @@ private fun SettingsHero(
                 }
             }
 
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                contentPadding = PaddingValues(end = Spacing.sm),
             ) {
-                SettingsOverviewStat(
-                    label = stringResource(R.string.settings_editor),
-                    value = settings.editorMode,
-                    accent = Mocha.Mauve,
-                    modifier = Modifier.widthIn(min = 132.dp)
-                )
-                SettingsOverviewStat(
-                    label = stringResource(R.string.settings_auto_save),
-                    value = if (settings.autoSaveEnabled) "${settings.autoSaveIntervalSec}s" else stringResource(R.string.settings_off),
-                    accent = Mocha.Sapphire,
-                    modifier = Modifier.widthIn(min = 132.dp)
-                )
-                SettingsOverviewStat(
-                    label = stringResource(R.string.settings_ai_models),
-                    value = stringResource(R.string.manage),
-                    accent = Mocha.Rosewater,
-                    modifier = Modifier
-                        .widthIn(min = 132.dp)
-                        .clickable(role = Role.Button, onClick = onManageAiModels)
-                )
+                item {
+                    SettingsOverviewStat(
+                        label = stringResource(R.string.settings_editor),
+                        value = settings.editorMode,
+                        accent = Mocha.Sky,
+                        modifier = Modifier.width(132.dp)
+                    )
+                }
+                item {
+                    SettingsOverviewStat(
+                        label = stringResource(R.string.settings_auto_save),
+                        value = if (settings.autoSaveEnabled) "${settings.autoSaveIntervalSec}s" else stringResource(R.string.settings_off),
+                        accent = Mocha.Green,
+                        modifier = Modifier.width(132.dp)
+                    )
+                }
+                item {
+                    SettingsOverviewStat(
+                        label = stringResource(R.string.settings_ai_models),
+                        value = stringResource(R.string.manage),
+                        accent = Mocha.Peach,
+                        modifier = Modifier
+                            .width(132.dp)
+                            .clickable(role = Role.Button, onClick = onManageAiModels)
+                    )
+                }
             }
         }
     }
