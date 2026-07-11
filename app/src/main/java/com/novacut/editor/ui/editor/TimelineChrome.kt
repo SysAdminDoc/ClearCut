@@ -46,17 +46,17 @@ internal fun TimelineToolbarButton(
     val colors = LocalClearCutColors.current
     val backgroundColor = when {
         !enabled -> colors.panelHighest.copy(alpha = 0.35f)
-        highlight -> Mocha.Peach.copy(alpha = 0.22f)
+        highlight -> colors.accent.copy(alpha = 0.16f)
         else -> colors.panelHighest
     }
     val borderColor = when {
         !enabled -> colors.cardStroke.copy(alpha = 0.35f)
-        highlight -> Mocha.Peach.copy(alpha = 0.7f)
+        highlight -> colors.accent.copy(alpha = 0.58f)
         else -> if (colors.highContrast) colors.cardStrokeStrong else colors.cardStroke
     }
     val iconTint = when {
         !enabled -> colors.text.copy(alpha = 0.4f)
-        highlight -> Mocha.Peach
+        highlight -> colors.accent
         else -> colors.text
     }
     ClearCutChromeIconButton(

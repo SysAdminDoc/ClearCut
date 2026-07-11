@@ -6,7 +6,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -91,7 +90,7 @@ private fun TrimNumericInputRow(
 
     Row(
         modifier = modifier.padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -224,6 +223,7 @@ private fun TimelineToolbarControls(
     onZoomChanged: (Float) -> Unit,
     onScrollChanged: (Long) -> Unit,
     onSplitAtPlayhead: () -> Unit,
+    onMoreClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -259,6 +259,12 @@ private fun TimelineToolbarControls(
             highlight = true,
             enabled = selectedClipId != null,
             onClick = onSplitAtPlayhead
+        )
+        TimelineToolbarButton(
+            icon = Icons.Default.MoreHoriz,
+            contentDescription = stringResource(R.string.editor_more),
+            compact = compact,
+            onClick = onMoreClick,
         )
     }
 }
@@ -355,9 +361,9 @@ fun Timeline(
             (timelineWidthPx / pixelsPerMs).toLong().coerceAtLeast(0L)
         }
     }
-    val headerWidth = if (isCompactTimeline) 118.dp else 128.dp
-    val chromePadding = if (isCompactTimeline) 12.dp else 16.dp
-    val contentPadding = if (isCompactTimeline) 10.dp else 12.dp
+    val headerWidth = if (isCompactTimeline) 88.dp else 96.dp
+    val chromePadding = if (isCompactTimeline) 6.dp else 10.dp
+    val contentPadding = if (isCompactTimeline) 4.dp else 8.dp
     val trimHandleVisualWidth = 14.dp
     val trimHandleTouchWidth = 28.dp
     val videoTrackLabel = stringResource(R.string.editor_video_track)
@@ -497,34 +503,27 @@ fun Timeline(
 
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = Mocha.Panel,
-        shape = RoundedCornerShape(Radius.xxl),
-        border = BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.92f))
+        color = Mocha.Midnight,
+        shape = RoundedCornerShape(Radius.sm),
+        border = BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.72f))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Mocha.PanelHighest.copy(alpha = 0.96f),
-                            Mocha.Panel,
-                            Mocha.Mantle
-                        )
-                    )
-                )
+                .background(Mocha.Midnight)
         ) {
             if (isCompactTimeline) {
-                Column(
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = chromePadding, top = chromePadding, end = chromePadding)
+                        .padding(horizontal = chromePadding, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     TimelineHeaderSummary(
                         playheadMs = playheadMs,
                         totalDurationMs = totalDurationMs,
                         compact = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.weight(1f)
                     )
                     TimelineToolbarControls(
                         compact = true,
@@ -534,9 +533,8 @@ fun Timeline(
                         onZoomChanged = onZoomChanged,
                         onScrollChanged = onScrollChanged,
                         onSplitAtPlayhead = onSplitAtPlayhead,
+                        onMoreClick = { timelineOptionsExpanded = true },
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 10.dp)
                     )
                 }
             } else {
@@ -559,7 +557,8 @@ fun Timeline(
                         selectedClipId = selectedClipId,
                         onZoomChanged = onZoomChanged,
                         onScrollChanged = onScrollChanged,
-                        onSplitAtPlayhead = onSplitAtPlayhead
+                        onSplitAtPlayhead = onSplitAtPlayhead,
+                        onMoreClick = { timelineOptionsExpanded = true },
                     )
                 }
             }
@@ -600,12 +599,14 @@ fun Timeline(
                     modifier = Modifier.weight(1f),
                 )
                 Box {
-                    TimelineToolbarButton(
-                        icon = Icons.Default.MoreHoriz,
-                        contentDescription = stringResource(R.string.editor_more),
-                        compact = isCompactTimeline,
-                        onClick = { timelineOptionsExpanded = true }
-                    )
+                    if (!isCompactTimeline) {
+                        TimelineToolbarButton(
+                            icon = Icons.Default.MoreHoriz,
+                            contentDescription = stringResource(R.string.editor_more),
+                            compact = false,
+                            onClick = { timelineOptionsExpanded = true }
+                        )
+                    }
                     DropdownMenu(
                         expanded = timelineOptionsExpanded,
                         onDismissRequest = { timelineOptionsExpanded = false },
@@ -733,9 +734,9 @@ fun Timeline(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(currentTrackHeight)
-                                    .padding(bottom = 6.dp),
+                                    .padding(bottom = 4.dp),
                                 color = Mocha.Crust.copy(alpha = 0.98f),
-                                shape = RoundedCornerShape(if (track.isCollapsed) 16.dp else 20.dp),
+                                shape = RoundedCornerShape(Radius.sm),
                                 border = BorderStroke(
                                     1.dp,
                                     if (track.id == selectedTrackId) {
@@ -770,18 +771,18 @@ fun Timeline(
                                         ) {
                                             Surface(
                                                 color = trackColor.copy(alpha = 0.14f),
-                                                shape = CircleShape
+                                                shape = RoundedCornerShape(Radius.xs)
                                             ) {
                                                 Icon(
                                                     imageVector = trackIcon(track.type),
                                                     contentDescription = null,
                                                     tint = trackColor,
                                                     modifier = Modifier
-                                                        .padding(if (isCompactTimeline) 6.dp else 7.dp)
+                                                        .padding(if (isCompactTimeline) 4.dp else 7.dp)
                                                         .size(if (isCompactTimeline) 12.dp else 14.dp)
                                                 )
                                             }
-                                            Spacer(modifier = Modifier.width(if (isCompactTimeline) 6.dp else 8.dp))
+                                            Spacer(modifier = Modifier.width(if (isCompactTimeline) 4.dp else 8.dp))
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Text(
                                                     text = "${compactTrackLabelForType(track.type)} ${track.index + 1}",
@@ -821,7 +822,20 @@ fun Timeline(
                                         if (!track.isCollapsed) {
                                             Spacer(modifier = Modifier.height(6.dp))
                                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                                if (track.type == TrackType.AUDIO) {
+                                                if (isCompactTimeline && track.type == TrackType.AUDIO) {
+                                                    TimelineMiniIconButton(
+                                                        icon = if (track.isMuted) {
+                                                            Icons.AutoMirrored.Filled.VolumeOff
+                                                        } else {
+                                                            Icons.AutoMirrored.Filled.VolumeUp
+                                                        },
+                                                        contentDescription = stringResource(R.string.timeline_toggle_mute),
+                                                        active = !track.isMuted,
+                                                        accent = trackColor,
+                                                        compact = true,
+                                                        onClick = { onToggleTrackMute(track.id) }
+                                                    )
+                                                } else if (track.type == TrackType.AUDIO) {
                                                     TimelineMiniIconButton(
                                                         icon = Icons.Default.GraphicEq,
                                                         contentDescription = stringResource(R.string.track_waveform_toggle),
@@ -840,26 +854,28 @@ fun Timeline(
                                                         onClick = { onToggleTrackVisible(track.id) }
                                                     )
                                                 }
-                                                TimelineMiniIconButton(
-                                                    icon = if (track.isMuted) {
-                                                        Icons.AutoMirrored.Filled.VolumeOff
-                                                    } else {
-                                                        Icons.AutoMirrored.Filled.VolumeUp
-                                                    },
-                                                    contentDescription = stringResource(R.string.timeline_toggle_mute),
-                                                    active = !track.isMuted,
-                                                    accent = trackColor,
-                                                    compact = true,
-                                                    onClick = { onToggleTrackMute(track.id) }
-                                                )
-                                                TimelineMiniIconButton(
-                                                    icon = if (track.isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
-                                                    contentDescription = stringResource(R.string.timeline_toggle_lock),
-                                                    active = !track.isLocked,
-                                                    accent = trackColor,
-                                                    compact = true,
-                                                    onClick = { onToggleTrackLock(track.id) }
-                                                )
+                                                if (!isCompactTimeline) {
+                                                    TimelineMiniIconButton(
+                                                        icon = if (track.isMuted) {
+                                                            Icons.AutoMirrored.Filled.VolumeOff
+                                                        } else {
+                                                            Icons.AutoMirrored.Filled.VolumeUp
+                                                        },
+                                                        contentDescription = stringResource(R.string.timeline_toggle_mute),
+                                                        active = !track.isMuted,
+                                                        accent = trackColor,
+                                                        compact = true,
+                                                        onClick = { onToggleTrackMute(track.id) }
+                                                    )
+                                                    TimelineMiniIconButton(
+                                                        icon = if (track.isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
+                                                        contentDescription = stringResource(R.string.timeline_toggle_lock),
+                                                        active = !track.isLocked,
+                                                        accent = trackColor,
+                                                        compact = true,
+                                                        onClick = { onToggleTrackLock(track.id) }
+                                                    )
+                                                }
                                                 Box {
                                                     TimelineMiniIconButton(
                                                         icon = Icons.Default.MoreHoriz,
@@ -873,8 +889,44 @@ fun Timeline(
                                                         expanded = trackMenuExpanded,
                                                         onDismissRequest = { trackMenuExpanded = false },
                                                         containerColor = Mocha.PanelHighest,
-                                                        shape = RoundedCornerShape(18.dp)
+                                                        shape = RoundedCornerShape(Radius.md)
                                                     ) {
+                                                        if (isCompactTimeline) {
+                                                            DropdownMenuItem(
+                                                                text = { Text(stringResource(R.string.timeline_toggle_lock)) },
+                                                                leadingIcon = {
+                                                                    Icon(
+                                                                        if (track.isLocked) Icons.Default.LockOpen else Icons.Default.Lock,
+                                                                        contentDescription = null,
+                                                                    )
+                                                                },
+                                                                onClick = {
+                                                                    trackMenuExpanded = false
+                                                                    onToggleTrackLock(track.id)
+                                                                },
+                                                            )
+                                                            if (track.type == TrackType.AUDIO) {
+                                                                DropdownMenuItem(
+                                                                    text = { Text(stringResource(R.string.track_waveform_toggle)) },
+                                                                    leadingIcon = { Icon(Icons.Default.GraphicEq, contentDescription = null) },
+                                                                    onClick = {
+                                                                        trackMenuExpanded = false
+                                                                        onToggleTrackWaveform(track.id)
+                                                                    },
+                                                                )
+                                                            } else {
+                                                                DropdownMenuItem(
+                                                                    text = { Text(stringResource(R.string.timeline_toggle_mute)) },
+                                                                    leadingIcon = {
+                                                                        Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null)
+                                                                    },
+                                                                    onClick = {
+                                                                        trackMenuExpanded = false
+                                                                        onToggleTrackMute(track.id)
+                                                                    },
+                                                                )
+                                                            }
+                                                        }
                                                         DropdownMenuItem(
                                                             text = {
                                                                 Text(
@@ -927,7 +979,7 @@ fun Timeline(
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .clip(RoundedCornerShape(24.dp))
+                        .clip(RoundedCornerShape(Radius.sm))
                         .background(
                             Brush.verticalGradient(
                                 listOf(
@@ -936,7 +988,7 @@ fun Timeline(
                                 )
                             )
                         )
-                        .border(1.dp, Mocha.CardStroke.copy(alpha = 0.6f), RoundedCornerShape(24.dp))
+                        .border(1.dp, Mocha.CardStroke.copy(alpha = 0.6f), RoundedCornerShape(Radius.sm))
                         .clipToBounds()
                         .onSizeChanged {
                             timelineWidthPx = it.width.toFloat()
@@ -1412,7 +1464,7 @@ fun Timeline(
                                             .width(with(density) { clipWidthPx.toDp() })
                                             .fillMaxHeight()
                                             .padding(vertical = 4.dp, horizontal = 1.dp)
-                                            .clip(RoundedCornerShape(12.dp))
+                                            .clip(RoundedCornerShape(Radius.xs))
                                             .background(clipBackgroundBrush)
                                             .alpha(if (track.isLocked) 0.7f else 1f)
                                             .then(
@@ -1425,7 +1477,7 @@ fun Timeline(
                                                         isMultiSelected -> Mocha.Peach.copy(alpha = 0.85f)
                                                         else -> clipColor.copy(alpha = 0.25f)
                                                     },
-                                                    RoundedCornerShape(12.dp)
+                                                    RoundedCornerShape(Radius.xs)
                                                 )
                                             )
                                             .semantics {
@@ -1791,7 +1843,7 @@ fun Timeline(
                                                 .fillMaxHeight()
                                                 .background(
                                                     trimHandleColor,
-                                                    RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)
+                                                    RoundedCornerShape(topStart = Radius.xs, bottomStart = Radius.xs)
                                                 )
                                         ) {
                                             if (isSelected) {
@@ -1818,7 +1870,7 @@ fun Timeline(
                                                 .fillMaxHeight()
                                                 .background(
                                                     trimHandleColor,
-                                                    RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp)
+                                                    RoundedCornerShape(topEnd = Radius.xs, bottomEnd = Radius.xs)
                                                 )
                                         ) {
                                             if (isSelected) {

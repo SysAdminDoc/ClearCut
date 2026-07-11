@@ -275,7 +275,7 @@ fun BottomToolArea(
         // Tab bar
         BottomTabBar(
             tabs = tabs,
-            activeTabId = activeTabId,
+            activeTabId = activeTabId ?: "edit",
             onTabTapped = { tabId ->
                 when (tabId) {
                     "back" -> {
@@ -351,14 +351,15 @@ private fun BottomTabBar(
 ) {
     val colors = LocalClearCutColors.current
     Surface(
-        color = colors.panel,
-        shape = RoundedCornerShape(topStart = Radius.xl, topEnd = Radius.xl),
+        color = colors.background,
+        shape = RoundedCornerShape(topStart = Radius.sm, topEnd = Radius.sm),
+        border = BorderStroke(1.dp, colors.cardStroke.copy(alpha = 0.72f)),
         modifier = modifier.fillMaxWidth()
     ) {
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 6.dp, vertical = 5.dp)
+                .padding(horizontal = 4.dp, vertical = 3.dp)
         ) {
             val fitAllTabs = tabs.size <= 6
             val compactItem = maxWidth < 390.dp
@@ -456,21 +457,19 @@ private fun BottomTabBarItem(
     val isBack = tab.id == "back"
     val tabLabel = if (tab.labelRes != 0) stringResource(tab.labelRes) else ""
     val itemDescription = if (isBack) stringResource(R.string.back) else tabLabel
-    val itemShape = RoundedCornerShape(Radius.md)
+    val itemShape = RoundedCornerShape(Radius.xs)
     val iconSize = if (compact) 20.dp else 22.dp
-    val labelSlotHeight = if (compact) 18.dp else 20.dp
-    val itemHeight = if (compact) 58.dp else 62.dp
+    val labelSlotHeight = if (compact) 16.dp else 18.dp
+    val itemHeight = if (compact) 56.dp else 60.dp
     val itemBorderColor by animateColorAsState(
         targetValue = when {
-            isActive && !isBack -> colors.accent.copy(alpha = 0.58f)
-            isBack -> Mocha.CardStroke.copy(alpha = 0.46f)
+            isBack -> Mocha.CardStroke.copy(alpha = 0.38f)
             else -> Color.Transparent
         },
         label = "toolTabItemBorder"
     )
     val itemContainerColor by animateColorAsState(
         targetValue = when {
-            isActive && !isBack -> colors.selectedSurface
             isBack -> Mocha.PanelRaised.copy(alpha = 0.42f)
             else -> Color.Transparent
         },
@@ -501,12 +500,19 @@ private fun BottomTabBarItem(
             .height(itemHeight)
             .background(itemContainerColor)
             .border(BorderStroke(1.dp, itemBorderColor), itemShape)
-            .padding(vertical = 5.dp, horizontal = 4.dp),
+            .padding(vertical = 3.dp, horizontal = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
             modifier = Modifier
-                .height(28.dp)
+                .width(30.dp)
+                .height(2.dp)
+                .background(if (isActive && !isBack) colors.accent else Color.Transparent)
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Box(
+            modifier = Modifier
+                .height(24.dp)
                 .fillMaxWidth(),
             contentAlignment = Alignment.Center
         ) {
@@ -518,7 +524,7 @@ private fun BottomTabBarItem(
             )
         }
 
-        Spacer(modifier = Modifier.height(3.dp))
+        Spacer(modifier = Modifier.height(1.dp))
         Box(
             modifier = Modifier.height(labelSlotHeight),
             contentAlignment = Alignment.TopCenter
