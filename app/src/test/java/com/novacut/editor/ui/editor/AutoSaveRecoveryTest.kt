@@ -7,38 +7,9 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
-class RecoveryDialogTest {
-
-    @Test
-    fun shouldShowRecoveryDialog_ignoresNormalProjectPersistence() {
-        assertFalse(
-            shouldShowRecoveryDialog(
-                projectUpdatedAtMs = 10_000L,
-                recoveryTimestampMs = 12_000L,
-                hasRecoveredContent = true
-            )
-        )
-    }
-
-    @Test
-    fun shouldShowRecoveryDialog_requiresNewerAutosaveWithContent() {
-        assertTrue(
-            shouldShowRecoveryDialog(
-                projectUpdatedAtMs = 10_000L,
-                recoveryTimestampMs = 20_001L,
-                hasRecoveredContent = true
-            )
-        )
-
-        assertFalse(
-            shouldShowRecoveryDialog(
-                projectUpdatedAtMs = 10_000L,
-                recoveryTimestampMs = 20_001L,
-                hasRecoveredContent = false
-            )
-        )
-    }
+class AutoSaveRecoveryTest {
 
     @Test
     fun recoveryOpenFeedback_blocksWritesForFutureSchemaAndCorruptAutosaves() {
@@ -64,5 +35,23 @@ class RecoveryDialogTest {
         )
         assertEquals(ToastSeverity.Warning, feedback?.severity)
         assertFalse(shouldBlockAutoSaveForRecoveryOutcome(ProjectAutoSave.LoadOutcome.NotFound))
+    }
+
+    @Test
+    fun loadedAutosaves_haveNoBlockingRecoveryDialog() {
+        val viewModel = locate("app/src/main/java/com/novacut/editor/ui/editor/EditorViewModel.kt").readText()
+        val utilityPanels = locate(
+            "app/src/main/java/com/novacut/editor/ui/editor/EditorUtilityPanelHost.kt"
+        ).readText()
+
+        assertFalse(viewModel.contains("RECOVERY_DIALOG"))
+        assertFalse(viewModel.contains("shouldShowRecoveryDialog"))
+        assertFalse(utilityPanels.contains("recovery_title"))
+    }
+
+    private fun locate(relativePath: String): File {
+        return listOf(File(relativePath), File("../$relativePath"))
+            .firstOrNull(File::exists)
+            ?: error("$relativePath not found")
     }
 }

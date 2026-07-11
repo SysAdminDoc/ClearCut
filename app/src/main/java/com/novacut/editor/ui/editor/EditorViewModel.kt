@@ -104,17 +104,6 @@ private const val MIN_TIMELINE_ZOOM = 0.01f
 private const val MAX_TIMELINE_ZOOM = 10f
 private const val WAVEFORM_PRELOAD_PADDING_MS = 3_000L
 private const val WAVEFORM_FALLBACK_WINDOW_MS = 15_000L
-private const val RECOVERY_DIALOG_NEWER_THAN_PROJECT_MS = 5_000L
-
-internal fun shouldShowRecoveryDialog(
-    projectUpdatedAtMs: Long,
-    recoveryTimestampMs: Long,
-    hasRecoveredContent: Boolean
-): Boolean {
-    if (!hasRecoveredContent) return false
-    return recoveryTimestampMs > projectUpdatedAtMs + RECOVERY_DIALOG_NEWER_THAN_PROJECT_MS
-}
-
 internal data class RecoveryOpenFeedback(
     val message: String,
     val severity: ToastSeverity,
@@ -175,7 +164,7 @@ enum class PanelId {
     CLOUD_BACKUP, TUTORIAL, UNDO_HISTORY, CAPTION_STYLE_GALLERY,
     BEAT_SYNC, SMART_REFRAME, SPEED_PRESETS,
     AUTO_EDIT, TTS, EFFECT_LIBRARY, NOISE_REDUCTION, STICKER_PICKER,
-    DRAWING, MULTI_CAM, MARKER_LIST, SCRATCHPAD, RECOVERY_DIALOG,
+    DRAWING, MULTI_CAM, MARKER_LIST, SCRATCHPAD,
     // v3.69 — 15-feature wave (composite hub + drill-downs).
     V369_FEATURES,
     TEXT_BASED_EDIT, AUTO_CHAPTER, TALKING_HEAD, KARAOKE_CAPTIONS,
@@ -921,15 +910,7 @@ class EditorViewModel @Inject constructor(
     }
 
     private fun restoreLoadedRecovery(recovery: AutoSaveState) {
-        val hadContent = recovery.tracks.any { it.clips.isNotEmpty() } ||
-            recovery.textOverlays.isNotEmpty() ||
-            recovery.imageOverlays.isNotEmpty()
         val mediaHealthReport = analyzeMediaHealthForRecovery(recovery)
-        val showRecoveryDialog = shouldShowRecoveryDialog(
-            projectUpdatedAtMs = _state.value.project.updatedAt,
-            recoveryTimestampMs = recovery.timestamp,
-            hasRecoveredContent = hadContent
-        )
         _state.update { current ->
             current.copy(
                 tracks = recovery.tracks.ifEmpty { current.tracks },
@@ -949,14 +930,7 @@ class EditorViewModel @Inject constructor(
                 totalDurationMs = recovery.tracks.maxOfOrNull { t ->
                     t.clips.maxOfOrNull { c -> c.timelineEndMs } ?: 0L
                 } ?: 0L
-            ).copyPanel { panel ->
-                // Surface a dialog only when the autosave is materially newer
-                // than the project metadata. Auto-save is also the normal
-                // full-state persistence path, so routine opens stay quiet.
-                panel.copy(
-                    panels = if (showRecoveryDialog) panel.panels.open(PanelId.RECOVERY_DIALOG) else panel.panels
-                )
-            }
+            )
         }
         _playheadMs.value = recovery.playheadMs
         if (recovery.tracks.flatMap { it.clips }.isNotEmpty()) {
@@ -5095,15 +5069,6 @@ class EditorViewModel @Inject constructor(
     fun dismissBulkUndoPrompt() {
         val current = _state.value.bulkUndoPrompt ?: return
         _state.update { if (it.bulkUndoPrompt?.id == current.id) it.copy(bulkUndoPrompt = null) else it }
-    }
-
-    fun dismissRecoveryDialog(recover: Boolean) {
-        _state.update {
-            it.copyPanel { panel -> panel.copy(panels = panel.panels.close(PanelId.RECOVERY_DIALOG)) }
-        }
-        if (!recover) {
-            showToast(text(R.string.vm_autosave_kept_toast), ToastSeverity.Warning)
-        }
     }
 
     fun updateProjectAspect(aspect: AspectRatio) {
