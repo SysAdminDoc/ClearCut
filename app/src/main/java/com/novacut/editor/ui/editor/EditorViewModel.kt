@@ -1408,7 +1408,7 @@ class EditorViewModel @Inject constructor(
         if (gapPlaybackJob?.isActive == true) {
             cancelGapPlayback()
             _state.update { it.copy(isPlaying = false) }
-        } else if (videoEngine.isPlaying()) {
+        } else if (videoEngine.isPlaybackRequested() && !videoEngine.isPlaybackEnded()) {
             videoEngine.pause()
             _state.update { it.copy(isPlaying = false) }
         } else {
@@ -1432,8 +1432,7 @@ class EditorViewModel @Inject constructor(
             if (currentPreviewClip == null && _state.value.totalDurationMs > playhead) {
                 startGapPlayback(playhead)
             } else {
-                videoEngine.play()
-                _state.update { it.copy(isPlaying = true) }
+                videoEngine.playFromTimelinePosition(playhead)
             }
         }
     }

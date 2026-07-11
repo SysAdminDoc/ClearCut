@@ -160,6 +160,7 @@ class VideoEngine @Inject constructor(
                 .apply {
                     setAudioAttributes(previewAudioAttributes, true)
                     setHandleAudioBecomingNoisy(true)
+                    playerListener?.let(::addListener)
                 }
         }
         return requireNotNull(player) { "ExoPlayer failed to initialize" }
@@ -266,8 +267,25 @@ class VideoEngine @Inject constructor(
     }
 
     fun play() { player?.play() }
+
+    fun playFromTimelinePosition(positionMs: Long) {
+        val p = player ?: return
+        resolvePreviewSeekTarget(positionMs)?.let { target ->
+            // A playlist rebuilt at a cut boundary can still be buffering or
+            // ended when the user presses Play. Reassert the resolved item and
+            // offset here so play never inherits a stale ended media period.
+            p.seekTo(target.mediaItemIndex, target.mediaPositionMs)
+        }
+        if (p.playbackState == Player.STATE_IDLE) {
+            p.prepare()
+        }
+        p.play()
+    }
+
     fun pause() { player?.pause() }
     fun isPlaying(): Boolean = player?.isPlaying ?: false
+    fun isPlaybackRequested(): Boolean = player?.playWhenReady == true
+    fun isPlaybackEnded(): Boolean = player?.playbackState == Player.STATE_ENDED
 
     fun getVideoDuration(uri: Uri): Long {
         val retriever = MediaMetadataRetriever()

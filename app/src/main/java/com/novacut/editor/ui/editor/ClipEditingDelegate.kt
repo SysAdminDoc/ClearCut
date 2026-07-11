@@ -626,7 +626,9 @@ class ClipEditingDelegate(
                 )
             )
         }
-        rebuildPlayerTimeline()
+        // A split only partitions metadata; it does not change the rendered
+        // source sequence. Keep the already-prepared player timeline so Play
+        // can continue immediately instead of rebuffering every new half.
         saveProject()
         showToast(if (splitCandidates.size > 1) "Clips split" else "Clip split")
     }
