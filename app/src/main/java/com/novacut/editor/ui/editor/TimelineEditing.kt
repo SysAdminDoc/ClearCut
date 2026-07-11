@@ -441,6 +441,194 @@ internal fun trimClipOnTrack(
     return track.copy(clips = updatedClips)
 }
 
+/**
+ * Trim identity-linked clips by one shared timeline delta. Each track may have
+ * different neighbouring clips, so applying the same source trim request to
+ * every member can clamp them to different timeline boundaries and break A/V
+ * sync. This planner resolves the anchor request, intersects the admissible
+ * delta across every linked member, then applies that shared delta atomically.
+ */
+internal fun trimLinkedClipsOnTimeline(
+    tracks: List<Track>,
+    anchorClipId: String,
+    targetClipIds: Set<String>,
+    requestedTrimStartMs: Long? = null,
+    requestedTrimEndMs: Long? = null
+): List<Track> {
+    if (targetClipIds.isEmpty()) return tracks
+    var updatedTracks = tracks
+    if (requestedTrimStartMs != null) {
+        updatedTracks = trimLinkedClipStarts(
+            tracks = updatedTracks,
+            anchorClipId = anchorClipId,
+            targetClipIds = targetClipIds,
+            requestedTrimStartMs = requestedTrimStartMs
+        )
+    }
+    if (requestedTrimEndMs != null) {
+        updatedTracks = trimLinkedClipEnds(
+            tracks = updatedTracks,
+            anchorClipId = anchorClipId,
+            targetClipIds = targetClipIds,
+            requestedTrimEndMs = requestedTrimEndMs
+        )
+    }
+    return updatedTracks
+}
+
+private fun trimLinkedClipStarts(
+    tracks: List<Track>,
+    anchorClipId: String,
+    targetClipIds: Set<String>,
+    requestedTrimStartMs: Long
+): List<Track> {
+    val anchor = tracks.findClipLocation(anchorClipId) ?: return tracks
+    val simulatedAnchorTrack = trimClipOnTrack(
+        track = anchor.track,
+        clipId = anchorClipId,
+        requestedTrimStartMs = requestedTrimStartMs
+    )
+    val simulatedAnchor = simulatedAnchorTrack.clips.firstOrNull { it.id == anchorClipId }
+        ?: return tracks
+    val requestedDeltaMs = simulatedAnchor.timelineStartMs - anchor.clip.timelineStartMs
+    if (requestedDeltaMs == 0L) return tracks
+
+    val resolvedDeltas = targetClipIds.mapNotNull { clipId ->
+        val location = tracks.findClipLocation(clipId) ?: return@mapNotNull null
+        val simulatedTrack = trimClipStartToTimelineStart(
+            track = location.track,
+            clipId = clipId,
+            requestedTimelineStartMs = location.clip.timelineStartMs + requestedDeltaMs
+        )
+        val simulatedClip = simulatedTrack.clips.firstOrNull { it.id == clipId }
+            ?: return@mapNotNull null
+        simulatedClip.timelineStartMs - location.clip.timelineStartMs
+    }
+    if (resolvedDeltas.size != targetClipIds.size) return tracks
+    val sharedDeltaMs = mostRestrictiveSharedDelta(requestedDeltaMs, resolvedDeltas)
+    if (sharedDeltaMs == 0L) return tracks
+
+    return tracks.map { track ->
+        targetClipIds.fold(track) { currentTrack, clipId ->
+            val clip = currentTrack.clips.firstOrNull { it.id == clipId }
+                ?: return@fold currentTrack
+            trimClipStartToTimelineStart(
+                track = currentTrack,
+                clipId = clipId,
+                requestedTimelineStartMs = clip.timelineStartMs + sharedDeltaMs
+            )
+        }
+    }
+}
+
+private fun trimLinkedClipEnds(
+    tracks: List<Track>,
+    anchorClipId: String,
+    targetClipIds: Set<String>,
+    requestedTrimEndMs: Long
+): List<Track> {
+    val anchor = tracks.findClipLocation(anchorClipId) ?: return tracks
+    val simulatedAnchorTrack = trimClipOnTrack(
+        track = anchor.track,
+        clipId = anchorClipId,
+        requestedTrimEndMs = requestedTrimEndMs
+    )
+    val simulatedAnchor = simulatedAnchorTrack.clips.firstOrNull { it.id == anchorClipId }
+        ?: return tracks
+    val requestedDeltaMs = simulatedAnchor.timelineEndMs - anchor.clip.timelineEndMs
+    if (requestedDeltaMs == 0L) return tracks
+
+    val resolvedDeltas = targetClipIds.mapNotNull { clipId ->
+        val location = tracks.findClipLocation(clipId) ?: return@mapNotNull null
+        val simulatedTrack = trimClipEndToTimelineEnd(
+            track = location.track,
+            clipId = clipId,
+            requestedTimelineEndMs = location.clip.timelineEndMs + requestedDeltaMs
+        )
+        val simulatedClip = simulatedTrack.clips.firstOrNull { it.id == clipId }
+            ?: return@mapNotNull null
+        simulatedClip.timelineEndMs - location.clip.timelineEndMs
+    }
+    if (resolvedDeltas.size != targetClipIds.size) return tracks
+    val sharedDeltaMs = mostRestrictiveSharedDelta(requestedDeltaMs, resolvedDeltas)
+    if (sharedDeltaMs == 0L) return tracks
+
+    return tracks.map { track ->
+        targetClipIds.fold(track) { currentTrack, clipId ->
+            val clip = currentTrack.clips.firstOrNull { it.id == clipId }
+                ?: return@fold currentTrack
+            trimClipEndToTimelineEnd(
+                track = currentTrack,
+                clipId = clipId,
+                requestedTimelineEndMs = clip.timelineEndMs + sharedDeltaMs
+            )
+        }
+    }
+}
+
+private fun mostRestrictiveSharedDelta(requestedDeltaMs: Long, resolvedDeltas: List<Long>): Long {
+    return when {
+        requestedDeltaMs > 0L -> resolvedDeltas.minOrNull()?.coerceIn(0L, requestedDeltaMs) ?: 0L
+        requestedDeltaMs < 0L -> resolvedDeltas.maxOrNull()?.coerceIn(requestedDeltaMs, 0L) ?: 0L
+        else -> 0L
+    }
+}
+
+private fun trimClipStartToTimelineStart(
+    track: Track,
+    clipId: String,
+    requestedTimelineStartMs: Long
+): Track {
+    val clipIndex = track.clips.indexOfFirst { it.id == clipId }
+    if (clipIndex < 0) return track
+    val clip = track.clips[clipIndex]
+    val previousClip = track.clips.getOrNull(clipIndex - 1)
+    val minStartMs = previousClip?.timelineEndMs ?: 0L
+    val maxStartMs = clip.timelineEndMs - MIN_TIMELINE_CLIP_DURATION_MS
+    if (maxStartMs < minStartMs) return track
+    val resolvedStartMs = requestedTimelineStartMs.coerceIn(minStartMs, maxStartMs)
+    val fallbackTrimStartMs = clip.timelineOffsetToSourceMs(
+        (resolvedStartMs - clip.timelineStartMs).coerceAtLeast(0L)
+    )
+    val resolvedTrimStartMs = trimStartForTimelineStart(
+        clip = clip,
+        targetTimelineStartMs = resolvedStartMs,
+        fallbackTrimStartMs = fallbackTrimStartMs
+    )
+    val updatedClips = track.clips.toMutableList()
+    updatedClips[clipIndex] = clip.copy(
+        timelineStartMs = resolvedStartMs,
+        trimStartMs = resolvedTrimStartMs
+    )
+    return track.copy(clips = updatedClips)
+}
+
+private fun trimClipEndToTimelineEnd(
+    track: Track,
+    clipId: String,
+    requestedTimelineEndMs: Long
+): Track {
+    val clipIndex = track.clips.indexOfFirst { it.id == clipId }
+    if (clipIndex < 0) return track
+    val clip = track.clips[clipIndex]
+    val nextClip = track.clips.getOrNull(clipIndex + 1)
+    val minEndMs = clip.timelineStartMs + MIN_TIMELINE_CLIP_DURATION_MS
+    val maxEndMs = nextClip?.timelineStartMs ?: Long.MAX_VALUE
+    if (maxEndMs < minEndMs) return track
+    val resolvedEndMs = requestedTimelineEndMs.coerceIn(minEndMs, maxEndMs)
+    val fallbackTrimEndMs = clip.timelineOffsetToSourceMs(
+        (resolvedEndMs - clip.timelineStartMs).coerceAtLeast(0L)
+    )
+    val resolvedTrimEndMs = trimEndForTimelineEnd(
+        clip = clip,
+        targetTimelineEndMs = resolvedEndMs,
+        fallbackTrimEndMs = fallbackTrimEndMs
+    )
+    val updatedClips = track.clips.toMutableList()
+    updatedClips[clipIndex] = clip.copy(trimEndMs = resolvedTrimEndMs)
+    return track.copy(clips = updatedClips)
+}
+
 internal fun calculateSlideBounds(track: Track, clipId: String): SlideBounds? {
     val sortedClips = track.clips.sortedBy { it.timelineStartMs }
     val clipIndex = sortedClips.indexOfFirst { it.id == clipId }

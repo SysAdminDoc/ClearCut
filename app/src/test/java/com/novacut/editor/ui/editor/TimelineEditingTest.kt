@@ -227,6 +227,67 @@ class TimelineEditingTest {
     }
 
     @Test
+    fun `linked leading trim uses the most restrictive neighboring boundary`() {
+        val video = clip("video", 500L, 200L, 1_000L, 1_000L)
+        val audio = clip("audio", 500L, 200L, 1_000L, 1_000L)
+        val videoTrack = Track(
+            type = TrackType.VIDEO,
+            index = 0,
+            clips = listOf(clip("video-prev", 0L, 0L, 400L, 400L), video)
+        )
+        val audioTrack = Track(
+            type = TrackType.AUDIO,
+            index = 1,
+            clips = listOf(clip("audio-prev", 0L, 0L, 450L, 450L), audio)
+        )
+
+        val trimmedTracks = trimLinkedClipsOnTimeline(
+            tracks = listOf(videoTrack, audioTrack),
+            anchorClipId = video.id,
+            targetClipIds = setOf(video.id, audio.id),
+            requestedTrimStartMs = 0L
+        )
+
+        val trimmedVideo = trimmedTracks[0].clips.last()
+        val trimmedAudio = trimmedTracks[1].clips.last()
+        assertEquals(450L, trimmedVideo.timelineStartMs)
+        assertEquals(450L, trimmedAudio.timelineStartMs)
+        assertEquals(150L, trimmedVideo.trimStartMs)
+        assertEquals(150L, trimmedAudio.trimStartMs)
+        assertEquals(trimmedVideo.timelineEndMs, trimmedAudio.timelineEndMs)
+    }
+
+    @Test
+    fun `linked trailing trim uses the most restrictive next clip boundary`() {
+        val video = clip("video", 0L, 0L, 600L, 1_000L)
+        val audio = clip("audio", 0L, 0L, 600L, 1_000L)
+        val videoTrack = Track(
+            type = TrackType.VIDEO,
+            index = 0,
+            clips = listOf(video, clip("video-next", 900L, 0L, 100L, 100L))
+        )
+        val audioTrack = Track(
+            type = TrackType.AUDIO,
+            index = 1,
+            clips = listOf(audio, clip("audio-next", 700L, 0L, 100L, 100L))
+        )
+
+        val trimmedTracks = trimLinkedClipsOnTimeline(
+            tracks = listOf(videoTrack, audioTrack),
+            anchorClipId = video.id,
+            targetClipIds = setOf(video.id, audio.id),
+            requestedTrimEndMs = 1_000L
+        )
+
+        val trimmedVideo = trimmedTracks[0].clips.first()
+        val trimmedAudio = trimmedTracks[1].clips.first()
+        assertEquals(700L, trimmedVideo.timelineEndMs)
+        assertEquals(700L, trimmedAudio.timelineEndMs)
+        assertEquals(700L, trimmedVideo.trimEndMs)
+        assertEquals(700L, trimmedAudio.trimEndMs)
+    }
+
+    @Test
     fun `slide edit keeps neighboring clips connected`() {
         val first = clip(
             id = "a",

@@ -624,19 +624,13 @@ class ClipEditingDelegate(
         if (tracksContainLockedClip(targetIds)) return
         var previewSeekMs: Long? = null
         stateFlow.update { state ->
-            val tracks = state.tracks.map { track ->
-                val targetClipId = track.clips.firstOrNull { it.id in targetIds }?.id
-                if (targetClipId == null) {
-                    track
-                } else {
-                    trimClipOnTrack(
-                        track = track,
-                        clipId = targetClipId,
-                        requestedTrimStartMs = newTrimStartMs,
-                        requestedTrimEndMs = newTrimEndMs
-                    )
-                }
-            }
+            val tracks = trimLinkedClipsOnTimeline(
+                tracks = state.tracks,
+                anchorClipId = clipId,
+                targetClipIds = targetIds,
+                requestedTrimStartMs = newTrimStartMs,
+                requestedTrimEndMs = newTrimEndMs
+            )
             val updatedState = recalculateDuration(state.copy(tracks = tracks))
             val previewClip = updatedState.tracks
                 .asSequence()
