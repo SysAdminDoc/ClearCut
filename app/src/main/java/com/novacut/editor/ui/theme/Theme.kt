@@ -35,7 +35,7 @@ object Mocha {
     val Surface0 = Color(0xFF243240)
     val Surface1 = Color(0xFF3B4A58)
     val Surface2 = Color(0xFF566574)
-    val Overlay0 = Color(0xFF6C7086)
+    val Overlay0 = Color(0xFF626B78)
     val Overlay1 = Color(0xFF7F849C)
     val Overlay2 = Color(0xFF9399B2)
     val Subtext0 = Color(0xFFA6ADC8)
