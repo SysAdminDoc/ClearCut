@@ -386,7 +386,10 @@ data class UndoAction(
     val drawingPaths: List<com.novacut.editor.model.DrawingPath> = emptyList(),
     val beatMarkers: List<Long> = emptyList(),
     val trackedObjects: List<com.novacut.editor.model.TrackedObject> = emptyList(),
-    val playheadMs: Long = 0L
+    val playheadMs: Long = 0L,
+    val selectedClipId: String? = null,
+    val selectedTrackId: String? = null,
+    val selectedClipIds: Set<String> = emptySet()
 )
 
 /**
@@ -2286,28 +2289,43 @@ class EditorViewModel @Inject constructor(
         val stack = _state.value.undoStack
         if (index < 0 || index >= stack.size) return
         val target = stack[index]
-        _state.update { it.copy(
-            tracks = target.tracks,
-            textOverlays = target.textOverlays,
-            imageOverlays = target.imageOverlays,
-            timelineMarkers = target.timelineMarkers,
-            chapterMarkers = target.chapterMarkers,
-            drawingPaths = target.drawingPaths,
-            undoStack = stack.take(index),
-            redoStack = listOf(UndoAction(
-                "Current",
-                it.tracks,
-                it.textOverlays,
-                imageOverlays = it.imageOverlays.toList(),
-                timelineMarkers = it.timelineMarkers.toList(),
-                chapterMarkers = it.chapterMarkers.toList(),
-                drawingPaths = it.drawingPaths.toList(),
-                playheadMs = _playheadMs.value
-            )) + stack.drop(index + 1),
-            playheadMs = target.playheadMs.coerceIn(0L, it.totalDurationMs.coerceAtLeast(0L))
-        ) }
+        _state.update { state ->
+            val restored = recalculateDuration(state.copy(
+                tracks = target.tracks,
+                textOverlays = target.textOverlays,
+                imageOverlays = target.imageOverlays,
+                timelineMarkers = target.timelineMarkers,
+                chapterMarkers = target.chapterMarkers,
+                drawingPaths = target.drawingPaths,
+                beatMarkers = target.beatMarkers,
+                trackedObjects = target.trackedObjects,
+                selectedClipId = target.selectedClipId,
+                selectedTrackId = target.selectedTrackId,
+                selectedClipIds = target.selectedClipIds,
+                undoStack = stack.take(index),
+                redoStack = listOf(UndoAction(
+                    "Current",
+                    state.tracks,
+                    state.textOverlays,
+                    imageOverlays = state.imageOverlays.toList(),
+                    timelineMarkers = state.timelineMarkers.toList(),
+                    chapterMarkers = state.chapterMarkers.toList(),
+                    drawingPaths = state.drawingPaths.toList(),
+                    beatMarkers = state.beatMarkers.toList(),
+                    trackedObjects = state.trackedObjects.toList(),
+                    playheadMs = _playheadMs.value,
+                    selectedClipId = state.selectedClipId,
+                    selectedTrackId = state.selectedTrackId,
+                    selectedClipIds = state.selectedClipIds
+                )) + stack.drop(index + 1)
+            ))
+            normalizeSelectionState(restored).copy(
+                playheadMs = target.playheadMs.coerceIn(0L, restored.totalDurationMs.coerceAtLeast(0L))
+            )
+        }
         _playheadMs.value = _state.value.playheadMs
         rebuildTimeline()
+        saveProject()
         showToast(text(R.string.vm_restored_toast, target.description))
     }
 
@@ -3011,48 +3029,75 @@ class EditorViewModel @Inject constructor(
     }
 
     // Helper for beat sync splitting
-    private fun splitClipAt(clipId: String, positionMs: Long) {
-        val clipIdsToSplit = linkedClipIds(_state.value.tracks, clipId)
-        val newIdsByOldId = clipIdsToSplit.associateWith { java.util.UUID.randomUUID().toString() }
+    private fun splitClipAt(clipId: String, positionMs: Long): Map<String, String> {
+        val initialState = _state.value
+        val clipIdsToSplit = linkedClipIds(initialState.tracks, clipId)
+        if (initialState.tracks.any { track ->
+                track.isLocked && track.clips.any { it.id in clipIdsToSplit }
+            }
+        ) return emptyMap()
+        val candidates = clipIdsToSplit.mapNotNull { candidateId ->
+            initialState.tracks.findClipLocation(candidateId)?.clip
+        }.filter { canSplitClipAtPosition(it, positionMs) }
+        if (candidates.isEmpty()) return emptyMap()
+
+        val newIdsByOldId = candidates.associate { it.id to java.util.UUID.randomUUID().toString() }
+        val newGroupIdsByOldId = candidates.mapNotNull { it.groupId }.distinct()
+            .associateWith { java.util.UUID.randomUUID().toString() }
+        val newTrackedObjectIdsByClipId = newIdsByOldId.mapValues { (oldClipId, _) ->
+            initialState.trackedObjects
+                .filter { it.sourceClipId == oldClipId }
+                .associate { it.id to java.util.UUID.randomUUID().toString() }
+        }
+        val splitTrackedObjects = newIdsByOldId.flatMap { (oldClipId, newClipId) ->
+            val idMap = newTrackedObjectIdsByClipId[oldClipId].orEmpty()
+            initialState.trackedObjects
+                .filter { it.sourceClipId == oldClipId }
+                .map { tracked ->
+                    tracked.copy(id = idMap.getValue(tracked.id), sourceClipId = newClipId)
+                }
+        }
+
         _state.update { s ->
-            s.copy(tracks = s.tracks.map { track ->
-                if (track.clips.none { it.id in clipIdsToSplit }) return@map track
-                val newClips = buildList {
+            val tracks = s.tracks.map { track ->
+                track.copy(clips = buildList {
                     track.clips.forEach { clip ->
                         val newId = newIdsByOldId[clip.id]
-                        if (newId == null || !canSplitClipAtPosition(clip, positionMs)) {
-                            add(clip)
-                        } else {
-                            val sourcePos = splitPointInSource(clip, positionMs)
-                            val trimRange = (clip.trimEndMs - clip.trimStartMs).coerceAtLeast(0L)
-                            val splitFraction = if (trimRange > 0L) {
-                                ((sourcePos - clip.trimStartMs).toFloat() / trimRange.toFloat()).coerceIn(0f, 1f)
-                            } else {
-                                0f
-                            }
-                            add(clip.copy(
-                                trimEndMs = sourcePos,
-                                headTransition = null,
-                                tailTransition = null,
-                                speedCurve = clip.speedCurve?.restrictTo(0f, splitFraction, trimRange)
-                            ))
+                        if (newId == null) {
+                            val rightGroupId = clip.groupId?.let { newGroupIdsByOldId[it] }
                             add(
-                                clip.copy(
-                                    id = newId,
-                                    trimStartMs = sourcePos,
-                                    timelineStartMs = positionMs,
-                                    headTransition = null,
-                                    tailTransition = null,
-                                    speedCurve = clip.speedCurve?.restrictTo(splitFraction, 1f, trimRange),
-                                    linkedClipId = clip.linkedClipId?.let { linkedId -> newIdsByOldId[linkedId] }
-                                )
+                                if (rightGroupId != null && clip.timelineStartMs >= positionMs) {
+                                    clip.copy(groupId = rightGroupId)
+                                } else clip
                             )
+                        } else {
+                            val split = splitTimelineClip(
+                                clip = clip,
+                                playheadMs = positionMs,
+                                newClipId = newId,
+                                newLinkedClipId = clip.linkedClipId?.let { newIdsByOldId[it] ?: it },
+                                rightGroupId = clip.groupId?.let { newGroupIdsByOldId[it] },
+                                rightTrackedObjectIds = newTrackedObjectIdsByClipId[clip.id].orEmpty(),
+                                idFactory = { java.util.UUID.randomUUID().toString() }
+                            )
+                            if (split == null) add(clip) else {
+                                add(split.left)
+                                add(split.right)
+                            }
                         }
                     }
-                }
-                track.copy(clips = newClips)
-            })
+                })
+            }
+            val waveforms = newIdsByOldId.entries.fold(s.waveforms) { acc, (oldId, newId) ->
+                acc[oldId]?.let { waveform -> acc + (newId to waveform) } ?: acc
+            }
+            s.copy(
+                tracks = tracks,
+                waveforms = waveforms,
+                trackedObjects = s.trackedObjects + splitTrackedObjects
+            )
         }
+        return newIdsByOldId
     }
 
     private fun rebuildTimeline() {
@@ -3176,32 +3221,18 @@ class EditorViewModel @Inject constructor(
                     val originalClip = _state.value.tracks
                         .flatMap { it.clips }
                         .firstOrNull { it.id == op.clipId } ?: return@forEach
-                    // Snapshot the set of clip IDs in the original clip's track BEFORE the
-                    // first split so we can identify the freshly-minted right-half by id
-                    // diff (splitClipAt mints a UUID, but the LEFT half keeps op.clipId).
-                    val targetTrackId = _state.value.tracks
-                        .firstOrNull { track -> track.clips.any { it.id == op.clipId } }
-                        ?.id ?: return@forEach
-                    val idsBeforeFirstSplit = _state.value.tracks
-                        .firstOrNull { it.id == targetTrackId }
-                        ?.clips?.map { it.id }?.toSet().orEmpty()
-                    splitClipAt(op.clipId, op.timelineStartMs)
-                    val idsAfterFirstSplit = _state.value.tracks
-                        .firstOrNull { it.id == targetTrackId }
-                        ?.clips?.map { it.id }.orEmpty()
-                    // The middle+tail slice is the new id created by the first split. If
-                    // canSplitClipAtPosition rejected the cut (proposal endpoints landed
-                    // exactly on a clip boundary), no new id is created and we skip.
-                    val rightHalfId = idsAfterFirstSplit.firstOrNull { it !in idsBeforeFirstSplit }
+                    val lockedTimelineConflict = _state.value.tracks.any { track ->
+                        track.isLocked && track.clips.any { clip ->
+                            clip.timelineEndMs > op.timelineStartMs
+                        }
+                    }
+                    if (lockedTimelineConflict) return@forEach
+                    val firstSplitIds = splitClipAt(op.clipId, op.timelineStartMs)
+                    // The middle+tail slice is the new id created by the first split.
+                    val rightHalfId = firstSplitIds[op.clipId]
                         ?: return@forEach
-                    val idsBeforeSecondSplit = _state.value.tracks
-                        .firstOrNull { it.id == targetTrackId }
-                        ?.clips?.map { it.id }?.toSet().orEmpty()
-                    splitClipAt(rightHalfId, op.timelineEndMs)
-                    val idsAfterSecondSplit = _state.value.tracks
-                        .firstOrNull { it.id == targetTrackId }
-                        ?.clips?.map { it.id }.orEmpty()
-                    val tailId = idsAfterSecondSplit.firstOrNull { it !in idsBeforeSecondSplit }
+                    val secondSplitIds = splitClipAt(rightHalfId, op.timelineEndMs)
+                    val tailId = secondSplitIds[rightHalfId]
                     // If the second split was rejected (proposal range collapsed against the
                     // clip's right edge) nothing was minted, so the "middle" is rightHalfId
                     // itself extending to the original clip end. Either way we delete
@@ -3210,10 +3241,12 @@ class EditorViewModel @Inject constructor(
                     val deletedSpanMs = (op.timelineEndMs - op.timelineStartMs).coerceAtLeast(0L)
                     val deletedTimelineStart = op.timelineStartMs
                     _state.update { s ->
-                        s.copy(tracks = s.tracks.map { track ->
-                            track.copy(
-                                clips = track.clips
-                                    .filterNot { it.id == rightHalfId }
+                        val middleClipIds = expandTimelineEditClipIds(s.tracks, setOf(rightHalfId))
+                        s.copy(
+                            tracks = s.tracks.map { track ->
+                                track.copy(
+                                    clips = track.clips
+                                    .filterNot { it.id in middleClipIds }
                                     .map { clip ->
                                         // Ripple-shift everything after the deletion point.
                                         // Linked audio on other tracks lines up because we
@@ -3222,8 +3255,13 @@ class EditorViewModel @Inject constructor(
                                             clip.copy(timelineStartMs = clip.timelineStartMs - deletedSpanMs)
                                         } else clip
                                     }
-                            )
-                        })
+                                )
+                            },
+                            waveforms = s.waveforms - middleClipIds,
+                            trackedObjects = s.trackedObjects.filterNot {
+                                it.sourceClipId in middleClipIds
+                            }
+                        )
                     }
                     appliedSecondsReclaimed += deletedSpanMs
                     appliedCount++
@@ -4239,38 +4277,7 @@ class EditorViewModel @Inject constructor(
     }
 
     fun deleteMultiSelectedClips() {
-        val clipIds = _state.value.selectedClipIds
-        if (clipIds.isEmpty()) return
-        saveUndoState("Delete ${clipIds.size} clips")
-        _state.update { s ->
-            val tracks = s.tracks.map { track ->
-                val remaining = track.clips.filter { it.id !in clipIds }
-                // Ripple delete: close gaps by recalculating timeline positions
-                val sorted = remaining.sortedBy { it.timelineStartMs }
-                var nextStartMs = 0L
-                val rippled = sorted.map { clip ->
-                    if (clip.timelineStartMs > nextStartMs) {
-                        val shifted = clip.copy(timelineStartMs = nextStartMs)
-                        nextStartMs += shifted.durationMs
-                        shifted
-                    } else {
-                        nextStartMs = clip.timelineStartMs + clip.durationMs
-                        clip
-                    }
-                }
-                track.copy(clips = rippled)
-            }
-            recalculateDuration(s.copy(
-                tracks = tracks,
-                selectedClipIds = emptySet(),
-                selectedClipId = null,
-                selectedTrackId = null,
-                waveforms = s.waveforms - clipIds
-            ))
-        }
-        rebuildPlayerTimeline()
-        saveProject()
-        showToast(text(R.string.vm_multi_deleted_toast, clipIds.size))
+        clipEditingDelegate.deleteSelectedClip()
     }
 
     fun applyEffectToSelectedClips(effect: Effect) {
@@ -4648,7 +4655,10 @@ class EditorViewModel @Inject constructor(
             drawingPaths = _state.value.drawingPaths.toList(),
             beatMarkers = _state.value.beatMarkers.toList(),
             trackedObjects = _state.value.trackedObjects.toList(),
-            playheadMs = _playheadMs.value
+            playheadMs = _playheadMs.value,
+            selectedClipId = _state.value.selectedClipId,
+            selectedTrackId = _state.value.selectedTrackId,
+            selectedClipIds = _state.value.selectedClipIds
         )
 
         _state.update {
@@ -4661,24 +4671,25 @@ class EditorViewModel @Inject constructor(
                 drawingPaths = action.drawingPaths,
                 beatMarkers = action.beatMarkers,
                 trackedObjects = action.trackedObjects,
+                selectedClipId = action.selectedClipId,
+                selectedTrackId = action.selectedTrackId,
+                selectedClipIds = action.selectedClipIds,
                 undoStack = undoStack.dropLast(1),
                 redoStack = (it.redoStack + currentAction).takeLast(50)
             ))
-            val clipExists = it.selectedClipId != null &&
-                restored.tracks.any { t -> t.clips.any { c -> c.id == it.selectedClipId } }
             // Clamp the restored playhead to the restored timeline duration so
             // undoing a "delete last clip" doesn't leave the playhead dangling
             // past the new timeline end.
             val clampedPlayhead = action.playheadMs
                 .coerceIn(0L, restored.totalDurationMs.coerceAtLeast(0L))
             dismissedPanelState(restored).copy(
-                selectedClipId = if (clipExists) it.selectedClipId else null,
                 currentTool = EditorTool.NONE,
                 playheadMs = clampedPlayhead
             )
         }
         _playheadMs.value = _state.value.playheadMs
         rebuildPlayerTimeline()
+        saveProject()
     }
 
     fun redo() {
@@ -4696,7 +4707,10 @@ class EditorViewModel @Inject constructor(
             drawingPaths = _state.value.drawingPaths.toList(),
             beatMarkers = _state.value.beatMarkers.toList(),
             trackedObjects = _state.value.trackedObjects.toList(),
-            playheadMs = _playheadMs.value
+            playheadMs = _playheadMs.value,
+            selectedClipId = _state.value.selectedClipId,
+            selectedTrackId = _state.value.selectedTrackId,
+            selectedClipIds = _state.value.selectedClipIds
         )
 
         _state.update {
@@ -4709,21 +4723,22 @@ class EditorViewModel @Inject constructor(
                 drawingPaths = action.drawingPaths,
                 beatMarkers = action.beatMarkers,
                 trackedObjects = action.trackedObjects,
+                selectedClipId = action.selectedClipId,
+                selectedTrackId = action.selectedTrackId,
+                selectedClipIds = action.selectedClipIds,
                 redoStack = redoStack.dropLast(1),
                 undoStack = (it.undoStack + currentAction).takeLast(50)
             ))
-            val clipExists = it.selectedClipId != null &&
-                restored.tracks.any { t -> t.clips.any { c -> c.id == it.selectedClipId } }
             val clampedPlayhead = action.playheadMs
                 .coerceIn(0L, restored.totalDurationMs.coerceAtLeast(0L))
             dismissedPanelState(restored).copy(
-                selectedClipId = if (clipExists) it.selectedClipId else null,
                 currentTool = EditorTool.NONE,
                 playheadMs = clampedPlayhead
             )
         }
         _playheadMs.value = _state.value.playheadMs
         rebuildPlayerTimeline()
+        saveProject()
     }
 
     @Volatile
@@ -5026,7 +5041,10 @@ class EditorViewModel @Inject constructor(
                 drawingPaths = state.drawingPaths.toList(),
                 beatMarkers = state.beatMarkers.toList(),
                 trackedObjects = state.trackedObjects.toList(),
-                playheadMs = state.playheadMs
+                playheadMs = state.playheadMs,
+                selectedClipId = state.selectedClipId,
+                selectedTrackId = state.selectedTrackId,
+                selectedClipIds = state.selectedClipIds
             )
             state.copy(
                 undoStack = (state.undoStack + action).takeLast(50),

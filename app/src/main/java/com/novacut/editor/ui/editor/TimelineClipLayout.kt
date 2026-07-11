@@ -114,6 +114,7 @@ internal fun resolveTimelineClipGestureAction(
 internal fun timelineSlideSnapTargets(
     tracks: List<Track>,
     draggedClipId: String,
+    excludedClipIds: Set<String> = setOf(draggedClipId),
     playheadMs: Long,
     beatMarkers: List<Long>,
     markers: List<TimelineMarker>,
@@ -122,7 +123,7 @@ internal fun timelineSlideSnapTargets(
 ): List<Long> {
     val clipEdges = tracks.flatMap { track ->
         track.clips
-            .filter { it.id != draggedClipId }
+            .filter { it.id !in excludedClipIds }
             .flatMap { listOf(it.timelineStartMs, it.timelineEndMs) }
     }
     return buildList {
@@ -134,15 +135,50 @@ internal fun timelineSlideSnapTargets(
     }
 }
 
+internal data class TimelineSlideSnap(
+    val deltaMs: Long,
+    val targetMs: Long?,
+    val snappedEdgeMs: Long?
+)
+
+internal fun resolveTimelineSlideSnap(
+    currentStartMs: Long,
+    clipDurationMs: Long,
+    deltaMs: Long,
+    snapTargets: List<Long>,
+    snapThresholdMs: Long
+): TimelineSlideSnap {
+    val proposedStart = currentStartMs + deltaMs
+    val proposedEnd = proposedStart + clipDurationMs
+    val candidates = buildList {
+        findSnapTarget(proposedStart, snapTargets, snapThresholdMs)?.let { target ->
+            add(Triple(kotlin.math.abs(target - proposedStart), target, proposedStart))
+        }
+        findSnapTarget(proposedEnd, snapTargets, snapThresholdMs)?.let { target ->
+            add(Triple(kotlin.math.abs(target - proposedEnd), target, proposedEnd))
+        }
+    }
+    val match = candidates.minByOrNull { it.first }
+        ?: return TimelineSlideSnap(deltaMs, targetMs = null, snappedEdgeMs = null)
+    val correctedDelta = deltaMs + (match.second - match.third)
+    return TimelineSlideSnap(
+        deltaMs = correctedDelta,
+        targetMs = match.second,
+        snappedEdgeMs = match.third + (match.second - match.third)
+    )
+}
+
 internal fun shouldTriggerTimelineSlideSnapHaptic(
     currentStartMs: Long,
     deltaMs: Long,
     snapTargets: List<Long>,
     snapThresholdMs: Long
 ): Boolean {
-    return findSnapTarget(
-        positionMs = currentStartMs + deltaMs,
-        targets = snapTargets,
-        thresholdMs = snapThresholdMs
-    ) != null
+    return resolveTimelineSlideSnap(
+        currentStartMs = currentStartMs,
+        clipDurationMs = 0L,
+        deltaMs = deltaMs,
+        snapTargets = snapTargets,
+        snapThresholdMs = snapThresholdMs
+    ).targetMs != null
 }

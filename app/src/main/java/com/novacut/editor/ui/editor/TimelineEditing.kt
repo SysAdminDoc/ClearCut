@@ -1,6 +1,16 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.engine.KeyframeEngine
+import com.novacut.editor.model.Caption
+import com.novacut.editor.model.CaptionWord
 import com.novacut.editor.model.Clip
+import com.novacut.editor.model.Effect
+import com.novacut.editor.model.EffectKeyframe
+import com.novacut.editor.model.Keyframe
+import com.novacut.editor.model.Mask
+import com.novacut.editor.model.MaskKeyframe
+import com.novacut.editor.model.MotionTrackPoint
+import com.novacut.editor.model.MotionTrackingData
 import com.novacut.editor.model.Track
 import kotlin.math.abs
 import kotlin.math.ceil
@@ -43,6 +53,303 @@ internal fun linkedClipIds(tracks: List<Track>, clipId: String): Set<String> {
     } else {
         setOf(clipId)
     }
+}
+
+/** Resolve every clip that must participate in an identity-linked edit. */
+internal fun expandTimelineEditClipIds(tracks: List<Track>, seedIds: Set<String>): Set<String> {
+    val allClips = tracks.flatMap { it.clips }
+    val resolved = seedIds.filterTo(mutableSetOf()) { seed -> allClips.any { it.id == seed } }
+    var changed: Boolean
+    do {
+        changed = false
+        allClips.forEach { clip ->
+            val linkedToResolved = clip.linkedClipId?.let { it in resolved } == true
+            val sameGroup = clip.groupId?.let { groupId ->
+                allClips.any { it.id in resolved && it.groupId == groupId }
+            } == true
+            val selectedClip = clip.id in resolved
+            if (selectedClip || linkedToResolved || sameGroup) {
+                if (resolved.add(clip.id)) changed = true
+                clip.linkedClipId?.let { if (resolved.add(it)) changed = true }
+            }
+        }
+    } while (changed)
+    return resolved
+}
+
+/**
+ * Ripple-remove only the requested clip intervals. Existing gaps and untouched
+ * tracks retain their offsets; overlapping removed intervals are counted once.
+ */
+internal fun rippleDeleteClips(tracks: List<Track>, clipIds: Set<String>): List<Track> {
+    if (clipIds.isEmpty()) return tracks
+    return tracks.map { track ->
+        val removedRanges = track.clips
+            .filter { it.id in clipIds }
+            .map { it.timelineStartMs to it.timelineEndMs }
+            .sortedBy { it.first }
+        if (removedRanges.isEmpty()) return@map track
+
+        track.copy(
+            clips = track.clips
+                .filterNot { it.id in clipIds }
+                .map { clip ->
+                    val shiftMs = mergedDurationEndingAtOrBefore(
+                        ranges = removedRanges,
+                        positionMs = clip.timelineStartMs
+                    )
+                    if (shiftMs == 0L) clip
+                    else clip.copy(timelineStartMs = (clip.timelineStartMs - shiftMs).coerceAtLeast(0L))
+                }
+        )
+    }
+}
+
+private fun mergedDurationEndingAtOrBefore(
+    ranges: List<Pair<Long, Long>>,
+    positionMs: Long
+): Long {
+    val eligible = ranges.filter { (_, end) -> end <= positionMs }
+    if (eligible.isEmpty()) return 0L
+    var total = 0L
+    var currentStart = eligible.first().first
+    var currentEnd = eligible.first().second
+    eligible.drop(1).forEach { (start, end) ->
+        if (start <= currentEnd) {
+            currentEnd = maxOf(currentEnd, end)
+        } else {
+            total += (currentEnd - currentStart).coerceAtLeast(0L)
+            currentStart = start
+            currentEnd = end
+        }
+    }
+    return total + (currentEnd - currentStart).coerceAtLeast(0L)
+}
+
+internal data class TimelineClipSplit(
+    val left: Clip,
+    val right: Clip,
+    val timelineOffsetMs: Long,
+    val sourceSplitMs: Long
+)
+
+/**
+ * Split one timeline clip while preserving absolute animation/caption timing.
+ * The left half retains owned IDs; the right half receives fresh nested IDs.
+ */
+internal fun splitTimelineClip(
+    clip: Clip,
+    playheadMs: Long,
+    newClipId: String,
+    newLinkedClipId: String?,
+    rightGroupId: String?,
+    rightTrackedObjectIds: Map<String, String> = emptyMap(),
+    idFactory: () -> String
+): TimelineClipSplit? {
+    if (playheadMs <= clip.timelineStartMs || playheadMs >= clip.timelineEndMs) return null
+    val timelineOffsetMs = playheadMs - clip.timelineStartMs
+    if (timelineOffsetMs < MIN_TIMELINE_CLIP_DURATION_MS ||
+        clip.durationMs - timelineOffsetMs < MIN_TIMELINE_CLIP_DURATION_MS
+    ) return null
+
+    val sourceSplitMs = clip.timelineOffsetToSourceMs(timelineOffsetMs)
+    if (sourceSplitMs <= clip.trimStartMs || sourceSplitMs >= clip.trimEndMs) return null
+    val sourceRangeMs = (clip.trimEndMs - clip.trimStartMs).coerceAtLeast(1L)
+    val splitFraction = ((sourceSplitMs - clip.trimStartMs).toFloat() / sourceRangeMs)
+        .coerceIn(0f, 1f)
+
+    val (leftKeyframes, rightKeyframes) = splitKeyframes(clip.keyframes, timelineOffsetMs)
+    val (leftEffects, rightEffects) = splitEffects(
+        clip.effects,
+        timelineOffsetMs,
+        rightTrackedObjectIds,
+        idFactory
+    )
+    val (leftMasks, rightMasks) = splitMasks(clip.masks, timelineOffsetMs, idFactory)
+    val (leftCaptions, rightCaptions) = splitCaptions(clip.captions, timelineOffsetMs, idFactory)
+    val (leftMotion, rightMotion) = splitMotionTracking(
+        clip.motionTrackingData,
+        timelineOffsetMs,
+        idFactory
+    )
+
+    val leftCandidate = clip.copy(
+        trimEndMs = sourceSplitMs,
+        tailTransition = null,
+        fadeOutMs = 0L,
+        keyframes = leftKeyframes,
+        speedCurve = clip.speedCurve?.restrictTo(0f, splitFraction, sourceRangeMs),
+        effects = leftEffects,
+        masks = leftMasks,
+        captions = leftCaptions,
+        motionTrackingData = leftMotion
+    )
+    val rightCandidate = clip.copy(
+        id = newClipId,
+        timelineStartMs = playheadMs,
+        trimStartMs = sourceSplitMs,
+        headTransition = null,
+        fadeInMs = 0L,
+        linkedClipId = newLinkedClipId,
+        groupId = rightGroupId,
+        keyframes = rightKeyframes,
+        speedCurve = clip.speedCurve?.restrictTo(splitFraction, 1f, sourceRangeMs),
+        effects = rightEffects,
+        masks = rightMasks,
+        captions = rightCaptions,
+        motionTrackingData = rightMotion,
+        audioEffects = clip.audioEffects.map { it.copy(id = idFactory()) }
+    )
+    val left = leftCandidate.copy(fadeInMs = minOf(leftCandidate.fadeInMs, leftCandidate.durationMs))
+    val right = rightCandidate.copy(fadeOutMs = minOf(rightCandidate.fadeOutMs, rightCandidate.durationMs))
+    return TimelineClipSplit(left, right, timelineOffsetMs, sourceSplitMs)
+}
+
+private fun splitKeyframes(
+    keyframes: List<Keyframe>,
+    splitMs: Long
+): Pair<List<Keyframe>, List<Keyframe>> {
+    val boundary = keyframes.map { it.property }.distinct().mapNotNull { property ->
+        KeyframeEngine.getValueAt(keyframes, property, splitMs)?.let { value ->
+            (keyframes.lastOrNull { it.property == property && it.timeOffsetMs <= splitMs }
+                ?: keyframes.firstOrNull { it.property == property })
+                ?.copy(timeOffsetMs = splitMs, value = value)
+        }
+    }
+    val left = (keyframes.filter { it.timeOffsetMs < splitMs } + boundary)
+        .distinctBy { it.property to it.timeOffsetMs }
+        .sortedBy { it.timeOffsetMs }
+    val rightBoundary = boundary.map { it.copy(timeOffsetMs = 0L) }
+    val right = (rightBoundary + keyframes.filter { it.timeOffsetMs > splitMs }
+        .map { it.copy(timeOffsetMs = it.timeOffsetMs - splitMs) })
+        .distinctBy { it.property to it.timeOffsetMs }
+        .sortedBy { it.timeOffsetMs }
+    return left to right
+}
+
+private fun splitEffects(
+    effects: List<Effect>,
+    splitMs: Long,
+    rightTrackedObjectIds: Map<String, String>,
+    idFactory: () -> String
+): Pair<List<Effect>, List<Effect>> {
+    val left = mutableListOf<Effect>()
+    val right = mutableListOf<Effect>()
+    effects.forEach { effect ->
+        val boundary = effect.keyframes.map { it.paramName }.distinct().mapNotNull { param ->
+            KeyframeEngine.getEffectParamAt(effect.keyframes, param, splitMs)?.let { value ->
+                (effect.keyframes.lastOrNull { it.paramName == param && it.timeOffsetMs <= splitMs }
+                    ?: effect.keyframes.firstOrNull { it.paramName == param })
+                    ?.copy(timeOffsetMs = splitMs, value = value)
+            }
+        }
+        val leftFrames = (effect.keyframes.filter { it.timeOffsetMs < splitMs } + boundary)
+            .distinctBy { it.paramName to it.timeOffsetMs }
+            .sortedBy { it.timeOffsetMs }
+        val rightFrames = (boundary.map { it.copy(timeOffsetMs = 0L) } +
+            effect.keyframes.filter { it.timeOffsetMs > splitMs }
+                .map { it.copy(timeOffsetMs = it.timeOffsetMs - splitMs) })
+            .distinctBy { it.paramName to it.timeOffsetMs }
+            .sortedBy { it.timeOffsetMs }
+        left += effect.copy(keyframes = leftFrames)
+        right += effect.copy(
+            id = idFactory(),
+            keyframes = rightFrames,
+            targetTrackedObjectId = effect.targetTrackedObjectId?.let { trackedId ->
+                rightTrackedObjectIds[trackedId] ?: trackedId
+            }
+        )
+    }
+    return left to right
+}
+
+private fun splitMasks(
+    masks: List<Mask>,
+    splitMs: Long,
+    idFactory: () -> String
+): Pair<List<Mask>, List<Mask>> {
+    val left = mutableListOf<Mask>()
+    val right = mutableListOf<Mask>()
+    masks.forEach { mask ->
+        val boundary = if (mask.keyframes.isEmpty()) null else MaskKeyframe(
+            timeOffsetMs = splitMs,
+            points = KeyframeEngine.interpolateMaskPoints(mask, splitMs),
+            easing = mask.keyframes.lastOrNull { it.timeOffsetMs <= splitMs }?.easing
+                ?: mask.keyframes.first().easing
+        )
+        val leftFrames = (mask.keyframes.filter { it.timeOffsetMs < splitMs } + listOfNotNull(boundary))
+            .distinctBy { it.timeOffsetMs }
+            .sortedBy { it.timeOffsetMs }
+        val rightFrames = (listOfNotNull(boundary?.copy(timeOffsetMs = 0L)) +
+            mask.keyframes.filter { it.timeOffsetMs > splitMs }
+                .map { it.copy(timeOffsetMs = it.timeOffsetMs - splitMs) })
+            .distinctBy { it.timeOffsetMs }
+            .sortedBy { it.timeOffsetMs }
+        left += mask.copy(keyframes = leftFrames)
+        right += mask.copy(id = idFactory(), keyframes = rightFrames)
+    }
+    return left to right
+}
+
+private fun splitCaptions(
+    captions: List<Caption>,
+    splitMs: Long,
+    idFactory: () -> String
+): Pair<List<Caption>, List<Caption>> {
+    val left = mutableListOf<Caption>()
+    val right = mutableListOf<Caption>()
+    captions.forEach { caption ->
+        if (caption.startTimeMs < splitMs && caption.endTimeMs > 0L) {
+            left += caption.copy(
+                endTimeMs = minOf(caption.endTimeMs, splitMs),
+                words = caption.words.mapNotNull { it.clippedTo(0L, splitMs, 0L) }
+            )
+        }
+        if (caption.endTimeMs > splitMs) {
+            right += caption.copy(
+                id = idFactory(),
+                startTimeMs = (maxOf(caption.startTimeMs, splitMs) - splitMs).coerceAtLeast(0L),
+                endTimeMs = (caption.endTimeMs - splitMs).coerceAtLeast(0L),
+                words = caption.words.mapNotNull { it.clippedTo(splitMs, Long.MAX_VALUE, splitMs) }
+            )
+        }
+    }
+    return left to right
+}
+
+private fun CaptionWord.clippedTo(
+    rangeStartMs: Long,
+    rangeEndMs: Long,
+    rebaseMs: Long
+): CaptionWord? {
+    val clippedStart = maxOf(startTimeMs, rangeStartMs)
+    val clippedEnd = minOf(endTimeMs, rangeEndMs)
+    if (clippedEnd <= clippedStart) return null
+    return copy(startTimeMs = clippedStart - rebaseMs, endTimeMs = clippedEnd - rebaseMs)
+}
+
+private fun splitMotionTracking(
+    tracking: MotionTrackingData?,
+    splitMs: Long,
+    idFactory: () -> String
+): Pair<MotionTrackingData?, MotionTrackingData?> {
+    tracking ?: return null to null
+    val boundary = tracking.trackPoints.closestBoundaryAt(splitMs)
+    val leftPoints = (tracking.trackPoints.filter { it.timeOffsetMs < splitMs } + listOfNotNull(boundary))
+        .distinctBy { it.timeOffsetMs }
+        .sortedBy { it.timeOffsetMs }
+    val rightPoints = (listOfNotNull(boundary?.copy(timeOffsetMs = 0L)) +
+        tracking.trackPoints.filter { it.timeOffsetMs > splitMs }
+            .map { it.copy(timeOffsetMs = it.timeOffsetMs - splitMs) })
+        .distinctBy { it.timeOffsetMs }
+        .sortedBy { it.timeOffsetMs }
+    return tracking.copy(trackPoints = leftPoints) to
+        tracking.copy(id = idFactory(), trackPoints = rightPoints)
+}
+
+private fun List<MotionTrackPoint>.closestBoundaryAt(splitMs: Long): MotionTrackPoint? {
+    if (isEmpty()) return null
+    return minByOrNull { abs(it.timeOffsetMs - splitMs) }?.copy(timeOffsetMs = splitMs)
 }
 
 internal fun Track.canFitClipRange(

@@ -81,11 +81,20 @@ private fun TrimNumericInputRow(
     onTrimDragEnded: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var startText by remember(clipId, trimStartMs) {
+    var startText by remember(clipId) {
         mutableStateOf(formatTrimTime(trimStartMs))
     }
-    var endText by remember(clipId, trimEndMs) {
+    var endText by remember(clipId) {
         mutableStateOf(formatTrimTime(trimEndMs))
+    }
+    var startEditActive by remember(clipId) { mutableStateOf(false) }
+    var endEditActive by remember(clipId) { mutableStateOf(false) }
+
+    LaunchedEffect(clipId, trimStartMs, startEditActive) {
+        if (!startEditActive) startText = formatTrimTime(trimStartMs)
+    }
+    LaunchedEffect(clipId, trimEndMs, endEditActive) {
+        if (!endEditActive) endText = formatTrimTime(trimEndMs)
     }
 
     Row(
@@ -104,15 +113,25 @@ private fun TrimNumericInputRow(
                 startText = text
                 val parsed = parseTrimTime(text) ?: return@OutlinedTextField
                 val clamped = parsed.coerceIn(0L, (trimEndMs - 100L).coerceAtLeast(0L))
-                onTrimDragStarted()
+                if (clamped == trimStartMs) return@OutlinedTextField
+                if (!startEditActive) {
+                    startEditActive = true
+                    onTrimDragStarted()
+                }
                 onTrimChanged(clipId, clamped, null)
-                onTrimDragEnded()
             },
             singleLine = true,
             textStyle = MaterialTheme.typography.bodySmall.copy(color = Mocha.Text),
             modifier = Modifier
                 .weight(1f)
                 .height(42.dp)
+                .onFocusChanged { focus ->
+                    if (!focus.isFocused && startEditActive) {
+                        startEditActive = false
+                        onTrimDragEnded()
+                    }
+                    if (!focus.isFocused) startText = formatTrimTime(trimStartMs)
+                }
                 .semantics { contentDescription = "Trim start time in seconds" },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Mocha.Peach,
@@ -130,15 +149,25 @@ private fun TrimNumericInputRow(
                 endText = text
                 val parsed = parseTrimTime(text) ?: return@OutlinedTextField
                 val clamped = parsed.coerceIn((trimStartMs + 100L), sourceDurationMs)
-                onTrimDragStarted()
+                if (clamped == trimEndMs) return@OutlinedTextField
+                if (!endEditActive) {
+                    endEditActive = true
+                    onTrimDragStarted()
+                }
                 onTrimChanged(clipId, null, clamped)
-                onTrimDragEnded()
             },
             singleLine = true,
             textStyle = MaterialTheme.typography.bodySmall.copy(color = Mocha.Text),
             modifier = Modifier
                 .weight(1f)
                 .height(42.dp)
+                .onFocusChanged { focus ->
+                    if (!focus.isFocused && endEditActive) {
+                        endEditActive = false
+                        onTrimDragEnded()
+                    }
+                    if (!focus.isFocused) endText = formatTrimTime(trimEndMs)
+                }
                 .semantics { contentDescription = "Trim end time in seconds" },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Mocha.Peach,
@@ -1606,25 +1635,31 @@ fun Timeline(
                                                                     change.consume()
                                                                 }
                                                                 is TimelineClipGestureAction.Slide -> {
-                                                                    onSlideClip(clip.id, action.deltaMs)
-                                                                    val snapThreshMs = (12.dp.toPx() / ppm).toLong()
+                                                                    val snapThreshMs = (12.dp.toPx() / ppm)
+                                                                        .toLong()
+                                                                        .coerceAtLeast(1L)
                                                                     val snapTargetsLocal = timelineSlideSnapTargets(
                                                                         tracks = currentTracks,
                                                                         draggedClipId = clip.id,
+                                                                        excludedClipIds = linkedClipIds(
+                                                                            currentTracks,
+                                                                            clip.id
+                                                                        ),
                                                                         playheadMs = currentPlayheadMs,
                                                                         beatMarkers = beatMarkers,
                                                                         markers = markers,
                                                                         snapToBeat = snapToBeat,
                                                                         snapToMarker = snapToMarker
                                                                     )
-                                                                    if (
-                                                                        shouldTriggerTimelineSlideSnapHaptic(
-                                                                            currentStartMs = currentClip.timelineStartMs,
-                                                                            deltaMs = action.deltaMs,
-                                                                            snapTargets = snapTargetsLocal,
-                                                                            snapThresholdMs = snapThreshMs
-                                                                        )
-                                                                    ) {
+                                                                    val snap = resolveTimelineSlideSnap(
+                                                                        currentStartMs = currentClip.timelineStartMs,
+                                                                        clipDurationMs = currentClip.durationMs,
+                                                                        deltaMs = action.deltaMs,
+                                                                        snapTargets = snapTargetsLocal,
+                                                                        snapThresholdMs = snapThreshMs
+                                                                    )
+                                                                    onSlideClip(clip.id, snap.deltaMs)
+                                                                    if (snap.targetMs != null) {
                                                                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                                                     }
                                                                     change.consume()

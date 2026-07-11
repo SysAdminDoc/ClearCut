@@ -277,6 +277,29 @@ class TimelineClipLayoutTest {
         )
     }
 
+    @Test
+    fun `slide snap corrects both leading and trailing clip edges`() {
+        val leading = resolveTimelineSlideSnap(
+            currentStartMs = 1_000L,
+            clipDurationMs = 500L,
+            deltaMs = 495L,
+            snapTargets = listOf(1_500L),
+            snapThresholdMs = 10L
+        )
+        val trailing = resolveTimelineSlideSnap(
+            currentStartMs = 1_000L,
+            clipDurationMs = 500L,
+            deltaMs = 490L,
+            snapTargets = listOf(2_000L),
+            snapThresholdMs = 15L
+        )
+
+        assertEquals(500L, leading.deltaMs)
+        assertEquals(1_500L, leading.targetMs)
+        assertEquals(500L, trailing.deltaMs)
+        assertEquals(2_000L, trailing.targetMs)
+    }
+
     private fun clip(
         id: String,
         timelineStartMs: Long,

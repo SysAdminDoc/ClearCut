@@ -1,12 +1,7 @@
 package com.novacut.editor.ui.editor
 
 import android.net.FakeUri
-import com.novacut.editor.model.Clip
-import com.novacut.editor.model.Keyframe
-import com.novacut.editor.model.KeyframeProperty
-import com.novacut.editor.model.SpeedCurve
-import com.novacut.editor.model.Track
-import com.novacut.editor.model.TrackType
+import com.novacut.editor.model.*
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -386,6 +381,127 @@ class TimelineEditingTest {
         )
 
         assertFalse(canMergeAdjacentClips(first, second))
+    }
+
+    @Test
+    fun `edit target expansion includes linked clips and every member of selected groups`() {
+        val groupedVideo = clip("video", 0L, 0L, 500L, 500L).copy(
+            linkedClipId = "audio",
+            groupId = "scene"
+        )
+        val linkedAudio = clip("audio", 0L, 0L, 500L, 500L).copy(linkedClipId = "video")
+        val groupedOverlay = clip("overlay", 700L, 0L, 300L, 300L).copy(groupId = "scene")
+        val tracks = listOf(
+            Track(type = TrackType.VIDEO, index = 0, clips = listOf(groupedVideo)),
+            Track(type = TrackType.AUDIO, index = 1, clips = listOf(linkedAudio)),
+            Track(type = TrackType.OVERLAY, index = 2, clips = listOf(groupedOverlay))
+        )
+
+        assertEquals(
+            setOf("video", "audio", "overlay"),
+            expandTimelineEditClipIds(tracks, setOf("video"))
+        )
+    }
+
+    @Test
+    fun `ripple delete preserves existing gaps and leaves untouched tracks unchanged`() {
+        val first = clip("first", 1_000L, 0L, 500L, 500L)
+        val deleted = clip("deleted", 2_000L, 0L, 500L, 500L)
+        val last = clip("last", 3_000L, 0L, 400L, 400L)
+        val untouched = clip("untouched", 5_000L, 0L, 300L, 300L)
+        val tracks = listOf(
+            Track(type = TrackType.VIDEO, index = 0, clips = listOf(first, deleted, last)),
+            Track(type = TrackType.AUDIO, index = 1, clips = listOf(untouched))
+        )
+
+        val result = rippleDeleteClips(tracks, setOf("deleted"))
+
+        assertEquals(listOf("first", "last"), result[0].clips.map { it.id })
+        assertEquals(listOf(1_000L, 2_500L), result[0].clips.map { it.timelineStartMs })
+        assertEquals(5_000L, result[1].clips.single().timelineStartMs)
+    }
+
+    @Test
+    fun `split preserves absolute animation and caption timing with fresh right-side identities`() {
+        val sourceClip = clip("source", 1_000L, 0L, 1_000L, 1_000L).copy(
+            groupId = "left-group",
+            fadeInMs = 100L,
+            fadeOutMs = 200L,
+            keyframes = listOf(
+                Keyframe(0L, KeyframeProperty.POSITION_X, 0f, interpolation = KeyframeInterpolation.LINEAR),
+                Keyframe(1_000L, KeyframeProperty.POSITION_X, 10f, interpolation = KeyframeInterpolation.LINEAR)
+            ),
+            effects = listOf(
+                Effect(
+                    id = "effect",
+                    type = EffectType.BRIGHTNESS,
+                    keyframes = listOf(
+                        EffectKeyframe(0L, "amount", 0f),
+                        EffectKeyframe(1_000L, "amount", 1f)
+                    )
+                )
+            ),
+            masks = listOf(
+                Mask(
+                    id = "mask",
+                    type = MaskType.RECTANGLE,
+                    points = listOf(MaskPoint(0f, 0f)),
+                    keyframes = listOf(
+                        MaskKeyframe(0L, listOf(MaskPoint(0f, 0f))),
+                        MaskKeyframe(1_000L, listOf(MaskPoint(1f, 1f)))
+                    )
+                )
+            ),
+            captions = listOf(
+                Caption(
+                    id = "caption",
+                    text = "crosses cut",
+                    startTimeMs = 400L,
+                    endTimeMs = 700L,
+                    words = listOf(CaptionWord("cut", 420L, 680L))
+                )
+            ),
+            motionTrackingData = MotionTrackingData(
+                id = "motion",
+                trackPoints = listOf(
+                    MotionTrackPoint(0L, 0f, 0f),
+                    MotionTrackPoint(1_000L, 1f, 1f)
+                )
+            ),
+            audioEffects = listOf(AudioEffect(id = "audio-fx", type = AudioEffectType.COMPRESSOR))
+        )
+        var generatedId = 0
+
+        val split = splitTimelineClip(
+            clip = sourceClip,
+            playheadMs = 1_500L,
+            newClipId = "right",
+            newLinkedClipId = null,
+            rightGroupId = "right-group",
+            idFactory = { "generated-${generatedId++}" }
+        ) ?: error("expected split")
+
+        assertEquals(500L, split.left.durationMs)
+        assertEquals(500L, split.right.durationMs)
+        assertEquals(5f, split.left.keyframes.last().value, 0.01f)
+        assertEquals(500L, split.left.keyframes.last().timeOffsetMs)
+        assertEquals(5f, split.right.keyframes.first().value, 0.01f)
+        assertEquals(0L, split.right.keyframes.first().timeOffsetMs)
+        assertEquals(0.5f, split.right.effects.single().keyframes.first().value, 0.01f)
+        assertFalse(split.right.effects.single().id == "effect")
+        assertFalse(split.right.masks.single().id == "mask")
+        assertEquals(400L, split.left.captions.single().startTimeMs)
+        assertEquals(500L, split.left.captions.single().endTimeMs)
+        assertEquals(0L, split.right.captions.single().startTimeMs)
+        assertEquals(200L, split.right.captions.single().endTimeMs)
+        assertEquals(0L, split.right.captions.single().words.single().startTimeMs)
+        assertEquals(100L, split.left.fadeInMs)
+        assertEquals(0L, split.left.fadeOutMs)
+        assertEquals(0L, split.right.fadeInMs)
+        assertEquals(200L, split.right.fadeOutMs)
+        assertEquals("left-group", split.left.groupId)
+        assertEquals("right-group", split.right.groupId)
+        assertFalse(split.right.audioEffects.single().id == "audio-fx")
     }
 
     private fun clip(

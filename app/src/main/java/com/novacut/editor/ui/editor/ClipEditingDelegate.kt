@@ -295,40 +295,22 @@ class ClipEditingDelegate(
 
     // --- Delete Clip ---
     fun deleteSelectedClip() {
-        val clipId = stateFlow.value.selectedClipId ?: return
-        val clipIdsToDelete = linkedClipIds(stateFlow.value.tracks, clipId)
-        // Validate clip exists before saving undo state
-        val exists = stateFlow.value.tracks.any { it.clips.any { c -> c.id in clipIdsToDelete } }
-        if (!exists) return
+        val state = stateFlow.value
+        val selectedIds = state.selectedClipIds.ifEmpty { setOfNotNull(state.selectedClipId) }
+        val clipIdsToDelete = expandTimelineEditClipIds(state.tracks, selectedIds)
+        if (clipIdsToDelete.isEmpty()) return
         if (tracksContainLockedClip(clipIdsToDelete)) {
             showToast(appContext.getString(R.string.clip_track_locked_toast))
             return
         }
-        saveUndoState("Delete clip")
+        saveUndoState(
+            if (clipIdsToDelete.size == 1) "Delete clip"
+            else "Delete ${clipIdsToDelete.size} clips"
+        )
 
         stateFlow.update { state ->
-            val tracks = state.tracks.map { track ->
-                val deletedClips = track.clips
-                    .filter { it.id in clipIdsToDelete }
-                    .sortedBy { it.timelineStartMs }
-                if (deletedClips.isEmpty()) return@map track
-
-                val updatedClips = track.clips
-                    .filterNot { it.id in clipIdsToDelete }
-                    .map { clip ->
-                        val removedDurationBeforeClip = deletedClips
-                            .filter { deleted -> deleted.timelineStartMs < clip.timelineStartMs }
-                            .sumOf { it.durationMs }
-                        if (removedDurationBeforeClip > 0L) {
-                            clip.copy(timelineStartMs = clip.timelineStartMs - removedDurationBeforeClip)
-                        } else {
-                            clip
-                        }
-                    }
-                track.copy(clips = updatedClips)
-            }
             recalculateDuration(state.copy(
-                tracks = tracks,
+                tracks = rippleDeleteClips(state.tracks, clipIdsToDelete),
                 selectedClipId = null,
                 selectedTrackId = null,
                 selectedClipIds = emptySet(),
@@ -338,6 +320,9 @@ class ClipEditingDelegate(
         rebuildPlayerTimeline()
         saveProject()
         registerDeleteForBulkWatcher()
+        if (clipIdsToDelete.size > 1) {
+            showToast(text(R.string.vm_multi_deleted_toast, clipIdsToDelete.size))
+        }
     }
 
     /**
@@ -533,58 +518,58 @@ class ClipEditingDelegate(
 
         saveUndoState("Split clip")
         val newIdsByOldId = splitCandidates.associate { it.clip.id to UUID.randomUUID().toString() }
+        val newGroupIdsByOldId = splitCandidates
+            .mapNotNull { it.clip.groupId }
+            .distinct()
+            .associateWith { UUID.randomUUID().toString() }
+        val newTrackedObjectIdsByClipId = newIdsByOldId.mapValues { (oldClipId, _) ->
+            state.trackedObjects
+                .filter { it.sourceClipId == oldClipId }
+                .associate { it.id to UUID.randomUUID().toString() }
+        }
+        val splitTrackedObjects = newIdsByOldId.flatMap { (oldClipId, newClipId) ->
+            val idMap = newTrackedObjectIdsByClipId[oldClipId].orEmpty()
+            state.trackedObjects
+                .filter { it.sourceClipId == oldClipId }
+                .map { tracked ->
+                    tracked.copy(
+                        id = idMap.getValue(tracked.id),
+                        sourceClipId = newClipId
+                    )
+                }
+        }
         val fallbackSelectedId = state.selectedClipId ?: selectedIds.firstOrNull()
 
         stateFlow.update { s ->
             val tracks = s.tracks.map { track ->
-                if (track.clips.none { it.id in newIdsByOldId }) return@map track
                 val updatedClips = buildList {
                     track.clips.forEach { clip ->
                         val newId = newIdsByOldId[clip.id]
-                        if (newId == null || !canSplitClipAt(clip, playhead)) {
-                            add(clip)
+                        if (newId == null) {
+                            val rightGroupId = clip.groupId?.let { newGroupIdsByOldId[it] }
+                            add(
+                                if (rightGroupId != null && clip.timelineStartMs >= playhead) {
+                                    clip.copy(groupId = rightGroupId)
+                                } else {
+                                    clip
+                                }
+                            )
                         } else {
-                            val splitPointInSource = splitPointInSource(clip, playhead)
-                            // Remap the speedCurve (if any) so each half gets the
-                            // correct sub-range of the parent curve. Without this
-                            // both halves would inherit the full parent curve and
-                            // misreport speeds across the new trim ranges.
-                            val parentTrimRange = (clip.trimEndMs - clip.trimStartMs)
-                                .coerceAtLeast(1L)
-                            val splitFraction = ((splitPointInSource - clip.trimStartMs)
-                                .toFloat() / parentTrimRange.toFloat())
-                                .coerceIn(0f, 1f)
-                            val firstHalfCurve = clip.speedCurve?.restrictTo(
-                                0f, splitFraction, parentTrimRange
+                            val split = splitTimelineClip(
+                                clip = clip,
+                                playheadMs = playhead,
+                                newClipId = newId,
+                                newLinkedClipId = clip.linkedClipId?.let { linkedId ->
+                                    newIdsByOldId[linkedId] ?: linkedId
+                                },
+                                rightGroupId = clip.groupId?.let { newGroupIdsByOldId[it] },
+                                rightTrackedObjectIds = newTrackedObjectIdsByClipId[clip.id].orEmpty(),
+                                idFactory = { UUID.randomUUID().toString() }
                             )
-                            val secondHalfCurve = clip.speedCurve?.restrictTo(
-                                splitFraction, 1f, parentTrimRange
-                            )
-                            add(
-                                clip.copy(
-                                    trimEndMs = splitPointInSource,
-                                    headTransition = null,
-                                    tailTransition = null,
-                                    linkedClipId = clip.linkedClipId,
-                                    speedCurve = firstHalfCurve
-                                )
-                            )
-                            add(
-                                clip.copy(
-                                    id = newId,
-                                    timelineStartMs = playhead,
-                                    trimStartMs = splitPointInSource,
-                                    headTransition = null,
-                                    tailTransition = null,
-                                    linkedClipId = clip.linkedClipId?.let { linkedId ->
-                                        // If the linked clip was also split, use its new second-half ID.
-                                        // If it wasn't split (e.g., on a locked track), preserve the original
-                                        // link rather than silently nulling it and desynchronising audio/video.
-                                        newIdsByOldId[linkedId] ?: linkedId
-                                    },
-                                    speedCurve = secondHalfCurve
-                                )
-                            )
+                            if (split == null) add(clip) else {
+                                add(split.left)
+                                add(split.right)
+                            }
                         }
                     }
                 }
@@ -593,15 +578,24 @@ class ClipEditingDelegate(
             val selectedClipId = fallbackSelectedId?.let { originalId ->
                 newIdsByOldId[originalId] ?: originalId
             } ?: s.selectedClipId
+            val selectedClipIds = selectedIds.mapNotNull { originalId ->
+                val resolvedId = newIdsByOldId[originalId] ?: originalId
+                resolvedId.takeIf { id -> tracks.any { track -> track.clips.any { it.id == id } } }
+            }.toSet()
             val selectedTrackId = selectedClipId?.let { newClipId ->
                 tracks.firstOrNull { track -> track.clips.any { it.id == newClipId } }?.id
+            }
+            val waveforms = newIdsByOldId.entries.fold(s.waveforms) { acc, (oldId, newId) ->
+                acc[oldId]?.let { waveform -> acc + (newId to waveform) } ?: acc
             }
             recalculateDuration(
                 s.copy(
                     tracks = tracks,
                     selectedClipId = selectedClipId,
                     selectedTrackId = selectedTrackId,
-                    selectedClipIds = selectedClipId?.let { setOf(it) } ?: s.selectedClipIds
+                    selectedClipIds = selectedClipIds,
+                    waveforms = waveforms,
+                    trackedObjects = s.trackedObjects + splitTrackedObjects
                 )
             )
         }

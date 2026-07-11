@@ -1,0 +1,5 @@
+- Timeline Reliability
+- Split now preserves animation, caption, mask, effect, group, waveform, and tracking timing while renewing right-side identities.
+- Single and multi-delete share gap-safe linked/grouped ripple behavior with locked-track protection.
+- Cut Assistant removes linked A/V slices cleanly, slide snapping changes the real timestamp, and numeric trim creates one undo step.
+- Undo/redo restores selection and saves immediately.

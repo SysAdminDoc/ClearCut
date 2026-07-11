@@ -4,7 +4,7 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.111-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.112-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
 
@@ -58,14 +58,16 @@ Planning files are local-only in the development checkout:
 
 ### Timeline Editing
 - Multi-track timeline with video, audio, overlay, text, and adjustment layers
-- Trim, split, merge, crop, rotate with visual handles
+- Trim, split, merge, crop, rotate with visual handles; numeric trim commits as one undoable edit
+- **Reliable split ownership** — linked/grouped cuts preserve side-specific grouping, rebase animation/effect/mask/caption timing, renew nested IDs, and retain waveform/tracking context
+- **Gap-safe linked ripple delete** — single and multi-delete share one locked-track-aware planner that expands linked/grouped clips without compacting unrelated tracks or intentional gaps
 - **Slip/slide editing** — drag clip body to slide (reposition) or slip (shift source window)
 - **Magnetic snapping** — clips snap to edges, playhead, and markers (8dp threshold with diamond indicators)
 - **Clip grouping** — select multiple clips, group/ungroup, move as a unit
 - Speed control (0.1x-16x) with bezier speed ramping curves and presets
 - Keyframe animation for position, scale, rotation, opacity, volume with **12 easing types** (linear, ease in/out, spring, bounce, elastic, back, circular, expo, sine, cubic)
 - **14 speed presets** including time freeze, film reel, heartbeat, crescendo
-- Undo/redo (50 levels) with full state restoration + command-based undo foundation
+- Undo/redo (50 levels) restores clip selection/playhead context and persists immediately
 - Long-press multi-select for batch operations
 - Pinch-to-zoom + zoom in/out/fit buttons
 - Timeline scrubbing with frame-accurate seeking
