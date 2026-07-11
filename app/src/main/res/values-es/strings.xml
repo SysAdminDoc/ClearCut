@@ -560,6 +560,10 @@
     <string name="preview_jump_to_content">Saltar al contenido</string>
     <string name="preview_unavailable_title">Vista previa no disponible</string>
     <string name="preview_unavailable_body">ClearCut no pudo cargar esta fuente para una vista previa en vivo.</string>
+    <string name="preview_playback_error_title">No se puede reproducir este clip</string>
+    <string name="preview_playback_error_body">Es posible que la fuente se haya movido, no se pueda leer o use un formato que este dispositivo no pueda decodificar.</string>
+    <string name="preview_open_media_manager">Abrir el gestor de medios</string>
+    <string name="vm_preview_playback_failed_toast">La vista previa no pudo decodificar este clip; abra el gestor de medios para volver a vincularlo o reemplazarlo</string>
     <string name="text_editor_title">Superposición de texto</string>
     <string name="text_editor_save">Guardar</string>
     <string name="text_editor_font">fuente</string>

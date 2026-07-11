@@ -774,6 +774,13 @@ class EditorViewModel @Inject constructor(
                 // decoded frame and audio sample use the destination clip state.
                 updatePreview()
             }
+
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                videoEngine.pause()
+                _state.update { it.copy(isPlaying = false) }
+                showToast(text(R.string.vm_preview_playback_failed_toast), ToastSeverity.Error)
+                Log.w("EditorViewModel", "Preview playback failed", error)
+            }
         })
 
         // Periodic playhead sync (~30fps) with smooth auto-scroll + per-clip speed tracking
@@ -5618,8 +5625,19 @@ class EditorViewModel @Inject constructor(
                 videoEngine.play()
             } else {
                 val timelineEndMs = _state.value.totalDurationMs
-                _playheadMs.value = timelineEndMs
-                _state.update { it.copy(playheadMs = timelineEndMs, isPlaying = false) }
+                if (_state.value.isLooping && timelineEndMs > 0L) {
+                    _playheadMs.value = 0L
+                    _state.update { it.copy(playheadMs = 0L, isPlaying = true) }
+                    videoEngine.seekTo(0L)
+                    if (previewClipAtPosition(0L) != null) {
+                        videoEngine.play()
+                    } else {
+                        startGapPlayback(0L)
+                    }
+                } else {
+                    _playheadMs.value = timelineEndMs
+                    _state.update { it.copy(playheadMs = timelineEndMs, isPlaying = false) }
+                }
             }
         }
     }

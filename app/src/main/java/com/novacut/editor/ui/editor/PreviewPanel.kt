@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.Player
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
 import coil3.compose.SubcomposeAsyncImage
@@ -92,6 +93,7 @@ fun PreviewPanel(
     nextTimelineClip: Clip? = null,
     imageOverlays: List<ImageOverlay> = emptyList(),
     textOverlays: List<TextOverlay> = emptyList(),
+    onOpenMediaManager: () -> Unit = {},
     jumpToContentMs: Long? = null,
     onJumpToContent: (Long) -> Unit = {},
     onPreviewTransformStarted: () -> Unit = {},
@@ -208,6 +210,7 @@ fun PreviewPanel(
                         contentAlignment = Alignment.Center
                     ) {
                         var isBuffering by remember { mutableStateOf(false) }
+                        var hasPlaybackError by remember { mutableStateOf(false) }
                         DisposableEffect(engine) {
                             // Capture the player reference once; reuse on dispose to avoid
                             // attaching/removing on different player instances if engine state changes.
@@ -215,12 +218,22 @@ fun PreviewPanel(
                             val listener = object : Player.Listener {
                                 override fun onPlaybackStateChanged(state: Int) {
                                     isBuffering = state == Player.STATE_BUFFERING
+                                    if (state == Player.STATE_READY) hasPlaybackError = false
+                                }
+
+                                override fun onPlayerError(error: PlaybackException) {
+                                    isBuffering = false
+                                    hasPlaybackError = true
                                 }
                             }
                             capturedPlayer.addListener(listener)
                             onDispose {
                                 try { capturedPlayer.removeListener(listener) } catch (_: Exception) { /* player released */ }
                             }
+                        }
+
+                        if (hasPlaybackError) {
+                            PreviewPlaybackErrorState(onOpenMediaManager = onOpenMediaManager)
                         }
 
                         when {
@@ -556,7 +569,7 @@ private fun PreviewGapState(
     Card(
         colors = CardDefaults.cardColors(containerColor = Mocha.Panel.copy(alpha = 0.9f)),
         border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
-        shape = RoundedCornerShape(22.dp)
+        shape = RoundedCornerShape(Radius.xl)
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 22.dp),
@@ -603,7 +616,7 @@ private fun PreviewGapState(
                         containerColor = Mocha.Rosewater,
                         contentColor = Mocha.Midnight
                     ),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(Radius.xl)
                 ) {
                     Icon(
                         Icons.Default.PlayArrow,
@@ -623,7 +636,7 @@ private fun PreviewUnavailableState() {
     Card(
         colors = CardDefaults.cardColors(containerColor = Mocha.Panel.copy(alpha = 0.9f)),
         border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
-        shape = RoundedCornerShape(22.dp)
+        shape = RoundedCornerShape(Radius.xl)
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 22.dp),
@@ -658,6 +671,51 @@ private fun PreviewUnavailableState() {
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center
             )
+        }
+    }
+}
+
+@Composable
+private fun PreviewPlaybackErrorState(onOpenMediaManager: () -> Unit) {
+    Card(
+        modifier = Modifier.padding(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Mocha.Panel.copy(alpha = 0.96f)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Red.copy(alpha = 0.7f)),
+        shape = RoundedCornerShape(Radius.xl),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(
+                Icons.Default.BrokenImage,
+                contentDescription = null,
+                tint = Mocha.Red,
+                modifier = Modifier.size(26.dp),
+            )
+            Text(
+                text = stringResource(R.string.preview_playback_error_title),
+                color = Mocha.Text,
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = stringResource(R.string.preview_playback_error_body),
+                color = Mocha.Subtext0,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+            )
+            Button(
+                onClick = onOpenMediaManager,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Mocha.Sky,
+                    contentColor = Mocha.Midnight,
+                ),
+                shape = RoundedCornerShape(Radius.xl),
+            ) {
+                Text(stringResource(R.string.preview_open_media_manager))
+            }
         }
     }
 }

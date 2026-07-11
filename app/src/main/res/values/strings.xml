@@ -586,6 +586,10 @@
     <string name="preview_jump_to_content">Jump to Content</string>
     <string name="preview_unavailable_title">Preview unavailable</string>
     <string name="preview_unavailable_body">ClearCut couldn\'t load this source for live preview.</string>
+    <string name="preview_playback_error_title">Can\'t play this clip</string>
+    <string name="preview_playback_error_body">The source may have moved, become unreadable, or use a format this device can\'t decode.</string>
+    <string name="preview_open_media_manager">Open Media Manager</string>
+    <string name="vm_preview_playback_failed_toast">Preview couldn\'t decode this clip — open Media Manager to relink or replace it</string>
 
     <!-- TextEditorSheet -->
     <string name="text_editor_title">Text Overlay</string>
