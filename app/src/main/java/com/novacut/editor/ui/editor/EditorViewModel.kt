@@ -3255,59 +3255,76 @@ class EditorViewModel @Inject constructor(
             showToast(text(R.string.vm_cut_none_selected_toast))
             return
         }
+        val applicableOps = ops.filter { op ->
+            when (op) {
+                is com.novacut.editor.engine.CutAssistantEngine.CutOperation.RippleDelete -> {
+                    val state = _state.value
+                    val splitIds = linkedClipIds(state.tracks, op.clipId)
+                    val groupedIds = regroupedClipIdsForSplit(state.tracks, splitIds, op.timelineStartMs)
+                    canDeleteTimelineRangeAtomically(
+                        tracks = state.tracks,
+                        clipId = op.clipId,
+                        startMs = op.timelineStartMs,
+                        endMs = op.timelineEndMs
+                    ) && state.tracks.none { track ->
+                        track.isLocked && track.clips.any { it.id in splitIds || it.id in groupedIds }
+                    }
+                }
+            }
+        }
+        if (applicableOps.isEmpty()) {
+            showToast(text(R.string.vm_cut_no_change_toast))
+            return
+        }
         saveUndoState("Apply Cut Assistant")
         var appliedSecondsReclaimed = 0L
         var appliedCount = 0
-        ops.forEach { op ->
+        applicableOps.forEach { op ->
             when (op) {
                 is com.novacut.editor.engine.CutAssistantEngine.CutOperation.RippleDelete -> {
                     val originalClip = _state.value.tracks
                         .flatMap { it.clips }
                         .firstOrNull { it.id == op.clipId } ?: return@forEach
-                    val lockedTimelineConflict = _state.value.tracks.any { track ->
-                        track.isLocked && track.clips.any { clip ->
-                            clip.timelineEndMs > op.timelineStartMs
-                        }
-                    }
-                    if (lockedTimelineConflict) return@forEach
                     val firstSplitIds = splitClipAt(op.clipId, op.timelineStartMs)
                     // The middle+tail slice is the new id created by the first split.
                     val rightHalfId = firstSplitIds[op.clipId]
                         ?: return@forEach
                     val secondSplitIds = splitClipAt(rightHalfId, op.timelineEndMs)
-                    val tailId = secondSplitIds[rightHalfId]
-                    // If the second split was rejected (proposal range collapsed against the
-                    // clip's right edge) nothing was minted, so the "middle" is rightHalfId
-                    // itself extending to the original clip end. Either way we delete
-                    // rightHalfId — that is the silence slice — and ripple-shift the tail
-                    // (if any) and every clip to its right back by the deleted span.
-                    val deletedSpanMs = (op.timelineEndMs - op.timelineStartMs).coerceAtLeast(0L)
-                    val deletedTimelineStart = op.timelineStartMs
+                    val tailId = secondSplitIds[rightHalfId] ?: return@forEach
                     _state.update { s ->
                         val middleClipIds = expandTimelineEditClipIds(s.tracks, setOf(rightHalfId))
+                        val markerRippleRanges = s.tracks
+                            .firstOrNull { track -> track.clips.any { it.id == rightHalfId } }
+                            ?.clips
+                            ?.filter { it.id in middleClipIds }
+                            ?.map { it.timelineStartMs to it.timelineEndMs }
+                            .orEmpty()
+                        val deletedSpanMs = s.tracks
+                            .flatMap { it.clips }
+                            .filter { it.id in middleClipIds }
+                            .maxOfOrNull { it.durationMs }
+                            ?: return@update s
+                        appliedSecondsReclaimed += deletedSpanMs
+                        appliedCount++
                         s.copy(
-                            tracks = s.tracks.map { track ->
-                                track.copy(
-                                    clips = track.clips
-                                    .filterNot { it.id in middleClipIds }
-                                    .map { clip ->
-                                        // Ripple-shift everything after the deletion point.
-                                        // Linked audio on other tracks lines up because we
-                                        // compare timeline coords, not track membership.
-                                        if (clip.timelineStartMs >= deletedTimelineStart + deletedSpanMs) {
-                                            clip.copy(timelineStartMs = clip.timelineStartMs - deletedSpanMs)
-                                        } else clip
-                                    }
-                                )
-                            },
+                            tracks = rippleDeleteClips(s.tracks, middleClipIds),
                             waveforms = s.waveforms - middleClipIds,
                             trackedObjects = s.trackedObjects.filterNot {
                                 it.sourceClipId in middleClipIds
+                            },
+                            timelineMarkers = s.timelineMarkers.mapNotNull { marker ->
+                                rippleTimelinePosition(marker.timeMs, markerRippleRanges)
+                                    ?.let { marker.copy(timeMs = it) }
+                            },
+                            chapterMarkers = s.chapterMarkers.mapNotNull { marker ->
+                                rippleTimelinePosition(marker.timeMs, markerRippleRanges)
+                                    ?.let { marker.copy(timeMs = it) }
+                            },
+                            beatMarkers = s.beatMarkers.mapNotNull { markerMs ->
+                                rippleTimelinePosition(markerMs, markerRippleRanges)
                             }
                         )
                     }
-                    appliedSecondsReclaimed += deletedSpanMs
-                    appliedCount++
                     Log.d(
                         "CutAssistant",
                         "Applied ${op.reason} cut ${op.timelineStartMs}..${op.timelineEndMs} on ${originalClip.id} (rightHalf=$rightHalfId, tail=$tailId)"

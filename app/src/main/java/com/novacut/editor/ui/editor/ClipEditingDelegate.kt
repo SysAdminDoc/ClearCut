@@ -303,6 +303,14 @@ class ClipEditingDelegate(
             showToast(appContext.getString(R.string.clip_track_locked_toast))
             return
         }
+        val markerTrack = state.selectedTrackId
+            ?.let { selectedTrackId -> state.tracks.firstOrNull { it.id == selectedTrackId } }
+            ?.takeIf { track -> track.clips.any { it.id in clipIdsToDelete } }
+            ?: state.tracks.firstOrNull { track -> track.clips.any { it.id in clipIdsToDelete } }
+        val markerRippleRanges = markerTrack?.clips
+            ?.filter { it.id in clipIdsToDelete }
+            ?.map { it.timelineStartMs to it.timelineEndMs }
+            .orEmpty()
         saveUndoState(
             if (clipIdsToDelete.size == 1) "Delete clip"
             else "Delete ${clipIdsToDelete.size} clips"
@@ -315,7 +323,18 @@ class ClipEditingDelegate(
                 selectedTrackId = null,
                 selectedClipIds = emptySet(),
                 waveforms = state.waveforms - clipIdsToDelete,
-                trackedObjects = state.trackedObjects.filterNot { it.sourceClipId in clipIdsToDelete }
+                trackedObjects = state.trackedObjects.filterNot { it.sourceClipId in clipIdsToDelete },
+                timelineMarkers = state.timelineMarkers.mapNotNull { marker ->
+                    rippleTimelinePosition(marker.timeMs, markerRippleRanges)
+                        ?.let { marker.copy(timeMs = it) }
+                },
+                chapterMarkers = state.chapterMarkers.mapNotNull { marker ->
+                    rippleTimelinePosition(marker.timeMs, markerRippleRanges)
+                        ?.let { marker.copy(timeMs = it) }
+                },
+                beatMarkers = state.beatMarkers.mapNotNull { markerMs ->
+                    rippleTimelinePosition(markerMs, markerRippleRanges)
+                }
             ))
         }
         rebuildPlayerTimeline()

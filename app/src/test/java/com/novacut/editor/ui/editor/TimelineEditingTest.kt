@@ -515,6 +515,26 @@ class TimelineEditingTest {
     }
 
     @Test
+    fun `timeline markers inside deleted media are removed and later markers ripple`() {
+        val ranges = listOf(1_000L to 1_500L, 2_000L to 2_250L)
+
+        assertEquals(900L, rippleTimelinePosition(900L, ranges))
+        assertNull(rippleTimelinePosition(1_200L, ranges))
+        assertEquals(1_300L, rippleTimelinePosition(1_800L, ranges))
+        assertNull(rippleTimelinePosition(2_100L, ranges))
+        assertEquals(1_750L, rippleTimelinePosition(2_500L, ranges))
+    }
+
+    @Test
+    fun `assistant range validation rejects a cut with an unsafe trailing fragment`() {
+        val source = clip("source", 0L, 0L, 1_000L, 1_000L)
+        val tracks = listOf(Track(type = TrackType.VIDEO, index = 0, clips = listOf(source)))
+
+        assertTrue(canDeleteTimelineRangeAtomically(tracks, source.id, 200L, 700L))
+        assertFalse(canDeleteTimelineRangeAtomically(tracks, source.id, 200L, 950L))
+    }
+
+    @Test
     fun `split preserves absolute animation and caption timing with fresh right-side identities`() {
         val sourceClip = clip("source", 1_000L, 0L, 1_000L, 1_000L).copy(
             groupId = "left-group",

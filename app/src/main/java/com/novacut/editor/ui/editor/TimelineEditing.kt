@@ -172,6 +172,45 @@ private fun mergedDurationEndingAtOrBefore(
     return total + (currentEnd - currentStart).coerceAtLeast(0L)
 }
 
+/** Move a global timeline marker with one track's ripple edit. */
+internal fun rippleTimelinePosition(
+    positionMs: Long,
+    removedRanges: List<Pair<Long, Long>>
+): Long? {
+    val normalized = removedRanges
+        .filter { (start, end) -> end > start }
+        .sortedBy { it.first }
+    if (normalized.any { (start, end) -> positionMs >= start && positionMs < end }) {
+        return null
+    }
+    return (positionMs - mergedDurationEndingAtOrBefore(normalized, positionMs))
+        .coerceAtLeast(0L)
+}
+
+/** Verify that both split boundaries are safe for every linked member. */
+internal fun canDeleteTimelineRangeAtomically(
+    tracks: List<Track>,
+    clipId: String,
+    startMs: Long,
+    endMs: Long
+): Boolean {
+    if (endMs <= startMs) return false
+    val splitIds = linkedSplitCandidateIds(tracks, setOf(clipId), startMs)
+    if (splitIds.isEmpty()) return false
+    return splitIds.all { candidateId ->
+        val clip = tracks.findClipLocation(candidateId)?.clip ?: return@all false
+        val firstSplit = splitTimelineClip(
+            clip = clip,
+            playheadMs = startMs,
+            newClipId = "validation-right-$candidateId",
+            newLinkedClipId = null,
+            rightGroupId = clip.groupId,
+            idFactory = { "validation-owned" }
+        ) ?: return@all false
+        firstSplit.right.canSplitAtTimelinePosition(endMs)
+    }
+}
+
 internal data class TimelineClipSplit(
     val left: Clip,
     val right: Clip,
