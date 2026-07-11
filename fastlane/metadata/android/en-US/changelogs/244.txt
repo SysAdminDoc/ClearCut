@@ -1,0 +1,4 @@
+- Atelier Editor Workspace
+- Re-imagined the phone editor from a new generated design target, then rebuilt the live Compose shell toward that target instead of stopping at a static mockup.
+- Collapsed persistence feedback into project identity, embedded timecode and frame controls into the preview deck, and reassigned remaining phone height to the multi-track timeline.
+- Flattened persistent chrome onto a graphite/AMOLED surface system with cyan primary selection, compact track headers, shar...

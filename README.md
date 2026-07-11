@@ -4,7 +4,7 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.110-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.111-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
 
@@ -31,12 +31,14 @@ Release history is maintained in git tags and the development checkout's local
 
 ## Premium mobile workspace
 
-The phone-first editing workspace keeps the preview dominant, exposes the most
-important transport and timeline controls without burying the canvas, and uses
-a compact six-category tool rail for fast clip and project editing.
+The phone-first editing workspace keeps the footage, frame transport, and
+multi-track timeline in one continuous AMOLED editing deck. Saved state stays
+with the project identity, track controls remain compact, and a six-category
+tool dock keeps advanced actions available without turning the canvas into a
+dashboard.
 
 <p align="center">
-  <img src="artifacts/clearcut-premium-editor.png" alt="ClearCut premium Android editing workspace" width="360" />
+  <img src="artifacts/clearcut-atelier-editor.png" alt="ClearCut AMOLED Android editing workspace" width="360" />
 </p>
 
 ## Project planning
