@@ -465,6 +465,20 @@ class TimelineEditingTest {
     }
 
     @Test
+    fun `merging adjacent clips preserves every following timeline position`() {
+        val first = clip("first", 0L, 0L, 4_000L, 10_000L)
+        val second = clip("second", 4_000L, 4_000L, 10_000L, 10_000L)
+        val following = clip("following", 10_000L, 10_000L, 24_000L, 34_000L)
+        val track = Track(type = TrackType.VIDEO, index = 0, clips = listOf(first, second, following))
+
+        val merged = mergeAdjacentClipPair(track, first.id)
+
+        assertEquals(listOf("first", "following"), merged.clips.map { it.id })
+        assertEquals(10_000L, merged.clips.first().durationMs)
+        assertEquals(10_000L, merged.clips.last().timelineStartMs)
+    }
+
+    @Test
     fun `edit target expansion includes linked clips and every member of selected groups`() {
         val groupedVideo = clip("video", 0L, 0L, 500L, 500L).copy(
             linkedClipId = "audio",

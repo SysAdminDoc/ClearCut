@@ -1,0 +1,2 @@
+Fixed Merge Next so later clips keep their timeline positions instead of shifting backward into overlaps.
+Added regression coverage for adjacent clip merging while retaining the larger preview, reliable cut playback, visible Delete action, silent autosave restore, and snoozable editing suggestions.

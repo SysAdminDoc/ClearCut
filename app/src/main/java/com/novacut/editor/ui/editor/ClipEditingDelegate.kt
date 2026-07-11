@@ -808,28 +808,7 @@ class ClipEditingDelegate(
     }
 
     private fun mergeClipWithNext(track: Track, clipId: String): Track {
-        val clipIndex = track.clips.indexOfFirst { it.id == clipId }
-        if (clipIndex < 0 || clipIndex >= track.clips.lastIndex) return track
-        val clip = track.clips[clipIndex]
-        val nextClip = track.clips[clipIndex + 1]
-        if (!canMergeAdjacentClips(clip, nextClip)) return track
-
-        val merged = clip.copy(
-            trimEndMs = nextClip.trimEndMs,
-            effects = clip.effects + nextClip.effects.map { it.copy(id = UUID.randomUUID().toString()) }
-        )
-        val updatedClips = track.clips.toMutableList().apply {
-            removeAt(clipIndex + 1)
-            set(clipIndex, merged)
-        }
-        val shifted = updatedClips.mapIndexed { index, candidate ->
-            if (index > clipIndex) {
-                candidate.copy(timelineStartMs = candidate.timelineStartMs - nextClip.durationMs)
-            } else {
-                candidate
-            }
-        }
-        return track.copy(clips = shifted)
+        return mergeAdjacentClipPair(track, clipId)
     }
 
     // --- Move Clip to Track ---
@@ -912,4 +891,24 @@ class ClipEditingDelegate(
         saveProject()
     }
 
+}
+
+internal fun mergeAdjacentClipPair(track: Track, clipId: String): Track {
+    val clipIndex = track.clips.indexOfFirst { it.id == clipId }
+    if (clipIndex < 0 || clipIndex >= track.clips.lastIndex) return track
+    val clip = track.clips[clipIndex]
+    val nextClip = track.clips[clipIndex + 1]
+    if (!canMergeAdjacentClips(clip, nextClip)) return track
+
+    val merged = clip.copy(
+        trimEndMs = nextClip.trimEndMs,
+        effects = clip.effects + nextClip.effects.map { it.copy(id = UUID.randomUUID().toString()) }
+    )
+    val updatedClips = track.clips.toMutableList().apply {
+        removeAt(clipIndex + 1)
+        set(clipIndex, merged)
+    }
+    // The merged clip still occupies both original clips' timeline span, so
+    // every later clip keeps its existing start position.
+    return track.copy(clips = updatedClips)
 }
