@@ -4,7 +4,7 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.112-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.113-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
 
@@ -61,6 +61,8 @@ Planning files are local-only in the development checkout:
 - Trim, split, merge, crop, rotate with visual handles; numeric trim commits as one undoable edit
 - **Reliable split ownership** — linked/grouped cuts preserve side-specific grouping, rebase animation/effect/mask/caption timing, renew nested IDs, and retain waveform/tracking context
 - **Gap-safe linked ripple delete** — single and multi-delete share one locked-track-aware planner that expands linked/grouped clips without compacting unrelated tracks or intentional gaps
+- **Retimed live preview** — constant-speed and ramped clips seek to the correct source frame, keep the playhead aligned, and refresh speed/volume immediately across cuts
+- **WYSIWYG overlays and recovery** — titles, stickers, and images stay visible across timeline gaps; decoder failures offer a direct Media Manager recovery path
 - **Slip/slide editing** — drag clip body to slide (reposition) or slip (shift source window)
 - **Magnetic snapping** — clips snap to edges, playhead, and markers (8dp threshold with diamond indicators)
 - **Clip grouping** — select multiple clips, group/ungroup, move as a unit

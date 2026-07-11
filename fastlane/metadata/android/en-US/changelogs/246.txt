@@ -1,0 +1,4 @@
+- Timeline and Preview Reliability
+- Linked trims and splits stay atomic across video/audio pairs, while Beat Sync and Cut Assistant reject unsafe cuts and preserve marker alignment.
+- Retimed clips now seek, play, and compare against the correct source frame at constant speeds and nonlinear ramps.
+- Titles and image overlays remain visible through gaps; relink, proxy, loop, and decoder-recovery preview states are more reliable.
