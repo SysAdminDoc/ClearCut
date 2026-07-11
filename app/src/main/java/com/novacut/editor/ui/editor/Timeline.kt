@@ -249,9 +249,11 @@ private fun TimelineToolbarControls(
     zoomLevel: Float,
     fitZoomLevel: Float,
     canSplitAtPlayhead: Boolean,
+    selectedClipId: String?,
     onZoomChanged: (Float) -> Unit,
     onScrollChanged: (Long) -> Unit,
     onSplitAtPlayhead: () -> Unit,
+    onDeleteSelectedClip: () -> Unit,
     onMoreClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -289,6 +291,16 @@ private fun TimelineToolbarControls(
             enabled = canSplitAtPlayhead,
             onClick = onSplitAtPlayhead
         )
+        if (selectedClipId != null) {
+            TimelineToolbarButton(
+                icon = Icons.Default.Delete,
+                contentDescription = stringResource(R.string.timeline_clip_action_delete),
+                compact = compact,
+                highlight = true,
+                destructive = true,
+                onClick = onDeleteSelectedClip
+            )
+        }
         TimelineToolbarButton(
             icon = Icons.Default.MoreHoriz,
             contentDescription = stringResource(R.string.editor_more),
@@ -562,9 +574,11 @@ fun Timeline(
                         zoomLevel = zoomLevel,
                         fitZoomLevel = fitZoomLevel,
                         canSplitAtPlayhead = canSplitAtPlayhead,
+                        selectedClipId = selectedClipId,
                         onZoomChanged = onZoomChanged,
                         onScrollChanged = onScrollChanged,
                         onSplitAtPlayhead = onSplitAtPlayhead,
+                        onDeleteSelectedClip = onDeleteSelectedClip,
                         onMoreClick = { timelineOptionsExpanded = true },
                         modifier = Modifier
                     )
@@ -587,9 +601,11 @@ fun Timeline(
                         zoomLevel = zoomLevel,
                         fitZoomLevel = fitZoomLevel,
                         canSplitAtPlayhead = canSplitAtPlayhead,
+                        selectedClipId = selectedClipId,
                         onZoomChanged = onZoomChanged,
                         onScrollChanged = onScrollChanged,
                         onSplitAtPlayhead = onSplitAtPlayhead,
+                        onDeleteSelectedClip = onDeleteSelectedClip,
                         onMoreClick = { timelineOptionsExpanded = true },
                     )
                 }
