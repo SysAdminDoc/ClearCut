@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ClearCut</string>
-    <string name="app_version">v3.74.114</string>
+    <string name="app_version">v3.74.115</string>
     <string name="close">Cerrar</string>
     <string name="cancel">Cancelar</string>
     <string name="done">Listo</string>
@@ -1785,9 +1785,6 @@
     <string name="scratchpad_saved">Caracteres guardados · %1$d</string>
     <string name="scratchpad_saving">Guardando…</string>
     <string name="scratchpad_menu_label">Notas del bloc de notas</string>
-    <string name="recovery_title">Edición guardada automáticamente restaurada</string>
-    <string name="recovery_message">ClearCut encontró datos del proyecto guardados automáticamente más recientes que los últimos metadatos guardados y los cargó. Continúe después de confirmar que la línea de tiempo se ve correcta.</string>
-    <string name="recovery_keep">Continuar</string>
     <string name="recovery_media_ready_title">Medios listos</string>
     <plurals name="recovery_media_ready_body">
         <item quantity="one">%1$d referencia de medios restaurada está disponible para editar y exportar.</item>
@@ -2311,7 +2308,6 @@
     <string name="vm_otio_exported_toast">OTIO exportado: %1$s%2$s</string>
     <string name="vm_fcpxml_blocked_toast">Exportación FCPXML bloqueada: %1$s — %2$s</string>
     <string name="vm_fcpxml_exported_toast">FCPXML exportado: %1$s%2$s</string>
-    <string name="vm_autosave_kept_toast">Los datos guardados automáticamente se conservaron para no perder esta edición.</string>
     <!-- Project storage -->
     <string name="settings_project_storage_title">Almacenamiento del proyecto</string>
     <string name="settings_project_storage_media">Medios gestionados: %1$s</string>

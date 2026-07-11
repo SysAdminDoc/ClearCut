@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ClearCut</string>
-    <string name="app_version">v3.74.114</string>
+    <string name="app_version">v3.74.115</string>
 
     <!-- Common -->
     <string name="close">Close</string>
@@ -1977,9 +1977,6 @@
     <string name="scratchpad_menu_label">Scratchpad Notes</string>
 
     <!-- Recovery dialog -->
-    <string name="recovery_title">Autosaved edit restored</string>
-    <string name="recovery_message">ClearCut found autosaved project data newer than the last metadata save and loaded it. Continue after confirming the timeline looks right.</string>
-    <string name="recovery_keep">Continue</string>
     <string name="recovery_media_ready_title">Media ready</string>
     <plurals name="recovery_media_ready_body">
         <item quantity="one">%1$d restored media reference is available for editing and export.</item>
@@ -2585,7 +2582,6 @@
     <string name="vm_otio_exported_toast">OTIO exported: %1$s%2$s</string>
     <string name="vm_fcpxml_blocked_toast">FCPXML export blocked: %1$s — %2$s</string>
     <string name="vm_fcpxml_exported_toast">FCPXML exported: %1$s%2$s</string>
-    <string name="vm_autosave_kept_toast">Autosaved project data was kept to avoid losing this edit.</string>
     <!-- Project storage -->
     <string name="settings_project_storage_title">Project Storage</string>
     <string name="settings_project_storage_media">Managed media: %1$s</string>

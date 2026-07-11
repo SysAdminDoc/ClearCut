@@ -1,0 +1,1 @@
+Cut now works directly at the live playhead without a selection prerequisite. Selected clips expose a clear red Delete button backed by ripple delete and undo. Autosaves restore silently. Editing suggestions offer Not now and remain snoozed for 30 minutes. This release also improves preview space and fixes playback after cuts, deletes, and timeline-end restart.
