@@ -104,6 +104,14 @@ private const val MIN_TIMELINE_ZOOM = 0.01f
 private const val MAX_TIMELINE_ZOOM = 10f
 private const val WAVEFORM_PRELOAD_PADDING_MS = 3_000L
 private const val WAVEFORM_FALLBACK_WINDOW_MS = 15_000L
+private const val SUGGESTION_SNOOZE_STATE_KEY = "editingSuggestionSnoozeUntil"
+private const val SUGGESTION_SNOOZE_MS = 30 * 60 * 1_000L
+
+internal fun shouldShowEditingSuggestion(
+    suggestionId: String,
+    nowMs: Long,
+    snoozedUntilMs: Map<String, Long>
+): Boolean = nowMs >= snoozedUntilMs.getOrDefault(suggestionId, 0L)
 internal data class RecoveryOpenFeedback(
     val message: String,
     val severity: ToastSeverity,
@@ -473,11 +481,15 @@ class EditorViewModel @Inject constructor(
     private val exportIncidentStore: ExportIncidentStore,
     private val ffmpegEngine: com.novacut.editor.engine.FFmpegEngine,
     @ApplicationContext private val appContext: Context,
-    savedStateHandle: SavedStateHandle
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val projectId: String? = savedStateHandle["projectId"]
     private val expectRecovery: Boolean = savedStateHandle["expectRecovery"] ?: false
+    private var suggestionSnoozedUntilMs: Map<String, Long> =
+        savedStateHandle.get<java.util.HashMap<String, Long>>(SUGGESTION_SNOOZE_STATE_KEY)
+            ?.toMap()
+            ?: emptyMap()
     private var recoveryOpenComplete = false
     private var autoSaveBlockedByRecovery = false
     private var latestSettings: AppSettings? = null
@@ -2532,6 +2544,12 @@ class EditorViewModel @Inject constructor(
 
     // --- AI Suggestions ---
     fun dismissAiSuggestion() {
+        _state.value.aiSuggestion?.id?.let { suggestionId ->
+            suggestionSnoozedUntilMs = suggestionSnoozedUntilMs +
+                (suggestionId to (System.currentTimeMillis() + SUGGESTION_SNOOZE_MS))
+            savedStateHandle[SUGGESTION_SNOOZE_STATE_KEY] =
+                java.util.HashMap(suggestionSnoozedUntilMs)
+        }
         _state.update { it.copyAi { ai -> ai.copy(suggestion = null) } }
     }
 
@@ -2568,7 +2586,10 @@ class EditorViewModel @Inject constructor(
             hasTranscript = s.v369.transcript != null,
             hasBeatMarkers = s.beatMarkers.isNotEmpty()
         )
-        val suggestion = engineSuggestion?.let {
+        val nowMs = System.currentTimeMillis()
+        val suggestion = engineSuggestion
+            ?.takeIf { shouldShowEditingSuggestion(it.id, nowMs, suggestionSnoozedUntilMs) }
+            ?.let {
             AiSuggestion(id = it.id, message = it.message, actionId = it.actionId)
         }
         _state.update { it.copyAi { ai -> ai.copy(suggestion = suggestion) } }

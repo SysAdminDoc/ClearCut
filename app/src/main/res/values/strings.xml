@@ -2064,6 +2064,7 @@
     <string name="desktop_sidebar_media_empty">No media yet. Add media above to build the project library.</string>
     <string name="v369_features_label">Creator Intelligence</string>
     <string name="ai_apply">Apply</string>
+    <string name="ai_suggestion_not_now">Not now</string>
 
     <!-- DrawingOverlayPanel -->
     <string name="cd_drawing_undo">Undo</string>

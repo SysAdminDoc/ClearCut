@@ -1862,6 +1862,7 @@
     <string name="desktop_sidebar_media_empty">Aún no hay medios. Agregue los medios arriba para construir la biblioteca del proyecto.</string>
     <string name="v369_features_label">Inteligencia del creador</string>
     <string name="ai_apply">Aplicar</string>
+    <string name="ai_suggestion_not_now">Ahora no</string>
     <string name="cd_drawing_undo">Deshacer</string>
     <string name="cd_drawing_clear">Borrar</string>
     <string name="cd_drawing_eraser">borrador</string>

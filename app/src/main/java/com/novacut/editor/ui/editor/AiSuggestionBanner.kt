@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,8 +18,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.novacut.editor.R
-import com.novacut.editor.ui.theme.ClearCutChromeIconButton
 import com.novacut.editor.ui.theme.ClearCutPrimaryButton
+import com.novacut.editor.ui.theme.ClearCutSecondaryButton
 import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.Motion
 import com.novacut.editor.ui.theme.Radius
@@ -99,11 +98,9 @@ fun AiSuggestionBanner(
                         onClick = { onApply(s.actionId) }
                     )
                     Spacer(modifier = Modifier.width(Spacing.xs))
-                    ClearCutChromeIconButton(
-                        icon = Icons.Default.Close,
-                        contentDescription = stringResource(R.string.cd_dismiss_suggestion),
-                        onClick = onDismiss,
-                        size = 40.dp
+                    ClearCutSecondaryButton(
+                        text = stringResource(R.string.ai_suggestion_not_now),
+                        onClick = onDismiss
                     )
                 }
             }
