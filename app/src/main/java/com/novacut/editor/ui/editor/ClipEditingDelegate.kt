@@ -314,7 +314,8 @@ class ClipEditingDelegate(
                 selectedClipId = null,
                 selectedTrackId = null,
                 selectedClipIds = emptySet(),
-                waveforms = state.waveforms - clipIdsToDelete
+                waveforms = state.waveforms - clipIdsToDelete,
+                trackedObjects = state.trackedObjects.filterNot { it.sourceClipId in clipIdsToDelete }
             ))
         }
         rebuildPlayerTimeline()
@@ -504,15 +505,15 @@ class ClipEditingDelegate(
             showToast(appContext.getString(R.string.clip_track_locked_toast))
             return
         }
-        val splitCandidates = splitIds.mapNotNull { candidateId ->
-            state.tracks.findClipLocation(candidateId)
-        }.filter { location ->
-            playhead > location.clip.timelineStartMs &&
-                playhead < location.clip.timelineEndMs &&
-                canSplitClipAt(location.clip, playhead)
-        }
+        val splitCandidateIds = linkedSplitCandidateIds(state.tracks, selectedIds, playhead)
+        val splitCandidates = splitCandidateIds.mapNotNull(state.tracks::findClipLocation)
         if (splitCandidates.isEmpty()) {
             showToast(appContext.getString(R.string.clip_too_short_to_split_toast))
+            return
+        }
+        val regroupedClipIds = regroupedClipIdsForSplit(state.tracks, splitCandidateIds, playhead)
+        if (tracksContainLockedClip(splitCandidateIds + regroupedClipIds)) {
+            showToast(appContext.getString(R.string.clip_track_locked_toast))
             return
         }
 
@@ -767,13 +768,6 @@ class ClipEditingDelegate(
             .flatMap { it.clips.sortedBy { clip -> clip.timelineStartMs } }
             .firstOrNull { playheadMs in it.timelineStartMs until it.timelineEndMs }
             ?.id
-    }
-
-    private fun canSplitClipAt(clip: Clip, playheadMs: Long): Boolean {
-        if (playheadMs <= clip.timelineStartMs || playheadMs >= clip.timelineEndMs) return false
-        val splitPoint = splitPointInSource(clip, playheadMs)
-        return splitPoint - clip.trimStartMs >= MIN_TIMELINE_CLIP_DURATION_MS &&
-            clip.trimEndMs - splitPoint >= MIN_TIMELINE_CLIP_DURATION_MS
     }
 
     private fun splitPointInSource(clip: Clip, playheadMs: Long): Long {

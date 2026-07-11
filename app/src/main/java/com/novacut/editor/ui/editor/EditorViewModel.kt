@@ -8,6 +8,7 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import com.novacut.editor.R
 import com.novacut.editor.ai.AiFeatures
@@ -766,6 +767,13 @@ class EditorViewModel @Inject constructor(
                     _state.update { it.copy(isPlaying = false, playheadMs = totalMs) }
                 }
             }
+
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                // A paused seek can cross a cut without entering the periodic
+                // playback loop. Refresh volume/speed immediately so the first
+                // decoded frame and audio sample use the destination clip state.
+                updatePreview()
+            }
         })
 
         // Periodic playhead sync (~30fps) with smooth auto-scroll + per-clip speed tracking
@@ -776,6 +784,7 @@ class EditorViewModel @Inject constructor(
                 delay(33)
                 val player = videoEngine.getPlayer() ?: continue
                 if (player.isPlaying) {
+                    videoEngine.syncPreviewSpeedForCurrentPosition()
                     val currentMs = videoEngine.getAbsolutePositionMs()
                     // Fast-path: update dedicated playhead flow every frame
                     _playheadMs.value = currentMs
@@ -1101,7 +1110,7 @@ class EditorViewModel @Inject constructor(
             safeEditorFloat(track?.volume ?: 1f, 1f, 0f, 2f)
         }
         videoEngine.applyPreviewEffects(clip, _state.value.trackedObjects)
-        videoEngine.setPreviewSpeed(safeEditorFloat(clip?.speed ?: 1f, 1f, 0.01f, 100f))
+        videoEngine.syncPreviewSpeedForCurrentPosition()
         videoEngine.setPreviewVolume(safeEditorFloat((clip?.volume ?: 1f) * trackVolume, 1f, 0f, 1f))
     }
 
@@ -2018,7 +2027,13 @@ class EditorViewModel @Inject constructor(
             generateProxiesForAllClips()
         } else {
             proxyEngine.clearProxies()
+            _state.update { state ->
+                state.copy(tracks = state.tracks.map { track ->
+                    track.copy(clips = track.clips.map { clip -> clip.copy(proxyUri = null) })
+                })
+            }
             rebuildPlayerTimeline()
+            saveProject()
             showToast(text(R.string.vm_proxy_disabled_toast))
         }
     }
@@ -2041,7 +2056,15 @@ class EditorViewModel @Inject constructor(
                     generated++
                 }
             }
+            _state.update { state ->
+                state.copy(tracks = state.tracks.map { track ->
+                    track.copy(clips = track.clips.map { clip ->
+                        clip.copy(proxyUri = proxyEngine.getProxyUri(clip.sourceUri))
+                    })
+                })
+            }
             rebuildPlayerTimeline()
+            saveProject()
             showToast(text(R.string.vm_proxy_enabled_toast, generated))
         }
     }
@@ -2439,7 +2462,8 @@ class EditorViewModel @Inject constructor(
                 // Waveform is mono (1 channel) at ~4000 samples, estimate effective sample rate
                 val clipDurationSec = audioClip.sourceDurationMs / 1000.0
                 val effectiveSampleRate = if (clipDurationSec > 0) (waveform.size / clipDurationSec).toInt().coerceAtLeast(1) else 4000
-                val beats = com.novacut.editor.engine.AudioEffectsEngine.detectBeats(pcm, effectiveSampleRate, 1)
+                val sourceBeats = com.novacut.editor.engine.AudioEffectsEngine.detectBeats(pcm, effectiveSampleRate, 1)
+                val beats = mapSourceMarkersToTimeline(audioClip, sourceBeats)
                 _state.update { it.copy(beatMarkers = beats, isAnalyzingBeats = false) }
                 showToast(text(R.string.vm_beats_detected_toast, beats.size))
             } catch (e: Exception) {
@@ -2454,17 +2478,34 @@ class EditorViewModel @Inject constructor(
             showToast(text(R.string.vm_detect_beats_first_toast))
             return
         }
+        val plannedBeats = beats.sortedDescending().filter { beat ->
+            val clip = _state.value.tracks
+                .filter { it.type == TrackType.VIDEO }
+                .flatMap { it.clips }
+                .firstOrNull { beat > it.timelineStartMs && beat < it.timelineEndMs }
+                ?: return@filter false
+            val splitIds = linkedSplitCandidateIds(_state.value.tracks, setOf(clip.id), beat)
+            val regroupedIds = regroupedClipIdsForSplit(_state.value.tracks, splitIds, beat)
+            splitIds.isNotEmpty() && _state.value.tracks.none { track ->
+                track.isLocked && track.clips.any { it.id in splitIds || it.id in regroupedIds }
+            }
+        }
+        if (plannedBeats.isEmpty()) {
+            showToast(text(R.string.vm_beat_split_toast, 0))
+            return
+        }
         saveUndoState("Beat sync")
         var splitCount = 0
-        for (beat in beats.sortedDescending()) {
+        for (beat in plannedBeats) {
             // Re-read clips each iteration since splits modify state
             val currentClips = _state.value.tracks
                 .filter { it.type == TrackType.VIDEO }
                 .flatMap { it.clips }
             val clip = currentClips.firstOrNull { beat > it.timelineStartMs && beat < it.timelineEndMs }
             if (clip != null) {
-                splitClipAt(clip.id, beat)
-                splitCount++
+                if (splitClipAt(clip.id, beat).isNotEmpty()) {
+                    splitCount++
+                }
             }
         }
         rebuildTimeline()
@@ -3031,15 +3072,17 @@ class EditorViewModel @Inject constructor(
     // Helper for beat sync splitting
     private fun splitClipAt(clipId: String, positionMs: Long): Map<String, String> {
         val initialState = _state.value
-        val clipIdsToSplit = linkedClipIds(initialState.tracks, clipId)
+        val clipIdsToSplit = linkedSplitCandidateIds(initialState.tracks, setOf(clipId), positionMs)
+        if (clipIdsToSplit.isEmpty()) return emptyMap()
+        val regroupedClipIds = regroupedClipIdsForSplit(initialState.tracks, clipIdsToSplit, positionMs)
         if (initialState.tracks.any { track ->
-                track.isLocked && track.clips.any { it.id in clipIdsToSplit }
+                track.isLocked && track.clips.any { it.id in clipIdsToSplit || it.id in regroupedClipIds }
             }
         ) return emptyMap()
         val candidates = clipIdsToSplit.mapNotNull { candidateId ->
             initialState.tracks.findClipLocation(candidateId)?.clip
-        }.filter { canSplitClipAtPosition(it, positionMs) }
-        if (candidates.isEmpty()) return emptyMap()
+        }
+        if (candidates.size != clipIdsToSplit.size) return emptyMap()
 
         val newIdsByOldId = candidates.associate { it.id to java.util.UUID.randomUUID().toString() }
         val newGroupIdsByOldId = candidates.mapNotNull { it.groupId }.distinct()
@@ -3700,6 +3743,9 @@ class EditorViewModel @Inject constructor(
 
         mediaRelinkProbeJob?.cancel()
         mediaRelinkProbeJob = viewModelScope.launch {
+            val previousMissingIds = _state.value.media.relinkReports
+                .filterValues { it.state == MediaRelinkProbe.RelinkState.MISSING }
+                .keys
             val reports = mediaRelinkProbe.probeClips(tracks) + mediaRelinkProbe.probeImageOverlays(imageOverlays)
             val healthReport = analyzeMediaHealthForState(_state.value)
             val missingCount = reports.values.count { it.state == MediaRelinkProbe.RelinkState.MISSING }
@@ -3721,12 +3767,11 @@ class EditorViewModel @Inject constructor(
                         )
                     }
             }
-            if (missingCount > 0) {
-                val missingIds = reports
-                    .filter { it.value.state == MediaRelinkProbe.RelinkState.MISSING }
-                    .keys
-                videoEngine.prepareTimeline(_state.value.tracks, missingIds)
-                videoEngine.seekTo(_state.value.playheadMs)
+            val missingIds = reports
+                .filterValues { it.state == MediaRelinkProbe.RelinkState.MISSING }
+                .keys
+            if (missingIds != previousMissingIds) {
+                rebuildPlayerTimeline()
             }
             if (openPanelOnProblems) {
                 mediaRelinkOpenToast(

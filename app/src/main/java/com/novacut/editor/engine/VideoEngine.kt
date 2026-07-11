@@ -244,7 +244,9 @@ class VideoEngine @Inject constructor(
     fun getAbsolutePositionMs(): Long {
         val p = player ?: return 0L
         val segment = previewSegments.getOrNull(p.currentMediaItemIndex) ?: return p.currentPosition
-        return (segment.timelineStartMs + p.currentPosition)
+        return segment.clip?.let { clip ->
+            previewTimelinePositionForMediaPosition(clip, p.currentPosition)
+        } ?: (segment.timelineStartMs + p.currentPosition)
             .coerceIn(segment.timelineStartMs, segment.timelineEndMs)
     }
 
@@ -1473,7 +1475,9 @@ class VideoEngine @Inject constructor(
             if (targetMs < segment.timelineEndMs) {
                 return PreviewSeekTarget(
                     mediaItemIndex = index,
-                    mediaPositionMs = (targetMs - segment.timelineStartMs)
+                    mediaPositionMs = segment.clip?.let { clip ->
+                        previewMediaPositionForTimelinePosition(clip, targetMs)
+                    } ?: (targetMs - segment.timelineStartMs)
                         .coerceIn(0L, (segment.durationMs - 1L).coerceAtLeast(0L))
                 )
             }
@@ -1770,6 +1774,7 @@ class VideoEngine @Inject constructor(
         val clip = previewSegments[index].clip
         if (clip == null) {
             p.setVideoEffects(emptyList())
+            setPreviewSpeed(1f)
             return
         }
         val nextClipTransition = nextPreviewTransitionForClip(clip)
@@ -1780,6 +1785,7 @@ class VideoEngine @Inject constructor(
         } catch (e: Exception) {
             Log.w(TAG, "Failed to apply effects for clip $index", e)
         }
+        syncPreviewSpeedForCurrentPosition()
     }
 
     /**
@@ -1841,6 +1847,14 @@ class VideoEngine @Inject constructor(
         } catch (e: Exception) {
             Log.w(TAG, "Failed to set preview speed", e)
         }
+    }
+
+    /** Keep speed-ramp preview playback aligned with the current source frame. */
+    fun syncPreviewSpeedForCurrentPosition() {
+        val p = player ?: return
+        val clip = previewSegments.getOrNull(p.currentMediaItemIndex)?.clip
+        val speed = clip?.let { previewSpeedForMediaPosition(it, p.currentPosition) } ?: 1f
+        setPreviewSpeed(speed)
     }
 
     /**

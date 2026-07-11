@@ -465,6 +465,38 @@ class TimelineEditingTest {
     }
 
     @Test
+    fun `linked split rejects the entire pair when one member is too short`() {
+        val video = clip("video", 0L, 0L, 1_000L, 1_000L).copy(linkedClipId = "audio")
+        val audio = clip("audio", 0L, 0L, 550L, 550L).copy(linkedClipId = "video")
+        val tracks = listOf(
+            Track(type = TrackType.VIDEO, index = 0, clips = listOf(video)),
+            Track(type = TrackType.AUDIO, index = 1, clips = listOf(audio))
+        )
+
+        assertTrue(linkedSplitCandidateIds(tracks, setOf(video.id), 500L).isEmpty())
+        assertEquals(
+            setOf("video", "audio"),
+            linkedSplitCandidateIds(tracks, setOf(video.id), 300L)
+        )
+    }
+
+    @Test
+    fun `source beat markers map through trim speed and timeline start`() {
+        val retimed = clip(
+            id = "audio",
+            timelineStartMs = 5_000L,
+            trimStartMs = 1_000L,
+            trimEndMs = 3_000L,
+            sourceDurationMs = 4_000L
+        ).copy(speed = 2f)
+
+        assertEquals(
+            listOf(5_250L, 5_750L),
+            mapSourceMarkersToTimeline(retimed, listOf(500L, 1_500L, 2_500L, 3_500L))
+        )
+    }
+
+    @Test
     fun `ripple delete preserves existing gaps and leaves untouched tracks unchanged`() {
         val first = clip("first", 1_000L, 0L, 500L, 500L)
         val deleted = clip("deleted", 2_000L, 0L, 500L, 500L)

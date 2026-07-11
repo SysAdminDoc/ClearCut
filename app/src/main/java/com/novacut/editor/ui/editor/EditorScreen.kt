@@ -810,6 +810,7 @@ fun EditorScreen(
                     currentTimelineClip = previewClipAtPlayhead,
                     nextTimelineClip = nextPreviewClip,
                     imageOverlays = state.imageOverlays,
+                    textOverlays = state.textOverlays,
                     jumpToContentMs = previewRecoveryTargetMs,
                     onJumpToContent = viewModel::seekTo,
                     onPreviewTransformStarted = { viewModel.beginTransformChange() },

@@ -55,6 +55,52 @@ internal fun linkedClipIds(tracks: List<Track>, clipId: String): Set<String> {
     }
 }
 
+internal fun Clip.canSplitAtTimelinePosition(positionMs: Long): Boolean {
+    if (positionMs <= timelineStartMs || positionMs >= timelineEndMs) return false
+    val sourceSplitMs = timelineOffsetToSourceMs(positionMs - timelineStartMs)
+    return sourceSplitMs - trimStartMs >= MIN_TIMELINE_CLIP_DURATION_MS &&
+        trimEndMs - sourceSplitMs >= MIN_TIMELINE_CLIP_DURATION_MS
+}
+
+/** Return only complete linked closures that can all split at this position. */
+internal fun linkedSplitCandidateIds(
+    tracks: List<Track>,
+    seedIds: Set<String>,
+    positionMs: Long
+): Set<String> {
+    val closures = seedIds
+        .map { seedId -> linkedClipIds(tracks, seedId) }
+        .distinct()
+    return closures.flatMapTo(mutableSetOf()) { closure ->
+        val locations = closure.mapNotNull(tracks::findClipLocation)
+        if (locations.size == closure.size && locations.all { it.clip.canSplitAtTimelinePosition(positionMs) }) {
+            closure
+        } else {
+            emptySet()
+        }
+    }
+}
+
+internal fun regroupedClipIdsForSplit(
+    tracks: List<Track>,
+    splitClipIds: Set<String>,
+    positionMs: Long
+): Set<String> {
+    val affectedGroupIds = splitClipIds.mapNotNull { tracks.findClipLocation(it)?.clip?.groupId }.toSet()
+    if (affectedGroupIds.isEmpty()) return emptySet()
+    return tracks.flatMap { it.clips }
+        .filter { it.groupId in affectedGroupIds && it.timelineStartMs >= positionMs }
+        .mapTo(mutableSetOf()) { it.id }
+}
+
+/** Convert detector/source timestamps into this clip's retimed project timeline. */
+internal fun mapSourceMarkersToTimeline(clip: Clip, sourceMarkersMs: List<Long>): List<Long> {
+    return sourceMarkersMs.mapNotNull { sourceMs ->
+        clip.sourceTimeToTimelineOffsetMs(sourceMs, includeBoundaries = false)
+            ?.let { clip.timelineStartMs + it }
+    }.distinct().sorted()
+}
+
 /** Resolve every clip that must participate in an identity-linked edit. */
 internal fun expandTimelineEditClipIds(tracks: List<Track>, seedIds: Set<String>): Set<String> {
     val allClips = tracks.flatMap { it.clips }

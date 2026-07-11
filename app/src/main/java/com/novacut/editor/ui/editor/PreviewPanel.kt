@@ -44,10 +44,16 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -58,6 +64,8 @@ import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.model.AspectRatio
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.ImageOverlay
+import com.novacut.editor.model.TextAlignment
+import com.novacut.editor.model.TextOverlay
 import com.novacut.editor.ui.theme.ClearCutChromeIconButton
 import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.Radius
@@ -83,6 +91,7 @@ fun PreviewPanel(
     currentTimelineClip: Clip? = null,
     nextTimelineClip: Clip? = null,
     imageOverlays: List<ImageOverlay> = emptyList(),
+    textOverlays: List<TextOverlay> = emptyList(),
     jumpToContentMs: Long? = null,
     onJumpToContent: (Long) -> Unit = {},
     onPreviewTransformStarted: () -> Unit = {},
@@ -107,6 +116,9 @@ fun PreviewPanel(
         imageOverlays.filter { overlay ->
             playheadMs >= overlay.startTimeMs && playheadMs <= overlay.endTimeMs
         }
+    }
+    val activeTextOverlays = remember(textOverlays, playheadMs) {
+        activePreviewTextOverlays(textOverlays, playheadMs)
     }
 
     val frameDurationMs = remember(frameRate) {
@@ -264,14 +276,19 @@ fun PreviewPanel(
                             }
                         }
 
-                        if (!showGapState && !showGapPlaybackFrame) {
-                            activeImageOverlays.forEach { overlay ->
-                                PreviewImageOverlay(
-                                    overlay = overlay,
-                                    frameWidth = frameWidth,
-                                    frameHeight = frameHeight,
-                                )
-                            }
+                        activeImageOverlays.forEach { overlay ->
+                            PreviewImageOverlay(
+                                overlay = overlay,
+                                frameWidth = frameWidth,
+                                frameHeight = frameHeight,
+                            )
+                        }
+                        activeTextOverlays.forEach { overlay ->
+                            PreviewTextOverlay(
+                                overlay = overlay,
+                                frameWidth = frameWidth,
+                                frameHeight = frameHeight,
+                            )
                         }
 
                         if (showCompositionGuides && totalDurationMs > 0 && !showGapState) {
@@ -654,6 +671,69 @@ fun formatTimecode(ms: Long): String {
     else "%02d:%02d".format(minutes, seconds)
 }
 
+internal fun activePreviewTextOverlays(overlays: List<TextOverlay>, playheadMs: Long): List<TextOverlay> {
+    return overlays.filter { overlay ->
+        playheadMs >= overlay.startTimeMs && playheadMs < overlay.endTimeMs
+    }
+}
+
+@Composable
+private fun BoxScope.PreviewTextOverlay(
+    overlay: TextOverlay,
+    frameWidth: androidx.compose.ui.unit.Dp,
+    frameHeight: androidx.compose.ui.unit.Dp,
+) {
+    val density = LocalDensity.current
+    val frameWidthPx = with(density) { frameWidth.toPx() }
+    val frameHeightPx = with(density) { frameHeight.toPx() }
+    val previewFontSize = (overlay.fontSize * frameHeight.value / 1_080f)
+        .coerceIn(10f, 72f)
+    val horizontal = (overlay.positionX.coerceIn(0f, 1f) - 0.5f) * frameWidthPx
+    val vertical = (overlay.positionY.coerceIn(0f, 1f) - 0.5f) * frameHeightPx
+    val fontFamily = when (overlay.fontFamily.lowercase()) {
+        "serif" -> FontFamily.Serif
+        "monospace" -> FontFamily.Monospace
+        "cursive" -> FontFamily.Cursive
+        else -> FontFamily.SansSerif
+    }
+    val textAlign = when (overlay.alignment) {
+        TextAlignment.LEFT -> TextAlign.Left
+        TextAlignment.RIGHT -> TextAlign.Right
+        TextAlignment.CENTER -> TextAlign.Center
+    }
+
+    Text(
+        text = overlay.text,
+        color = Color(overlay.color),
+        textAlign = textAlign,
+        fontFamily = fontFamily,
+        fontWeight = if (overlay.bold) FontWeight.Bold else FontWeight.Normal,
+        fontStyle = if (overlay.italic) FontStyle.Italic else FontStyle.Normal,
+        fontSize = previewFontSize.sp,
+        letterSpacing = (overlay.letterSpacing * previewFontSize / 48f).sp,
+        lineHeight = (previewFontSize * overlay.lineHeight.coerceIn(0.8f, 3f)).sp,
+        style = TextStyle(
+            shadow = Shadow(
+                color = Color(overlay.shadowColor),
+                offset = Offset(overlay.shadowOffsetX, overlay.shadowOffsetY),
+                blurRadius = overlay.shadowBlur.coerceAtLeast(0f),
+            ),
+            textDecoration = TextDecoration.None,
+        ),
+        modifier = Modifier
+            .align(Alignment.Center)
+            .graphicsLayer {
+                translationX = horizontal
+                translationY = vertical
+                rotationZ = overlay.rotation
+                scaleX = overlay.scaleX.coerceAtLeast(0.01f)
+                scaleY = overlay.scaleY.coerceAtLeast(0.01f)
+            }
+            .background(Color(overlay.backgroundColor), RoundedCornerShape(Radius.xs))
+            .padding(horizontal = 4.dp, vertical = 2.dp),
+    )
+}
+
 fun formatTimestamp(ms: Long): String {
     val totalSeconds = ms / 1000
     val hours = totalSeconds / 3600
@@ -729,8 +809,9 @@ private fun BoxScope.SplitPreviewOverlay(
     var originalBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
     val sourceUri = clip.sourceUri
-    val sourceTimeUs = ((playheadMs - clip.timelineStartMs + clip.trimStartMs)
-        .coerceIn(clip.trimStartMs, clip.trimEndMs)) * 1000L
+    val timelineOffsetMs = (playheadMs - clip.timelineStartMs)
+        .coerceIn(0L, clip.durationMs.coerceAtLeast(0L))
+    val sourceTimeUs = clip.timelineOffsetToSourceMs(timelineOffsetMs) * 1000L
 
     LaunchedEffect(sourceUri, sourceTimeUs / 100_000) {
         originalBitmap = withContext(Dispatchers.IO) {
