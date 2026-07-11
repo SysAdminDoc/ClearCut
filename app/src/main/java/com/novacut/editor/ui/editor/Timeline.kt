@@ -248,7 +248,7 @@ private fun TimelineToolbarControls(
     compact: Boolean,
     zoomLevel: Float,
     fitZoomLevel: Float,
-    selectedClipId: String?,
+    canSplitAtPlayhead: Boolean,
     onZoomChanged: (Float) -> Unit,
     onScrollChanged: (Long) -> Unit,
     onSplitAtPlayhead: () -> Unit,
@@ -286,7 +286,7 @@ private fun TimelineToolbarControls(
             contentDescription = stringResource(R.string.cd_split_at_playhead),
             compact = compact,
             highlight = true,
-            enabled = selectedClipId != null,
+            enabled = canSplitAtPlayhead,
             onClick = onSplitAtPlayhead
         )
         TimelineToolbarButton(
@@ -362,6 +362,9 @@ fun Timeline(
         tracks.firstOrNull { track -> track.clips.any { clip -> clip.id == selectedClipId } }?.id
     }
     val totalClipCount = remember(tracks) { tracks.sumOf { it.clips.size } }
+    val canSplitAtPlayhead = remember(tracks, selectedClipId, playheadMs) {
+        canSplitTimelineAtPlayhead(tracks, selectedClipId, playheadMs)
+    }
     val scrubBoundaries = remember(tracks, markers, beatMarkers) {
         val edges = mutableSetOf<Long>()
         tracks.forEach { track ->
@@ -558,7 +561,7 @@ fun Timeline(
                         compact = true,
                         zoomLevel = zoomLevel,
                         fitZoomLevel = fitZoomLevel,
-                        selectedClipId = selectedClipId,
+                        canSplitAtPlayhead = canSplitAtPlayhead,
                         onZoomChanged = onZoomChanged,
                         onScrollChanged = onScrollChanged,
                         onSplitAtPlayhead = onSplitAtPlayhead,
@@ -583,7 +586,7 @@ fun Timeline(
                         compact = false,
                         zoomLevel = zoomLevel,
                         fitZoomLevel = fitZoomLevel,
-                        selectedClipId = selectedClipId,
+                        canSplitAtPlayhead = canSplitAtPlayhead,
                         onZoomChanged = onZoomChanged,
                         onScrollChanged = onScrollChanged,
                         onSplitAtPlayhead = onSplitAtPlayhead,

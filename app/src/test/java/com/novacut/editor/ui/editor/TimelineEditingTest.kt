@@ -19,6 +19,18 @@ class TimelineEditingTest {
     }
 
     @Test
+    fun `cut toolbar follows the live playhead when no clip is selected`() {
+        val first = clip("first", 0L, 0L, 1_000L, 1_000L)
+        val second = clip("second", 1_000L, 0L, 1_000L, 1_000L)
+        val tracks = listOf(Track(type = TrackType.VIDEO, index = 0, clips = listOf(first, second)))
+
+        assertTrue(canSplitTimelineAtPlayhead(tracks, selectedClipId = null, playheadMs = 500L))
+        assertFalse(canSplitTimelineAtPlayhead(tracks, selectedClipId = null, playheadMs = 0L))
+        assertFalse(canSplitTimelineAtPlayhead(tracks, selectedClipId = first.id, playheadMs = 1_500L))
+        assertTrue(canSplitTimelineAtPlayhead(tracks, selectedClipId = second.id, playheadMs = 1_500L))
+    }
+
+    @Test
     fun `long press opens compound clips through ViewModel callback`() {
         var openedClipId: String? = null
         var toggledClipId: String? = null

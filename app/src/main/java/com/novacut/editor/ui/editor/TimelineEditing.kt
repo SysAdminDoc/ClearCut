@@ -22,6 +22,21 @@ internal fun playbackStartPosition(playheadMs: Long, totalDurationMs: Long): Lon
     return if (totalDurationMs > 0L && clamped >= totalDurationMs) 0L else clamped
 }
 
+internal fun canSplitTimelineAtPlayhead(
+    tracks: List<Track>,
+    selectedClipId: String?,
+    playheadMs: Long
+): Boolean {
+    val seedId = selectedClipId ?: tracks
+        .sortedBy { it.index }
+        .asSequence()
+        .flatMap { it.clips.sortedBy(Clip::timelineStartMs).asSequence() }
+        .firstOrNull { playheadMs in it.timelineStartMs until it.timelineEndMs }
+        ?.id
+        ?: return false
+    return linkedSplitCandidateIds(tracks, setOf(seedId), playheadMs).isNotEmpty()
+}
+
 internal data class ClipLocation(
     val trackIndex: Int,
     val clipIndex: Int,
