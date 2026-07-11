@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ClearCut</string>
-    <string name="app_version">v3.74.115</string>
+    <string name="app_version">v3.74.116</string>
 
     <!-- Common -->
     <string name="close">Close</string>
