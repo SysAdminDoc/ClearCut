@@ -17,6 +17,11 @@ import kotlin.math.ceil
 
 internal const val MIN_TIMELINE_CLIP_DURATION_MS = 100L
 
+internal fun playbackStartPosition(playheadMs: Long, totalDurationMs: Long): Long {
+    val clamped = playheadMs.coerceIn(0L, totalDurationMs.coerceAtLeast(0L))
+    return if (totalDurationMs > 0L && clamped >= totalDurationMs) 0L else clamped
+}
+
 internal data class ClipLocation(
     val trackIndex: Int,
     val clipIndex: Int,
@@ -185,6 +190,43 @@ internal fun rippleTimelinePosition(
     }
     return (positionMs - mergedDurationEndingAtOrBefore(normalized, positionMs))
         .coerceAtLeast(0L)
+}
+
+/** Keep preview playback attached to the edit point after a ripple delete. */
+internal fun ripplePlaybackPosition(
+    positionMs: Long,
+    removedRanges: List<Pair<Long, Long>>
+): Long {
+    val normalized = removedRanges
+        .filter { (start, end) -> end > start }
+        .sortedBy { it.first }
+    var removedBeforeMs = 0L
+    var currentStartMs: Long? = null
+    var currentEndMs = 0L
+
+    fun consumeRange(startMs: Long, endMs: Long): Long? {
+        if (positionMs < startMs) return (positionMs - removedBeforeMs).coerceAtLeast(0L)
+        if (positionMs < endMs) return (startMs - removedBeforeMs).coerceAtLeast(0L)
+        removedBeforeMs += (endMs - startMs).coerceAtLeast(0L)
+        return null
+    }
+
+    normalized.forEach { (startMs, endMs) ->
+        if (currentStartMs == null) {
+            currentStartMs = startMs
+            currentEndMs = endMs
+        } else if (startMs <= currentEndMs) {
+            currentEndMs = maxOf(currentEndMs, endMs)
+        } else {
+            consumeRange(currentStartMs!!, currentEndMs)?.let { return it }
+            currentStartMs = startMs
+            currentEndMs = endMs
+        }
+    }
+    currentStartMs?.let { startMs ->
+        consumeRange(startMs, currentEndMs)?.let { return it }
+    }
+    return (positionMs - removedBeforeMs).coerceAtLeast(0L)
 }
 
 /** Verify that both split boundaries are safe for every linked member. */

@@ -570,6 +570,8 @@ class EditorViewModel @Inject constructor(
         scope = viewModelScope, saveUndoState = ::saveUndoState, showToast = ::showToast,
         rebuildPlayerTimeline = ::rebuildPlayerTimeline, saveProject = ::saveProject,
         updatePreview = ::updatePreview, seekPreviewTo = ::seekTo,
+        currentPlayheadMs = { _playheadMs.value },
+        updateLivePlayheadMs = { _playheadMs.value = it },
         recalculateDuration = ::recalculateDuration,
         onClipAdded = { clipId, uri ->
             viewModelScope.launch(Dispatchers.IO) {
@@ -1025,13 +1027,19 @@ class EditorViewModel @Inject constructor(
     /** Rebuild ExoPlayer timeline from current tracks. Call after any clip mutation. */
     private fun rebuildPlayerTimeline() {
         cancelGapPlayback()
-        _state.update(::normalizeTimelineState)
+        val livePlayheadMs = _playheadMs.value
+        _state.update { state ->
+            normalizeTimelineState(state.copy(playheadMs = livePlayheadMs))
+        }
         _playheadMs.value = _state.value.playheadMs
         val missingClipIds = _state.value.media.relinkReports
             .filter { it.value.state == MediaRelinkProbe.RelinkState.MISSING }
             .keys
-        videoEngine.prepareTimeline(_state.value.tracks, missingClipIds)
-        videoEngine.seekTo(_state.value.playheadMs)
+        videoEngine.prepareTimeline(
+            tracks = _state.value.tracks,
+            missingClipIds = missingClipIds,
+            startPositionMs = _state.value.playheadMs
+        )
         updatePreview()
         preloadVisibleWaveforms(_state.value)
     }
@@ -1427,7 +1435,13 @@ class EditorViewModel @Inject constructor(
                     ToastSeverity.Warning
                 )
             }
-            val playhead = _playheadMs.value
+            val playhead = playbackStartPosition(
+                playheadMs = _playheadMs.value,
+                totalDurationMs = _state.value.totalDurationMs
+            )
+            if (playhead != _playheadMs.value) {
+                seekTo(playhead)
+            }
             val currentPreviewClip = previewClipAtPosition(playhead)
             if (currentPreviewClip == null && _state.value.totalDurationMs > playhead) {
                 startGapPlayback(playhead)

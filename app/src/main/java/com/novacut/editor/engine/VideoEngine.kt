@@ -199,8 +199,14 @@ class VideoEngine @Inject constructor(
     }
 
     @androidx.annotation.OptIn(UnstableApi::class)
-    fun prepareTimeline(tracks: List<Track>, missingClipIds: Set<String> = emptySet()) {
+    fun prepareTimeline(
+        tracks: List<Track>,
+        missingClipIds: Set<String> = emptySet(),
+        startPositionMs: Long = 0L
+    ) {
         val p = getPlayer()
+        val resumePlayback = p.playWhenReady && p.playbackState != Player.STATE_ENDED
+        p.pause()
         videoClips = collectPreviewClips(tracks)
         val timelineEndMs = tracks.maxOfOrNull { track ->
             track.clips.maxOfOrNull { clip -> clip.timelineEndMs } ?: 0L
@@ -213,8 +219,17 @@ class VideoEngine @Inject constructor(
         }
         clipDurationsMs = previewSegments.map { it.durationMs }
         val mediaItems = previewSegments.map(::buildMediaItemForPreviewSegment)
-        p.setMediaItems(mediaItems)
+        val startTarget = requireNotNull(resolvePreviewSeekTarget(startPositionMs))
+        // Replacing the playlist and seeking in separate calls lets playback
+        // briefly restart at item zero while cuts/deletes are rebuilding the
+        // preview. Set the new playlist and its edit-point position atomically.
+        p.setMediaItems(
+            mediaItems,
+            startTarget.mediaItemIndex,
+            startTarget.mediaPositionMs
+        )
         p.prepare()
+        if (resumePlayback) p.play()
 
         // Install per-clip effect switching listener
         transitionListener?.let { p.removeListener(it) }

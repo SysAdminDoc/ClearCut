@@ -11,6 +11,14 @@ import org.junit.Test
 class TimelineEditingTest {
 
     @Test
+    fun `playback restarts from zero after reaching the edited timeline end`() {
+        assertEquals(0L, playbackStartPosition(playheadMs = 4_000L, totalDurationMs = 4_000L))
+        assertEquals(0L, playbackStartPosition(playheadMs = 5_000L, totalDurationMs = 4_000L))
+        assertEquals(2_500L, playbackStartPosition(playheadMs = 2_500L, totalDurationMs = 4_000L))
+        assertEquals(0L, playbackStartPosition(playheadMs = 0L, totalDurationMs = 0L))
+    }
+
+    @Test
     fun `long press opens compound clips through ViewModel callback`() {
         var openedClipId: String? = null
         var toggledClipId: String? = null
@@ -523,6 +531,25 @@ class TimelineEditingTest {
         assertEquals(1_300L, rippleTimelinePosition(1_800L, ranges))
         assertNull(rippleTimelinePosition(2_100L, ranges))
         assertEquals(1_750L, rippleTimelinePosition(2_500L, ranges))
+    }
+
+    @Test
+    fun `preview playhead follows ripple deletes and lands at a removed clip boundary`() {
+        val ranges = listOf(1_000L to 1_500L, 2_000L to 2_250L)
+
+        assertEquals(900L, ripplePlaybackPosition(900L, ranges))
+        assertEquals(1_000L, ripplePlaybackPosition(1_200L, ranges))
+        assertEquals(1_300L, ripplePlaybackPosition(1_800L, ranges))
+        assertEquals(1_500L, ripplePlaybackPosition(2_100L, ranges))
+        assertEquals(1_750L, ripplePlaybackPosition(2_500L, ranges))
+    }
+
+    @Test
+    fun `preview playhead counts overlapping delete ranges only once`() {
+        val ranges = listOf(1_000L to 1_600L, 1_400L to 1_800L)
+
+        assertEquals(1_000L, ripplePlaybackPosition(1_500L, ranges))
+        assertEquals(1_200L, ripplePlaybackPosition(2_000L, ranges))
     }
 
     @Test

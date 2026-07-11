@@ -35,6 +35,8 @@ class ClipEditingDelegate(
     private val saveProject: () -> Unit,
     private val updatePreview: () -> Unit,
     private val seekPreviewTo: (Long) -> Unit,
+    private val currentPlayheadMs: () -> Long,
+    private val updateLivePlayheadMs: (Long) -> Unit,
     private val recalculateDuration: (EditorState) -> EditorState,
     private val onClipAdded: ((clipId: String, uri: Uri) -> Unit)? = null
 ) {
@@ -296,6 +298,7 @@ class ClipEditingDelegate(
     // --- Delete Clip ---
     fun deleteSelectedClip() {
         val state = stateFlow.value
+        val livePlayheadMs = currentPlayheadMs()
         val selectedIds = state.selectedClipIds.ifEmpty { setOfNotNull(state.selectedClipId) }
         val clipIdsToDelete = expandTimelineEditClipIds(state.tracks, selectedIds)
         if (clipIdsToDelete.isEmpty()) return
@@ -311,6 +314,7 @@ class ClipEditingDelegate(
             ?.filter { it.id in clipIdsToDelete }
             ?.map { it.timelineStartMs to it.timelineEndMs }
             .orEmpty()
+        val rippledPlayheadMs = ripplePlaybackPosition(livePlayheadMs, markerRippleRanges)
         saveUndoState(
             if (clipIdsToDelete.size == 1) "Delete clip"
             else "Delete ${clipIdsToDelete.size} clips"
@@ -322,6 +326,7 @@ class ClipEditingDelegate(
                 selectedClipId = null,
                 selectedTrackId = null,
                 selectedClipIds = emptySet(),
+                playheadMs = rippledPlayheadMs,
                 waveforms = state.waveforms - clipIdsToDelete,
                 trackedObjects = state.trackedObjects.filterNot { it.sourceClipId in clipIdsToDelete },
                 timelineMarkers = state.timelineMarkers.mapNotNull { marker ->
@@ -337,6 +342,7 @@ class ClipEditingDelegate(
                 }
             ))
         }
+        updateLivePlayheadMs(rippledPlayheadMs)
         rebuildPlayerTimeline()
         saveProject()
         registerDeleteForBulkWatcher()
@@ -510,8 +516,8 @@ class ClipEditingDelegate(
 
     // --- Split Clip ---
     fun splitClipAtPlayhead() {
+        val playhead = currentPlayheadMs()
         val state = stateFlow.value
-        val playhead = state.playheadMs
         val selectedIds = state.selectedClipIds.ifEmpty {
             setOfNotNull(state.selectedClipId ?: clipAtPlayhead(state, playhead))
         }
@@ -611,6 +617,7 @@ class ClipEditingDelegate(
             recalculateDuration(
                 s.copy(
                     tracks = tracks,
+                    playheadMs = playhead,
                     selectedClipId = selectedClipId,
                     selectedTrackId = selectedTrackId,
                     selectedClipIds = selectedClipIds,
