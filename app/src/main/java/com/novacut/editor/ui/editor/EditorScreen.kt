@@ -279,6 +279,11 @@ fun EditorScreen(
     }
     val isTrimInteractionActive = isTrimToolActive || isTimelineEditGestureActive
     val previewMinHeight = previewFirstLayout.previewMinHeightDp.dp
+    val previewWorkspaceHeight = if (isCompactEditorHeight) {
+        maxOf(previewMinHeight, 220.dp)
+    } else {
+        maxOf(previewMinHeight, 268.dp)
+    }
     val timelineMinHeight = previewFirstLayout.timelineMinHeightDp.dp
     val timelineMaxHeight = previewFirstLayout.timelineMaxHeightDp.dp
     val useEmbeddedExportPane = state.panels.isOpen(PanelId.EXPORT_SHEET) &&
@@ -636,33 +641,6 @@ fun EditorScreen(
                 )
                 .then(if (isTutorialOpen) Modifier.clearAndSetSemantics { } else Modifier)
         ) {
-            // Top bar (Home / Undo / Redo / Delete / More / Export)
-            EditorTopBar(
-                projectName = state.project.name,
-                onRename = viewModel::renameProject,
-                onBack = onBack,
-                onUndo = viewModel::undo,
-                onRedo = viewModel::redo,
-                canUndo = state.undoStack.isNotEmpty(),
-                canRedo = state.redoStack.isNotEmpty(),
-                selectedClipId = state.selectedClipId,
-                timelineDurationMs = state.totalDurationMs,
-                clipCount = state.tracks.sumOf { track -> track.clips.size },
-                onDelete = viewModel::deleteSelectedClip,
-                confirmBeforeDelete = viewModel.confirmBeforeDelete,
-                onDuplicateClip = viewModel::duplicateSelectedClip,
-                onSplitClip = viewModel::splitClipAtPlayhead,
-                onAddMedia = viewModel::showMediaPicker,
-                onAddTrack = viewModel::addTrack,
-                onExport = viewModel::showExportSheet,
-                onSaveTemplate = viewModel::saveAsTemplate,
-                editorMode = state.editorMode,
-                onToggleEditorMode = viewModel::toggleEditorMode,
-                onOpenScratchpad = viewModel::showScratchpad,
-                onOpenV369Features = viewModel::showV369Features,
-                onSearch = viewModel::showCommandPalette
-            )
-
             val editConfidenceStatus = remember(
                 state.undoStack.size,
                 state.redoStack.size,
@@ -676,10 +654,33 @@ fun EditorScreen(
                     saveIndicator = state.saveIndicator
                 )
             }
-            EditConfidenceRail(
-                status = editConfidenceStatus,
+
+            // Compact creator bar: project identity, persistence state, history, and export.
+            EditorTopBar(
+                projectName = state.project.name,
+                onRename = viewModel::renameProject,
+                onBack = onBack,
+                onUndo = viewModel::undo,
+                onRedo = viewModel::redo,
+                canUndo = state.undoStack.isNotEmpty(),
+                canRedo = state.redoStack.isNotEmpty(),
+                selectedClipId = state.selectedClipId,
+                onDelete = viewModel::deleteSelectedClip,
+                confirmBeforeDelete = viewModel.confirmBeforeDelete,
+                onDuplicateClip = viewModel::duplicateSelectedClip,
+                onSplitClip = viewModel::splitClipAtPlayhead,
+                onAddMedia = viewModel::showMediaPicker,
+                onAddTrack = viewModel::addTrack,
+                onExport = viewModel::showExportSheet,
+                onSaveTemplate = viewModel::saveAsTemplate,
+                editorMode = state.editorMode,
+                onToggleEditorMode = viewModel::toggleEditorMode,
+                onOpenScratchpad = viewModel::showScratchpad,
+                onOpenV369Features = viewModel::showV369Features,
+                onSearch = viewModel::showCommandPalette,
+                editConfidenceStatus = editConfidenceStatus,
                 onOpenHistory = viewModel::showUndoHistory,
-                onOpenSnapshots = viewModel::showSnapshotHistory
+                onOpenSnapshots = viewModel::showSnapshotHistory,
             )
 
             // Empty project onboarding hint
@@ -783,8 +784,8 @@ fun EditorScreen(
             // always hugs the bottom edge with no dead panel space.
             if (hasClips || hasOpenPanel) Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = previewMinHeight)
+                    .fillMaxWidth()
+                    .height(previewWorkspaceHeight)
                     .pointerInput(Unit) {
                         detectTapGestures(
                             onLongPress = { offset ->
@@ -1003,7 +1004,11 @@ fun EditorScreen(
                 isTrimInteractionActive
 
             Column(
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(
+                        if (hasClips || hasOpenPanel) Modifier.weight(1f) else Modifier
+                    )
             ) {
                 // Timeline — wraps its track stack between min/max bounds so
                 // the tool rail below stays snug against the timeline content.
@@ -1079,7 +1084,15 @@ fun EditorScreen(
                         engine = viewModel.engine,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = timelineMinHeight, max = timelineMaxHeight)
+                            .then(
+                                if (hasClips || hasOpenPanel) {
+                                    Modifier
+                                        .weight(1f)
+                                        .heightIn(min = timelineMinHeight)
+                                } else {
+                                    Modifier.heightIn(min = timelineMinHeight, max = timelineMaxHeight)
+                                }
+                            )
                     )
                 }
 
@@ -1186,99 +1199,6 @@ fun EditorScreen(
 }
 
 @Composable
-private fun EditConfidenceRail(
-    status: EditConfidenceStatus,
-    onOpenHistory: () -> Unit,
-    onOpenSnapshots: () -> Unit
-) {
-    val undoLabel = when {
-        status.undoableEdits > 0 && status.redoableEdits > 0 -> stringResource(
-            R.string.edit_confidence_undo_redo,
-            status.undoableEdits,
-            status.redoableEdits
-        )
-        status.undoableEdits > 0 -> pluralStringResource(
-            R.plurals.undo_history_action_count,
-            status.undoableEdits,
-            status.undoableEdits
-        )
-        status.redoableEdits > 0 -> stringResource(R.string.undo_history_newer_count, status.redoableEdits)
-        else -> stringResource(R.string.undo_history_empty)
-    }
-    val snapshotLabel = if (status.restorePoints > 0) {
-        pluralStringResource(
-            R.plurals.panel_snapshot_saved_count,
-            status.restorePoints,
-            status.restorePoints
-        )
-    } else {
-        stringResource(R.string.snapshot_status_empty)
-    }
-    val saveLabel = when (status.saveIndicator) {
-        SaveIndicatorState.SAVING -> stringResource(R.string.autosave_saving)
-        SaveIndicatorState.SAVED -> stringResource(R.string.autosave_saved)
-        SaveIndicatorState.ERROR -> stringResource(R.string.autosave_failed)
-        SaveIndicatorState.HIDDEN -> stringResource(R.string.edit_confidence_autosave_ready)
-    }
-    val saveAccent = when (status.saveIndicator) {
-        SaveIndicatorState.SAVING -> Mocha.Sapphire
-        SaveIndicatorState.SAVED,
-        SaveIndicatorState.HIDDEN -> Mocha.Green
-        SaveIndicatorState.ERROR -> Mocha.Red
-    }
-
-    Surface(
-        color = Mocha.Mantle,
-        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Surface0.copy(alpha = 0.72f)),
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(48.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = Spacing.md),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = if (status.saveNeedsAttention) Icons.Default.Warning else Icons.Default.CheckCircle,
-                contentDescription = null,
-                tint = saveAccent,
-                modifier = Modifier.size(16.dp)
-            )
-            Text(
-                text = saveLabel,
-                color = if (status.saveNeedsAttention) saveAccent else Mocha.Subtext1,
-                style = MaterialTheme.typography.labelMedium,
-                maxLines = 1,
-            )
-            Spacer(Modifier.weight(1f))
-            if (status.hasUndoHistory) {
-                ClearCutChromeIconButton(
-                    icon = Icons.Default.History,
-                    contentDescription = undoLabel,
-                    onClick = onOpenHistory,
-                    tint = Mocha.Mauve,
-                    containerColor = Color.Transparent,
-                    borderColor = Color.Transparent,
-                    size = 40.dp,
-                )
-            }
-            if (status.hasRestorePoints) {
-                ClearCutChromeIconButton(
-                    icon = Icons.Default.Restore,
-                    contentDescription = snapshotLabel,
-                    onClick = onOpenSnapshots,
-                    tint = Mocha.Green,
-                    containerColor = Color.Transparent,
-                    borderColor = Color.Transparent,
-                    size = 40.dp,
-                )
-            }
-        }
-    }
-}
-
-@Composable
 private fun EditorTopBar(
     projectName: String,
     onRename: (String) -> Unit,
@@ -1288,8 +1208,6 @@ private fun EditorTopBar(
     canUndo: Boolean,
     canRedo: Boolean,
     selectedClipId: String?,
-    timelineDurationMs: Long,
-    clipCount: Int,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
     confirmBeforeDelete: Boolean = true,
@@ -1303,7 +1221,10 @@ private fun EditorTopBar(
     onToggleEditorMode: () -> Unit = {},
     onOpenScratchpad: () -> Unit = {},
     onOpenV369Features: () -> Unit = {},
-    onSearch: () -> Unit = {}
+    onSearch: () -> Unit = {},
+    editConfidenceStatus: EditConfidenceStatus,
+    onOpenHistory: () -> Unit,
+    onOpenSnapshots: () -> Unit,
 ) {
     var showOverflow by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
@@ -1498,10 +1419,10 @@ private fun EditorTopBar(
     }
 
     Surface(
-        color = Mocha.Panel,
+        color = Mocha.Midnight,
         modifier = modifier
             .fillMaxWidth()
-            .height(if (isCompactBar) 60.dp else 64.dp)
+            .height(if (isCompactBar) 64.dp else 68.dp)
     ) {
         Box(
             modifier = Modifier
@@ -1509,9 +1430,9 @@ private fun EditorTopBar(
                 .background(
                     Brush.horizontalGradient(
                         listOf(
-                            Mocha.PanelHighest.copy(alpha = 0.9f),
-                            Mocha.Panel,
-                            Mocha.Mantle
+                            Mocha.Midnight,
+                            Mocha.Panel.copy(alpha = 0.9f),
+                            Mocha.Midnight
                         )
                     )
                 )
@@ -1544,26 +1465,27 @@ private fun EditorTopBar(
 
                 Spacer(modifier = Modifier.width(if (isCompactBar) 8.dp else 10.dp))
 
-                val modeAccent = if (editorMode == EditorMode.PRO) Mocha.Rosewater else Mocha.Sapphire
                 val modeLabel = if (editorMode == EditorMode.PRO) {
                     stringResource(R.string.settings_mode_pro)
                 } else {
                     stringResource(R.string.settings_mode_easy)
                 }
-                val timelineStatusLabel = if (clipCount > 0 && timelineDurationMs > 0L) {
-                    stringResource(
-                        R.string.editor_timeline_status_format,
-                        clipCount,
-                        formatTimelineDurationLabel(timelineDurationMs)
-                    )
-                } else {
-                    stringResource(R.string.editor_timeline_status_empty)
-                }
-                val timelineStatusAccent = if (clipCount > 0 && timelineDurationMs > 0L) Mocha.Green else Mocha.Subtext0
                 val modeChipDescription = stringResource(R.string.editor_mode_chip_cd, modeLabel)
+                val saveLabel = when (editConfidenceStatus.saveIndicator) {
+                    SaveIndicatorState.SAVING -> stringResource(R.string.autosave_saving)
+                    SaveIndicatorState.SAVED -> stringResource(R.string.autosave_saved)
+                    SaveIndicatorState.ERROR -> stringResource(R.string.autosave_failed)
+                    SaveIndicatorState.HIDDEN -> stringResource(R.string.edit_confidence_autosave_ready)
+                }
+                val saveAccent = when (editConfidenceStatus.saveIndicator) {
+                    SaveIndicatorState.SAVING -> Mocha.Sapphire
+                    SaveIndicatorState.SAVED,
+                    SaveIndicatorState.HIDDEN -> Mocha.Green
+                    SaveIndicatorState.ERROR -> Mocha.Red
+                }
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     Text(
                         text = projectName,
@@ -1572,18 +1494,31 @@ private fun EditorTopBar(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Text(
-                        text = "$modeLabel  •  $timelineStatusLabel",
-                        color = if (clipCount > 0) timelineStatusAccent else modeAccent,
-                        style = MaterialTheme.typography.labelSmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                    Row(
                         modifier = Modifier
                             .clickable(onClick = onToggleEditorMode)
-                            .semantics {
-                                contentDescription = modeChipDescription
-                            }
-                    )
+                            .semantics { contentDescription = modeChipDescription },
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = if (editConfidenceStatus.saveNeedsAttention) {
+                                Icons.Default.Warning
+                            } else {
+                                Icons.Default.CheckCircle
+                            },
+                            contentDescription = null,
+                            tint = saveAccent,
+                            modifier = Modifier.size(12.dp),
+                        )
+                        Text(
+                            text = "$saveLabel  •  $modeLabel",
+                            color = saveAccent,
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
 
                 Surface(
@@ -1754,6 +1689,30 @@ private fun EditorTopBar(
                                         tint = Mocha.Mauve
                                     )
                                 }
+                            )
+                        }
+                        if (editConfidenceStatus.hasUndoHistory) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.tool_version_history)) },
+                                onClick = {
+                                    showOverflow = false
+                                    onOpenHistory()
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.History, contentDescription = null, tint = Mocha.Mauve)
+                                },
+                            )
+                        }
+                        if (editConfidenceStatus.hasRestorePoints) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.panel_snapshot_history_title)) },
+                                onClick = {
+                                    showOverflow = false
+                                    onOpenSnapshots()
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Restore, contentDescription = null, tint = Mocha.Green)
+                                },
                             )
                         }
                     }

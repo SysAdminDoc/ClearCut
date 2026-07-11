@@ -22,6 +22,9 @@ import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.*
@@ -35,6 +38,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
@@ -105,36 +109,29 @@ fun PreviewPanel(
         }
     }
 
-    // Both gradients are static — colors don't change with state. Hoist them into `remember`
-    // so we don't allocate new Brush + List instances on every recomposition (PreviewPanel
-    // recomposes on every playhead tick during playback, ~30 fps).
-    val outerGradient = remember {
-        Brush.verticalGradient(listOf(Mocha.Midnight, Mocha.Base, Mocha.Midnight))
-    }
-    val previewGradient = remember {
-        Brush.verticalGradient(listOf(Mocha.PanelHighest.copy(alpha = 0.9f), Mocha.Panel))
+    val frameDurationMs = remember(frameRate) {
+        (1_000L / frameRate.coerceAtLeast(1)).coerceAtLeast(1L)
     }
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(outerGradient)
-            .padding(horizontal = 8.dp, vertical = 6.dp),
+            .background(Mocha.Midnight)
+            .padding(horizontal = 4.dp, vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
-            colors = CardDefaults.cardColors(containerColor = Mocha.Panel),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
-            shape = RoundedCornerShape(Radius.xxl)
+            colors = CardDefaults.cardColors(containerColor = Mocha.Crust),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.72f)),
+            shape = RoundedCornerShape(Radius.sm)
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(previewGradient)
-                    .padding(8.dp)
+                    .background(Mocha.Crust)
             ) {
                 BoxWithConstraints(
                     modifier = Modifier.fillMaxSize(),
@@ -151,7 +148,7 @@ fun PreviewPanel(
                     Box(
                         modifier = Modifier
                             .size(frameWidth, frameHeight)
-                            .clip(RoundedCornerShape(Radius.lg))
+                            .clip(RoundedCornerShape(Radius.xs))
                             .background(Mocha.Crust)
                             .then(
                                 // `awaitEachGesture` lets us bracket each gesture so we can
@@ -340,6 +337,28 @@ fun PreviewPanel(
                             )
                         }
 
+                        if (totalDurationMs > 0L && !showGapState) {
+                            Surface(
+                                modifier = Modifier
+                                    .align(Alignment.BottomStart)
+                                    .padding(8.dp),
+                                color = Mocha.Midnight.copy(alpha = 0.82f),
+                                shape = RoundedCornerShape(Radius.sm),
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    Mocha.CardStroke.copy(alpha = 0.82f),
+                                ),
+                            ) {
+                                Text(
+                                    text = "${formatTimecode(playheadMs)} / ${formatTimecode(totalDurationMs)}",
+                                    color = Mocha.Text,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
+                                )
+                            }
+                        }
+
                         if (!isPlaying && totalDurationMs == 0L) {
                             Card(
                                 colors = CardDefaults.cardColors(containerColor = Mocha.Panel.copy(alpha = 0.86f)),
@@ -379,36 +398,45 @@ fun PreviewPanel(
             }
         }
 
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         Surface(
-            color = Mocha.Panel,
-            shape = RoundedCornerShape(Radius.xl),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
+            color = Mocha.Midnight,
+            shape = RoundedCornerShape(Radius.sm),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.64f)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text(
-                        text = formatTimecode(playheadMs),
-                        color = Mocha.Text,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = formatTimecode(totalDurationMs),
-                        color = Mocha.Subtext0,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-
+                ClearCutChromeIconButton(
+                    icon = Icons.Default.Repeat,
+                    contentDescription = stringResource(
+                        if (isLooping) R.string.preview_disable_loop else R.string.preview_enable_loop
+                    ),
+                    onClick = onToggleLoop,
+                    tint = if (isLooping) Mocha.Sky else Mocha.Subtext0,
+                    containerColor = if (isLooping) Mocha.Sky.copy(alpha = 0.14f) else Color.Transparent,
+                    borderColor = Color.Transparent,
+                    shape = RoundedCornerShape(Radius.sm),
+                    size = 40.dp,
+                    iconSize = 19.dp,
+                )
                 Spacer(modifier = Modifier.weight(1f))
-
+                ClearCutChromeIconButton(
+                    icon = Icons.Default.SkipPrevious,
+                    contentDescription = stringResource(R.string.preview_previous_frame),
+                    onClick = { onSeek((playheadMs - frameDurationMs).coerceAtLeast(0L)) },
+                    tint = Mocha.Text,
+                    containerColor = Color.Transparent,
+                    borderColor = Color.Transparent,
+                    shape = RoundedCornerShape(Radius.sm),
+                    size = 40.dp,
+                    iconSize = 20.dp,
+                )
                 ClearCutChromeIconButton(
                     icon = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                     contentDescription = if (isPlaying) {
@@ -420,8 +448,27 @@ fun PreviewPanel(
                     tint = Mocha.Midnight,
                     containerColor = Mocha.Sky,
                     borderColor = Mocha.Sky.copy(alpha = 0.72f),
-                    shape = RoundedCornerShape(Radius.md),
-                    iconSize = 22.dp
+                    shape = RoundedCornerShape(Radius.sm),
+                    size = 44.dp,
+                    iconSize = 22.dp,
+                )
+                ClearCutChromeIconButton(
+                    icon = Icons.Default.SkipNext,
+                    contentDescription = stringResource(R.string.preview_next_frame),
+                    onClick = { onSeek((playheadMs + frameDurationMs).coerceAtMost(totalDurationMs)) },
+                    tint = Mocha.Text,
+                    containerColor = Color.Transparent,
+                    borderColor = Color.Transparent,
+                    shape = RoundedCornerShape(Radius.sm),
+                    size = 40.dp,
+                    iconSize = 20.dp,
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                Text(
+                    text = "${aspectRatio.label}  •  $frameRate fps",
+                    color = Mocha.Subtext0,
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
                 )
             }
         }
