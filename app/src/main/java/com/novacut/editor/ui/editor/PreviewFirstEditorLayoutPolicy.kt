@@ -47,7 +47,7 @@ object PreviewFirstEditorLayoutPolicy {
         val singlePane = paneMode == AdaptiveEditorLayoutPolicy.PaneMode.SINGLE_PANE
         val lockBottomToolArea = singlePane && previewCritical
         val effectiveBottomExpanded = bottomToolPanelExpanded && !lockBottomToolArea
-        val bottomToolRailHeightDp = if (effectiveBottomExpanded) 244 else 96
+        val bottomToolRailHeightDp = if (effectiveBottomExpanded) 236 else 88
         val previewMinHeightDp = previewMinHeightDp(
             paneMode = paneMode,
             screenHeightDp = screenHeightDp,

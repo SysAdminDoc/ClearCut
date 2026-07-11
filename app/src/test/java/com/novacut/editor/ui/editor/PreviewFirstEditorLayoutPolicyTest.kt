@@ -23,7 +23,7 @@ class PreviewFirstEditorLayoutPolicyTest {
 
         assertTrue(decision.previewCritical)
         assertTrue(decision.lockBottomToolArea)
-        assertEquals(96, decision.bottomToolRailHeightDp)
+        assertEquals(88, decision.bottomToolRailHeightDp)
         assertEquals(280, decision.previewMinHeightDp)
         assertEquals(200, decision.timelineMinHeightDp)
         assertEquals(260, decision.timelineMaxHeightDp)
@@ -67,7 +67,7 @@ class PreviewFirstEditorLayoutPolicyTest {
 
         assertFalse(decision.previewCritical)
         assertFalse(decision.lockBottomToolArea)
-        assertEquals(244, decision.bottomToolRailHeightDp)
+        assertEquals(236, decision.bottomToolRailHeightDp)
         assertEquals(210, decision.previewMinHeightDp)
         assertEquals(220, decision.timelineMinHeightDp)
         assertEquals(260, decision.timelineMaxHeightDp)
@@ -89,10 +89,10 @@ class PreviewFirstEditorLayoutPolicyTest {
 
         assertTrue(decision.previewCritical)
         assertFalse(decision.lockBottomToolArea)
-        assertEquals(244, decision.bottomToolRailHeightDp)
+        assertEquals(236, decision.bottomToolRailHeightDp)
         assertEquals(200, decision.previewMinHeightDp)
         assertEquals(252, decision.timelineMinHeightDp)
-        assertEquals(332, decision.timelineMaxHeightDp)
+        assertEquals(340, decision.timelineMaxHeightDp)
     }
 
     private fun phoneDecision(

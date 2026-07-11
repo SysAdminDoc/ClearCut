@@ -279,11 +279,6 @@ fun EditorScreen(
     }
     val isTrimInteractionActive = isTrimToolActive || isTimelineEditGestureActive
     val previewMinHeight = previewFirstLayout.previewMinHeightDp.dp
-    val previewWorkspaceHeight = if (isCompactEditorHeight) {
-        maxOf(previewMinHeight, 220.dp)
-    } else {
-        maxOf(previewMinHeight, 268.dp)
-    }
     val timelineMinHeight = previewFirstLayout.timelineMinHeightDp.dp
     val timelineMaxHeight = previewFirstLayout.timelineMaxHeightDp.dp
     val useEmbeddedExportPane = state.panels.isOpen(PanelId.EXPORT_SHEET) &&
@@ -785,7 +780,8 @@ fun EditorScreen(
             if (hasClips || hasOpenPanel) Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(previewWorkspaceHeight)
+                    .weight(1f)
+                    .heightIn(min = previewMinHeight)
                     .pointerInput(Unit) {
                         detectTapGestures(
                             onLongPress = { offset ->
@@ -1006,11 +1002,7 @@ fun EditorScreen(
                 isTrimInteractionActive
 
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .then(
-                        if (hasClips || hasOpenPanel) Modifier.weight(1f) else Modifier
-                    )
+                modifier = Modifier.fillMaxWidth()
             ) {
                 // Timeline — wraps its track stack between min/max bounds so
                 // the tool rail below stays snug against the timeline content.
@@ -1086,15 +1078,7 @@ fun EditorScreen(
                         engine = viewModel.engine,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .then(
-                                if (hasClips || hasOpenPanel) {
-                                    Modifier
-                                        .weight(1f)
-                                        .heightIn(min = timelineMinHeight)
-                                } else {
-                                    Modifier.heightIn(min = timelineMinHeight, max = timelineMaxHeight)
-                                }
-                            )
+                            .heightIn(min = timelineMinHeight, max = timelineMaxHeight)
                     )
                 }
 
