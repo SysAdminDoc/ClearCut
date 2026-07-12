@@ -4,9 +4,15 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.126-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.127-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.127 Portable projects and review-first Auto Edit
+
+- `.clearcut` archives now carry a typed v2 dependency manifest with safe paths, byte lengths, SHA-256 integrity, LUT/custom-font/watermark packaging, verified import rewrites, tamper rejection, and v1 compatibility.
+- Auto Edit scores bounded windows throughout each source and exposes deterministic Highlight, Source Order, and Beat Sync proposals for review; generation and cancellation are non-mutating, while Apply is one undoable edit with stale-source protection.
+- Android 16 strict intent matching now rejects null or mismatched explicit intents while preserving launcher, shortcut, VIEW, SEND, and SEND_MULTIPLE entry points.
 
 ### v3.74.126 Dependency-truthful export preflight
 

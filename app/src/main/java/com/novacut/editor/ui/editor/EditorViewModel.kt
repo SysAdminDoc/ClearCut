@@ -12,6 +12,9 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import com.novacut.editor.R
 import com.novacut.editor.ai.AiFeatures
+import com.novacut.editor.ai.AutoEditClip
+import com.novacut.editor.ai.AutoEditIntent
+import com.novacut.editor.ai.AutoEditResult
 import com.novacut.editor.engine.AiUsageLedger
 import com.novacut.editor.engine.AppSettings
 import com.novacut.editor.engine.AudioEngine
@@ -81,6 +84,7 @@ import com.novacut.editor.model.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -95,6 +99,7 @@ import com.novacut.editor.engine.EffectPreviewRenderer
 import com.novacut.editor.engine.MediaHashWorker
 import com.novacut.editor.engine.ProxyGenerationWorker
 import java.io.File
+import java.security.MessageDigest
 import java.util.UUID
 import javax.inject.Inject
 import kotlin.math.roundToLong
@@ -222,6 +227,75 @@ internal fun orderedTimelineTracks(tracks: List<Track>): List<Track> {
     return tracks.sortedWith(compareBy<Track>({ priority(it.type) }, { it.index }))
 }
 
+internal fun autoEditClipFingerprint(clip: Clip): String {
+    val canonical = listOf(
+        clip.id,
+        clip.sourceUri.toString(),
+        clip.sourceDurationMs.toString(),
+        clip.trimStartMs.toString(),
+        clip.trimEndMs.toString()
+    ).joinToString("|")
+    return MessageDigest.getInstance("SHA-256")
+        .digest(canonical.toByteArray(Charsets.UTF_8))
+        .joinToString("") { "%02x".format(it) }
+}
+
+/** Build render-safe excerpts without carrying edits or ownership from source clips. */
+internal fun buildAutoEditExcerptClips(
+    sourceClips: List<Clip>,
+    proposal: AutoEditResult,
+    newId: () -> String = { UUID.randomUUID().toString() }
+): List<Clip> {
+    require(proposal.segments.isNotEmpty()) { "Auto Edit proposal has no segments" }
+    val sources = sourceClips.associateBy { it.id }
+    return proposal.segments.map { segment ->
+        val source = requireNotNull(sources[segment.clipId]) { "Auto Edit source is no longer present" }
+        require(autoEditClipFingerprint(source) == segment.clipFingerprint) {
+            "Auto Edit source changed after analysis"
+        }
+        require(segment.trimStartMs >= source.trimStartMs && segment.trimEndMs <= source.trimEndMs) {
+            "Auto Edit range is outside the analyzed source"
+        }
+        require(segment.trimEndMs > segment.trimStartMs && segment.timelineEndMs > segment.timelineStartMs) {
+            "Auto Edit segment has an invalid range"
+        }
+        source.copy(
+            id = newId(),
+            timelineStartMs = segment.timelineStartMs,
+            trimStartMs = segment.trimStartMs,
+            trimEndMs = segment.trimEndMs,
+            effects = emptyList(),
+            headTransition = null,
+            tailTransition = null,
+            volume = 1f,
+            speed = 1f,
+            isReversed = false,
+            opacity = 1f,
+            rotation = 0f,
+            scaleX = 1f,
+            scaleY = 1f,
+            positionX = 0f,
+            positionY = 0f,
+            anchorX = 0.5f,
+            anchorY = 0.5f,
+            fadeInMs = 0L,
+            fadeOutMs = 0L,
+            keyframes = emptyList(),
+            blendMode = BlendMode.NORMAL,
+            speedCurve = null,
+            colorGrade = null,
+            masks = emptyList(),
+            linkedClipId = null,
+            isCompound = false,
+            compoundClips = emptyList(),
+            audioEffects = emptyList(),
+            motionTrackingData = null,
+            captions = emptyList(),
+            groupId = null
+        )
+    }
+}
+
 data class EditorState(
     val project: Project = Project(),
     val tracks: List<Track> = listOf(
@@ -333,6 +407,7 @@ data class EditorState(
     val aiUsageLedger: List<AiUsageLedger.Entry> get() = ai.usageLedger
     val cutAssistantReview: com.novacut.editor.engine.CutAssistantEngine.ReviewSet?
         get() = ai.cutAssistantReview
+    val autoEditProposal: AutoEditResult? get() = ai.autoEditProposal
     val isReframing: Boolean get() = ai.isReframing
     val isAutoEditing: Boolean get() = ai.isAutoEditing
     val isSynthesizingTts: Boolean get() = ai.isSynthesizingTts
@@ -418,7 +493,8 @@ data class UndoAction(
     val playheadMs: Long = 0L,
     val selectedClipId: String? = null,
     val selectedTrackId: String? = null,
-    val selectedClipIds: Set<String> = emptySet()
+    val selectedClipIds: Set<String> = emptySet(),
+    val aiUsageLedger: List<AiUsageLedger.Entry> = emptyList()
 )
 
 /**
@@ -528,6 +604,8 @@ class EditorViewModel @Inject constructor(
     private var lastAutoSaveIntervalSec: Int? = null
     private var mediaRelinkProbeJob: Job? = null
     private var captionTranslationJob: Job? = null
+    private var autoEditJob: Job? = null
+    private var autoEditGenerationId: Long = 0L
     private val projectMediaManifestCacheLock = Any()
     private var projectMediaManifestCache: CachedProjectMediaManifest? = null
 
@@ -1043,6 +1121,9 @@ class EditorViewModel @Inject constructor(
                 trackedObjects = recovery.trackedObjects.ifEmpty { current.trackedObjects },
                 storyboardCards = recovery.storyboardCards.ifEmpty { current.storyboardCards },
                 ai = current.ai.copy(usageLedger = recovery.aiUsageLedger),
+                export = current.export.copy(
+                    config = current.export.config.copy(watermark = recovery.exportWatermark)
+                ),
                 media = current.media.copy(healthReport = mediaHealthReport),
                 totalDurationMs = recovery.tracks.maxOfOrNull { t ->
                     t.clips.maxOfOrNull { c -> c.timelineEndMs } ?: 0L
@@ -2161,7 +2242,10 @@ class EditorViewModel @Inject constructor(
                     beatMarkers = recovery.beatMarkers,
                     trackedObjects = recovery.trackedObjects.ifEmpty { it.trackedObjects },
                     storyboardCards = recovery.storyboardCards.ifEmpty { it.storyboardCards },
-                    v369 = it.v369.copy(transcript = recovery.transcript ?: it.v369.transcript)
+                    v369 = it.v369.copy(transcript = recovery.transcript ?: it.v369.transcript),
+                    export = it.export.copy(
+                        config = it.export.config.copy(watermark = recovery.exportWatermark)
+                    )
                 )
             }
             _playheadMs.value = recovery.playheadMs
@@ -2373,7 +2457,10 @@ class EditorViewModel @Inject constructor(
                                     ),
                                     trackedObjects = state.trackedObjects,
                                     storyboardCards = state.storyboardCards,
-                                    playheadMs = state.playheadMs
+                                    playheadMs = state.playheadMs,
+                                    export = s.export.copy(
+                                        config = s.export.config.copy(watermark = state.exportWatermark)
+                                    )
                                 )
                             )
                         )
@@ -2484,6 +2571,7 @@ class EditorViewModel @Inject constructor(
                 selectedClipId = target.selectedClipId,
                 selectedTrackId = target.selectedTrackId,
                 selectedClipIds = target.selectedClipIds,
+                ai = state.ai.copy(usageLedger = target.aiUsageLedger),
                 undoStack = stack.take(index),
                 redoStack = listOf(UndoAction(
                     "Current",
@@ -2498,7 +2586,8 @@ class EditorViewModel @Inject constructor(
                     playheadMs = _playheadMs.value,
                     selectedClipId = state.selectedClipId,
                     selectedTrackId = state.selectedTrackId,
-                    selectedClipIds = state.selectedClipIds
+                    selectedClipIds = state.selectedClipIds,
+                    aiUsageLedger = state.aiUsageLedger
                 )) + stack.drop(index + 1)
             ))
             normalizeSelectionState(restored).copy(
@@ -2828,72 +2917,138 @@ class EditorViewModel @Inject constructor(
 
     // --- Auto-Edit ---
     fun showAutoEdit() = showPanel(PanelId.AUTO_EDIT)
-    fun hideAutoEdit() = hidePanel(PanelId.AUTO_EDIT)
+    fun hideAutoEdit() {
+        cancelAutoEdit()
+        hidePanel(PanelId.AUTO_EDIT)
+    }
 
-    fun runAutoEdit(script: String? = null) {
+    fun runAutoEdit(
+        intent: AutoEditIntent = AutoEditIntent.HIGHLIGHT_REEL,
+        targetDurationMs: Long = 60_000L
+    ) {
         val clips = _state.value.tracks
             .filter { it.type == TrackType.VIDEO }
             .flatMap { it.clips }
+            .sortedWith(compareBy<Clip> { it.timelineStartMs }.thenBy { it.id })
         if (clips.isEmpty()) { showToast(text(R.string.vm_add_video_clips_first_toast)); return }
 
-        _state.update { it.copyAi { ai -> ai.copy(isAutoEditing = true) } }
-        viewModelScope.launch {
+        autoEditJob?.cancel()
+        val generationId = ++autoEditGenerationId
+        _state.update {
+            it.copyAi { ai -> ai.copy(isAutoEditing = true, autoEditProposal = null) }
+        }
+        autoEditJob = viewModelScope.launch {
             try {
-                val autoClips = clips.map { com.novacut.editor.ai.AutoEditClip(it.sourceUri, it.sourceDurationMs) }
+                val autoClips = clips.mapIndexed { index, clip ->
+                    AutoEditClip(
+                        clipId = clip.id,
+                        clipFingerprint = autoEditClipFingerprint(clip),
+                        uri = clip.sourceUri,
+                        sourceStartMs = clip.trimStartMs,
+                        sourceEndMs = clip.trimEndMs,
+                        sourceOrder = index
+                    )
+                }
                 val musicUri = _state.value.tracks
                     .filter { it.type == TrackType.AUDIO }
                     .flatMap { it.clips }
                     .firstOrNull()?.sourceUri
-                val targetMs = 60_000L // 1 minute highlight reel
 
-                val result = aiFeatures.generateAutoEdit(autoClips, musicUri, targetMs, script)
+                val result = aiFeatures.generateAutoEdit(
+                    clips = autoClips,
+                    musicUri = musicUri,
+                    targetDurationMs = targetDurationMs,
+                    intent = intent
+                )
 
                 if (result.segments.isNotEmpty()) {
-                    saveUndoState("Auto edit")
-                    // Build new video track from auto-edit segments
-                    val newClips = result.segments.map { seg ->
-                        val sourceClip = clips[seg.clipIndex]
-                        sourceClip.copy(
-                            id = java.util.UUID.randomUUID().toString(),
-                            trimStartMs = seg.trimStartMs,
-                            trimEndMs = seg.trimEndMs,
-                            timelineStartMs = seg.timelineStartMs
-                        )
+                    if (generationId == autoEditGenerationId) {
+                        _state.update {
+                            it.copyAi { ai -> ai.copy(isAutoEditing = false, autoEditProposal = result) }
+                        }
                     }
-                    val recordedAt = System.currentTimeMillis()
-                    val aiUsageEntries = newClips.map { newClip ->
-                        AiUsageRecordFactory.forClip(
-                            clip = newClip,
-                            effectKind = AiUsageLedger.EffectKind.AUTO_EDIT_LOCAL,
-                            modelName = "ClearCut Auto Edit",
-                            recordedAtEpochMs = recordedAt
-                        )
-                    }
-                    _state.update { s ->
-                        val videoTrack = s.tracks.first { it.type == TrackType.VIDEO }
-                        s.copy(
-                            tracks = s.tracks.map { track ->
-                                if (track.id == videoTrack.id) track.copy(clips = newClips) else track
-                            },
-                            ai = s.ai.copy(
-                                isAutoEditing = false,
-                                usageLedger = AiUsageLedger.mergeOverlaps(s.aiUsageLedger + aiUsageEntries)
-                            )
-                        )
-                    }
-                    rebuildTimeline()
-                    saveProject()
-                    showToast(text(R.string.vm_auto_edit_created_toast, result.segments.size))
                 } else {
-                    _state.update { it.copyAi { ai -> ai.copy(isAutoEditing = false) } }
-                    showToast(text(R.string.vm_auto_edit_failed_toast))
+                    if (generationId == autoEditGenerationId) {
+                        _state.update {
+                            it.copyAi { ai -> ai.copy(isAutoEditing = false, autoEditProposal = null) }
+                        }
+                        showToast(text(R.string.vm_auto_edit_failed_toast))
+                    }
                 }
-                hideAutoEdit()
+            } catch (_: CancellationException) {
+                if (generationId == autoEditGenerationId) {
+                    _state.update { it.copyAi { ai -> ai.copy(isAutoEditing = false) } }
+                }
             } catch (e: Exception) {
-                _state.update { it.copyAi { ai -> ai.copy(isAutoEditing = false) } }
-                showToast(text(R.string.vm_auto_edit_error_toast))
+                Log.e("EditorViewModel", "Auto Edit proposal failed", e)
+                if (generationId == autoEditGenerationId) {
+                    _state.update {
+                        it.copyAi { ai -> ai.copy(isAutoEditing = false, autoEditProposal = null) }
+                    }
+                    showToast(text(R.string.vm_auto_edit_error_toast))
+                }
+            } finally {
+                if (generationId == autoEditGenerationId) autoEditJob = null
             }
         }
+    }
+
+    fun cancelAutoEdit() {
+        autoEditGenerationId++
+        autoEditJob?.cancel()
+        autoEditJob = null
+        _state.update {
+            it.copyAi { ai -> ai.copy(isAutoEditing = false, autoEditProposal = null) }
+        }
+    }
+
+    fun applyAutoEditProposal() {
+        val snapshot = _state.value
+        val proposal = snapshot.autoEditProposal ?: return
+        val sourceClips = snapshot.tracks.filter { it.type == TrackType.VIDEO }.flatMap { it.clips }
+        val primaryVideoTrack = snapshot.tracks.firstOrNull { it.type == TrackType.VIDEO } ?: return
+        val newClips = try {
+            buildAutoEditExcerptClips(sourceClips, proposal)
+        } catch (e: Exception) {
+            Log.w("EditorViewModel", "Auto Edit proposal became stale", e)
+            _state.update { it.copyAi { ai -> ai.copy(autoEditProposal = null) } }
+            showToast(text(R.string.vm_auto_edit_stale_toast))
+            return
+        }
+
+        val recordedAt = System.currentTimeMillis()
+        val usageEntries = newClips.map { clip ->
+            AiUsageRecordFactory.forClip(
+                clip = clip,
+                effectKind = AiUsageLedger.EffectKind.AUTO_EDIT_LOCAL,
+                modelName = "ClearCut Auto Edit window scorer",
+                recordedAtEpochMs = recordedAt
+            )
+        }
+        saveUndoState("Apply Auto Edit")
+        _state.update { state ->
+            recalculateDuration(
+                state.copy(
+                    tracks = state.tracks.map { track ->
+                        when {
+                            track.id == primaryVideoTrack.id -> track.copy(clips = newClips)
+                            track.type == TrackType.VIDEO -> track.copy(clips = emptyList())
+                            else -> track
+                        }
+                    },
+                    selectedClipId = null,
+                    selectedClipIds = emptySet(),
+                    ai = state.ai.copy(
+                        autoEditProposal = null,
+                        usageLedger = AiUsageLedger.mergeOverlaps(state.aiUsageLedger + usageEntries)
+                    )
+                )
+            )
+        }
+        rebuildTimeline()
+        saveProject()
+        showToast(text(R.string.vm_auto_edit_created_toast, newClips.size))
+        hidePanel(PanelId.AUTO_EDIT)
     }
 
     // --- TTS ---
@@ -4895,7 +5050,8 @@ class EditorViewModel @Inject constructor(
             playheadMs = _playheadMs.value,
             selectedClipId = _state.value.selectedClipId,
             selectedTrackId = _state.value.selectedTrackId,
-            selectedClipIds = _state.value.selectedClipIds
+            selectedClipIds = _state.value.selectedClipIds,
+            aiUsageLedger = _state.value.aiUsageLedger
         )
 
         _state.update {
@@ -4911,6 +5067,7 @@ class EditorViewModel @Inject constructor(
                 selectedClipId = action.selectedClipId,
                 selectedTrackId = action.selectedTrackId,
                 selectedClipIds = action.selectedClipIds,
+                ai = it.ai.copy(usageLedger = action.aiUsageLedger),
                 undoStack = undoStack.dropLast(1),
                 redoStack = (it.redoStack + currentAction).takeLast(50)
             ))
@@ -4947,7 +5104,8 @@ class EditorViewModel @Inject constructor(
             playheadMs = _playheadMs.value,
             selectedClipId = _state.value.selectedClipId,
             selectedTrackId = _state.value.selectedTrackId,
-            selectedClipIds = _state.value.selectedClipIds
+            selectedClipIds = _state.value.selectedClipIds,
+            aiUsageLedger = _state.value.aiUsageLedger
         )
 
         _state.update {
@@ -4963,6 +5121,7 @@ class EditorViewModel @Inject constructor(
                 selectedClipId = action.selectedClipId,
                 selectedTrackId = action.selectedTrackId,
                 selectedClipIds = action.selectedClipIds,
+                ai = it.ai.copy(usageLedger = action.aiUsageLedger),
                 redoStack = redoStack.dropLast(1),
                 undoStack = (it.undoStack + currentAction).takeLast(50)
             ))
@@ -5104,7 +5263,8 @@ class EditorViewModel @Inject constructor(
             aiUsageLedger = state.aiUsageLedger,
             mediaAssets = mediaAssets,
             storyboardCards = state.storyboardCards,
-            globalTransitions = state.globalTransitions
+            globalTransitions = state.globalTransitions,
+            exportWatermark = state.exportConfig.watermark
         )
     }
 
@@ -5279,7 +5439,8 @@ class EditorViewModel @Inject constructor(
                 playheadMs = state.playheadMs,
                 selectedClipId = state.selectedClipId,
                 selectedTrackId = state.selectedTrackId,
-                selectedClipIds = state.selectedClipIds
+                selectedClipIds = state.selectedClipIds,
+                aiUsageLedger = state.aiUsageLedger
             )
             state.copy(
                 undoStack = (state.undoStack + action).takeLast(50),

@@ -17,10 +17,10 @@ import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -34,6 +34,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
+import com.novacut.editor.ai.AutoEditIntent
+import com.novacut.editor.ai.AutoEditResult
 import com.novacut.editor.ui.theme.Mocha
 
 @Composable
@@ -41,11 +43,15 @@ fun AutoEditPanel(
     clipCount: Int,
     hasAudio: Boolean,
     isProcessing: Boolean,
-    onGenerate: (String?) -> Unit,
+    proposal: AutoEditResult?,
+    onGenerate: (AutoEditIntent, Long) -> Unit,
+    onCancel: () -> Unit,
+    onApply: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var scriptText by remember { mutableStateOf("") }
+    var intent by remember { mutableStateOf(AutoEditIntent.HIGHLIGHT_REEL) }
+    var targetDurationMs by remember { mutableStateOf(60_000L) }
 
     PremiumEditorPanel(
         title = stringResource(R.string.auto_edit_title),
@@ -88,7 +94,7 @@ fun AutoEditPanel(
                 )
                 AutoEditInfoCard(
                     label = stringResource(R.string.auto_edit_info_target),
-                    value = stringResource(R.string.auto_edit_info_target_value),
+                    value = stringResource(R.string.auto_edit_duration_seconds, targetDurationMs / 1_000L),
                     icon = Icons.Default.Timer,
                     accent = Mocha.Peach,
                     modifier = Modifier.weight(1f)
@@ -100,59 +106,115 @@ fun AutoEditPanel(
 
         PremiumPanelCard(accent = Mocha.Blue) {
             Text(
-                text = stringResource(R.string.auto_edit_brief_title),
+                text = stringResource(R.string.auto_edit_intent_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = Mocha.Text
             )
             Text(
-                text = stringResource(R.string.auto_edit_brief_description),
+                text = stringResource(R.string.auto_edit_brief_unsupported),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Mocha.Subtext0
             )
-
-            OutlinedTextField(
-                value = scriptText,
-                onValueChange = { scriptText = it },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 3,
-                maxLines = 5,
-                label = {
-                    Text(
-                        text = stringResource(R.string.panel_auto_edit_script_label),
-                        color = Mocha.Subtext0
-                    )
-                },
-                placeholder = {
-                    Text(
-                        text = stringResource(R.string.panel_auto_edit_script_placeholder),
-                        color = Mocha.Overlay1
-                    )
-                },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Mocha.Mauve,
-                    unfocusedBorderColor = Mocha.CardStroke,
-                    focusedLabelColor = Mocha.Mauve,
-                    unfocusedLabelColor = Mocha.Subtext0,
-                    focusedTextColor = Mocha.Text,
-                    unfocusedTextColor = Mocha.Text,
-                    cursorColor = Mocha.Mauve
+            AutoEditIntent.entries.forEach { option ->
+                FilterChip(
+                    selected = intent == option,
+                    onClick = { intent = option },
+                    enabled = !isProcessing,
+                    label = { Text(stringResource(option.labelResource())) }
                 )
-            )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(30_000L, 60_000L, 90_000L).forEach { duration ->
+                    FilterChip(
+                        selected = targetDurationMs == duration,
+                        onClick = { targetDurationMs = duration },
+                        enabled = !isProcessing,
+                        label = { Text(stringResource(R.string.auto_edit_duration_seconds, duration / 1_000L)) }
+                    )
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = if (hasAudio) Mocha.Green else Mocha.Peach) {
+        if (proposal != null) {
+            PremiumPanelCard(accent = Mocha.Green) {
+                Text(
+                    text = stringResource(R.string.auto_edit_review_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Mocha.Text
+                )
+                Text(
+                    text = stringResource(
+                        R.string.auto_edit_review_summary,
+                        proposal.segments.size,
+                        proposal.plannedDurationMs / 1_000f,
+                        proposal.confidence * 100f
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Mocha.Subtext0
+                )
+                proposal.segments.forEachIndexed { index, segment ->
+                    Text(
+                        text = stringResource(
+                            R.string.auto_edit_review_segment,
+                            index + 1,
+                            segment.clipIndex + 1,
+                            formatAutoEditTime(segment.trimStartMs),
+                            formatAutoEditTime(segment.trimEndMs),
+                            segment.timelineEndMs - segment.timelineStartMs,
+                            segment.score * 100f
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Mocha.Text
+                    )
+                    Text(
+                        text = segment.rationale.joinToString(" · "),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Mocha.Subtext0
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string.auto_edit_review_scores,
+                            segment.scoreComponents.visualQuality * 100f,
+                            segment.scoreComponents.motion * 100f,
+                            segment.scoreComponents.subjectPresence * 100f,
+                            segment.scoreComponents.audioEnergy * 100f
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Mocha.Overlay1
+                    )
+                }
+                if (proposal.warnings.isNotEmpty()) {
+                    Text(
+                        text = stringResource(R.string.auto_edit_review_warning),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Mocha.Peach
+                    )
+                }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.auto_edit_discard))
+                    }
+                    Button(onClick = onApply, modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.auto_edit_apply))
+                    }
+                }
+            }
+        } else {
+        PremiumPanelCard(accent = if (intent == AutoEditIntent.BEAT_SYNC && hasAudio) Mocha.Green else Mocha.Peach) {
             Text(
                 text = stringResource(R.string.auto_edit_generate_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = Mocha.Text
             )
             Text(
-                text = if (hasAudio) {
+                text = if (intent == AutoEditIntent.BEAT_SYNC && hasAudio) {
                     stringResource(R.string.auto_edit_generate_with_audio)
-                } else {
+                } else if (intent == AutoEditIntent.BEAT_SYNC) {
                     stringResource(R.string.auto_edit_generate_no_audio)
+                } else {
+                    stringResource(R.string.auto_edit_generate_visual)
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = Mocha.Subtext0
@@ -173,7 +235,7 @@ fun AutoEditPanel(
             }
 
             Button(
-                onClick = { onGenerate(scriptText.takeIf { it.isNotBlank() }) },
+                onClick = { onGenerate(intent, targetDurationMs) },
                 enabled = clipCount > 0 && !isProcessing,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
@@ -202,16 +264,31 @@ fun AutoEditPanel(
                 }
             }
 
-            if (!hasAudio) {
+            if (intent == AutoEditIntent.BEAT_SYNC && !hasAudio) {
                 Text(
                     text = stringResource(R.string.panel_auto_edit_add_music_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = Mocha.Subtext0
                 )
             }
+            if (isProcessing) {
+                OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.auto_edit_cancel_analysis))
+                }
+            }
+        }
         }
     }
 }
+
+private fun AutoEditIntent.labelResource(): Int = when (this) {
+    AutoEditIntent.HIGHLIGHT_REEL -> R.string.auto_edit_intent_highlight
+    AutoEditIntent.SOURCE_ORDER -> R.string.auto_edit_intent_source_order
+    AutoEditIntent.BEAT_SYNC -> R.string.auto_edit_intent_beat_sync
+}
+
+private fun formatAutoEditTime(timeMs: Long): String =
+    "%d:%02d.%03d".format(timeMs / 60_000L, (timeMs / 1_000L) % 60L, timeMs % 1_000L)
 
 @Composable
 private fun AutoEditInfoCard(

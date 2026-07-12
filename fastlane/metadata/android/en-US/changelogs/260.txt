@@ -1,0 +1,3 @@
+Portable .clearcut archives now verify and restore LUTs, custom fonts, and watermarks.
+Auto Edit now analyzes bounded source windows and waits for review before one undoable Apply.
+Android 16 strict intent matching hardens external imports while preserving supported share flows.

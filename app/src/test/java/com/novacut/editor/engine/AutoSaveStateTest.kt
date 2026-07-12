@@ -15,6 +15,8 @@ import com.novacut.editor.model.SpeedPoint
 import com.novacut.editor.model.TextOverlay
 import com.novacut.editor.model.Track
 import com.novacut.editor.model.TrackType
+import com.novacut.editor.model.Watermark
+import com.novacut.editor.model.WatermarkPosition
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -23,6 +25,33 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AutoSaveStateTest {
+
+    @Test
+    fun exportWatermarkRoundTripsWithoutSubstitution() {
+        val source = TestUri(
+            raw = "content://brand-assets/logo.png",
+            schemeValue = "content",
+            segment = "logo.png"
+        )
+        val state = AutoSaveState(
+            projectId = "watermark-project",
+            exportWatermark = Watermark(
+                sourceUri = source,
+                position = WatermarkPosition.TOP_RIGHT,
+                opacity = 0.55f,
+                scalePercent = 27
+            )
+        )
+
+        val restored = AutoSaveState.deserialize(state.serialize()) { raw ->
+            TestUri(raw = raw, schemeValue = raw.substringBefore(':'), segment = raw.substringAfterLast('/'))
+        }
+
+        assertEquals(source.toString(), restored.exportWatermark?.sourceUri.toString())
+        assertEquals(WatermarkPosition.TOP_RIGHT, restored.exportWatermark?.position)
+        assertEquals(0.55f, restored.exportWatermark?.opacity)
+        assertEquals(27, restored.exportWatermark?.scalePercent)
+    }
 
     @Test
     fun deserialize_coercesTrackFieldsToModelInvariants() {

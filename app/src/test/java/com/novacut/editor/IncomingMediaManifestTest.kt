@@ -10,6 +10,28 @@ import javax.xml.parsers.DocumentBuilderFactory
 class IncomingMediaManifestTest {
 
     @Test
+    fun mainActivityEnforcesAndroid16IntentFiltersAndDeclaresShortcutActions() {
+        val activity = mainActivity()
+        assertEquals(
+            "enforceIntentFilter",
+            activity.getAttributeNS(ANDROID_NS, "intentMatchingFlags")
+        )
+
+        val actions = activity.childElements("intent-filter")
+            .flatMap { it.childElements("action") }
+            .map { it.androidName }
+            .toSet()
+        assertTrue("Launcher action must remain accepted", "android.intent.action.MAIN" in actions)
+        assertTrue("VIEW imports must remain accepted", "android.intent.action.VIEW" in actions)
+        assertTrue("SEND imports must remain accepted", "android.intent.action.SEND" in actions)
+        assertTrue("SEND_MULTIPLE imports must remain accepted", "android.intent.action.SEND_MULTIPLE" in actions)
+        assertTrue("Static new-project shortcut must remain accepted", "com.novacut.editor.action.NEW_PROJECT" in actions)
+        assertTrue("Static recent-project shortcut must remain accepted", "com.novacut.editor.action.OPEN_RECENT" in actions)
+        assertTrue("Dynamic recovery shortcut must remain accepted", "com.novacut.editor.action.RESUME_RECOVERED" in actions)
+        assertTrue("Dynamic last-project shortcut must remain accepted", "com.novacut.editor.action.OPEN_LAST_PROJECT" in actions)
+    }
+
+    @Test
     fun mainActivityDeclaresSharesheetSendFiltersForMediaTypes() {
         val filters = mainActivityIntentFilters()
         assertSendFilter(filters, "android.intent.action.SEND")
@@ -79,6 +101,10 @@ class IncomingMediaManifestTest {
     }
 
     private fun mainActivityIntentFilters(): List<Element> {
+        return mainActivity().childElements("intent-filter")
+    }
+
+    private fun mainActivity(): Element {
         val manifest = File("src/main/AndroidManifest.xml")
         val document = DocumentBuilderFactory.newInstance()
             .apply { isNamespaceAware = true }
@@ -88,7 +114,7 @@ class IncomingMediaManifestTest {
         for (index in 0 until activities.length) {
             val activity = activities.item(index) as? Element ?: continue
             if (activity.androidName == ".MainActivity") {
-                return activity.childElements("intent-filter")
+                return activity
             }
         }
         error("MainActivity not found in manifest")

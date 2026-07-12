@@ -179,7 +179,7 @@ class ExportService : Service() {
                 )
             }.getOrElse { error ->
                 Log.w(TAG, "Export notification FileProvider handoff failed for ${file.path}", error)
-                return Intent(this, MainActivity::class.java).apply {
+                return Intent(Intent.ACTION_MAIN, null, this, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 }
             }
@@ -190,7 +190,7 @@ class ExportService : Service() {
             }
         }
 
-        return Intent(this, MainActivity::class.java).apply {
+        return Intent(Intent.ACTION_MAIN, null, this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
     }

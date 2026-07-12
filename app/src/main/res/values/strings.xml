@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ClearCut</string>
-    <string name="app_version">v3.74.126</string>
+    <string name="app_version">v3.74.127</string>
 
     <!-- Cut list / marker import -->
     <string name="cut_list_import_empty">Nothing to import — paste time ranges or markers first</string>
@@ -1361,12 +1361,27 @@
     <string name="auto_edit_description">AI analyzes your clips for quality, motion, and faces, then creates a highlight reel with the best moments.</string>
     <string name="auto_edit_start">Generate Highlight Reel</string>
     <string name="auto_edit_generate_title">Generate highlight reel</string>
-    <string name="auto_edit_subtitle">Turn rough footage into a first-cut highlight reel with a concise creative brief and an AI-assisted timing pass.</string>
+    <string name="auto_edit_subtitle">Score multiple moments across your footage, choose a cut intent, and review every excerpt before applying.</string>
     <string name="auto_edit_source_overview_title">Source overview</string>
     <string name="auto_edit_brief_title">Edit brief</string>
     <string name="auto_edit_brief_description">Guide the first cut with a short prompt like \"fast travel recap with strongest reactions first\" or leave it blank for a neutral highlight reel.</string>
-    <string name="auto_edit_generate_with_audio">ClearCut can pace the reel against your current audio bed while it scores the strongest moments.</string>
-    <string name="auto_edit_generate_no_audio">You can still generate a first cut now, but adding music or guide audio usually improves pacing.</string>
+    <string name="auto_edit_intent_title">Edit intent and duration</string>
+    <string name="auto_edit_brief_unsupported">Free-text and storyboard keyword matching are not supported yet. The selected intent and duration are the only creative inputs used by this proposal.</string>
+    <string name="auto_edit_intent_highlight">Highlights</string>
+    <string name="auto_edit_intent_source_order">Source order</string>
+    <string name="auto_edit_intent_beat_sync">Beat sync</string>
+    <string name="auto_edit_duration_seconds">%1$d s</string>
+    <string name="auto_edit_review_title">Review proposal</string>
+    <string name="auto_edit_review_summary">%1$d excerpts · %2$.1f s · %3$.0f%% confidence</string>
+    <string name="auto_edit_review_segment">%1$d. Source %2$d · %3$s–%4$s · %5$d ms · score %6$.0f%%</string>
+    <string name="auto_edit_review_scores">Quality %1$.0f%% · motion %2$.0f%% · subject %3$.0f%% · audio %4$.0f%%</string>
+    <string name="auto_edit_review_warning">The proposal could not fully satisfy the requested timing. Review every excerpt before applying.</string>
+    <string name="auto_edit_discard">Discard</string>
+    <string name="auto_edit_apply">Apply as one edit</string>
+    <string name="auto_edit_cancel_analysis">Cancel analysis</string>
+    <string name="auto_edit_generate_with_audio">Beat Sync will align proposed cuts to detected beats in the current audio track.</string>
+    <string name="auto_edit_generate_no_audio">Beat Sync has no audio track to analyze, so the proposal will explicitly fall back to highlight scoring.</string>
+    <string name="auto_edit_generate_visual">This proposal scores visual quality, motion, and subject presence across multiple windows in every source.</string>
     <string name="auto_edit_clip_count">%1$d clips</string>
     <string name="auto_edit_audio_ready">Audio ready</string>
     <string name="auto_edit_no_soundtrack">No soundtrack</string>
@@ -2518,6 +2533,7 @@
     <string name="vm_auto_edit_created_toast">Auto-edit created %1$d segments</string>
     <string name="vm_auto_edit_failed_toast">Could not generate auto-edit</string>
     <string name="vm_auto_edit_error_toast">Auto-edit failed</string>
+    <string name="vm_auto_edit_stale_toast">Sources changed after analysis. Generate a new proposal.</string>
     <string name="vm_tts_added_toast">Voice added to audio track</string>
     <string name="vm_tts_failed_toast">TTS synthesis failed</string>
     <string name="vm_effects_exported_toast">Effects exported: %1$s</string>

@@ -5,10 +5,12 @@ import android.net.Uri
 import android.util.Log
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.ImageOverlay
+import com.novacut.editor.model.Watermark
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.*
+import java.security.MessageDigest
 import java.util.LinkedHashMap
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
@@ -80,10 +82,22 @@ object ProjectArchive {
         val errorMessage: String? = null
     )
 
-    private data class ArchivedMediaSource(
-        val originalUri: String,
-        val uri: Uri,
-        val entryName: String
+    internal data class ArchiveManifestEntry(
+        val kind: String,
+        val logicalReference: String,
+        val entryName: String?,
+        val byteLength: Long?,
+        val sha256: String?,
+        val archivePolicy: String,
+        val required: Boolean,
+        val fallbackAllowed: Boolean = false,
+        val fallbackName: String? = null
+    )
+
+    private data class ArchivedDependencySource(
+        val manifest: ArchiveManifestEntry,
+        val uri: Uri? = null,
+        val file: File? = null
     )
 
     /**
@@ -110,9 +124,26 @@ object ProjectArchive {
 
         try {
             val projectJson = state.serialize()
-            val archivedMedia = collectArchivedMedia(state)
-            val mediaManifest = buildMediaManifest(archivedMedia)
-            val totalFiles = archivedMedia.size + 2 // project.json + media manifest
+            val archivedDependencies = collectArchivedDependencies(context, state).map { source ->
+                if (source.manifest.archivePolicy != ProjectDependencyArchivePolicy.INCLUDE.name) return@map source
+                try {
+                    val (byteLength, sha256) = inspectDependency(context, source)
+                    source.copy(manifest = source.manifest.copy(byteLength = byteLength, sha256 = sha256))
+                } catch (e: Exception) {
+                    if (source.manifest.required) throw e
+                    source.copy(manifest = source.manifest.copy(
+                        entryName = null,
+                        archivePolicy = ProjectDependencyArchivePolicy.REFERENCE_ONLY.name,
+                        fallbackAllowed = true,
+                        fallbackName = "Original reference"
+                    ))
+                }
+            }
+            val mediaManifest = buildMediaManifestV2(archivedDependencies.map { it.manifest })
+            val includedDependencies = archivedDependencies.filter {
+                it.manifest.archivePolicy == ProjectDependencyArchivePolicy.INCLUDE.name
+            }
+            val totalFiles = includedDependencies.size + 2 // project.json + manifest
             var processedFiles = 0
 
             ZipOutputStream(BufferedOutputStream(FileOutputStream(tempFile))).use { zip ->
@@ -124,16 +155,24 @@ object ProjectArchive {
                 processedFiles++
                 onProgress(processedFiles.toFloat() / totalFiles)
 
-                var writtenMediaBytes = 0L
-                archivedMedia.forEach { media ->
-                    zip.putNextEntry(ZipEntry(media.entryName))
-                    context.contentResolver.openInputStream(media.uri)?.use { input ->
-                        val remainingBytes = MAX_ARCHIVE_TOTAL_BYTES - writtenMediaBytes
+                var writtenDependencyBytes = 0L
+                includedDependencies.forEach { dependency ->
+                    val entryName = dependency.manifest.entryName
+                        ?: throw IOException("Included dependency has no archive entry")
+                    zip.putNextEntry(ZipEntry(entryName))
+                    openDependency(context, dependency).use { input ->
+                        val remainingBytes = MAX_ARCHIVE_TOTAL_BYTES - writtenDependencyBytes
                         if (remainingBytes <= 0L) {
                             throw IOException("Archive exceeds size limit")
                         }
-                        writtenMediaBytes += copyWithLimit(input, zip, remainingBytes)
-                    } ?: throw IOException("Cannot read media: ${media.uri}")
+                        val (copied, sha256) = copyWithLimitAndDigest(input, zip, remainingBytes)
+                        if (copied != dependency.manifest.byteLength ||
+                            !sha256.equals(dependency.manifest.sha256, ignoreCase = true)
+                        ) {
+                            throw IOException("Dependency changed while archiving: ${dependency.manifest.logicalReference}")
+                        }
+                        writtenDependencyBytes += copied
+                    }
                     zip.closeEntry()
                     processedFiles++
                     onProgress(processedFiles.toFloat() / totalFiles)
@@ -321,7 +360,16 @@ object ProjectArchive {
                 warnings += "Archive used schema v$schemaVersion; migrated to v${AutoSaveState.FORMAT_VERSION}."
             }
 
-            val manifestMap = mediaManifestJson?.let(::parseMediaManifest).orEmpty()
+            val parsedManifest = mediaManifestJson?.let(::parseMediaManifest)
+                ?: ParsedArchiveManifest(version = 1, entries = emptyList())
+            val invalidOptionalEntries = verifyManifestEntries(parsedManifest, extractedFiles, warnings)
+            invalidOptionalEntries.forEach { entryName ->
+                extractedFiles.remove(entryName)?.path?.let(::File)?.delete()
+            }
+            val trustedManifestEntries = parsedManifest.entries.filter { it.entryName !in invalidOptionalEntries }
+            val manifestMap = trustedManifestEntries
+                .filter { it.kind == ProjectDependencyKind.MEDIA.name && it.entryName != null }
+                .associate { it.logicalReference to requireNotNull(it.entryName) }
             val rawState = AutoSaveState.deserialize(stateJson)
             val originalProjectId = rawState.projectId
             val collided = originalProjectId in existingProjectIds
@@ -345,14 +393,20 @@ object ProjectArchive {
                 manifestEntryMap = manifestMap,
                 extractedFiles = extractedFiles,
                 seenSourceUris = seenSourceUris,
-                unresolvedSink = unresolved
+                unresolvedSink = unresolved,
+                allowFileNameFallback = parsedManifest.version <= 1
             )
+            val dependencyRewritten = if (parsedManifest.version >= 2) {
+                rewriteArchivedDependenciesForImport(context, rewritten, trustedManifestEntries, extractedFiles)
+            } else {
+                rewritten
+            }
 
             val mediaTotal = seenSourceUris.size
             val mediaResolved = mediaTotal - unresolved.size
 
             ImportResult(
-                state = rewritten,
+                state = dependencyRewritten,
                 report = ImportReport(
                     schemaVersion = schemaVersion,
                     schemaTooNew = false,
@@ -390,16 +444,20 @@ object ProjectArchive {
         state: AutoSaveState
     ): Long = withContext(Dispatchers.IO) {
         var totalSize = 0L
-        val mediaUris = collectArchivedMedia(state).map { it.uri }
+        val dependencies = collectArchivedDependencies(context, state)
+            .filter { it.manifest.archivePolicy == ProjectDependencyArchivePolicy.INCLUDE.name }
 
-        for (uri in mediaUris) {
+        for (dependency in dependencies) {
             try {
-                context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { fd ->
-                    if (fd.length > 0L) {
-                        totalSize += fd.length
+                openDependency(context, dependency).use { input ->
+                    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                    while (true) {
+                        val read = input.read(buffer)
+                        if (read < 0) break
+                        totalSize = (totalSize + read).coerceAtMost(MAX_ARCHIVE_TOTAL_BYTES)
                     }
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Skip unreadable files
             }
         }
@@ -407,7 +465,9 @@ object ProjectArchive {
         totalSize + 4096 // Add overhead for project JSON
     }
 
-    private fun collectArchivedMedia(state: AutoSaveState): List<ArchivedMediaSource> {
+    private data class LegacyMediaSource(val originalUri: String, val uri: Uri, val entryName: String)
+
+    private fun collectLegacyMedia(state: AutoSaveState): List<LegacyMediaSource> {
         val uniqueMedia = LinkedHashMap<String, Uri>()
 
         fun register(uri: Uri) {
@@ -434,7 +494,7 @@ object ProjectArchive {
                 raw = uri.lastPathSegment ?: "media_$index",
                 fallbackStem = "media_$index"
             )}"
-            ArchivedMediaSource(
+            LegacyMediaSource(
                 originalUri = originalUri,
                 uri = uri,
                 entryName = entryName
@@ -442,33 +502,228 @@ object ProjectArchive {
         }
     }
 
-    private fun buildMediaManifest(mediaSources: List<ArchivedMediaSource>): String {
-        return JSONObject().apply {
-            put("version", 1)
-            put("entries", JSONArray().apply {
-                mediaSources.forEach { media ->
-                    put(JSONObject().apply {
-                        put("originalUri", media.originalUri)
-                        put("entryName", media.entryName)
-                    })
+    private fun collectArchivedDependencies(
+        context: Context,
+        state: AutoSaveState
+    ): List<ArchivedDependencySource> {
+        val sources = LinkedHashMap<Pair<ProjectDependencyKind, String>, ArchivedDependencySource>()
+        var mediaIndex = 0
+        var lutIndex = 0
+        var fontIndex = 0
+        var watermarkIndex = 0
+
+        fun addMedia(uri: Uri, required: Boolean = true) {
+            val reference = uri.toString().takeIf(String::isNotBlank) ?: return
+            val key = ProjectDependencyKind.MEDIA to reference
+            sources[key]?.let { existing ->
+                if (required && !existing.manifest.required) {
+                    sources[key] = existing.copy(manifest = existing.manifest.copy(required = true))
                 }
-            })
-        }.toString(2)
+                return
+            }
+            val entry = "media/${mediaIndex++}_${sanitizeFileNamePreservingExtension(
+                uri.lastPathSegment ?: "media", "media"
+            )}"
+            sources[key] = ArchivedDependencySource(
+                manifest = ArchiveManifestEntry(
+                    kind = ProjectDependencyKind.MEDIA.name,
+                    logicalReference = reference,
+                    entryName = entry,
+                    byteLength = null,
+                    sha256 = null,
+                    archivePolicy = ProjectDependencyArchivePolicy.INCLUDE.name,
+                    required = required
+                ),
+                uri = uri
+            )
+        }
+
+        fun addLut(reference: String) {
+            if (reference.isBlank()) return
+            val key = ProjectDependencyKind.LUT to reference
+            if (key in sources) return
+            val file = File(reference)
+            val entry = "luts/${lutIndex++}_${sanitizeFileNamePreservingExtension(file.name, "lut")}"
+            sources[key] = ArchivedDependencySource(
+                manifest = ArchiveManifestEntry(
+                    kind = ProjectDependencyKind.LUT.name,
+                    logicalReference = reference,
+                    entryName = entry,
+                    byteLength = null,
+                    sha256 = null,
+                    archivePolicy = ProjectDependencyArchivePolicy.INCLUDE.name,
+                    required = true
+                ),
+                file = file
+            )
+        }
+
+        fun addFont(family: String) {
+            if (!family.startsWith(FontRegistry.CUSTOM_PREFIX)) return
+            val fileName = family.removePrefix(FontRegistry.CUSTOM_PREFIX)
+            val safeName = sanitizeFileNamePreservingExtension(fileName, "font")
+            val fontsDir = File(context.filesDir, "fonts").canonicalFile
+            val file = File(fontsDir, fileName).canonicalFile
+            require(file.toPath().startsWith(fontsDir.toPath())) { "Unsafe custom font reference" }
+            val key = ProjectDependencyKind.CUSTOM_FONT to family
+            if (key in sources) return
+            sources[key] = ArchivedDependencySource(
+                manifest = ArchiveManifestEntry(
+                    kind = ProjectDependencyKind.CUSTOM_FONT.name,
+                    logicalReference = family,
+                    entryName = "fonts/${fontIndex++}_$safeName",
+                    byteLength = null,
+                    sha256 = null,
+                    archivePolicy = ProjectDependencyArchivePolicy.INCLUDE.name,
+                    required = true
+                ),
+                file = file
+            )
+        }
+
+        fun addWatermark(watermark: Watermark) {
+            val reference = watermark.sourceUri.toString().takeIf(String::isNotBlank) ?: return
+            val key = ProjectDependencyKind.WATERMARK to reference
+            if (key in sources) return
+            val entry = "watermarks/${watermarkIndex++}_${sanitizeFileNamePreservingExtension(
+                watermark.sourceUri.lastPathSegment ?: "watermark", "watermark"
+            )}"
+            sources[key] = ArchivedDependencySource(
+                manifest = ArchiveManifestEntry(
+                    kind = ProjectDependencyKind.WATERMARK.name,
+                    logicalReference = reference,
+                    entryName = entry,
+                    byteLength = null,
+                    sha256 = null,
+                    archivePolicy = ProjectDependencyArchivePolicy.INCLUDE.name,
+                    required = true
+                ),
+                uri = watermark.sourceUri
+            )
+        }
+
+        fun visitClip(clip: Clip) {
+            addMedia(clip.sourceUri)
+            clip.colorGrade?.lutPath?.let(::addLut)
+            clip.captions.forEach { addFont(it.style.fontFamily) }
+            clip.compoundClips.forEach(::visitClip)
+        }
+
+        state.tracks.forEach { track -> track.clips.forEach(::visitClip) }
+        state.imageOverlays.forEach { addMedia(it.sourceUri) }
+        state.mediaAssets.forEach { asset ->
+            asset.managedUri.takeIf(String::isNotBlank)?.let { addMedia(Uri.parse(it)) }
+        }
+        state.storyboardCards.forEach { card -> card.mediaUri?.let { addMedia(it, required = false) } }
+        state.textOverlays.forEach { addFont(it.fontFamily) }
+        state.exportWatermark?.let(::addWatermark)
+
+        val needsModel = state.tracks.any { track ->
+            track.clips.any(::clipUsesSegmentationModel)
+        }
+        if (needsModel) {
+            sources[ProjectDependencyKind.MODEL to SEGMENTATION_MODEL_DEPENDENCY] = ArchivedDependencySource(
+                manifest = ArchiveManifestEntry(
+                    kind = ProjectDependencyKind.MODEL.name,
+                    logicalReference = SEGMENTATION_MODEL_DEPENDENCY,
+                    entryName = null,
+                    byteLength = null,
+                    sha256 = null,
+                    archivePolicy = ProjectDependencyArchivePolicy.REFERENCE_ONLY.name,
+                    required = true,
+                    fallbackName = null
+                )
+            )
+        }
+        return sources.values.toList()
     }
 
-    private fun parseMediaManifest(raw: String): Map<String, String> {
+    private fun clipUsesSegmentationModel(clip: Clip): Boolean =
+        clip.effects.any { it.enabled && it.type == com.novacut.editor.model.EffectType.BG_REMOVAL } ||
+            clip.compoundClips.any(::clipUsesSegmentationModel)
+
+    private fun inspectDependency(context: Context, source: ArchivedDependencySource): Pair<Long, String> {
+        val digest = MessageDigest.getInstance("SHA-256")
+        var length = 0L
+        openDependency(context, source).use { input ->
+            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            while (true) {
+                val read = input.read(buffer)
+                if (read < 0) break
+                length += read
+                if (length > MAX_ARCHIVE_TOTAL_BYTES) throw IOException("Archive dependency exceeds size limit")
+                digest.update(buffer, 0, read)
+            }
+        }
+        return length to digest.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    private fun openDependency(context: Context, source: ArchivedDependencySource): InputStream =
+        source.file?.inputStream()
+            ?: source.uri?.let { context.contentResolver.openInputStream(it) }
+            ?: throw IOException("Cannot read dependency: ${source.manifest.logicalReference}")
+
+    internal fun buildMediaManifestV2(entries: List<ArchiveManifestEntry>): String = JSONObject().apply {
+        put("version", 2)
+        put("entries", JSONArray().apply {
+            entries.forEach { entry ->
+                put(JSONObject().apply {
+                    put("kind", entry.kind)
+                    put("logicalReference", entry.logicalReference)
+                    entry.entryName?.let { put("entryName", it) }
+                    entry.byteLength?.let { put("byteLength", it) }
+                    entry.sha256?.let { put("sha256", it) }
+                    put("archivePolicy", entry.archivePolicy)
+                    put("required", entry.required)
+                    put("fallbackAllowed", entry.fallbackAllowed)
+                    entry.fallbackName?.let { put("fallbackName", it) }
+                })
+            }
+        })
+    }.toString(2)
+
+    internal data class ParsedArchiveManifest(val version: Int, val entries: List<ArchiveManifestEntry>)
+
+    internal fun parseMediaManifest(raw: String): ParsedArchiveManifest {
         val json = JSONObject(raw)
+        val version = json.optInt("version", 1)
         val entries = json.optJSONArray("entries") ?: JSONArray()
-        return buildMap {
+        val parsed = buildList {
             for (index in 0 until entries.length()) {
                 val item = entries.optJSONObject(index) ?: continue
-                val originalUri = item.optString("originalUri", "")
-                val entryName = item.optString("entryName", "")
-                if (originalUri.isNotBlank() && entryName.isNotBlank()) {
-                    put(originalUri, entryName)
+                if (version <= 1) {
+                    val originalUri = item.optString("originalUri", "")
+                    val entryName = item.optString("entryName", "")
+                    if (originalUri.isNotBlank() && entryName.isNotBlank()) {
+                        add(ArchiveManifestEntry(
+                            kind = ProjectDependencyKind.MEDIA.name,
+                            logicalReference = originalUri,
+                            entryName = entryName,
+                            byteLength = null,
+                            sha256 = null,
+                            archivePolicy = ProjectDependencyArchivePolicy.INCLUDE.name,
+                            required = false
+                        ))
+                    }
+                } else {
+                    val reference = item.optString("logicalReference", "")
+                    val kind = item.optString("kind", "")
+                    if (reference.isBlank() || kind.isBlank()) continue
+                    add(ArchiveManifestEntry(
+                        kind = kind,
+                        logicalReference = reference,
+                        entryName = item.optString("entryName", "").takeIf(String::isNotBlank),
+                        byteLength = if (item.has("byteLength")) item.optLong("byteLength") else null,
+                        sha256 = item.optString("sha256", "").takeIf(String::isNotBlank),
+                        archivePolicy = item.optString("archivePolicy", ProjectDependencyArchivePolicy.INCLUDE.name),
+                        required = item.optBoolean("required", true),
+                        fallbackAllowed = item.optBoolean("fallbackAllowed", false),
+                        fallbackName = item.optString("fallbackName", "").takeIf(String::isNotBlank)
+                    ))
                 }
             }
         }
+        return ParsedArchiveManifest(version, parsed)
     }
 
     private fun parseSchemaVersion(raw: String): Int {
@@ -510,10 +765,139 @@ object ProjectArchive {
     }
 
     private fun isSupportedMediaEntry(entryName: String): Boolean {
-        if (!entryName.startsWith("media/")) return false
+        if (listOf("media/", "luts/", "fonts/", "watermarks/").none(entryName::startsWith)) return false
         if ('\\' in entryName) return false
         if (entryName.endsWith('/')) return false
-        return entryName.substringAfter("media/").isNotBlank()
+        return entryName.substringAfter('/').isNotBlank()
+    }
+
+    private fun verifyManifestEntries(
+        manifest: ParsedArchiveManifest,
+        extractedFiles: Map<String, Uri>,
+        warnings: MutableList<String>
+    ): Set<String> = verifyManifestFiles(
+        manifest,
+        extractedFiles.mapNotNull { (name, uri) -> uri.path?.let { name to File(it) } }.toMap(),
+        warnings
+    )
+
+    internal fun verifyManifestFiles(
+        manifest: ParsedArchiveManifest,
+        extractedFiles: Map<String, File>,
+        warnings: MutableList<String>
+    ): Set<String> {
+        if (manifest.version <= 1) return emptySet()
+        val invalidOptionalEntries = mutableSetOf<String>()
+        val knownKinds = setOf(
+            ProjectDependencyKind.MEDIA.name,
+            ProjectDependencyKind.LUT.name,
+            ProjectDependencyKind.CUSTOM_FONT.name,
+            ProjectDependencyKind.WATERMARK.name,
+            ProjectDependencyKind.MODEL.name
+        )
+        val expectedPrefixes = mapOf(
+            ProjectDependencyKind.MEDIA.name to "media/",
+            ProjectDependencyKind.LUT.name to "luts/",
+            ProjectDependencyKind.CUSTOM_FONT.name to "fonts/",
+            ProjectDependencyKind.WATERMARK.name to "watermarks/"
+        )
+        val seenLogical = hashSetOf<Pair<String, String>>()
+        manifest.entries.forEach { entry ->
+            if (!seenLogical.add(entry.kind to entry.logicalReference)) {
+                throw IOException("Manifest contains duplicate dependency: ${entry.logicalReference}")
+            }
+            if (entry.kind !in knownKinds) {
+                if (entry.required) throw IOException("Unknown required dependency kind: ${entry.kind}")
+                warnings += "Ignored optional dependency kind: ${entry.kind}"
+                entry.entryName?.let(invalidOptionalEntries::add)
+                return@forEach
+            }
+            if (entry.archivePolicy == ProjectDependencyArchivePolicy.REFERENCE_ONLY.name) return@forEach
+            if (entry.archivePolicy != ProjectDependencyArchivePolicy.INCLUDE.name) {
+                if (entry.required) throw IOException("Required dependency has unsupported archive policy")
+                warnings += "Ignored optional dependency with archive policy ${entry.archivePolicy}"
+                entry.entryName?.let(invalidOptionalEntries::add)
+                return@forEach
+            }
+            val archiveName = entry.entryName
+            val expectedPrefix = expectedPrefixes[entry.kind]
+            if (archiveName == null || expectedPrefix == null || !archiveName.startsWith(expectedPrefix) ||
+                !isSupportedMediaEntry(archiveName)
+            ) {
+                if (handleInvalidManifestEntry(entry, warnings, "unsafe or missing archive path")) {
+                    archiveName?.let(invalidOptionalEntries::add)
+                }
+                return@forEach
+            }
+            val file = extractedFiles[archiveName]
+            if (file == null) {
+                if (handleInvalidManifestEntry(entry, warnings, "missing archive entry")) {
+                    invalidOptionalEntries += archiveName
+                }
+                return@forEach
+            }
+            if (!file.isFile) {
+                if (handleInvalidManifestEntry(entry, warnings, "unreadable archive entry")) {
+                    invalidOptionalEntries += archiveName
+                }
+                return@forEach
+            }
+            val expectedLength = entry.byteLength
+            val expectedSha = entry.sha256
+            if (expectedLength == null || expectedLength < 0L || expectedSha?.matches(Regex("[0-9a-fA-F]{64}")) != true) {
+                if (handleInvalidManifestEntry(entry, warnings, "missing integrity metadata")) {
+                    invalidOptionalEntries += archiveName
+                }
+                return@forEach
+            }
+            val actualSha = file.inputStream().use(::sha256)
+            if (file.length() != expectedLength || !actualSha.equals(expectedSha, ignoreCase = true)) {
+                if (handleInvalidManifestEntry(entry, warnings, "integrity check failed")) {
+                    invalidOptionalEntries += archiveName
+                }
+            }
+        }
+        return invalidOptionalEntries
+    }
+
+    private fun handleInvalidManifestEntry(
+        entry: ArchiveManifestEntry,
+        warnings: MutableList<String>,
+        reason: String
+    ): Boolean {
+        if (entry.required) throw IOException("Required ${entry.kind} dependency $reason: ${entry.logicalReference}")
+        warnings += "Optional ${entry.kind} dependency $reason: ${entry.logicalReference}"
+        return true
+    }
+
+    private fun sha256(input: InputStream): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        while (true) {
+            val read = input.read(buffer)
+            if (read < 0) break
+            digest.update(buffer, 0, read)
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    private fun copyWithLimitAndDigest(
+        input: InputStream,
+        output: OutputStream,
+        maxBytes: Long
+    ): Pair<Long, String> {
+        val digest = MessageDigest.getInstance("SHA-256")
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        var copied = 0L
+        while (true) {
+            val read = input.read(buffer)
+            if (read < 0) break
+            if (copied + read > maxBytes) throw IOException("Archive exceeds size limit")
+            output.write(buffer, 0, read)
+            digest.update(buffer, 0, read)
+            copied += read
+        }
+        return copied to digest.digest().joinToString("") { "%02x".format(it) }
     }
 
     private fun readCurrentEntryText(zipInput: ZipInputStream, maxBytes: Long): String {
@@ -525,21 +909,116 @@ object ProjectArchive {
         manifestEntryMap: Map<String, String>,
         extractedFiles: Map<String, Uri>,
         seenSourceUris: MutableSet<String>,
-        unresolvedSink: MutableList<String>
+        unresolvedSink: MutableList<String>,
+        allowFileNameFallback: Boolean = true
     ): AutoSaveState {
         return state.rewriteArchivedMediaUris(
             manifestEntryMap = manifestEntryMap,
             extractedFiles = extractedFiles,
             seenSourceUris = seenSourceUris,
-            unresolvedSink = unresolvedSink
+            unresolvedSink = unresolvedSink,
+            allowFileNameFallback = allowFileNameFallback
         )
+    }
+
+    internal fun rewriteArchivedDependenciesForImport(
+        context: Context,
+        state: AutoSaveState,
+        manifestEntries: List<ArchiveManifestEntry>,
+        extractedFiles: Map<String, Uri>
+    ): AutoSaveState {
+        val lutPaths = manifestEntries
+            .filter { it.kind == ProjectDependencyKind.LUT.name && it.entryName != null }
+            .mapNotNull { entry ->
+                extractedFiles[entry.entryName]?.path?.let { entry.logicalReference to it }
+            }
+            .toMap()
+        val installedFonts = installArchivedFonts(context, manifestEntries, extractedFiles)
+        val watermarkUris = manifestEntries
+            .filter { it.kind == ProjectDependencyKind.WATERMARK.name && it.entryName != null }
+            .mapNotNull { entry -> extractedFiles[entry.entryName]?.let { entry.logicalReference to it } }
+            .toMap()
+
+        return rewriteDependencyReferences(state, lutPaths, installedFonts, watermarkUris)
+    }
+
+    internal fun rewriteDependencyReferences(
+        state: AutoSaveState,
+        lutPaths: Map<String, String>,
+        installedFonts: Map<String, String>,
+        watermarkUris: Map<String, Uri> = emptyMap()
+    ): AutoSaveState {
+
+        fun rewriteClip(clip: Clip): Clip = clip.copy(
+            colorGrade = clip.colorGrade?.let { grade ->
+                grade.copy(lutPath = grade.lutPath?.let { lutPaths[it] ?: it })
+            },
+            captions = clip.captions.map { caption ->
+                caption.copy(style = caption.style.copy(
+                    fontFamily = installedFonts[caption.style.fontFamily] ?: caption.style.fontFamily
+                ))
+            },
+            compoundClips = clip.compoundClips.map(::rewriteClip)
+        )
+
+        return state.copy(
+            tracks = state.tracks.map { track -> track.copy(clips = track.clips.map(::rewriteClip)) },
+            textOverlays = state.textOverlays.map { overlay ->
+                overlay.copy(fontFamily = installedFonts[overlay.fontFamily] ?: overlay.fontFamily)
+            },
+            exportWatermark = state.exportWatermark?.let { watermark ->
+                watermark.copy(sourceUri = watermarkUris[watermark.sourceUri.toString()] ?: watermark.sourceUri)
+            }
+        )
+    }
+
+    private fun installArchivedFonts(
+        context: Context,
+        manifestEntries: List<ArchiveManifestEntry>,
+        extractedFiles: Map<String, Uri>
+    ): Map<String, String> {
+        val fontsDir = File(context.filesDir, "fonts")
+        return buildMap {
+            manifestEntries
+                .filter { it.kind == ProjectDependencyKind.CUSTOM_FONT.name && it.entryName != null }
+                .forEach { entry ->
+                    val source = extractedFiles[entry.entryName]?.path?.let(::File) ?: return@forEach
+                    val originalName = entry.logicalReference.removePrefix(FontRegistry.CUSTOM_PREFIX)
+                    val safeName = sanitizeFileNamePreservingExtension(originalName, "font")
+                    val hashPrefix = entry.sha256.orEmpty().ifBlank { "imported" }
+                    val installedName = "${hashPrefix}_$safeName"
+                    val target = File(fontsDir, installedName).canonicalFile
+                    if (!target.toPath().startsWith(fontsDir.canonicalFile.toPath())) {
+                        throw IOException("Unsafe font install path")
+                    }
+                    if (!fontsDir.exists() && !fontsDir.mkdirs() && !fontsDir.exists()) {
+                        throw IOException("Cannot create font directory")
+                    }
+                    val targetMatches = target.isFile &&
+                        entry.byteLength == target.length() &&
+                        entry.sha256?.equals(target.inputStream().use(::sha256), ignoreCase = true) == true
+                    if (!targetMatches) {
+                        val partial = File(fontsDir, "$installedName.partial")
+                        try {
+                            source.inputStream().use { input ->
+                                partial.outputStream().use { output -> input.copyTo(output) }
+                            }
+                            moveFileReplacing(partial, target)
+                        } finally {
+                            partial.delete()
+                        }
+                    }
+                    put(entry.logicalReference, FontRegistry.CUSTOM_PREFIX + installedName)
+                }
+        }
     }
 
     private fun AutoSaveState.rewriteArchivedMediaUris(
         manifestEntryMap: Map<String, String>,
         extractedFiles: Map<String, Uri>,
         seenSourceUris: MutableSet<String>,
-        unresolvedSink: MutableList<String>
+        unresolvedSink: MutableList<String>,
+        allowFileNameFallback: Boolean
     ): AutoSaveState {
         fun resolveDirectArchivedUri(uriString: String): Uri? {
             val mappedEntry = manifestEntryMap[uriString]
@@ -551,7 +1030,11 @@ object ProjectArchive {
 
         fun resolveMappedArchivedUri(originalUri: Uri): Uri? {
             val key = originalUri.toString()
-            return resolveDirectArchivedUri(key) ?: fallbackArchivedUri(originalUri, extractedFiles)
+            return resolveDirectArchivedUri(key) ?: if (allowFileNameFallback) {
+                fallbackArchivedUri(originalUri, extractedFiles)
+            } else {
+                null
+            }
         }
 
         fun resolveArchivedUri(originalUri: Uri): Uri {

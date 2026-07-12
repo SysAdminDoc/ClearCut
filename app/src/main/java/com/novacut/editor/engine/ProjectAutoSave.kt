@@ -400,7 +400,9 @@ data class AutoSaveState(
     // as the compatibility fallback while new saves can diagnose/repair assets
     // through stable ids.
     val mediaAssets: List<ProjectMediaAsset> = emptyList(),
-    val storyboardCards: List<com.novacut.editor.model.StoryboardCard> = emptyList()
+    val storyboardCards: List<com.novacut.editor.model.StoryboardCard> = emptyList(),
+    /** Project export watermark, persisted so backups and recovery never substitute the brand asset. */
+    val exportWatermark: Watermark? = null
 ) {
     fun serialize(): String {
         val json = JSONObject().apply {
@@ -444,6 +446,14 @@ data class AutoSaveState(
                             put("type", io.type.name)
                         })
                     }
+                })
+            }
+            exportWatermark?.let { watermark ->
+                put("exportWatermark", JSONObject().apply {
+                    put("sourceUri", watermark.sourceUri.toString())
+                    put("position", watermark.position.name)
+                    putSafeFloat("opacity", watermark.opacity, default = 0.9f)
+                    put("scalePercent", watermark.scalePercent)
                 })
             }
             if (timelineMarkers.isNotEmpty()) {
@@ -722,6 +732,23 @@ data class AutoSaveState(
                     )
                 } catch (e: Exception) { Log.w(TAG, "Failed to deserialize image overlay $i", e); null }
             }
+            val exportWatermark = json.optJSONObject("exportWatermark")?.let { watermark ->
+                runCatching {
+                    val source = boundedText(watermark.optString("sourceUri", ""), MAX_SHORT_TEXT_CHARS)
+                    val sourceUri = source.takeIf(String::isNotBlank)?.let(uriParser)
+                        ?: return@runCatching null
+                    Watermark(
+                        sourceUri = sourceUri,
+                        position = safeValueOf(
+                            watermark.optString("position", WatermarkPosition.BOTTOM_RIGHT.name),
+                            WatermarkPosition.BOTTOM_RIGHT
+                        ),
+                        opacity = watermark.optDouble("opacity", 0.9).toFloat()
+                            .let { if (it.isFinite()) it.coerceIn(0f, 1f) else 0.9f },
+                        scalePercent = watermark.optInt("scalePercent", 15).coerceIn(5, 50)
+                    )
+                }.onFailure { Log.w(TAG, "Skipping invalid export watermark", it) }.getOrNull()
+            }
             val timelineMarkersArr = json.optJSONArray("timelineMarkers") ?: JSONArray()
             val timelineMarkers = (0 until cappedArrayLength(timelineMarkersArr, MAX_PROJECT_MARKERS, "timeline markers")).mapNotNull { i ->
                 try {
@@ -910,7 +937,8 @@ data class AutoSaveState(
                 trackedObjects = trackedObjects,
                 aiUsageLedger = aiUsageLedger,
                 mediaAssets = mediaAssets,
-                storyboardCards = storyboardCards
+                storyboardCards = storyboardCards,
+                exportWatermark = exportWatermark
             )
         }
 

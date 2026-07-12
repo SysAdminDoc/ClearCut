@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ClearCut</string>
-    <string name="app_version">v3.74.126</string>
+    <string name="app_version">v3.74.127</string>
 
     <!-- Importación de listas de cortes y marcadores -->
     <string name="cut_list_import_empty">No hay nada que importar: primero pega rangos de tiempo o marcadores</string>
@@ -1270,12 +1270,27 @@
     <string name="auto_edit_description">La IA analiza tus clips en busca de calidad, movimiento y rostros, y luego crea un carrete destacado con los mejores momentos.</string>
     <string name="auto_edit_start">Generar carrete destacado</string>
     <string name="auto_edit_generate_title">Generar carrete destacado</string>
-    <string name="auto_edit_subtitle">Convierta el metraje preliminar en un carrete de lo más destacado del primer montaje con un resumen creativo conciso y un pase de sincronización asistido por IA.</string>
+    <string name="auto_edit_subtitle">Puntúe varios momentos del metraje, elija una intención de corte y revise cada extracto antes de aplicarlo.</string>
     <string name="auto_edit_source_overview_title">Descripción general de la fuente</string>
     <string name="auto_edit_brief_title">Editar resumen</string>
     <string name="auto_edit_brief_description">Guíe el primer corte con un breve mensaje como \"resumen de viaje rápido con las reacciones más fuertes primero\" o déjelo en blanco para obtener un resumen neutral.</string>
-    <string name="auto_edit_generate_with_audio">ClearCut puede ajustar el ritmo del carrete a su nivel de audio actual mientras logra los momentos más fuertes.</string>
-    <string name="auto_edit_generate_no_audio">Aún puedes generar un primer corte ahora, pero agregar música o audio guía generalmente mejora el ritmo.</string>
+    <string name="auto_edit_intent_title">Intención y duración de la edición</string>
+    <string name="auto_edit_brief_unsupported">La coincidencia de palabras clave de texto libre y guion gráfico aún no es compatible. La intención y la duración seleccionadas son las únicas entradas creativas utilizadas.</string>
+    <string name="auto_edit_intent_highlight">Destacados</string>
+    <string name="auto_edit_intent_source_order">Orden de origen</string>
+    <string name="auto_edit_intent_beat_sync">Sincronizar ritmo</string>
+    <string name="auto_edit_duration_seconds">%1$d s</string>
+    <string name="auto_edit_review_title">Revisar propuesta</string>
+    <string name="auto_edit_review_summary">%1$d extractos · %2$.1f s · %3$.0f%% de confianza</string>
+    <string name="auto_edit_review_segment">%1$d. Origen %2$d · %3$s–%4$s · %5$d ms · puntuación %6$.0f%%</string>
+    <string name="auto_edit_review_scores">Calidad %1$.0f%% · movimiento %2$.0f%% · sujeto %3$.0f%% · audio %4$.0f%%</string>
+    <string name="auto_edit_review_warning">La propuesta no pudo cumplir completamente el tiempo solicitado. Revise cada extracto antes de aplicarlo.</string>
+    <string name="auto_edit_discard">Descartar</string>
+    <string name="auto_edit_apply">Aplicar como una edición</string>
+    <string name="auto_edit_cancel_analysis">Cancelar análisis</string>
+    <string name="auto_edit_generate_with_audio">Sincronizar ritmo alineará los cortes propuestos con los ritmos detectados en la pista de audio actual.</string>
+    <string name="auto_edit_generate_no_audio">Sincronizar ritmo no tiene una pista de audio para analizar, por lo que la propuesta recurrirá explícitamente a la puntuación de destacados.</string>
+    <string name="auto_edit_generate_visual">Esta propuesta puntúa la calidad visual, el movimiento y la presencia del sujeto en varias ventanas de cada fuente.</string>
     <string name="auto_edit_clip_count">%1$d clips</string>
     <string name="auto_edit_audio_ready">Audio listo</string>
     <string name="auto_edit_no_soundtrack">Sin banda sonora</string>
@@ -2245,6 +2260,7 @@
     <string name="vm_auto_edit_created_toast">Edición automática creó %1$d segmentos</string>
     <string name="vm_auto_edit_failed_toast">No se pudo generar la edición automática</string>
     <string name="vm_auto_edit_error_toast">La edición automática falló</string>
+    <string name="vm_auto_edit_stale_toast">Las fuentes cambiaron después del análisis. Genere una propuesta nueva.</string>
     <string name="vm_tts_added_toast">Voz agregada a la pista de audio</string>
     <string name="vm_tts_failed_toast">La síntesis TTS falló</string>
     <string name="vm_effects_exported_toast">Efectos exportados: %1$s</string>

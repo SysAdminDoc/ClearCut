@@ -360,13 +360,10 @@ fun BoxScope.EditorUtilityPanelHost(
             clipCount = state.tracks.filter { it.type == TrackType.VIDEO }.flatMap { it.clips }.size,
             hasAudio = state.tracks.any { it.type == TrackType.AUDIO && it.clips.isNotEmpty() },
             isProcessing = state.isAutoEditing,
-            onGenerate = { script ->
-                val storyboardScript = if (state.storyboardCards.isNotEmpty() && script.isNullOrBlank()) {
-                    state.storyboardCards.sortedBy { it.ordinal }
-                        .joinToString("\n") { "${it.ordinal + 1}. ${it.shotText} (${it.targetDurationMs / 1000}s)" }
-                } else script
-                viewModel.runAutoEdit(storyboardScript)
-            },
+            proposal = state.autoEditProposal,
+            onGenerate = viewModel::runAutoEdit,
+            onCancel = viewModel::cancelAutoEdit,
+            onApply = viewModel::applyAutoEditProposal,
             onClose = viewModel::hideAutoEdit
         )
     }

@@ -2,14 +2,211 @@ package com.novacut.editor.engine
 
 import android.net.TestUri
 import com.novacut.editor.model.Clip
+import com.novacut.editor.model.Caption
+import com.novacut.editor.model.CaptionStyle
+import com.novacut.editor.model.ColorGrade
 import com.novacut.editor.model.ImageOverlay
+import com.novacut.editor.model.TextOverlay
 import com.novacut.editor.model.Track
 import com.novacut.editor.model.TrackType
+import com.novacut.editor.model.Watermark
+import com.novacut.editor.model.WatermarkPosition
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
+import java.io.File
+import java.io.IOException
+import java.security.MessageDigest
 
 class ProjectArchiveTest {
+
+    @Test
+    fun mediaManifestV1StillParsesAsOptionalMedia() {
+        val raw = """{"version":1,"entries":[{"originalUri":"content://clip","entryName":"media/0.mp4"}]}"""
+
+        val parsed = ProjectArchive.parseMediaManifest(raw)
+
+        assertEquals(1, parsed.version)
+        assertEquals(
+            ProjectArchive.ArchiveManifestEntry(
+                kind = ProjectDependencyKind.MEDIA.name,
+                logicalReference = "content://clip",
+                entryName = "media/0.mp4",
+                byteLength = null,
+                sha256 = null,
+                archivePolicy = ProjectDependencyArchivePolicy.INCLUDE.name,
+                required = false
+            ),
+            parsed.entries.single()
+        )
+    }
+
+    @Test
+    fun mediaManifestV2RoundTripsTypedIntegrityAndPolicyFields() {
+        val entries = listOf(
+            ProjectArchive.ArchiveManifestEntry(
+                kind = ProjectDependencyKind.LUT.name,
+                logicalReference = "/old/look.cube",
+                entryName = "luts/0_look.cube",
+                byteLength = 42L,
+                sha256 = "ab".repeat(32),
+                archivePolicy = ProjectDependencyArchivePolicy.INCLUDE.name,
+                required = true,
+                fallbackName = "Neutral color"
+            ),
+            ProjectArchive.ArchiveManifestEntry(
+                kind = ProjectDependencyKind.MODEL.name,
+                logicalReference = SEGMENTATION_MODEL_DEPENDENCY,
+                entryName = null,
+                byteLength = null,
+                sha256 = null,
+                archivePolicy = ProjectDependencyArchivePolicy.REFERENCE_ONLY.name,
+                required = true
+            )
+        )
+
+        val parsed = ProjectArchive.parseMediaManifest(ProjectArchive.buildMediaManifestV2(entries))
+
+        assertEquals(2, parsed.version)
+        assertEquals(entries, parsed.entries)
+    }
+
+    @Test
+    fun verifyManifestRejectsTamperedRequiredEntryAndWarnsForOptionalEntry() {
+        val file = File.createTempFile("archive-manifest", ".bin").apply { writeText("tampered") }
+        val actualHash = MessageDigest.getInstance("SHA-256")
+            .digest("tampered".toByteArray())
+            .joinToString("") { "%02x".format(it) }
+        val badHash = MessageDigest.getInstance("SHA-256")
+            .digest("expected".toByteArray())
+            .joinToString("") { "%02x".format(it) }
+        val required = ProjectArchive.ArchiveManifestEntry(
+            kind = ProjectDependencyKind.MEDIA.name,
+            logicalReference = "content://clip",
+            entryName = "media/0.mp4",
+            byteLength = 8L,
+            sha256 = actualHash,
+            archivePolicy = ProjectDependencyArchivePolicy.INCLUDE.name,
+            required = true
+        )
+        ProjectArchive.verifyManifestFiles(
+            ProjectArchive.ParsedArchiveManifest(2, listOf(required)),
+            mapOf("media/0.mp4" to file),
+            mutableListOf()
+        )
+        val tamperedManifest = required.copy(sha256 = badHash)
+        try {
+            ProjectArchive.verifyManifestFiles(
+                ProjectArchive.ParsedArchiveManifest(2, listOf(tamperedManifest)),
+                mapOf("media/0.mp4" to file),
+                mutableListOf()
+            )
+            fail("Required tampering must reject the archive")
+        } catch (_: IOException) {
+            // Expected.
+        }
+
+        val warnings = mutableListOf<String>()
+        val invalidOptionalEntries = ProjectArchive.verifyManifestFiles(
+            ProjectArchive.ParsedArchiveManifest(2, listOf(tamperedManifest.copy(required = false))),
+            mapOf("media/0.mp4" to file),
+            warnings
+        )
+        assertTrue(warnings.single().contains("integrity check failed"))
+        assertEquals(setOf("media/0.mp4"), invalidOptionalEntries)
+        file.delete()
+    }
+
+    @Test
+    fun verifyManifestRejectsUnknownRequiredKindButWarnsForOptionalKind() {
+        val unknown = ProjectArchive.ArchiveManifestEntry(
+            kind = "PLUGIN_PAYLOAD",
+            logicalReference = "example",
+            entryName = null,
+            byteLength = null,
+            sha256 = null,
+            archivePolicy = ProjectDependencyArchivePolicy.REFERENCE_ONLY.name,
+            required = true
+        )
+        try {
+            ProjectArchive.verifyManifestFiles(
+                ProjectArchive.ParsedArchiveManifest(2, listOf(unknown)),
+                emptyMap(),
+                mutableListOf()
+            )
+            fail("Unknown required dependency kinds must reject the archive")
+        } catch (_: IOException) {
+            // Expected.
+        }
+
+        val warnings = mutableListOf<String>()
+        ProjectArchive.verifyManifestFiles(
+            ProjectArchive.ParsedArchiveManifest(2, listOf(unknown.copy(required = false))),
+            emptyMap(),
+            warnings
+        )
+        assertTrue(warnings.single().contains("Ignored optional dependency kind"))
+    }
+
+    @Test
+    fun rewriteDependencyReferencesUpdatesRecursiveLutsAndCustomFonts() {
+        val uri = testUri("file:///clip.mp4", "clip.mp4")
+        val watermarkUri = testUri("content://brand/logo.png", "logo.png")
+        val restoredWatermarkUri = testUri("file:///import/watermarks/logo.png", "logo.png")
+        val nested = Clip(
+            sourceUri = uri,
+            sourceDurationMs = 1_000L,
+            timelineStartMs = 0L,
+            colorGrade = ColorGrade(lutPath = "/old/look.cube"),
+            captions = listOf(Caption(
+                text = "caption",
+                startTimeMs = 0L,
+                endTimeMs = 500L,
+                style = CaptionStyle(fontFamily = "custom:caption.ttf")
+            ))
+        )
+        val state = AutoSaveState(
+            projectId = "project",
+            tracks = listOf(Track(
+                type = TrackType.VIDEO,
+                index = 0,
+                clips = listOf(Clip(
+                    sourceUri = uri,
+                    sourceDurationMs = 1_000L,
+                    timelineStartMs = 0L,
+                    isCompound = true,
+                    compoundClips = listOf(nested)
+                ))
+            )),
+            textOverlays = listOf(TextOverlay(text = "title", fontFamily = "custom:title.otf")),
+            exportWatermark = Watermark(
+                sourceUri = watermarkUri,
+                position = WatermarkPosition.TOP_LEFT,
+                opacity = 0.6f,
+                scalePercent = 22
+            )
+        )
+
+        val rewritten = ProjectArchive.rewriteDependencyReferences(
+            state,
+            lutPaths = mapOf("/old/look.cube" to "/new/luts/look.cube"),
+            installedFonts = mapOf(
+                "custom:caption.ttf" to "custom:hash_caption.ttf",
+                "custom:title.otf" to "custom:hash_title.otf"
+            ),
+            watermarkUris = mapOf(watermarkUri.toString() to restoredWatermarkUri)
+        )
+
+        val rewrittenNested = rewritten.tracks.single().clips.single().compoundClips.single()
+        assertEquals("/new/luts/look.cube", rewrittenNested.colorGrade?.lutPath)
+        assertEquals("custom:hash_caption.ttf", rewrittenNested.captions.single().style.fontFamily)
+        assertEquals("custom:hash_title.otf", rewritten.textOverlays.single().fontFamily)
+        assertEquals(restoredWatermarkUri.toString(), rewritten.exportWatermark?.sourceUri.toString())
+        assertEquals(WatermarkPosition.TOP_LEFT, rewritten.exportWatermark?.position)
+        assertEquals(0.6f, rewritten.exportWatermark?.opacity)
+        assertEquals(22, rewritten.exportWatermark?.scalePercent)
+    }
 
     @Test
     fun rewriteArchivedMediaUrisForImportKeepsMediaAssetManifestPlayable() {

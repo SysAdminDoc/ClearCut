@@ -1677,7 +1677,7 @@ class AiFeatures @Inject constructor(
         clips: List<AutoEditClip>,
         musicUri: Uri?,
         targetDurationMs: Long,
-        script: String? = null,
+        intent: AutoEditIntent = AutoEditIntent.HIGHLIGHT_REEL,
         onProgress: (Float) -> Unit = {}
     ): AutoEditResult = withContext(Dispatchers.IO) {
         if (clips.isEmpty() || targetDurationMs <= 0) {
@@ -1686,10 +1686,16 @@ class AiFeatures @Inject constructor(
 
         onProgress(0.05f)
 
-        // Phase 1: Analyze each clip for quality metrics
-        val scored = mutableListOf<Pair<Int, Float>>() // clipIndex to score
-        for ((idx, clip) in clips.withIndex()) {
+        // Analyze bounded windows across each source instead of trusting one midpoint.
+        val windowSpecs = clips.flatMap { clip ->
+            autoEditWindowRanges(clip.sourceStartMs, clip.sourceEndMs).mapIndexed { index, range ->
+                Triple(clip, index, range)
+            }
+        }.take(AutoEditPlanner.MAX_WINDOWS)
+        val windows = mutableListOf<AutoEditWindow>()
+        for ((analyzedIndex, spec) in windowSpecs.withIndex()) {
             ensureActive()
+            val (clip, windowIndex, range) = spec
             val retriever = MediaMetadataRetriever()
             try {
                 var qualityScore = 0f
@@ -1698,7 +1704,7 @@ class AiFeatures @Inject constructor(
 
                 try {
                     retriever.setDataSource(context, clip.uri)
-                    val midTime = clip.durationMs / 2
+                    val midTime = range.first + (range.last + 1L - range.first) / 2L
 
                     val frame = retriever.getFrameAtTime(
                         midTime * 1000L, MediaMetadataRetriever.OPTION_CLOSEST_SYNC
@@ -1720,7 +1726,8 @@ class AiFeatures @Inject constructor(
 
                             // Motion: compare two frames
                             frame2 = retriever.getFrameAtTime(
-                                (midTime + 500) * 1000L, MediaMetadataRetriever.OPTION_CLOSEST_SYNC
+                                min(midTime + 500L, range.last) * 1000L,
+                                MediaMetadataRetriever.OPTION_CLOSEST_SYNC
                             )
                             if (frame2 != null) {
                                 scaled2 = Bitmap.createScaledBitmap(frame2, 64, 36, true)
@@ -1738,11 +1745,23 @@ class AiFeatures @Inject constructor(
                     // Score remains 0 — clip will be ranked low
                 }
 
-                // Combined score: sharpness (40%), motion (30%), face (30%)
-                val combinedScore = qualityScore * 0.4f + motionScore * 0.3f + faceScore * 0.3f
-                scored.add(idx to combinedScore)
+                windows += AutoEditWindow(
+                    id = "${clip.clipFingerprint}:$windowIndex:${range.first}",
+                    clipId = clip.clipId,
+                    clipFingerprint = clip.clipFingerprint,
+                    sourceOrder = clip.sourceOrder,
+                    sourceStartMs = range.first,
+                    sourceEndMs = range.last + 1L,
+                    scores = AutoEditScoreComponents(
+                        visualQuality = qualityScore,
+                        motion = motionScore,
+                        subjectPresence = faceScore,
+                        audioEnergy = 0f,
+                        keywordRelevance = 0f
+                    )
+                )
 
-                onProgress(0.05f + 0.5f * (idx + 1) / clips.size)
+                onProgress(0.05f + 0.5f * (analyzedIndex + 1) / windowSpecs.size.coerceAtLeast(1))
             } finally {
                 retriever.release()
             }
@@ -1750,7 +1769,7 @@ class AiFeatures @Inject constructor(
 
         // Phase 2: Optionally detect beats for synced cuts
         var beatPositions: List<Long> = emptyList()
-        if (musicUri != null) {
+        if (intent == AutoEditIntent.BEAT_SYNC && musicUri != null) {
             try {
                 val extractor = MediaExtractor()
                 try {
@@ -1833,102 +1852,44 @@ class AiFeatures @Inject constructor(
 
         onProgress(0.75f)
 
-        // Phase 3: Select best segments to fill target duration
-        val rankedClips = scored.sortedByDescending { it.second }
-        val segments = mutableListOf<AutoEditSegment>()
-        val transitionPoints = mutableListOf<Long>()
-        var timelinePos = 0L
-
-        // Script-based ordering: use script segments to determine clip order/duration
-        if (!script.isNullOrBlank()) {
-            val scriptSegments = parseScriptToSegments(script, clips.size, targetDurationMs)
-            for (seg in scriptSegments) {
-                ensureActive()
-                if (timelinePos >= targetDurationMs) break
-                val clipIdx = seg.clipIndex ?: continue
-                if (clipIdx >= clips.size) continue
-                val segDur = min(seg.durationMs, clips[clipIdx].durationMs)
-                if (segDur <= 0) continue
-
-                segments.add(AutoEditSegment(
-                    clipIndex = clipIdx,
-                    trimStartMs = 0L,
-                    trimEndMs = segDur,
-                    timelineStartMs = timelinePos
-                ))
-
-                if (timelinePos > 0) transitionPoints.add(timelinePos)
-                timelinePos += segDur
-            }
-
-            onProgress(1f)
-            return@withContext AutoEditResult(
-                segments = segments,
-                transitionPoints = transitionPoints
+        val plan = AutoEditPlanner().plan(
+            AutoEditPlanRequest(
+                windows = windows,
+                targetDurationMs = targetDurationMs,
+                intent = intent,
+                beatPositionsMs = if (intent == AutoEditIntent.BEAT_SYNC) beatPositions else emptyList()
             )
-        }
-
-        if (beatPositions.size >= 2) {
-            // Beat-synced: place clips at beat intervals
-            val beatIntervals = (0 until beatPositions.size - 1).map {
-                beatPositions[it + 1] - beatPositions[it]
-            }
-            var beatIdx = 0
-            var rankIdx = 0
-
-            while (timelinePos < targetDurationMs && rankIdx < rankedClips.size) {
-                ensureActive()
-                val (clipIdx, _) = rankedClips[rankIdx % rankedClips.size]
-                val clipDur = clips[clipIdx].durationMs
-                val segDur = if (beatIdx < beatIntervals.size) {
-                    beatIntervals[beatIdx].coerceAtMost(clipDur)
-                } else {
-                    (targetDurationMs - timelinePos).coerceAtMost(clipDur)
-                }
-
-                if (segDur <= 0) break
-
-                segments.add(AutoEditSegment(
-                    clipIndex = clipIdx,
-                    trimStartMs = 0L,
-                    trimEndMs = segDur,
-                    timelineStartMs = timelinePos
-                ))
-
-                if (timelinePos > 0) transitionPoints.add(timelinePos)
-                timelinePos += segDur
-                beatIdx++
-                rankIdx++
-            }
-        } else {
-            // No beats: distribute evenly by quality ranking
-            val avgSegDur = if (rankedClips.isNotEmpty()) {
-                (targetDurationMs / rankedClips.size).coerceIn(1000L, 10000L)
-            } else return@withContext AutoEditResult()
-
-            for ((clipIdx, _) in rankedClips) {
-                ensureActive()
-                if (timelinePos >= targetDurationMs) break
-                val remaining = targetDurationMs - timelinePos
-                val segDur = min(avgSegDur, min(remaining, clips[clipIdx].durationMs))
-                if (segDur <= 0) continue
-
-                segments.add(AutoEditSegment(
-                    clipIndex = clipIdx,
-                    trimStartMs = 0L,
-                    trimEndMs = segDur,
-                    timelineStartMs = timelinePos
-                ))
-
-                if (timelinePos > 0) transitionPoints.add(timelinePos)
-                timelinePos += segDur
-            }
+        )
+        val clipIndexById = clips.mapIndexed { index, clip -> clip.clipId to index }.toMap()
+        val segments = plan.segments.mapNotNull { proposal ->
+            val clipIndex = clipIndexById[proposal.clipId] ?: return@mapNotNull null
+            AutoEditSegment(
+                clipIndex = clipIndex,
+                clipId = proposal.clipId,
+                clipFingerprint = proposal.clipFingerprint,
+                trimStartMs = proposal.sourceStartMs,
+                trimEndMs = proposal.sourceEndMs,
+                timelineStartMs = proposal.timelineStartMs,
+                timelineEndMs = proposal.timelineEndMs,
+                scoreComponents = proposal.scoreComponents,
+                score = proposal.score,
+                confidence = proposal.confidence,
+                rationale = proposal.rationale,
+                beatAligned = proposal.beatAligned
+            )
         }
 
         onProgress(1f)
         AutoEditResult(
             segments = segments,
-            transitionPoints = transitionPoints
+            transitionPoints = segments.drop(1).map { it.timelineStartMs },
+            intent = intent,
+            requestedDurationMs = targetDurationMs,
+            plannedDurationMs = plan.plannedDurationMs,
+            confidence = plan.confidence,
+            beatSupport = plan.beatSupport,
+            warnings = plan.warnings,
+            keywordSupport = AutoEditKeywordSupport.UNSUPPORTED
         )
     }
 
@@ -2427,21 +2388,75 @@ data class ScriptSegment(
 // ---- AI Auto-Edit / Highlight Reel ----
 
 data class AutoEditClip(
+    val clipId: String,
+    val clipFingerprint: String,
     val uri: Uri,
-    val durationMs: Long
+    val sourceStartMs: Long,
+    val sourceEndMs: Long,
+    val sourceOrder: Int
 )
 
 data class AutoEditResult(
     val segments: List<AutoEditSegment> = emptyList(),
-    val transitionPoints: List<Long> = emptyList()
+    val transitionPoints: List<Long> = emptyList(),
+    val intent: AutoEditIntent = AutoEditIntent.HIGHLIGHT_REEL,
+    val requestedDurationMs: Long = 0L,
+    val plannedDurationMs: Long = 0L,
+    val confidence: Float = 0f,
+    val beatSupport: AutoEditBeatSupport = AutoEditBeatSupport.NOT_REQUESTED,
+    val warnings: List<AutoEditPlanWarning> = emptyList(),
+    /** Creative-brief text is intentionally not represented as semantic matching. */
+    val keywordSupport: AutoEditKeywordSupport = AutoEditKeywordSupport.UNSUPPORTED
 )
 
 data class AutoEditSegment(
     val clipIndex: Int,
+    val clipId: String,
+    val clipFingerprint: String,
     val trimStartMs: Long,
     val trimEndMs: Long,
-    val timelineStartMs: Long
+    val timelineStartMs: Long,
+    val timelineEndMs: Long,
+    val scoreComponents: AutoEditScoreComponents,
+    val score: Float,
+    val confidence: Float,
+    val rationale: List<String>,
+    val beatAligned: Boolean
 )
+
+enum class AutoEditKeywordSupport { UNSUPPORTED }
+
+/**
+ * Deterministic, bounded sampling plan used by Auto Edit analysis.
+ * Windows never overlap, never exceed [preferredWindowMs], and sample head/middle/tail
+ * while capping decoder work for long footage.
+ */
+internal fun autoEditWindowRanges(
+    sourceStartMs: Long,
+    sourceEndMs: Long,
+    maxWindows: Int = 12,
+    preferredWindowMs: Long = 4_000L
+): List<LongRange> {
+    require(sourceStartMs >= 0L && sourceEndMs > sourceStartMs)
+    require(maxWindows > 0 && preferredWindowMs > 0L)
+    val durationMs = sourceEndMs - sourceStartMs
+    val count = minOf(maxWindows.toLong(), (durationMs + preferredWindowMs - 1L) / preferredWindowMs)
+        .toInt()
+        .coerceAtLeast(1)
+    if (durationMs > maxWindows.toLong() * preferredWindowMs) {
+        val availableStartRange = durationMs - preferredWindowMs
+        return (0 until count).map { index ->
+            val offset = if (count == 1) 0L else availableStartRange * index / (count - 1L)
+            val start = sourceStartMs + offset
+            start..(start + preferredWindowMs - 1L)
+        }
+    }
+    return (0 until count).map { index ->
+        val start = sourceStartMs + durationMs * index / count
+        val endExclusive = sourceStartMs + durationMs * (index + 1L) / count
+        start..(endExclusive - 1L)
+    }
+}
 
 // ---- AI Noise Reduction Analysis ----
 

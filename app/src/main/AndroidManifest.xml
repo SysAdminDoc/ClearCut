@@ -45,11 +45,21 @@
             android:name=".MainActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|density|uiMode"
             android:exported="true"
+            android:intentMatchingFlags="enforceIntentFilter"
             android:resizeableActivity="true"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- Explicit launcher/dynamic shortcuts must still match a declared
+                 action when Android 16 strict intent matching is enabled. -->
+            <intent-filter>
+                <action android:name="com.novacut.editor.action.NEW_PROJECT" />
+                <action android:name="com.novacut.editor.action.OPEN_RECENT" />
+                <action android:name="com.novacut.editor.action.RESUME_RECOVERED" />
+                <action android:name="com.novacut.editor.action.OPEN_LAST_PROJECT" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

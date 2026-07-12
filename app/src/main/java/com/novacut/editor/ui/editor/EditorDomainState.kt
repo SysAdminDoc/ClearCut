@@ -9,6 +9,7 @@ import com.novacut.editor.engine.MediaRelinkProbe
 import com.novacut.editor.engine.MediaHealthReport
 import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.engine.ExportState
+import com.novacut.editor.ai.AutoEditResult
 import com.novacut.editor.model.BatchExportItem
 import com.novacut.editor.model.ExportConfig
 
@@ -84,6 +85,7 @@ data class EditorAiState(
     val suggestion: AiSuggestion? = null,
     val usageLedger: List<AiUsageLedger.Entry> = emptyList(),
     val cutAssistantReview: CutAssistantEngine.ReviewSet? = null,
+    val autoEditProposal: AutoEditResult? = null,
     val isReframing: Boolean = false,
     val isAutoEditing: Boolean = false,
     val isSynthesizingTts: Boolean = false,
