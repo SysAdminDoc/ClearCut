@@ -17,9 +17,6 @@ import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.File
 import java.security.MessageDigest
-import kotlin.math.abs
-import kotlin.math.ceil
-import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 
@@ -251,63 +248,6 @@ class AudioEngine @Inject constructor(
     }
 
     /**
-     * Mix multiple audio tracks into a single PCM buffer.
-     * Each track has a volume level.
-     */
-    suspend fun mixAudioTracks(
-        tracks: List<AudioTrackData>,
-        outputSampleRate: Int = 44100,
-        outputChannels: Int = 2
-    ): ShortArray = withContext(Dispatchers.IO) {
-        if (tracks.isEmpty()) return@withContext ShortArray(0)
-
-        val maxDuration = tracks.maxOf { it.durationMs }
-        // Guard against Int overflow for ultra-long timelines. At 44.1 kHz
-        // stereo, Int.MAX_VALUE samples caps at ~6h 45m; higher sample rates
-        // or longer timelines silently wrap negative, producing a
-        // NegativeArraySizeException on the FloatArray allocation. Clamp so
-        // we fail gracefully with an empty mix rather than a hard crash.
-        val rawSamples = (maxDuration / 1000.0 * outputSampleRate * outputChannels).toLong()
-        if (rawSamples <= 0L || rawSamples > Int.MAX_VALUE.toLong()) {
-            Log.w(TAG, "Timeline too long to mix in one pass: ${maxDuration / 1000}s — aborting mix")
-            return@withContext ShortArray(0)
-        }
-        val totalSamples = rawSamples.toInt()
-        val mixBuffer = FloatArray(totalSamples)
-
-        for (track in tracks) {
-            if (track.isMuted) continue
-            var pcm = decodeToPCM(track.uri)
-            val scaledVolume = track.volume
-
-            val srcRate = track.sourceSampleRate
-            val srcCh = track.sourceChannels
-            if (srcRate > 0 && srcCh > 0) {
-                if (srcCh != outputChannels) {
-                    pcm = convertChannels(pcm, srcCh, outputChannels)
-                }
-                if (srcRate != outputSampleRate) {
-                    pcm = resampleLinear(pcm, outputChannels, srcRate, outputSampleRate)
-                }
-            }
-
-            for (i in pcm.indices) {
-                if (i < mixBuffer.size) {
-                    mixBuffer[i] += pcm[i].toFloat() * scaledVolume
-                }
-            }
-        }
-
-        // Normalize and convert to Short
-        val maxVal = mixBuffer.maxOfOrNull { abs(it) } ?: 1f
-        val normalizer = if (maxVal > Short.MAX_VALUE) Short.MAX_VALUE.toFloat() / maxVal else 1f
-
-        ShortArray(mixBuffer.size) { i ->
-            (mixBuffer[i] * normalizer).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
-        }
-    }
-
-    /**
      * Apply volume fade to PCM data.
      */
     fun applyFade(
@@ -527,74 +467,6 @@ class AudioEngine @Inject constructor(
         )
     }
 
-    /**
-     * Linear-interpolation resampler for interleaved 16-bit PCM.
-     * Falls back when OboeResamplerEngine is unavailable.
-     */
-    fun resampleLinear(
-        input: ShortArray,
-        inputChannels: Int,
-        fromRate: Int,
-        toRate: Int,
-    ): ShortArray {
-        if (fromRate == toRate || input.isEmpty() || inputChannels <= 0) return input
-        val inputFrames = input.size / inputChannels
-        if (inputFrames <= 1) return input
-
-        val ratio = fromRate.toDouble() / toRate
-        val outputFrames = ceil(inputFrames / ratio).toInt()
-        val output = ShortArray(outputFrames * inputChannels)
-
-        for (f in 0 until outputFrames) {
-            val srcPos = f * ratio
-            val srcIdx = floor(srcPos).toInt()
-            val frac = (srcPos - srcIdx).toFloat()
-            val idx0 = srcIdx.coerceIn(0, inputFrames - 1)
-            val idx1 = (srcIdx + 1).coerceIn(0, inputFrames - 1)
-            for (ch in 0 until inputChannels) {
-                val s0 = input[idx0 * inputChannels + ch].toFloat()
-                val s1 = input[idx1 * inputChannels + ch].toFloat()
-                val interpolated = s0 + (s1 - s0) * frac
-                output[f * inputChannels + ch] = interpolated
-                    .toInt()
-                    .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
-                    .toShort()
-            }
-        }
-        return output
-    }
-
-    fun convertChannels(
-        input: ShortArray,
-        fromChannels: Int,
-        toChannels: Int,
-    ): ShortArray {
-        if (fromChannels == toChannels || input.isEmpty() || fromChannels <= 0 || toChannels <= 0) return input
-        val frames = input.size / fromChannels
-        val output = ShortArray(frames * toChannels)
-
-        for (f in 0 until frames) {
-            if (fromChannels == 1 && toChannels == 2) {
-                output[f * 2] = input[f]
-                output[f * 2 + 1] = input[f]
-            } else if (fromChannels == 2 && toChannels == 1) {
-                val l = input[f * 2].toInt()
-                val r = input[f * 2 + 1].toInt()
-                output[f] = ((l + r) / 2).toShort()
-            } else if (toChannels < fromChannels) {
-                for (ch in 0 until toChannels) {
-                    output[f * toChannels + ch] = input[f * fromChannels + ch]
-                }
-            } else {
-                for (ch in 0 until toChannels) {
-                    val srcCh = ch.coerceAtMost(fromChannels - 1)
-                    output[f * toChannels + ch] = input[f * fromChannels + srcCh]
-                }
-            }
-        }
-        return output
-    }
-
     private fun readPcmSamples(outputBuffer: ByteBuffer, bufferInfo: MediaCodec.BufferInfo): ShortArray {
         if (bufferInfo.size < 2) return ShortArray(0)
         val buffer = outputBuffer.duplicate()
@@ -611,17 +483,6 @@ class AudioEngine @Inject constructor(
         return samples
     }
 }
-
-data class AudioTrackData(
-    val uri: Uri,
-    val volume: Float = 1f,
-    val isMuted: Boolean = false,
-    val durationMs: Long = 0L,
-    val fadeInMs: Long = 0L,
-    val fadeOutMs: Long = 0L,
-    val sourceSampleRate: Int = 0,
-    val sourceChannels: Int = 0,
-)
 
 data class AudioFormatInfo(
     val sampleRate: Int,
