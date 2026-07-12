@@ -296,7 +296,14 @@ class ClipEditingDelegate(
     }
 
     // --- Delete Clip ---
-    fun deleteSelectedClip() {
+
+    /** Ripple delete: remove the selection and close the gap (shift later clips left). */
+    fun deleteSelectedClip() = removeSelectedClips(ripple = true)
+
+    /** Lift delete: remove the selection but leave the gap; nothing else moves. */
+    fun liftSelectedClip() = removeSelectedClips(ripple = false)
+
+    private fun removeSelectedClips(ripple: Boolean) {
         val state = stateFlow.value
         val livePlayheadMs = currentPlayheadMs()
         val selectedIds = state.selectedClipIds.ifEmpty { setOfNotNull(state.selectedClipId) }
@@ -312,19 +319,32 @@ class ClipEditingDelegate(
         // across lanes) using one track's ranges left markers misaligned with the
         // content they annotated. The ripple helpers sort and merge overlaps, so a
         // same-range linked A/V delete still collapses to one shift — no change to
-        // the common single-track case.
-        val markerRippleRanges = state.tracks
-            .flatMap { track -> track.clips.filter { it.id in clipIdsToDelete } }
-            .map { it.timelineStartMs to it.timelineEndMs }
+        // the common single-track case. A lift leaves the gap, so it passes NO
+        // ranges: every marker, beat, and later clip stays exactly where it was.
+        val markerRippleRanges = if (ripple) {
+            state.tracks
+                .flatMap { track -> track.clips.filter { it.id in clipIdsToDelete } }
+                .map { it.timelineStartMs to it.timelineEndMs }
+        } else {
+            emptyList()
+        }
         val rippledPlayheadMs = ripplePlaybackPosition(livePlayheadMs, markerRippleRanges)
         saveUndoState(
-            if (clipIdsToDelete.size == 1) "Delete clip"
-            else "Delete ${clipIdsToDelete.size} clips"
+            when {
+                clipIdsToDelete.size == 1 && ripple -> "Delete clip"
+                clipIdsToDelete.size == 1 -> "Lift clip"
+                ripple -> "Delete ${clipIdsToDelete.size} clips"
+                else -> "Lift ${clipIdsToDelete.size} clips"
+            }
         )
 
         stateFlow.update { state ->
             recalculateDuration(state.copy(
-                tracks = rippleDeleteClips(state.tracks, clipIdsToDelete),
+                tracks = if (ripple) {
+                    rippleDeleteClips(state.tracks, clipIdsToDelete)
+                } else {
+                    removeClipsWithoutRipple(state.tracks, clipIdsToDelete)
+                },
                 selectedClipId = null,
                 selectedTrackId = null,
                 selectedClipIds = emptySet(),

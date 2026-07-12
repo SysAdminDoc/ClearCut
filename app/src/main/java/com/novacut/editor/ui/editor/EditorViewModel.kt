@@ -1328,6 +1328,7 @@ class EditorViewModel @Inject constructor(
         generateAiSuggestion(clipId)
     }
     fun deleteSelectedClip() = clipEditingDelegate.deleteSelectedClip()
+    fun liftSelectedClip() = clipEditingDelegate.liftSelectedClip()
     fun duplicateSelectedClip() = clipEditingDelegate.duplicateSelectedClip()
     fun mergeWithNextClip() = clipEditingDelegate.mergeWithNextClip()
     fun splitClipAtPlayhead() = clipEditingDelegate.splitClipAtPlayhead()

@@ -7,6 +7,7 @@ import com.novacut.editor.model.*
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -559,6 +560,33 @@ class TimelineEditingTest {
         assertEquals(listOf("first", "last"), result[0].clips.map { it.id })
         assertEquals(listOf(1_000L, 2_500L), result[0].clips.map { it.timelineStartMs })
         assertEquals(5_000L, result[1].clips.single().timelineStartMs)
+    }
+
+    @Test
+    fun `lift delete removes clips without moving any later clip or gap`() {
+        val first = clip("first", 1_000L, 0L, 500L, 500L)
+        val lifted = clip("lifted", 2_000L, 0L, 500L, 500L)
+        val last = clip("last", 3_000L, 0L, 400L, 400L)
+        val untouched = clip("untouched", 5_000L, 0L, 300L, 300L)
+        val tracks = listOf(
+            Track(type = TrackType.VIDEO, index = 0, clips = listOf(first, lifted, last)),
+            Track(type = TrackType.AUDIO, index = 1, clips = listOf(untouched))
+        )
+
+        val result = removeClipsWithoutRipple(tracks, setOf("lifted"))
+
+        // The lifted clip is gone but every other clip keeps its exact position,
+        // leaving the 2_000..2_500 hole intact.
+        assertEquals(listOf("first", "last"), result[0].clips.map { it.id })
+        assertEquals(listOf(1_000L, 3_000L), result[0].clips.map { it.timelineStartMs })
+        assertEquals(5_000L, result[1].clips.single().timelineStartMs)
+    }
+
+    @Test
+    fun `lift delete of an unknown id is a no-op that reuses the same track instances`() {
+        val only = clip("only", 0L, 0L, 500L, 500L)
+        val tracks = listOf(Track(type = TrackType.VIDEO, index = 0, clips = listOf(only)))
+        assertSame(tracks[0], removeClipsWithoutRipple(tracks, setOf("missing"))[0])
     }
 
     @Test

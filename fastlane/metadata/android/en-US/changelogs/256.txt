@@ -1,0 +1,1 @@
+Timeline editing now has two ways to delete: the usual Delete closes the gap (ripple), while Shift+Delete lifts a clip out and leaves the hole so nothing else on the timeline shifts. Both are a single undo step and leave your markers where they are.

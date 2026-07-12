@@ -442,7 +442,14 @@ fun EditorScreen(
                 when {
                     // Space = play/pause
                     event.key == Key.Spacebar -> { viewModel.togglePlayPause(); true }
-                    // Delete/Backspace = delete clip
+                    // Shift+Delete/Backspace = lift clip (remove, leave the gap)
+                    (event.key == Key.Delete || event.key == Key.Backspace) && event.isShiftPressed -> {
+                        if (state.selectedClipId != null) {
+                            viewModel.liftSelectedClip()
+                            true
+                        } else false
+                    }
+                    // Delete/Backspace = ripple delete clip (remove, close the gap)
                     event.key == Key.Delete || event.key == Key.Backspace -> {
                         if (state.selectedClipId != null) {
                             viewModel.deleteSelectedClip()

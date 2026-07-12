@@ -156,6 +156,19 @@ internal fun expandTimelineEditClipIds(tracks: List<Track>, seedIds: Set<String>
  * Ripple-remove only the requested clip intervals. Existing gaps and untouched
  * tracks retain their offsets; overlapping removed intervals are counted once.
  */
+/**
+ * Lift-remove the requested clips: delete them but leave the hole where they
+ * were, so no later clip on any track moves and every pre-existing gap keeps
+ * its exact duration. The non-rippling counterpart to [rippleDeleteClips].
+ */
+internal fun removeClipsWithoutRipple(tracks: List<Track>, clipIds: Set<String>): List<Track> {
+    if (clipIds.isEmpty()) return tracks
+    return tracks.map { track ->
+        val filtered = track.clips.filterNot { it.id in clipIds }
+        if (filtered.size == track.clips.size) track else track.copy(clips = filtered)
+    }
+}
+
 internal fun rippleDeleteClips(tracks: List<Track>, clipIds: Set<String>): List<Track> {
     if (clipIds.isEmpty()) return tracks
     return tracks.map { track ->
