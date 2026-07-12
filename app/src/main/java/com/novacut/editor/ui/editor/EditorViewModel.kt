@@ -1438,6 +1438,7 @@ class EditorViewModel @Inject constructor(
     fun removeImageOverlay(id: String) = overlayDelegate.removeImageOverlay(id)
     fun addTimelineMarker(label: String = "", color: MarkerColor = MarkerColor.BLUE) = overlayDelegate.addTimelineMarker(label, color)
     fun deleteTimelineMarker(id: String) = overlayDelegate.deleteTimelineMarker(id)
+    fun applyCutList(text: String) = overlayDelegate.applyCutList(text)
 
     fun jumpToNextMarker() {
         val current = _playheadMs.value

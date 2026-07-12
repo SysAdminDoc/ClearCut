@@ -1,0 +1,1 @@
+Paste or import a cut list: drop in timecodes and ranges (0:10 - 0:15 Label, 1:23 Marker) from the editor menu and ClearCut turns them into timeline markers in one undoable step. Supports minute:second, hour:minute:second, and plain-seconds formats with optional labels; bad lines are skipped and counted so nothing is half-applied.

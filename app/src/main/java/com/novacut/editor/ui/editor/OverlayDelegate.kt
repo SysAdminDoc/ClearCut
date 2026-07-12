@@ -3,6 +3,7 @@ package com.novacut.editor.ui.editor
 import android.content.Context
 import android.net.Uri
 import com.novacut.editor.R
+import com.novacut.editor.engine.CutListParser
 import com.novacut.editor.model.ImageOverlay
 import com.novacut.editor.model.ImageOverlayType
 import com.novacut.editor.model.MarkerColor
@@ -115,6 +116,70 @@ class OverlayDelegate(
         saveUndoState("Delete marker")
         stateFlow.update { state -> state.copy(timelineMarkers = state.timelineMarkers.filter { it.id != id }) }
         saveProject()
+    }
+
+    /**
+     * Parse a pasted / imported cut list and apply every valid row as timeline
+     * markers in a single undoable batch. Point rows become one marker; range
+     * rows become a bracketing "in"/"out" marker pair the user can act on with
+     * the existing marker + cut tools. Invalid rows are NOT applied — the full
+     * [CutListParser.Result] is returned so the caller can surface per-row
+     * errors for the user to fix. Nothing is committed when there is no valid
+     * row (avoids an empty undo entry).
+     */
+    fun applyCutList(text: String): CutListParser.Result {
+        val result = CutListParser.parse(text)
+        if (result.entries.isEmpty()) {
+            showToast(
+                if (result.hasErrors) {
+                    appContext.getString(R.string.cut_list_import_no_valid_rows, result.errors.size)
+                } else {
+                    appContext.getString(R.string.cut_list_import_empty)
+                }
+            )
+            return result
+        }
+        saveUndoState("Import cut list")
+        val newMarkers = buildList {
+            result.entries.forEach { entry ->
+                val start = entry.startMs.coerceAtLeast(0L)
+                val end = entry.endMs
+                if (end == null) {
+                    add(TimelineMarker(timeMs = start, label = entry.label, color = MarkerColor.BLUE))
+                } else {
+                    val base = entry.label.ifBlank { appContext.getString(R.string.cut_list_default_label) }
+                    add(
+                        TimelineMarker(
+                            timeMs = start,
+                            label = appContext.getString(R.string.cut_list_range_in, base),
+                            color = MarkerColor.ORANGE
+                        )
+                    )
+                    add(
+                        TimelineMarker(
+                            timeMs = end.coerceAtLeast(0L),
+                            label = appContext.getString(R.string.cut_list_range_out, base),
+                            color = MarkerColor.ORANGE
+                        )
+                    )
+                }
+            }
+        }
+        stateFlow.update {
+            it.copy(timelineMarkers = (it.timelineMarkers + newMarkers).sortedBy { m -> m.timeMs })
+        }
+        saveProject()
+        val markerCount = result.entries.count { !it.isRange }
+        val cutCount = result.entries.count { it.isRange }
+        showToast(
+            appContext.getString(
+                R.string.cut_list_imported_summary,
+                markerCount,
+                cutCount,
+                result.errors.size
+            )
+        )
+        return result
     }
 
 }

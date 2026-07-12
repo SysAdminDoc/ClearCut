@@ -689,6 +689,7 @@ fun EditorScreen(
                 editConfidenceStatus = editConfidenceStatus,
                 onOpenHistory = viewModel::showUndoHistory,
                 onOpenSnapshots = viewModel::showSnapshotHistory,
+                onApplyCutList = { viewModel.applyCutList(it) },
             )
 
             // Empty project onboarding hint
@@ -1213,9 +1214,11 @@ private fun EditorTopBar(
     editConfidenceStatus: EditConfidenceStatus,
     onOpenHistory: () -> Unit,
     onOpenSnapshots: () -> Unit,
+    onApplyCutList: (String) -> Unit = {},
 ) {
     var showOverflow by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
+    var showCutListDialog by remember { mutableStateOf(false) }
     var showSaveTemplateDialog by remember { mutableStateOf(false) }
     var showAddTrackMenu by remember { mutableStateOf(false) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
@@ -1397,6 +1400,70 @@ private fun EditorTopBar(
                 ClearCutSecondaryButton(
                     text = stringResource(R.string.editor_cancel),
                     onClick = { showRenameDialog = false }
+                )
+            },
+            containerColor = Mocha.PanelHighest,
+            titleContentColor = Mocha.Text,
+            textContentColor = Mocha.Subtext0,
+            shape = RoundedCornerShape(Radius.xxl)
+        )
+    }
+
+    if (showCutListDialog) {
+        var cutListText by remember { mutableStateOf("") }
+        val canImport = cutListText.isNotBlank()
+        AlertDialog(
+            onDismissRequest = { showCutListDialog = false },
+            icon = {
+                ClearCutDialogIcon(
+                    icon = Icons.Default.ContentPaste,
+                    accent = Mocha.Peach
+                )
+            },
+            title = {
+                Text(
+                    text = stringResource(R.string.cut_list_paste_title),
+                    color = Mocha.Text,
+                    style = MaterialTheme.typography.titleLarge
+                )
+            },
+            text = {
+                OutlinedTextField(
+                    value = cutListText,
+                    onValueChange = { cutListText = it },
+                    singleLine = false,
+                    minLines = 4,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(Radius.lg),
+                    label = { Text(stringResource(R.string.cut_list_paste_hint)) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Mocha.Text,
+                        unfocusedTextColor = Mocha.Text,
+                        cursorColor = Mocha.Peach,
+                        focusedBorderColor = Mocha.Peach,
+                        unfocusedBorderColor = Mocha.CardStroke,
+                        focusedLabelColor = Mocha.Peach,
+                        unfocusedLabelColor = Mocha.Subtext0,
+                        focusedContainerColor = Mocha.PanelRaised,
+                        unfocusedContainerColor = Mocha.PanelRaised
+                    )
+                )
+            },
+            confirmButton = {
+                ClearCutPrimaryButton(
+                    text = stringResource(R.string.cut_list_paste_apply),
+                    onClick = {
+                        onApplyCutList(cutListText)
+                        showCutListDialog = false
+                    },
+                    enabled = canImport,
+                    icon = Icons.Default.Check
+                )
+            },
+            dismissButton = {
+                ClearCutSecondaryButton(
+                    text = stringResource(R.string.editor_cancel),
+                    onClick = { showCutListDialog = false }
                 )
             },
             containerColor = Mocha.PanelHighest,
@@ -1675,6 +1742,19 @@ private fun EditorTopBar(
                                         Icons.Default.AutoAwesome,
                                         contentDescription = stringResource(R.string.v369_features_label),
                                         tint = Mocha.Mauve
+                                    )
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.cut_list_paste_title)) },
+                                onClick = {
+                                    showOverflow = false
+                                    showCutListDialog = true
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.ContentPaste,
+                                        contentDescription = stringResource(R.string.cut_list_paste_title)
                                     )
                                 }
                             )

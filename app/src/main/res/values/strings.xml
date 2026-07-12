@@ -1,7 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ClearCut</string>
-    <string name="app_version">v3.74.121</string>
+    <string name="app_version">v3.74.122</string>
+
+    <!-- Cut list / marker import -->
+    <string name="cut_list_import_empty">Nothing to import — paste time ranges or markers first</string>
+    <string name="cut_list_import_no_valid_rows">No valid rows — %1$d line(s) need fixing</string>
+    <string name="cut_list_imported_summary">Imported %1$d markers and %2$d cuts (%3$d skipped)</string>
+    <string name="cut_list_default_label">Cut</string>
+    <string name="cut_list_range_in">%1$s ▸ in</string>
+    <string name="cut_list_range_out">%1$s ▸ out</string>
+    <string name="cut_list_paste_title">Paste cut list</string>
+    <string name="cut_list_paste_hint">One per line: 0:10 - 0:15 Label, or 1:23 Marker</string>
+    <string name="cut_list_paste_apply">Import</string>
 
     <!-- Common -->
     <string name="close">Close</string>
