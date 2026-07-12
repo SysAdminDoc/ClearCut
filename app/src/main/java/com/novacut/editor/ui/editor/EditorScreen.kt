@@ -976,21 +976,6 @@ fun EditorScreen(
                 }
             }
 
-            // AI Suggestion Banner
-            AiSuggestionBanner(
-                suggestion = state.aiSuggestion,
-                onApply = { actionId ->
-                    viewModel.dismissAiSuggestion()
-                    when (actionId) {
-                        "auto_color" -> viewModel.runAiTool("auto_color")
-                        "denoise" -> viewModel.runAiTool("denoise")
-                        "transition", "transitions" -> viewModel.showTransitionPicker()
-                        else -> Log.w("EditorScreen", "Unknown AI suggestion action: $actionId")
-                    }
-                },
-                onDismiss = viewModel::dismissAiSuggestion
-            )
-
             if (state.compoundNavDepth > 0) {
                 CompoundNavBreadcrumb(
                     breadcrumbText = state.compoundBreadcrumbText,

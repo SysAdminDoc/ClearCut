@@ -912,14 +912,6 @@ class EditorViewModel @Inject constructor(
             }
         }
 
-        // First-run tutorial: show on first launch
-        viewModelScope.launch {
-            if (!settingsRepo.isTutorialShown()) {
-                delay(500)
-                showTutorial()
-            }
-        }
-
         // Apply user settings (export defaults + auto-save)
         var appliedDefaults = false
         viewModelScope.launch {

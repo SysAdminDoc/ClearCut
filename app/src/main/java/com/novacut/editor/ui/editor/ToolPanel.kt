@@ -117,13 +117,6 @@ private val clipMotionSubMenu = listOf(
     SubMenuItem("chroma_key", Icons.Default.Deblur, R.string.tool_chroma_key)
 )
 
-// Clip mode — Color tab sub-menu
-private val clipColorSubMenu = listOf(
-    SubMenuItem("color_grade", Icons.Default.Palette, R.string.tool_color_grade),
-    SubMenuItem("effects", Icons.Default.AutoFixHigh, R.string.tool_submenu_effects),
-    SubMenuItem("audio_norm", Icons.AutoMirrored.Filled.VolumeUp, R.string.tool_normalize_audio)
-)
-
 private val projectTextSubMenu = textSubMenu.filterNot { it.id == "captions" }
 
 // Secondary clip workflows live behind one deliberate More workbench so the
@@ -243,7 +236,6 @@ fun BottomToolArea(
         isClipMode && activeTabId == "edit" -> clipEditSubMenu
         isClipMode && activeTabId == "text" -> textSubMenu
         isClipMode && activeTabId == "transform" -> clipMotionSubMenu
-        isClipMode && activeTabId == "color" -> clipColorSubMenu
         isClipMode && activeTabId == "ai" -> clipAiSubMenu
         isClipMode && activeTabId == "more" -> clipMoreSubMenu
         else -> null
@@ -256,7 +248,7 @@ fun BottomToolArea(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(max = if (compactLocked || subMenuItems == null) 88.dp else 236.dp)
+            .heightIn(max = if (compactLocked || subMenuItems == null) 64.dp else 126.dp)
     ) {
         // Sub-menu grid (slides up above tab bar)
         if (!compactLocked) {
@@ -340,8 +332,8 @@ fun BottomToolArea(
                         onAction("transition")
                     }
                     "color" -> {
-                        // Clip mode: show Color sub-menu (Color Grade, Effects, Normalize Audio)
-                        activeTabId = if (activeTabId == "color") null else "color"
+                        activeTabId = null
+                        onAction("color_grade")
                     }
                     "ai" -> {
                         activeTabId = if (activeTabId == "ai") null else "ai"
@@ -479,9 +471,9 @@ private fun BottomTabBarItem(
     val tabLabel = if (tab.labelRes != 0) stringResource(tab.labelRes) else ""
     val itemDescription = if (isBack) stringResource(R.string.back) else tabLabel
     val itemShape = RoundedCornerShape(Radius.xs)
-    val iconSize = if (compact) 20.dp else 22.dp
-    val labelSlotHeight = if (compact) 16.dp else 18.dp
-    val itemHeight = if (compact) 56.dp else 60.dp
+    val iconSize = if (compact) 19.dp else 20.dp
+    val labelSlotHeight = 15.dp
+    val itemHeight = if (compact) 50.dp else 54.dp
     val itemBorderColor by animateColorAsState(
         targetValue = when {
             isBack -> Mocha.CardStroke.copy(alpha = 0.38f)
@@ -521,7 +513,7 @@ private fun BottomTabBarItem(
             .height(itemHeight)
             .background(itemContainerColor)
             .border(BorderStroke(1.dp, itemBorderColor), itemShape)
-            .padding(vertical = 3.dp, horizontal = 4.dp),
+            .padding(vertical = 2.dp, horizontal = 3.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
@@ -533,7 +525,7 @@ private fun BottomTabBarItem(
         Spacer(modifier = Modifier.height(2.dp))
         Box(
             modifier = Modifier
-                .height(24.dp)
+                .height(21.dp)
                 .fillMaxWidth(),
             contentAlignment = Alignment.Center
         ) {
@@ -553,11 +545,11 @@ private fun BottomTabBarItem(
             if (tabLabel.isNotEmpty()) {
                 Text(
                     text = tabLabel,
-                    fontSize = if (compact) 11.sp else 12.sp,
+                    fontSize = if (compact) 10.sp else 11.sp,
                     color = labelColor,
                     textAlign = TextAlign.Center,
                     maxLines = 2,
-                    lineHeight = if (compact) 12.sp else 13.sp,
+                    lineHeight = if (compact) 11.sp else 12.sp,
                     overflow = TextOverflow.Ellipsis
                 )
             }
@@ -572,114 +564,54 @@ private fun SubMenuGrid(
     modifier: Modifier = Modifier,
     disabledIds: Set<String> = emptySet()
 ) {
-    val itemsPerRow = 4
-    val preferredTileWidth = 88.dp
-    val tileHeight = 74.dp
-    val tileShape = RoundedCornerShape(Radius.md)
-    val iconBoxSize = 32.dp
-    val iconSize = 18.dp
-    val labelSlotHeight = 24.dp
-    val rows = items.chunked(itemsPerRow)
-
     Surface(
         color = Mocha.Panel,
-        shape = RoundedCornerShape(topStart = Radius.xl, topEnd = Radius.xl),
+        shape = RoundedCornerShape(topStart = Radius.sm, topEnd = Radius.sm),
+        border = BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.72f)),
         modifier = modifier.fillMaxWidth()
     ) {
-        Column(
+        LazyRow(
             modifier = Modifier
-                .heightIn(max = 156.dp)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 10.dp)
+                .height(62.dp),
+            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 5.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .width(40.dp)
-                    .height(5.dp)
-                    .clip(RoundedCornerShape(Radius.xs))
-                    .background(Mocha.Surface2.copy(alpha = 0.8f))
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                val tileWidth = minOf(preferredTileWidth, maxWidth / itemsPerRow)
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    rows.forEach { rowItems ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            rowItems.forEach { item ->
-                                val isDisabled = item.id in disabledIds
-                                val itemLabel = stringResource(item.labelRes)
-                                val itemAccent = if (isDisabled) Mocha.Overlay0 else LocalClearCutColors.current.accent
-                                Column(
-                                    modifier = Modifier
-                                        .size(width = tileWidth, height = tileHeight)
-                                        .clip(tileShape)
-                                        .clickable(enabled = !isDisabled) { onItemSelected(item.id) }
-                                        .semantics {
-                                            contentDescription = itemLabel
-                                            if (isDisabled) disabled()
-                                        }
-                                        .background(
-                                            Brush.verticalGradient(
-                                                listOf(
-                                                    itemAccent.copy(alpha = if (isDisabled) 0.05f else 0.12f),
-                                                    Mocha.PanelHighest
-                                                )
-                                            )
-                                        )
-                                        .border(
-                                            BorderStroke(
-                                                1.dp,
-                                                if (isDisabled) Mocha.CardStroke.copy(alpha = 0.6f) else itemAccent.copy(alpha = 0.18f)
-                                            ),
-                                            tileShape
-                                        )
-                                        .padding(horizontal = 8.dp, vertical = 7.dp)
-                                        .alpha(if (isDisabled) 0.45f else 1f),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(iconBoxSize)
-                                            .clip(RoundedCornerShape(Radius.sm))
-                                            .background(itemAccent.copy(alpha = if (isDisabled) 0.10f else 0.16f)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            item.icon,
-                                            contentDescription = null,
-                                            tint = if (isDisabled) Mocha.Subtext0 else itemAccent,
-                                            modifier = Modifier.size(iconSize)
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(labelSlotHeight),
-                                        contentAlignment = Alignment.TopCenter
-                                    ) {
-                                        Text(
-                                            text = itemLabel,
-                                            fontSize = 11.sp,
-                                            color = Mocha.Subtext0,
-                                            textAlign = TextAlign.Center,
-                                            maxLines = 2,
-                                            lineHeight = 13.sp,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                }
-                            }
-                            // Fill empty slots so items do not stretch.
-                            repeat(itemsPerRow - rowItems.size) {
-                                Spacer(modifier = Modifier.width(tileWidth))
-                            }
+            items(items, key = { it.id }) { item ->
+                val isDisabled = item.id in disabledIds
+                val itemLabel = stringResource(item.labelRes)
+                val itemAccent = if (isDisabled) Mocha.Overlay0 else LocalClearCutColors.current.accent
+                Column(
+                    modifier = Modifier
+                        .width(72.dp)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(Radius.xs))
+                        .clickable(enabled = !isDisabled) { onItemSelected(item.id) }
+                        .semantics {
+                            contentDescription = itemLabel
+                            if (isDisabled) disabled()
                         }
-                    }
+                        .background(if (isDisabled) Color.Transparent else itemAccent.copy(alpha = 0.08f))
+                        .alpha(if (isDisabled) 0.42f else 1f)
+                        .padding(horizontal = 4.dp, vertical = 3.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        item.icon,
+                        contentDescription = null,
+                        tint = if (isDisabled) Mocha.Subtext0 else itemAccent,
+                        modifier = Modifier.size(19.dp)
+                    )
+                    Spacer(modifier = Modifier.height(3.dp))
+                    Text(
+                        text = itemLabel,
+                        fontSize = 10.sp,
+                        color = Mocha.Subtext0,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        lineHeight = 11.sp,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
         }
