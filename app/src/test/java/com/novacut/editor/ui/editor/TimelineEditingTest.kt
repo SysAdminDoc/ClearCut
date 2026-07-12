@@ -18,6 +18,7 @@ class TimelineEditingTest {
         assertTrue(playbackSessionNeedsReset(false, Player.STATE_IDLE, false))
         assertTrue(playbackSessionNeedsReset(false, Player.STATE_READY, true))
         assertTrue(playbackSessionNeedsReset(true, Player.STATE_BUFFERING, false))
+        assertTrue(playbackSessionNeedsReset(false, Player.STATE_BUFFERING, false, playbackRequested = false))
         assertFalse(playbackSessionNeedsReset(false, Player.STATE_READY, false))
         assertFalse(playbackSessionNeedsReset(false, Player.STATE_BUFFERING, false))
     }

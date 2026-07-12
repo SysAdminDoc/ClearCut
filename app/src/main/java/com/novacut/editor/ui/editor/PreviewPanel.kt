@@ -366,7 +366,7 @@ fun PreviewPanel(
                             }
                         }
 
-                        if (isBuffering && totalDurationMs > 0 && !showGapState) {
+                        if (isBuffering && isPlaybackRequested && totalDurationMs > 0 && !showGapState) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(36.dp),
                                 color = Mocha.Sky,

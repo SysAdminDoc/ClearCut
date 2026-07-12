@@ -39,9 +39,11 @@ private const val DEFAULT_STILL_IMAGE_DURATION_MS = 3_000L
 internal fun playbackSessionNeedsReset(
     forceRestart: Boolean,
     playbackState: Int,
-    hasPlayerError: Boolean
+    hasPlayerError: Boolean,
+    playbackRequested: Boolean = true
 ): Boolean = forceRestart || hasPlayerError ||
-    playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED
+    playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED ||
+    (playbackState == Player.STATE_BUFFERING && !playbackRequested)
 
 internal fun canCoalesceAdjacentPreviewCuts(left: Clip, right: Clip): Boolean =
     left.timelineEndMs == right.timelineStartMs &&
@@ -324,7 +326,8 @@ class VideoEngine @Inject constructor(
         val resetSession = playbackSessionNeedsReset(
             forceRestart = restartSession,
             playbackState = p.playbackState,
-            hasPlayerError = p.playerError != null
+            hasPlayerError = p.playerError != null,
+            playbackRequested = p.playWhenReady
         )
         if (resetSession) {
             // A seek can move an ended player to BUFFERING before Play runs,
