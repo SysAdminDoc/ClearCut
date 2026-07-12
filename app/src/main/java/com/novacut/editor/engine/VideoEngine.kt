@@ -36,6 +36,13 @@ import javax.inject.Singleton
 private const val TAG = "VideoEngine"
 private const val DEFAULT_STILL_IMAGE_DURATION_MS = 3_000L
 
+internal fun playbackSessionNeedsReset(
+    forceRestart: Boolean,
+    playbackState: Int,
+    hasPlayerError: Boolean
+): Boolean = forceRestart || hasPlayerError ||
+    playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED
+
 @Singleton
 @androidx.annotation.OptIn(UnstableApi::class)
 class VideoEngine @Inject constructor(
@@ -268,15 +275,27 @@ class VideoEngine @Inject constructor(
 
     fun play() { player?.play() }
 
-    fun playFromTimelinePosition(positionMs: Long) {
+    fun playFromTimelinePosition(positionMs: Long, restartSession: Boolean = false) {
         val p = player ?: return
-        resolvePreviewSeekTarget(positionMs)?.let { target ->
+        val target = resolvePreviewSeekTarget(positionMs)
+        val resetSession = playbackSessionNeedsReset(
+            forceRestart = restartSession,
+            playbackState = p.playbackState,
+            hasPlayerError = p.playerError != null
+        )
+        if (resetSession) {
+            // A seek can move an ended player to BUFFERING before Play runs,
+            // while retaining the stale ended media period/decoder session.
+            // Stop first so prepare creates a fresh period at the edit point.
+            p.stop()
+        }
+        target?.let {
             // A playlist rebuilt at a cut boundary can still be buffering or
             // ended when the user presses Play. Reassert the resolved item and
             // offset here so play never inherits a stale ended media period.
-            p.seekTo(target.mediaItemIndex, target.mediaPositionMs)
+            p.seekTo(it.mediaItemIndex, it.mediaPositionMs)
         }
-        if (p.playbackState == Player.STATE_IDLE) {
+        if (resetSession || p.playbackState == Player.STATE_IDLE) {
             p.prepare()
         }
         p.play()
@@ -1770,9 +1789,7 @@ class VideoEngine @Inject constructor(
             p.setVideoEffects(emptyList())
             return
         }
-        val nextClipTransition = nextPreviewTransitionForClip(clip)
-
-        val effects = buildPreviewEffectsForClip(clip, nextClipTransition, trackedObjects)
+        val effects = buildPreviewEffectsForClip(clip, trackedObjects)
         try {
             p.setVideoEffects(effects)
         } catch (e: Exception) {
@@ -1810,9 +1827,7 @@ class VideoEngine @Inject constructor(
             setPreviewSpeed(1f)
             return
         }
-        val nextClipTransition = nextPreviewTransitionForClip(clip)
-
-        val effects = buildPreviewEffectsForClip(clip, nextClipTransition, previewTrackedObjects)
+        val effects = buildPreviewEffectsForClip(clip, previewTrackedObjects)
         try {
             p.setVideoEffects(effects)
         } catch (e: Exception) {
@@ -1824,14 +1839,17 @@ class VideoEngine @Inject constructor(
     /**
      * Build the complete effect chain for a clip preview, including:
      * - User effects (filters, color grading, blend modes)
-     * - Transition-in (if this clip has a transition)
-     * - Transition-out (if the next clip has a transition)
      * - Opacity and transform
+     *
+     * Timeline transitions are intentionally excluded here. A dissolve needs
+     * both adjacent frames and a compositor; dynamically swapping single-input
+     * GlEffects only fades through black and can leave Media3's frame processor
+     * stuck after a playlist rebuild or rewind. Transitions remain preserved
+     * in the project and are rendered by the export composition.
      */
     @UnstableApi
     private fun buildPreviewEffectsForClip(
         clip: Clip,
-        nextClipTransition: Transition?,
         trackedObjects: List<TrackedObject>
     ): List<androidx.media3.common.Effect> = buildList {
         val clipTrackedObjects = trackedObjects.filter { it.sourceClipId == clip.id && it.isEnabled }
@@ -1849,10 +1867,6 @@ class VideoEngine @Inject constructor(
         // Blend mode
         if (clip.blendMode != com.novacut.editor.model.BlendMode.NORMAL) {
             add(EffectShaders.blendMode(clip.blendMode, clip.opacity))
-        }
-        clip.headTransition?.let { add(EffectBuilder.buildTransitionEffect(it)) }
-        nextClipTransition?.let {
-            add(EffectBuilder.buildTransitionOutEffect(it, clip.durationMs))
         }
         // Opacity + transform (keyframe-animated or static)
         addOpacityAndTransformEffects(clip)
@@ -1895,18 +1909,6 @@ class VideoEngine @Inject constructor(
      */
     fun getCurrentClipIndex(): Int {
         return player?.currentMediaItemIndex ?: 0
-    }
-
-    private fun nextPreviewTransitionForClip(clip: Clip): Transition? {
-        if (clip.tailTransition != null) return clip.tailTransition
-        val clipIndex = videoClips.indexOfFirst { it.id == clip.id }
-        if (clipIndex < 0) return null
-        val nextClip = videoClips.getOrNull(clipIndex + 1) ?: return null
-        return if (nextClip.timelineStartMs <= clip.timelineEndMs) {
-            nextClip.headTransition
-        } else {
-            null
-        }
     }
 
     /**

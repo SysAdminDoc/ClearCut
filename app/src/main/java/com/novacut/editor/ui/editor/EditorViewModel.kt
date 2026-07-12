@@ -106,6 +106,8 @@ private const val WAVEFORM_PRELOAD_PADDING_MS = 3_000L
 private const val WAVEFORM_FALLBACK_WINDOW_MS = 15_000L
 private const val SUGGESTION_SNOOZE_STATE_KEY = "editingSuggestionSnoozeUntil"
 private const val SUGGESTION_SNOOZE_MS = 30 * 60 * 1_000L
+private const val PLAYBACK_START_RECOVERY_DELAY_MS = 3_000L
+private const val PLAYBACK_START_FAILURE_DELAY_MS = 7_000L
 
 internal fun shouldShowEditingSuggestion(
     suggestionId: String,
@@ -203,6 +205,7 @@ data class EditorState(
     val selectedTrackId: String? = null,
     val playheadMs: Long = 0L,
     val isPlaying: Boolean = false,
+    val isPlaybackRequested: Boolean = false,
     val zoomLevel: Float = 1f,
     val scrollOffsetMs: Long = 0L,
     val totalDurationMs: Long = 0L,
@@ -661,6 +664,7 @@ class EditorViewModel @Inject constructor(
     private var timelineWidthPx: Float = 0f
     private val waveformLoadJobs = java.util.concurrent.ConcurrentHashMap<String, Job>()
     private var gapPlaybackJob: Job? = null
+    private var playbackStartRecoveryJob: Job? = null
 
     private fun visibleTimelineDurationMs(state: EditorState = _state.value): Long? {
         if (timelineWidthPx <= 0f) return null
@@ -761,13 +765,29 @@ class EditorViewModel @Inject constructor(
         videoEngine.setPlayerListener(object : Player.Listener {
             override fun onIsPlayingChanged(playing: Boolean) {
                 _state.update { it.copy(isPlaying = playing) }
+                if (playing) playbackStartRecoveryJob?.cancel()
+            }
+
+            override fun onPlayWhenReadyChanged(
+                playWhenReady: Boolean,
+                reason: Int
+            ) {
+                _state.update { it.copy(isPlaybackRequested = playWhenReady) }
             }
 
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_ENDED) {
+                    playbackStartRecoveryJob?.cancel()
+                    videoEngine.pause()
                     val totalMs = _state.value.totalDurationMs
                     _playheadMs.value = totalMs
-                    _state.update { it.copy(isPlaying = false, playheadMs = totalMs) }
+                    _state.update {
+                        it.copy(
+                            isPlaying = false,
+                            isPlaybackRequested = false,
+                            playheadMs = totalMs
+                        )
+                    }
                 }
             }
 
@@ -779,8 +799,9 @@ class EditorViewModel @Inject constructor(
             }
 
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                playbackStartRecoveryJob?.cancel()
                 videoEngine.pause()
-                _state.update { it.copy(isPlaying = false) }
+                _state.update { it.copy(isPlaying = false, isPlaybackRequested = false) }
                 showToast(text(R.string.vm_preview_playback_failed_toast), ToastSeverity.Error)
                 Log.w("EditorViewModel", "Preview playback failed", error)
             }
@@ -1407,10 +1428,12 @@ class EditorViewModel @Inject constructor(
     fun togglePlayback() {
         if (gapPlaybackJob?.isActive == true) {
             cancelGapPlayback()
-            _state.update { it.copy(isPlaying = false) }
+            playbackStartRecoveryJob?.cancel()
+            _state.update { it.copy(isPlaying = false, isPlaybackRequested = false) }
         } else if (videoEngine.isPlaybackRequested() && !videoEngine.isPlaybackEnded()) {
+            playbackStartRecoveryJob?.cancel()
             videoEngine.pause()
-            _state.update { it.copy(isPlaying = false) }
+            _state.update { it.copy(isPlaying = false, isPlaybackRequested = false) }
         } else {
             val missingCount = _state.value.media.relinkReports
                 .values.count { it.state == MediaRelinkProbe.RelinkState.MISSING }
@@ -1421,18 +1444,47 @@ class EditorViewModel @Inject constructor(
                     ToastSeverity.Warning
                 )
             }
+            val currentPlayheadMs = _playheadMs.value
             val playhead = playbackStartPosition(
-                playheadMs = _playheadMs.value,
+                playheadMs = currentPlayheadMs,
                 totalDurationMs = _state.value.totalDurationMs
             )
-            if (playhead != _playheadMs.value) {
-                seekTo(playhead)
+            val restartSession = playhead != currentPlayheadMs
+            if (restartSession) {
+                _playheadMs.value = playhead
+                _state.update { it.copy(playheadMs = playhead) }
             }
             val currentPreviewClip = previewClipAtPosition(playhead)
             if (currentPreviewClip == null && _state.value.totalDurationMs > playhead) {
                 startGapPlayback(playhead)
             } else {
-                videoEngine.playFromTimelinePosition(playhead)
+                // Show Pause as soon as playback is requested. Player.isPlaying
+                // remains false while buffering; using it for the transport icon
+                // made a visible Play tap cancel playWhenReady after a cut.
+                _state.update { it.copy(isPlaybackRequested = true) }
+                videoEngine.playFromTimelinePosition(playhead, restartSession)
+                armPlaybackStartRecovery()
+            }
+        }
+    }
+
+    private fun armPlaybackStartRecovery() {
+        playbackStartRecoveryJob?.cancel()
+        playbackStartRecoveryJob = viewModelScope.launch {
+            delay(PLAYBACK_START_RECOVERY_DELAY_MS)
+            if (!videoEngine.isPlaybackRequested() || videoEngine.isPlaying()) return@launch
+
+            val recoveryPositionMs = _playheadMs.value
+            Log.w(
+                "EditorViewModel",
+                "Playback did not advance after request; resetting at $recoveryPositionMs ms"
+            )
+            videoEngine.playFromTimelinePosition(recoveryPositionMs, restartSession = true)
+            delay(PLAYBACK_START_FAILURE_DELAY_MS)
+            if (videoEngine.isPlaybackRequested() && !videoEngine.isPlaying()) {
+                videoEngine.pause()
+                _state.update { it.copy(isPlaying = false, isPlaybackRequested = false) }
+                showToast(text(R.string.vm_preview_playback_failed_toast), ToastSeverity.Error)
             }
         }
     }
@@ -1537,9 +1589,10 @@ class EditorViewModel @Inject constructor(
 
     // Panel mutual exclusion — atomic dismiss-and-show in single state update
     private fun pauseIfPlaying() {
-        if (videoEngine.isPlaying()) {
+        if (videoEngine.isPlaybackRequested()) {
+            playbackStartRecoveryJob?.cancel()
             videoEngine.pause()
-            _state.update { it.copy(isPlaying = false) }
+            _state.update { it.copy(isPlaying = false, isPlaybackRequested = false) }
         }
     }
 
@@ -5588,7 +5641,7 @@ class EditorViewModel @Inject constructor(
             if (targetClip != null) {
                 seekTo(targetClip.timelineStartMs)
                 videoEngine.play()
-                _state.update { it.copy(isPlaying = true) }
+                _state.update { it.copy(isPlaying = true, isPlaybackRequested = true) }
             }
             return
         }
@@ -5596,7 +5649,9 @@ class EditorViewModel @Inject constructor(
         cancelGapPlayback()
         videoEngine.pause()
         _playheadMs.value = startMs
-        _state.update { it.copy(isPlaying = true, playheadMs = startMs) }
+        _state.update {
+            it.copy(isPlaying = true, isPlaybackRequested = true, playheadMs = startMs)
+        }
 
         gapPlaybackJob = viewModelScope.launch {
             val gapPlaybackStartRealtime = SystemClock.elapsedRealtime()
@@ -5604,7 +5659,13 @@ class EditorViewModel @Inject constructor(
                 val elapsedMs = SystemClock.elapsedRealtime() - gapPlaybackStartRealtime
                 val positionMs = (startMs + elapsedMs).coerceAtMost(gapEndMs)
                 _playheadMs.value = positionMs
-                _state.update { it.copy(playheadMs = positionMs, isPlaying = true) }
+                _state.update {
+                    it.copy(
+                        playheadMs = positionMs,
+                        isPlaying = true,
+                        isPlaybackRequested = true
+                    )
+                }
                 if (positionMs >= gapEndMs) {
                     break
                 }
@@ -5619,14 +5680,22 @@ class EditorViewModel @Inject constructor(
             if (resumeClip != null) {
                 val resumeAtMs = resumeClip.timelineStartMs
                 _playheadMs.value = resumeAtMs
-                _state.update { it.copy(playheadMs = resumeAtMs, isPlaying = true) }
+                _state.update {
+                    it.copy(
+                        playheadMs = resumeAtMs,
+                        isPlaying = true,
+                        isPlaybackRequested = true
+                    )
+                }
                 videoEngine.seekTo(resumeAtMs)
                 videoEngine.play()
             } else {
                 val timelineEndMs = _state.value.totalDurationMs
                 if (_state.value.isLooping && timelineEndMs > 0L) {
                     _playheadMs.value = 0L
-                    _state.update { it.copy(playheadMs = 0L, isPlaying = true) }
+                    _state.update {
+                        it.copy(playheadMs = 0L, isPlaying = true, isPlaybackRequested = true)
+                    }
                     videoEngine.seekTo(0L)
                     if (previewClipAtPosition(0L) != null) {
                         videoEngine.play()
@@ -5635,7 +5704,13 @@ class EditorViewModel @Inject constructor(
                     }
                 } else {
                     _playheadMs.value = timelineEndMs
-                    _state.update { it.copy(playheadMs = timelineEndMs, isPlaying = false) }
+                    _state.update {
+                        it.copy(
+                            playheadMs = timelineEndMs,
+                            isPlaying = false,
+                            isPlaybackRequested = false
+                        )
+                    }
                 }
             }
         }
@@ -5646,7 +5721,7 @@ class EditorViewModel @Inject constructor(
         gapPlaybackJob?.cancel()
         gapPlaybackJob = null
         if (wasPlayingGap) {
-            _state.update { it.copy(isPlaying = false) }
+            _state.update { it.copy(isPlaying = false, isPlaybackRequested = false) }
         }
     }
 
@@ -5690,6 +5765,7 @@ class EditorViewModel @Inject constructor(
         super.onCleared()
         saveIndicatorJob?.cancel()
         toastJob?.cancel()
+        playbackStartRecoveryJob?.cancel()
         aiToolsDelegate.cancelAiTool()
         autoSave.stop()
         voiceoverDurationJob?.cancel()

@@ -35,13 +35,16 @@ class EditorPlaybackContractTest {
             viewModel.indexOf("fun toggleLoop()")
         )
 
-        assertTrue(engine.contains("fun playFromTimelinePosition(positionMs: Long)"))
+        assertTrue(engine.contains("fun playFromTimelinePosition(positionMs: Long, restartSession: Boolean = false)"))
         assertTrue(engine.contains("playerListener?.let(::addListener)"))
-        assertTrue(engine.contains("p.seekTo(target.mediaItemIndex, target.mediaPositionMs)"))
-        assertTrue(engine.contains("if (p.playbackState == Player.STATE_IDLE)"))
-        assertTrue(playbackBlock.contains("videoEngine.playFromTimelinePosition(playhead)"))
+        assertTrue(engine.contains("p.seekTo(it.mediaItemIndex, it.mediaPositionMs)"))
+        assertTrue(engine.contains("playbackSessionNeedsReset("))
+        assertTrue(engine.contains("p.stop()"))
+        assertTrue(playbackBlock.contains("videoEngine.playFromTimelinePosition(playhead, restartSession)"))
         assertTrue(playbackBlock.contains("videoEngine.isPlaybackRequested()"))
         assertTrue(playbackBlock.contains("!videoEngine.isPlaybackEnded()"))
+        assertTrue(playbackBlock.contains("isPlaybackRequested = true"))
+        assertTrue(playbackBlock.contains("armPlaybackStartRecovery()"))
         assertFalse(playbackBlock.contains("it.copy(isPlaying = true)"))
     }
 
@@ -57,6 +60,21 @@ class EditorPlaybackContractTest {
 
         assertFalse(splitBlock.contains("rebuildPlayerTimeline()"))
         assertTrue(splitBlock.contains("A split only partitions metadata"))
+    }
+
+    @Test
+    fun `live preview excludes single input transition shaders`() {
+        val engine = locate("app/src/main/java/com/novacut/editor/engine/VideoEngine.kt").readText()
+        val previewEffectsBlock = engine.substring(
+            engine.indexOf("private fun buildPreviewEffectsForClip("),
+            engine.indexOf("fun setPreviewVolume(")
+        )
+
+        assertFalse(previewEffectsBlock.contains("headTransition"))
+        assertFalse(previewEffectsBlock.contains("buildTransitionEffect"))
+        assertFalse(previewEffectsBlock.contains("buildTransitionOutEffect"))
+        assertTrue(engine.contains("Timeline transitions are intentionally excluded here"))
+        assertTrue(engine.contains("EffectBuilder.buildTransitionEffect(it)"))
     }
 
     private fun locate(relativePath: String): File {

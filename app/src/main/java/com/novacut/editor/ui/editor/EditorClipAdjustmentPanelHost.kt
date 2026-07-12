@@ -88,7 +88,7 @@ fun BoxScope.EditorClipAdjustmentPanelHost(
     ) {
         Column {
             MiniPlayerBar(
-                isPlaying = state.isPlaying,
+                isPlaying = state.isPlaybackRequested,
                 playheadMs = playheadMs,
                 totalDurationMs = state.totalDurationMs,
                 onTogglePlayback = viewModel::togglePlayback,
@@ -111,7 +111,7 @@ fun BoxScope.EditorClipAdjustmentPanelHost(
     ) {
         Column {
             MiniPlayerBar(
-                isPlaying = state.isPlaying,
+                isPlaying = state.isPlaybackRequested,
                 playheadMs = playheadMs,
                 totalDurationMs = state.totalDurationMs,
                 onTogglePlayback = viewModel::togglePlayback,
@@ -162,7 +162,7 @@ fun BoxScope.EditorClipAdjustmentPanelHost(
     ) {
         Column {
             MiniPlayerBar(
-                isPlaying = state.isPlaying,
+                isPlaying = state.isPlaybackRequested,
                 playheadMs = playheadMs,
                 totalDurationMs = state.totalDurationMs,
                 onTogglePlayback = viewModel::togglePlayback,
@@ -196,7 +196,7 @@ fun BoxScope.EditorClipAdjustmentPanelHost(
     ) {
         Column {
             MiniPlayerBar(
-                isPlaying = state.isPlaying,
+                isPlaying = state.isPlaybackRequested,
                 playheadMs = playheadMs,
                 totalDurationMs = state.totalDurationMs,
                 onTogglePlayback = viewModel::togglePlayback,

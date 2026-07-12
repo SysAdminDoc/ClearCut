@@ -80,6 +80,7 @@ fun PreviewPanel(
     playheadMs: Long,
     totalDurationMs: Long,
     isPlaying: Boolean,
+    isPlaybackRequested: Boolean,
     modifier: Modifier = Modifier,
     isLooping: Boolean = false,
     aspectRatio: AspectRatio = AspectRatio.RATIO_16_9,
@@ -468,8 +469,8 @@ fun PreviewPanel(
                     iconSize = 20.dp,
                 )
                 ClearCutChromeIconButton(
-                    icon = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = if (isPlaying) {
+                    icon = if (isPlaybackRequested) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = if (isPlaybackRequested) {
                         stringResource(R.string.preview_pause)
                     } else {
                         stringResource(R.string.preview_play)

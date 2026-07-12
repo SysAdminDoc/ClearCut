@@ -1,0 +1,3 @@
+Fixed intermittent preview playback failures after cutting by separating playback intent from active frame progress.
+Ended, failed, or stalled preview sessions now reset and resume at the active edit point instead of remaining stuck on Play.
+Transition metadata remains available for export while the editor preview avoids the GPU transition path that could leave a black frame after rewind.

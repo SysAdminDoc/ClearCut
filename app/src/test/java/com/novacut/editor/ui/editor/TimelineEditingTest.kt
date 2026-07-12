@@ -1,6 +1,8 @@
 package com.novacut.editor.ui.editor
 
 import android.net.FakeUri
+import androidx.media3.common.Player
+import com.novacut.editor.engine.playbackSessionNeedsReset
 import com.novacut.editor.model.*
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -9,6 +11,16 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TimelineEditingTest {
+
+    @Test
+    fun `playback session resets for ended idle failed and watchdog recovery states`() {
+        assertTrue(playbackSessionNeedsReset(false, Player.STATE_ENDED, false))
+        assertTrue(playbackSessionNeedsReset(false, Player.STATE_IDLE, false))
+        assertTrue(playbackSessionNeedsReset(false, Player.STATE_READY, true))
+        assertTrue(playbackSessionNeedsReset(true, Player.STATE_BUFFERING, false))
+        assertFalse(playbackSessionNeedsReset(false, Player.STATE_READY, false))
+        assertFalse(playbackSessionNeedsReset(false, Player.STATE_BUFFERING, false))
+    }
 
     @Test
     fun `playback restarts from zero after reaching the edited timeline end`() {

@@ -796,6 +796,7 @@ fun EditorScreen(
                     playheadMs = playheadMs,
                     totalDurationMs = state.totalDurationMs,
                     isPlaying = state.isPlaying,
+                    isPlaybackRequested = state.isPlaybackRequested,
                     isLooping = state.isLooping,
                     aspectRatio = state.project.aspectRatio,
                     frameRate = state.project.frameRate,
@@ -983,7 +984,7 @@ fun EditorScreen(
                     when (actionId) {
                         "auto_color" -> viewModel.runAiTool("auto_color")
                         "denoise" -> viewModel.runAiTool("denoise")
-                        "transition" -> viewModel.showTransitionPicker()
+                        "transition", "transitions" -> viewModel.showTransitionPicker()
                         else -> Log.w("EditorScreen", "Unknown AI suggestion action: $actionId")
                     }
                 },
