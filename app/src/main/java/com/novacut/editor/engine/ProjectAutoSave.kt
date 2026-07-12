@@ -46,6 +46,7 @@ class ProjectAutoSave @Inject constructor(
     fun startAutoSave(
         projectId: String,
         intervalMs: Long = 30_000,
+        onSaveResult: (Boolean) -> Unit = {},
         getState: () -> AutoSaveState
     ) {
         autoSaveJob?.cancel()
@@ -56,9 +57,11 @@ class ProjectAutoSave @Inject constructor(
                 try {
                     saveState(projectId, getState())
                     consecutiveFailures = 0
+                    onSaveResult(true)
                 } catch (e: Exception) {
                     consecutiveFailures++
                     Log.e(TAG, "Auto-save failed for $projectId (attempt $consecutiveFailures)", e)
+                    onSaveResult(false)
                     if (consecutiveFailures >= 3) {
                         Log.w(TAG, "Auto-save has failed $consecutiveFailures times in a row for $projectId")
                     }

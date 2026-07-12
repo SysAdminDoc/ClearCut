@@ -13,6 +13,7 @@
 - The video preview now owns all flexible phone height; the bounded timeline and tool dock stay together at the bottom instead of leaving a large empty timeline panel.
 - Cut works directly at the live playhead, selected clips expose an obvious red Delete button, playlist rebuilds start atomically at the active edit point, ripple deletes keep playback attached to surviving content, and Play restarts after reaching the edited timeline end.
 - Autosaves restore silently without interrupting editing with a confirmation popup.
+- Autosave status now changes to Saved only after the file write succeeds; failed periodic, immediate, or database writes remain visible as an inline error without a popup.
 - Editing suggestions now offer “Not now” and remain snoozed for 30 minutes instead of reappearing on each clip selection.
 - Manual cuts keep the prepared Media3 timeline intact, stored player listeners attach during lazy player creation, and Play re-seeks/restarts correctly after cuts and timeline end.
 - Merging adjacent cuts keeps every later clip at its existing timeline position instead of shifting the rest of the track backward into an overlap.

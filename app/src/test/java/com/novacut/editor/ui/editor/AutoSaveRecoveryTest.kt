@@ -49,6 +49,18 @@ class AutoSaveRecoveryTest {
         assertFalse(utilityPanels.contains("recovery_title"))
     }
 
+    @Test
+    fun saveIndicatorReflectsCompletedPersistenceInsteadOfAStartupTimer() {
+        val viewModel = locate("app/src/main/java/com/novacut/editor/ui/editor/EditorViewModel.kt").readText()
+        val autoSave = locate("app/src/main/java/com/novacut/editor/engine/ProjectAutoSave.kt").readText()
+
+        assertTrue(autoSave.contains("onSaveResult(true)"))
+        assertTrue(autoSave.contains("onSaveResult(false)"))
+        assertTrue(viewModel.contains("onSaveResult = { succeeded ->"))
+        assertTrue(viewModel.contains("!autoSave.saveNow(project.id, autoSaveState)"))
+        assertFalse(viewModel.contains("delay(500)\n                    showSaveIndicator"))
+    }
+
     private fun locate(relativePath: String): File {
         return listOf(File(relativePath), File("../$relativePath"))
             .firstOrNull(File::exists)

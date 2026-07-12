@@ -1014,16 +1014,21 @@ class EditorViewModel @Inject constructor(
         if (shouldRun) {
             autoSave.startAutoSave(
                 projectId ?: _state.value.project.id,
-                intervalMs = current.autoSaveIntervalSec * 1000L
+                intervalMs = current.autoSaveIntervalSec * 1000L,
+                onSaveResult = { succeeded ->
+                    showSaveIndicator(
+                        if (succeeded) {
+                            com.novacut.editor.model.SaveIndicatorState.SAVED
+                        } else {
+                            com.novacut.editor.model.SaveIndicatorState.ERROR
+                        }
+                    )
+                }
             ) {
                 showSaveIndicator(com.novacut.editor.model.SaveIndicatorState.SAVING)
                 val s = _state.value
                 val state = buildAutoSaveState(s)
                 persistProjectMediaAssets(state)
-                viewModelScope.launch {
-                    delay(500)
-                    showSaveIndicator(com.novacut.editor.model.SaveIndicatorState.SAVED)
-                }
                 state
             }
         } else {
@@ -5056,28 +5061,35 @@ class EditorViewModel @Inject constructor(
 
     fun saveProject() {
         viewModelScope.launch {
-            val s = _state.value
-            val firstClipUri = s.tracks
-                .filter { it.type == TrackType.VIDEO }
-                .flatMap { it.clips }
-                .firstOrNull()?.sourceUri?.toString()
+            try {
+                val s = _state.value
+                val firstClipUri = s.tracks
+                    .filter { it.type == TrackType.VIDEO }
+                    .flatMap { it.clips }
+                    .firstOrNull()?.sourceUri?.toString()
 
-            val project = s.project.copy(
-                updatedAt = System.currentTimeMillis(),
-                durationMs = s.totalDurationMs,
-                thumbnailUri = firstClipUri
-            )
-            val autoSaveState = buildAutoSaveState(s, project.id)
-            projectDao.insertProject(project)
-            projectDao.replaceProjectMediaAssets(
-                project.id,
-                autoSaveState.mediaAssets.toProjectMediaAssetEntities(project.id)
-            )
-            _state.update { it.copy(project = project) }
+                val project = s.project.copy(
+                    updatedAt = System.currentTimeMillis(),
+                    durationMs = s.totalDurationMs,
+                    thumbnailUri = firstClipUri
+                )
+                val autoSaveState = buildAutoSaveState(s, project.id)
+                projectDao.insertProject(project)
+                projectDao.replaceProjectMediaAssets(
+                    project.id,
+                    autoSaveState.mediaAssets.toProjectMediaAssetEntities(project.id)
+                )
+                _state.update { it.copy(project = project) }
 
-            // Persist track/clip data immediately (don't wait for auto-save timer)
-            if (recoveryOpenComplete && !autoSaveBlockedByRecovery) {
-                autoSave.saveNow(project.id, autoSaveState)
+                // Persist track/clip data immediately (don't wait for auto-save timer).
+                if (recoveryOpenComplete && !autoSaveBlockedByRecovery &&
+                    !autoSave.saveNow(project.id, autoSaveState)
+                ) {
+                    showSaveIndicator(com.novacut.editor.model.SaveIndicatorState.ERROR)
+                }
+            } catch (e: Exception) {
+                Log.e("EditorVM", "Project save failed", e)
+                showSaveIndicator(com.novacut.editor.model.SaveIndicatorState.ERROR)
             }
         }
     }
