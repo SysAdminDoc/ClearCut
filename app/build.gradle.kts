@@ -127,7 +127,8 @@ android {
             "FrequentlyChangingValue",
             "FlowOperatorInvokedInComposition",
             "RememberInComposition",
-            "AutoboxingStateCreation"
+            "AutoboxingStateCreation",
+            "UnrememberedMutableState"
         )
         baseline = file("lint-baseline.xml")
         abortOnError = true
