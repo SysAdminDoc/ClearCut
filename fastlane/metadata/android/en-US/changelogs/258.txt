@@ -1,0 +1,1 @@
+Diagnostic ZIPs now use bundle-scoped project pseudonyms and structured export-failure details only. Project identity, media paths, free-form errors, captions, and health prose stay private on-device. Spanish cut-list import copy no longer falls back to English.

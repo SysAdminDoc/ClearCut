@@ -1,11 +1,15 @@
 package com.novacut.editor.engine
 
+import android.content.Context
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import java.io.File
 import java.util.zip.ZipFile
 
@@ -173,5 +177,84 @@ class DiagnosticExportEngineTest {
         assertTrue(text.indexOf("ACCESS_LOCAL_NETWORK") < text.indexOf("NEARBY_WIFI_DEVICES"))
         assertFalse(text.contains("key=secret"))
         assertTrue(text.contains("<redacted>"))
+    }
+}
+
+@RunWith(RobolectricTestRunner::class)
+class DiagnosticExportBundlePrivacyTest {
+
+    @get:Rule
+    val temp = TemporaryFolder()
+
+    @Test
+    fun writeBundleExcludesHostileIncidentContentFromEveryEntry() {
+        val context = RuntimeEnvironment.getApplication().applicationContext as Context
+        val incidentStore = ExportIncidentStore.forContext(context)
+        incidentStore.clear()
+        val secret = "SECRET_JANE_PROJECT_TRANSCRIPT_93817"
+        incidentStore.save(
+            ExportIncidentBundle(
+                id = "hostile-incident",
+                appVersion = "v3.74.125",
+                deviceModel = "Test device",
+                androidSdk = 36,
+                projectId = "private-project-id-93817",
+                projectName = secret,
+                failedPhase = "encoder",
+                errorClass = "ExportException",
+                errorMessage = "$secret failed at C:\\Users\\Jane\\private-video.mp4",
+                encoderPath = "hardware: test.encoder",
+                codecLabel = "H.264",
+                resolutionLabel = "1080p",
+                frameRate = 30,
+                exportAudioOnly = false,
+                hdrRequested = false,
+                streamCopyAttempted = false,
+                timelineDurationMs = 60_000,
+                elapsedMs = 5_000,
+                progressSamples = listOf(0.25f, 0.5f),
+                mediaWarningCount = 2,
+                mediaBlockingCount = 1,
+                mediaHealthSummary = "$secret content://media/video/42 /storage/private.mov",
+                timestampEpochMs = 1_718_200_000_000,
+            )
+        )
+
+        val engine = DiagnosticExportEngine(
+            context = context,
+            crashRecordStore = CrashRecordStore(context),
+            memoryTrimBreadcrumbStore = MemoryTrimBreadcrumbStore.forContextFilesDir(context.filesDir),
+            processExitRecorder = ProcessExitRecorder(context),
+            settingsResetReportStore = SettingsResetReportStore(context),
+            exportIncidentStore = incidentStore,
+        )
+        val target = temp.newFile("privacy-diag.zip")
+
+        try {
+            engine.writeBundle(target, modelRegistry = emptyList(), now = 1_718_200_000_000)
+
+            ZipFile(target).use { zip ->
+                val entries = zip.entries().toList().filterNot { it.isDirectory }
+                assertTrue(entries.any { it.name == ExportIncidentStore.BUNDLE_ENTRY })
+                for (entry in entries) {
+                    val text = zip.getInputStream(entry).bufferedReader(Charsets.UTF_8).use { it.readText() }
+                    assertFalse("Secret leaked through ${entry.name}", text.contains(secret))
+                    assertFalse("Project ID leaked through ${entry.name}", text.contains("private-project-id-93817"))
+                    assertFalse("Path leaked through ${entry.name}", text.contains("private-video.mp4"))
+                    assertFalse("URI leaked through ${entry.name}", text.contains("content://media/video/42"))
+                }
+
+                val incidentJson = zip.getInputStream(zip.getEntry(ExportIncidentStore.BUNDLE_ENTRY))
+                    .bufferedReader(Charsets.UTF_8)
+                    .use { it.readText() }
+                assertTrue(incidentJson.contains("\"projectPseudonym\": \"project-1\""))
+                assertTrue(incidentJson.contains("\"mediaWarningCount\": 2"))
+                assertTrue(incidentJson.contains("\"mediaBlockingCount\": 1"))
+                assertFalse(incidentJson.contains("\"errorMessage\""))
+                assertFalse(incidentJson.contains("\"mediaHealthSummary\""))
+            }
+        } finally {
+            incidentStore.clear()
+        }
     }
 }

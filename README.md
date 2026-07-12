@@ -4,9 +4,15 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.120-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.125-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.125 Private diagnostic sharing
+
+- Diagnostic ZIPs now group export incidents with bundle-scoped project pseudonyms and structured failure/configuration counts only.
+- Project names and IDs, media paths, free-form error text, health summaries, captions, and transcripts remain available only in private on-device incident history and never enter the shared ZIP.
+- Hostile-string regression coverage scans every generated ZIP entry, and dependency verification now trusts the independently verified JUnit 5.9.2 module metadata used by clean test builds.
 
 ### v3.74.120 Editor workspace and playback
 

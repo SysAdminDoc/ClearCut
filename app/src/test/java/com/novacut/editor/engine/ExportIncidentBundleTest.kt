@@ -2,6 +2,7 @@ package com.novacut.editor.engine
 
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -109,15 +110,67 @@ class ExportIncidentBundleTest {
     }
 
     @Test
-    fun buildDiagnosticJsonReturnsValidJson() {
+    fun buildDiagnosticJsonUsesBundlePseudonymsAndOmitsFreeFormFields() {
         val dir = Files.createTempDirectory("incident-diag-").toFile()
         try {
             val store = ExportIncidentStore(dir)
-            store.save(testBundle())
-            val json = store.buildDiagnosticJson()
-            assertNotNull(json)
+            val secret = "SECRET-PROJECT-JANE-TRANSCRIPT"
+            store.save(
+                testBundle(
+                    id = "same-a-001",
+                    projectId = "private-project-id",
+                    projectName = secret,
+                    errorMessage = "$secret at /storage/emulated/0/Movies/private.mov",
+                    healthSummary = "$secret content://media/video/42",
+                )
+            )
+            store.save(
+                testBundle(
+                    id = "same-b-002",
+                    projectId = "private-project-id",
+                    projectName = "Another private name",
+                )
+            )
+            store.save(
+                testBundle(
+                    id = "other-project",
+                    projectId = "different-private-id",
+                    projectName = "Different private project",
+                )
+            )
+            val json = requireNotNull(store.buildDiagnosticJson())
             val array = org.json.JSONArray(json)
-            assertEquals(1, array.length())
+            assertEquals(3, array.length())
+
+            val byId = (0 until array.length())
+                .map { array.getJSONObject(it) }
+                .associateBy { it.getString("id") }
+            val first = requireNotNull(byId["same-a-001"])
+            val second = requireNotNull(byId["same-b-002"])
+            val other = requireNotNull(byId["other-project"])
+
+            assertEquals(first.getString("projectPseudonym"), second.getString("projectPseudonym"))
+            assertFalse(first.getString("projectPseudonym") == other.getString("projectPseudonym"))
+            for (incident in byId.values) {
+                assertFalse(incident.has("projectId"))
+                assertFalse(incident.has("projectName"))
+                assertFalse(incident.has("errorMessage"))
+                assertFalse(incident.has("mediaHealthSummary"))
+                assertTrue(incident.getString("projectPseudonym").matches(Regex("project-\\d+")))
+                assertEquals("encoder", incident.getString("failedPhase"))
+                assertEquals(1, incident.getInt("mediaWarningCount"))
+                assertEquals(0, incident.getInt("mediaBlockingCount"))
+            }
+            assertFalse(json.contains(secret))
+            assertFalse(json.contains("private-project-id"))
+            assertFalse(json.contains("different-private-id"))
+            assertFalse(json.contains("/storage/"))
+            assertFalse(json.contains("content://"))
+
+            val local = store.readAll().associateBy { it.id }
+            assertEquals(secret, local["same-a-001"]?.projectName)
+            assertTrue(local["same-a-001"]?.errorMessage.orEmpty().contains(secret))
+            assertTrue(local["same-a-001"]?.mediaHealthSummary.orEmpty().contains(secret))
         } finally {
             dir.deleteRecursively()
         }
@@ -200,18 +253,20 @@ class ExportIncidentBundleTest {
 
     private fun testBundle(
         id: String = "test-id-1234",
+        projectId: String = "proj-abc",
         projectName: String = "Test Project",
+        errorMessage: String = "Encoder failed on frame 42",
         healthSummary: String? = "10 refs, 1 warnings, 0 blocking"
     ) = ExportIncidentBundle(
         id = id,
         appVersion = "v3.74.77",
         deviceModel = "Google Pixel 8",
         androidSdk = 35,
-        projectId = "proj-abc",
+        projectId = projectId,
         projectName = projectName,
         failedPhase = "encoder",
         errorClass = "ExportException",
-        errorMessage = "Encoder failed on frame 42",
+        errorMessage = errorMessage,
         encoderPath = "hardware: c2.qti.avc.encoder",
         codecLabel = "H.264",
         resolutionLabel = "1080p",

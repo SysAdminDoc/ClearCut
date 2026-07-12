@@ -71,9 +71,15 @@ class ExportIncidentStore internal constructor(private val incidentDir: File) {
     fun buildDiagnosticJson(): String? {
         val incidents = readAll()
         if (incidents.isEmpty()) return null
+        val projectPseudonyms = linkedMapOf<String, String>()
         val array = JSONArray()
         for (incident in incidents) {
-            array.put(toJson(incident))
+            val projectKey = incident.projectId.takeIf { it.isNotBlank() }
+                ?: "incident:${incident.id}"
+            val pseudonym = projectPseudonyms.getOrPut(projectKey) {
+                "project-${projectPseudonyms.size + 1}"
+            }
+            array.put(toDiagnosticJson(incident, pseudonym))
         }
         return array.toString(2)
     }
@@ -122,6 +128,43 @@ class ExportIncidentStore internal constructor(private val incidentDir: File) {
             put("mediaWarningCount", bundle.mediaWarningCount)
             put("mediaBlockingCount", bundle.mediaBlockingCount)
             put("mediaHealthSummary", bundle.mediaHealthSummary ?: JSONObject.NULL)
+            put("timestampEpochMs", bundle.timestampEpochMs)
+        }
+
+        /**
+         * Whitelist-only representation for a user-shared diagnostic ZIP.
+         *
+         * Private incident files retain project context and free-form failure
+         * details for local retry/history. The shared form deliberately omits
+         * project identity, error text, and media-health prose because generic
+         * redaction cannot recognize arbitrary filenames, captions, or names.
+         */
+        internal fun toDiagnosticJson(
+            bundle: ExportIncidentBundle,
+            projectPseudonym: String,
+        ): JSONObject = JSONObject().apply {
+            put("schema", "com.clearcut.export-incident.shared.v1")
+            put("id", bundle.id)
+            put("appVersion", bundle.appVersion)
+            put("deviceModel", bundle.deviceModel)
+            put("androidSdk", bundle.androidSdk)
+            put("projectPseudonym", projectPseudonym)
+            put("failedPhase", bundle.failedPhase)
+            put("errorClass", bundle.errorClass)
+            put("encoderPath", bundle.encoderPath)
+            put("codecLabel", bundle.codecLabel)
+            put("resolutionLabel", bundle.resolutionLabel)
+            put("frameRate", bundle.frameRate)
+            put("exportAudioOnly", bundle.exportAudioOnly)
+            put("hdrRequested", bundle.hdrRequested)
+            put("streamCopyAttempted", bundle.streamCopyAttempted)
+            put("timelineDurationMs", bundle.timelineDurationMs)
+            put("elapsedMs", bundle.elapsedMs)
+            put("progressSamples", JSONArray().apply {
+                bundle.progressSamples.forEach { put(it.toDouble()) }
+            })
+            put("mediaWarningCount", bundle.mediaWarningCount)
+            put("mediaBlockingCount", bundle.mediaBlockingCount)
             put("timestampEpochMs", bundle.timestampEpochMs)
         }
 

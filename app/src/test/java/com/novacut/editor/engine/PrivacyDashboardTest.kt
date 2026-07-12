@@ -133,6 +133,16 @@ class PrivacyDashboardTest {
     }
 
     @Test
+    fun diagnosticLogsDisclosePrivateIncidentsAndPseudonymizedSharing() {
+        val entry = PrivacyDashboard.entryFor(PrivacyDashboard.Category.DIAGNOSTIC_LOGS)
+        assertNotNull(entry)
+        assertTrue(entry!!.collectedBy.contains("ExportIncidentStore"))
+        assertTrue(entry.retentionPolicy.contains("capped to 10"))
+        assertTrue(entry.retentionPolicy.contains("pseudonym", ignoreCase = true))
+        assertFalse(entry.collectedByDefault)
+    }
+
+    @Test
     fun projectContentRowDisclosesOverlayAssetCopies() {
         val entry = PrivacyDashboard.entryFor(PrivacyDashboard.Category.PROJECT_CONTENT)
         assertNotNull(entry)

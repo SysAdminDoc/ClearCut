@@ -1,7 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ClearCut</string>
-    <string name="app_version">v3.74.120</string>
+    <string name="app_version">v3.74.125</string>
+
+    <!-- Importación de listas de cortes y marcadores -->
+    <string name="cut_list_import_empty">No hay nada que importar: primero pega rangos de tiempo o marcadores</string>
+    <string name="cut_list_import_no_valid_rows">No hay filas válidas: hay que corregir %1$d línea(s)</string>
+    <string name="cut_list_imported_summary">Se importaron %1$d marcadores y %2$d cortes (%3$d omitidos)</string>
+    <string name="cut_list_default_label">Corte</string>
+    <string name="cut_list_range_in">%1$s ▸ entrada</string>
+    <string name="cut_list_range_out">%1$s ▸ salida</string>
+    <string name="cut_list_paste_title">Pegar lista de cortes</string>
+    <string name="cut_list_paste_hint">Uno por línea: 0:10 - 0:15 Etiqueta, o 1:23 Marcador</string>
+    <string name="cut_list_paste_apply">Importar</string>
+
     <string name="close">Cerrar</string>
     <string name="cancel">Cancelar</string>
     <string name="done">Listo</string>
@@ -495,7 +507,7 @@
     <string name="settings_diagnostic_timeline_shape">Incluir forma de línea de tiempo</string>
     <string name="settings_diagnostic_timeline_shape_description">Solo agrega recuentos: totales de pistas, totales de clips, tipos de efectos y tipos de transición. Nunca incluye nombres de medios, URI, subtítulos o transcripciones.</string>
     <string name="settings_diagnostic_export">ZIP de diagnóstico</string>
-    <string name="settings_diagnostic_export_description">Guarda los detalles de la aplicación, el dispositivo, el códec, el modelo y el registro redactado. Los archivos del proyecto, los medios, los subtítulos y las transcripciones nunca se incluyen.</string>
+    <string name="settings_diagnostic_export_description">Guarda detalles de la aplicación, el dispositivo, el códec, el modelo y el registro redactado. Nunca incluye nombres ni identificadores de proyectos, rutas de medios, errores de texto libre, subtítulos o transcripciones.</string>
     <string name="settings_diagnostic_export_action">Guardar ZIP</string>
     <string name="settings_diagnostic_exporting">Ahorro</string>
     <string name="settings_diagnostic_saved">Guardado localmente</string>

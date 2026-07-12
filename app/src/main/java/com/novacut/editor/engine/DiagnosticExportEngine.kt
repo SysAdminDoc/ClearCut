@@ -39,6 +39,9 @@ import javax.inject.Singleton
  *                           unsupported marker on older devices
  *  - `settings-reset-report.jsonl` — optional bounded, redacted records for
  *                           Settings DataStore corruption recovery
+ *  - `export-incidents.json` — optional structured export failure categories,
+ *                           configuration, timing, and aggregate media-health
+ *                           counts with bundle-scoped project pseudonyms
  *  - `permission-state.txt` — optional runtime permission state snapshots,
  *                           including local-network streaming permissions
  *  - `logcat-tail.txt`    — last 200 logcat lines from the current process,
@@ -47,8 +50,9 @@ import javax.inject.Singleton
  *
  * What this engine **never** does:
  *  - Phone home, upload to any server, or open a network connection.
- *  - Include project JSON, media URIs, autosave snapshots, user content, or
- *    captions/transcripts. All of those can contain personal data.
+ *  - Include project JSON, project IDs/names, media URIs/paths, autosave
+ *    snapshots, free-form export errors, captions, or transcripts. All of
+ *    those can contain personal data.
  *  - Persist a ZIP outside `context.filesDir/diagnostics/` until the user
  *    explicitly shares one via the system share sheet.
  *
