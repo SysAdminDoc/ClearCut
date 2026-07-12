@@ -75,12 +75,13 @@ class TrackedFilesAuditTest {
             return
         }
 
+        val releaseContractMarkdown = setOf("README.md", "docs/models.md")
         val trackedPrivateMarkdown = tracked.filter { path ->
-            path.endsWith(".md") && path != "README.md"
+            path.endsWith(".md") && path !in releaseContractMarkdown
         }
 
         assertTrue(
-            "README.md is the only tracked markdown file; private planning docs " +
+            "Only public release-contract markdown may be tracked; private planning docs " +
                 "must stay local-only. Tracked private markdown: $trackedPrivateMarkdown",
             trackedPrivateMarkdown.isEmpty()
         )
