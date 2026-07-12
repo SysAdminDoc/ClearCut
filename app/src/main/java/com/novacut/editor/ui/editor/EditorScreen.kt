@@ -994,7 +994,8 @@ fun EditorScreen(
                 // the tool rail below stays snug against the timeline content.
                 if (shouldShowTimeline) {
                     Timeline(
-                        tracks = state.tracks,
+                        tracks = orderedTimelineTracks(state.tracks),
+                        textOverlays = state.textOverlays,
                         playheadMs = playheadMs,
                         totalDurationMs = state.totalDurationMs,
                         playheadMsProvider = playheadMsProvider,
@@ -1004,6 +1005,8 @@ fun EditorScreen(
                         isTrimMode = state.currentTool == EditorTool.TRIM,
                         waveforms = if (viewModel.showWaveforms) state.waveforms else emptyMap(),
                         onClipSelected = viewModel::selectClip,
+                        onTextOverlaySelected = viewModel::editTextOverlay,
+                        onAddTextOverlay = viewModel::showTextEditor,
                         onPlayheadMoved = viewModel::seekTo,
                         onZoomChanged = viewModel::setZoomLevel,
                         onScrollChanged = viewModel::setScrollOffset,

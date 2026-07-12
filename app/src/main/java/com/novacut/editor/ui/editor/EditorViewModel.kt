@@ -196,11 +196,34 @@ data class PanelVisibility(
     fun closeAll(): PanelVisibility = copy(openPanels = emptySet())
 }
 
+internal fun ensureEditorTracks(tracks: List<Track>): List<Track> {
+    if (tracks.any { it.type == TrackType.TEXT }) return tracks
+    val nextIndex = (tracks.maxOfOrNull { it.index } ?: -1) + 1
+    return tracks + Track(
+        type = TrackType.TEXT,
+        index = nextIndex,
+        trackHeight = 48,
+        isCollapsed = true
+    )
+}
+
+internal fun orderedTimelineTracks(tracks: List<Track>): List<Track> {
+    fun priority(type: TrackType): Int = when (type) {
+        TrackType.TEXT -> 0
+        TrackType.OVERLAY -> 1
+        TrackType.ADJUSTMENT -> 2
+        TrackType.VIDEO -> 3
+        TrackType.AUDIO -> 4
+    }
+    return tracks.sortedWith(compareBy<Track>({ priority(it.type) }, { it.index }))
+}
+
 data class EditorState(
     val project: Project = Project(),
     val tracks: List<Track> = listOf(
-        Track(type = TrackType.VIDEO, index = 0),
-        Track(type = TrackType.AUDIO, index = 1)
+        Track(type = TrackType.TEXT, index = 0, trackHeight = 48, isCollapsed = true),
+        Track(type = TrackType.VIDEO, index = 1),
+        Track(type = TrackType.AUDIO, index = 2)
     ),
     val selectedClipId: String? = null,
     val selectedTrackId: String? = null,
@@ -987,7 +1010,7 @@ class EditorViewModel @Inject constructor(
         val mediaHealthReport = analyzeMediaHealthForRecovery(recovery)
         _state.update { current ->
             current.copy(
-                tracks = recovery.tracks.ifEmpty { current.tracks },
+                tracks = ensureEditorTracks(recovery.tracks.ifEmpty { current.tracks }),
                 textOverlays = recovery.textOverlays,
                 imageOverlays = recovery.imageOverlays,
                 timelineMarkers = recovery.timelineMarkers,

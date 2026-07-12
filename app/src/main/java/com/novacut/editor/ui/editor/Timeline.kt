@@ -314,6 +314,7 @@ private fun TimelineToolbarControls(
 @Composable
 fun Timeline(
     tracks: List<Track>,
+    textOverlays: List<TextOverlay> = emptyList(),
     playheadMs: Long,
     totalDurationMs: Long,
     zoomLevel: Float,
@@ -324,6 +325,8 @@ fun Timeline(
     isTrimMode: Boolean = false,
     waveforms: Map<String, List<Float>> = emptyMap(),
     onClipSelected: (String?, String?) -> Unit,
+    onTextOverlaySelected: (String) -> Unit = {},
+    onAddTextOverlay: () -> Unit = {},
     onPlayheadMoved: (Long) -> Unit,
     onZoomChanged: (Float) -> Unit,
     onScrollChanged: (Long) -> Unit,
@@ -365,7 +368,7 @@ fun Timeline(
     val isCompactTimeline = screenWidth < 430.dp
     val density = LocalDensity.current
     val haptic = LocalHapticFeedback.current
-    val rulerHeight = 28.dp
+    val rulerHeight = if (isCompactTimeline) 24.dp else 28.dp
     val pixelsPerMs = zoomLevel * BASE_SCALE
     val coroutineScope = rememberCoroutineScope()
     val textMeasurer = rememberTextMeasurer()
@@ -377,13 +380,17 @@ fun Timeline(
     val canSplitAtPlayhead = remember(tracks, selectedClipId, playheadMs) {
         canSplitTimelineAtPlayhead(tracks, selectedClipId, playheadMs)
     }
-    val scrubBoundaries = remember(tracks, markers, beatMarkers) {
+    val scrubBoundaries = remember(tracks, textOverlays, markers, beatMarkers) {
         val edges = mutableSetOf<Long>()
         tracks.forEach { track ->
             track.clips.forEach { clip ->
                 edges.add(clip.timelineStartMs)
                 edges.add(clip.timelineStartMs + clip.durationMs)
             }
+        }
+        textOverlays.forEach { overlay ->
+            edges.add(overlay.startTimeMs)
+            edges.add(overlay.endTimeMs)
         }
         markers.forEach { edges.add(it.timeMs) }
         if (snapToBeat) beatMarkers.forEach { edges.add(it) }
@@ -405,9 +412,9 @@ fun Timeline(
             (timelineWidthPx / pixelsPerMs).toLong().coerceAtLeast(0L)
         }
     }
-    val headerWidth = if (isCompactTimeline) 88.dp else 96.dp
-    val chromePadding = if (isCompactTimeline) 6.dp else 10.dp
-    val contentPadding = if (isCompactTimeline) 4.dp else 8.dp
+    val headerWidth = if (isCompactTimeline) 80.dp else 96.dp
+    val chromePadding = if (isCompactTimeline) 4.dp else 10.dp
+    val contentPadding = if (isCompactTimeline) 2.dp else 8.dp
     val trimHandleVisualWidth = 14.dp
     val trimHandleTouchWidth = 28.dp
     val videoTrackLabel = stringResource(R.string.editor_video_track)
@@ -474,7 +481,10 @@ fun Timeline(
     val currentPlayheadMs by rememberUpdatedState(playheadMs)
     val currentMarkers by rememberUpdatedState(markers)
     val currentTracks by rememberUpdatedState(tracks)
+    val currentTextOverlays by rememberUpdatedState(textOverlays)
     val currentOnClipSelected by rememberUpdatedState(onClipSelected)
+    val currentOnTextOverlaySelected by rememberUpdatedState(onTextOverlaySelected)
+    val currentOnAddTextOverlay by rememberUpdatedState(onAddTextOverlay)
     val currentOnPlayheadMoved by rememberUpdatedState(onPlayheadMoved)
     val currentOnSplitAtPlayhead by rememberUpdatedState(onSplitAtPlayhead)
     val currentOnDeleteSelectedClip by rememberUpdatedState(onDeleteSelectedClip)
@@ -614,38 +624,42 @@ fun Timeline(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = chromePadding, vertical = if (isCompactTimeline) 5.dp else 7.dp),
+                    .padding(horizontal = chromePadding, vertical = if (isCompactTimeline) 0.dp else 7.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                val modeLabel = if (isTrimMode) {
-                    stringResource(R.string.timeline_mode_trim)
-                } else {
-                    stringResource(R.string.timeline_mode_arrange)
-                }
-                val snapLabel = when {
-                    snapToBeat -> stringResource(R.string.settings_snap_beat)
-                    snapToMarker -> stringResource(R.string.settings_snap_markers)
-                    else -> null
-                }
-                Text(
-                    text = buildString {
-                        append(modeLabel)
-                        append("  •  ")
-                        append((zoomLevel * 100f).roundToInt())
-                        append("%  •  ")
-                        append(markerCountLabel)
-                        if (snapLabel != null) {
+                if (!isCompactTimeline) {
+                    val modeLabel = if (isTrimMode) {
+                        stringResource(R.string.timeline_mode_trim)
+                    } else {
+                        stringResource(R.string.timeline_mode_arrange)
+                    }
+                    val snapLabel = when {
+                        snapToBeat -> stringResource(R.string.settings_snap_beat)
+                        snapToMarker -> stringResource(R.string.settings_snap_markers)
+                        else -> null
+                    }
+                    Text(
+                        text = buildString {
+                            append(modeLabel)
                             append("  •  ")
-                            append(snapLabel)
-                        }
-                    },
-                    color = if (isTrimMode) Mocha.Peach else Mocha.Subtext0,
-                    style = MaterialTheme.typography.labelSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
+                            append((zoomLevel * 100f).roundToInt())
+                            append("%  •  ")
+                            append(markerCountLabel)
+                            if (snapLabel != null) {
+                                append("  •  ")
+                                append(snapLabel)
+                            }
+                        },
+                        color = if (isTrimMode) Mocha.Peach else Mocha.Subtext0,
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                } else {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
                 Box {
                     if (!isCompactTimeline) {
                         TimelineToolbarButton(
@@ -753,17 +767,23 @@ fun Timeline(
                                     MaterialTheme.typography.labelLarge
                                 }
                             )
-                            Text(
-                                text = totalClipLabel,
-                                color = Mocha.Subtext0,
-                                style = MaterialTheme.typography.labelSmall
-                            )
+                            if (!isCompactTimeline) {
+                                Text(
+                                    text = totalClipLabel,
+                                    color = Mocha.Subtext0,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
                         }
                     }
 
                     tracks.forEach { track ->
                         key(track.id) {
-                            val currentTrackHeight = if (track.isCollapsed) 28.dp else track.trackHeight.dp
+                            val currentTrackHeight = when {
+                                track.isCollapsed -> if (isCompactTimeline) 24.dp else 28.dp
+                                isCompactTimeline -> track.trackHeight.coerceAtMost(56).dp
+                                else -> track.trackHeight.dp
+                            }
                             val trackColor = trackAccentColor(track.type)
                             var trackMenuExpanded by remember(track.id) { mutableStateOf(false) }
                             val statusBits = buildList {
@@ -771,11 +791,12 @@ fun Timeline(
                                 if (track.isMuted) add(mutedShortLabel)
                                 if (!track.isVisible) add(hiddenShortLabel)
                             }
+                            val trackItemCount = if (track.type == TrackType.TEXT) textOverlays.size else track.clips.size
                             val trackSummary = statusBits.joinToString(" · ").ifEmpty {
                                 pluralStringResource(
                                     R.plurals.timeline_clip_count,
-                                    track.clips.size,
-                                    track.clips.size
+                                    trackItemCount,
+                                    trackItemCount
                                 )
                             }
                             Surface(
@@ -810,7 +831,10 @@ fun Timeline(
                                     Column(
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            .padding(horizontal = if (isCompactTimeline) 8.dp else 9.dp, vertical = if (track.isCollapsed) 6.dp else 7.dp),
+                                            .padding(
+                                                horizontal = if (isCompactTimeline) 5.dp else 9.dp,
+                                                vertical = if (isCompactTimeline) 3.dp else if (track.isCollapsed) 6.dp else 7.dp
+                                            ),
                                         verticalArrangement = Arrangement.Center
                                     ) {
                                         Row(
@@ -833,7 +857,11 @@ fun Timeline(
                                             Spacer(modifier = Modifier.width(if (isCompactTimeline) 4.dp else 8.dp))
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Text(
-                                                    text = "${compactTrackLabelForType(track.type)} ${track.index + 1}",
+                                                    text = if (isCompactTimeline) {
+                                                        compactTrackLabelForType(track.type)
+                                                    } else {
+                                                        "${compactTrackLabelForType(track.type)} ${track.index + 1}"
+                                                    },
                                                     color = Mocha.Text,
                                                     style = if (isCompactTimeline) {
                                                         MaterialTheme.typography.labelMedium
@@ -843,13 +871,15 @@ fun Timeline(
                                                     maxLines = 1,
                                                     overflow = TextOverflow.Ellipsis
                                                 )
-                                                Text(
-                                                    text = trackSummary,
-                                                    color = Mocha.Subtext0,
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
+                                                if (!isCompactTimeline) {
+                                                    Text(
+                                                        text = trackSummary,
+                                                        color = Mocha.Subtext0,
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                }
                                             }
                                             TimelineMiniIconButton(
                                                 icon = if (track.isCollapsed) {
@@ -868,7 +898,7 @@ fun Timeline(
                                         }
 
                                         if (!track.isCollapsed) {
-                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Spacer(modifier = Modifier.height(if (isCompactTimeline) 2.dp else 6.dp))
                                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                                 if (isCompactTimeline && track.type == TrackType.AUDIO) {
                                                     TimelineMiniIconButton(
@@ -964,13 +994,16 @@ fun Timeline(
                                                                 )
                                                             } else {
                                                                 DropdownMenuItem(
-                                                                    text = { Text(stringResource(R.string.timeline_toggle_mute)) },
+                                                                    text = { Text(stringResource(R.string.timeline_toggle_visibility)) },
                                                                     leadingIcon = {
-                                                                        Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null)
+                                                                        Icon(
+                                                                            if (track.isVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                                                            contentDescription = null
+                                                                        )
                                                                     },
                                                                     onClick = {
                                                                         trackMenuExpanded = false
-                                                                        onToggleTrackMute(track.id)
+                                                                        onToggleTrackVisible(track.id)
                                                                     },
                                                                 )
                                                             }
@@ -1216,7 +1249,11 @@ fun Timeline(
 
                     // Tracks
                     for (track in tracks) {
-                    val currentTrackHeight = if (track.isCollapsed) 28.dp else track.trackHeight.dp
+                    val currentTrackHeight = when {
+                        track.isCollapsed -> if (isCompactTimeline) 24.dp else 28.dp
+                        isCompactTimeline -> track.trackHeight.coerceAtMost(56).dp
+                        else -> track.trackHeight.dp
+                    }
                     key(track.id) {
                         val trackColor = trackAccentColor(track.type)
                         Box(
@@ -1237,12 +1274,25 @@ fun Timeline(
                                     color = Mocha.Surface0.copy(alpha = 0.5f),
                                     shape = RoundedCornerShape(0.dp)
                                 )
-                                .pointerInput(track.id) {
+                                .pointerInput(track.id, track.type) {
                                     detectTapGestures(
                                         onTap = { offset ->
                                             val ppm = currentZoomLevel * BASE_SCALE
                                             if (ppm < 0.001f) return@detectTapGestures
                                             val tappedMs = currentScrollOffsetMs + (offset.x / ppm).toLong()
+                                            if (track.type == TrackType.TEXT) {
+                                                val overlay = currentTextOverlays.lastOrNull {
+                                                    tappedMs >= it.startTimeMs && tappedMs < it.endTimeMs
+                                                }
+                                                currentOnClipSelected(null, null)
+                                                if (overlay == null) {
+                                                    currentOnAddTextOverlay()
+                                                } else {
+                                                    currentOnTextOverlaySelected(overlay.id)
+                                                }
+                                                currentOnPlayheadMoved(tappedMs.coerceIn(0L, currentTotalDurationMs))
+                                                return@detectTapGestures
+                                            }
                                             val trackClips = currentTracks.firstOrNull { it.id == track.id }?.clips ?: return@detectTapGestures
                                             val clip = trackClips.firstOrNull {
                                                 it.containsTimelinePosition(tappedMs)
@@ -1275,25 +1325,47 @@ fun Timeline(
                                 }
                         ) {
                             if (track.isCollapsed) {
-                                for (clip in track.clips) {
-                                    val clipLayout = timelineClipLayout(
-                                        clip = clip,
-                                        scrollOffsetMs = scrollOffsetMs,
-                                        pixelsPerMs = pixelsPerMs
-                                    )
-                                    if (clipLayout.isVisibleIn(timelineWidthPx)) {
-                                        Box(
-                                            modifier = Modifier
-                                                .offset(x = with(density) { clipLayout.startPx.toDp() })
-                                                .size(width = with(density) { clipLayout.widthPx.toDp() }, height = 16.dp)
-                                                .padding(vertical = 3.dp)
-                                                .clip(RoundedCornerShape(2.dp))
-                                                .background(trackColor.copy(alpha = 0.6f))
+                                if (track.type == TrackType.TEXT) {
+                                    for (overlay in textOverlays) {
+                                        val startPx = (overlay.startTimeMs - scrollOffsetMs) * pixelsPerMs
+                                        val widthPx = ((overlay.endTimeMs - overlay.startTimeMs) * pixelsPerMs).coerceAtLeast(1f)
+                                        if (startPx + widthPx >= 0f && startPx <= timelineWidthPx) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .offset(x = with(density) { startPx.toDp() })
+                                                    .size(width = with(density) { widthPx.toDp() }, height = 16.dp)
+                                                    .padding(vertical = 3.dp)
+                                                    .clip(RoundedCornerShape(2.dp))
+                                                    .background(trackColor.copy(alpha = 0.78f))
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    for (clip in track.clips) {
+                                        val clipLayout = timelineClipLayout(
+                                            clip = clip,
+                                            scrollOffsetMs = scrollOffsetMs,
+                                            pixelsPerMs = pixelsPerMs
                                         )
+                                        if (clipLayout.isVisibleIn(timelineWidthPx)) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .offset(x = with(density) { clipLayout.startPx.toDp() })
+                                                    .size(width = with(density) { clipLayout.widthPx.toDp() }, height = 16.dp)
+                                                    .padding(vertical = 3.dp)
+                                                    .clip(RoundedCornerShape(2.dp))
+                                                    .background(trackColor.copy(alpha = 0.6f))
+                                            )
+                                        }
                                     }
                                 }
                             } else {
-                            if (track.clips.isEmpty()) {
+                            val trackIsEmpty = if (track.type == TrackType.TEXT) {
+                                textOverlays.isEmpty()
+                            } else {
+                                track.clips.isEmpty()
+                            }
+                            if (trackIsEmpty && track.type != TrackType.TEXT) {
                                 Text(
                                     text = stringResource(
                                         if (isCompactTimeline) {
@@ -1311,6 +1383,34 @@ fun Timeline(
                                     modifier = Modifier
                                         .align(Alignment.Center)
                                 )
+                            }
+                            if (track.type == TrackType.TEXT) {
+                                textOverlays.forEach { overlay ->
+                                    val startPx = (overlay.startTimeMs - scrollOffsetMs) * pixelsPerMs
+                                    val widthPx = ((overlay.endTimeMs - overlay.startTimeMs) * pixelsPerMs).coerceAtLeast(1f)
+                                    if (startPx + widthPx >= 0f && startPx <= timelineWidthPx) {
+                                        Box(
+                                            modifier = Modifier
+                                                .offset(x = with(density) { startPx.toDp() })
+                                                .width(with(density) { widthPx.toDp() })
+                                                .fillMaxHeight()
+                                                .padding(vertical = 4.dp)
+                                                .clip(RoundedCornerShape(Radius.xs))
+                                                .background(trackColor.copy(alpha = 0.24f))
+                                                .border(1.dp, trackColor.copy(alpha = 0.62f), RoundedCornerShape(Radius.xs))
+                                                .padding(horizontal = 6.dp, vertical = 3.dp),
+                                            contentAlignment = Alignment.CenterStart
+                                        ) {
+                                            Text(
+                                                text = overlay.text,
+                                                color = Mocha.Text,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+                                }
                             }
                             // Draw clips
                             track.clips.forEachIndexed { clipIdx, clip ->
