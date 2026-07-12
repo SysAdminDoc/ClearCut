@@ -43,6 +43,49 @@ internal fun playbackSessionNeedsReset(
 ): Boolean = forceRestart || hasPlayerError ||
     playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED
 
+internal fun canCoalesceAdjacentPreviewCuts(left: Clip, right: Clip): Boolean =
+    left.timelineEndMs == right.timelineStartMs &&
+        left.trimEndMs == right.trimStartMs &&
+        left.sourceUri == right.sourceUri &&
+        left.proxyUri == right.proxyUri &&
+        left.assetId == right.assetId &&
+        left.sourceDurationMs == right.sourceDurationMs &&
+        left.speed == right.speed &&
+        !left.isReversed && !right.isReversed &&
+        left.speedCurve == null && right.speedCurve == null &&
+        left.effects.isEmpty() && right.effects.isEmpty() &&
+        left.keyframes.isEmpty() && right.keyframes.isEmpty() &&
+        left.masks.isEmpty() && right.masks.isEmpty() &&
+        left.audioEffects.isEmpty() && right.audioEffects.isEmpty() &&
+        left.motionTrackingData == null && right.motionTrackingData == null &&
+        left.headTransition == null && left.tailTransition == null &&
+        right.headTransition == null && right.tailTransition == null &&
+        left.fadeInMs == 0L && left.fadeOutMs == 0L &&
+        right.fadeInMs == 0L && right.fadeOutMs == 0L &&
+        left.volume == right.volume &&
+        left.opacity == right.opacity &&
+        left.rotation == right.rotation &&
+        left.scaleX == right.scaleX && left.scaleY == right.scaleY &&
+        left.positionX == right.positionX && left.positionY == right.positionY &&
+        left.anchorX == right.anchorX && left.anchorY == right.anchorY &&
+        left.blendMode == right.blendMode &&
+        left.colorGrade == right.colorGrade &&
+        !left.isCompound && !right.isCompound
+
+internal fun coalesceAdjacentPreviewCuts(clips: List<Clip>): List<Clip> {
+    if (clips.size < 2) return clips
+    val coalesced = mutableListOf<Clip>()
+    clips.sortedBy { it.timelineStartMs }.forEach { clip ->
+        val previous = coalesced.lastOrNull()
+        if (previous != null && canCoalesceAdjacentPreviewCuts(previous, clip)) {
+            coalesced[coalesced.lastIndex] = previous.copy(trimEndMs = clip.trimEndMs)
+        } else {
+            coalesced += clip
+        }
+    }
+    return coalesced
+}
+
 @Singleton
 @androidx.annotation.OptIn(UnstableApi::class)
 class VideoEngine @Inject constructor(
@@ -215,7 +258,7 @@ class VideoEngine @Inject constructor(
         val p = getPlayer()
         val resumePlayback = p.playWhenReady && p.playbackState != Player.STATE_ENDED
         p.pause()
-        videoClips = collectPreviewClips(tracks)
+        videoClips = coalesceAdjacentPreviewCuts(collectPreviewClips(tracks))
         val timelineEndMs = tracks.maxOfOrNull { track ->
             track.clips.maxOfOrNull { clip -> clip.timelineEndMs } ?: 0L
         } ?: 0L

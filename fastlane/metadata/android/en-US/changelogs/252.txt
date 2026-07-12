@@ -1,1 +1,1 @@
-Fixed timeline preview failures caused by detached video surfaces or a player reporting playback without advancing. Runtime stalls now recover without incorrectly claiming the clip cannot be decoded.
+Fixed timeline preview failures caused by detached surfaces or hardware-decoder restarts at plain cut boundaries. Runtime stalls recover without incorrectly claiming the clip cannot be decoded.
