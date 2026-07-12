@@ -24,7 +24,7 @@ class OpenSourceLicensesTest {
 
     @Test
     fun registryContainsReleaseNoticeObligationDependencies() {
-        assertNotNull(OpenSourceLicenses.noticeForArtifact("com.moizhassan.ffmpeg:ffmpeg-kit-16kb"))
+        assertNotNull(OpenSourceLicenses.noticeForArtifact("third_party/ffmpeg-kit-next/ffmpeg-kit-next-8.1.0.aar"))
         assertNotNull(OpenSourceLicenses.noticeForArtifact("io.github.kaleyravideo:android-deepfilternet"))
     }
 
@@ -32,11 +32,16 @@ class OpenSourceLicensesTest {
     fun ffmpegKitNoticePreservesSourceOfferAndGplWarning() {
         val notice = OpenSourceLicenses.ffmpegKitNotice()
 
-        assertTrue(notice.licenseText.contains("GPLv3"))
+        assertTrue(notice.version.contains("8.1.0"))
+        assertTrue(notice.version.contains("FFmpeg 8.1.2"))
+        assertTrue(notice.licenseName.contains("General Public License"))
+        assertTrue(notice.licenseText.contains("GPL"))
         assertTrue(notice.sourceOfferText.orEmpty().contains("source", ignoreCase = true))
         assertTrue(notice.sourceOfferText.orEmpty().contains("GPL v3.0"))
-        assertTrue(notice.sourceOfferText.orEmpty().contains("https://github.com/arthenica/ffmpeg-kit/wiki/Source"))
+        assertTrue(notice.sourceOfferText.orEmpty().contains("3e223118e6e8fb6208693ecf3952e77cd096f587"))
+        assertTrue(notice.sourceOfferText.orEmpty().contains("nix-android.sh"))
         assertTrue(notice.complianceNote.orEmpty().contains("res/raw/source.txt"))
+        assertTrue(notice.complianceNote.orEmpty().contains("ffmpeg_kit_next_source_offer.txt"))
     }
 
     @Test
@@ -59,6 +64,6 @@ class OpenSourceLicensesTest {
     fun onlyFfmpegKitCurrentlyNeedsSourceOfferCopy() {
         val sourceOfferArtifacts = OpenSourceLicenses.dependenciesWithSourceOffers().map { it.artifact }
 
-        assertEquals(listOf("com.moizhassan.ffmpeg:ffmpeg-kit-16kb"), sourceOfferArtifacts)
+        assertEquals(listOf("third_party/ffmpeg-kit-next/ffmpeg-kit-next-8.1.0.aar"), sourceOfferArtifacts)
     }
 }

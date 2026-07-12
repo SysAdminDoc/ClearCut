@@ -40,7 +40,6 @@ class DependencyFreshnessTest {
         "lottieCompose" to "6.7.1",
         "onnxruntime" to "1.26.0",
         "mediapipe" to "0.10.35",
-        "ffmpegKit" to "6.1.1",
         "robolectric" to "4.14.1",
     )
 
@@ -83,12 +82,6 @@ class DependencyFreshnessTest {
             "6.7.1",
             "Lottie 7.x state-machine API blocked on Compose compatibility validation.",
             "Upgrade when Lottie 7.x stable passes local integration tests."
-        ),
-        "ffmpegKit" to Hold(
-            "6.1.1",
-            "Only 16KB-page fork available (com.moizhassan.ffmpeg:ffmpeg-kit-16kb). " +
-                "MagicYUV decoder CVE-2026-8461 mitigated by AVI input block.",
-            "Upgrade when fork publishes a build carrying the FFmpeg 8.1.2 fix."
         ),
     )
 

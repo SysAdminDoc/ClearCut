@@ -1,10 +1,10 @@
 ClearCut third-party notices
 
-FFmpegKit / FFmpeg
+FFmpegKitNext / FFmpeg
 
-ClearCut may bundle com.moizhassan.ffmpeg:ffmpeg-kit-16kb:6.1.1 for FFmpeg-backed export paths that AndroidX Media3 Transformer does not cover. The resolved Maven POM declares LGPL-3.0, while the packaged AAR includes GPLv3 license text and a GPLv3 source-offer resource. Treat redistributed ClearCut builds that include this AAR as carrying FFmpegKit / FFmpeg GPLv3 notice and source-offer obligations unless the dependency is replaced by a verified LGPL-only build flavor.
+ClearCut bundles a source-pinned GPLv3 build of FFmpegKitNext 8.1.0 with FFmpeg 8.1.2, x264, libass, and the supporting libraries recorded in third_party/ffmpeg-kit-next/native-lock.json. The exact upstream commit is 3e223118e6e8fb6208693ecf3952e77cd096f587 and the reproducible build command is ./nix-android.sh -p android-r27d --enable-gpl --enable-x264 --enable-libass --jobs=8.
 
-The Android package includes FFmpegKit's upstream license resources under res/raw/license*.txt and res/raw/source.txt. Keep those resources in any redistributed build, and provide source access or a written source offer for the FFmpegKit / FFmpeg components according to those bundled terms.
+The Android package includes the upstream license resources under res/raw/license*.txt and res/raw/source.txt, plus ClearCut's exact source recipe under res/raw/ffmpeg_kit_next_source_offer.txt. Keep those resources and the corresponding-source access available with redistributed builds.
 
 DeepFilterNet
 

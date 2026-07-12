@@ -1,0 +1,159 @@
+{
+  "schemaVersion": 1,
+  "artifact": {
+    "path": "third_party/ffmpeg-kit-next/ffmpeg-kit-next-8.1.0.aar",
+    "size": 64228197,
+    "sha256": "4b7654925340bb4a5eb0c4e50350a6f664f4568a228d46e9e128eb032406fd00",
+    "pomPath": "third_party/ffmpeg-kit-next/ffmpeg-kit-next-8.1.0.pom",
+    "pomSize": 669,
+    "pomSha256": "1b2f22bab50ff6abae874c42b335857d0ca23a318773369a77933261a25e731b"
+  },
+  "source": {
+    "repository": "https://github.com/arthenica/ffmpeg-kit-next",
+    "commit": "3e223118e6e8fb6208693ecf3952e77cd096f587",
+    "builtAt": "2026-07-12T00:00:00Z"
+  },
+  "build": {
+    "command": "./nix-android.sh -p android-r27d --enable-gpl --enable-x264 --enable-libass --jobs=8",
+    "androidNdk": "27.3.13750724",
+    "androidApi": 24,
+    "abis": ["armeabi-v7a", "armeabi-v7a-neon", "arm64-v8a", "x86", "x86_64"],
+    "license": "GPL-3.0-only"
+  },
+  "components": [
+    {
+      "name": "ffmpeg-kit-next",
+      "version": "8.1.0",
+      "commit": "3e223118e6e8fb6208693ecf3952e77cd096f587",
+      "purl": "pkg:github/arthenica/ffmpeg-kit-next@3e223118e6e8fb6208693ecf3952e77cd096f587",
+      "license": "GPL-3.0-only"
+    },
+    {
+      "name": "FFmpeg",
+      "version": "8.1.2",
+      "commit": "38b88335f99e76ed89ff3c93f877fdefce736c13",
+      "purl": "pkg:generic/ffmpeg@8.1.2",
+      "license": "GPL-3.0-or-later"
+    },
+    {
+      "name": "x264",
+      "version": "55d517bc4569272a2c9a367a4106c234aba2ffbc",
+      "commit": "55d517bc4569272a2c9a367a4106c234aba2ffbc",
+      "purl": "pkg:generic/x264@55d517bc4569272a2c9a367a4106c234aba2ffbc",
+      "license": "GPL-2.0-or-later"
+    },
+    {
+      "name": "libass",
+      "version": "0.17.4",
+      "commit": "bbb3c7f1570a4a021e52683f3fbdf74fe492ae84",
+      "purl": "pkg:generic/libass@0.17.4",
+      "license": "ISC"
+    },
+    {
+      "name": "cpu-features",
+      "version": "0.11.0",
+      "commit": "81d13c49649f0714dd41fb56bb246398b6584085",
+      "purl": "pkg:github/google/cpu_features@81d13c49649f0714dd41fb56bb246398b6584085",
+      "license": "Apache-2.0"
+    },
+    {
+      "name": "expat",
+      "version": "2.8.1",
+      "commit": "c7ffbf3879f6aef7a7b020ef84ddb4ee00222b19",
+      "purl": "pkg:github/libexpat/libexpat@c7ffbf3879f6aef7a7b020ef84ddb4ee00222b19",
+      "license": "MIT"
+    },
+    {
+      "name": "fontconfig",
+      "version": "2.18.1",
+      "commit": "d87ec67db56518e9e9c36ff38f151dfc9b728b2e",
+      "purl": "pkg:github/arthenica/fontconfig@d87ec67db56518e9e9c36ff38f151dfc9b728b2e",
+      "license": "MIT"
+    },
+    {
+      "name": "freetype",
+      "version": "2.14.3",
+      "commit": "0a0221a1347e2f1e07c395263540026e9a0aa7c7",
+      "purl": "pkg:github/freetype/freetype@0a0221a1347e2f1e07c395263540026e9a0aa7c7",
+      "license": "FTL"
+    },
+    {
+      "name": "fribidi",
+      "version": "1.0.16",
+      "commit": "68162babff4f39c4e2dc164a5e825af93bda9983",
+      "purl": "pkg:github/fribidi/fribidi@68162babff4f39c4e2dc164a5e825af93bda9983",
+      "license": "LGPL-2.1-or-later"
+    },
+    {
+      "name": "harfbuzz",
+      "version": "14.2.1",
+      "commit": "56feae4035bdd48f62ba2b8d8c16232d4d89b3a4",
+      "purl": "pkg:github/harfbuzz/harfbuzz@56feae4035bdd48f62ba2b8d8c16232d4d89b3a4",
+      "license": "MIT"
+    },
+    {
+      "name": "libiconv",
+      "version": "1.17",
+      "commit": "4b9c27bec873392533dd3ef309cd62962a644e18",
+      "purl": "pkg:github/arthenica/libiconv@4b9c27bec873392533dd3ef309cd62962a644e18",
+      "license": "LGPL-2.1-or-later"
+    },
+    {
+      "name": "libjxl",
+      "version": "0.11.2",
+      "commit": "332feb17d17311c748445f7ee75c4fb55cc38530",
+      "purl": "pkg:github/libjxl/libjxl@332feb17d17311c748445f7ee75c4fb55cc38530",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "name": "libpng",
+      "version": "1.6.58",
+      "commit": "3061454d980de7d53608f594194cfac722721d2a",
+      "purl": "pkg:github/glennrp/libpng@3061454d980de7d53608f594194cfac722721d2a",
+      "license": "Libpng"
+    },
+    {
+      "name": "libuuid",
+      "version": "1.0.3",
+      "commit": "16cb58d558844045f217d4ee416f931fc1b03794",
+      "purl": "pkg:github/arthenica/libuuid@16cb58d558844045f217d4ee416f931fc1b03794",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "name": "Android NDK libc++",
+      "version": "27.3.13750724",
+      "commit": "NOASSERTION",
+      "purl": "pkg:generic/android-ndk-libcxx@27.3.13750724",
+      "license": "Apache-2.0-with-LLVM-exception"
+    }
+  ],
+  "advisories": [
+    {
+      "id": "CVE-2026-8461",
+      "component": "FFmpeg",
+      "severity": "HIGH",
+      "status": "not_affected",
+      "fixedVersion": "8.1.2",
+      "reviewUntil": "2027-07-12",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-8461"
+    },
+    {
+      "id": "CVE-2024-36617",
+      "component": "FFmpeg",
+      "severity": "MEDIUM",
+      "status": "not_affected",
+      "fixedVersion": "6.1.2",
+      "reviewUntil": "2027-07-12",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-36617"
+    },
+    {
+      "id": "CVE-2026-30999",
+      "component": "FFmpeg",
+      "severity": "UNKNOWN",
+      "status": "not_affected",
+      "fixedVersion": "8.1.2",
+      "reviewUntil": "2027-07-12",
+      "url": "https://ffmpeg.org/security.html"
+    }
+  ]
+}

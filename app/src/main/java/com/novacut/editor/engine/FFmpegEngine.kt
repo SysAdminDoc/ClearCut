@@ -19,12 +19,11 @@ import kotlin.coroutines.resume
 /**
  * Engine for FFmpeg-backed export paths that Media3 Transformer does not cover.
  *
- * ## Dependency path (Tier A.9, refreshed in Round 6 R6.5)
+ * ## Dependency path
  *
- * ClearCut pins `com.moizhassan.ffmpeg:ffmpeg-kit-16kb:6.1.1`, the 16 KB
- * page-size rebuilt FFmpegKit successor used by R6.5. The AAR is verified by
- * the local `scripts/check_16kb_alignment.py` gate after every native dep
- * change and carries GPLv3/source-offer license resources in the packaged APK.
+ * ClearCut vendors a source-pinned FFmpegKitNext 8.1.0 AAR carrying FFmpeg
+ * 8.1.2. Local gates verify its checksum, source/build lock, native advisory
+ * review, deterministic SBOMs, and 16 KB page alignment.
  *
  * ## License note
  *
@@ -80,9 +79,8 @@ import kotlin.coroutines.resume
  *
  * Not documented. No published native .so artifacts to verify. The project
  * does not mention Android 16 / API 35+ 16KB page alignment anywhere.
- * ClearCut's current fork (`com.moizhassan.ffmpeg:ffmpeg-kit-16kb:6.1.1`)
- * was specifically rebuilt for 16KB alignment and is verified by the local
- * `scripts/check_16kb_alignment.py` gate.
+ * ClearCut's FFmpegKitNext 8.1.0 build targets NDK r27d and is verified by the
+ * local `scripts/check_16kb_alignment.py` gate.
  *
  * ### APK size comparison
  *
@@ -92,7 +90,7 @@ import kotlin.coroutines.resume
  *
  * ### License analysis
  *
- * ffmpeg-kt is GPL v3.0. Same as ClearCut's current FFmpegKit fork, so no
+ * ffmpeg-kt is GPL v3.0. Same as ClearCut's FFmpegKitNext build, so no
  * license improvement. The alternative JamaisMagic fork
  * (`io.github.jamaismagic.ffmpeg:ffmpeg-kit-lts-16kb:6.1.7`) offers an
  * LGPL-3.0 variant, which would be a license improvement if ClearCut ever
@@ -108,12 +106,8 @@ import kotlin.coroutines.resume
  * compliance documentation, and would require a full FFmpegEngine rewrite
  * with no functional benefit over the current fork.
  *
- * The real supply-chain risk (upstream FFmpegKit archived, binaries removed
- * from Maven Central) is already mitigated by ClearCut's pinned 16KB fork.
- * If the moizhassankh fork goes stale, the JamaisMagic fork
- * (`io.github.jamaismagic.ffmpeg`, 740 commits, NDK r27d, Maven Central,
- * LGPL option) is a drop-in replacement with 100% API compatibility —
- * a one-line Gradle coordinate swap, not a rewrite.
+ * The upstream binary-supply risk is mitigated by ClearCut's vendored,
+ * reproducibly built AAR and local provenance/advisory gates.
  *
  * Re-evaluate if ffmpeg-kt ships a 1.0 with command-string execution,
  * SAF support, and published Android AARs.
@@ -342,9 +336,8 @@ class FFmpegEngine @Inject constructor(
             return false
         }
         val available = try {
-            // Both arthenica/ffmpeg-kit and its 16 KB-aligned successor share the
-            // `com.arthenica.ffmpegkit.FFmpegKit` entry point — checking either
-            // covers any drop-in successor that preserves the API.
+            // FFmpegKitNext preserves the original
+            // `com.arthenica.ffmpegkit.FFmpegKit` entry point.
             Class.forName("com.arthenica.ffmpegkit.FFmpegKit")
             true
         } catch (_: ClassNotFoundException) {
@@ -465,7 +458,7 @@ class FFmpegEngine @Inject constructor(
             val session = FFmpegKit.executeAsync(
                 command,
                 { completed ->
-                    val code = returnCodeValue(completed.returnCode)
+                    val code = returnCodeValue(completed.getReturnCode())
                     if (code == 0) notifyProgress(onProgress, 1f)
                     if (continuation.isActive) continuation.resume(code)
                 },
@@ -494,7 +487,7 @@ class FFmpegEngine @Inject constructor(
             val session = FFmpegKit.executeWithArgumentsAsync(
                 arguments.toTypedArray(),
                 { completed ->
-                    val code = returnCodeValue(completed.returnCode)
+                    val code = returnCodeValue(completed.getReturnCode())
                     if (code == 0) notifyProgress(onProgress, 1f)
                     if (continuation.isActive) continuation.resume(code)
                 },

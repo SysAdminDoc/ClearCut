@@ -1,0 +1,2 @@
+Replaced the obsolete native video fork with a source-pinned FFmpegKitNext 8.1.0 / FFmpeg 8.1.2 build.
+Added reproducible-build provenance, checksum/advisory gates, deterministic native SBOMs, and restored AVI processing on the fixed decoder.

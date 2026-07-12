@@ -160,8 +160,8 @@ object SmartRenderEngine {
      * produce, so the gap-bridging step is left to a future bridge pass on
      * the composer side.
      *
-     * The B.5 composer step (stitch the run outputs with FFmpeg concat
-     * demuxer) is gated on R6.5 (ffmpeg-kit-16kb activation).
+     * The composer can stitch run outputs through the source-pinned
+     * FFmpegKitNext concat demuxer.
      */
     fun planRuns(segments: List<RenderSegment>): List<RenderRun> {
         if (segments.isEmpty()) return emptyList()

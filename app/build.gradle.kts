@@ -1,4 +1,5 @@
 import java.util.Properties
+import java.security.MessageDigest
 
 plugins {
     alias(libs.plugins.android.application)
@@ -29,8 +30,8 @@ android {
         applicationId = "com.novacut.editor"
         minSdk = 26
         targetSdk = 36
-        versionCode = 261
-        versionName = "3.74.128"
+        versionCode = 262
+        versionName = "3.74.129"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // Passive, opt-in update check for sideload / GitHub-release installs.
@@ -146,6 +147,54 @@ ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
 
+val ffmpegKitAar = rootProject.file("third_party/ffmpeg-kit-next/ffmpeg-kit-next-8.1.0.aar")
+val ffmpegKitAarSha256 = "4b7654925340bb4a5eb0c4e50350a6f664f4568a228d46e9e128eb032406fd00"
+
+fun File.sha256(): String {
+    val digest = MessageDigest.getInstance("SHA-256")
+    inputStream().buffered().use { input ->
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        while (true) {
+            val read = input.read(buffer)
+            if (read < 0) break
+            digest.update(buffer, 0, read)
+        }
+    }
+    return digest.digest().joinToString("") { "%02x".format(it) }
+}
+
+val verifyFfmpegKitAar by tasks.registering {
+    group = "verification"
+    description = "Verifies the source-pinned FFmpegKitNext AAR before compilation."
+    inputs.file(ffmpegKitAar)
+    doLast {
+        require(ffmpegKitAar.isFile) { "Missing vendored FFmpegKitNext AAR: $ffmpegKitAar" }
+        val actual = ffmpegKitAar.sha256()
+        require(actual == ffmpegKitAarSha256) {
+            "FFmpegKitNext AAR checksum mismatch: expected=$ffmpegKitAarSha256 actual=$actual"
+        }
+    }
+}
+
+tasks.named("preBuild").configure { dependsOn(verifyFfmpegKitAar) }
+
+val generateNativeSbom by tasks.registering(Exec::class) {
+    group = "verification"
+    description = "Validates native dependency provenance/advisories and writes deterministic SBOMs."
+    workingDir(rootProject.projectDir)
+    commandLine("python", "scripts/verify_native_supply_chain.py")
+    inputs.file(rootProject.file("third_party/ffmpeg-kit-next/native-lock.json"))
+    inputs.file(ffmpegKitAar)
+    outputs.files(
+        layout.buildDirectory.file("reports/native-sbom/cyclonedx.json"),
+        layout.buildDirectory.file("reports/native-sbom/spdx.json"),
+    )
+}
+
+tasks.configureEach {
+    if (name == "preReleaseBuild") dependsOn(generateNativeSbom)
+}
+
 // Workaround: VMware HGFS cannot delete files whose names contain '$' via standard
 // Java/Windows APIs (ERROR_INVALID_NAME). Ensure output dirs exist before AGP tasks
 // that call FileUtils.deleteDirectoryContents (which asserts isDirectory).
@@ -227,8 +276,9 @@ dependencies {
     // Tier 2: Lottie animated titles
     implementation(libs.lottie.compose)
 
-    // Tier A.9 / R6.5: FFmpeg Kit fork rebuilt for Android 16 KB pages
-    implementation(libs.ffmpeg.kit.sixteenkb)
+    // Source-pinned GPL build: FFmpegKitNext 8.1.0 / FFmpeg 8.1.2, five Android ABIs.
+    implementation(files(ffmpegKitAar))
+    implementation("com.arthenica:smart-exception-java:0.2.1")
 
     // Tier A.2 / R6.6: DeepFilterNet Android noise reduction
     implementation(libs.android.deepfilternet)

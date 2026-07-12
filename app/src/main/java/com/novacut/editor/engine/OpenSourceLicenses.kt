@@ -22,36 +22,25 @@ object OpenSourceLicenses {
 
     val notices: List<OpenSourceLicenseNotice> = listOf(
         OpenSourceLicenseNotice(
-            name = "FFmpegKit 16 KB / FFmpeg",
-            version = "6.1.1",
-            artifact = "com.moizhassan.ffmpeg:ffmpeg-kit-16kb",
-            licenseName = "LGPL-3.0 POM with bundled GPLv3 obligation material",
-            licenseText = "The Maven POM declares GNU Lesser General Public License Version 3. " +
-                "The packaged Android archive also includes GPLv3 license text and a GPLv3 " +
-                "source-offer resource. Redistributed builds that include this artifact must " +
-                "preserve those resources and comply with the bundled FFmpegKit / FFmpeg terms.",
-            licenseUrl = "https://www.gnu.org/licenses/lgpl-3.0.txt",
-            projectUrl = "https://github.com/moizhassankh/ffmpeg-kit-android-16KB",
+            name = "FFmpegKitNext / FFmpeg",
+            version = "8.1.0 (FFmpeg 8.1.2)",
+            artifact = "third_party/ffmpeg-kit-next/ffmpeg-kit-next-8.1.0.aar",
+            licenseName = "GNU General Public License Version 3",
+            licenseText = "This source-pinned build enables GPL components including x264. " +
+                "Redistribution must preserve the packaged licenses and corresponding-source offer.",
+            licenseUrl = "https://www.gnu.org/licenses/gpl-3.0.txt",
+            projectUrl = "https://github.com/arthenica/ffmpeg-kit-next",
             sourceOfferText = """
-                The source code of "FFmpegKit", "FFmpeg" and external libraries enabled within
-                "FFmpeg" for this release can be downloaded from
-                https://github.com/arthenica/ffmpeg-kit/wiki/Source page.
-
-                If you want to receive the source code on physical media submit your request
-                to "open-source@arthenica.com" email address.
-
-                Your request should include "FFmpegKit" version, "FFmpegKit" platform, your
-                name, your company name, your mailing address, the phone number and the date
-                you started using "FFmpegKit".
-
-                Note that we may charge you a fee to cover physical media printing and
-                shipping costs. Your request must be sent within the first three years of the
-                date you received "FFmpegKit" with "GPL v3.0" license.
+                Exact corresponding-source recipe for this GPL v3.0 build:
+                https://github.com/arthenica/ffmpeg-kit-next/tree/3e223118e6e8fb6208693ecf3952e77cd096f587
+                Command: ./nix-android.sh -p android-r27d --enable-gpl --enable-x264 --enable-libass --jobs=8
+                The complete recipe, checksums, enabled components, and source revisions are
+                recorded in third_party/ffmpeg-kit-next/native-lock.json and the installed
+                application resource res/raw/ffmpeg_kit_next_source_offer.txt.
             """.trimIndent(),
-            complianceNote = "ClearCut treats this AAR as carrying FFmpegKit / FFmpeg GPLv3 " +
-                "notice and source-offer obligations unless it is replaced by a verified " +
-                "LGPL-only build flavor. The matching packaged resources are " +
-                "res/raw/license.txt, res/raw/license_*.txt, and res/raw/source.txt.",
+            complianceNote = "The AAR packages res/raw/license.txt, res/raw/license_*.txt, " +
+                "and res/raw/source.txt; ClearCut additionally packages " +
+                "res/raw/ffmpeg_kit_next_source_offer.txt with its exact source recipe.",
         ),
         OpenSourceLicenseNotice(
             name = "Android DeepFilterNet",
@@ -136,7 +125,7 @@ object OpenSourceLicenses {
         notices.firstOrNull { it.artifact == artifact }
 
     fun ffmpegKitNotice(): OpenSourceLicenseNotice =
-        requireNotNull(noticeForArtifact("com.moizhassan.ffmpeg:ffmpeg-kit-16kb"))
+        requireNotNull(noticeForArtifact("third_party/ffmpeg-kit-next/ffmpeg-kit-next-8.1.0.aar"))
 
     fun dependenciesWithSourceOffers(): List<OpenSourceLicenseNotice> =
         notices.filter { !it.sourceOfferText.isNullOrBlank() }

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.arthenica</groupId>
+  <artifactId>ffmpeg-kit-next</artifactId>
+  <version>8.1.0</version>
+  <packaging>aar</packaging>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.arthenica</groupId>
+      <artifactId>smart-exception-java</artifactId>
+      <version>0.2.1</version>
+      <scope>runtime</scope>
+    </dependency>
+  </dependencies>
+</project>

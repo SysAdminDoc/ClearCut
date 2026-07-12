@@ -4,9 +4,14 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.128-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.129-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.129 Reproducible native video stack
+
+- Replaced the obsolete binary fork with a source-pinned FFmpegKitNext 8.1.0 / FFmpeg 8.1.2 GPL build across five Android targets; AVI processing is restored on the fixed decoder.
+- Release preflight verifies the vendored AAR, exact source/build lock and advisory review, then emits deterministic CycloneDX 1.6 and SPDX 2.3 native inventories.
 
 ### v3.74.128 Bounded model downloads
 
@@ -311,7 +316,7 @@ com.novacut.editor/
 │   ├── TapSegmentEngine     # SAM 2.1 / MobileSAM target metadata (stub)
 │   ├── PiperTtsEngine       # Piper VITS TTS (stub, system TTS fallback)
 │   ├── LottieTemplateEngine # Animated title rendering
-│   ├── FFmpegEngine         # FFmpegX fallback encoder (stub)
+│   ├── FFmpegEngine         # FFmpegKitNext fallback processing engine
 │   ├── SubtitleRenderEngine # Canvas + ASS subtitle rendering
 │   ├── GenerativeVideoPolicy # Cloud-only trust gates for large video generators
 │   ├── TimelineExchangeEngine  # OTIO/FCPXML interchange
@@ -426,12 +431,12 @@ Key external dependencies currently in `build.gradle.kts`:
 | Lottie Compose | 6.7.1 | Animated title templates |
 | AndroidX Benchmark/ProfileInstaller | 1.4.1 / 1.4.1 | Baseline Profile generation and release profile install |
 | OkHttp | 5.3.2 | Model downloads and future opt-in provider calls |
-| FFmpegKit 16 KB | 6.1.1 | FFmpeg-backed fallback export paths not covered by Media3 Transformer |
+| FFmpegKitNext / FFmpeg | 8.1.0 / 8.1.2 | Source-pinned GPL build for FFmpeg-backed paths not covered by Media3 Transformer |
 | Android DeepFilterNet | 0.0.8 | On-device voiceover noise reduction |
 
 ### Distribution and Third-party Notices
 
-Open-source notices are available in **Settings > Third-party notices > Open source licenses**. Redistributed builds that include `com.moizhassan.ffmpeg:ffmpeg-kit-16kb:6.1.1` must keep the packaged FFmpegKit / FFmpeg license resources and source-offer text. The fork source is published at https://github.com/moizhassankh/ffmpeg-kit-android-16KB, and the bundled source-offer resource points to FFmpegKit source access at https://github.com/arthenica/ffmpeg-kit/wiki/Source.
+Open-source notices are available in **Settings > Third-party notices > Open source licenses**. ClearCut's GPL FFmpegKitNext 8.1.0 / FFmpeg 8.1.2 build is pinned by commit, build command, component revisions, and AAR checksum in `third_party/ffmpeg-kit-next/native-lock.json`; redistributed builds must keep the packaged license and exact source-offer resources.
 
 ## Supported Devices
 
