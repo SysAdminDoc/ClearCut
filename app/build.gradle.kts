@@ -15,6 +15,12 @@ fun resolveSigningSecret(vararg keys: String): String? {
     }
 }
 
+configurations.configureEach {
+    // Dagger 2.58's lint AAR crashes AGP 8.7.3 lint jar migration with an
+    // ASM NegativeArraySizeException before ClearCut findings are reported.
+    exclude(group = "com.google.dagger", module = "dagger-lint-aar")
+}
+
 android {
     namespace = "com.novacut.editor"
     compileSdk = 36
