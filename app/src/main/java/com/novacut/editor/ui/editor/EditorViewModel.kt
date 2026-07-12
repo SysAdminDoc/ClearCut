@@ -804,16 +804,43 @@ class EditorViewModel @Inject constructor(
                 val resumeAfterSurfaceRecovery = _state.value.isPlaybackRequested
                 videoEngine.pause()
                 _state.update { it.copy(isPlaying = false, isPlaybackRequested = false) }
-                if (isPreviewSurfaceDetachTimeout(error)) {
+                if (isRecoverablePreviewRuntimeFailure(error)) {
+                    val currentPositionMs = _playheadMs.value
+                    val totalDurationMs = _state.value.totalDurationMs
+                    if (isPreviewStuckPlayerFailure(error) &&
+                        isAtPreviewTimelineEnd(currentPositionMs, totalDurationMs)
+                    ) {
+                        _playheadMs.value = totalDurationMs
+                        _state.update {
+                            it.copy(
+                                playheadMs = totalDurationMs,
+                                isPlaying = false,
+                                isPlaybackRequested = false
+                            )
+                        }
+                        Log.i(
+                            "EditorViewModel",
+                            "Treating a stuck-player signal at timeline end as normal completion"
+                        )
+                        return
+                    }
                     Log.w(
                         "EditorViewModel",
-                        "Preview surface detach timed out; resetting the player without blaming the clip",
+                        "Preview runtime stalled; resetting the player without blaming the clip",
                         error
                     )
                     if (resumeAfterSurfaceRecovery) {
                         viewModelScope.launch {
                             delay(PREVIEW_SURFACE_RECOVERY_DELAY_MS)
-                            val recoveryPositionMs = _playheadMs.value
+                            val livePositionMs = _playheadMs.value
+                            val recoveryPositionMs = playbackStartPosition(
+                                livePositionMs,
+                                _state.value.totalDurationMs
+                            )
+                            if (recoveryPositionMs != livePositionMs) {
+                                _playheadMs.value = recoveryPositionMs
+                                _state.update { it.copy(playheadMs = recoveryPositionMs) }
+                            }
                             _state.update { it.copy(isPlaybackRequested = true) }
                             videoEngine.playFromTimelinePosition(
                                 recoveryPositionMs,
@@ -1497,18 +1524,27 @@ class EditorViewModel @Inject constructor(
 
     private fun armPlaybackStartRecovery() {
         playbackStartRecoveryJob?.cancel()
+        val requestedPositionMs = _playheadMs.value
         playbackStartRecoveryJob = viewModelScope.launch {
             delay(PLAYBACK_START_RECOVERY_DELAY_MS)
-            if (!videoEngine.isPlaybackRequested() || videoEngine.isPlaying()) return@launch
+            if (!videoEngine.isPlaybackRequested()) return@launch
 
-            val recoveryPositionMs = _playheadMs.value
+            val observedPositionMs = videoEngine.getAbsolutePositionMs()
+            if (hasPreviewPlaybackAdvanced(requestedPositionMs, observedPositionMs)) {
+                return@launch
+            }
+
+            val recoveryPositionMs = observedPositionMs
             Log.w(
                 "EditorViewModel",
                 "Playback did not advance after request; resetting at $recoveryPositionMs ms"
             )
             videoEngine.playFromTimelinePosition(recoveryPositionMs, restartSession = true)
             delay(PLAYBACK_START_FAILURE_DELAY_MS)
-            if (videoEngine.isPlaybackRequested() && !videoEngine.isPlaying()) {
+            val recoveredPositionMs = videoEngine.getAbsolutePositionMs()
+            if (videoEngine.isPlaybackRequested() &&
+                !hasPreviewPlaybackAdvanced(recoveryPositionMs, recoveredPositionMs)
+            ) {
                 videoEngine.pause()
                 _state.update { it.copy(isPlaying = false, isPlaybackRequested = false) }
                 showToast(text(R.string.vm_preview_playback_failed_toast), ToastSeverity.Error)
