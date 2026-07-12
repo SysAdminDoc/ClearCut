@@ -1,0 +1,1 @@
+Compact editor menus now leave more room for video, with direct Color and FX access and no automatic training prompts. A real Text lane sits above video and shows title timing. Playback now restarts stale paused-buffering sessions instead of leaving the preview spinner or black frame stuck.

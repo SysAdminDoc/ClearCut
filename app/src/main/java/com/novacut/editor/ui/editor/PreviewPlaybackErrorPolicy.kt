@@ -3,6 +3,7 @@ package com.novacut.editor.ui.editor
 import androidx.media3.exoplayer.ExoTimeoutException
 import kotlin.math.abs
 
+@android.annotation.SuppressLint("UnsafeOptInUsageError")
 internal fun isPreviewSurfaceDetachTimeout(error: Throwable): Boolean {
     var cause: Throwable? = error
     val visited = mutableSetOf<Throwable>()

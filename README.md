@@ -4,9 +4,19 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.119-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.120-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.120 Editor workspace and playback
+
+- Replaced oversized multi-row tool cards with a compact action rail; Color and FX now open their real editors directly, and tool panels use title-only headers without training copy.
+- Removed automatic tutorials and editing-suggestion banners from the editing workspace so the preview, timeline, and commands remain uninterrupted.
+- Added a persistent Text lane above video for new and restored projects. Text spans render on the lane, tap to edit, and empty lane space opens a new title.
+- Compact phone timelines use tighter chrome, shorter rulers, concise track labels, and a collapsed Text lane to return vertical room to the video preview.
+- Paused Media3 sessions stuck in `BUFFERING` now restart before Play, and the preview no longer shows a permanent loading spinner when playback was not requested.
+- The project home now opens directly on compact create/import, search, filters, and recent work instead of a marketing/training hero.
+- Playback completion retains the final decoded frame instead of misclassifying the exact timeline end as an empty gap.
 
 ### v3.74.119 Timeline edit controls and playback
 
