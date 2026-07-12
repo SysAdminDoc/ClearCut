@@ -1,0 +1,3 @@
+Every downloadable model now has a hard byte ceiling and worst-case storage reserve.
+Oversized, chunked, or dishonest responses abort before exceeding the cap and clean partial files.
+Download progress and byte counters remain bounded through retries and cancellation.

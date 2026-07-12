@@ -144,6 +144,7 @@ class InpaintingEngine @Inject constructor(
                         targetFile = outputFile,
                         minimumBytes = MODEL_SIZE_BYTES / 2,
                         estimatedBytes = MODEL_SIZE_BYTES,
+                        maxBytes = MODEL_SIZE_BYTES,
                         displayName = "LaMa inpainting model",
                         sha256 = MODEL_SHA256,
                         checksumRequired = true

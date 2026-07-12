@@ -1,11 +1,17 @@
 package com.novacut.editor.engine
 
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.IOException
 import java.nio.file.Files
 
 class ModelDownloadManagerTest {
@@ -138,22 +144,96 @@ class ModelDownloadManagerTest {
     }
 
     @Test
-    fun estimateTotalBytes_usesTheLargerOfEstimateAndMinimum() {
+    fun estimateTotalBytes_sumsValidatedEstimates() {
         val files = listOf(
             ModelDownloadManager.ModelFile(
                 url = "https://example.com/a.onnx",
                 targetFile = File("a.onnx"),
                 minimumBytes = 100,
-                estimatedBytes = 50
+                estimatedBytes = 100,
+                maxBytes = 125
             ),
             ModelDownloadManager.ModelFile(
                 url = "https://example.com/b.onnx",
                 targetFile = File("b.onnx"),
                 minimumBytes = 100,
-                estimatedBytes = 250
+                estimatedBytes = 250,
+                maxBytes = 300
             )
         )
 
         assertEquals(350, ModelDownloadManager.estimateTotalBytes(files))
+    }
+
+    @Test
+    fun declaredLengthOverMaximumIsRejectedBeforeStreaming() {
+        assertThrows(IOException::class.java) {
+            ModelDownloadManager.validateDeclaredLength(
+                serverLength = 11L,
+                maxBytes = 10L,
+                displayName = "bounded model"
+            )
+        }
+        ModelDownloadManager.validateDeclaredLength(-1L, 10L, "chunked model")
+        ModelDownloadManager.validateDeclaredLength(10L, 10L, "exact model")
+    }
+
+    @Test
+    fun chunkedTransferAbortsAtCeilingAndDeletesTemp() = runBlocking {
+        val dir = Files.createTempDirectory("clearcut-model-cap").toFile()
+        val temp = File(dir, "model.tmp")
+        try {
+            assertThrows(IOException::class.java) {
+                runBlocking {
+                    ModelDownloadManager.writeDownloadTemp(
+                        tempFile = temp,
+                        input = ByteArrayInputStream(ByteArray(11)),
+                        maxBytes = 10L
+                    )
+                }
+            }
+            assertFalse(temp.exists())
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun exactBoundarySucceedsAndProgressNeverExceedsCeiling() = runBlocking {
+        val output = ByteArrayOutputStream()
+        val progress = mutableListOf<Long>()
+
+        val copied = ModelDownloadManager.copyWithByteCeiling(
+            input = ByteArrayInputStream(ByteArray(10)),
+            output = output,
+            maxBytes = 10L,
+            onBytesCopied = progress::add
+        )
+
+        assertEquals(10L, copied)
+        assertEquals(10, output.size())
+        assertTrue(progress.all { it in 0L..10L })
+        assertEquals(10L, progress.last())
+    }
+
+    @Test
+    fun cancellationDeletesPartialTemp() = runBlocking {
+        val dir = Files.createTempDirectory("clearcut-model-cancel").toFile()
+        val temp = File(dir, "model.tmp").apply { writeText("partial") }
+        try {
+            val job = launch {
+                coroutineContext.cancel()
+                ModelDownloadManager.writeDownloadTemp(
+                    tempFile = temp,
+                    input = ByteArrayInputStream(ByteArray(10)),
+                    maxBytes = 10L
+                )
+            }
+            job.join()
+            assertTrue(job.isCancelled)
+            assertFalse(temp.exists())
+        } finally {
+            dir.deleteRecursively()
+        }
     }
 }

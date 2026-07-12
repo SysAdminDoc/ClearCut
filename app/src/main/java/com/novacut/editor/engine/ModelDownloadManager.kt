@@ -11,6 +11,8 @@ import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.IOException
+import java.io.InputStream
+import java.io.OutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
@@ -28,6 +30,8 @@ class ModelDownloadManager @Inject constructor(
         val targetFile: File,
         val minimumBytes: Long,
         val estimatedBytes: Long = minimumBytes,
+        /** Hard transfer and storage ceiling. Downloads abort before writing byte maxBytes + 1. */
+        val maxBytes: Long,
         val displayName: String = targetFile.name,
         // Optional lowercase hex SHA-256 of the expected file. When set, the
         // download is verified before being moved into place — a length-only
@@ -94,8 +98,8 @@ class ModelDownloadManager @Inject constructor(
                     requireChecksum = request.checksumRequired,
                 )
             ) {
-                completedEstimateBytes += estimatedBytes
-                reusedBytes += request.targetFile.length()
+                completedEstimateBytes = saturatingAdd(completedEstimateBytes, estimatedBytes)
+                reusedBytes = saturatingAdd(reusedBytes, request.targetFile.length())
                 filesReady++
                 onProgress((completedEstimateBytes.toFloat() / safeTotal).coerceIn(0f, 0.99f))
                 return@forEach
@@ -109,8 +113,8 @@ class ModelDownloadManager @Inject constructor(
                 readTimeoutMs = readTimeoutMs,
                 onProgress = onProgress
             )
-            downloadedBytes += result.actualBytes
-            completedEstimateBytes += estimatedBytes
+            downloadedBytes = saturatingAdd(downloadedBytes, result.actualBytes)
+            completedEstimateBytes = saturatingAdd(completedEstimateBytes, estimatedBytes)
             filesReady++
             onProgress((completedEstimateBytes.toFloat() / safeTotal).coerceIn(0f, 0.99f))
         }
@@ -188,8 +192,6 @@ class ModelDownloadManager @Inject constructor(
         connection.readTimeout = readTimeoutMs
         connection.setRequestProperty("User-Agent", USER_AGENT)
 
-        val digest = request.sha256?.let { MessageDigest.getInstance("SHA-256") }
-
         try {
             connection.connect()
             if (connection.responseCode !in 200..299) {
@@ -197,24 +199,17 @@ class ModelDownloadManager @Inject constructor(
             }
 
             val serverLength = connection.contentLengthLong
-            var actualBytes = 0L
-            BufferedInputStream(connection.inputStream, BUFFER_SIZE).use { input ->
-                tempFile.outputStream().buffered().use { output ->
-                    val buffer = ByteArray(BUFFER_SIZE)
-                    var read: Int
-                    while (input.read(buffer).also { read = it } != -1) {
-                        coroutineContext.ensureActive()
-                        output.write(buffer, 0, read)
-                        digest?.update(buffer, 0, read)
-                        actualBytes += read
-                        val downloadedEstimate = when {
-                            serverLength > 0L -> (actualBytes.toFloat() / serverLength * request.estimatedBytes).toLong()
-                            else -> actualBytes
-                        }
-                        val progress = (completedEstimateBytes + downloadedEstimate)
-                            .toFloat() / safeTotalBytes
-                        onProgress(progress.coerceIn(0f, 0.99f))
-                    }
+            validateDeclaredLength(serverLength, request.maxBytes, request.displayName)
+            val progressLength = serverLength.takeIf { it > 0L } ?: request.maxBytes
+            val actualBytes = BufferedInputStream(connection.inputStream, BUFFER_SIZE).use { input ->
+                writeDownloadTemp(tempFile, input, request.maxBytes) { copied ->
+                    val ratio = copied.toDouble() / progressLength.coerceAtLeast(1L).toDouble()
+                    val downloadedEstimate = (ratio * request.estimatedBytes)
+                        .toLong()
+                        .coerceIn(0L, request.estimatedBytes)
+                    val progress = (completedEstimateBytes.toDouble() + downloadedEstimate.toDouble()) /
+                        safeTotalBytes.toDouble()
+                    onProgress(progress.toFloat().coerceIn(0f, 0.99f))
                 }
             }
 
@@ -224,8 +219,8 @@ class ModelDownloadManager @Inject constructor(
                 expectedBytes = serverLength.takeIf { it > 0L },
                 displayName = request.displayName
             )
-            if (digest != null) {
-                val actualHash = digest.digest().toHexString()
+            if (request.sha256 != null) {
+                val actualHash = sha256Of(tempFile)
                 val expected = requireNotNull(request.sha256) {
                     "sha256 was null but digest was created — logic error"
                 }.lowercase()
@@ -253,7 +248,62 @@ class ModelDownloadManager @Inject constructor(
         private val USER_AGENT = "ClearCut/${com.novacut.editor.ClearCutApp.VERSION.removePrefix("v")}"
 
         internal fun estimateTotalBytes(files: List<ModelFile>): Long {
-            return files.sumOf { it.estimatedBytes.coerceAtLeast(it.minimumBytes).coerceAtLeast(1L) }
+            return files.fold(0L) { total, request ->
+                saturatingAdd(total, request.estimatedBytes.coerceAtLeast(request.minimumBytes).coerceAtLeast(1L))
+            }
+        }
+
+        private fun saturatingAdd(left: Long, right: Long): Long =
+            if (right > Long.MAX_VALUE - left) Long.MAX_VALUE else left + right
+
+        internal fun validateDeclaredLength(serverLength: Long, maxBytes: Long, displayName: String) {
+            if (serverLength > maxBytes) {
+                throw IOException(
+                    "Model download is larger than the ${maxBytes}-byte limit: $displayName"
+                )
+            }
+        }
+
+        internal suspend fun writeDownloadTemp(
+            tempFile: File,
+            input: InputStream,
+            maxBytes: Long,
+            onBytesCopied: (Long) -> Unit = {}
+        ): Long {
+            require(maxBytes > 0L) { "maxBytes must be positive" }
+            var copied = 0L
+            try {
+                tempFile.outputStream().buffered().use { output ->
+                    copied = copyWithByteCeiling(input, output, maxBytes, onBytesCopied)
+                }
+                return copied
+            } catch (failure: Throwable) {
+                tempFile.delete()
+                throw failure
+            }
+        }
+
+        internal suspend fun copyWithByteCeiling(
+            input: InputStream,
+            output: OutputStream,
+            maxBytes: Long,
+            onBytesCopied: (Long) -> Unit = {}
+        ): Long {
+            require(maxBytes > 0L) { "maxBytes must be positive" }
+            val buffer = ByteArray(BUFFER_SIZE)
+            var copied = 0L
+            while (true) {
+                coroutineContext.ensureActive()
+                val read = input.read(buffer)
+                if (read < 0) break
+                if (read.toLong() > maxBytes - copied) {
+                    throw IOException("Model download exceeded the $maxBytes-byte limit")
+                }
+                output.write(buffer, 0, read)
+                copied += read
+                onBytesCopied(copied)
+            }
+            return copied
         }
 
         /**
@@ -346,6 +396,12 @@ class ModelDownloadManager @Inject constructor(
                 require(request.minimumBytes > 0L) {
                     "Model minimum size must be positive: ${request.displayName}"
                 }
+                require(request.maxBytes >= request.minimumBytes) {
+                    "Model maximum size must cover its minimum: ${request.displayName}"
+                }
+                require(request.estimatedBytes in request.minimumBytes..request.maxBytes) {
+                    "Model estimate must be between minimum and maximum: ${request.displayName}"
+                }
                 request.sha256?.let { hash ->
                     require(hash.length == 64 && hash.all { it.isHexDigit() }) {
                         "SHA-256 must be 64 hex characters: ${request.displayName}"
@@ -371,7 +427,7 @@ class ModelDownloadManager @Inject constructor(
                         requireChecksum = it.checksumRequired,
                     )
                 }
-                .sumOf { it.estimatedBytes.coerceAtLeast(it.minimumBytes).coerceAtLeast(1L) }
+                .fold(0L) { total, request -> saturatingAdd(total, request.maxBytes) }
             if (neededBytes <= 0L) return
 
             val targetDir = files.first().targetFile.absoluteFile.parentFile ?: return

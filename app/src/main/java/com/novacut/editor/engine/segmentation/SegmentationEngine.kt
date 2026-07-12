@@ -115,6 +115,7 @@ class SegmentationEngine @Inject constructor(
                         targetFile = modelFile,
                         minimumBytes = MIN_MODEL_BYTES,
                         estimatedBytes = MODEL_ESTIMATED_BYTES,
+                        maxBytes = MODEL_ESTIMATED_BYTES,
                         displayName = "Selfie segmenter",
                         sha256 = MODEL_SHA256,
                         checksumRequired = true

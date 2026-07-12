@@ -4,9 +4,14 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.127-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.128-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.128 Bounded model downloads
+
+- Every downloadable model now declares a hard byte ceiling in addition to its minimum, estimate, and checksum.
+- Oversized declared lengths fail before body reads; chunked or lying responses abort before writing past the cap, delete partial files, preserve storage headroom, and keep progress bounded.
 
 ### v3.74.127 Portable projects and review-first Auto Edit
 

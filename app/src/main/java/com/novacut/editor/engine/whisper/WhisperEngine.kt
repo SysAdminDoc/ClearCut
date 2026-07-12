@@ -153,6 +153,7 @@ class WhisperEngine @Inject constructor(
                     targetFile = encoderFile,
                     minimumBytes = MIN_ENCODER_BYTES,
                     estimatedBytes = ENCODER_ESTIMATED_BYTES,
+                    maxBytes = ENCODER_ESTIMATED_BYTES,
                     displayName = "Whisper encoder",
                     sha256 = ENCODER_SHA256,
                     checksumRequired = true
@@ -162,6 +163,7 @@ class WhisperEngine @Inject constructor(
                     targetFile = decoderFile,
                     minimumBytes = MIN_DECODER_BYTES,
                     estimatedBytes = DECODER_ESTIMATED_BYTES,
+                    maxBytes = DECODER_ESTIMATED_BYTES,
                     displayName = "Whisper decoder",
                     sha256 = DECODER_SHA256,
                     checksumRequired = true
@@ -171,6 +173,7 @@ class WhisperEngine @Inject constructor(
                     targetFile = vocabFile,
                     minimumBytes = MIN_VOCAB_BYTES,
                     estimatedBytes = VOCAB_ESTIMATED_BYTES,
+                    maxBytes = VOCAB_ESTIMATED_BYTES,
                     displayName = "Whisper vocabulary",
                     sha256 = VOCAB_SHA256,
                     checksumRequired = true

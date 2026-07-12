@@ -105,6 +105,7 @@ class SmartReframeEngine @Inject constructor(
                 targetFile = faceModelFile,
                 minimumBytes = MIN_MODEL_BYTES,
                 estimatedBytes = MODEL_ESTIMATED_BYTES,
+                maxBytes = MODEL_ESTIMATED_BYTES,
                 displayName = "BlazeFace face detector",
                 sha256 = MODEL_SHA256,
                 checksumRequired = true
