@@ -52,6 +52,8 @@ import com.novacut.editor.model.Track
 import com.novacut.editor.model.TrackType
 import com.novacut.editor.ui.theme.Mocha
 
+private const val AUDIO_ROUTING_RENDERER_AVAILABLE = false
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AudioMixerPanel(
@@ -126,10 +128,12 @@ fun AudioMixerPanel(
                         text = "${tracks.size} tracks live",
                         accent = Mocha.Sapphire
                     )
-                    PremiumPanelPill(
-                        text = "$activeEffects FX staged",
-                        accent = if (activeEffects > 0) Mocha.Mauve else Mocha.Overlay1
-                    )
+                    if (AUDIO_ROUTING_RENDERER_AVAILABLE) {
+                        PremiumPanelPill(
+                            text = "$activeEffects FX staged",
+                            accent = if (activeEffects > 0) Mocha.Mauve else Mocha.Overlay1
+                        )
+                    }
                 }
             }
         }
@@ -145,7 +149,7 @@ fun AudioMixerPanel(
                 color = Mocha.Text
             )
             Text(
-                text = "Each strip now exposes real volume and pan control, plus mute, solo, and effect routing.",
+                text = "Each strip exposes rendered volume, mute, and solo controls.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Mocha.Subtext0
             )
@@ -185,7 +189,7 @@ fun AudioMixerPanel(
         }
 
         AnimatedVisibility(
-            visible = selectedTrack != null,
+            visible = AUDIO_ROUTING_RENDERER_AVAILABLE && selectedTrack != null,
             enter = slideInVertically { it / 3 } + fadeIn(),
             exit = slideOutVertically { it / 3 } + fadeOut()
         ) {
@@ -446,33 +450,35 @@ private fun ChannelStrip(
                         )
                     }
 
-                    var panDragging by remember { mutableStateOf(false) }
-                    MixerControlBlock(
-                        label = "Pan",
-                        valueLabel = formatPan(track.pan),
-                        accent = accent
-                    ) {
-                        Slider(
-                            value = track.pan,
-                            onValueChange = {
-                                if (!panDragging) {
-                                    panDragging = true
-                                    onPanDragStarted()
-                                }
-                                onPanChanged(it)
-                            },
-                            onValueChangeFinished = {
-                                panDragging = false
-                                onPanDragEnded()
-                            },
-                            valueRange = -1f..1f,
-                            modifier = Modifier.semantics { contentDescription = panDesc },
-                            colors = SliderDefaults.colors(
-                                thumbColor = Mocha.Mauve,
-                                activeTrackColor = Mocha.Mauve.copy(alpha = 0.65f),
-                                inactiveTrackColor = Mocha.Surface1
+                    if (AUDIO_ROUTING_RENDERER_AVAILABLE) {
+                        var panDragging by remember { mutableStateOf(false) }
+                        MixerControlBlock(
+                            label = "Pan",
+                            valueLabel = formatPan(track.pan),
+                            accent = accent
+                        ) {
+                            Slider(
+                                value = track.pan,
+                                onValueChange = {
+                                    if (!panDragging) {
+                                        panDragging = true
+                                        onPanDragStarted()
+                                    }
+                                    onPanChanged(it)
+                                },
+                                onValueChangeFinished = {
+                                    panDragging = false
+                                    onPanDragEnded()
+                                },
+                                valueRange = -1f..1f,
+                                modifier = Modifier.semantics { contentDescription = panDesc },
+                                colors = SliderDefaults.colors(
+                                    thumbColor = Mocha.Mauve,
+                                    activeTrackColor = Mocha.Mauve.copy(alpha = 0.65f),
+                                    inactiveTrackColor = Mocha.Surface1
+                                )
                             )
-                        )
+                        }
                     }
                 }
 
@@ -496,14 +502,16 @@ private fun ChannelStrip(
                         onClick = onSoloToggled,
                         modifier = Modifier.weight(1f)
                     )
-                    MixerToggleButton(
-                        label = androidx.compose.ui.res.stringResource(R.string.panel_audio_mixer_fx),
-                        accent = accent,
-                        active = isEffectsExpanded || track.audioEffects.isNotEmpty(),
-                        contentDescription = fxDesc,
-                        onClick = onEffectsClicked,
-                        modifier = Modifier.weight(1f)
-                    )
+                    if (AUDIO_ROUTING_RENDERER_AVAILABLE) {
+                        MixerToggleButton(
+                            label = androidx.compose.ui.res.stringResource(R.string.panel_audio_mixer_fx),
+                            accent = accent,
+                            active = isEffectsExpanded || track.audioEffects.isNotEmpty(),
+                            contentDescription = fxDesc,
+                            onClick = onEffectsClicked,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
         }

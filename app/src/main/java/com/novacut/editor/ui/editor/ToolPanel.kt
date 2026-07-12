@@ -113,8 +113,6 @@ private val clipEditSubMenu = listOf(
 private val clipMotionSubMenu = listOf(
     SubMenuItem("transform", Icons.Default.Transform, R.string.tool_submenu_transform),
     SubMenuItem("keyframes", Icons.Default.Timeline, R.string.tool_keyframes),
-    SubMenuItem("masks", Icons.Default.Layers, R.string.tool_masks),
-    SubMenuItem("blend_mode", Icons.Default.BlurOn, R.string.tool_blend_mode),
     SubMenuItem("pip", Icons.Default.PictureInPicture, R.string.tool_pip),
     SubMenuItem("chroma_key", Icons.Default.Deblur, R.string.tool_chroma_key)
 )
@@ -135,8 +133,6 @@ private val clipMoreSubMenu = listOf(
     SubMenuItem("speed", Icons.Default.Speed, R.string.tool_tab_speed),
     SubMenuItem("transform", Icons.Default.Transform, R.string.tool_submenu_transform),
     SubMenuItem("keyframes", Icons.Default.Timeline, R.string.tool_keyframes),
-    SubMenuItem("masks", Icons.Default.Layers, R.string.tool_masks),
-    SubMenuItem("blend_mode", Icons.Default.BlurOn, R.string.tool_blend_mode),
     SubMenuItem("pip", Icons.Default.PictureInPicture, R.string.tool_pip),
     SubMenuItem("chroma_key", Icons.Default.Deblur, R.string.tool_chroma_key),
     SubMenuItem("transition", Icons.Default.SwapHoriz, R.string.tool_transitions),

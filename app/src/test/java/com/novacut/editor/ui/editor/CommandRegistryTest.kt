@@ -84,9 +84,12 @@ class CommandRegistryTest {
     fun secondaryMotionToolsAreReachableAndProjectCaptionsAreNotOffered() {
         assertTrue(
             clipMoreActionIds().containsAll(
-                setOf("transform", "keyframes", "masks", "blend_mode", "pip", "chroma_key")
+                setOf("transform", "keyframes", "pip", "chroma_key")
             )
         )
+        assertFalse("incomplete mask editor must not be offered", "masks" in clipMoreActionIds())
+        assertFalse("single-input blend filters must not be offered as compositing", "blend_mode" in clipMoreActionIds())
+        assertFalse(CommandRegistry.allCommands().any { it.actionId in setOf("masks", "blend_mode") })
         assertFalse("captions require a clip", "captions" in projectTextActionIds())
     }
 }

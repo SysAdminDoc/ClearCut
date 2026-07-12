@@ -93,8 +93,6 @@ object CommandRegistry {
         val cat = "Motion"
         add(CommandEntry("transform", Icons.Default.Transform, R.string.tool_submenu_transform, cat, requiresClip = true))
         add(CommandEntry("keyframes", Icons.Default.Timeline, R.string.tool_keyframes, cat, requiresClip = true))
-        add(CommandEntry("masks", Icons.Default.Layers, R.string.tool_masks, cat, requiresClip = true))
-        add(CommandEntry("blend_mode", Icons.Default.BlurOn, R.string.tool_blend_mode, cat, requiresClip = true))
         add(CommandEntry("pip", Icons.Default.PictureInPicture, R.string.tool_pip, cat, requiresClip = true))
         add(CommandEntry("chroma_key", Icons.Default.Deblur, R.string.tool_chroma_key, cat, requiresClip = true))
     }
