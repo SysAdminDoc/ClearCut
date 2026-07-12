@@ -74,6 +74,19 @@ import java.io.File
 private const val EXPORT_NOTIFICATION_PERMISSION_PREFS = "export_notification_permission"
 private const val EXPORT_NOTIFICATION_PERMISSION_HANDLED = "handled"
 
+internal fun previewClipForDisplay(
+    clips: List<Clip>,
+    positionMs: Long,
+    totalDurationMs: Long
+): Clip? {
+    return clips.firstOrNull { positionMs in it.timelineStartMs until it.timelineEndMs }
+        ?: clips.lastOrNull()?.takeIf {
+            totalDurationMs > 0L &&
+                positionMs == totalDurationMs &&
+                it.timelineEndMs == totalDurationMs
+        }
+}
+
 @Composable
 fun EditorScreen(
     modifier: Modifier = Modifier,
@@ -329,9 +342,9 @@ fun EditorScreen(
     // These two derives intentionally read `playheadMs` (the fast-path flow) so
     // they recompute every playhead tick, but because the sorted list is cached
     // above, each recompute is just a cheap linear scan over the sorted list.
-    val previewClipAtPlayhead by remember(previewTrackClips) {
+    val previewClipAtPlayhead by remember(previewTrackClips, state.totalDurationMs) {
         derivedStateOf {
-            previewTrackClips.firstOrNull { playheadMs in it.timelineStartMs until it.timelineEndMs }
+            previewClipForDisplay(previewTrackClips, playheadMs, state.totalDurationMs)
         }
     }
     val nextPreviewClip by remember(previewTrackClips) {

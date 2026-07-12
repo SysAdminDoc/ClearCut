@@ -135,7 +135,6 @@ fun ProjectListScreen(
         Column(modifier = Modifier.fillMaxSize()) {
             ProjectHomeHero(
                 projectCount = projectTotalCount,
-                savedTemplateCount = userTemplates.size,
                 searchQuery = searchQuery,
                 sortMode = sortMode,
                 onSearchQueryChanged = viewModel::setSearchQuery,
@@ -231,9 +230,7 @@ fun ProjectListScreen(
                             projectTotalCount,
                             sortLabel.lowercase(Locale.getDefault())
                         )
-                    } else {
-                        stringResource(R.string.projects_recent_subtitle)
-                    },
+                    } else null,
                     modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, top = 14.dp, bottom = Spacing.sm),
                     trailing = {
                         ClearCutMetricPill(
@@ -521,7 +518,6 @@ private fun DocumentReportLine(
 @Composable
 private fun ProjectHomeHero(
     projectCount: Int,
-    savedTemplateCount: Int,
     searchQuery: String,
     sortMode: SortMode,
     onSearchQueryChanged: (String) -> Unit,
@@ -545,7 +541,7 @@ private fun ProjectHomeHero(
             verticalAlignment = Alignment.CenterVertically
         ) {
             ClearCutMetricPill(
-                text = stringResource(R.string.projects_app_title),
+                text = "${stringResource(R.string.projects_app_title)} · $projectCount",
                 accent = Mocha.Mauve,
                 icon = Icons.Default.Movie
             )
@@ -556,52 +552,6 @@ private fun ProjectHomeHero(
                 onClick = onSettings,
                 modifier = Modifier.testTag(ClearCutTestTags.PROJECTS_SETTINGS)
             )
-        }
-
-        Text(
-            text = stringResource(R.string.projects_headline),
-            color = Mocha.Text,
-            style = MaterialTheme.typography.headlineLarge,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-
-        Text(
-            text = stringResource(R.string.projects_subtitle),
-            color = Mocha.Subtext0,
-            style = MaterialTheme.typography.bodyMedium,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            item {
-                HeroMetricPill(
-                    label = stringResource(
-                        R.string.projects_count,
-                        projectCount,
-                        if (projectCount != 1) "s" else ""
-                    ),
-                    accent = Mocha.Mauve,
-                    icon = Icons.Default.Folder
-                )
-            }
-            item {
-                HeroMetricPill(
-                    label = stringResource(R.string.projects_templates_count, projectTemplates.size),
-                    accent = Mocha.Sapphire,
-                    icon = Icons.Default.DashboardCustomize
-                )
-            }
-            if (savedTemplateCount > 0) {
-                item {
-                    HeroMetricPill(
-                        label = stringResource(R.string.projects_saved_templates_count, savedTemplateCount),
-                        accent = Mocha.Rosewater,
-                        icon = Icons.Default.BookmarkAdded
-                    )
-                }
-            }
         }
 
         if (showProjectActions) {
@@ -678,15 +628,6 @@ private fun ProjectHomeHero(
             }
         }
     }
-}
-
-@Composable
-private fun HeroMetricPill(
-    label: String,
-    accent: androidx.compose.ui.graphics.Color,
-    icon: androidx.compose.ui.graphics.vector.ImageVector? = null
-) {
-    ClearCutMetricPill(text = label, accent = accent, icon = icon)
 }
 
 @Composable
@@ -1078,7 +1019,7 @@ private fun ProjectActionRow(
     secondaryTestTag: String? = null
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-        val stackActions = maxWidth < 360.dp
+        val stackActions = maxWidth < 300.dp
         if (stackActions) {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 ClearCutPrimaryButton(
