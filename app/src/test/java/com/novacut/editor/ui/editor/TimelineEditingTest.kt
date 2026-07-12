@@ -629,6 +629,25 @@ class TimelineEditingTest {
     }
 
     @Test
+    fun `speed-curve split keeps the two halves exactly abutting`() {
+        // A ramping speed curve makes durationMs a rounded integration of the
+        // restricted curve, which used to leave a sub-frame gap/overlap between
+        // the split halves and break the merge/coalesce abutment invariant.
+        val ramped = clip("ramped", 1_000L, 0L, 4_000L, 4_000L, speedCurve = SpeedCurve.rampUp())
+        var generatedId = 0
+        val split = splitTimelineClip(
+            clip = ramped,
+            playheadMs = ramped.timelineStartMs + ramped.durationMs / 2,
+            newClipId = "right",
+            newLinkedClipId = null,
+            rightGroupId = null,
+            idFactory = { "generated-${generatedId++}" }
+        ) ?: error("expected split")
+
+        assertEquals(split.left.timelineEndMs, split.right.timelineStartMs)
+    }
+
+    @Test
     fun `split preserves absolute animation and caption timing with fresh right-side identities`() {
         val sourceClip = clip("source", 1_000L, 0L, 1_000L, 1_000L).copy(
             groupId = "left-group",

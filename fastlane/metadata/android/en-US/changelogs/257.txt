@@ -1,0 +1,1 @@
+Splitting a clip that has a speed ramp now lands the cut cleanly, with the two halves lined up exactly so they can still be merged back together later.

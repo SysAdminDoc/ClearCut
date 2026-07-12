@@ -365,7 +365,18 @@ internal fun splitTimelineClip(
         audioEffects = clip.audioEffects.map { it.copy(id = idFactory()) }
     )
     val left = leftCandidate.copy(fadeInMs = minOf(leftCandidate.fadeInMs, leftCandidate.durationMs))
-    val right = rightCandidate.copy(fadeOutMs = minOf(rightCandidate.fadeOutMs, rightCandidate.durationMs))
+    // Keep the two halves exactly abutting. leftCandidate.durationMs is a fresh
+    // integration of the restricted speed curve, so for a curved clip it can
+    // round a millisecond away from timelineOffsetMs and leave a sub-frame
+    // gap/overlap against the right half (pinned to playheadMs). Snapping the
+    // right start to left.timelineEndMs preserves the abutment invariant that
+    // merge/coalesce rely on (left.timelineEndMs == right.timelineStartMs). For
+    // constant-speed clips left.timelineEndMs already equals playheadMs, so this
+    // is a no-op there.
+    val right = rightCandidate.copy(
+        timelineStartMs = left.timelineEndMs,
+        fadeOutMs = minOf(rightCandidate.fadeOutMs, rightCandidate.durationMs)
+    )
     return TimelineClipSplit(left, right, timelineOffsetMs, sourceSplitMs)
 }
 
