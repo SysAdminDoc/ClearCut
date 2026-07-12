@@ -224,7 +224,7 @@ fun PreviewPanel(
 
                                 override fun onPlayerError(error: PlaybackException) {
                                     isBuffering = false
-                                    hasPlaybackError = true
+                                    hasPlaybackError = !isPreviewSurfaceDetachTimeout(error)
                                 }
                             }
                             capturedPlayer.addListener(listener)
@@ -233,11 +233,31 @@ fun PreviewPanel(
                             }
                         }
 
-                        if (hasPlaybackError) {
-                            PreviewPlaybackErrorState(onOpenMediaManager = onOpenMediaManager)
-                        }
+                        // Keep one PlayerView mounted for the lifetime of the preview. Removing
+                        // the AndroidView for a timeline gap, still image, or transient error
+                        // destroys its SurfaceView while the hardware codec is active. On some
+                        // Samsung/Qualcomm devices that detach blocks until Media3 raises
+                        // TIMEOUT_OPERATION_DETACH_SURFACE and the preview becomes unrecoverable.
+                        AndroidView(
+                            factory = { ctx ->
+                                PlayerView(ctx).apply {
+                                    useController = false
+                                    setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
+                                    onPlayerViewReady(this)
+                                }
+                            },
+                            update = { playerView ->
+                                val player = engine.getPlayer()
+                                if (playerView.player !== player) playerView.player = player
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        )
 
                         when {
+                            hasPlaybackError -> {
+                                PreviewPlaybackErrorState(onOpenMediaManager = onOpenMediaManager)
+                            }
+
                             showGapState -> {
                                 PreviewGapState(
                                     nextClipStartMs = nextTimelineClip?.timelineStartMs,
@@ -273,21 +293,7 @@ fun PreviewPanel(
                                 )
                             }
 
-                            else -> {
-                                AndroidView(
-                                    factory = { ctx ->
-                                        PlayerView(ctx).apply {
-                                            useController = false
-                                            setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
-                                            onPlayerViewReady(this)
-                                        }
-                                    },
-                                    update = { playerView ->
-                                        playerView.player = engine.getPlayer()
-                                    },
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
+                            else -> Unit
                         }
 
                         activeImageOverlays.forEach { overlay ->

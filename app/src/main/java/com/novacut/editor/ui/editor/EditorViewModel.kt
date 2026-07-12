@@ -108,6 +108,7 @@ private const val SUGGESTION_SNOOZE_STATE_KEY = "editingSuggestionSnoozeUntil"
 private const val SUGGESTION_SNOOZE_MS = 30 * 60 * 1_000L
 private const val PLAYBACK_START_RECOVERY_DELAY_MS = 3_000L
 private const val PLAYBACK_START_FAILURE_DELAY_MS = 7_000L
+private const val PREVIEW_SURFACE_RECOVERY_DELAY_MS = 250L
 
 internal fun shouldShowEditingSuggestion(
     suggestionId: String,
@@ -800,8 +801,29 @@ class EditorViewModel @Inject constructor(
 
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                 playbackStartRecoveryJob?.cancel()
+                val resumeAfterSurfaceRecovery = _state.value.isPlaybackRequested
                 videoEngine.pause()
                 _state.update { it.copy(isPlaying = false, isPlaybackRequested = false) }
+                if (isPreviewSurfaceDetachTimeout(error)) {
+                    Log.w(
+                        "EditorViewModel",
+                        "Preview surface detach timed out; resetting the player without blaming the clip",
+                        error
+                    )
+                    if (resumeAfterSurfaceRecovery) {
+                        viewModelScope.launch {
+                            delay(PREVIEW_SURFACE_RECOVERY_DELAY_MS)
+                            val recoveryPositionMs = _playheadMs.value
+                            _state.update { it.copy(isPlaybackRequested = true) }
+                            videoEngine.playFromTimelinePosition(
+                                recoveryPositionMs,
+                                restartSession = true
+                            )
+                            armPlaybackStartRecovery()
+                        }
+                    }
+                    return
+                }
                 showToast(text(R.string.vm_preview_playback_failed_toast), ToastSeverity.Error)
                 Log.w("EditorViewModel", "Preview playback failed", error)
             }

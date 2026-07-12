@@ -1,0 +1,1 @@
+Fixed timeline preview failures caused by the video surface being detached across gaps, stills, and error states. Surface timeouts now recover without incorrectly claiming the clip cannot be decoded.

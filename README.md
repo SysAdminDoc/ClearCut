@@ -4,11 +4,11 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.118-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.119-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
 
-### v3.74.118 Timeline edit controls and playback
+### v3.74.119 Timeline edit controls and playback
 
 - The video preview now owns all flexible phone height; the bounded timeline and tool dock stay together at the bottom instead of leaving a large empty timeline panel.
 - Cut works directly at the live playhead, selected clips expose an obvious red Delete button, playlist rebuilds start atomically at the active edit point, ripple deletes keep playback attached to surviving content, and Play restarts after reaching the edited timeline end.
@@ -24,6 +24,7 @@
 - Effect safety now includes true alpha opacity, wired chroma spill, tail-aware nonlinear transition timing, corrected gamma/highlight/shadow/posterize math, and guarded GPU edge cases; unsupported generic Speed/Reverse/BG Removal entries are no longer offered as no-op effects.
 - Easy mode now maps to the current editor tabs, the More workbench exposes rendered motion tools, clip-only captions are no longer offered without a clip, and the command palette routes background replacement, face tracking, and frame interpolation correctly.
 - Incomplete mask/blend compositing and unrendered audio pan/FX controls are withheld from the editor instead of accepting edits that preview or export cannot honor.
+- The preview PlayerView remains mounted across timeline gaps, still images, and error overlays, preventing Samsung/Qualcomm surface-detach timeouts from being mislabeled as clip decoder failures.
 
 <p align="center">A professional Android video editor built with Kotlin and Jetpack Compose.<br>Open alternative to CapCut, PowerDirector, and DaVinci Resolve — with AI-assisted tools, GPU-accelerated effects, and desktop NLE interoperability.</p>
 
