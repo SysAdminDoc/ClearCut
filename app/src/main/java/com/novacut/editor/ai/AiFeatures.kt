@@ -487,7 +487,11 @@ class AiFeatures @Inject constructor(
                 recommendedZoom = zoomFactor,
                 motionKeyframes = smoothed.mapIndexed { i, (sx, sy) ->
                     StabilizationKeyframe(
-                        timestampMs = i * intervalMs,
+                        // motion[i] is the displacement between the frame at
+                        // i*interval and the NEXT frame, so it belongs at the
+                        // second frame's timestamp. Using i*interval placed every
+                        // counter-motion keyframe one analysis interval too early.
+                        timestampMs = (i + 1) * intervalMs,
                         offsetX = -sx * 0.5f, // Counter-motion at 50% strength
                         offsetY = -sy * 0.5f
                     )

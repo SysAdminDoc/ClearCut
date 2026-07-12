@@ -1581,10 +1581,17 @@ class VideoEngine @Inject constructor(
             }
         }
 
-        val lastClip = previewSegments.last()
+        val lastSegment = previewSegments.last()
         return PreviewSeekTarget(
             mediaItemIndex = previewSegments.lastIndex,
-            mediaPositionMs = (lastClip.durationMs - 1L).coerceAtLeast(0L)
+            // A clip segment's media time is trim-relative, not timeline-relative:
+            // for a sped-up final clip durationMs (timeline length) != the media
+            // clipping length, so using it directly under-seeks. Map the last
+            // retained frame through the same timeline->media helper the in-loop
+            // branch uses. Gap segments have no clip, so fall back to their span.
+            mediaPositionMs = lastSegment.clip?.let { clip ->
+                previewMediaPositionForTimelinePosition(clip, lastSegment.timelineEndMs - 1L)
+            } ?: (lastSegment.durationMs - 1L).coerceAtLeast(0L)
         )
     }
 

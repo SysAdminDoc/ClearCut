@@ -884,32 +884,34 @@ class ExportDelegate(
             )
 
             fun handleVideoExportComplete() {
-                // If the project carries scratchpad notes, drop them next to the render
-                // as a `.txt` sidecar. Runs on IO to avoid blocking the Transformer
-                // callback thread; failure is logged but doesn't taint the export.
+              // The Transformer completion callback lands on the Main thread.
+              // Finalization here (subtitle burn-in especially, which re-encodes
+              // the whole video) can run for seconds to minutes, so run all of it
+              // on IO to avoid an ANR. StateFlow updates and showToast are
+              // thread-safe; ordering is preserved because the COMPLETE state that
+              // exposes the Share/Save buttons is set only after the sidecars and
+              // burn-in finish inside this same coroutine.
+              scope.launch(Dispatchers.IO) {
+                // If the project carries scratchpad notes, drop them next to the
+                // render as a `.txt` sidecar; failure is logged, never fatal.
                 val notes = currentState.project.notes
                 if (notes.isNotBlank()) {
-                    scope.launch(Dispatchers.IO) {
-                        try {
-                            val sidecar = File(
-                                outputFile.parentFile,
-                                "${outputFile.nameWithoutExtension}.notes.txt"
-                            )
-                            writeUtf8TextAtomically(sidecar, notes)
-                        } catch (e: Exception) {
-                            android.util.Log.w("ExportDelegate", "Scratchpad sidecar write failed", e)
-                        }
+                    try {
+                        val sidecar = File(
+                            outputFile.parentFile,
+                            "${outputFile.nameWithoutExtension}.notes.txt"
+                        )
+                        writeUtf8TextAtomically(sidecar, notes)
+                    } catch (e: Exception) {
+                        android.util.Log.w("ExportDelegate", "Scratchpad sidecar write failed", e)
                     }
                 }
                 // Subtitle sidecar. Written next to the video with a matching
                 // basename so the pair travels together through `saveToGallery`
                 // (image-collection fallback path) and share intents. Sequential
-                // with the state → COMPLETE transition: we block on the write
-                // before the UI gets Share/Save-to-Gallery buttons, so a user
-                // tapping Share can't race a half-written .srt. Runs on IO with
-                // runBlocking only because the Transformer callback lands on the
-                // Main thread where `launch`/`await` would defer past the
-                // state update.
+                // with the state → COMPLETE transition: the write completes before
+                // the UI gets Share/Save-to-Gallery buttons, so a user tapping
+                // Share can't race a half-written .srt.
                 val subtitleFormat = configWithChapters.subtitleFormat
                 if (subtitleFormat != null) {
                     try {
@@ -959,12 +961,10 @@ class ExportDelegate(
                                 outputFile.parentFile,
                                 "${outputFile.nameWithoutExtension}_burned.mp4"
                             )
-                            kotlinx.coroutines.runBlocking {
-                                val ok = ffmpegEngine.burnSubtitles(outputFile, assFile, burnedFile)
-                                if (ok && burnedFile.isFile && burnedFile.length() > 0L) {
-                                    outputFile.delete()
-                                    burnedFile.renameTo(outputFile)
-                                }
+                            val ok = ffmpegEngine.burnSubtitles(outputFile, assFile, burnedFile)
+                            if (ok && burnedFile.isFile && burnedFile.length() > 0L) {
+                                outputFile.delete()
+                                burnedFile.renameTo(outputFile)
                             }
                             assFile.delete()
                         } catch (e: Exception) {
@@ -997,6 +997,7 @@ class ExportDelegate(
                     healthReport = healthReport
                 )
                 showToast(appContext.getString(R.string.export_complete_toast, finalizedFile.name))
+              }
             }
 
             fun handleVideoExportError(e: Exception) {
@@ -1624,7 +1625,13 @@ class ExportDelegate(
             output.write(0x21)
             output.write(0xF9)
             output.write(0x04)
-            output.write(0x00) // no transparency
+            // Disposal method 2 (restore to background) in bits 2-4, no transparency.
+            // Frames can be smaller than the logical screen (gap frames use the export
+            // aspect, source frames keep their own), so without a per-frame clear an
+            // undersized frame placed at (0,0) leaves the previous larger frame's
+            // border visible. Restoring to background between frames prevents that
+            // ghosting; undersized frames simply letterbox against the background.
+            output.write(0x08)
             output.write(delayCentiseconds and 0xFF)
             output.write((delayCentiseconds shr 8) and 0xFF)
             output.write(0x00) // transparent color index

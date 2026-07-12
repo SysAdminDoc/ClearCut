@@ -1,0 +1,1 @@
+Stability pass: exporting with burned-in subtitles no longer freezes the app while it re-encodes. Scrubbing to the end of a sped-up final clip now shows the right frame, and splitting a sped-up clip no longer silently fails. Deleting clips across multiple tracks keeps markers aligned, video stabilization is better timed, and GIF exports with mixed frame sizes no longer ghost.

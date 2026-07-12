@@ -306,14 +306,16 @@ class ClipEditingDelegate(
             showToast(appContext.getString(R.string.clip_track_locked_toast))
             return
         }
-        val markerTrack = state.selectedTrackId
-            ?.let { selectedTrackId -> state.tracks.firstOrNull { it.id == selectedTrackId } }
-            ?.takeIf { track -> track.clips.any { it.id in clipIdsToDelete } }
-            ?: state.tracks.firstOrNull { track -> track.clips.any { it.id in clipIdsToDelete } }
-        val markerRippleRanges = markerTrack?.clips
-            ?.filter { it.id in clipIdsToDelete }
-            ?.map { it.timelineStartMs to it.timelineEndMs }
-            .orEmpty()
+        // Markers, chapters, and beats are GLOBAL timeline annotations, so they
+        // ripple by the union of removed ranges across EVERY track, not a single
+        // track's. When a delete spans multiple tracks (grouped, or multi-select
+        // across lanes) using one track's ranges left markers misaligned with the
+        // content they annotated. The ripple helpers sort and merge overlaps, so a
+        // same-range linked A/V delete still collapses to one shift — no change to
+        // the common single-track case.
+        val markerRippleRanges = state.tracks
+            .flatMap { track -> track.clips.filter { it.id in clipIdsToDelete } }
+            .map { it.timelineStartMs to it.timelineEndMs }
         val rippledPlayheadMs = ripplePlaybackPosition(livePlayheadMs, markerRippleRanges)
         saveUndoState(
             if (clipIdsToDelete.size == 1) "Delete clip"
@@ -602,7 +604,11 @@ class ClipEditingDelegate(
                 track.copy(clips = updatedClips)
             }
             val selectedClipId = fallbackSelectedId?.let { originalId ->
-                newIdsByOldId[originalId] ?: originalId
+                (newIdsByOldId[originalId] ?: originalId)
+                    // Only keep the selection if the resolved clip actually
+                    // exists after the split (mirrors the selectedClipIds guard
+                    // below) so a no-op split can never strand a dangling id.
+                    .takeIf { id -> tracks.any { track -> track.clips.any { it.id == id } } }
             } ?: s.selectedClipId
             val selectedClipIds = selectedIds.mapNotNull { originalId ->
                 val resolvedId = newIdsByOldId[originalId] ?: originalId

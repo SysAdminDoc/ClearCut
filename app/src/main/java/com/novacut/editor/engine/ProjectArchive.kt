@@ -472,7 +472,15 @@ object ProjectArchive {
     }
 
     private fun parseSchemaVersion(raw: String): Int {
-        return runCatching { JSONObject(raw).optInt("version", 0) }.getOrDefault(0)
+        // Prefer the canonical `schemaVersion` key (matching peekSchemaVersion),
+        // falling back to the legacy `version`. Reading only `version` would make
+        // a future build that keeps only `schemaVersion` see version 0 here and
+        // treat a genuinely newer archive as older — bypassing the schema-too-new
+        // guard and doing a lossy best-effort import instead of refusing it.
+        return runCatching {
+            val json = JSONObject(raw)
+            json.optInt("schemaVersion", json.optInt("version", 0))
+        }.getOrDefault(0)
     }
 
     private fun parseProjectId(raw: String): String? {

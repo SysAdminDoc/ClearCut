@@ -77,9 +77,18 @@ internal fun linkedClipIds(tracks: List<Track>, clipId: String): Set<String> {
 
 internal fun Clip.canSplitAtTimelinePosition(positionMs: Long): Boolean {
     if (positionMs <= timelineStartMs || positionMs >= timelineEndMs) return false
-    val sourceSplitMs = timelineOffsetToSourceMs(positionMs - timelineStartMs)
-    return sourceSplitMs - trimStartMs >= MIN_TIMELINE_CLIP_DURATION_MS &&
-        trimEndMs - sourceSplitMs >= MIN_TIMELINE_CLIP_DURATION_MS
+    // Mirror splitTimelineClip's guards exactly so this gate never reports a
+    // clip as splittable when the executor would no-op. The executor enforces
+    // the 100 ms minimum in TIMELINE space (durationMs), which is stricter than
+    // source space for sped-up clips (timeline half = source half / speed) — a
+    // source-space-only check here let a 3x clip pass the gate yet fail the
+    // split, leaving a dangling selection and a false "Clip split" toast.
+    val timelineOffsetMs = positionMs - timelineStartMs
+    if (timelineOffsetMs < MIN_TIMELINE_CLIP_DURATION_MS ||
+        durationMs - timelineOffsetMs < MIN_TIMELINE_CLIP_DURATION_MS
+    ) return false
+    val sourceSplitMs = timelineOffsetToSourceMs(timelineOffsetMs)
+    return sourceSplitMs > trimStartMs && sourceSplitMs < trimEndMs
 }
 
 /** Return only complete linked closures that can all split at this position. */
