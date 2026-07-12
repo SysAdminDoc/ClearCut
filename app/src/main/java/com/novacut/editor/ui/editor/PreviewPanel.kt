@@ -224,7 +224,7 @@ fun PreviewPanel(
 
                                 override fun onPlayerError(error: PlaybackException) {
                                     isBuffering = false
-                                    hasPlaybackError = !isPreviewSurfaceDetachTimeout(error)
+                                    hasPlaybackError = !isRecoverablePreviewRuntimeFailure(error)
                                 }
                             }
                             capturedPlayer.addListener(listener)
