@@ -1,0 +1,1 @@
+Export now checks timeline media, LUTs, custom fonts, watermarks, and the background-removal model before rendering. Missing or invalid requested dependencies are named and block before output work starts; substitutions require an explicit named fallback.

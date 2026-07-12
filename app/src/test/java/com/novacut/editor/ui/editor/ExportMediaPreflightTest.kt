@@ -5,6 +5,11 @@ import com.novacut.editor.engine.MediaHealthIssueType
 import com.novacut.editor.engine.MediaHealthReport
 import com.novacut.editor.engine.MediaHealthSeverity
 import com.novacut.editor.engine.MediaRelinkProbe
+import com.novacut.editor.engine.ProjectDependency
+import com.novacut.editor.engine.ProjectDependencyKind
+import com.novacut.editor.engine.ProjectDependencyManifest
+import com.novacut.editor.engine.ProjectDependencyRequest
+import com.novacut.editor.engine.ProjectDependencyStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -83,6 +88,57 @@ class ExportMediaPreflightTest {
         assertTrue(result.canExport)
         assertEquals(0, result.blockingCount)
         assertEquals("Media ready for export.", result.message)
+    }
+
+    @Test
+    fun evaluateBlocksAndNamesMissingRequiredDependencies() {
+        val result = ExportMediaPreflight.evaluate(
+            healthReport = report(),
+            relinkReports = emptyMap(),
+            dependencies = ProjectDependencyManifest(
+                listOf(
+                    ProjectDependency(
+                        request = ProjectDependencyRequest(
+                            kind = ProjectDependencyKind.LUT,
+                            reference = "/looks/brand.cube",
+                            label = "Brand look",
+                        ),
+                        status = ProjectDependencyStatus.MISSING,
+                    )
+                )
+            ),
+        )
+
+        assertFalse(result.canExport)
+        assertEquals(1, result.blockingCount)
+        assertTrue(result.message.contains("Brand look"))
+        assertTrue(result.message.contains("missing"))
+    }
+
+    @Test
+    fun evaluateAllowsOnlyNamedExplicitDependencyFallbacks() {
+        val result = ExportMediaPreflight.evaluate(
+            healthReport = report(),
+            relinkReports = emptyMap(),
+            dependencies = ProjectDependencyManifest(
+                listOf(
+                    ProjectDependency(
+                        request = ProjectDependencyRequest(
+                            kind = ProjectDependencyKind.CUSTOM_FONT,
+                            reference = "/fonts/missing.ttf",
+                            label = "Brand font",
+                            fallbackAllowed = true,
+                            fallbackName = "sans-serif",
+                        ),
+                        status = ProjectDependencyStatus.MISSING,
+                    )
+                )
+            ),
+        )
+
+        assertTrue(result.canExport)
+        assertEquals(1, result.warningCount)
+        assertTrue(result.message.contains("Brand font → sans-serif"))
     }
 
     private fun report(vararg issues: MediaHealthIssue): MediaHealthReport {

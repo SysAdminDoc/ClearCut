@@ -4,9 +4,15 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.125-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.126-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.126 Dependency-truthful export preflight
+
+- Export now resolves one typed dependency manifest before every render path, recursively covering timeline media, compound clips, LUTs, custom fonts, configured watermarks, and the background-removal model.
+- Missing, unreadable, or invalid requested dependencies block before output work starts and are named in the error; a substitution can proceed only when an explicit fallback and its name are recorded.
+- Added deterministic collector/probe and combined media/audio/dependency preflight tests. Storyboard-only assets remain portable without blocking timeline export.
 
 ### v3.74.125 Private diagnostic sharing
 

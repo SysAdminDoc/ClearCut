@@ -22,6 +22,7 @@ import com.novacut.editor.engine.ExportService
 import com.novacut.editor.engine.ExportState
 import com.novacut.editor.engine.MediaHealthReport
 import com.novacut.editor.engine.MixedRenderExportPlanner
+import com.novacut.editor.engine.ProjectDependencyManifest
 import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.engine.StreamCopyExportEngine
 import com.novacut.editor.engine.VideoEngine
@@ -64,6 +65,9 @@ class ExportDelegate(
     private val streamCopyEngine: StreamCopyExportEngine? = null,
     private val c2paExportEngine: C2paExportEngine? = null,
     private val mediaHealthPreflight: (EditorState) -> MediaHealthReport? = { it.media.healthReport },
+    private val projectDependencyManifest: (EditorState) -> ProjectDependencyManifest = {
+        ProjectDependencyManifest(emptyList())
+    },
     private val audioEngine: com.novacut.editor.engine.AudioEngine? = null,
     private val exportIncidentStore: ExportIncidentStore? = null,
     private val appVersion: String = "unknown",
@@ -498,6 +502,7 @@ class ExportDelegate(
             healthReport = healthReport,
             relinkReports = currentState.media.relinkReports,
             audioConformance = audioConformance,
+            dependencies = projectDependencyManifest(currentState),
         )
         stateFlow.update { state ->
             state.copyMedia { media -> media.copy(healthReport = healthReport) }

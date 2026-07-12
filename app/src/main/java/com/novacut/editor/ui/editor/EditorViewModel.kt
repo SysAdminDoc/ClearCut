@@ -21,6 +21,10 @@ import com.novacut.editor.engine.ExportState
 import com.novacut.editor.engine.FontRegistry
 import com.novacut.editor.engine.ProjectAutoSave
 import com.novacut.editor.engine.ProjectArchive
+import com.novacut.editor.engine.AndroidProjectDependencyProbe
+import com.novacut.editor.engine.ProjectDependencyEditorInputs
+import com.novacut.editor.engine.ProjectDependencyManifest
+import com.novacut.editor.engine.SEGMENTATION_MODEL_DEPENDENCY
 import com.novacut.editor.engine.ProxyEngine
 import com.novacut.editor.engine.SettingsRepository
 import com.novacut.editor.engine.SmartRenderEngine
@@ -568,6 +572,22 @@ class EditorViewModel @Inject constructor(
         streamCopyEngine = streamCopyEngine,
         c2paExportEngine = c2paExportEngine,
         mediaHealthPreflight = ::analyzeMediaHealthForState,
+        projectDependencyManifest = { editorState ->
+            val fontFiles = fontRegistry.listImportedFonts().associate { font ->
+                fontRegistry.fontFamilyKey(font.fileName) to font.file.absolutePath
+            }
+            ProjectDependencyManifest.collect(
+                state = buildAutoSaveState(editorState),
+                editorInputs = ProjectDependencyEditorInputs(
+                    watermarkReference = editorState.exportConfig.watermark?.sourceUri?.toString(),
+                    customFontReferencesByFamily = fontFiles,
+                ),
+                probe = AndroidProjectDependencyProbe(appContext) { dependency ->
+                    dependency == SEGMENTATION_MODEL_DEPENDENCY &&
+                        aiFeatures.segmentationEngine.isReady()
+                },
+            )
+        },
         audioEngine = audioEngine,
         exportIncidentStore = exportIncidentStore,
         appVersion = com.novacut.editor.ClearCutApp.VERSION,
