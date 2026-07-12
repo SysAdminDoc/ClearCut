@@ -139,7 +139,7 @@ enum class EffectType(val displayName: String, val category: EffectCategory) {
             if (defaults.isEmpty()) return emptyMap()
             val overrides: Map<String, ParamRange> = when (type) {
                 BRIGHTNESS -> mapOf("value" to ParamRange("Brightness", -1f, 1f))
-                CONTRAST -> mapOf("value" to ParamRange("Contrast", 0f, 3f))
+                CONTRAST -> mapOf("value" to ParamRange("Contrast", 0f, 2f))
                 SATURATION -> mapOf("value" to ParamRange("Saturation", 0f, 3f))
                 TEMPERATURE -> mapOf("value" to ParamRange("Temperature", -5f, 5f))
                 TINT -> mapOf("value" to ParamRange("Tint", -1f, 1f))
@@ -152,7 +152,7 @@ enum class EffectType(val displayName: String, val category: EffectCategory) {
                     "intensity" to ParamRange("Intensity", 0f, 1f),
                     "radius" to ParamRange("Radius", 0.1f, 1f)
                 )
-                GAUSSIAN_BLUR -> mapOf("radius" to ParamRange("Radius", 0f, 25f))
+                GAUSSIAN_BLUR -> mapOf("radius" to ParamRange("Radius", 1f, 25f))
                 FILM_GRAIN -> mapOf("intensity" to ParamRange("Intensity", 0f, 0.5f))
                 GLITCH -> mapOf("intensity" to ParamRange("Intensity", 0f, 1f))
                 CHROMATIC_ABERRATION -> mapOf("intensity" to ParamRange("Intensity", 0f, 2f))

@@ -136,39 +136,15 @@ internal object EffectBuilder {
             }
             EffectType.GAMMA -> {
                 val value = effect.params.safeParam("value", 1f, 0.2f, 5f)
-                val inv = 1f / value
-                RgbMatrix { _, _ ->
-                    floatArrayOf(
-                        inv, 0f, 0f, 0f,
-                        0f, inv, 0f, 0f,
-                        0f, 0f, inv, 0f,
-                        0f, 0f, 0f, 1f
-                    )
-                }
+                EffectShaders.gamma(value)
             }
             EffectType.HIGHLIGHTS -> {
                 val value = effect.params.safeParam("value", 0f, -1f, 1f)
-                val scale = 1f + value * 0.3f
-                RgbMatrix { _, _ ->
-                    floatArrayOf(
-                        scale, 0f, 0f, 0f,
-                        0f, scale, 0f, 0f,
-                        0f, 0f, scale, 0f,
-                        0f, 0f, 0f, 1f
-                    )
-                }
+                EffectShaders.highlights(value)
             }
             EffectType.SHADOWS -> {
                 val value = effect.params.safeParam("value", 0f, -1f, 1f)
-                val offset = value * 0.15f
-                RgbMatrix { _, _ ->
-                    floatArrayOf(
-                        1f, 0f, 0f, offset,
-                        0f, 1f, 0f, offset,
-                        0f, 0f, 1f, offset,
-                        0f, 0f, 0f, 1f
-                    )
-                }
+                EffectShaders.shadows(value)
             }
             EffectType.VIBRANCE -> {
                 val value = effect.params.safeParam("value", 0f, -1f, 1f)
@@ -187,15 +163,7 @@ internal object EffectBuilder {
             }
             EffectType.POSTERIZE -> {
                 val levels = effect.params.safeParam("levels", 6f, 2f, 16f)
-                val scale = levels / 8f
-                RgbMatrix { _, _ ->
-                    floatArrayOf(
-                        scale, 0f, 0f, (1f - scale) * 0.5f,
-                        0f, scale, 0f, (1f - scale) * 0.5f,
-                        0f, 0f, scale, (1f - scale) * 0.5f,
-                        0f, 0f, 0f, 1f
-                    )
-                }
+                EffectShaders.posterize(levels)
             }
             EffectType.COOL_TONE -> {
                 val intensity = effect.params.safeParam("intensity", 0.5f, 0f, 1f)
@@ -334,7 +302,8 @@ internal object EffectBuilder {
                 val keyR = effect.params.safeParam("keyR", 0f, 0f, 1f)
                 val keyG = effect.params.safeParam("keyG", 1f, 0f, 1f)
                 val keyB = effect.params.safeParam("keyB", 0f, 0f, 1f)
-                EffectShaders.chromaKey(keyR, keyG, keyB, similarity, smoothness)
+                val spill = effect.params.safeParam("spill", 0.1f, 0f, 1f)
+                EffectShaders.chromaKey(keyR, keyG, keyB, similarity, smoothness, spill)
             }
             EffectType.BG_REMOVAL -> {
                 val threshold = effect.params.safeParam("threshold", 0.5f, 0.1f, 0.9f)
@@ -388,7 +357,7 @@ internal object EffectBuilder {
                     safeEffectFloat(hsl.satMax, 1f, 0f, 1f),
                     safeEffectFloat(hsl.lumMin, 0f, 0f, 1f),
                     safeEffectFloat(hsl.lumMax, 1f, 0f, 1f),
-                    safeEffectFloat(hsl.softness, 0.1f, 0f, 1f),
+                    safeEffectFloat(hsl.softness, 0.1f, 0.001f, 1f),
                     safeEffectFloat(hsl.adjustHue, 0f, -180f, 180f),
                     safeEffectFloat(hsl.adjustSat, 0f, -1f, 1f),
                     safeEffectFloat(hsl.adjustLum, 0f, -1f, 1f)
@@ -508,28 +477,15 @@ internal object EffectBuilder {
     fun MutableList<androidx.media3.common.Effect>.addOpacityAndTransformEffects(clip: Clip) {
         val hasKeyframeOpacity = clip.keyframes.any { it.property == KeyframeProperty.OPACITY }
         if (hasKeyframeOpacity) {
-            add(RgbMatrix { presentationTimeUs, _ ->
+            add(EffectShaders.animatedOpacity { presentationTimeUs ->
                 val timeMs = presentationTimeUs / 1000L
-                val opacity = KeyframeEngine.getValueAt(
+                KeyframeEngine.getValueAt(
                     clip.keyframes, KeyframeProperty.OPACITY, timeMs
                 )?.let { safeEffectFloat(it, 1f, 0f, 1f) } ?: 1f
-                floatArrayOf(
-                    opacity, 0f, 0f, 0f,
-                    0f, opacity, 0f, 0f,
-                    0f, 0f, opacity, 0f,
-                    0f, 0f, 0f, 1f
-                )
             })
         } else if (clip.opacity != 1f) {
             val o = safeEffectFloat(clip.opacity, 1f, 0f, 1f)
-            add(RgbMatrix { _, _ ->
-                floatArrayOf(
-                    o, 0f, 0f, 0f,
-                    0f, o, 0f, 0f,
-                    0f, 0f, o, 0f,
-                    0f, 0f, 0f, 1f
-                )
-            })
+            add(EffectShaders.opacity(o))
         }
         val hasKfScale = clip.keyframes.any {
             it.property == KeyframeProperty.SCALE_X || it.property == KeyframeProperty.SCALE_Y

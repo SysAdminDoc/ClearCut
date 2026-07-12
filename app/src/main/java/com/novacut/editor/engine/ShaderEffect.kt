@@ -12,6 +12,30 @@ import com.novacut.editor.model.TransitionEasing
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
+internal fun easedTransitionPresentationTimeSeconds(
+    presentationTimeUs: Long,
+    durationUs: Float,
+    clipDurationUs: Float?,
+    easing: TransitionEasing
+): Float {
+    if (durationUs <= 0f || easing == TransitionEasing.LINEAR) {
+        return presentationTimeUs / 1_000_000f
+    }
+    val transitionStartUs = clipDurationUs?.let { (it - durationUs).coerceAtLeast(0f) } ?: 0f
+    val rawProgress = ((presentationTimeUs - transitionStartUs) / durationUs).coerceIn(0f, 1f)
+    val easedProgress = when (easing) {
+        TransitionEasing.LINEAR -> rawProgress
+        TransitionEasing.EASE_IN -> rawProgress * rawProgress
+        TransitionEasing.EASE_OUT -> rawProgress * (2f - rawProgress)
+        TransitionEasing.EASE_IN_OUT -> if (rawProgress < 0.5f) {
+            2f * rawProgress * rawProgress
+        } else {
+            -1f + (4f - 2f * rawProgress) * rawProgress
+        }
+    }
+    return (transitionStartUs + easedProgress * durationUs) / 1_000_000f
+}
+
 /**
  * Custom GLSL fragment shader effect for Media3 Transformer export.
  * Wraps a GLES 3.0 fragment shader into a GlEffect with fullscreen quad rendering.
@@ -66,9 +90,15 @@ private class ShaderProgram(
         val rawTimeSec = presentationTimeUs / 1_000_000f
         val durationUs = uniforms["uDurationUs"]
         if (durationUs != null && durationUs > 0f && transitionEasing != TransitionEasing.LINEAR) {
-            val rawProgress = (rawTimeSec * 1_000_000f / durationUs).coerceIn(0f, 1f)
-            val easedProgress = applyTransitionEasing(rawProgress, transitionEasing)
-            uniform1f("uTime", easedProgress * durationUs / 1_000_000f)
+            uniform1f(
+                "uTime",
+                easedTransitionPresentationTimeSeconds(
+                    presentationTimeUs = presentationTimeUs,
+                    durationUs = durationUs,
+                    clipDurationUs = uniforms["uClipDurationUs"],
+                    easing = transitionEasing
+                )
+            )
         } else {
             uniform1f("uTime", rawTimeSec)
         }
@@ -155,13 +185,6 @@ private class ShaderProgram(
     }
 
     companion object {
-        fun applyTransitionEasing(t: Float, easing: TransitionEasing): Float = when (easing) {
-            TransitionEasing.LINEAR -> t
-            TransitionEasing.EASE_IN -> t * t
-            TransitionEasing.EASE_OUT -> t * (2f - t)
-            TransitionEasing.EASE_IN_OUT -> if (t < 0.5f) 2f * t * t else -1f + (4f - 2f * t) * t
-        }
-
         private const val VERT = "#version 300 es\n" +
             "in vec4 aPosition;\nin vec2 aTexCoord;\nout vec2 vTexCoord;\n" +
             "void main() { gl_Position = aPosition; vTexCoord = aTexCoord; }"
@@ -177,6 +200,38 @@ private class ShaderProgram(
 
 @UnstableApi
 object EffectShaders {
+
+    fun opacity(opacity: Float) = ShaderEffect(
+        FRAG_OPACITY,
+        mapOf("uOpacity" to opacity.coerceIn(0f, 1f))
+    )
+
+    fun animatedOpacity(opacityAtTimeUs: (Long) -> Float) = ShaderEffect(
+        FRAG_OPACITY,
+        dynamicUniforms = { presentationTimeUs ->
+            mapOf("uOpacity" to opacityAtTimeUs(presentationTimeUs).coerceIn(0f, 1f))
+        }
+    )
+
+    fun gamma(value: Float) = ShaderEffect(
+        FRAG_GAMMA,
+        mapOf("uGamma" to value.coerceIn(0.2f, 5f))
+    )
+
+    fun highlights(value: Float) = ShaderEffect(
+        FRAG_HIGHLIGHTS,
+        mapOf("uAmount" to value.coerceIn(-1f, 1f))
+    )
+
+    fun shadows(value: Float) = ShaderEffect(
+        FRAG_SHADOWS,
+        mapOf("uAmount" to value.coerceIn(-1f, 1f))
+    )
+
+    fun posterize(levels: Float) = ShaderEffect(
+        FRAG_POSTERIZE,
+        mapOf("uLevels" to levels.coerceIn(2f, 16f))
+    )
 
     fun vignette(intensity: Float, radius: Float) = ShaderEffect(
         FRAG_VIGNETTE, mapOf("uIntensity" to intensity, "uRadius" to radius)
@@ -402,12 +457,51 @@ object EffectShaders {
     private const val H = "#version 300 es\nprecision mediump float;\n" +
         "uniform sampler2D uTexSampler;\nin vec2 vTexCoord;\nout vec4 fragColor;\n"
 
+    private const val FRAG_OPACITY = H +
+        "uniform float uOpacity;\n" +
+        "void main() {\n" +
+        "  vec4 c = texture(uTexSampler, vTexCoord);\n" +
+        "  float opacity = clamp(uOpacity, 0.0, 1.0);\n" +
+        "  fragColor = vec4(c.rgb * opacity, c.a * opacity);\n}"
+
+    private const val FRAG_GAMMA = H +
+        "uniform float uGamma;\n" +
+        "void main() {\n" +
+        "  vec4 c = texture(uTexSampler, vTexCoord);\n" +
+        "  vec3 corrected = pow(max(c.rgb, vec3(0.0)), vec3(1.0 / max(uGamma, 0.001)));\n" +
+        "  fragColor = vec4(corrected, c.a);\n}"
+
+    private const val FRAG_HIGHLIGHTS = H +
+        "uniform float uAmount;\n" +
+        "void main() {\n" +
+        "  vec4 c = texture(uTexSampler, vTexCoord);\n" +
+        "  float luma = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722));\n" +
+        "  float mask = smoothstep(0.45, 1.0, luma);\n" +
+        "  vec3 delta = uAmount >= 0.0 ? (vec3(1.0) - c.rgb) : c.rgb;\n" +
+        "  fragColor = vec4(clamp(c.rgb + uAmount * mask * delta, 0.0, 1.0), c.a);\n}"
+
+    private const val FRAG_SHADOWS = H +
+        "uniform float uAmount;\n" +
+        "void main() {\n" +
+        "  vec4 c = texture(uTexSampler, vTexCoord);\n" +
+        "  float luma = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722));\n" +
+        "  float mask = 1.0 - smoothstep(0.0, 0.55, luma);\n" +
+        "  vec3 delta = uAmount >= 0.0 ? (vec3(1.0) - c.rgb) : c.rgb;\n" +
+        "  fragColor = vec4(clamp(c.rgb + uAmount * mask * delta, 0.0, 1.0), c.a);\n}"
+
+    private const val FRAG_POSTERIZE = H +
+        "uniform float uLevels;\n" +
+        "void main() {\n" +
+        "  vec4 c = texture(uTexSampler, vTexCoord);\n" +
+        "  float steps = max(uLevels - 1.0, 1.0);\n" +
+        "  fragColor = vec4(floor(c.rgb * steps + 0.5) / steps, c.a);\n}"
+
     private const val FRAG_VIGNETTE = H +
         "uniform float uIntensity;\nuniform float uRadius;\n" +
         "void main() {\n" +
         "  vec4 c = texture(uTexSampler, vTexCoord);\n" +
         "  float d = length(vTexCoord - 0.5) * 1.414;\n" +
-        "  float v = smoothstep(uRadius + 0.4, uRadius - 0.3, d * (0.5 + uIntensity * 1.5));\n" +
+        "  float v = 1.0 - smoothstep(uRadius - 0.3, uRadius + 0.4, d * (0.5 + uIntensity * 1.5));\n" +
         "  fragColor = vec4(c.rgb * v, c.a);\n}"
 
     private const val FRAG_SHARPEN = H +
@@ -544,7 +638,7 @@ object EffectShaders {
         "  vec2 uv = vTexCoord - 0.5;\n" +
         "  float dist = length(uv);\n" +
         "  float power = 1.0 + uIntensity * 3.0;\n" +
-        "  if (dist < 0.5) {\n" +
+        "  if (dist > 0.00001 && dist < 0.5) {\n" +
         "    float f = pow(dist / 0.5, power) * 0.5 / dist;\n" +
         "    uv *= f;\n" +
         "  }\n" +
@@ -567,7 +661,8 @@ object EffectShaders {
         "  float r = texture(uTexSampler, clamp(vec2(blockUv.x + rgbOff, blockUv.y), 0.0, 1.0)).r;\n" +
         "  float g = texture(uTexSampler, clamp(blockUv, 0.0, 1.0)).g;\n" +
         "  float b = texture(uTexSampler, clamp(vec2(blockUv.x - rgbOff, blockUv.y + rgbOff * 0.5), 0.0, 1.0)).b;\n" +
-        "  fragColor = vec4(r, g, b, 1.0);\n}"
+        "  float a = texture(uTexSampler, clamp(blockUv, 0.0, 1.0)).a;\n" +
+        "  fragColor = vec4(r, g, b, a);\n}"
 
     private const val FRAG_PIXELATE = H +
         "uniform vec2 uResolution;\nuniform float uSize;\n" +
@@ -591,7 +686,8 @@ object EffectShaders {
         "  float r = texture(uTexSampler, vTexCoord + dir).r;\n" +
         "  float g = texture(uTexSampler, vTexCoord).g;\n" +
         "  float b = texture(uTexSampler, vTexCoord - dir).b;\n" +
-        "  fragColor = vec4(r, g, b, 1.0);\n}"
+        "  float a = texture(uTexSampler, vTexCoord).a;\n" +
+        "  fragColor = vec4(r, g, b, a);\n}"
 
     private const val FRAG_CHROMA_KEY = H +
         "uniform float uKeyR, uKeyG, uKeyB;\n" +
@@ -832,7 +928,7 @@ object EffectShaders {
         "  float progress = clamp(uTime * 1000000.0 / uDurationUs, 0.0, 1.0);\n" +
         "  vec2 p = (vTexCoord - vec2(0.5, 0.6)) * vec2(2.5, -3.0);\n" +
         "  float h = pow(p.x * p.x + p.y * p.y - 1.0, 3.0) - p.x * p.x * p.y * p.y * p.y;\n" +
-        "  float mask = smoothstep(0.1, -0.1, h + (1.0 - progress) * 2.0);\n" +
+        "  float mask = 1.0 - smoothstep(-0.1, 0.1, h + (1.0 - progress) * 2.0);\n" +
         "  vec4 c = texture(uTexSampler, vTexCoord);\n" +
         "  fragColor = vec4(c.rgb * mask, c.a);\n}"
 
@@ -1177,7 +1273,8 @@ object EffectShaders {
         "  float scanline = sin(uv.y * uResolution.y * 3.14159) * 0.5 + 0.5;\n" +
         "  col *= mix(1.0, scanline, 0.15 * uIntensity);\n" +
         "  col = floor(col * (4.0 + (1.0 - uIntensity) * 12.0) + 0.5) / (4.0 + (1.0 - uIntensity) * 12.0);\n" +
-        "  fragColor = vec4(col, 1.0);\n}"
+        "  float a = texture(uTexSampler, clamp(uv, 0.0, 1.0)).a;\n" +
+        "  fragColor = vec4(col, a);\n}"
 
     private const val FRAG_LIGHT_LEAK = H +
         "uniform float uIntensity;\nuniform float uTime;\n" +
@@ -1441,7 +1538,7 @@ object EffectShaders {
         "  float progress = clamp((timeUs - transStart) / uDurationUs, 0.0, 1.0);\n" +
         "  float dist = length(vTexCoord - 0.5);\n" +
         "  float radius = (1.0 - progress) * 0.75;\n" +
-        "  float mask = smoothstep(radius + 0.02, radius - 0.02, dist);\n" +
+        "  float mask = 1.0 - smoothstep(radius - 0.02, radius + 0.02, dist);\n" +
         "  fragColor = vec4(c.rgb * mask, c.a);\n}"
 
     private const val FRAG_ZOOM_OUT_EXIT = HO +

@@ -48,6 +48,15 @@ import java.util.Locale
 data class TabItem(val id: String, val icon: ImageVector, @StringRes val labelRes: Int)
 data class SubMenuItem(val id: String, val icon: ImageVector, @StringRes val labelRes: Int)
 
+internal val genericAddableEffectTypes: List<EffectType> = EffectType.entries.filterNot {
+    it in setOf(
+        EffectType.TRACKED_MOSAIC,
+        EffectType.BG_REMOVAL,
+        EffectType.SPEED,
+        EffectType.REVERSE
+    )
+}
+
 // Project mode tabs (no clip selected)
 val projectTabs = listOf(
     TabItem("edit", Icons.Default.Edit, R.string.tool_tab_edit),
@@ -677,9 +686,7 @@ fun EffectsPanel(
     var selectedCategory by remember { mutableStateOf(EffectCategory.COLOR) }
     val accent = effectAccent(selectedCategory)
     val effects = remember(selectedCategory) {
-        EffectType.entries.filter {
-            it.category == selectedCategory && it != EffectType.TRACKED_MOSAIC
-        }
+        genericAddableEffectTypes.filter { it.category == selectedCategory }
     }
     val clipTrackedObjects = remember(selectedClip?.id, trackedObjects) {
         selectedClip?.let { clip ->
@@ -724,7 +731,9 @@ fun EffectsPanel(
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                EffectCategory.entries.forEach { category ->
+                EffectCategory.entries
+                    .filter { category -> genericAddableEffectTypes.any { it.category == category } }
+                    .forEach { category ->
                     val isSelected = selectedCategory == category
                     val categoryAccent = effectAccent(category)
                     FilterChip(
