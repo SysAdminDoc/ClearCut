@@ -51,7 +51,7 @@ android {
                 val alias = (props["keyAlias"] as? String)?.trim()
                 val keyPass = (props["keyPassword"] as? String)?.trim()
                 if (!storePath.isNullOrBlank() && !storePass.isNullOrBlank() && !alias.isNullOrBlank() && !keyPass.isNullOrBlank()) {
-                    storeFile = file(storePath)
+                    storeFile = rootProject.file(storePath)
                     storePassword = storePass
                     keyAlias = alias
                     keyPassword = keyPass
@@ -62,7 +62,7 @@ android {
                 val alias = resolveSigningSecret("CLEARCUT_KEY_ALIAS")
                 val keyPass = resolveSigningSecret("CLEARCUT_KEY_PASSWORD", "CLEARCUT_KEY_PASS")
                 if (!storePath.isNullOrBlank() && !storePass.isNullOrBlank() && !alias.isNullOrBlank() && !keyPass.isNullOrBlank()) {
-                    storeFile = file(storePath)
+                    storeFile = rootProject.file(storePath)
                     storePassword = storePass
                     keyAlias = alias
                     keyPassword = keyPass
