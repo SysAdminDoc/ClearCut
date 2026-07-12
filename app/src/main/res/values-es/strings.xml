@@ -2252,6 +2252,7 @@
     <string name="vm_select_clips_to_group_toast">Seleccione 2 o más clips para agrupar</string>
     <string name="vm_clips_grouped_toast">%1$d clips agrupados</string>
     <string name="vm_clips_ungrouped_toast">Clips desagrupados</string>
+    <string name="vm_select_grouped_clips_to_ungroup_toast">Selecciona un clip agrupado para desagruparlo</string>
     <string name="vm_multi_deleted_toast">%1$d clips eliminados</string>
     <string name="vm_no_clips_selected_toast">No hay clips seleccionados</string>
     <string name="vm_multi_effect_applied_toast">%1$s aplicado a %2$d clips</string>

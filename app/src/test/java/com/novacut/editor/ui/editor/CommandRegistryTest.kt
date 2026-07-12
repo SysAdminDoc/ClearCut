@@ -2,6 +2,7 @@ package com.novacut.editor.ui.editor
 
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class CommandRegistryTest {
@@ -56,5 +57,36 @@ class CommandRegistryTest {
         assertTrue("split should require a clip", split?.requiresClip == true)
         val addMedia = commands.find { it.actionId == "add_media" }
         assertFalse("add_media should not require a clip", addMedia?.requiresClip == true)
+    }
+
+    @Test
+    fun commandAvailabilityMatchesActionPreconditions() {
+        val commands = CommandRegistry.allCommands().associateBy { it.actionId }
+
+        assertTrue(commands.getValue("captions").requiresClip)
+        assertFalse(commands.getValue("draw").requiresClip)
+        assertFalse(commands.getValue("ai_hub").requiresClip)
+        assertFalse(commands.getValue("cut_assistant").requiresClip)
+        assertTrue(commands.getValue("bg_replace").requiresClip)
+        assertTrue(commands.getValue("face_track").requiresClip)
+        assertTrue(commands.getValue("frame_interp").requiresClip)
+    }
+
+    @Test
+    fun easyModeUsesCurrentTabIdsAndKeepsMoreWorkbenchReachable() {
+        assertEquals(
+            setOf("edit", "audio", "text", "effects", "more"),
+            visibleClipTabs(EditorMode.EASY).mapTo(mutableSetOf()) { it.id }
+        )
+    }
+
+    @Test
+    fun secondaryMotionToolsAreReachableAndProjectCaptionsAreNotOffered() {
+        assertTrue(
+            clipMoreActionIds().containsAll(
+                setOf("transform", "keyframes", "masks", "blend_mode", "pip", "chroma_key")
+            )
+        )
+        assertFalse("captions require a clip", "captions" in projectTextActionIds())
     }
 }

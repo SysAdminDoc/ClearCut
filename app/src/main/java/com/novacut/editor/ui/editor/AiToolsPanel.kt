@@ -15,12 +15,14 @@ import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.Crop
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PersonOff
 import androidx.compose.material.icons.filled.PhotoFilter
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Straighten
+import androidx.compose.material.icons.filled.SlowMotionVideo
 import androidx.compose.material.icons.filled.Style
 import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material.icons.filled.ZoomIn
@@ -105,6 +107,16 @@ val aiTools = listOf(
         readinessAccent = Mocha.Teal
     ),
     AiToolConfig(
+        "bg_replace",
+        R.string.tool_replace_bg,
+        R.string.ai_tool_ai_background_desc,
+        Icons.Default.PhotoFilter,
+        Mocha.Lavender,
+        readinessResId = R.string.ai_tool_status_model_gated,
+        readinessHintResId = R.string.ai_tool_hint_model_required,
+        readinessAccent = Mocha.Peach
+    ),
+    AiToolConfig(
         "scene_detect",
         R.string.ai_tool_scene_detect,
         R.string.ai_tool_scene_detect_desc,
@@ -116,6 +128,13 @@ val aiTools = listOf(
         R.string.ai_tool_track_motion,
         R.string.ai_tool_track_motion_desc,
         Icons.Default.GpsFixed,
+        Mocha.Mauve
+    ),
+    AiToolConfig(
+        "face_track",
+        R.string.tool_face_track,
+        R.string.ai_tool_track_motion_desc,
+        Icons.Default.Face,
         Mocha.Mauve
     ),
     AiToolConfig(
@@ -152,6 +171,16 @@ val aiTools = listOf(
         R.string.ai_tool_ai_upscale_desc,
         Icons.Default.ZoomIn,
         Mocha.Rosewater,
+        readinessResId = R.string.ai_tool_status_model_gated,
+        readinessHintResId = R.string.ai_tool_hint_model_required,
+        readinessAccent = Mocha.Peach
+    ),
+    AiToolConfig(
+        "frame_interp",
+        R.string.tool_frame_interp,
+        R.string.ai_tool_ai_upscale_desc,
+        Icons.Default.SlowMotionVideo,
+        Mocha.Sky,
         readinessResId = R.string.ai_tool_status_model_gated,
         readinessHintResId = R.string.ai_tool_hint_model_required,
         readinessAccent = Mocha.Peach

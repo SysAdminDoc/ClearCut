@@ -67,7 +67,7 @@ object CommandRegistry {
         val cat = "Text"
         add(CommandEntry("add_text", Icons.Default.Title, R.string.tool_add_text, cat))
         add(CommandEntry("text_templates", Icons.Default.Dashboard, R.string.tool_text_templates, cat))
-        add(CommandEntry("captions", Icons.Default.ClosedCaption, R.string.tool_captions, cat))
+        add(CommandEntry("captions", Icons.Default.ClosedCaption, R.string.tool_captions, cat, requiresClip = true))
         add(CommandEntry("caption_styles", Icons.Default.Subtitles, R.string.tool_caption_styles, cat))
         add(CommandEntry("stickers", Icons.Default.EmojiEmotions, R.string.tool_stickers, cat))
         add(CommandEntry("tts", Icons.Default.RecordVoiceOver, R.string.tool_text_to_speech, cat))
@@ -86,7 +86,7 @@ object CommandRegistry {
         add(CommandEntry("speed_presets", Icons.Default.Speed, R.string.tool_speed_presets, cat, requiresClip = true))
         add(CommandEntry("group", Icons.Default.GroupWork, R.string.tool_group, cat, requiresClip = true))
         add(CommandEntry("ungroup", Icons.Default.Workspaces, R.string.tool_ungroup, cat, requiresClip = true))
-        add(CommandEntry("draw", Icons.Default.Draw, R.string.tool_draw, cat, requiresClip = true))
+        add(CommandEntry("draw", Icons.Default.Draw, R.string.tool_draw, cat))
     }
 
     private fun MutableList<CommandEntry>.addMotionCommands() {
@@ -107,10 +107,12 @@ object CommandRegistry {
 
     private fun MutableList<CommandEntry>.addAiCommands() {
         val cat = "AI"
-        add(CommandEntry("ai_hub", Icons.Default.AutoAwesome, R.string.tool_ai_hub, cat, requiresClip = true))
-        add(CommandEntry("cut_assistant", Icons.Default.ContentCut, R.string.tool_cut_assistant, cat, requiresClip = true))
+        add(CommandEntry("ai_hub", Icons.Default.AutoAwesome, R.string.tool_ai_hub, cat))
+        add(CommandEntry("cut_assistant", Icons.Default.ContentCut, R.string.tool_cut_assistant, cat))
         add(CommandEntry("scene_detect", Icons.Default.ContentCut, R.string.tool_scene_detect, cat, requiresClip = true))
         add(CommandEntry("remove_bg", Icons.Default.Wallpaper, R.string.tool_remove_bg, cat, requiresClip = true))
+        add(CommandEntry("bg_replace", Icons.Default.PhotoFilter, R.string.tool_replace_bg, cat, requiresClip = true))
+        add(CommandEntry("face_track", Icons.Default.Face, R.string.tool_face_track, cat, requiresClip = true))
         add(CommandEntry("smart_crop", Icons.Default.Crop, R.string.tool_smart_crop, cat, requiresClip = true))
         add(CommandEntry("smart_reframe", Icons.Default.CropRotate, R.string.tool_smart_reframe, cat, requiresClip = true))
         add(CommandEntry("stabilize", Icons.Default.Straighten, R.string.tool_stabilize, cat, requiresClip = true))
@@ -120,6 +122,7 @@ object CommandRegistry {
         add(CommandEntry("style_transfer", Icons.Default.Style, R.string.tool_style_transfer, cat, requiresClip = true))
         add(CommandEntry("object_remove", Icons.Default.HideImage, R.string.tool_object_remove, cat, requiresClip = true))
         add(CommandEntry("upscale", Icons.Default.ZoomIn, R.string.tool_upscale_4k, cat, requiresClip = true))
+        add(CommandEntry("frame_interp", Icons.Default.SlowMotionVideo, R.string.tool_frame_interp, cat, requiresClip = true))
         add(CommandEntry("filler_removal", Icons.Default.ContentCut, R.string.tool_remove_fillers, cat, requiresClip = true))
         add(CommandEntry("noise_reduction", Icons.Default.GraphicEq, R.string.tool_reduce_noise, cat, requiresClip = true))
         add(CommandEntry("auto_edit", Icons.Default.AutoFixHigh, R.string.tool_auto_edit, cat))

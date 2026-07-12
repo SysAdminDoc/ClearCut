@@ -4394,6 +4394,13 @@ class EditorViewModel @Inject constructor(
 
     fun ungroupSelectedClips() {
         val ids = _state.value.selectedClipIds
+        val hasGroupedSelection = _state.value.tracks
+            .flatMap { it.clips }
+            .any { it.id in ids && it.groupId != null }
+        if (!hasGroupedSelection) {
+            showToast(text(R.string.vm_select_grouped_clips_to_ungroup_toast))
+            return
+        }
         saveUndoState("Ungroup clips")
         _state.update { s ->
             s.copy(tracks = s.tracks.map { track ->

@@ -126,17 +126,35 @@ private val clipColorSubMenu = listOf(
     SubMenuItem("audio_norm", Icons.AutoMirrored.Filled.VolumeUp, R.string.tool_normalize_audio)
 )
 
+private val projectTextSubMenu = textSubMenu.filterNot { it.id == "captions" }
+
 // Secondary clip workflows live behind one deliberate More workbench so the
 // persistent rail stays stable and scannable at six categories.
 private val clipMoreSubMenu = listOf(
     SubMenuItem("back", Icons.AutoMirrored.Filled.ArrowBack, R.string.back),
     SubMenuItem("speed", Icons.Default.Speed, R.string.tool_tab_speed),
     SubMenuItem("transform", Icons.Default.Transform, R.string.tool_submenu_transform),
+    SubMenuItem("keyframes", Icons.Default.Timeline, R.string.tool_keyframes),
+    SubMenuItem("masks", Icons.Default.Layers, R.string.tool_masks),
+    SubMenuItem("blend_mode", Icons.Default.BlurOn, R.string.tool_blend_mode),
+    SubMenuItem("pip", Icons.Default.PictureInPicture, R.string.tool_pip),
+    SubMenuItem("chroma_key", Icons.Default.Deblur, R.string.tool_chroma_key),
     SubMenuItem("transition", Icons.Default.SwapHoriz, R.string.tool_transitions),
     SubMenuItem("aspect", Icons.Default.AspectRatio, R.string.tool_tab_aspect),
     SubMenuItem("ai_hub", Icons.Default.AutoAwesome, R.string.tool_ai_hub),
     SubMenuItem("command_palette", Icons.Default.Search, R.string.tool_search),
 )
+
+internal fun visibleClipTabs(editorMode: EditorMode): List<TabItem> =
+    if (editorMode == EditorMode.EASY) {
+        clipTabs.filter { it.id in setOf("edit", "audio", "text", "effects", "more") }
+    } else {
+        clipTabs
+    }
+
+internal fun projectTextActionIds(): Set<String> = projectTextSubMenu.mapTo(mutableSetOf()) { it.id }
+
+internal fun clipMoreActionIds(): Set<String> = clipMoreSubMenu.mapTo(mutableSetOf()) { it.id }
 
 // Clip mode — AI Magic tab sub-menu (expanded)
 private val clipAiSubMenu = listOf(
@@ -211,9 +229,7 @@ fun BottomToolArea(
         projectTabs.filter { it.id in setOf("edit", "audio", "text", "effects") }
     } else projectTabs
 
-    val visibleClipTabs = if (editorMode == EditorMode.EASY) {
-        clipTabs.filter { it.id in setOf("back", "edit", "speed", "effects", "transition") }
-    } else clipTabs
+    val visibleClipTabs = visibleClipTabs(editorMode)
 
     val tabs = if (isClipMode) visibleClipTabs else visibleProjectTabs
     var activeTabId by remember { mutableStateOf<String?>(null) }
@@ -226,7 +242,7 @@ fun BottomToolArea(
     // Resolve sub-menu for the currently active tab
     val subMenuItems: List<SubMenuItem>? = when {
         compactLocked -> null
-        !isClipMode && activeTabId == "text" -> textSubMenu
+        !isClipMode && activeTabId == "text" -> projectTextSubMenu
         !isClipMode && activeTabId == "project_tools" -> projectToolsSubMenu
         isClipMode && activeTabId == "edit" -> clipEditSubMenu
         isClipMode && activeTabId == "text" -> textSubMenu
