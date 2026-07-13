@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Arrangement
@@ -37,7 +39,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
-import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
 import com.novacut.editor.ui.theme.TouchTarget
@@ -57,6 +58,7 @@ fun CloudBackupPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     val hasBackup = lastBackupTime != null
     val isBusy = isExporting || isImporting
     val lastBackupLabel = lastBackupTime?.let(::formatBackupTime) ?: stringResource(R.string.panel_cloud_backup_never)
@@ -64,28 +66,28 @@ fun CloudBackupPanel(
         isExporting -> BackupStatus(
             title = stringResource(R.string.panel_cloud_backup_status_exporting_title),
             body = stringResource(R.string.panel_cloud_backup_status_exporting_body),
-            accent = Mocha.Mauve,
+            accent = ClearCutAccents.Mauve,
             icon = Icons.Default.Upload,
             label = stringResource(R.string.panel_cloud_backup_exporting)
         )
         isImporting -> BackupStatus(
             title = stringResource(R.string.panel_cloud_backup_status_importing_title),
             body = stringResource(R.string.panel_cloud_backup_status_importing_body),
-            accent = Mocha.Blue,
+            accent = ClearCutAccents.Blue,
             icon = Icons.Default.Download,
             label = stringResource(R.string.panel_cloud_backup_importing)
         )
         hasBackup -> BackupStatus(
             title = stringResource(R.string.panel_cloud_backup_status_ready_title),
             body = stringResource(R.string.panel_cloud_backup_status_ready_body),
-            accent = Mocha.Green,
+            accent = ClearCutAccents.Green,
             icon = Icons.Default.Backup,
             label = stringResource(R.string.panel_cloud_backup_ready)
         )
         else -> BackupStatus(
             title = stringResource(R.string.panel_cloud_backup_status_empty_title),
             body = stringResource(R.string.panel_cloud_backup_status_empty_body),
-            accent = Mocha.Blue,
+            accent = ClearCutAccents.Blue,
             icon = Icons.Default.Backup,
             label = stringResource(R.string.panel_cloud_backup_never)
         )
@@ -95,7 +97,7 @@ fun CloudBackupPanel(
         title = stringResource(R.string.panel_cloud_backup_title),
         subtitle = stringResource(R.string.panel_cloud_backup_subtitle),
         icon = Icons.Default.Backup,
-        accent = Mocha.Blue,
+        accent = ClearCutAccents.Blue,
         onClose = onClose,
         modifier = modifier,
         scrollable = true
@@ -110,13 +112,13 @@ fun CloudBackupPanel(
                     Text(
                         text = stringResource(R.string.panel_cloud_backup_status_title),
                         style = MaterialTheme.typography.titleMedium,
-                        color = Mocha.Text
+                        color = semanticColors.text
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = stringResource(R.string.panel_cloud_backup_description),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
 
@@ -128,7 +130,7 @@ fun CloudBackupPanel(
                 ) {
                     PremiumPanelPill(
                         text = formatBackupFileSize(estimatedSizeBytes),
-                        accent = Mocha.Blue
+                        accent = ClearCutAccents.Blue
                     )
                     PremiumPanelPill(
                         text = status.label,
@@ -144,13 +146,13 @@ fun CloudBackupPanel(
                 BackupMetric(
                     title = stringResource(R.string.panel_cloud_backup_estimated_size),
                     value = formatBackupFileSize(estimatedSizeBytes),
-                    accent = Mocha.Peach,
+                    accent = ClearCutAccents.Peach,
                     modifier = Modifier.weight(1f)
                 )
                 BackupMetric(
                     title = stringResource(R.string.panel_cloud_backup_last_backup),
                     value = lastBackupLabel,
-                    accent = if (hasBackup) Mocha.Green else Mocha.Overlay0,
+                    accent = if (hasBackup) ClearCutAccents.Green else semanticColors.overlay,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -165,22 +167,22 @@ fun CloudBackupPanel(
 
         Spacer(modifier = Modifier.height(Spacing.md))
 
-        PremiumPanelCard(accent = Mocha.Mauve) {
+        PremiumPanelCard(accent = ClearCutAccents.Mauve) {
             Text(
                 text = stringResource(R.string.panel_cloud_backup_archive_title),
                 style = MaterialTheme.typography.titleMedium,
-                color = Mocha.Text
+                color = semanticColors.text
             )
             Text(
                 text = stringResource(R.string.panel_cloud_backup_archive_body),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
 
             BackupMessageCard(
                 title = stringResource(R.string.panel_cloud_backup_archive_include_title),
                 body = stringResource(R.string.panel_cloud_backup_archive_include_body),
-                accent = Mocha.Mauve,
+                accent = ClearCutAccents.Mauve,
                 icon = Icons.Default.Backup
             )
 
@@ -191,31 +193,31 @@ fun CloudBackupPanel(
             ) {
                 PremiumPanelPill(
                     text = stringResource(R.string.panel_cloud_backup_include_timeline),
-                    accent = Mocha.Blue
+                    accent = ClearCutAccents.Blue
                 )
                 PremiumPanelPill(
                     text = stringResource(R.string.panel_cloud_backup_include_links),
-                    accent = Mocha.Peach
+                    accent = ClearCutAccents.Peach
                 )
                 PremiumPanelPill(
                     text = stringResource(R.string.panel_cloud_backup_include_state),
-                    accent = Mocha.Green
+                    accent = ClearCutAccents.Green
                 )
             }
         }
 
         Spacer(modifier = Modifier.height(Spacing.md))
 
-        PremiumPanelCard(accent = Mocha.Green) {
+        PremiumPanelCard(accent = ClearCutAccents.Green) {
             Text(
                 text = stringResource(R.string.panel_cloud_backup_actions_title),
                 style = MaterialTheme.typography.titleMedium,
-                color = Mocha.Text
+                color = semanticColors.text
             )
             Text(
                 text = stringResource(R.string.panel_cloud_backup_actions_body),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
 
             BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
@@ -232,7 +234,7 @@ fun CloudBackupPanel(
                 Text(
                     text = stringResource(R.string.panel_cloud_backup_actions_busy),
                     style = MaterialTheme.typography.bodySmall,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
             }
         }
@@ -294,22 +296,23 @@ private fun BackupExportButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     Button(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier.defaultMinSize(minHeight = TouchTarget.minimum),
         colors = ButtonDefaults.buttonColors(
-            containerColor = Mocha.Rosewater,
-            contentColor = Mocha.Midnight,
-            disabledContainerColor = Mocha.Surface1.copy(alpha = 0.5f),
-            disabledContentColor = Mocha.Subtext0
+            containerColor = ClearCutAccents.Rosewater,
+            contentColor = semanticColors.background,
+            disabledContainerColor = semanticColors.surface.copy(alpha = 0.5f),
+            disabledContentColor = semanticColors.subtext
         ),
         shape = RoundedCornerShape(Radius.lg)
     ) {
         if (isExporting) {
             CircularProgressIndicator(
                 modifier = Modifier.size(16.dp),
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 strokeWidth = 2.dp
             )
         } else {
@@ -340,24 +343,25 @@ private fun BackupImportButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     OutlinedButton(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier.defaultMinSize(minHeight = TouchTarget.minimum),
         border = BorderStroke(
             1.dp,
-            if (enabled) Mocha.Blue.copy(alpha = 0.32f) else Mocha.CardStroke.copy(alpha = 0.6f)
+            if (enabled) ClearCutAccents.Blue.copy(alpha = 0.32f) else semanticColors.cardStroke.copy(alpha = 0.6f)
         ),
         colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = Mocha.Blue,
-            disabledContentColor = Mocha.Subtext0
+            contentColor = ClearCutAccents.Blue,
+            disabledContentColor = semanticColors.subtext
         ),
         shape = RoundedCornerShape(Radius.lg)
     ) {
         if (isImporting) {
             CircularProgressIndicator(
                 modifier = Modifier.size(16.dp),
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 strokeWidth = 2.dp
             )
         } else {
@@ -396,6 +400,7 @@ private fun BackupMessageCard(
     accent: Color,
     icon: ImageVector
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = accent.copy(alpha = 0.08f),
@@ -435,7 +440,7 @@ private fun BackupMessageCard(
                 Text(
                     text = body,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
             }
         }
@@ -449,6 +454,7 @@ private fun BackupMetric(
     accent: androidx.compose.ui.graphics.Color,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         modifier = modifier,
         color = accent.copy(alpha = 0.12f),
@@ -462,13 +468,13 @@ private fun BackupMetric(
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelLarge,
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 modifier = Modifier.padding(start = Spacing.md, top = Spacing.md, end = Spacing.md)
             )
             Text(
                 text = value,
                 style = MaterialTheme.typography.titleSmall,
-                color = if (accent == Mocha.Subtext0) Mocha.Text else accent,
+                color = if (accent == semanticColors.subtext) semanticColors.text else accent,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.padding(start = Spacing.md, end = Spacing.md, bottom = Spacing.md)
             )

@@ -12,11 +12,15 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.tryPerformAccessibilityChecks
 import com.novacut.editor.ui.ClearCutTestTags
+import com.novacut.editor.engine.AppearanceMode
+import com.novacut.editor.engine.DesktopOverride
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import androidx.test.filters.SdkSuppress
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 
 class ClearCutSmokeTest {
     @get:Rule
@@ -102,6 +106,57 @@ class ClearCutSmokeTest {
                 .getSystemService(android.app.LocaleManager::class.java)
                 .applicationLocales = android.os.LocaleList.getEmptyLocaleList()
         }
+    }
+
+    @Test
+    fun highContrastPhoneAndDesktopEditorSurfacesRender() {
+        try {
+            updateAppearance(AppearanceMode.HIGH_CONTRAST_DARK, DesktopOverride.FORCE_OFF)
+            compose.onNodeWithTag(ClearCutTestTags.PROJECTS_CREATE_PROJECT).performClick()
+            compose.onNodeWithTag(ClearCutTestTags.TEMPLATE_BLANK)
+                .performScrollTo()
+                .performClick()
+            compose.waitUntilAtLeastOneExists(ClearCutTestTags.EDITOR_SCREEN)
+            dismissTutorialIfPresent()
+            compose.assertAccessibilityChecksPass()
+            assertTrue(compose.onRoot().captureToImage().width > 0)
+
+            compose.onNodeWithTag(ClearCutTestTags.EDITOR_EMPTY_ADD_MEDIA).performClick()
+            compose.onNodeWithTag(ClearCutTestTags.MEDIA_PICKER_SHEET).assertIsDisplayed()
+            compose.assertAccessibilityChecksPass()
+            assertTrue(compose.onRoot().captureToImage().width > 0)
+            compose.onNodeWithTag(ClearCutTestTags.MEDIA_PICKER_CLOSE).performClick()
+
+            compose.onNodeWithTag(ClearCutTestTags.EDITOR_EXPORT).performClick()
+            compose.onNodeWithTag(ClearCutTestTags.EXPORT_SHEET).assertIsDisplayed()
+            compose.assertAccessibilityChecksPass()
+            assertTrue(compose.onRoot().captureToImage().width > 0)
+            compose.onNodeWithTag(ClearCutTestTags.EXPORT_CLOSE).performClick()
+
+            updateAppearance(AppearanceMode.HIGH_CONTRAST_DARK, DesktopOverride.FORCE_ON)
+            compose.waitUntilAtLeastOneExists(ClearCutTestTags.EDITOR_DESKTOP_SIDEBAR)
+            compose.onNodeWithTag(ClearCutTestTags.EDITOR_DESKTOP_SIDEBAR).assertIsDisplayed()
+            compose.assertAccessibilityChecksPass()
+            assertTrue(compose.onRoot().captureToImage().width > 0)
+            compose.onNodeWithTag(ClearCutTestTags.EDITOR_EXPORT).performClick()
+            compose.onNodeWithTag(ClearCutTestTags.EXPORT_SHEET).assertIsDisplayed()
+            compose.assertAccessibilityChecksPass()
+            assertTrue(compose.onRoot().captureToImage().width > 0)
+        } finally {
+            updateAppearance(AppearanceMode.SYSTEM, DesktopOverride.AUTO)
+        }
+    }
+
+    private fun updateAppearance(appearanceMode: AppearanceMode, desktopOverride: DesktopOverride) {
+        runBlocking {
+            compose.activity.settingsRepository.updateAppearanceMode(appearanceMode)
+            compose.activity.settingsRepository.updateDesktopOverride(desktopOverride)
+            compose.activity.settingsRepository.settings.first { settings ->
+                settings.appearanceMode == appearanceMode &&
+                    settings.desktopModeOverride == desktopOverride
+            }
+        }
+        compose.waitForIdle()
     }
 
     private fun setApplicationLocale(languageTag: String) {

@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -24,7 +26,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.engine.SmartRenderEngine
-import com.novacut.editor.ui.theme.Mocha
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -36,6 +37,7 @@ fun RenderPreviewSheet(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     val hasSegments = segments.isNotEmpty()
     val reEncodeRatio = if (summary.totalDurationMs > 0L) {
         summary.reEncodeDurationMs.toFloat() / summary.totalDurationMs.toFloat()
@@ -52,25 +54,25 @@ fun RenderPreviewSheet(
         !hasSegments -> RenderOutlookState(
             title = stringResource(R.string.render_preview_outlook_empty_title),
             body = stringResource(R.string.render_preview_outlook_empty_body),
-            accent = Mocha.Blue,
+            accent = ClearCutAccents.Blue,
             icon = Icons.Default.Preview
         )
         summary.reEncodeSegments == 0 -> RenderOutlookState(
             title = stringResource(R.string.render_preview_outlook_instant_title),
             body = stringResource(R.string.render_preview_outlook_instant_body),
-            accent = Mocha.Green,
+            accent = ClearCutAccents.Green,
             icon = Icons.Default.Preview
         )
         summary.passThroughSegments == 0 -> RenderOutlookState(
             title = stringResource(R.string.render_preview_outlook_full_title),
             body = stringResource(R.string.render_preview_outlook_full_body),
-            accent = Mocha.Yellow,
+            accent = ClearCutAccents.Yellow,
             icon = Icons.Default.RocketLaunch
         )
         else -> RenderOutlookState(
             title = stringResource(R.string.render_preview_outlook_mixed_title),
             body = stringResource(R.string.render_preview_outlook_mixed_body),
-            accent = Mocha.Peach,
+            accent = ClearCutAccents.Peach,
             icon = Icons.Default.Preview
         )
     }
@@ -79,7 +81,7 @@ fun RenderPreviewSheet(
         title = stringResource(R.string.render_preview_title),
         subtitle = stringResource(R.string.render_preview_subtitle),
         icon = Icons.Default.Preview,
-        accent = Mocha.Peach,
+        accent = ClearCutAccents.Peach,
         onClose = onClose,
         closeContentDescription = stringResource(R.string.render_preview_close_cd),
         modifier = modifier,
@@ -113,13 +115,13 @@ fun RenderPreviewSheet(
                         Text(
                             text = outlook.title,
                             style = MaterialTheme.typography.titleMedium,
-                            color = Mocha.Text
+                            color = semanticColors.text
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = outlook.body,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Mocha.Subtext0
+                            color = semanticColors.subtext
                         )
                     }
                 }
@@ -132,7 +134,7 @@ fun RenderPreviewSheet(
                 ) {
                     PremiumPanelPill(
                         text = formatDuration(summary.totalDurationMs),
-                        accent = Mocha.Blue
+                        accent = ClearCutAccents.Blue
                     )
                     PremiumPanelPill(
                         text = speedupLabel,
@@ -148,13 +150,13 @@ fun RenderPreviewSheet(
                 RenderMetric(
                     label = stringResource(R.string.panel_render_pass_through),
                     value = summary.passThroughSegments.toString(),
-                    accent = Mocha.Green,
+                    accent = ClearCutAccents.Green,
                     modifier = Modifier.widthIn(min = 110.dp)
                 )
                 RenderMetric(
                     label = stringResource(R.string.panel_render_re_encode),
                     value = summary.reEncodeSegments.toString(),
-                    accent = if (summary.reEncodeSegments > 0) Mocha.Yellow else Mocha.Green,
+                    accent = if (summary.reEncodeSegments > 0) ClearCutAccents.Yellow else ClearCutAccents.Green,
                     modifier = Modifier.widthIn(min = 110.dp)
                 )
                 RenderMetric(
@@ -169,13 +171,13 @@ fun RenderPreviewSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(10.dp)
-                    .background(Mocha.Green.copy(alpha = 0.22f), RoundedCornerShape(10.dp))
+                    .background(ClearCutAccents.Green.copy(alpha = 0.22f), RoundedCornerShape(10.dp))
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth(reEncodeRatio.coerceIn(0f, 1f))
                         .height(10.dp)
-                        .background(Mocha.Yellow.copy(alpha = 0.72f), RoundedCornerShape(10.dp))
+                        .background(ClearCutAccents.Yellow.copy(alpha = 0.72f), RoundedCornerShape(10.dp))
                 )
             }
 
@@ -189,7 +191,7 @@ fun RenderPreviewSheet(
                         formatDuration(summary.passThroughDurationMs)
                     ),
                     style = MaterialTheme.typography.labelMedium,
-                    color = Mocha.Green
+                    color = ClearCutAccents.Green
                 )
                 Text(
                     text = stringResource(
@@ -197,30 +199,30 @@ fun RenderPreviewSheet(
                         formatDuration(summary.reEncodeDurationMs)
                     ),
                     style = MaterialTheme.typography.labelMedium,
-                    color = if (summary.reEncodeSegments > 0) Mocha.Yellow else Mocha.Subtext0
+                    color = if (summary.reEncodeSegments > 0) ClearCutAccents.Yellow else semanticColors.subtext
                 )
             }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Blue) {
+        PremiumPanelCard(accent = ClearCutAccents.Blue) {
             Text(
                 text = stringResource(R.string.panel_render_segments),
                 style = MaterialTheme.typography.titleMedium,
-                color = Mocha.Text
+                color = semanticColors.text
             )
             Text(
                 text = stringResource(R.string.render_preview_segments_description),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
 
             if (segments.isEmpty()) {
                 RenderMessageCard(
                     title = stringResource(R.string.render_preview_empty_title),
                     body = stringResource(R.string.render_preview_empty_body),
-                    accent = Mocha.Blue,
+                    accent = ClearCutAccents.Blue,
                     icon = Icons.Default.Preview
                 )
             } else {
@@ -237,16 +239,16 @@ fun RenderPreviewSheet(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Mauve) {
+        PremiumPanelCard(accent = ClearCutAccents.Mauve) {
             Text(
                 text = stringResource(R.string.render_preview_actions_title),
                 style = MaterialTheme.typography.titleMedium,
-                color = Mocha.Text
+                color = semanticColors.text
             )
             Text(
                 text = stringResource(R.string.render_preview_actions_body),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
 
             if (isCompactActions) {
@@ -259,8 +261,8 @@ fun RenderPreviewSheet(
                         enabled = hasSegments,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(18.dp),
-                        border = BorderStroke(1.dp, Mocha.Peach.copy(alpha = 0.4f)),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Peach)
+                        border = BorderStroke(1.dp, ClearCutAccents.Peach.copy(alpha = 0.4f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = ClearCutAccents.Peach)
                     ) {
                         androidx.compose.material3.Icon(
                             imageVector = Icons.Default.Preview,
@@ -275,7 +277,7 @@ fun RenderPreviewSheet(
                         enabled = hasSegments,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(18.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve)
+                        colors = ButtonDefaults.buttonColors(containerColor = ClearCutAccents.Mauve)
                     ) {
                         androidx.compose.material3.Icon(
                             imageVector = Icons.Default.RocketLaunch,
@@ -295,8 +297,8 @@ fun RenderPreviewSheet(
                         enabled = hasSegments,
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(18.dp),
-                        border = BorderStroke(1.dp, Mocha.Peach.copy(alpha = 0.4f)),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Peach)
+                        border = BorderStroke(1.dp, ClearCutAccents.Peach.copy(alpha = 0.4f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = ClearCutAccents.Peach)
                     ) {
                         androidx.compose.material3.Icon(
                             imageVector = Icons.Default.Preview,
@@ -311,7 +313,7 @@ fun RenderPreviewSheet(
                         enabled = hasSegments,
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(18.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve)
+                        colors = ButtonDefaults.buttonColors(containerColor = ClearCutAccents.Mauve)
                     ) {
                         androidx.compose.material3.Icon(
                             imageVector = Icons.Default.RocketLaunch,
@@ -327,7 +329,7 @@ fun RenderPreviewSheet(
                 Text(
                     text = stringResource(R.string.render_actions_disabled_hint),
                     style = MaterialTheme.typography.bodySmall,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
             }
         }
@@ -348,6 +350,7 @@ private fun RenderMetric(
     accent: Color,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         modifier = modifier,
         color = accent.copy(alpha = 0.12f),
@@ -367,7 +370,7 @@ private fun RenderMetric(
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodySmall,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
         }
     }
@@ -381,6 +384,7 @@ private fun RenderMessageCard(
     icon: ImageVector,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = accent.copy(alpha = 0.08f),
@@ -420,7 +424,7 @@ private fun RenderMessageCard(
                 Text(
                     text = body,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
             }
         }
@@ -429,7 +433,8 @@ private fun RenderMessageCard(
 
 @Composable
 private fun RenderSegmentRow(segment: SmartRenderEngine.RenderSegment) {
-    val accent = if (segment.needsReEncode) Mocha.Yellow else Mocha.Green
+    val semanticColors = LocalClearCutColors.current
+    val accent = if (segment.needsReEncode) ClearCutAccents.Yellow else ClearCutAccents.Green
     val statusLabel = stringResource(
         if (segment.needsReEncode) R.string.panel_render_re_encode else R.string.panel_render_pass_through
     )
@@ -445,11 +450,11 @@ private fun RenderSegmentRow(segment: SmartRenderEngine.RenderSegment) {
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = if (segment.needsReEncode) accent.copy(alpha = 0.12f) else Mocha.PanelRaised,
+        color = if (segment.needsReEncode) accent.copy(alpha = 0.12f) else semanticColors.panelRaised,
         shape = RoundedCornerShape(20.dp),
         border = BorderStroke(
             1.dp,
-            if (segment.needsReEncode) accent.copy(alpha = 0.2f) else Mocha.CardStroke
+            if (segment.needsReEncode) accent.copy(alpha = 0.2f) else semanticColors.cardStroke
         )
     ) {
         Row(
@@ -485,14 +490,14 @@ private fun RenderSegmentRow(segment: SmartRenderEngine.RenderSegment) {
                             formatDuration(segment.endMs)
                         ),
                         style = MaterialTheme.typography.titleSmall,
-                        color = Mocha.Text,
+                        color = semanticColors.text,
                         fontWeight = FontWeight.Medium
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = detail,
                         style = MaterialTheme.typography.bodySmall,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
             }
@@ -509,7 +514,7 @@ private fun RenderSegmentRow(segment: SmartRenderEngine.RenderSegment) {
                 )
                 PremiumPanelPill(
                     text = durationLabel,
-                    accent = if (segment.needsReEncode) Mocha.Overlay1 else Mocha.Blue
+                    accent = if (segment.needsReEncode) semanticColors.overlayStrong else ClearCutAccents.Blue
                 )
             }
         }

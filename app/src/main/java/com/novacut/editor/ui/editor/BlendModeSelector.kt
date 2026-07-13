@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -28,7 +30,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.model.BlendMode
-import com.novacut.editor.ui.theme.Mocha
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -38,6 +39,7 @@ fun BlendModeSelector(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     val sections = blendModeSections()
     val currentSection = sections.firstOrNull { currentMode in it.modes }
 
@@ -45,23 +47,23 @@ fun BlendModeSelector(
         title = stringResource(R.string.blend_mode_title),
         subtitle = stringResource(R.string.blend_mode_subtitle),
         icon = Icons.Default.AutoFixHigh,
-        accent = currentSection?.accent ?: Mocha.Peach,
+        accent = currentSection?.accent ?: ClearCutAccents.Peach,
         onClose = onClose,
         modifier = modifier,
         scrollable = true,
         closeContentDescription = stringResource(R.string.blend_mode_close_cd)
     ) {
-        PremiumPanelCard(accent = currentSection?.accent ?: Mocha.Peach) {
+        PremiumPanelCard(accent = currentSection?.accent ?: ClearCutAccents.Peach) {
             Text(
                 text = stringResource(R.string.blend_mode_current_title),
                 style = MaterialTheme.typography.titleMedium,
-                color = Mocha.Text,
+                color = semanticColors.text,
                 fontWeight = FontWeight.SemiBold
             )
             Text(
                 text = blendModeDescription(currentMode),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -69,7 +71,7 @@ fun BlendModeSelector(
             ) {
                 PremiumPanelPill(
                     text = currentMode.displayName,
-                    accent = currentSection?.accent ?: Mocha.Peach
+                    accent = currentSection?.accent ?: ClearCutAccents.Peach
                 )
                 PremiumPanelPill(
                     text = pluralStringResource(
@@ -77,7 +79,7 @@ fun BlendModeSelector(
                         sections.sumOf { it.modes.size },
                         sections.sumOf { it.modes.size }
                     ),
-                    accent = Mocha.Sky
+                    accent = ClearCutAccents.Sky
                 )
                 currentSection?.let { section ->
                     PremiumPanelPill(
@@ -95,13 +97,13 @@ fun BlendModeSelector(
                 Text(
                     text = section.title,
                     style = MaterialTheme.typography.titleMedium,
-                    color = Mocha.Text,
+                    color = semanticColors.text,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
                     text = section.subtitle,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
                 PremiumPanelPill(
                     text = pluralStringResource(
@@ -148,14 +150,15 @@ private fun BlendModeOptionCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         onClick = onClick,
         modifier = modifier,
-        color = if (selected) accent.copy(alpha = 0.14f) else Mocha.PanelRaised,
+        color = if (selected) accent.copy(alpha = 0.14f) else semanticColors.panelRaised,
         shape = RoundedCornerShape(20.dp),
         border = BorderStroke(
             1.dp,
-            if (selected) accent.copy(alpha = 0.24f) else Mocha.CardStroke
+            if (selected) accent.copy(alpha = 0.24f) else semanticColors.cardStroke
         )
     ) {
         Row(
@@ -174,13 +177,13 @@ private fun BlendModeOptionCard(
                 Text(
                     text = mode.displayName,
                     style = MaterialTheme.typography.titleSmall,
-                    color = if (selected) accent else Mocha.Text,
+                    color = if (selected) accent else semanticColors.text,
                     fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium
                 )
                 Text(
                     text = blendModeShortHint(mode),
                     style = MaterialTheme.typography.bodySmall,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
             }
 
@@ -209,7 +212,7 @@ private fun blendModeSections(): List<BlendModeSection> = listOf(
     BlendModeSection(
         title = "Foundation",
         subtitle = "The most-used blend modes for everyday compositing, contrast, and soft overlays.",
-        accent = Mocha.Peach,
+        accent = ClearCutAccents.Peach,
         modes = listOf(
             BlendMode.NORMAL,
             BlendMode.MULTIPLY,
@@ -220,7 +223,7 @@ private fun blendModeSections(): List<BlendModeSection> = listOf(
     BlendModeSection(
         title = "Light and Shadow",
         subtitle = "Push exposure up or down, then lean into harsher additive or subtractive blends.",
-        accent = Mocha.Yellow,
+        accent = ClearCutAccents.Yellow,
         modes = listOf(
             BlendMode.DARKEN,
             BlendMode.LIGHTEN,
@@ -233,7 +236,7 @@ private fun blendModeSections(): List<BlendModeSection> = listOf(
     BlendModeSection(
         title = "Contrast",
         subtitle = "Use these when you want the layer interaction to feel punchier, more graphic, or more unpredictable.",
-        accent = Mocha.Mauve,
+        accent = ClearCutAccents.Mauve,
         modes = listOf(
             BlendMode.HARD_LIGHT,
             BlendMode.SOFT_LIGHT,
@@ -244,7 +247,7 @@ private fun blendModeSections(): List<BlendModeSection> = listOf(
     BlendModeSection(
         title = "Color Channels",
         subtitle = "Borrow hue, saturation, or luminance from one layer while keeping the rest from another.",
-        accent = Mocha.Blue,
+        accent = ClearCutAccents.Blue,
         modes = listOf(
             BlendMode.HUE,
             BlendMode.SATURATION_BLEND,

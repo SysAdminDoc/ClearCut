@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,7 +28,6 @@ import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.model.Track
 import com.novacut.editor.model.TrackType
-import com.novacut.editor.ui.theme.Mocha
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -37,6 +38,7 @@ fun MultiCamPanel(
     onSyncClips: () -> Unit,
     onClose: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     val isCompactGrid = LocalConfiguration.current.screenWidthDp < 430
     val allVideoClips = tracks
         .filter { it.type == TrackType.VIDEO }
@@ -53,12 +55,12 @@ fun MultiCamPanel(
         title = stringResource(R.string.panel_multi_cam_title),
         subtitle = "Sync angles, compare coverage, and switch the active shot without leaving the edit context.",
         icon = Icons.Default.Videocam,
-        accent = Mocha.Blue,
+        accent = ClearCutAccents.Blue,
         onClose = onClose,
         closeContentDescription = stringResource(R.string.cd_multicam_close),
         scrollable = true
     ) {
-        PremiumPanelCard(accent = Mocha.Blue) {
+        PremiumPanelCard(accent = ClearCutAccents.Blue) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -68,7 +70,7 @@ fun MultiCamPanel(
                     Text(
                         text = "Angle overview",
                         style = MaterialTheme.typography.titleMedium,
-                        color = Mocha.Text
+                        color = semanticColors.text
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
@@ -78,7 +80,7 @@ fun MultiCamPanel(
                             "Choose an angle to make it active, then sync clips if the cameras need alignment. Still photos stay hidden here so the angle grid remains camera-focused."
                         },
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
 
@@ -90,7 +92,7 @@ fun MultiCamPanel(
                 ) {
                     PremiumPanelPill(
                         text = "${videoClips.size} angles",
-                        accent = Mocha.Blue
+                        accent = ClearCutAccents.Blue
                     )
                     PremiumPanelPill(
                         text = when {
@@ -98,12 +100,12 @@ fun MultiCamPanel(
                             selectedClipId != null -> "Selection off-grid"
                             else -> "No angle selected"
                         },
-                        accent = if (activeAngleLabel != null) Mocha.Green else Mocha.Overlay1
+                        accent = if (activeAngleLabel != null) ClearCutAccents.Green else semanticColors.overlayStrong
                     )
                     if (hiddenAngleCount > 0) {
                         PremiumPanelPill(
                             text = stringResource(R.string.panel_multi_cam_more_angles, hiddenAngleCount),
-                            accent = Mocha.Mauve
+                            accent = ClearCutAccents.Mauve
                         )
                     }
                 }
@@ -112,24 +114,24 @@ fun MultiCamPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Mauve) {
+        PremiumPanelCard(accent = ClearCutAccents.Mauve) {
             Text(
                 text = "Sync cameras",
                 style = MaterialTheme.typography.titleMedium,
-                color = Mocha.Text
+                color = semanticColors.text
             )
             Text(
                 text = "Run a sync pass before switching angles if the camera starts or audio reference drifted across tracks.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
 
             Button(
                 onClick = onSyncClips,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Mocha.Mauve,
-                    contentColor = Mocha.Base
+                    containerColor = ClearCutAccents.Mauve,
+                    contentColor = semanticColors.surfaceBase
                 ),
                 shape = RoundedCornerShape(18.dp)
             ) {
@@ -144,24 +146,24 @@ fun MultiCamPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = if (videoClips.isEmpty()) Mocha.Overlay1 else Mocha.Green) {
+        PremiumPanelCard(accent = if (videoClips.isEmpty()) semanticColors.overlayStrong else ClearCutAccents.Green) {
             Text(
                 text = "Available angles",
                 style = MaterialTheme.typography.titleMedium,
-                color = Mocha.Text
+                color = semanticColors.text
             )
 
             if (videoClips.isEmpty()) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = Mocha.PanelRaised,
+                    color = semanticColors.panelRaised,
                     shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(1.dp, Mocha.CardStroke)
+                    border = BorderStroke(1.dp, semanticColors.cardStroke)
                 ) {
                     Text(
                         text = stringResource(R.string.panel_multi_cam_no_clips),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Mocha.Subtext0,
+                        color = semanticColors.subtext,
                         modifier = Modifier.padding(16.dp)
                     )
                 }
@@ -169,7 +171,7 @@ fun MultiCamPanel(
                 Text(
                     text = "The first four motion clips appear here as switchable camera angles.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
 
                 FlowRow(
@@ -207,15 +209,16 @@ private fun MultiCamAngleCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val accent = if (isActive) Mocha.Mauve else Mocha.Blue
+    val semanticColors = LocalClearCutColors.current
+    val accent = if (isActive) ClearCutAccents.Mauve else ClearCutAccents.Blue
 
     Surface(
         modifier = modifier,
-        color = if (isActive) accent.copy(alpha = 0.12f) else Mocha.PanelRaised,
+        color = if (isActive) accent.copy(alpha = 0.12f) else semanticColors.panelRaised,
         shape = RoundedCornerShape(22.dp),
         border = BorderStroke(
             width = 1.dp,
-            color = if (isActive) accent.copy(alpha = 0.28f) else Mocha.CardStroke
+            color = if (isActive) accent.copy(alpha = 0.28f) else semanticColors.cardStroke
         )
     ) {
         Column(
@@ -230,7 +233,7 @@ private fun MultiCamAngleCard(
                     .fillMaxWidth()
                     .aspectRatio(16f / 9f)
                     .background(
-                        color = if (isActive) accent.copy(alpha = 0.2f) else Mocha.Base,
+                        color = if (isActive) accent.copy(alpha = 0.2f) else semanticColors.surfaceBase,
                         shape = RoundedCornerShape(18.dp)
                     ),
                 contentAlignment = Alignment.Center
@@ -238,7 +241,7 @@ private fun MultiCamAngleCard(
                 Icon(
                     imageVector = Icons.Default.Videocam,
                     contentDescription = stringResource(R.string.cd_multicam_angle),
-                    tint = if (isActive) accent else Mocha.Overlay1,
+                    tint = if (isActive) accent else semanticColors.overlayStrong,
                     modifier = Modifier.size(28.dp)
                 )
 
@@ -247,7 +250,7 @@ private fun MultiCamAngleCard(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(8.dp),
-                        color = Mocha.Mauve,
+                        color = ClearCutAccents.Mauve,
                         shape = CircleShape
                     ) {
                         Box(
@@ -257,7 +260,7 @@ private fun MultiCamAngleCard(
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = stringResource(R.string.cd_multicam_selected),
-                                tint = Mocha.Crust,
+                                tint = semanticColors.onAccent,
                                 modifier = Modifier.size(12.dp)
                             )
                         }
@@ -269,12 +272,12 @@ private fun MultiCamAngleCard(
                 Text(
                     text = label,
                     style = MaterialTheme.typography.titleSmall,
-                    color = Mocha.Text
+                    color = semanticColors.text
                 )
                 Text(
                     text = fileName,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Mocha.Subtext0,
+                    color = semanticColors.subtext,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

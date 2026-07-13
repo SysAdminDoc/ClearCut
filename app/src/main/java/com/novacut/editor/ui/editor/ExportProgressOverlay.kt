@@ -1,5 +1,6 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -30,7 +31,6 @@ import com.novacut.editor.engine.ExportState
 import com.novacut.editor.ui.theme.ClearCutChromeIconButton
 import com.novacut.editor.ui.theme.Elevation
 import com.novacut.editor.ui.theme.LocalClearCutColors
-import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.Motion
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
@@ -116,7 +116,7 @@ fun ExportProgressOverlay(
                     .background(
                         Brush.horizontalGradient(
                             listOf(
-                                Mocha.Mauve.copy(alpha = 0.12f),
+                                ClearCutAccents.Mauve.copy(alpha = 0.12f),
                                 colors.panelHighest,
                                 colors.panelHighest
                             )
@@ -130,19 +130,19 @@ fun ExportProgressOverlay(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(CircleShape)
-                        .background(Mocha.Mauve.copy(alpha = 0.12f)),
+                        .background(ClearCutAccents.Mauve.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator(
                         progress = { progressValue },
                         modifier = Modifier.size(34.dp),
-                        color = Mocha.Mauve,
+                        color = ClearCutAccents.Mauve,
                         strokeWidth = 3.dp,
-                        trackColor = Mocha.Mauve.copy(alpha = 0.12f)
+                        trackColor = ClearCutAccents.Mauve.copy(alpha = 0.12f)
                     )
                     Text(
                         text = "$percent%",
-                        color = Mocha.Mauve,
+                        color = ClearCutAccents.Mauve,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -183,9 +183,9 @@ fun ExportProgressOverlay(
                     icon = Icons.Default.Close,
                     contentDescription = stringResource(R.string.cd_export_cancel),
                     onClick = onCancel,
-                    tint = Mocha.Red,
-                    containerColor = Mocha.Red.copy(alpha = 0.12f),
-                    borderColor = Mocha.Red.copy(alpha = 0.24f),
+                    tint = ClearCutAccents.Red,
+                    containerColor = ClearCutAccents.Red.copy(alpha = 0.12f),
+                    borderColor = ClearCutAccents.Red.copy(alpha = 0.24f),
                     shape = RoundedCornerShape(Radius.lg),
                 )
             }

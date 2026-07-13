@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
@@ -70,7 +72,6 @@ import com.novacut.editor.R
 import com.novacut.editor.model.Mask
 import com.novacut.editor.model.MaskPoint
 import com.novacut.editor.model.MaskType
-import com.novacut.editor.ui.theme.Mocha
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -84,6 +85,7 @@ fun MaskEditorPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     val selectedMask = masks.find { it.id == selectedMaskId }
     val trackedMasks = masks.count { it.trackToMotion }
     var showAddMenu by remember { mutableStateOf(false) }
@@ -92,7 +94,7 @@ fun MaskEditorPanel(
         title = stringResource(R.string.mask_title),
         subtitle = stringResource(R.string.panel_mask_subtitle),
         icon = Icons.Default.Gesture,
-        accent = if (selectedMask != null) Mocha.Mauve else Mocha.Blue,
+        accent = if (selectedMask != null) ClearCutAccents.Mauve else ClearCutAccents.Blue,
         onClose = onClose,
         closeContentDescription = stringResource(R.string.cd_close_mask_editor),
         modifier = modifier,
@@ -103,7 +105,7 @@ fun MaskEditorPanel(
                     icon = Icons.Default.Add,
                     contentDescription = stringResource(R.string.cd_add_mask),
                     onClick = { showAddMenu = true },
-                    tint = Mocha.Green
+                    tint = ClearCutAccents.Green
                 )
                 DropdownMenu(
                     expanded = showAddMenu,
@@ -122,7 +124,7 @@ fun MaskEditorPanel(
             }
         }
     ) {
-        PremiumPanelCard(accent = if (selectedMask != null) Mocha.Mauve else Mocha.Blue) {
+        PremiumPanelCard(accent = if (selectedMask != null) ClearCutAccents.Mauve else ClearCutAccents.Blue) {
             BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                 val isCompactLayout = maxWidth < 420.dp
                 if (isCompactLayout) {
@@ -131,13 +133,13 @@ fun MaskEditorPanel(
                             Text(
                                 text = stringResource(R.string.mask_stack_title),
                                 style = MaterialTheme.typography.titleMedium,
-                                color = Mocha.Text
+                                color = semanticColors.text
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
                                 text = stringResource(R.string.mask_stack_description),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Mocha.Subtext0
+                                color = semanticColors.subtext
                             )
                         }
                         FlowRow(
@@ -146,11 +148,11 @@ fun MaskEditorPanel(
                         ) {
                             PremiumPanelPill(
                                 text = stringResource(R.string.mask_summary_total, masks.size),
-                                accent = Mocha.Blue
+                                accent = ClearCutAccents.Blue
                             )
                             PremiumPanelPill(
                                 text = if (selectedMask != null) localizedMaskTypeName(selectedMask.type) else stringResource(R.string.mask_selection_none),
-                                accent = if (selectedMask != null) Mocha.Mauve else Mocha.Subtext0
+                                accent = if (selectedMask != null) ClearCutAccents.Mauve else semanticColors.subtext
                             )
                         }
                     }
@@ -164,13 +166,13 @@ fun MaskEditorPanel(
                             Text(
                                 text = stringResource(R.string.mask_stack_title),
                                 style = MaterialTheme.typography.titleMedium,
-                                color = Mocha.Text
+                                color = semanticColors.text
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
                                 text = stringResource(R.string.mask_stack_description),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Mocha.Subtext0
+                                color = semanticColors.subtext
                             )
                         }
 
@@ -182,11 +184,11 @@ fun MaskEditorPanel(
                         ) {
                             PremiumPanelPill(
                                 text = stringResource(R.string.mask_summary_total, masks.size),
-                                accent = Mocha.Blue
+                                accent = ClearCutAccents.Blue
                             )
                             PremiumPanelPill(
                                 text = if (selectedMask != null) localizedMaskTypeName(selectedMask.type) else stringResource(R.string.mask_selection_none),
-                                accent = if (selectedMask != null) Mocha.Mauve else Mocha.Subtext0
+                                accent = if (selectedMask != null) ClearCutAccents.Mauve else semanticColors.subtext
                             )
                         }
                     }
@@ -200,13 +202,13 @@ fun MaskEditorPanel(
                 MaskMetric(
                     title = stringResource(R.string.mask_metric_tracked),
                     value = trackedMasks.toString(),
-                    accent = if (trackedMasks > 0) Mocha.Yellow else Mocha.Green,
+                    accent = if (trackedMasks > 0) ClearCutAccents.Yellow else ClearCutAccents.Green,
                     modifier = Modifier.width(140.dp)
                 )
                 MaskMetric(
                     title = stringResource(R.string.mask_metric_points),
                     value = selectedMask?.points?.size?.toString() ?: "0",
-                    accent = Mocha.Mauve,
+                    accent = ClearCutAccents.Mauve,
                     modifier = Modifier.width(140.dp)
                 )
             }
@@ -214,11 +216,11 @@ fun MaskEditorPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Blue) {
+        PremiumPanelCard(accent = ClearCutAccents.Blue) {
             Text(
                 text = stringResource(R.string.mask_shapes_title),
                 style = MaterialTheme.typography.titleMedium,
-                color = Mocha.Text
+                color = semanticColors.text
             )
             Text(
                 text = if (masks.isEmpty()) {
@@ -227,7 +229,7 @@ fun MaskEditorPanel(
                     stringResource(R.string.mask_shapes_description)
                 },
                 style = MaterialTheme.typography.bodyMedium,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
 
             FlowRow(
@@ -237,8 +239,8 @@ fun MaskEditorPanel(
                     OutlinedButton(
                         onClick = { onMaskAdded(type) },
                         shape = RoundedCornerShape(18.dp),
-                        border = BorderStroke(1.dp, Mocha.Blue.copy(alpha = 0.25f)),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Blue)
+                        border = BorderStroke(1.dp, ClearCutAccents.Blue.copy(alpha = 0.25f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = ClearCutAccents.Blue)
                     ) {
                         androidx.compose.material3.Icon(
                             imageVector = maskTypeIcon(type),
@@ -268,7 +270,7 @@ fun MaskEditorPanel(
         Spacer(modifier = Modifier.height(12.dp))
 
         if (selectedMask != null) {
-            PremiumPanelCard(accent = Mocha.Mauve) {
+            PremiumPanelCard(accent = ClearCutAccents.Mauve) {
                 BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                     val isCompactLayout = maxWidth < 420.dp
                     if (isCompactLayout) {
@@ -277,20 +279,20 @@ fun MaskEditorPanel(
                                 Text(
                                     text = stringResource(R.string.mask_selected_title),
                                     style = MaterialTheme.typography.titleMedium,
-                                    color = Mocha.Text
+                                    color = semanticColors.text
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = localizedMaskTypeName(selectedMask.type),
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = Mocha.Subtext0
+                                    color = semanticColors.subtext
                                 )
                             }
                             OutlinedButton(
                                 onClick = { onMaskDeleted(selectedMask.id) },
                                 shape = RoundedCornerShape(18.dp),
-                                border = BorderStroke(1.dp, Mocha.Red.copy(alpha = 0.25f)),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Red)
+                                border = BorderStroke(1.dp, ClearCutAccents.Red.copy(alpha = 0.25f)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = ClearCutAccents.Red)
                             ) {
                                 androidx.compose.material3.Icon(
                                     imageVector = Icons.Default.Delete,
@@ -310,21 +312,21 @@ fun MaskEditorPanel(
                                 Text(
                                     text = stringResource(R.string.mask_selected_title),
                                     style = MaterialTheme.typography.titleMedium,
-                                    color = Mocha.Text
+                                    color = semanticColors.text
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = localizedMaskTypeName(selectedMask.type),
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = Mocha.Subtext0
+                                    color = semanticColors.subtext
                                 )
                             }
 
                             OutlinedButton(
                                 onClick = { onMaskDeleted(selectedMask.id) },
                                 shape = RoundedCornerShape(18.dp),
-                                border = BorderStroke(1.dp, Mocha.Red.copy(alpha = 0.25f)),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Red)
+                                border = BorderStroke(1.dp, ClearCutAccents.Red.copy(alpha = 0.25f)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = ClearCutAccents.Red)
                             ) {
                                 androidx.compose.material3.Icon(
                                     imageVector = Icons.Default.Delete,
@@ -342,7 +344,7 @@ fun MaskEditorPanel(
                     value = selectedMask.feather,
                     min = 0f,
                     max = 100f,
-                    accent = Mocha.Mauve,
+                    accent = ClearCutAccents.Mauve,
                     onChanged = { onMaskUpdated(selectedMask.copy(feather = it)) }
                 )
                 MaskSliderRow(
@@ -350,7 +352,7 @@ fun MaskEditorPanel(
                     value = selectedMask.opacity,
                     min = 0f,
                     max = 1f,
-                    accent = Mocha.Blue,
+                    accent = ClearCutAccents.Blue,
                     onChanged = { onMaskUpdated(selectedMask.copy(opacity = it)) },
                     valueFormatter = { "%.0f%%".format(it * 100f) }
                 )
@@ -359,7 +361,7 @@ fun MaskEditorPanel(
                     value = selectedMask.expansion,
                     min = -50f,
                     max = 50f,
-                    accent = Mocha.Peach,
+                    accent = ClearCutAccents.Peach,
                     onChanged = { onMaskUpdated(selectedMask.copy(expansion = it)) }
                 )
 
@@ -374,28 +376,28 @@ fun MaskEditorPanel(
                     label = stringResource(R.string.mask_invert),
                     subtitle = stringResource(R.string.mask_invert_description),
                     checked = selectedMask.inverted,
-                    accent = Mocha.Mauve,
+                    accent = ClearCutAccents.Mauve,
                     onCheckedChange = { onMaskUpdated(selectedMask.copy(inverted = it)) }
                 )
                 MaskToggleRow(
                     label = stringResource(R.string.mask_track_to_motion),
                     subtitle = stringResource(R.string.mask_track_description),
                     checked = selectedMask.trackToMotion,
-                    accent = Mocha.Yellow,
+                    accent = ClearCutAccents.Yellow,
                     onCheckedChange = { onMaskUpdated(selectedMask.copy(trackToMotion = it)) }
                 )
             }
         } else {
-            PremiumPanelCard(accent = Mocha.Green) {
+            PremiumPanelCard(accent = ClearCutAccents.Green) {
                 Text(
                     text = stringResource(R.string.mask_none_selected_title),
                     style = MaterialTheme.typography.titleMedium,
-                    color = Mocha.Text
+                    color = semanticColors.text
                 )
                 Text(
                     text = stringResource(R.string.mask_none_selected_description),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
             }
         }
@@ -409,6 +411,7 @@ private fun MaskMetric(
     accent: Color,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         modifier = modifier,
         color = accent.copy(alpha = 0.12f),
@@ -422,7 +425,7 @@ private fun MaskMetric(
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelLarge,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
             Text(
                 text = value,
@@ -440,17 +443,18 @@ private fun MaskChip(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val accent = if (isSelected) Mocha.Mauve else Mocha.Blue
+    val semanticColors = LocalClearCutColors.current
+    val accent = if (isSelected) ClearCutAccents.Mauve else ClearCutAccents.Blue
     val invLabel = stringResource(R.string.mask_inv_label)
     val pointsLabel = stringResource(R.string.mask_chip_points_format, mask.points.size)
     val trackedLabel = stringResource(R.string.mask_chip_tracked)
 
     Surface(
-        color = if (isSelected) accent.copy(alpha = 0.12f) else Mocha.PanelRaised,
+        color = if (isSelected) accent.copy(alpha = 0.12f) else semanticColors.panelRaised,
         shape = RoundedCornerShape(18.dp),
         border = BorderStroke(
             1.dp,
-            if (isSelected) accent.copy(alpha = 0.2f) else Mocha.CardStroke
+            if (isSelected) accent.copy(alpha = 0.2f) else semanticColors.cardStroke
         ),
         modifier = Modifier.clickable(onClick = onClick)
     ) {
@@ -468,7 +472,7 @@ private fun MaskChip(
                 Text(
                     text = localizedMaskTypeName(mask.type),
                     style = MaterialTheme.typography.labelLarge,
-                    color = if (isSelected) accent else Mocha.Text
+                    color = if (isSelected) accent else semanticColors.text
                 )
                 Text(
                     text = buildString {
@@ -477,7 +481,7 @@ private fun MaskChip(
                         if (mask.trackToMotion) append(" • $trackedLabel")
                     },
                     style = MaterialTheme.typography.bodySmall,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
             }
         }
@@ -494,6 +498,7 @@ private fun MaskSliderRow(
     onChanged: (Float) -> Unit,
     valueFormatter: (Float) -> String = { "%.1f".format(it) }
 ) {
+    val semanticColors = LocalClearCutColors.current
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -503,7 +508,7 @@ private fun MaskSliderRow(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelLarge,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
             PremiumPanelPill(text = valueFormatter(value), accent = accent)
         }
@@ -514,7 +519,7 @@ private fun MaskSliderRow(
             colors = SliderDefaults.colors(
                 thumbColor = accent,
                 activeTrackColor = accent,
-                inactiveTrackColor = Mocha.Surface1
+                inactiveTrackColor = semanticColors.surface
             )
         )
     }
@@ -528,11 +533,12 @@ private fun MaskToggleRow(
     accent: Color,
     onCheckedChange: (Boolean) -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     val switchState = stringResource(if (checked) R.string.settings_on else R.string.settings_off)
     Surface(
-        color = Mocha.PanelRaised,
+        color = semanticColors.panelRaised,
         shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(1.dp, Mocha.CardStroke)
+        border = BorderStroke(1.dp, semanticColors.cardStroke)
     ) {
         Row(
             modifier = Modifier
@@ -551,13 +557,13 @@ private fun MaskToggleRow(
                 Text(
                     text = label,
                     style = MaterialTheme.typography.titleSmall,
-                    color = Mocha.Text
+                    color = semanticColors.text
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
             }
 
@@ -577,6 +583,7 @@ private fun MaskPointCoordinateEditor(
     mask: Mask,
     onMaskUpdated: (Mask) -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     val pointLabels = when (mask.type) {
         MaskType.RECTANGLE -> if (mask.points.size >= 2) {
             listOf(stringResource(R.string.mask_point_top_left), stringResource(R.string.mask_point_bottom_right))
@@ -598,7 +605,7 @@ private fun MaskPointCoordinateEditor(
         Text(
             text = stringResource(R.string.mask_control_points),
             style = MaterialTheme.typography.labelMedium,
-            color = Mocha.Subtext0
+            color = semanticColors.subtext
         )
         pointLabels.forEachIndexed { index, label ->
             if (index >= mask.points.size) return@forEachIndexed
@@ -613,7 +620,7 @@ private fun MaskPointCoordinateEditor(
                 Text(
                     text = label,
                     style = MaterialTheme.typography.labelSmall,
-                    color = Mocha.Mauve,
+                    color = ClearCutAccents.Mauve,
                     modifier = Modifier.width(72.dp)
                 )
                 OutlinedTextField(
@@ -633,10 +640,10 @@ private fun MaskPointCoordinateEditor(
                         .height(48.dp)
                         .semantics { contentDescription = xDescription },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Mocha.Text,
-                        unfocusedTextColor = Mocha.Subtext0,
-                        focusedBorderColor = Mocha.Mauve,
-                        unfocusedBorderColor = Mocha.Surface1
+                        focusedTextColor = semanticColors.text,
+                        unfocusedTextColor = semanticColors.subtext,
+                        focusedBorderColor = ClearCutAccents.Mauve,
+                        unfocusedBorderColor = semanticColors.surface
                     )
                 )
                 OutlinedTextField(
@@ -656,10 +663,10 @@ private fun MaskPointCoordinateEditor(
                         .height(48.dp)
                         .semantics { contentDescription = yDescription },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Mocha.Text,
-                        unfocusedTextColor = Mocha.Subtext0,
-                        focusedBorderColor = Mocha.Mauve,
-                        unfocusedBorderColor = Mocha.Surface1
+                        focusedTextColor = semanticColors.text,
+                        unfocusedTextColor = semanticColors.subtext,
+                        focusedBorderColor = ClearCutAccents.Mauve,
+                        unfocusedBorderColor = semanticColors.surface
                     )
                 )
             }
@@ -759,7 +766,7 @@ fun MaskPreviewOverlay(
     ) {
         masks.forEach { mask ->
             val isSelected = mask.id == selectedMaskId
-            val color = if (isSelected) Mocha.Mauve else Mocha.Mauve.copy(alpha = 0.3f)
+            val color = if (isSelected) ClearCutAccents.Mauve else ClearCutAccents.Mauve.copy(alpha = 0.3f)
 
             when (mask.type) {
                 MaskType.RECTANGLE -> {
@@ -866,7 +873,7 @@ fun MaskPreviewOverlay(
             drawingPoints.forEachIndexed { idx, pt ->
                 if (idx == 0) path.moveTo(pt.x, pt.y) else path.lineTo(pt.x, pt.y)
             }
-            drawPath(path, Mocha.Mauve, style = Stroke(2f))
+            drawPath(path, ClearCutAccents.Mauve, style = Stroke(2f))
         }
     }
 }

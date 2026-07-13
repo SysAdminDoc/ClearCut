@@ -1,5 +1,6 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,7 +17,6 @@ import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.ui.theme.ClearCutChromeIconButton
 import com.novacut.editor.ui.theme.LocalClearCutColors
-import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.TouchTarget
 
@@ -29,6 +29,7 @@ fun MiniPlayerBar(
     onSeek: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     val colors = LocalClearCutColors.current
     val progress = if (totalDurationMs > 0L) {
         (playheadMs.toFloat() / totalDurationMs.toFloat()).coerceIn(0f, 1f)
@@ -65,9 +66,9 @@ fun MiniPlayerBar(
                     if (isPlaying) R.string.preview_pause else R.string.preview_play
                 ),
                 onClick = onTogglePlayback,
-                tint = Mocha.Rosewater,
-                containerColor = Mocha.Rosewater.copy(alpha = 0.14f),
-                borderColor = Mocha.Rosewater.copy(alpha = 0.22f),
+                tint = ClearCutAccents.Rosewater,
+                containerColor = ClearCutAccents.Rosewater.copy(alpha = 0.14f),
+                borderColor = ClearCutAccents.Rosewater.copy(alpha = 0.22f),
                 shape = RoundedCornerShape(Radius.md)
             )
 
@@ -91,11 +92,11 @@ fun MiniPlayerBar(
                     .weight(1f)
                     .height(TouchTarget.minimum),
                 colors = SliderDefaults.colors(
-                    thumbColor = Mocha.Sky,
-                    activeTrackColor = Mocha.Sky,
-                    inactiveTrackColor = Mocha.Surface1,
-                    activeTickColor = Mocha.Sky,
-                    inactiveTickColor = Mocha.Surface1
+                    thumbColor = ClearCutAccents.Sky,
+                    activeTrackColor = ClearCutAccents.Sky,
+                    inactiveTrackColor = semanticColors.surface,
+                    activeTickColor = ClearCutAccents.Sky,
+                    inactiveTickColor = semanticColors.surface
                 )
             )
 

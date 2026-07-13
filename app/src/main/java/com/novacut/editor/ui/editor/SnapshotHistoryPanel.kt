@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -44,7 +46,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.model.ProjectSnapshot
-import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.ClearCutDialogIcon
 import com.novacut.editor.ui.theme.ClearCutPrimaryButton
 import com.novacut.editor.ui.theme.ClearCutSecondaryButton
@@ -65,6 +66,7 @@ fun SnapshotHistoryPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     var showNameDialog by remember { mutableStateOf(false) }
     var snapshotName by remember { mutableStateOf("") }
     var pendingRestoreSnapshot by remember { mutableStateOf<ProjectSnapshot?>(null) }
@@ -78,12 +80,12 @@ fun SnapshotHistoryPanel(
     if (showNameDialog) {
         AlertDialog(
             onDismissRequest = { showNameDialog = false },
-            containerColor = Mocha.PanelHighest,
+            containerColor = semanticColors.panelHighest,
             shape = RoundedCornerShape(Radius.xxl),
             title = {
                 Text(
                     text = stringResource(R.string.panel_snapshot_save_title),
-                    color = Mocha.Text,
+                    color = semanticColors.text,
                     style = MaterialTheme.typography.titleLarge
                 )
             },
@@ -92,7 +94,7 @@ fun SnapshotHistoryPanel(
                     Text(
                         text = stringResource(R.string.panel_snapshot_dialog_body),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                     OutlinedTextField(
                         value = snapshotName,
@@ -101,17 +103,17 @@ fun SnapshotHistoryPanel(
                         placeholder = {
                             Text(
                                 text = stringResource(R.string.snapshot_name_hint),
-                                color = Mocha.Subtext0
+                                color = semanticColors.subtext
                             )
                         },
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Mocha.Mauve,
-                            unfocusedBorderColor = Mocha.CardStroke,
-                            focusedTextColor = Mocha.Text,
-                            unfocusedTextColor = Mocha.Text,
-                            cursorColor = Mocha.Mauve,
-                            focusedContainerColor = Mocha.PanelRaised,
-                            unfocusedContainerColor = Mocha.PanelRaised
+                            focusedBorderColor = ClearCutAccents.Mauve,
+                            unfocusedBorderColor = semanticColors.cardStroke,
+                            focusedTextColor = semanticColors.text,
+                            unfocusedTextColor = semanticColors.text,
+                            cursorColor = ClearCutAccents.Mauve,
+                            focusedContainerColor = semanticColors.panelRaised,
+                            unfocusedContainerColor = semanticColors.panelRaised
                         ),
                         shape = RoundedCornerShape(Radius.lg)
                     )
@@ -128,7 +130,7 @@ fun SnapshotHistoryPanel(
                 ) {
                     Text(
                         text = stringResource(R.string.panel_snapshot_save_button),
-                        color = Mocha.Mauve
+                        color = ClearCutAccents.Mauve
                     )
                 }
             },
@@ -136,7 +138,7 @@ fun SnapshotHistoryPanel(
                 TextButton(onClick = { showNameDialog = false }) {
                     Text(
                         text = stringResource(R.string.panel_snapshot_cancel),
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
             }
@@ -149,13 +151,13 @@ fun SnapshotHistoryPanel(
             icon = {
                 ClearCutDialogIcon(
                     icon = Icons.Default.Restore,
-                    accent = Mocha.Green
+                    accent = ClearCutAccents.Green
                 )
             },
             title = {
                 Text(
                     text = stringResource(R.string.snapshot_restore_title),
-                    color = Mocha.Text,
+                    color = semanticColors.text,
                     style = MaterialTheme.typography.titleLarge
                 )
             },
@@ -166,7 +168,7 @@ fun SnapshotHistoryPanel(
                         snapshot.label.ifEmpty { stringResource(R.string.panel_snapshot_untitled) }
                     ),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
             },
             confirmButton = {
@@ -185,9 +187,9 @@ fun SnapshotHistoryPanel(
                     onClick = { pendingRestoreSnapshot = null }
                 )
             },
-            containerColor = Mocha.PanelHighest,
-            titleContentColor = Mocha.Text,
-            textContentColor = Mocha.Subtext0,
+            containerColor = semanticColors.panelHighest,
+            titleContentColor = semanticColors.text,
+            textContentColor = semanticColors.subtext,
             shape = RoundedCornerShape(Radius.xxl)
         )
     }
@@ -195,12 +197,12 @@ fun SnapshotHistoryPanel(
     pendingDeleteSnapshot?.let { snapshot ->
         AlertDialog(
             onDismissRequest = { pendingDeleteSnapshot = null },
-            containerColor = Mocha.PanelHighest,
+            containerColor = semanticColors.panelHighest,
             shape = RoundedCornerShape(Radius.xxl),
             title = {
                 Text(
                     text = stringResource(R.string.snapshot_delete_title),
-                    color = Mocha.Text,
+                    color = semanticColors.text,
                     style = MaterialTheme.typography.titleLarge
                 )
             },
@@ -211,7 +213,7 @@ fun SnapshotHistoryPanel(
                         snapshot.label.ifEmpty { stringResource(R.string.panel_snapshot_untitled) }
                     ),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
             },
             confirmButton = {
@@ -223,7 +225,7 @@ fun SnapshotHistoryPanel(
                 ) {
                     Text(
                         text = stringResource(R.string.snapshot_delete_confirm),
-                        color = Mocha.Red
+                        color = ClearCutAccents.Red
                     )
                 }
             },
@@ -231,7 +233,7 @@ fun SnapshotHistoryPanel(
                 TextButton(onClick = { pendingDeleteSnapshot = null }) {
                     Text(
                         text = stringResource(R.string.panel_snapshot_cancel),
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
             }
@@ -242,7 +244,7 @@ fun SnapshotHistoryPanel(
         title = stringResource(R.string.snapshot_title),
         subtitle = stringResource(R.string.panel_snapshot_subtitle),
         icon = Icons.Default.History,
-        accent = Mocha.Mauve,
+        accent = ClearCutAccents.Mauve,
         onClose = onClose,
         modifier = modifier,
         scrollable = true,
@@ -252,15 +254,15 @@ fun SnapshotHistoryPanel(
                 icon = Icons.Default.Add,
                 contentDescription = stringResource(R.string.snapshot_take_cd),
                 onClick = { showNameDialog = true },
-                tint = Mocha.Green
+                tint = ClearCutAccents.Green
             )
         }
     ) {
-        PremiumPanelCard(accent = Mocha.Mauve) {
+        PremiumPanelCard(accent = ClearCutAccents.Mauve) {
             Text(
                 text = stringResource(R.string.panel_snapshot_overview_title),
                 style = MaterialTheme.typography.titleMedium,
-                color = Mocha.Text,
+                color = semanticColors.text,
                 fontWeight = FontWeight.SemiBold
             )
             Text(
@@ -273,7 +275,7 @@ fun SnapshotHistoryPanel(
                     stringResource(R.string.panel_snapshot_overview_empty)
                 },
                 style = MaterialTheme.typography.bodyMedium,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -285,7 +287,7 @@ fun SnapshotHistoryPanel(
                     } else {
                         stringResource(R.string.snapshot_status_ready)
                     },
-                    accent = if (latestSnapshot == null) Mocha.Overlay0 else Mocha.Green
+                    accent = if (latestSnapshot == null) semanticColors.overlay else ClearCutAccents.Green
                 )
                 PremiumPanelPill(
                     text = pluralStringResource(
@@ -293,16 +295,16 @@ fun SnapshotHistoryPanel(
                         sortedSnapshots.size,
                         sortedSnapshots.size
                     ),
-                    accent = Mocha.Mauve
+                    accent = ClearCutAccents.Mauve
                 )
                 latestSnapshot?.let {
                     PremiumPanelPill(
                         text = stringResource(R.string.panel_snapshot_latest_badge),
-                        accent = Mocha.Blue
+                        accent = ClearCutAccents.Blue
                     )
                     PremiumPanelPill(
                         text = dateFormat.format(Date(it.timestamp)),
-                        accent = Mocha.Sky
+                        accent = ClearCutAccents.Sky
                     )
                 }
             }
@@ -310,7 +312,7 @@ fun SnapshotHistoryPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Blue) {
+        PremiumPanelCard(accent = ClearCutAccents.Blue) {
             if (sortedSnapshots.isEmpty()) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     SnapshotMessageCard(
@@ -320,7 +322,7 @@ fun SnapshotHistoryPanel(
                     SnapshotAction(
                         icon = Icons.Default.Add,
                         label = stringResource(R.string.snapshot_create_cta),
-                        accent = Mocha.Green,
+                        accent = ClearCutAccents.Green,
                         onClick = { showNameDialog = true }
                     )
                 }
@@ -328,13 +330,13 @@ fun SnapshotHistoryPanel(
                 Text(
                     text = stringResource(R.string.panel_snapshot_history_title),
                     style = MaterialTheme.typography.titleMedium,
-                    color = Mocha.Text,
+                    color = semanticColors.text,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
                     text = stringResource(R.string.panel_snapshot_history_description),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
                 sortedSnapshots.forEachIndexed { index, snapshot ->
                     SnapshotRow(
@@ -358,11 +360,12 @@ private fun SnapshotMessageCard(
     title: String,
     body: String
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Mocha.PanelRaised,
+        color = semanticColors.panelRaised,
         shape = RoundedCornerShape(Radius.xl),
-        border = BorderStroke(1.dp, Mocha.CardStroke)
+        border = BorderStroke(1.dp, semanticColors.cardStroke)
     ) {
         Row(
             modifier = Modifier
@@ -372,14 +375,14 @@ private fun SnapshotMessageCard(
             verticalAlignment = Alignment.Top
         ) {
             Surface(
-                color = Mocha.Mauve.copy(alpha = 0.12f),
+                color = ClearCutAccents.Mauve.copy(alpha = 0.12f),
                 shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, Mocha.Mauve.copy(alpha = 0.18f))
+                border = BorderStroke(1.dp, ClearCutAccents.Mauve.copy(alpha = 0.18f))
             ) {
                 Icon(
                     imageVector = Icons.Default.History,
                     contentDescription = null,
-                    tint = Mocha.Mauve,
+                    tint = ClearCutAccents.Mauve,
                     modifier = Modifier.padding(10.dp)
                 )
             }
@@ -391,13 +394,13 @@ private fun SnapshotMessageCard(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleSmall,
-                    color = Mocha.Text,
+                    color = semanticColors.text,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
                     text = body,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
             }
         }
@@ -413,11 +416,12 @@ private fun SnapshotRow(
     onRestore: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Mocha.PanelRaised,
+        color = semanticColors.panelRaised,
         shape = RoundedCornerShape(Radius.xl),
-        border = BorderStroke(1.dp, Mocha.CardStroke)
+        border = BorderStroke(1.dp, semanticColors.cardStroke)
     ) {
         Column(
             modifier = Modifier
@@ -436,14 +440,14 @@ private fun SnapshotRow(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.md)
                 ) {
                     Surface(
-                        color = Mocha.Mauve.copy(alpha = 0.14f),
+                        color = ClearCutAccents.Mauve.copy(alpha = 0.14f),
                         shape = RoundedCornerShape(14.dp),
-                        border = BorderStroke(1.dp, Mocha.Mauve.copy(alpha = 0.22f))
+                        border = BorderStroke(1.dp, ClearCutAccents.Mauve.copy(alpha = 0.22f))
                     ) {
                         Icon(
                             imageVector = Icons.Default.SaveAlt,
                             contentDescription = stringResource(R.string.cd_save_snapshot),
-                            tint = Mocha.Mauve,
+                            tint = ClearCutAccents.Mauve,
                             modifier = Modifier.padding(10.dp)
                         )
                     }
@@ -452,7 +456,7 @@ private fun SnapshotRow(
                         Text(
                             text = snapshot.label.ifEmpty { stringResource(R.string.panel_snapshot_untitled) },
                             style = MaterialTheme.typography.titleSmall,
-                            color = Mocha.Text,
+                            color = semanticColors.text,
                             fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -461,7 +465,7 @@ private fun SnapshotRow(
                         Text(
                             text = dateFormat.format(Date(snapshot.timestamp)),
                             style = MaterialTheme.typography.bodySmall,
-                            color = Mocha.Subtext0
+                            color = semanticColors.subtext
                         )
                     }
                 }
@@ -469,7 +473,7 @@ private fun SnapshotRow(
                 if (isLatest) {
                     PremiumPanelPill(
                         text = stringResource(R.string.panel_snapshot_latest_badge),
-                        accent = Mocha.Blue
+                        accent = ClearCutAccents.Blue
                     )
                 }
             }
@@ -482,13 +486,13 @@ private fun SnapshotRow(
                 SnapshotAction(
                     icon = Icons.Default.Restore,
                     label = stringResource(R.string.snapshot_restore),
-                    accent = Mocha.Green,
+                    accent = ClearCutAccents.Green,
                     onClick = onRestore
                 )
                 SnapshotAction(
                     icon = Icons.Default.Delete,
                     label = stringResource(R.string.snapshot_delete),
-                    accent = Mocha.Red,
+                    accent = ClearCutAccents.Red,
                     onClick = onDelete
                 )
             }

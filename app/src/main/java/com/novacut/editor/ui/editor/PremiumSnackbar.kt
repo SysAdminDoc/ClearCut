@@ -1,5 +1,6 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -42,7 +43,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.ui.theme.Elevation
 import com.novacut.editor.ui.theme.LocalClearCutColors
-import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.Motion
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
@@ -57,10 +57,10 @@ fun PremiumSnackbar(
 ) {
     val colors = LocalClearCutColors.current
     val accent = when (severity) {
-        ToastSeverity.Info -> Mocha.Lavender
-        ToastSeverity.Success -> Mocha.Green
-        ToastSeverity.Warning -> Mocha.Peach
-        ToastSeverity.Error -> Mocha.Red
+        ToastSeverity.Info -> ClearCutAccents.Lavender
+        ToastSeverity.Success -> ClearCutAccents.Green
+        ToastSeverity.Warning -> ClearCutAccents.Peach
+        ToastSeverity.Error -> ClearCutAccents.Red
     }
     val icon: ImageVector = when (severity) {
         ToastSeverity.Info -> Icons.Outlined.Info

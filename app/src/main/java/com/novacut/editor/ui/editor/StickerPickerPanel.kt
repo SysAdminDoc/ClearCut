@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -47,7 +49,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.novacut.editor.R
-import com.novacut.editor.ui.theme.Mocha
 
 private enum class StickerCategory(val label: String) {
     EMOJI("Emoji"),
@@ -141,6 +142,7 @@ fun StickerPickerPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     var selectedCategory by remember { mutableStateOf(StickerCategory.EMOJI) }
     val accent = stickerAccent(selectedCategory)
     val stickers = remember(selectedCategory) {
@@ -170,18 +172,18 @@ fun StickerPickerPanel(
                 )
                 PremiumPanelPill(
                     text = selectedCategory.label,
-                    accent = Mocha.Sapphire
+                    accent = ClearCutAccents.Sapphire
                 )
             }
 
             Text(
                 text = "Sticker shelf",
-                color = Mocha.Rosewater,
+                color = ClearCutAccents.Rosewater,
                 style = MaterialTheme.typography.labelLarge
             )
             Text(
                 text = "Keep overlays fast and expressive with curated bundles for humor, emphasis, direction, and social prompts.",
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodyMedium
             )
 
@@ -208,7 +210,7 @@ fun StickerPickerPanel(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(
-                            color = Mocha.PanelRaised.copy(alpha = 0.7f),
+                            color = semanticColors.panelRaised.copy(alpha = 0.7f),
                             shape = RoundedCornerShape(22.dp)
                         )
                         .padding(horizontal = 18.dp, vertical = 24.dp),
@@ -233,13 +235,13 @@ fun StickerPickerPanel(
 
                         Text(
                             text = "Bring in your own art",
-                            color = Mocha.Text,
+                            color = semanticColors.text,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
                             text = stringResource(R.string.sticker_add_own_images),
-                            color = Mocha.Subtext0,
+                            color = semanticColors.subtext,
                             style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center
                         )
@@ -248,7 +250,7 @@ fun StickerPickerPanel(
                             onClick = onImportFromGallery,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = accent,
-                                contentColor = Mocha.Base
+                                contentColor = semanticColors.surfaceBase
                             ),
                             shape = RoundedCornerShape(18.dp)
                         ) {
@@ -267,12 +269,12 @@ fun StickerPickerPanel(
             PremiumPanelCard(accent = accent) {
                 Text(
                     text = "Bundled collection",
-                    color = Mocha.Rosewater,
+                    color = ClearCutAccents.Rosewater,
                     style = MaterialTheme.typography.labelLarge
                 )
                 Text(
                     text = "Tap any sticker to place it immediately as an image overlay on the timeline.",
-                    color = Mocha.Subtext0,
+                    color = semanticColors.subtext,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
@@ -306,18 +308,19 @@ private fun StickerCategoryChip(
     accent: androidx.compose.ui.graphics.Color,
     onClick: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         onClick = onClick,
-        color = if (selected) accent.copy(alpha = 0.14f) else Mocha.PanelHighest,
+        color = if (selected) accent.copy(alpha = 0.14f) else semanticColors.panelHighest,
         shape = RoundedCornerShape(10.dp),
         border = BorderStroke(
             1.dp,
-            if (selected) accent.copy(alpha = 0.28f) else Mocha.CardStroke
+            if (selected) accent.copy(alpha = 0.28f) else semanticColors.cardStroke
         )
     ) {
         Text(
             text = category.label,
-            color = if (selected) accent else Mocha.Subtext0,
+            color = if (selected) accent else semanticColors.subtext,
             style = MaterialTheme.typography.labelLarge,
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
         )
@@ -330,15 +333,16 @@ private fun StickerTile(
     accent: androidx.compose.ui.graphics.Color,
     onClick: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     val selectLabel = stringResource(R.string.cd_select_sticker, sticker.display)
 
     Surface(
         modifier = Modifier
             .aspectRatio(1f)
             .clickable(onClickLabel = selectLabel, onClick = onClick),
-        color = Mocha.PanelHighest,
+        color = semanticColors.panelHighest,
         shape = RoundedCornerShape(22.dp),
-        border = BorderStroke(1.dp, Mocha.CardStrokeStrong.copy(alpha = 0.9f))
+        border = BorderStroke(1.dp, semanticColors.cardStrokeStrong.copy(alpha = 0.9f))
     ) {
         Box(
             modifier = Modifier
@@ -360,7 +364,7 @@ private fun StickerTile(
                 )
                 Text(
                     text = "Tap to place",
-                    color = Mocha.Subtext0,
+                    color = semanticColors.subtext,
                     style = MaterialTheme.typography.labelSmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -371,9 +375,9 @@ private fun StickerTile(
 }
 
 private fun stickerAccent(category: StickerCategory): androidx.compose.ui.graphics.Color = when (category) {
-    StickerCategory.EMOJI -> Mocha.Yellow
-    StickerCategory.SHAPES -> Mocha.Sapphire
-    StickerCategory.ARROWS -> Mocha.Green
-    StickerCategory.SOCIAL -> Mocha.Pink
-    StickerCategory.CUSTOM -> Mocha.Peach
+    StickerCategory.EMOJI -> ClearCutAccents.Yellow
+    StickerCategory.SHAPES -> ClearCutAccents.Sapphire
+    StickerCategory.ARROWS -> ClearCutAccents.Green
+    StickerCategory.SOCIAL -> ClearCutAccents.Pink
+    StickerCategory.CUSTOM -> ClearCutAccents.Peach
 }

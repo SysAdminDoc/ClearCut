@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -42,7 +44,6 @@ import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.model.StoryboardCard
 import com.novacut.editor.model.StoryboardCardStatus
-import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.TouchTarget
 
 @Composable
@@ -54,6 +55,7 @@ fun StoryboardPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     var newShotText by remember { mutableStateOf("") }
     var editingCardId by remember { mutableStateOf<String?>(null) }
     var editText by remember(editingCardId) { mutableStateOf("") }
@@ -62,12 +64,12 @@ fun StoryboardPanel(
         title = stringResource(R.string.storyboard_title),
         subtitle = stringResource(R.string.storyboard_subtitle),
         icon = Icons.AutoMirrored.Filled.ViewList,
-        accent = Mocha.Teal,
+        accent = ClearCutAccents.Teal,
         onClose = onClose,
         modifier = modifier,
         scrollable = true
     ) {
-        PremiumPanelCard(accent = Mocha.Teal) {
+        PremiumPanelCard(accent = ClearCutAccents.Teal) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
@@ -75,13 +77,13 @@ fun StoryboardPanel(
                 OutlinedTextField(
                     value = newShotText,
                     onValueChange = { newShotText = it },
-                    placeholder = { Text(stringResource(R.string.storyboard_new_shot_hint), color = Mocha.Overlay0) },
+                    placeholder = { Text(stringResource(R.string.storyboard_new_shot_hint), color = semanticColors.overlay) },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Mocha.Teal,
-                        unfocusedBorderColor = Mocha.Surface1,
-                        focusedTextColor = Mocha.Text,
-                        unfocusedTextColor = Mocha.Text
+                        focusedBorderColor = ClearCutAccents.Teal,
+                        unfocusedBorderColor = semanticColors.surface,
+                        focusedTextColor = semanticColors.text,
+                        unfocusedTextColor = semanticColors.text
                     ),
                     modifier = Modifier.weight(1f)
                 )
@@ -99,7 +101,7 @@ fun StoryboardPanel(
                     Icon(
                         Icons.Default.Add,
                         contentDescription = stringResource(R.string.storyboard_add_shot_cd),
-                        tint = if (newShotText.isNotBlank()) Mocha.Teal else Mocha.Overlay0
+                        tint = if (newShotText.isNotBlank()) ClearCutAccents.Teal else semanticColors.overlay
                     )
                 }
             }
@@ -120,10 +122,10 @@ fun StoryboardPanel(
                                 onValueChange = { editText = it },
                                 singleLine = true,
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = Mocha.Teal,
-                                    unfocusedBorderColor = Mocha.Surface1,
-                                    focusedTextColor = Mocha.Text,
-                                    unfocusedTextColor = Mocha.Text
+                                    focusedBorderColor = ClearCutAccents.Teal,
+                                    unfocusedBorderColor = semanticColors.surface,
+                                    focusedTextColor = semanticColors.text,
+                                    unfocusedTextColor = semanticColors.text
                                 ),
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -139,7 +141,7 @@ fun StoryboardPanel(
                                     },
                                     label = { Text(stringResource(R.string.storyboard_save)) },
                                     colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = Mocha.Teal
+                                        selectedContainerColor = ClearCutAccents.Teal
                                     )
                                 )
                                 Spacer(Modifier.width(8.dp))
@@ -158,7 +160,7 @@ fun StoryboardPanel(
                                     Text(
                                         card.shotText,
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = Mocha.Text,
+                                        color = semanticColors.text,
                                         maxLines = 2,
                                         overflow = TextOverflow.Ellipsis
                                     )
@@ -169,12 +171,12 @@ fun StoryboardPanel(
                                             Text(
                                                 status.displayName,
                                                 style = MaterialTheme.typography.labelSmall,
-                                                color = if (selected) statusColor(status) else Mocha.Overlay0,
+                                                color = if (selected) statusColor(status) else semanticColors.overlay,
                                                 modifier = Modifier
                                                     .clip(RoundedCornerShape(4.dp))
                                                     .background(
                                                         if (selected) statusColor(status).copy(alpha = 0.15f)
-                                                        else Mocha.Surface0
+                                                        else semanticColors.surfaceLow
                                                     )
                                                     .clickable { onUpdateCard(card.id, null, status, null) }
                                                     .padding(horizontal = 6.dp, vertical = 2.dp)
@@ -192,7 +194,7 @@ fun StoryboardPanel(
                                     Icon(
                                         Icons.Default.Edit,
                                         contentDescription = stringResource(R.string.storyboard_edit_shot_cd),
-                                        tint = Mocha.Subtext0,
+                                        tint = semanticColors.subtext,
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }
@@ -203,7 +205,7 @@ fun StoryboardPanel(
                                     Icon(
                                         Icons.Default.Delete,
                                         contentDescription = stringResource(R.string.storyboard_delete_shot_cd),
-                                        tint = Mocha.Red,
+                                        tint = ClearCutAccents.Red,
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }
@@ -219,14 +221,14 @@ fun StoryboardPanel(
             Text(
                 "${cards.size} shot${if (cards.size != 1) "s" else ""} • ${cards.sumOf { it.targetDurationMs / 1000 }}s target",
                 style = MaterialTheme.typography.labelSmall,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
         }
     }
 }
 
 private fun statusColor(status: StoryboardCardStatus) = when (status) {
-    StoryboardCardStatus.PLANNED -> Mocha.Yellow
-    StoryboardCardStatus.FILMED -> Mocha.Blue
-    StoryboardCardStatus.EDITED -> Mocha.Green
+    StoryboardCardStatus.PLANNED -> ClearCutAccents.Yellow
+    StoryboardCardStatus.FILMED -> ClearCutAccents.Blue
+    StoryboardCardStatus.EDITED -> ClearCutAccents.Green
 }

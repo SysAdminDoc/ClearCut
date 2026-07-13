@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -33,7 +35,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
-import com.novacut.editor.ui.theme.Mocha
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -47,26 +48,27 @@ fun EffectLibraryPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     PremiumEditorPanel(
         title = stringResource(R.string.effect_library_title),
         subtitle = stringResource(R.string.panel_effect_library_subtitle),
         icon = Icons.Default.ContentCopy,
-        accent = Mocha.Mauve,
+        accent = ClearCutAccents.Mauve,
         onClose = onClose,
         modifier = modifier.heightIn(max = 560.dp),
         scrollable = true,
         closeContentDescription = stringResource(R.string.effect_library_close_cd)
     ) {
-        PremiumPanelCard(accent = Mocha.Mauve) {
+        PremiumPanelCard(accent = ClearCutAccents.Mauve) {
             Text(
                 text = stringResource(R.string.panel_effect_library_workflow_title),
-                color = Mocha.Text,
+                color = semanticColors.text,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
             Text(
                 text = stringResource(R.string.panel_effect_library_description),
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodyMedium
             )
             Spacer(modifier = Modifier.height(12.dp))
@@ -81,7 +83,7 @@ fun EffectLibraryPanel(
                     } else {
                         stringResource(R.string.panel_effect_library_status_clip_needed)
                     },
-                    accent = if (hasClipSelected) Mocha.Green else Mocha.Red
+                    accent = if (hasClipSelected) ClearCutAccents.Green else ClearCutAccents.Red
                 )
                 PremiumPanelPill(
                     text = if (hasCopiedEffects) {
@@ -89,7 +91,7 @@ fun EffectLibraryPanel(
                     } else {
                         stringResource(R.string.panel_effect_library_status_buffer_empty)
                     },
-                    accent = if (hasCopiedEffects) Mocha.Sapphire else Mocha.Subtext0
+                    accent = if (hasCopiedEffects) ClearCutAccents.Sapphire else semanticColors.subtext
                 )
             }
         }
@@ -113,7 +115,7 @@ fun EffectLibraryPanel(
                         stringResource(R.string.panel_effect_library_copy_disabled)
                     },
                     icon = Icons.Default.ContentCopy,
-                    accent = Mocha.Mauve,
+                    accent = ClearCutAccents.Mauve,
                     enabled = hasClipSelected,
                     buttonLabel = stringResource(R.string.panel_effect_library_copy),
                     buttonStyle = ActionButtonStyle.Outlined,
@@ -128,7 +130,7 @@ fun EffectLibraryPanel(
                         else -> stringResource(R.string.panel_effect_library_paste_description)
                     },
                     icon = Icons.Default.ContentPaste,
-                    accent = Mocha.Green,
+                    accent = ClearCutAccents.Green,
                     enabled = hasClipSelected && hasCopiedEffects,
                     buttonLabel = stringResource(R.string.panel_effect_library_paste),
                     buttonStyle = ActionButtonStyle.Outlined,
@@ -143,7 +145,7 @@ fun EffectLibraryPanel(
                         stringResource(R.string.panel_effect_library_export_disabled)
                     },
                     icon = Icons.Default.Upload,
-                    accent = Mocha.Peach,
+                    accent = ClearCutAccents.Peach,
                     enabled = hasClipSelected,
                     buttonLabel = stringResource(R.string.panel_effect_library_export),
                     buttonStyle = ActionButtonStyle.Filled,
@@ -154,7 +156,7 @@ fun EffectLibraryPanel(
                     title = stringResource(R.string.panel_effect_library_import),
                     subtitle = stringResource(R.string.panel_effect_library_import_description),
                     icon = Icons.Default.Download,
-                    accent = Mocha.Blue,
+                    accent = ClearCutAccents.Blue,
                     enabled = true,
                     buttonLabel = stringResource(R.string.panel_effect_library_import),
                     buttonStyle = ActionButtonStyle.Filled,
@@ -166,16 +168,16 @@ fun EffectLibraryPanel(
 
         if (!hasClipSelected) {
             Spacer(modifier = Modifier.height(12.dp))
-            PremiumPanelCard(accent = Mocha.Red) {
+            PremiumPanelCard(accent = ClearCutAccents.Red) {
                 Text(
                     text = stringResource(R.string.panel_effect_library_clip_required_title),
-                    color = Mocha.Text,
+                    color = semanticColors.text,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
                     text = stringResource(R.string.panel_effect_library_select_clip_hint),
-                    color = Mocha.Subtext0,
+                    color = semanticColors.subtext,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
@@ -200,13 +202,14 @@ private fun EffectLibraryActionCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         modifier = modifier,
-        color = Mocha.PanelHighest,
+        color = semanticColors.panelHighest,
         shape = RoundedCornerShape(24.dp),
         border = BorderStroke(
             1.dp,
-            if (enabled) accent.copy(alpha = 0.24f) else Mocha.CardStroke
+            if (enabled) accent.copy(alpha = 0.24f) else semanticColors.cardStroke
         )
     ) {
         Column(
@@ -227,7 +230,7 @@ private fun EffectLibraryActionCard(
                 androidx.compose.material3.Icon(
                     imageVector = icon,
                     contentDescription = title,
-                    tint = if (enabled) accent else Mocha.Subtext0,
+                    tint = if (enabled) accent else semanticColors.subtext,
                     modifier = Modifier.padding(12.dp)
                 )
             }
@@ -235,13 +238,13 @@ private fun EffectLibraryActionCard(
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
                     text = title,
-                    color = if (enabled) Mocha.Text else Mocha.Subtext0,
+                    color = if (enabled) semanticColors.text else semanticColors.subtext,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
                     text = subtitle,
-                    color = Mocha.Subtext0,
+                    color = semanticColors.subtext,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -256,9 +259,9 @@ private fun EffectLibraryActionCard(
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = accent,
-                            contentColor = Mocha.Base,
-                            disabledContainerColor = Mocha.Surface0,
-                            disabledContentColor = Mocha.Overlay0
+                            contentColor = semanticColors.surfaceBase,
+                            disabledContainerColor = semanticColors.surfaceLow,
+                            disabledContentColor = semanticColors.overlay
                         ),
                         shape = RoundedCornerShape(18.dp)
                     ) {
@@ -279,11 +282,11 @@ private fun EffectLibraryActionCard(
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = accent,
-                            disabledContentColor = Mocha.Overlay0
+                            disabledContentColor = semanticColors.overlay
                         ),
                         border = BorderStroke(
                             1.dp,
-                            if (enabled) accent.copy(alpha = 0.28f) else Mocha.CardStroke
+                            if (enabled) accent.copy(alpha = 0.28f) else semanticColors.cardStroke
                         ),
                         shape = RoundedCornerShape(18.dp)
                     ) {

@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -34,7 +36,6 @@ import com.novacut.editor.engine.AiToolRequirements
 import com.novacut.editor.engine.AiToolRequirements.Availability
 import com.novacut.editor.engine.AiToolRequirements.Runtime
 import com.novacut.editor.engine.AiToolRequirements.ToolRequirement
-import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.ClearCutDialogIcon
 import com.novacut.editor.ui.theme.ClearCutPrimaryButton
 import com.novacut.editor.ui.theme.ClearCutSecondaryButton
@@ -64,6 +65,7 @@ fun AiModelRequirementSheet(
     onRun: (ToolRequirement) -> Unit,
     onReviewModels: () -> Unit = {},
 ) {
+    val semanticColors = LocalClearCutColors.current
     val title = when (requirement.availability) {
         Availability.READY -> stringResource(R.string.ai_requirement_title_ready)
         Availability.MODEL_DOWNLOAD_REQUIRED -> stringResource(R.string.ai_requirement_title_download)
@@ -71,10 +73,10 @@ fun AiModelRequirementSheet(
         Availability.CLOUD_OPT_IN -> stringResource(R.string.ai_requirement_title_cloud)
     }
     val (icon, accent) = when (requirement.availability) {
-        Availability.READY -> Icons.Default.Verified to Mocha.Green
-        Availability.MODEL_DOWNLOAD_REQUIRED -> Icons.Default.Download to Mocha.Sky
-        Availability.DEPENDENCY_MISSING -> Icons.Default.CloudOff to Mocha.Peach
-        Availability.CLOUD_OPT_IN -> Icons.Default.Cloud to Mocha.Yellow
+        Availability.READY -> Icons.Default.Verified to ClearCutAccents.Green
+        Availability.MODEL_DOWNLOAD_REQUIRED -> Icons.Default.Download to ClearCutAccents.Sky
+        Availability.DEPENDENCY_MISSING -> Icons.Default.CloudOff to ClearCutAccents.Peach
+        Availability.CLOUD_OPT_IN -> Icons.Default.Cloud to ClearCutAccents.Yellow
     }
 
     var consentChecked by remember(requirement) { mutableStateOf(false) }
@@ -87,7 +89,7 @@ fun AiModelRequirementSheet(
         title = {
             Text(
                 text = title,
-                color = Mocha.Text,
+                color = semanticColors.text,
                 style = MaterialTheme.typography.titleLarge,
             )
         },
@@ -95,7 +97,7 @@ fun AiModelRequirementSheet(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     text = body(requirement),
-                    color = Mocha.Subtext0,
+                    color = semanticColors.subtext,
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 MetaRow(
@@ -130,14 +132,14 @@ fun AiModelRequirementSheet(
                             checked = consentChecked,
                             onCheckedChange = { consentChecked = it },
                             colors = CheckboxDefaults.colors(
-                                checkedColor = Mocha.Mauve,
-                                uncheckedColor = Mocha.Subtext0,
-                                checkmarkColor = Mocha.Text,
+                                checkedColor = ClearCutAccents.Mauve,
+                                uncheckedColor = semanticColors.subtext,
+                                checkmarkColor = semanticColors.text,
                             ),
                         )
                         Text(
                             text = stringResource(R.string.ai_requirement_consent_label),
-                            color = Mocha.Subtext1,
+                            color = semanticColors.subtextStrong,
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.padding(start = 4.dp),
                         )
@@ -174,25 +176,26 @@ fun AiModelRequirementSheet(
                 onClick = onDismiss,
             )
         },
-        containerColor = Mocha.PanelHighest,
-        titleContentColor = Mocha.Text,
-        textContentColor = Mocha.Subtext0,
+        containerColor = semanticColors.panelHighest,
+        titleContentColor = semanticColors.text,
+        textContentColor = semanticColors.subtext,
         shape = RoundedCornerShape(Radius.xxl),
     )
 }
 
 @Composable
 private fun MetaRow(icon: ImageVector, label: String) {
+    val semanticColors = LocalClearCutColors.current
     Row(verticalAlignment = Alignment.CenterVertically) {
         androidx.compose.material3.Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = Mocha.Subtext0,
+            tint = semanticColors.subtext,
             modifier = Modifier.padding(end = 8.dp),
         )
         Text(
             text = label,
-            color = Mocha.Subtext0,
+            color = semanticColors.subtext,
             style = MaterialTheme.typography.bodySmall,
         )
     }

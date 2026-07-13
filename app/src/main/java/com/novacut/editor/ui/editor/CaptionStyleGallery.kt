@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -46,7 +48,6 @@ import com.novacut.editor.model.CaptionStyleTemplate
 import com.novacut.editor.model.CaptionTemplateType
 import com.novacut.editor.model.TextAnimation
 import com.novacut.editor.model.isAccessibilityPreset
-import com.novacut.editor.ui.theme.Mocha
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -56,6 +57,7 @@ fun CaptionStyleGallery(
     modifier: Modifier = Modifier,
     installedStyles: List<CaptionStyleTemplate> = emptyList(),
 ) {
+    val semanticColors = LocalClearCutColors.current
     val templates = remember(installedStyles) { defaultTemplates() + installedStyles }
     val accessibilityTemplates = remember(templates) {
         templates.filter { it.isAccessibilityPreset }
@@ -71,13 +73,13 @@ fun CaptionStyleGallery(
         title = stringResource(R.string.caption_styles_title),
         subtitle = stringResource(R.string.caption_styles_subtitle),
         icon = Icons.Default.Subtitles,
-        accent = Mocha.Mauve,
+        accent = ClearCutAccents.Mauve,
         onClose = onClose,
         closeContentDescription = stringResource(R.string.caption_styles_close_cd),
         modifier = modifier,
         scrollable = true
     ) {
-        PremiumPanelCard(accent = Mocha.Mauve) {
+        PremiumPanelCard(accent = ClearCutAccents.Mauve) {
             BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                 val isCompactLayout = maxWidth < 420.dp
                 if (isCompactLayout) {
@@ -86,13 +88,13 @@ fun CaptionStyleGallery(
                             Text(
                                 text = stringResource(R.string.caption_styles_library_title),
                                 style = MaterialTheme.typography.titleMedium,
-                                color = Mocha.Text
+                                color = semanticColors.text
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
                                 text = stringResource(R.string.caption_styles_library_description),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Mocha.Subtext0
+                                color = semanticColors.subtext
                             )
                         }
                         FlowRow(
@@ -101,15 +103,15 @@ fun CaptionStyleGallery(
                         ) {
                             PremiumPanelPill(
                                 text = stringResource(R.string.caption_styles_looks_format, templates.size),
-                                accent = Mocha.Blue
+                                accent = ClearCutAccents.Blue
                             )
                             PremiumPanelPill(
                                 text = stringResource(R.string.caption_styles_motion_format, karaokeTemplates.size),
-                                accent = Mocha.Yellow
+                                accent = ClearCutAccents.Yellow
                             )
                             PremiumPanelPill(
                                 text = stringResource(R.string.caption_styles_accessible_format, accessibilityTemplates.size),
-                                accent = Mocha.Green
+                                accent = ClearCutAccents.Green
                             )
                         }
                     }
@@ -123,13 +125,13 @@ fun CaptionStyleGallery(
                             Text(
                                 text = stringResource(R.string.caption_styles_library_title),
                                 style = MaterialTheme.typography.titleMedium,
-                                color = Mocha.Text
+                                color = semanticColors.text
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
                                 text = stringResource(R.string.caption_styles_library_description),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Mocha.Subtext0
+                                color = semanticColors.subtext
                             )
                         }
 
@@ -141,15 +143,15 @@ fun CaptionStyleGallery(
                         ) {
                             PremiumPanelPill(
                                 text = stringResource(R.string.caption_styles_looks_format, templates.size),
-                                accent = Mocha.Blue
+                                accent = ClearCutAccents.Blue
                             )
                             PremiumPanelPill(
                                 text = stringResource(R.string.caption_styles_motion_format, karaokeTemplates.size),
-                                accent = Mocha.Yellow
+                                accent = ClearCutAccents.Yellow
                             )
                             PremiumPanelPill(
                                 text = stringResource(R.string.caption_styles_accessible_format, accessibilityTemplates.size),
-                                accent = Mocha.Green
+                                accent = ClearCutAccents.Green
                             )
                         }
                     }
@@ -172,19 +174,19 @@ fun CaptionStyleGallery(
                     StyleMetric(
                         title = "Karaoke",
                         value = karaokeTemplates.size.toString(),
-                        accent = Mocha.Yellow,
+                        accent = ClearCutAccents.Yellow,
                         modifier = Modifier.width(metricWidth.coerceAtLeast(0.dp))
                     )
                     StyleMetric(
                         title = "Editorial",
                         value = editorialTemplates.size.toString(),
-                        accent = Mocha.Mauve,
+                        accent = ClearCutAccents.Mauve,
                         modifier = Modifier.width(metricWidth.coerceAtLeast(0.dp))
                     )
                     StyleMetric(
                         title = "Accessible",
                         value = accessibilityTemplates.size.toString(),
-                        accent = Mocha.Green,
+                        accent = ClearCutAccents.Green,
                         modifier = Modifier.width(metricWidth.coerceAtLeast(0.dp))
                     )
                 }
@@ -196,7 +198,7 @@ fun CaptionStyleGallery(
         CaptionStyleSection(
             title = stringResource(R.string.caption_accessibility_title),
             subtitle = stringResource(R.string.caption_accessibility_subtitle),
-            accent = Mocha.Green,
+            accent = ClearCutAccents.Green,
             sectionContentDescription = stringResource(R.string.cd_caption_accessibility_section),
             templates = accessibilityTemplates,
             onStyleSelected = onStyleSelected
@@ -207,7 +209,7 @@ fun CaptionStyleGallery(
         CaptionStyleSection(
             title = stringResource(R.string.caption_karaoke_title),
             subtitle = stringResource(R.string.caption_styles_karaoke_subtitle),
-            accent = Mocha.Yellow,
+            accent = ClearCutAccents.Yellow,
             sectionContentDescription = stringResource(R.string.cd_karaoke_section),
             templates = karaokeTemplates,
             onStyleSelected = onStyleSelected
@@ -218,7 +220,7 @@ fun CaptionStyleGallery(
         CaptionStyleSection(
             title = stringResource(R.string.caption_editorial_title),
             subtitle = stringResource(R.string.caption_editorial_subtitle),
-            accent = Mocha.Blue,
+            accent = ClearCutAccents.Blue,
             sectionContentDescription = stringResource(R.string.cd_caption_styles_section),
             templates = editorialTemplates,
             onStyleSelected = onStyleSelected
@@ -233,6 +235,7 @@ private fun StyleMetric(
     accent: Color,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         modifier = modifier,
         color = accent.copy(alpha = 0.12f),
@@ -246,7 +249,7 @@ private fun StyleMetric(
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelLarge,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
             Text(
                 text = value,
@@ -268,6 +271,7 @@ private fun CaptionStyleSection(
     templates: List<CaptionStyleTemplate>,
     onStyleSelected: (CaptionStyleTemplate) -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     PremiumPanelCard(accent = accent) {
         Column(
             modifier = Modifier.semantics { contentDescription = sectionContentDescription },
@@ -278,7 +282,7 @@ private fun CaptionStyleSection(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 androidx.compose.material3.Icon(
-                    imageVector = if (accent == Mocha.Yellow) Icons.Default.MusicNote else Icons.Default.Subtitles,
+                    imageVector = if (accent == ClearCutAccents.Yellow) Icons.Default.MusicNote else Icons.Default.Subtitles,
                     contentDescription = title,
                     tint = accent
                 )
@@ -286,12 +290,12 @@ private fun CaptionStyleSection(
                     Text(
                         text = title,
                         style = MaterialTheme.typography.titleMedium,
-                        color = Mocha.Text
+                        color = semanticColors.text
                     )
                     Text(
                         text = subtitle,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
             }
@@ -330,6 +334,7 @@ private fun CaptionStyleCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     val accessibilityLabel = if (template.isAccessibilityPreset) {
         stringResource(R.string.caption_style_accessibility_label, template.accessibilityPreset.displayName)
     } else {
@@ -345,9 +350,9 @@ private fun CaptionStyleCard(
                 ).joinToString(", ")
             }
             .clickable(onClick = onClick),
-        color = Mocha.PanelRaised,
+        color = semanticColors.panelRaised,
         shape = RoundedCornerShape(22.dp),
-        border = BorderStroke(1.dp, Mocha.CardStroke)
+        border = BorderStroke(1.dp, semanticColors.cardStroke)
     ) {
         Column {
             Box(
@@ -358,8 +363,8 @@ private fun CaptionStyleCard(
                         Brush.verticalGradient(
                             listOf(
                                 accent.copy(alpha = 0.28f),
-                                Mocha.PanelHighest,
-                                Mocha.Base
+                                semanticColors.panelHighest,
+                                semanticColors.surfaceBase
                             )
                         )
                     ),
@@ -379,7 +384,7 @@ private fun CaptionStyleCard(
                 Text(
                     text = template.type.displayName,
                     style = MaterialTheme.typography.titleSmall,
-                    color = Mocha.Text,
+                    color = semanticColors.text,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     fontWeight = FontWeight.Medium
@@ -400,13 +405,13 @@ private fun CaptionStyleCard(
                             stringResource(R.string.caption_style_static_look)
                         },
                         style = MaterialTheme.typography.labelMedium,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                     if (accessibilityLabel != null) {
                         Text(
                             text = accessibilityLabel,
                             style = MaterialTheme.typography.labelMedium,
-                            color = Mocha.Green
+                            color = ClearCutAccents.Green
                         )
                     }
                 }

@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -17,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -24,7 +27,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.novacut.editor.R
 import com.novacut.editor.model.TrackType
-import com.novacut.editor.ui.theme.Mocha
+import com.novacut.editor.ui.ClearCutTestTags
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
 
@@ -50,13 +53,15 @@ fun DesktopSidebar(
     viewModel: EditorViewModel,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     Column(
         modifier = modifier
             .fillMaxHeight()
             .width(260.dp)
-            .background(Mocha.Mantle)
+            .testTag(ClearCutTestTags.EDITOR_DESKTOP_SIDEBAR)
+            .background(semanticColors.backgroundMid)
             .padding(horizontal = Spacing.md, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(Spacing.md)
     ) {
@@ -78,24 +83,25 @@ private fun ProjectHeaderBlock(
     fps: Int,
     totalDurationMs: Long
 ) {
+    val semanticColors = LocalClearCutColors.current
     Column {
         Text(
             text = stringResource(R.string.desktop_sidebar_project),
-            color = Mocha.Overlay1,
+            color = semanticColors.overlayStrong,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold
         )
         Spacer(Modifier.height(Spacing.xs))
         Text(
             text = name,
-            color = Mocha.Text,
+            color = semanticColors.text,
             fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold
         )
         Spacer(Modifier.height(2.dp))
         Text(
             text = "$resolution · ${fps}fps · ${formatDuration(totalDurationMs)}",
-            color = Mocha.Subtext0,
+            color = semanticColors.subtext,
             fontSize = 11.sp
         )
     }
@@ -103,23 +109,24 @@ private fun ProjectHeaderBlock(
 
 @Composable
 private fun QuickActionsBlock(viewModel: EditorViewModel) {
+    val semanticColors = LocalClearCutColors.current
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             text = stringResource(R.string.desktop_sidebar_quick),
-            color = Mocha.Overlay1,
+            color = semanticColors.overlayStrong,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold
         )
-        SidebarAction(icon = Icons.Default.Add, label = stringResource(R.string.editor_add_media), tint = Mocha.Blue) {
+        SidebarAction(icon = Icons.Default.Add, label = stringResource(R.string.editor_add_media), tint = ClearCutAccents.Blue) {
             viewModel.showMediaPicker()
         }
-        SidebarAction(icon = Icons.Default.Videocam, label = stringResource(R.string.desktop_sidebar_record), tint = Mocha.Green) {
+        SidebarAction(icon = Icons.Default.Videocam, label = stringResource(R.string.desktop_sidebar_record), tint = ClearCutAccents.Green) {
             viewModel.showMediaPicker()
         }
-        SidebarAction(icon = Icons.Default.FileDownload, label = stringResource(R.string.editor_export), tint = Mocha.Rosewater) {
+        SidebarAction(icon = Icons.Default.FileDownload, label = stringResource(R.string.editor_export), tint = ClearCutAccents.Rosewater) {
             viewModel.showExportSheet()
         }
-        SidebarAction(icon = Icons.Default.AutoAwesome, label = stringResource(R.string.v369_features_label), tint = Mocha.Mauve) {
+        SidebarAction(icon = Icons.Default.AutoAwesome, label = stringResource(R.string.v369_features_label), tint = ClearCutAccents.Mauve) {
             viewModel.showV369Features()
         }
     }
@@ -132,6 +139,7 @@ private fun SidebarAction(
     tint: androidx.compose.ui.graphics.Color,
     onClick: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -143,7 +151,7 @@ private fun SidebarAction(
     ) {
         Icon(icon, null, tint = tint, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(Spacing.sm))
-        Text(label, color = Mocha.Text, fontSize = 13.sp)
+        Text(label, color = semanticColors.text, fontSize = 13.sp)
     }
 }
 
@@ -152,6 +160,7 @@ private fun ColumnScope.MediaLibraryBlock(
     viewModel: EditorViewModel,
     state: EditorState
 ) {
+    val semanticColors = LocalClearCutColors.current
     val entries = remember(state.tracks) {
         state.tracks
             .flatMap { track -> track.clips.map { it to track.type } }
@@ -160,7 +169,7 @@ private fun ColumnScope.MediaLibraryBlock(
     Column(modifier = Modifier.weight(1f, fill = true)) {
         Text(
             text = stringResource(R.string.desktop_sidebar_media_count, entries.size),
-            color = Mocha.Overlay1,
+            color = semanticColors.overlayStrong,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold
         )
@@ -168,7 +177,7 @@ private fun ColumnScope.MediaLibraryBlock(
         if (entries.isEmpty()) {
             Text(
                 text = stringResource(R.string.desktop_sidebar_media_empty),
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 fontSize = 11.sp
             )
             return
@@ -182,7 +191,7 @@ private fun ColumnScope.MediaLibraryBlock(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(Radius.sm))
-                        .background(Mocha.PanelRaised)
+                        .background(semanticColors.panelRaised)
                         .clickable(role = Role.Button) { viewModel.selectClip(clip.id) }
                         .padding(horizontal = Spacing.sm, vertical = 7.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -196,13 +205,13 @@ private fun ColumnScope.MediaLibraryBlock(
                             TrackType.ADJUSTMENT -> Icons.Default.Tune
                         },
                         contentDescription = null,
-                        tint = Mocha.Subtext1,
+                        tint = semanticColors.subtextStrong,
                         modifier = Modifier.size(14.dp)
                     )
                     Spacer(Modifier.width(Spacing.sm))
                     Text(
                         text = clip.sourceUri.lastPathSegment?.substringAfterLast('/') ?: "clip",
-                        color = Mocha.Text,
+                        color = semanticColors.text,
                         fontSize = 11.sp,
                         maxLines = 1
                     )

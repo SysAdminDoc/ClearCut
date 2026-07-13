@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -21,7 +23,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.novacut.editor.R
 import com.novacut.editor.model.Clip
-import com.novacut.editor.ui.theme.Mocha
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -39,18 +40,19 @@ fun AudioPanel(
     onStartVoiceover: () -> Unit,
     onClose: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     PremiumEditorPanel(
         title = stringResource(R.string.audio_title),
         subtitle = stringResource(R.string.panel_audio_subtitle),
         icon = Icons.Default.GraphicEq,
-        accent = Mocha.Green,
+        accent = ClearCutAccents.Green,
         onClose = onClose,
         closeContentDescription = stringResource(R.string.cd_close_audio_panel),
         modifier = modifier,
         scrollable = true
     ) {
         if (clip == null) {
-            PremiumPanelCard(accent = Mocha.Sapphire) {
+            PremiumPanelCard(accent = ClearCutAccents.Sapphire) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -59,25 +61,25 @@ fun AudioPanel(
                         modifier = Modifier
                             .size(48.dp)
                             .clip(RoundedCornerShape(16.dp))
-                            .background(Mocha.Panel),
+                            .background(semanticColors.panel),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             Icons.Default.LibraryMusic,
                             contentDescription = stringResource(R.string.audio_select_clip),
-                            tint = Mocha.Sapphire,
+                            tint = ClearCutAccents.Sapphire,
                             modifier = Modifier.size(22.dp)
                         )
                     }
                     Text(
                         text = stringResource(R.string.audio_select_clip),
-                        color = Mocha.Text,
+                        color = semanticColors.text,
                         style = MaterialTheme.typography.titleMedium
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = stringResource(R.string.audio_select_clip_description),
-                        color = Mocha.Subtext0,
+                        color = semanticColors.subtext,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -91,18 +93,18 @@ fun AudioPanel(
         val fadeInMax = (clipDuration - fadeOutMs).coerceAtLeast(0f)
         val fadeOutMax = (clipDuration - fadeInMs).coerceAtLeast(0f)
 
-        PremiumPanelCard(accent = Mocha.Green) {
+        PremiumPanelCard(accent = ClearCutAccents.Green) {
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 PremiumPanelPill(
                     text = stringResource(R.string.audio_clip_duration, formatTimestamp(clip.durationMs)),
-                    accent = Mocha.Sapphire
+                    accent = ClearCutAccents.Sapphire
                 )
                 PremiumPanelPill(
                     text = "${(clip.volume * 100).toInt()}%",
-                    accent = Mocha.Rosewater
+                    accent = ClearCutAccents.Rosewater
                 )
                 PremiumPanelPill(
                     text = if (!waveform.isNullOrEmpty()) {
@@ -110,14 +112,14 @@ fun AudioPanel(
                     } else {
                         stringResource(R.string.audio_waveform_pending)
                     },
-                    accent = if (!waveform.isNullOrEmpty()) Mocha.Green else Mocha.Overlay1
+                    accent = if (!waveform.isNullOrEmpty()) ClearCutAccents.Green else semanticColors.overlayStrong
                 )
             }
 
             if (waveform != null && waveform.isNotEmpty()) {
                 Text(
                     text = stringResource(R.string.audio_waveform_label),
-                    color = Mocha.Rosewater,
+                    color = ClearCutAccents.Rosewater,
                     style = MaterialTheme.typography.labelLarge
                 )
                 Canvas(
@@ -125,24 +127,24 @@ fun AudioPanel(
                         .fillMaxWidth()
                         .height(88.dp)
                         .clip(RoundedCornerShape(20.dp))
-                        .background(Mocha.Panel)
+                        .background(semanticColors.panel)
                         .padding(horizontal = 8.dp, vertical = 10.dp)
                 ) {
-                    drawWaveform(waveform, Mocha.Green)
+                    drawWaveform(waveform, ClearCutAccents.Green)
                     if (clip.fadeInMs > 0 || clip.fadeOutMs > 0) {
-                        drawFadeEnvelope(clip.fadeInMs, clip.fadeOutMs, clip.durationMs.coerceAtLeast(1L), Mocha.Mauve)
+                        drawFadeEnvelope(clip.fadeInMs, clip.fadeOutMs, clip.durationMs.coerceAtLeast(1L), ClearCutAccents.Mauve)
                     }
                 }
             } else {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = Mocha.PanelRaised,
+                    color = semanticColors.panelRaised,
                     shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(1.dp, Mocha.CardStroke)
+                    border = BorderStroke(1.dp, semanticColors.cardStroke)
                 ) {
                     Text(
                         text = stringResource(R.string.audio_waveform_pending_description),
-                        color = Mocha.Subtext0,
+                        color = semanticColors.subtext,
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)
                     )
@@ -152,7 +154,7 @@ fun AudioPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Mauve) {
+        PremiumPanelCard(accent = ClearCutAccents.Mauve) {
             EffectSlider(
                 label = stringResource(R.string.audio_volume),
                 value = clip.volume,
@@ -184,24 +186,24 @@ fun AudioPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Rosewater) {
+        PremiumPanelCard(accent = ClearCutAccents.Rosewater) {
             Text(
                 text = stringResource(R.string.audio_voiceover),
                 style = MaterialTheme.typography.titleMedium,
-                color = Mocha.Text
+                color = semanticColors.text
             )
             Text(
                 text = stringResource(R.string.audio_voiceover_description),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
 
             Button(
                 onClick = onStartVoiceover,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Mocha.Rosewater,
-                    contentColor = Mocha.Midnight
+                    containerColor = ClearCutAccents.Rosewater,
+                    contentColor = semanticColors.background
                 ),
                 shape = RoundedCornerShape(18.dp)
             ) {
@@ -303,17 +305,18 @@ fun VoiceoverRecorder(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     PremiumEditorPanel(
         title = stringResource(R.string.audio_voiceover),
         subtitle = stringResource(R.string.panel_voiceover_subtitle),
         icon = Icons.Default.Mic,
-        accent = if (isRecording) Mocha.Red else Mocha.Sapphire,
+        accent = if (isRecording) ClearCutAccents.Red else ClearCutAccents.Sapphire,
         onClose = onClose,
         closeContentDescription = stringResource(R.string.audio_voiceover_close_cd),
         modifier = modifier,
         scrollable = true
     ) {
-        PremiumPanelCard(accent = if (isRecording) Mocha.Red else Mocha.Sapphire) {
+        PremiumPanelCard(accent = if (isRecording) ClearCutAccents.Red else ClearCutAccents.Sapphire) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -324,12 +327,12 @@ fun VoiceoverRecorder(
                     } else {
                         stringResource(R.string.audio_status_ready)
                     },
-                    accent = if (isRecording) Mocha.Red else Mocha.Sapphire
+                    accent = if (isRecording) ClearCutAccents.Red else ClearCutAccents.Sapphire
                 )
 
                 Text(
                     text = formatTimestamp(recordingDurationMs),
-                    color = if (isRecording) Mocha.Rosewater else Mocha.Text,
+                    color = if (isRecording) ClearCutAccents.Rosewater else semanticColors.text,
                     style = MaterialTheme.typography.displayMedium
                 )
 
@@ -338,12 +341,12 @@ fun VoiceoverRecorder(
                         .size(112.dp)
                         .clip(CircleShape)
                         .background(
-                            if (isRecording) Mocha.Red.copy(alpha = 0.14f)
-                            else Mocha.Panel
+                            if (isRecording) ClearCutAccents.Red.copy(alpha = 0.14f)
+                            else semanticColors.panel
                         )
                         .border(
                             width = 2.dp,
-                            color = if (isRecording) Mocha.Red.copy(alpha = 0.7f) else Mocha.CardStrokeStrong,
+                            color = if (isRecording) ClearCutAccents.Red.copy(alpha = 0.7f) else semanticColors.cardStrokeStrong,
                             shape = CircleShape
                         )
                         .clickable {
@@ -356,21 +359,21 @@ fun VoiceoverRecorder(
                             modifier = Modifier
                                 .size(34.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(Mocha.Red)
+                                .background(ClearCutAccents.Red)
                         )
                     } else {
                         Box(
                             modifier = Modifier
                                 .size(42.dp)
                                 .clip(CircleShape)
-                                .background(Mocha.Red)
+                                .background(ClearCutAccents.Red)
                         )
                     }
                 }
 
                 Text(
                     text = if (isRecording) stringResource(R.string.audio_tap_to_stop) else stringResource(R.string.audio_tap_to_record),
-                    color = Mocha.Subtext0,
+                    color = semanticColors.subtext,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
@@ -382,12 +385,12 @@ fun VoiceoverRecorder(
             onClick = onClose,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(18.dp),
-            border = BorderStroke(1.dp, Mocha.CardStroke),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Subtext0)
+            border = BorderStroke(1.dp, semanticColors.cardStroke),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = semanticColors.subtext)
         ) {
             Text(
                 text = stringResource(R.string.audio_cancel),
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.labelLarge
             )
         }

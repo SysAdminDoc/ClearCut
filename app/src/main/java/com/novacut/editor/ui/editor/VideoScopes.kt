@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import android.graphics.Bitmap
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -44,7 +46,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
-import com.novacut.editor.ui.theme.Mocha
 import kotlin.math.min
 
 private val ScopeBg = Color(0xFF11111B)
@@ -70,6 +71,7 @@ fun VideoScopesOverlay(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     var scopeData by remember(frameBitmap, activeScope) { mutableStateOf<ScopeData?>(null) }
     val hasFrame = frameBitmap?.isRecycled == false
     val isAnalyzing = hasFrame && scopeData == null
@@ -90,7 +92,7 @@ fun VideoScopesOverlay(
         modifier = modifier.widthIn(min = 264.dp, max = 320.dp),
         color = ScopeBg.copy(alpha = 0.96f),
         shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, Mocha.CardStrokeStrong.copy(alpha = 0.9f))
+        border = BorderStroke(1.dp, semanticColors.cardStrokeStrong.copy(alpha = 0.9f))
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
@@ -101,7 +103,7 @@ fun VideoScopesOverlay(
                     .align(Alignment.CenterHorizontally)
                     .width(40.dp)
                     .height(4.dp)
-                    .background(Mocha.Surface2.copy(alpha = 0.8f), RoundedCornerShape(10.dp))
+                    .background(semanticColors.surfaceHigh.copy(alpha = 0.8f), RoundedCornerShape(10.dp))
             )
 
             Row(
@@ -113,14 +115,14 @@ fun VideoScopesOverlay(
                     Text(
                         text = stringResource(R.string.video_scopes_title),
                         style = MaterialTheme.typography.titleMedium,
-                        color = Mocha.Text,
+                        color = semanticColors.text,
                         fontWeight = FontWeight.SemiBold
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = stringResource(activeScope.descriptionRes()),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
 
@@ -130,8 +132,8 @@ fun VideoScopesOverlay(
                     icon = Icons.Default.Close,
                     contentDescription = stringResource(R.string.video_scopes_close_cd),
                     onClick = onClose,
-                    tint = Mocha.Subtext0,
-                    containerColor = Mocha.PanelRaised
+                    tint = semanticColors.subtext,
+                    containerColor = semanticColors.panelRaised
                 )
             }
 
@@ -152,9 +154,9 @@ fun VideoScopesOverlay(
                         }
                     ),
                     accent = when {
-                        !hasFrame -> Mocha.Overlay1
-                        isAnalyzing -> Mocha.Yellow
-                        else -> Mocha.Green
+                        !hasFrame -> semanticColors.overlayStrong
+                        isAnalyzing -> ClearCutAccents.Yellow
+                        else -> ClearCutAccents.Green
                     }
                 )
             }
@@ -177,7 +179,7 @@ fun VideoScopesOverlay(
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = scope.accent().copy(alpha = 0.18f),
                             selectedLabelColor = scope.accent(),
-                            labelColor = Mocha.Subtext0
+                            labelColor = semanticColors.subtext
                         )
                     )
                 }
@@ -217,6 +219,7 @@ private fun ScopeStateMessage(
     title: String,
     body: String
 ) {
+    val semanticColors = LocalClearCutColors.current
     Column(
         modifier = Modifier.padding(horizontal = 18.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -224,13 +227,13 @@ private fun ScopeStateMessage(
     ) {
         Text(
             text = title,
-            color = Mocha.Text,
+            color = semanticColors.text,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold
         )
         Text(
             text = body,
-            color = Mocha.Subtext0,
+            color = semanticColors.subtext,
             style = MaterialTheme.typography.bodySmall
         )
     }
@@ -244,7 +247,7 @@ private fun ScopeLoadingState() {
     ) {
         CircularProgressIndicator(
             modifier = Modifier.size(24.dp),
-            color = Mocha.Yellow,
+            color = ClearCutAccents.Yellow,
             strokeWidth = 2.dp
         )
         ScopeStateMessage(
@@ -255,9 +258,9 @@ private fun ScopeLoadingState() {
 }
 
 private fun ScopeType.accent(): Color = when (this) {
-    ScopeType.HISTOGRAM -> Mocha.Peach
-    ScopeType.WAVEFORM -> Mocha.Blue
-    ScopeType.VECTORSCOPE -> Mocha.Mauve
+    ScopeType.HISTOGRAM -> ClearCutAccents.Peach
+    ScopeType.WAVEFORM -> ClearCutAccents.Blue
+    ScopeType.VECTORSCOPE -> ClearCutAccents.Mauve
 }
 
 private fun ScopeType.descriptionRes(): Int = when (this) {

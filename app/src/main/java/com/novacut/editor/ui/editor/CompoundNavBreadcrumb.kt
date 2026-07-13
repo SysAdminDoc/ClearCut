@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,7 +27,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.ui.ClearCutTestTags
-import com.novacut.editor.ui.theme.Mocha
 
 /**
  * Breadcrumb chip rendered above the timeline whenever the editor is
@@ -48,6 +49,7 @@ fun CompoundNavBreadcrumb(
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val semanticColors = LocalClearCutColors.current
     val text = breadcrumbText.takeIf { it.isNotBlank() } ?: return
 
     Row(
@@ -56,8 +58,8 @@ fun CompoundNavBreadcrumb(
             .padding(horizontal = 16.dp, vertical = 6.dp)
             .testTag(ClearCutTestTags.EDITOR_COMPOUND_BREADCRUMB)
             .clip(RoundedCornerShape(20.dp))
-            .border(BorderStroke(1.dp, Mocha.Mauve.copy(alpha = 0.55f)), RoundedCornerShape(20.dp))
-            .background(Mocha.Mauve.copy(alpha = 0.14f))
+            .border(BorderStroke(1.dp, ClearCutAccents.Mauve.copy(alpha = 0.55f)), RoundedCornerShape(20.dp))
+            .background(ClearCutAccents.Mauve.copy(alpha = 0.14f))
             .clickable(onClick = onExit)
             .padding(horizontal = 12.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -66,12 +68,12 @@ fun CompoundNavBreadcrumb(
         Icon(
             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
             contentDescription = stringResource(R.string.compound_breadcrumb_exit_cd),
-            tint = Mocha.Mauve,
+            tint = ClearCutAccents.Mauve,
             modifier = Modifier.size(18.dp),
         )
         Text(
             text = text,
-            color = Mocha.Text,
+            color = semanticColors.text,
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
         )

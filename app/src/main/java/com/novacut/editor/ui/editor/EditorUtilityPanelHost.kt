@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -35,7 +37,6 @@ import com.novacut.editor.model.Clip
 import com.novacut.editor.model.ImageOverlayType
 import com.novacut.editor.model.TrackType
 import com.novacut.editor.ui.export.BatchExportPanel
-import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.ClearCutDialogIcon
 import com.novacut.editor.ui.theme.ClearCutPrimaryButton
 import com.novacut.editor.ui.theme.ClearCutSecondaryButton
@@ -53,6 +54,7 @@ fun BoxScope.EditorUtilityPanelHost(
     onImportStickerFromGallery: () -> Unit,
     onAction: (String) -> Unit = {}
 ) {
+    val semanticColors = LocalClearCutColors.current
     BottomSheetSlot(
         visible = state.panels.isOpen(PanelId.SCRATCHPAD),
         modifier = Modifier.align(Alignment.BottomCenter)
@@ -105,13 +107,13 @@ fun BoxScope.EditorUtilityPanelHost(
             icon = {
                 ClearCutDialogIcon(
                     icon = Icons.Default.Download,
-                    accent = Mocha.Mauve
+                    accent = ClearCutAccents.Mauve
                 )
             },
             title = {
                 Text(
                     text = prompt.title,
-                    color = Mocha.Text,
+                    color = semanticColors.text,
                     style = MaterialTheme.typography.titleLarge
                 )
             },
@@ -119,7 +121,7 @@ fun BoxScope.EditorUtilityPanelHost(
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
                         text = prompt.body,
-                        color = Mocha.Subtext0,
+                        color = semanticColors.subtext,
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Row(
@@ -129,13 +131,13 @@ fun BoxScope.EditorUtilityPanelHost(
                         AiRequirementInfoChip(
                             label = stringResource(R.string.ai_requirement_model_label),
                             value = prompt.modelName,
-                            accent = Mocha.Mauve,
+                            accent = ClearCutAccents.Mauve,
                             modifier = Modifier.weight(1f)
                         )
                         AiRequirementInfoChip(
                             label = stringResource(R.string.ai_requirement_size_label),
                             value = prompt.estimatedSize,
-                            accent = Mocha.Blue,
+                            accent = ClearCutAccents.Blue,
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -158,9 +160,9 @@ fun BoxScope.EditorUtilityPanelHost(
                     icon = Icons.Default.Close
                 )
             },
-            containerColor = Mocha.PanelHighest,
-            titleContentColor = Mocha.Text,
-            textContentColor = Mocha.Subtext0,
+            containerColor = semanticColors.panelHighest,
+            titleContentColor = semanticColors.text,
+            textContentColor = semanticColors.subtext,
             shape = RoundedCornerShape(Radius.xxl)
         )
     }
@@ -497,20 +499,20 @@ fun BoxScope.EditorUtilityPanelHost(
                 icon = {
                     ClearCutDialogIcon(
                         icon = Icons.Default.Restore,
-                        accent = Mocha.Blue
+                        accent = ClearCutAccents.Blue
                     )
                 },
                 title = {
                     Text(
                         text = stringResource(R.string.panel_cloud_backup_import_confirm_title),
-                        color = Mocha.Text,
+                        color = semanticColors.text,
                         style = MaterialTheme.typography.titleLarge
                     )
                 },
                 text = {
                     Text(
                         text = stringResource(R.string.panel_cloud_backup_import_confirm_body),
-                        color = Mocha.Subtext0,
+                        color = semanticColors.subtext,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 },
@@ -531,9 +533,9 @@ fun BoxScope.EditorUtilityPanelHost(
                         icon = Icons.Default.Close
                     )
                 },
-                containerColor = Mocha.PanelHighest,
-                titleContentColor = Mocha.Text,
-                textContentColor = Mocha.Subtext0,
+                containerColor = semanticColors.panelHighest,
+                titleContentColor = semanticColors.text,
+                textContentColor = semanticColors.subtext,
                 shape = RoundedCornerShape(Radius.xxl)
             )
         }

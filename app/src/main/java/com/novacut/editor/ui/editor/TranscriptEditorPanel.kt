@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,7 +38,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.model.Transcript
-import com.novacut.editor.ui.theme.Mocha
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -52,40 +53,41 @@ fun TranscriptEditorPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     PremiumEditorPanel(
         title = stringResource(R.string.v369_text_edit_title),
         subtitle = stringResource(R.string.v369_text_edit_subtitle),
         icon = Icons.AutoMirrored.Filled.Subject,
-        accent = Mocha.Blue,
+        accent = ClearCutAccents.Blue,
         onClose = onClose,
         closeContentDescription = stringResource(R.string.cd_close_speed_curve),
         modifier = modifier,
         scrollable = false
     ) {
         if (transcript == null || transcript.words.isEmpty()) {
-            PremiumPanelCard(accent = Mocha.Sapphire) {
+            PremiumPanelCard(accent = ClearCutAccents.Sapphire) {
                 Text(
                     text = stringResource(R.string.v369_text_edit_need_transcript),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
             }
             return@PremiumEditorPanel
         }
 
-        PremiumPanelCard(accent = Mocha.Blue) {
+        PremiumPanelCard(accent = ClearCutAccents.Blue) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 PremiumPanelPill(
                     text = "${transcript.words.size} words",
-                    accent = Mocha.Blue
+                    accent = ClearCutAccents.Blue
                 )
                 if (selectedWordIndices.isNotEmpty()) {
                     PremiumPanelPill(
                         text = "${selectedWordIndices.size} selected",
-                        accent = Mocha.Peach
+                        accent = ClearCutAccents.Peach
                     )
                 }
             }
@@ -96,8 +98,8 @@ fun TranscriptEditorPanel(
                 FilledTonalButton(
                     onClick = onSelectFillers,
                     colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = Mocha.Mauve.copy(alpha = 0.15f),
-                        contentColor = Mocha.Mauve
+                        containerColor = ClearCutAccents.Mauve.copy(alpha = 0.15f),
+                        contentColor = ClearCutAccents.Mauve
                     )
                 ) {
                     Icon(Icons.Default.SelectAll, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
@@ -107,8 +109,8 @@ fun TranscriptEditorPanel(
                     FilledTonalButton(
                         onClick = onClearSelection,
                         colors = ButtonDefaults.filledTonalButtonColors(
-                            containerColor = Mocha.Surface1,
-                            contentColor = Mocha.Subtext0
+                            containerColor = semanticColors.surface,
+                            contentColor = semanticColors.subtext
                         )
                     ) {
                         Text(stringResource(R.string.transcript_clear))
@@ -119,7 +121,7 @@ fun TranscriptEditorPanel(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        PremiumPanelCard(accent = if (selectedWordIndices.isNotEmpty()) Mocha.Peach else Mocha.Blue) {
+        PremiumPanelCard(accent = if (selectedWordIndices.isNotEmpty()) ClearCutAccents.Peach else ClearCutAccents.Blue) {
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -147,8 +149,8 @@ fun TranscriptEditorPanel(
                 onClick = onApplyDeletions,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.filledTonalButtonColors(
-                    containerColor = Mocha.Red.copy(alpha = 0.15f),
-                    contentColor = Mocha.Red
+                    containerColor = ClearCutAccents.Red.copy(alpha = 0.15f),
+                    contentColor = ClearCutAccents.Red
                 )
             ) {
                 Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
@@ -166,13 +168,14 @@ private fun TranscriptWord(
     onLongPress: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     val bg = when {
-        isSelected -> Mocha.Red.copy(alpha = 0.25f)
-        else -> Mocha.Surface0
+        isSelected -> ClearCutAccents.Red.copy(alpha = 0.25f)
+        else -> semanticColors.surfaceLow
     }
     val textColor = when {
-        isSelected -> Mocha.Red
-        else -> Mocha.Text
+        isSelected -> ClearCutAccents.Red
+        else -> semanticColors.text
     }
 
     Text(

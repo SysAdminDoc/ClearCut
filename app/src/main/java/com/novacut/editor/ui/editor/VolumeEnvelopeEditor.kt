@@ -1,5 +1,6 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -13,7 +14,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import com.novacut.editor.engine.KeyframeEngine
 import com.novacut.editor.model.*
-import com.novacut.editor.ui.theme.Mocha
 import kotlin.math.abs
 import kotlin.math.sqrt
 
@@ -135,7 +135,7 @@ fun VolumeEnvelopeEditor(
                 val y = (1f - vol / 2f) * h
                 if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
             }
-            drawPath(path, Mocha.Yellow.copy(alpha = 0.8f), style = Stroke(width = 2f))
+            drawPath(path, ClearCutAccents.Yellow.copy(alpha = 0.8f), style = Stroke(width = 2f))
 
             // Filled area under curve
             val fillPath = Path()
@@ -143,11 +143,11 @@ fun VolumeEnvelopeEditor(
             fillPath.lineTo(w, h)
             fillPath.lineTo(0f, h)
             fillPath.close()
-            drawPath(fillPath, Mocha.Yellow.copy(alpha = 0.08f))
+            drawPath(fillPath, ClearCutAccents.Yellow.copy(alpha = 0.08f))
         } else {
             // Draw constant volume line
             val y = (1f - clipVolume / 2f) * h
-            drawLine(Mocha.Yellow.copy(alpha = 0.4f), Offset(0f, y), Offset(w, y), 1f)
+            drawLine(ClearCutAccents.Yellow.copy(alpha = 0.4f), Offset(0f, y), Offset(w, y), 1f)
         }
 
         // Draw keyframe dots
@@ -158,7 +158,7 @@ fun VolumeEnvelopeEditor(
 
             drawCircle(Color.White, if (isSelected) 7f else 5f, Offset(x, y))
             drawCircle(
-                if (isSelected) Mocha.Red else Mocha.Mauve,
+                if (isSelected) ClearCutAccents.Red else ClearCutAccents.Mauve,
                 if (isSelected) 5f else 3.5f,
                 Offset(x, y)
             )

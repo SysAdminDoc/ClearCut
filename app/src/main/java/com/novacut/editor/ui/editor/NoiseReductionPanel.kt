@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,7 +26,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
-import com.novacut.editor.ui.theme.Mocha
 
 @Composable
 fun NoiseReductionPanel(
@@ -34,16 +35,17 @@ fun NoiseReductionPanel(
     onAnalyze: () -> Unit,
     onClose: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     PremiumEditorPanel(
         title = stringResource(R.string.noise_reduction_title),
         subtitle = stringResource(R.string.noise_reduction_subtitle),
         icon = Icons.Default.GraphicEq,
-        accent = Mocha.Mauve,
+        accent = ClearCutAccents.Mauve,
         onClose = onClose,
         modifier = modifier,
         scrollable = true
     ) {
-        PremiumPanelCard(accent = Mocha.Mauve) {
+        PremiumPanelCard(accent = ClearCutAccents.Mauve) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -53,13 +55,13 @@ fun NoiseReductionPanel(
                     Text(
                         text = stringResource(R.string.noise_reduction_profile_title),
                         style = MaterialTheme.typography.titleMedium,
-                        color = Mocha.Text
+                        color = semanticColors.text
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = stringResource(R.string.noise_reduction_description),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
 
@@ -71,11 +73,11 @@ fun NoiseReductionPanel(
                 ) {
                     PremiumPanelPill(
                         text = if (analysisResult != null) stringResource(R.string.noise_reduction_profile_ready) else stringResource(R.string.noise_reduction_awaiting_scan),
-                        accent = Mocha.Mauve
+                        accent = ClearCutAccents.Mauve
                     )
                     PremiumPanelPill(
                         text = if (isAnalyzing) stringResource(R.string.noise_reduction_cleaning_now) else stringResource(R.string.noise_reduction_ai_assist),
-                        accent = if (isAnalyzing) Mocha.Peach else Mocha.Blue
+                        accent = if (isAnalyzing) ClearCutAccents.Peach else ClearCutAccents.Blue
                     )
                 }
             }
@@ -83,25 +85,25 @@ fun NoiseReductionPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Blue) {
+        PremiumPanelCard(accent = ClearCutAccents.Blue) {
             Text(
                 text = stringResource(R.string.noise_reduction_analyze_title),
                 style = MaterialTheme.typography.titleMedium,
-                color = Mocha.Text
+                color = semanticColors.text
             )
             Text(
                 text = stringResource(R.string.noise_reduction_analyze_description),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                PremiumPanelPill(text = stringResource(R.string.noise_reduction_type_hiss), accent = Mocha.Blue)
-                PremiumPanelPill(text = stringResource(R.string.noise_reduction_type_hum), accent = Mocha.Mauve)
-                PremiumPanelPill(text = stringResource(R.string.noise_reduction_type_broadband), accent = Mocha.Peach)
+                PremiumPanelPill(text = stringResource(R.string.noise_reduction_type_hiss), accent = ClearCutAccents.Blue)
+                PremiumPanelPill(text = stringResource(R.string.noise_reduction_type_hum), accent = ClearCutAccents.Mauve)
+                PremiumPanelPill(text = stringResource(R.string.noise_reduction_type_broadband), accent = ClearCutAccents.Peach)
             }
 
             Button(
@@ -109,17 +111,17 @@ fun NoiseReductionPanel(
                 enabled = !isAnalyzing,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Mocha.Mauve,
-                    contentColor = Mocha.Base,
-                    disabledContainerColor = Mocha.Mauve.copy(alpha = 0.45f),
-                    disabledContentColor = Mocha.Base.copy(alpha = 0.85f)
+                    containerColor = ClearCutAccents.Mauve,
+                    contentColor = semanticColors.surfaceBase,
+                    disabledContainerColor = ClearCutAccents.Mauve.copy(alpha = 0.45f),
+                    disabledContentColor = semanticColors.surfaceBase.copy(alpha = 0.85f)
                 ),
                 shape = RoundedCornerShape(18.dp)
             ) {
                 if (isAnalyzing) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(16.dp),
-                        color = Mocha.Base,
+                        color = semanticColors.surfaceBase,
                         strokeWidth = 2.dp
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -137,7 +139,7 @@ fun NoiseReductionPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = if (analysisResult != null) Mocha.Green else Mocha.Overlay1) {
+        PremiumPanelCard(accent = if (analysisResult != null) ClearCutAccents.Green else semanticColors.overlayStrong) {
             if (analysisResult != null) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -147,19 +149,19 @@ fun NoiseReductionPanel(
                     Icon(
                         imageVector = Icons.Default.CheckCircle,
                         contentDescription = stringResource(R.string.done),
-                        tint = Mocha.Green
+                        tint = ClearCutAccents.Green
                     )
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = stringResource(R.string.noise_reduction_cleanup_applied),
                             style = MaterialTheme.typography.titleMedium,
-                            color = Mocha.Text
+                            color = semanticColors.text
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = analysisResult,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Mocha.Subtext0
+                            color = semanticColors.subtext
                         )
                     }
                 }
@@ -168,12 +170,12 @@ fun NoiseReductionPanel(
                     Text(
                         text = stringResource(R.string.noise_reduction_no_result_title),
                         style = MaterialTheme.typography.titleMedium,
-                        color = Mocha.Text
+                        color = semanticColors.text
                     )
                     Text(
                         text = stringResource(R.string.noise_reduction_no_result_description),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
             }

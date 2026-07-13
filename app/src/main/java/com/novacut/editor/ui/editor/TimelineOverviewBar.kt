@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -31,7 +33,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.model.Track
-import com.novacut.editor.ui.theme.Mocha
 
 /**
  * Full-duration mini-strip shown below the tracks area. Paints one rectangle per
@@ -47,6 +48,7 @@ internal fun TimelineOverviewBar(
     contentPadding: Dp,
     onScrollTo: (Long) -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     val overviewHeight = 22.dp
     var widthPx by remember { mutableFloatStateOf(0f) }
     val overviewContentDescription = stringResource(R.string.cd_timeline_overview)
@@ -71,8 +73,8 @@ internal fun TimelineOverviewBar(
             .padding(horizontal = contentPadding, vertical = 6.dp)
             .height(overviewHeight)
             .clip(RoundedCornerShape(10.dp))
-            .background(Mocha.Crust.copy(alpha = 0.78f))
-            .border(1.dp, Mocha.CardStroke.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+            .background(semanticColors.onAccent.copy(alpha = 0.78f))
+            .border(1.dp, semanticColors.cardStroke.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
             .onSizeChanged { widthPx = it.width.toFloat() }
             .semantics { contentDescription = overviewContentDescription }
             .pointerInput(Unit) {
@@ -106,12 +108,12 @@ internal fun TimelineOverviewBar(
             val vStartF = (scrollOffsetMs.toFloat() / totalF).coerceIn(0f, 1f)
             val vWidthF = (currentVisibleDurationMs.toFloat() / totalF).coerceIn(0.01f, 1f)
             drawRect(
-                color = Mocha.Sky.copy(alpha = 0.25f),
+                color = ClearCutAccents.Sky.copy(alpha = 0.25f),
                 topLeft = Offset(vStartF * size.width, 0f),
                 size = Size(vWidthF * size.width, size.height)
             )
             drawRect(
-                color = Mocha.Sky,
+                color = ClearCutAccents.Sky,
                 topLeft = Offset(vStartF * size.width, 0f),
                 size = Size(vWidthF * size.width, size.height),
                 style = Stroke(width = 1.6f)
@@ -119,7 +121,7 @@ internal fun TimelineOverviewBar(
 
             val playheadF = (playheadMs.toFloat() / totalF).coerceIn(0f, 1f)
             drawLine(
-                color = Mocha.Rosewater,
+                color = ClearCutAccents.Rosewater,
                 start = Offset(playheadF * size.width, 0f),
                 end = Offset(playheadF * size.width, size.height),
                 strokeWidth = 1.4f

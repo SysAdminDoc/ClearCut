@@ -2,6 +2,9 @@
 
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
+
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -30,7 +33,6 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.novacut.editor.R
 import com.novacut.editor.model.*
-import com.novacut.editor.ui.theme.Mocha
 import java.util.Locale
 
 // Pre-built text templates
@@ -279,6 +281,7 @@ fun TextTemplateGallery(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     var selectedCategory by remember { mutableStateOf<TextTemplateCategory?>(null) }
     var showAnimated by remember { mutableStateOf(false) }
     val animatedTemplates = remember { animatedTextTemplates() }
@@ -296,7 +299,7 @@ fun TextTemplateGallery(
             animatedTemplates.filter { it.category == selectedCategory }
         }
     }
-    val accent = if (showAnimated) Mocha.Yellow else Mocha.Sapphire
+    val accent = if (showAnimated) ClearCutAccents.Yellow else ClearCutAccents.Sapphire
 
     PremiumEditorPanel(
         title = stringResource(R.string.panel_text_template_title),
@@ -315,14 +318,14 @@ fun TextTemplateGallery(
                         Column {
                             Text(
                                 text = stringResource(R.string.panel_text_template_modes_title),
-                                color = Mocha.Text,
+                                color = semanticColors.text,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
                                 text = stringResource(R.string.panel_text_template_modes_description),
-                                color = Mocha.Subtext0,
+                                color = semanticColors.subtext,
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
@@ -343,7 +346,7 @@ fun TextTemplateGallery(
                                     R.string.panel_text_template_insert_at,
                                     formatTemplateTime(playheadMs)
                                 ),
-                                accent = Mocha.Sky
+                                accent = ClearCutAccents.Sky
                             )
                             PremiumPanelPill(
                                 text = if (showAnimated) {
@@ -351,7 +354,7 @@ fun TextTemplateGallery(
                                 } else {
                                     stringResource(R.string.panel_text_template_static)
                                 },
-                                accent = Mocha.Pink
+                                accent = ClearCutAccents.Pink
                             )
                         }
                     }
@@ -364,14 +367,14 @@ fun TextTemplateGallery(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = stringResource(R.string.panel_text_template_modes_title),
-                                color = Mocha.Text,
+                                color = semanticColors.text,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
                                 text = stringResource(R.string.panel_text_template_modes_description),
-                                color = Mocha.Subtext0,
+                                color = semanticColors.subtext,
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
@@ -395,7 +398,7 @@ fun TextTemplateGallery(
                                     R.string.panel_text_template_insert_at,
                                     formatTemplateTime(playheadMs)
                                 ),
-                                accent = Mocha.Sky
+                                accent = ClearCutAccents.Sky
                             )
                             PremiumPanelPill(
                                 text = if (showAnimated) {
@@ -403,7 +406,7 @@ fun TextTemplateGallery(
                                 } else {
                                     stringResource(R.string.panel_text_template_static)
                                 },
-                                accent = Mocha.Pink
+                                accent = ClearCutAccents.Pink
                             )
                         }
                     }
@@ -418,7 +421,7 @@ fun TextTemplateGallery(
                             title = stringResource(R.string.panel_text_template_static),
                             subtitle = stringResource(R.string.panel_text_template_static_subtitle),
                             selected = !showAnimated,
-                            accent = Mocha.Sapphire,
+                            accent = ClearCutAccents.Sapphire,
                             onClick = { showAnimated = false },
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -426,7 +429,7 @@ fun TextTemplateGallery(
                             title = stringResource(R.string.panel_text_template_animated),
                             subtitle = stringResource(R.string.panel_text_template_animated_subtitle),
                             selected = showAnimated,
-                            accent = Mocha.Yellow,
+                            accent = ClearCutAccents.Yellow,
                             onClick = { showAnimated = true },
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -440,7 +443,7 @@ fun TextTemplateGallery(
                             title = stringResource(R.string.panel_text_template_static),
                             subtitle = stringResource(R.string.panel_text_template_static_subtitle),
                             selected = !showAnimated,
-                            accent = Mocha.Sapphire,
+                            accent = ClearCutAccents.Sapphire,
                             onClick = { showAnimated = false },
                             modifier = Modifier.weight(1f)
                         )
@@ -448,7 +451,7 @@ fun TextTemplateGallery(
                             title = stringResource(R.string.panel_text_template_animated),
                             subtitle = stringResource(R.string.panel_text_template_animated_subtitle),
                             selected = showAnimated,
-                            accent = Mocha.Yellow,
+                            accent = ClearCutAccents.Yellow,
                             onClick = { showAnimated = true },
                             modifier = Modifier.weight(1f)
                         )
@@ -480,14 +483,14 @@ fun TextTemplateGallery(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = if (showAnimated) Mocha.Peach else Mocha.Blue) {
+        PremiumPanelCard(accent = if (showAnimated) ClearCutAccents.Peach else ClearCutAccents.Blue) {
             Text(
                 text = if (showAnimated) {
                     stringResource(R.string.panel_text_template_collection_animated_title)
                 } else {
                     stringResource(R.string.panel_text_template_collection_static_title)
                 },
-                color = Mocha.Rosewater,
+                color = ClearCutAccents.Rosewater,
                 style = MaterialTheme.typography.labelLarge
             )
             Text(
@@ -496,7 +499,7 @@ fun TextTemplateGallery(
                 } else {
                     stringResource(R.string.panel_text_template_collection_static_description)
                 },
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodyMedium
             )
             FlowRow(
@@ -509,14 +512,14 @@ fun TextTemplateGallery(
                         if (showAnimated) visibleAnimatedTemplates.size else visibleStaticTemplates.size,
                         if (showAnimated) visibleAnimatedTemplates.size else visibleStaticTemplates.size
                     ),
-                    accent = if (showAnimated) Mocha.Yellow else Mocha.Sapphire
+                    accent = if (showAnimated) ClearCutAccents.Yellow else ClearCutAccents.Sapphire
                 )
                 PremiumPanelPill(
                     text = stringResource(
                         R.string.panel_text_template_category_format,
                         selectedCategory?.displayName ?: stringResource(R.string.panel_text_template_all)
                     ),
-                    accent = selectedCategory?.let(::templateCategoryAccent) ?: Mocha.Sky
+                    accent = selectedCategory?.let(::templateCategoryAccent) ?: ClearCutAccents.Sky
                 )
             }
         }
@@ -525,7 +528,7 @@ fun TextTemplateGallery(
 
         if (showAnimated) {
             if (visibleAnimatedTemplates.isEmpty()) {
-                TemplateEmptyState(accent = Mocha.Peach)
+                TemplateEmptyState(accent = ClearCutAccents.Peach)
             } else {
                 LazyVerticalGrid(
                     columns = GridCells.Adaptive(minSize = 160.dp),
@@ -545,7 +548,7 @@ fun TextTemplateGallery(
             }
         } else {
             if (visibleStaticTemplates.isEmpty()) {
-                TemplateEmptyState(accent = Mocha.Blue)
+                TemplateEmptyState(accent = ClearCutAccents.Blue)
             } else {
                 LazyVerticalGrid(
                     columns = GridCells.Adaptive(minSize = 160.dp),
@@ -572,16 +575,17 @@ private fun TemplateEmptyState(
     accent: Color,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     PremiumPanelCard(accent = accent, modifier = modifier) {
         Text(
             text = stringResource(R.string.panel_text_template_empty_title),
-            color = Mocha.Text,
+            color = semanticColors.text,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold
         )
         Text(
             text = stringResource(R.string.panel_text_template_empty_body),
-            color = Mocha.Subtext0,
+            color = semanticColors.subtext,
             style = MaterialTheme.typography.bodyMedium
         )
     }
@@ -592,13 +596,14 @@ private fun TemplateCard(
     template: TextTemplate,
     onClick: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     val accent = templateCategoryAccent(template.category)
 
     Surface(
         onClick = onClick,
-        color = Mocha.PanelHighest,
+        color = semanticColors.panelHighest,
         shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, Mocha.CardStrokeStrong.copy(alpha = 0.9f))
+        border = BorderStroke(1.dp, semanticColors.cardStrokeStrong.copy(alpha = 0.9f))
     ) {
         Column {
             Box(
@@ -607,7 +612,7 @@ private fun TemplateCard(
                     .height(118.dp)
                     .background(
                         Brush.verticalGradient(
-                            listOf(accent.copy(alpha = 0.24f), Color(0xFF181825), Mocha.Panel)
+                            listOf(accent.copy(alpha = 0.24f), Color(0xFF181825), semanticColors.panel)
                         )
                     ),
                 contentAlignment = Alignment.Center
@@ -656,7 +661,7 @@ private fun TemplateCard(
             ) {
                 Text(
                     text = template.name,
-                    color = Mocha.Text,
+                    color = semanticColors.text,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
@@ -664,7 +669,7 @@ private fun TemplateCard(
                 )
                 Text(
                     text = templateCategorySummary(template.category),
-                    color = Mocha.Subtext0,
+                    color = semanticColors.subtext,
                     style = MaterialTheme.typography.bodySmall,
                     minLines = 2
                 )
@@ -681,7 +686,7 @@ private fun TemplateCard(
                             R.string.panel_text_template_duration_format,
                             template.durationMs / 1000L
                         ),
-                        accent = Mocha.Sky
+                        accent = ClearCutAccents.Sky
                     )
                 }
             }
@@ -698,14 +703,15 @@ private fun TemplateModeCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         onClick = onClick,
         modifier = modifier,
-        color = if (selected) accent.copy(alpha = 0.14f) else Mocha.PanelHighest,
+        color = if (selected) accent.copy(alpha = 0.14f) else semanticColors.panelHighest,
         shape = RoundedCornerShape(22.dp),
         border = BorderStroke(
             1.dp,
-            if (selected) accent.copy(alpha = 0.28f) else Mocha.CardStroke
+            if (selected) accent.copy(alpha = 0.28f) else semanticColors.cardStroke
         )
     ) {
         Column(
@@ -714,13 +720,13 @@ private fun TemplateModeCard(
         ) {
             Text(
                 text = title,
-                color = if (selected) accent else Mocha.Text,
+                color = if (selected) accent else semanticColors.text,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold
             )
             Text(
                 text = subtitle,
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodySmall
             )
         }
@@ -734,18 +740,19 @@ private fun TemplateCategoryChip(
     accent: Color,
     onClick: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         onClick = onClick,
-        color = if (selected) accent.copy(alpha = 0.14f) else Mocha.PanelHighest,
+        color = if (selected) accent.copy(alpha = 0.14f) else semanticColors.panelHighest,
         shape = RoundedCornerShape(10.dp),
         border = BorderStroke(
             1.dp,
-            if (selected) accent.copy(alpha = 0.28f) else Mocha.CardStroke
+            if (selected) accent.copy(alpha = 0.28f) else semanticColors.cardStroke
         )
     ) {
         Text(
             text = label,
-            color = if (selected) accent else Mocha.Subtext0,
+            color = if (selected) accent else semanticColors.subtext,
             style = MaterialTheme.typography.labelLarge,
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
         )
@@ -757,9 +764,10 @@ private fun AnimatedTemplateCard(
     template: AnimatedTextTemplateDefinition,
     onClick: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         onClick = onClick,
-        color = Mocha.PanelHighest,
+        color = semanticColors.panelHighest,
         shape = RoundedCornerShape(24.dp),
         border = BorderStroke(1.dp, template.accent.copy(alpha = 0.24f))
     ) {
@@ -773,7 +781,7 @@ private fun AnimatedTemplateCard(
                             listOf(
                                 template.accent.copy(alpha = 0.26f),
                                 Color(0xFF181825),
-                                Mocha.Panel
+                                semanticColors.panel
                             )
                         )
                     ),
@@ -792,7 +800,7 @@ private fun AnimatedTemplateCard(
                     )
                     Text(
                         text = template.previewNote,
-                        color = Mocha.Text,
+                        color = semanticColors.text,
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -804,7 +812,7 @@ private fun AnimatedTemplateCard(
             ) {
                 Text(
                     text = template.name,
-                    color = Mocha.Text,
+                    color = semanticColors.text,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
@@ -812,7 +820,7 @@ private fun AnimatedTemplateCard(
                 )
                 Text(
                     text = template.description,
-                    color = Mocha.Subtext0,
+                    color = semanticColors.subtext,
                     style = MaterialTheme.typography.bodySmall,
                     minLines = 2
                 )
@@ -826,7 +834,7 @@ private fun AnimatedTemplateCard(
                     )
                     PremiumPanelPill(
                         text = template.animation.displayName,
-                        accent = Mocha.Pink
+                        accent = ClearCutAccents.Pink
                     )
                 }
             }
@@ -888,7 +896,7 @@ private fun animatedTextTemplates(): List<AnimatedTextTemplateDefinition> = list
         previewText = "HOST NAME",
         previewNote = "New episode",
         description = "A polished host intro with strong lateral movement.",
-        accent = Mocha.Sapphire,
+        accent = ClearCutAccents.Sapphire,
         animation = TextAnimation.SLIDE_LEFT,
         durationMs = 3500L
     ),
@@ -899,7 +907,7 @@ private fun animatedTextTemplates(): List<AnimatedTextTemplateDefinition> = list
         previewText = "3 2 1",
         previewNote = "Launch",
         description = "Great for cold opens, beats, and punchy scene intros.",
-        accent = Mocha.Yellow,
+        accent = ClearCutAccents.Yellow,
         animation = TextAnimation.BOUNCE,
         durationMs = 3000L
     ),
@@ -910,7 +918,7 @@ private fun animatedTextTemplates(): List<AnimatedTextTemplateDefinition> = list
         previewText = "NEON",
         previewNote = "Night drive",
         description = "A vivid hero title with glow-led reveal energy.",
-        accent = Mocha.Pink,
+        accent = ClearCutAccents.Pink,
         animation = TextAnimation.SCALE,
         durationMs = 3200L
     ),
@@ -921,7 +929,7 @@ private fun animatedTextTemplates(): List<AnimatedTextTemplateDefinition> = list
         previewText = "SUBSCRIBE",
         previewNote = "Weekly drops",
         description = "A clean CTA for end cards and creator reminders.",
-        accent = Mocha.Red,
+        accent = ClearCutAccents.Red,
         animation = TextAnimation.ELASTIC,
         durationMs = 3600L
     ),
@@ -932,7 +940,7 @@ private fun animatedTextTemplates(): List<AnimatedTextTemplateDefinition> = list
         previewText = "@NOVA",
         previewNote = "Follow along",
         description = "Fast social ID tag for reels, shorts, and cutdowns.",
-        accent = Mocha.Mauve,
+        accent = ClearCutAccents.Mauve,
         animation = TextAnimation.SLIDE_UP,
         durationMs = 2800L
     ),
@@ -943,7 +951,7 @@ private fun animatedTextTemplates(): List<AnimatedTextTemplateDefinition> = list
         previewText = "THANK YOU",
         previewNote = "See you next cut",
         description = "A softer sign-off treatment for polished endings.",
-        accent = Mocha.Teal,
+        accent = ClearCutAccents.Teal,
         animation = TextAnimation.FADE,
         durationMs = 4000L
     ),
@@ -954,7 +962,7 @@ private fun animatedTextTemplates(): List<AnimatedTextTemplateDefinition> = list
         previewText = "\"BREATHE\"",
         previewNote = "Scene note",
         description = "A restrained pull-quote for narrative or documentary edits.",
-        accent = Mocha.Lavender,
+        accent = ClearCutAccents.Lavender,
         animation = TextAnimation.SLIDE_RIGHT,
         durationMs = 3600L
     ),
@@ -965,19 +973,19 @@ private fun animatedTextTemplates(): List<AnimatedTextTemplateDefinition> = list
         previewText = "LINK IN BIO",
         previewNote = "Open now",
         description = "A bold conversion card designed for vertical social posts.",
-        accent = Mocha.Peach,
+        accent = ClearCutAccents.Peach,
         animation = TextAnimation.BOUNCE,
         durationMs = 2800L
     )
 )
 
 private fun templateCategoryAccent(category: TextTemplateCategory): Color = when (category) {
-    TextTemplateCategory.LOWER_THIRD -> Mocha.Sapphire
-    TextTemplateCategory.TITLE_CARD -> Mocha.Yellow
-    TextTemplateCategory.END_SCREEN -> Mocha.Teal
-    TextTemplateCategory.CALL_TO_ACTION -> Mocha.Red
-    TextTemplateCategory.SOCIAL -> Mocha.Mauve
-    TextTemplateCategory.MINIMAL -> Mocha.Lavender
+    TextTemplateCategory.LOWER_THIRD -> ClearCutAccents.Sapphire
+    TextTemplateCategory.TITLE_CARD -> ClearCutAccents.Yellow
+    TextTemplateCategory.END_SCREEN -> ClearCutAccents.Teal
+    TextTemplateCategory.CALL_TO_ACTION -> ClearCutAccents.Red
+    TextTemplateCategory.SOCIAL -> ClearCutAccents.Mauve
+    TextTemplateCategory.MINIMAL -> ClearCutAccents.Lavender
 }
 
 @Composable

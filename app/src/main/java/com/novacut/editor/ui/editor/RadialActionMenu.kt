@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -20,7 +22,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import com.novacut.editor.ui.theme.Mocha
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -60,6 +61,7 @@ fun RadialActionMenu(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     val actions = if (hasClipSelected) {
         clipActions(includeOpenCompound = hasOpenableCompoundClipSelected)
     } else {
@@ -97,7 +99,7 @@ fun RadialActionMenu(
                 .size(20.dp)
                 .scale(scale)
                 .clip(CircleShape)
-                .background(Mocha.Mauve)
+                .background(ClearCutAccents.Mauve)
         )
 
         actions.forEachIndexed { index, action ->
@@ -117,14 +119,14 @@ fun RadialActionMenu(
                     .size(40.dp)
                     .scale(scale)
                     .clip(CircleShape)
-                    .background(Mocha.Surface0)
+                    .background(semanticColors.surfaceLow)
                     .clickable { onAction(action.id) },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     action.icon,
                     contentDescription = action.label,
-                    tint = Mocha.Subtext1,
+                    tint = semanticColors.subtextStrong,
                     modifier = Modifier.size(20.dp)
                 )
             }

@@ -1,5 +1,6 @@
 package com.novacut.editor.ui.export
 
+import com.novacut.editor.ui.theme.ClearCutAccents
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -99,7 +100,6 @@ import com.novacut.editor.model.Watermark
 import com.novacut.editor.model.WatermarkPosition
 import com.novacut.editor.ui.ClearCutTestTags
 import com.novacut.editor.ui.theme.LocalClearCutColors
-import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.Motion
 import com.novacut.editor.ui.theme.ClearCutChromeIconButton
 import com.novacut.editor.ui.theme.ClearCutDialogIcon
@@ -149,6 +149,7 @@ fun ExportSheet(
     onClearAiUsageLedger: () -> Unit = {},
     onClose: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     val availableCodecs = remember { ExportConfig.getAvailableCodecs() }
     val (width, height) = config.resolution.forAspect(aspectRatio)
     val effectiveConfig = remember(config, totalDurationMs) {
@@ -280,7 +281,7 @@ fun ExportSheet(
             icon = {
                 ClearCutDialogIcon(
                     icon = Icons.Default.AutoAwesome,
-                    accent = Mocha.Mauve
+                    accent = ClearCutAccents.Mauve
                 )
             },
             title = { Text(stringResource(R.string.export_ai_ledger_clear_title)) },
@@ -309,7 +310,7 @@ fun ExportSheet(
         modifier = modifier
             .fillMaxWidth()
             .testTag(ClearCutTestTags.EXPORT_SHEET)
-            .background(Mocha.Panel, containerShape)
+            .background(semanticColors.panel, containerShape)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = Spacing.lg, vertical = 14.dp)
     ) {
@@ -319,7 +320,7 @@ fun ExportSheet(
                     .align(Alignment.CenterHorizontally)
                     .width(36.dp)
                     .height(3.dp)
-                    .background(Mocha.Surface2.copy(alpha = 0.55f), RoundedCornerShape(Radius.sm))
+                    .background(semanticColors.surfaceHigh.copy(alpha = 0.55f), RoundedCornerShape(Radius.sm))
             )
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -330,9 +331,9 @@ fun ExportSheet(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                color = Mocha.Mauve.copy(alpha = 0.14f),
+                color = ClearCutAccents.Mauve.copy(alpha = 0.14f),
                 shape = RoundedCornerShape(Radius.lg),
-                border = BorderStroke(1.dp, Mocha.Mauve.copy(alpha = 0.22f))
+                border = BorderStroke(1.dp, ClearCutAccents.Mauve.copy(alpha = 0.22f))
             ) {
                 Box(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
@@ -341,7 +342,7 @@ fun ExportSheet(
                     Icon(
                         Icons.Default.FileUpload,
                         contentDescription = stringResource(R.string.export_title),
-                        tint = Mocha.Rosewater,
+                        tint = ClearCutAccents.Rosewater,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -352,13 +353,13 @@ fun ExportSheet(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     stringResource(R.string.export_title),
-                    color = Mocha.Text,
+                    color = semanticColors.text,
                     style = MaterialTheme.typography.headlineMedium
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     stringResource(R.string.export_subtitle),
-                    color = Mocha.Subtext0,
+                    color = semanticColors.subtext,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
@@ -399,7 +400,7 @@ fun ExportSheet(
 
             ExportStateCard(
                 icon = if (stallWarning) Icons.Default.Warning else Icons.Default.FileUpload,
-                tint = if (stallWarning) Mocha.Yellow else Mocha.Mauve,
+                tint = if (stallWarning) ClearCutAccents.Yellow else ClearCutAccents.Mauve,
                 title = stringResource(R.string.export_exporting),
                 body = bodyParts,
                 progress = exportProgress,
@@ -419,7 +420,7 @@ fun ExportSheet(
             }
             ExportStateCard(
                 icon = Icons.Default.CheckCircle,
-                tint = Mocha.Green,
+                tint = ClearCutAccents.Green,
                 title = stringResource(R.string.export_complete),
                 body = stringResource(R.string.export_subtitle),
                 primaryLabel = stringResource(R.string.share),
@@ -436,7 +437,7 @@ fun ExportSheet(
         if (exportState == ExportState.CANCELLED) {
             ExportStateCard(
                 icon = Icons.Default.Cancel,
-                tint = Mocha.Peach,
+                tint = ClearCutAccents.Peach,
                 title = stringResource(R.string.export_cancelled),
                 body = stringResource(R.string.export_subtitle),
                 primaryLabel = stringResource(R.string.done),
@@ -453,7 +454,7 @@ fun ExportSheet(
             }?.diagnosticSummary
             ExportStateCard(
                 icon = Icons.Default.Error,
-                tint = Mocha.Red,
+                tint = ClearCutAccents.Red,
                 title = stringResource(R.string.export_failed),
                 body = errorMessage?.takeIf { it.isNotBlank() } ?: stringResource(R.string.export_error_unknown),
                 secondaryBody = latestFailureDiagnostic,
@@ -468,16 +469,16 @@ fun ExportSheet(
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Mocha.Panel),
-            border = BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
+            colors = CardDefaults.cardColors(containerColor = semanticColors.panel),
+            border = BorderStroke(1.dp, semanticColors.cardStroke.copy(alpha = 0.9f)),
             shape = RoundedCornerShape(Radius.xl)
         ) {
             Box(
                 modifier = Modifier.background(
                     Brush.verticalGradient(
                         listOf(
-                            Mocha.PanelHighest.copy(alpha = 0.95f),
-                            Mocha.Panel
+                            semanticColors.panelHighest.copy(alpha = 0.95f),
+                            semanticColors.panel
                         )
                     )
                 )
@@ -488,12 +489,12 @@ fun ExportSheet(
                 ) {
                     Text(
                         text = config.platformPreset?.displayName ?: stringResource(R.string.export_delivery_summary),
-                        color = Mocha.Rosewater,
+                        color = ClearCutAccents.Rosewater,
                         style = MaterialTheme.typography.labelLarge
                     )
                     Text(
                         text = summaryHeadline,
-                        color = Mocha.Text,
+                        color = semanticColors.text,
                         style = MaterialTheme.typography.headlineMedium
                     )
                     FlowRow(
@@ -502,32 +503,32 @@ fun ExportSheet(
                     ) {
                         when {
                             config.captureFrameOnly -> {
-                                ExportPill(localizedFrameCaptureFormat(config.captureFormat), Mocha.Mauve)
-                                ExportPill(aspectRatio.label, Mocha.Sapphire)
+                                ExportPill(localizedFrameCaptureFormat(config.captureFormat), ClearCutAccents.Mauve)
+                                ExportPill(aspectRatio.label, ClearCutAccents.Sapphire)
                             }
                             config.exportAsGif -> {
-                                ExportPill(stringResource(R.string.export_fps_value, config.gifFrameRate), Mocha.Mauve)
-                                ExportPill(stringResource(R.string.export_pixels_value, config.gifMaxWidth), Mocha.Sapphire)
-                                ExportPill(aspectRatio.label, Mocha.Teal)
+                                ExportPill(stringResource(R.string.export_fps_value, config.gifFrameRate), ClearCutAccents.Mauve)
+                                ExportPill(stringResource(R.string.export_pixels_value, config.gifMaxWidth), ClearCutAccents.Sapphire)
+                                ExportPill(aspectRatio.label, ClearCutAccents.Teal)
                             }
                             config.exportStemsOnly -> {
-                                ExportPill(stringResource(R.string.export_stems), Mocha.Mauve)
-                                ExportPill(config.audioCodec.label, Mocha.Sapphire)
+                                ExportPill(stringResource(R.string.export_stems), ClearCutAccents.Mauve)
+                                ExportPill(config.audioCodec.label, ClearCutAccents.Sapphire)
                             }
                             config.exportAudioOnly -> {
-                                ExportPill(stringResource(R.string.export_audio_only), Mocha.Mauve)
-                                ExportPill(config.audioCodec.label, Mocha.Sapphire)
+                                ExportPill(stringResource(R.string.export_audio_only), ClearCutAccents.Mauve)
+                                ExportPill(config.audioCodec.label, ClearCutAccents.Sapphire)
                             }
                             else -> {
-                                ExportPill(stringResource(R.string.export_fps_value, config.frameRate), Mocha.Mauve)
-                                ExportPill(config.codec.label, Mocha.Sapphire)
-                                ExportPill(localizedExportQuality(config.quality), Mocha.Teal)
+                                ExportPill(stringResource(R.string.export_fps_value, config.frameRate), ClearCutAccents.Mauve)
+                                ExportPill(config.codec.label, ClearCutAccents.Sapphire)
+                                ExportPill(localizedExportQuality(config.quality), ClearCutAccents.Teal)
                             }
                         }
                     }
                     Text(
                         text = summaryDetail,
-                        color = Mocha.Subtext0,
+                        color = semanticColors.subtext,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -539,7 +540,7 @@ fun ExportSheet(
         ExportSectionCard(
             title = stringResource(R.string.export_quick_presets),
             description = stringResource(R.string.export_presets_description),
-            accent = Mocha.Green
+            accent = ClearCutAccents.Green
         ) {
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -561,10 +562,10 @@ fun ExportSheet(
                         label = { Text(preset.displayName, style = MaterialTheme.typography.labelMedium) },
                         selected = isSelected,
                         colors = FilterChipDefaults.filterChipColors(
-                            containerColor = Mocha.PanelRaised,
-                            labelColor = Mocha.Subtext0,
-                            selectedContainerColor = Mocha.Green.copy(alpha = 0.16f),
-                            selectedLabelColor = Mocha.Green
+                            containerColor = semanticColors.panelRaised,
+                            labelColor = semanticColors.subtext,
+                            selectedContainerColor = ClearCutAccents.Green.copy(alpha = 0.16f),
+                            selectedLabelColor = ClearCutAccents.Green
                         )
                     )
                 }
@@ -576,7 +577,7 @@ fun ExportSheet(
         ExportSectionCard(
             title = stringResource(R.string.export_special_outputs),
             description = stringResource(R.string.export_special_outputs_description),
-            accent = Mocha.Mauve
+            accent = ClearCutAccents.Mauve
         ) {
             ExportToggleRow(
                 icon = Icons.Default.GraphicEq,
@@ -594,10 +595,10 @@ fun ExportSheet(
                         )
                     )
                 },
-                accent = Mocha.Peach
+                accent = ClearCutAccents.Peach
             )
 
-            HorizontalDivider(color = Mocha.CardStroke.copy(alpha = 0.6f))
+            HorizontalDivider(color = semanticColors.cardStroke.copy(alpha = 0.6f))
 
             ExportToggleRow(
                 icon = Icons.Default.ClosedCaption,
@@ -607,13 +608,13 @@ fun ExportSheet(
                 onCheckedChange = {
                     onConfigChanged(config.copy(subtitleFormat = if (it) SubtitleFormat.SRT else null))
                 },
-                accent = Mocha.Blue
+                accent = ClearCutAccents.Blue
             )
 
             if (config.subtitleFormat != null) {
                 ExportChoiceGroup(
                     title = stringResource(R.string.export_subtitles),
-                    accent = Mocha.Blue
+                    accent = ClearCutAccents.Blue
                 ) {
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -624,14 +625,14 @@ fun ExportSheet(
                                 onClick = { onConfigChanged(config.copy(subtitleFormat = format)) },
                                 label = { Text(format.displayName, style = MaterialTheme.typography.labelMedium) },
                                 selected = config.subtitleFormat == format,
-                                colors = exportChipColors(Mocha.Blue)
+                                colors = exportChipColors(ClearCutAccents.Blue)
                             )
                         }
                     }
                 }
             }
 
-            HorizontalDivider(color = Mocha.CardStroke.copy(alpha = 0.6f))
+            HorizontalDivider(color = semanticColors.cardStroke.copy(alpha = 0.6f))
 
             ExportToggleRow(
                 icon = Icons.Default.Layers,
@@ -649,10 +650,10 @@ fun ExportSheet(
                         )
                     )
                 },
-                accent = Mocha.Yellow
+                accent = ClearCutAccents.Yellow
             )
 
-            HorizontalDivider(color = Mocha.CardStroke.copy(alpha = 0.6f))
+            HorizontalDivider(color = semanticColors.cardStroke.copy(alpha = 0.6f))
 
             ExportToggleRow(
                 icon = Icons.AutoMirrored.Filled.Notes,
@@ -660,11 +661,11 @@ fun ExportSheet(
                 description = stringResource(R.string.export_chapter_markers_description),
                 checked = config.includeChapterMarkers,
                 onCheckedChange = { onConfigChanged(config.copy(includeChapterMarkers = it)) },
-                accent = Mocha.Sapphire
+                accent = ClearCutAccents.Sapphire
             )
 
             if (videoModeEnabled) {
-                HorizontalDivider(color = Mocha.CardStroke.copy(alpha = 0.6f))
+                HorizontalDivider(color = semanticColors.cardStroke.copy(alpha = 0.6f))
 
                 ExportToggleRow(
                     icon = Icons.Default.AutoAwesome,
@@ -684,7 +685,7 @@ fun ExportSheet(
                             )
                         )
                     },
-                    accent = if (hasDisclosureBearingAiUsage) Mocha.Mauve else Mocha.Teal
+                    accent = if (hasDisclosureBearingAiUsage) ClearCutAccents.Mauve else ClearCutAccents.Teal
                 )
 
                 if (config.discloseAiUse && hasAiUsage) {
@@ -696,7 +697,7 @@ fun ExportSheet(
                         onCheckedChange = {
                             onConfigChanged(config.copy(writeAiUseSidecar = it))
                         },
-                        accent = Mocha.Blue
+                        accent = ClearCutAccents.Blue
                     )
                 }
 
@@ -707,13 +708,13 @@ fun ExportSheet(
                     ) {
                         Text(
                             text = stringResource(R.string.export_ai_ledger_clear_button),
-                            color = Mocha.Red
+                            color = ClearCutAccents.Red
                         )
                     }
                 }
             }
 
-            HorizontalDivider(color = Mocha.CardStroke.copy(alpha = 0.6f))
+            HorizontalDivider(color = semanticColors.cardStroke.copy(alpha = 0.6f))
 
             ExportToggleRow(
                 icon = Icons.Default.LayersClear,
@@ -721,10 +722,10 @@ fun ExportSheet(
                 description = stringResource(R.string.export_transparent_bg_description),
                 checked = config.transparentBackground,
                 onCheckedChange = { onConfigChanged(config.copy(transparentBackground = it)) },
-                accent = Mocha.Teal
+                accent = ClearCutAccents.Teal
             )
 
-            HorizontalDivider(color = Mocha.CardStroke.copy(alpha = 0.6f))
+            HorizontalDivider(color = semanticColors.cardStroke.copy(alpha = 0.6f))
 
             ExportToggleRow(
                 icon = Icons.Default.GifBox,
@@ -742,13 +743,13 @@ fun ExportSheet(
                         )
                     )
                 },
-                accent = Mocha.Mauve
+                accent = ClearCutAccents.Mauve
             )
 
             if (config.exportAsGif) {
                 ExportChoiceGroup(
                     title = stringResource(R.string.export_gif_frame_rate),
-                    accent = Mocha.Mauve
+                    accent = ClearCutAccents.Mauve
                 ) {
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -759,7 +760,7 @@ fun ExportSheet(
                                 onClick = { onConfigChanged(config.copy(gifFrameRate = frameRate)) },
                                 label = { Text(stringResource(R.string.export_fps_value, frameRate), style = MaterialTheme.typography.labelMedium) },
                                 selected = config.gifFrameRate == frameRate,
-                                colors = exportChipColors(Mocha.Mauve)
+                                colors = exportChipColors(ClearCutAccents.Mauve)
                             )
                         }
                     }
@@ -767,7 +768,7 @@ fun ExportSheet(
 
                 ExportChoiceGroup(
                     title = stringResource(R.string.export_gif_max_width),
-                    accent = Mocha.Mauve
+                    accent = ClearCutAccents.Mauve
                 ) {
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -778,14 +779,14 @@ fun ExportSheet(
                                 onClick = { onConfigChanged(config.copy(gifMaxWidth = maxWidth)) },
                                 label = { Text(stringResource(R.string.export_pixels_value, maxWidth), style = MaterialTheme.typography.labelMedium) },
                                 selected = config.gifMaxWidth == maxWidth,
-                                colors = exportChipColors(Mocha.Mauve)
+                                colors = exportChipColors(ClearCutAccents.Mauve)
                             )
                         }
                     }
                 }
             }
 
-            HorizontalDivider(color = Mocha.CardStroke.copy(alpha = 0.6f))
+            HorizontalDivider(color = semanticColors.cardStroke.copy(alpha = 0.6f))
 
             ExportToggleRow(
                 icon = Icons.Default.Image,
@@ -803,13 +804,13 @@ fun ExportSheet(
                         )
                     )
                 },
-                accent = Mocha.Green
+                accent = ClearCutAccents.Green
             )
 
             if (config.captureFrameOnly) {
                 ExportChoiceGroup(
                     title = stringResource(R.string.export_capture_format),
-                    accent = Mocha.Green
+                    accent = ClearCutAccents.Green
                 ) {
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -820,14 +821,14 @@ fun ExportSheet(
                                 onClick = { onConfigChanged(config.copy(captureFormat = format)) },
                                 label = { Text(format.displayName, style = MaterialTheme.typography.labelMedium) },
                                 selected = config.captureFormat == format,
-                                colors = exportChipColors(Mocha.Green)
+                                colors = exportChipColors(ClearCutAccents.Green)
                             )
                         }
                     }
                 }
             }
 
-            HorizontalDivider(color = Mocha.CardStroke.copy(alpha = 0.6f))
+            HorizontalDivider(color = semanticColors.cardStroke.copy(alpha = 0.6f))
 
             ExportToggleRow(
                 icon = Icons.Default.ViewModule,
@@ -845,13 +846,13 @@ fun ExportSheet(
                         )
                     )
                 },
-                accent = Mocha.Flamingo
+                accent = ClearCutAccents.Flamingo
             )
 
             if (config.exportAsContactSheet) {
                 ExportChoiceGroup(
                     title = stringResource(R.string.export_contact_sheet_columns),
-                    accent = Mocha.Flamingo
+                    accent = ClearCutAccents.Flamingo
                 ) {
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -862,7 +863,7 @@ fun ExportSheet(
                                 onClick = { onConfigChanged(config.copy(contactSheetColumns = cols)) },
                                 label = { Text(pluralStringResource(R.plurals.export_columns_count, cols, cols), style = MaterialTheme.typography.labelMedium) },
                                 selected = config.contactSheetColumns == cols,
-                                colors = exportChipColors(Mocha.Flamingo)
+                                colors = exportChipColors(ClearCutAccents.Flamingo)
                             )
                         }
                     }
@@ -872,7 +873,7 @@ fun ExportSheet(
             // Watermark burn-in. Applies across all video clips during export;
             // no effect on GIF / contact-sheet / frame-capture paths.
             if (videoModeEnabled) {
-                HorizontalDivider(color = Mocha.CardStroke.copy(alpha = 0.6f))
+                HorizontalDivider(color = semanticColors.cardStroke.copy(alpha = 0.6f))
                 WatermarkSection(
                     watermark = config.watermark,
                     onWatermarkChanged = { updated ->
@@ -887,7 +888,7 @@ fun ExportSheet(
         ExportSectionCard(
             title = stringResource(R.string.export_delivery_options),
             description = stringResource(R.string.export_delivery_options_description),
-            accent = Mocha.Sapphire
+            accent = ClearCutAccents.Sapphire
         ) {
             if (videoModeEnabled && suggestedResolution != null &&
                 (suggestedResolution != config.resolution || (suggestedFps != null && suggestedFps != config.frameRate))
@@ -900,10 +901,10 @@ fun ExportSheet(
                 val upscaleWarning = config.resolution.height > suggestedResolution.height
                 Surface(
                     shape = RoundedCornerShape(Radius.md),
-                    color = if (upscaleWarning) Mocha.Yellow.copy(alpha = 0.12f) else Mocha.Green.copy(alpha = 0.12f),
+                    color = if (upscaleWarning) ClearCutAccents.Yellow.copy(alpha = 0.12f) else ClearCutAccents.Green.copy(alpha = 0.12f),
                     border = BorderStroke(
                         1.dp,
-                        if (upscaleWarning) Mocha.Yellow.copy(alpha = 0.3f) else Mocha.Green.copy(alpha = 0.3f)
+                        if (upscaleWarning) ClearCutAccents.Yellow.copy(alpha = 0.3f) else ClearCutAccents.Green.copy(alpha = 0.3f)
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -922,27 +923,27 @@ fun ExportSheet(
                         Icon(
                             if (upscaleWarning) Icons.Default.Warning else Icons.Default.AutoAwesome,
                             contentDescription = null,
-                            tint = if (upscaleWarning) Mocha.Yellow else Mocha.Green,
+                            tint = if (upscaleWarning) ClearCutAccents.Yellow else ClearCutAccents.Green,
                             modifier = Modifier.size(18.dp)
                         )
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 label,
                                 style = MaterialTheme.typography.labelMedium,
-                                color = if (upscaleWarning) Mocha.Yellow else Mocha.Green
+                                color = if (upscaleWarning) ClearCutAccents.Yellow else ClearCutAccents.Green
                             )
                             if (upscaleWarning) {
                                 Text(
                                     stringResource(R.string.export_exceeds_source_resolution),
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Mocha.Subtext0
+                                    color = semanticColors.subtext
                                 )
                             }
                         }
                         Text(
                             stringResource(R.string.ai_apply),
                             style = MaterialTheme.typography.labelMedium,
-                            color = Mocha.Mauve
+                            color = ClearCutAccents.Mauve
                         )
                     }
                 }
@@ -951,7 +952,7 @@ fun ExportSheet(
             if (videoModeEnabled) {
                 ExportChoiceGroup(
                     title = stringResource(R.string.export_resolution),
-                    accent = Mocha.Rosewater
+                    accent = ClearCutAccents.Rosewater
                 ) {
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -962,7 +963,7 @@ fun ExportSheet(
                                 onClick = { onConfigChanged(config.copy(resolution = resolution)) },
                                 label = { Text(resolution.label, style = MaterialTheme.typography.labelMedium) },
                                 selected = config.resolution == resolution,
-                                colors = exportChipColors(Mocha.Rosewater)
+                                colors = exportChipColors(ClearCutAccents.Rosewater)
                             )
                         }
                     }
@@ -970,7 +971,7 @@ fun ExportSheet(
 
                 ExportChoiceGroup(
                     title = stringResource(R.string.export_frame_rate),
-                    accent = Mocha.Mauve
+                    accent = ClearCutAccents.Mauve
                 ) {
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -981,7 +982,7 @@ fun ExportSheet(
                                 onClick = { onConfigChanged(config.copy(frameRate = frameRate)) },
                                 label = { Text(stringResource(R.string.export_fps_value, frameRate), style = MaterialTheme.typography.labelMedium) },
                                 selected = config.frameRate == frameRate,
-                                colors = exportChipColors(Mocha.Mauve)
+                                colors = exportChipColors(ClearCutAccents.Mauve)
                             )
                         }
                     }
@@ -989,7 +990,7 @@ fun ExportSheet(
 
                 ExportChoiceGroup(
                     title = stringResource(R.string.export_codec),
-                    accent = Mocha.Blue
+                    accent = ClearCutAccents.Blue
                 ) {
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1003,12 +1004,12 @@ fun ExportSheet(
                                 selected = config.codec == codec,
                                 enabled = isAvailable,
                                 colors = FilterChipDefaults.filterChipColors(
-                                    containerColor = Mocha.PanelRaised,
-                                    labelColor = Mocha.Subtext0,
-                                    selectedContainerColor = Mocha.Blue.copy(alpha = 0.16f),
-                                    selectedLabelColor = Mocha.Blue,
-                                    disabledContainerColor = Mocha.PanelRaised.copy(alpha = 0.45f),
-                                    disabledLabelColor = Mocha.Subtext0.copy(alpha = 0.4f)
+                                    containerColor = semanticColors.panelRaised,
+                                    labelColor = semanticColors.subtext,
+                                    selectedContainerColor = ClearCutAccents.Blue.copy(alpha = 0.16f),
+                                    selectedLabelColor = ClearCutAccents.Blue,
+                                    disabledContainerColor = semanticColors.panelRaised.copy(alpha = 0.45f),
+                                    disabledLabelColor = semanticColors.subtext.copy(alpha = 0.4f)
                                 )
                             )
                         }
@@ -1027,10 +1028,10 @@ fun ExportSheet(
                     onCheckedChange = { enabled ->
                         onConfigChanged(config.copy(hdr10PlusMetadata = enabled && codecCanCarryHdr))
                     },
-                    accent = Mocha.Yellow
+                    accent = ClearCutAccents.Yellow
                 )
 
-                HorizontalDivider(color = Mocha.CardStroke.copy(alpha = 0.6f))
+                HorizontalDivider(color = semanticColors.cardStroke.copy(alpha = 0.6f))
 
                 ExportToggleRow(
                     icon = Icons.Default.Speed,
@@ -1038,12 +1039,12 @@ fun ExportSheet(
                     description = stringResource(R.string.export_fast_trim_description),
                     checked = config.allowStreamCopy,
                     onCheckedChange = { onConfigChanged(config.copy(allowStreamCopy = it)) },
-                    accent = Mocha.Green
+                    accent = ClearCutAccents.Green
                 )
 
                 ExportChoiceGroup(
                     title = stringResource(R.string.export_quality),
-                    accent = Mocha.Teal
+                    accent = ClearCutAccents.Teal
                 ) {
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1054,7 +1055,7 @@ fun ExportSheet(
                                 onClick = { onConfigChanged(config.copy(quality = quality)) },
                                 label = { Text(localizedExportQuality(quality), style = MaterialTheme.typography.labelMedium) },
                                 selected = config.quality == quality,
-                                colors = exportChipColors(Mocha.Teal)
+                                colors = exportChipColors(ClearCutAccents.Teal)
                             )
                         }
                     }
@@ -1064,7 +1065,7 @@ fun ExportSheet(
             if (audioCodecVisible) {
                 ExportChoiceGroup(
                     title = stringResource(R.string.export_audio_codec),
-                    accent = Mocha.Peach
+                    accent = ClearCutAccents.Peach
                 ) {
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1075,7 +1076,7 @@ fun ExportSheet(
                                 onClick = { onConfigChanged(config.copy(audioCodec = audioCodec)) },
                                 label = { Text(audioCodec.label, style = MaterialTheme.typography.labelMedium) },
                                 selected = config.audioCodec == audioCodec,
-                                colors = exportChipColors(Mocha.Peach)
+                                colors = exportChipColors(ClearCutAccents.Peach)
                             )
                         }
                     }
@@ -1088,16 +1089,16 @@ fun ExportSheet(
         ExportSectionCard(
             title = stringResource(R.string.export_output_details),
             description = summaryDetail,
-            accent = Mocha.Rosewater
+            accent = ClearCutAccents.Rosewater
         ) {
             Text(
                 text = outputDetailsPrimary,
-                color = Mocha.Text,
+                color = semanticColors.text,
                 style = MaterialTheme.typography.titleMedium
             )
             Text(
                 text = outputDetailsSecondary,
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodyMedium
             )
             if (videoModeEnabled) {
@@ -1116,7 +1117,7 @@ fun ExportSheet(
             if (estimatedSize != null && videoModeEnabled) {
                 Text(
                     text = stringResource(R.string.export_estimated_size_format, estimatedSize),
-                    color = Mocha.Peach,
+                    color = ClearCutAccents.Peach,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -1124,7 +1125,7 @@ fun ExportSheet(
                 val etaSec = estimateExportEtaSeconds(totalDurationMs, effectiveConfig)
                 Text(
                     text = stringResource(R.string.export_estimated_time_format, formatEtaSeconds(etaSec)),
-                    color = Mocha.Blue,
+                    color = ClearCutAccents.Blue,
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (smartRenderSummary != null) {
@@ -1187,7 +1188,7 @@ fun ExportSheet(
                 preflightWarnings.forEach { warning ->
                     Text(
                         text = warning,
-                        color = Mocha.Yellow,
+                        color = ClearCutAccents.Yellow,
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -1205,7 +1206,7 @@ fun ExportSheet(
             ExportSectionCard(
                 title = stringResource(R.string.export_target_size),
                 description = stringResource(R.string.export_target_size_description),
-                accent = Mocha.Pink
+                accent = ClearCutAccents.Pink
             ) {
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1217,7 +1218,7 @@ fun ExportSheet(
                         },
                         label = { Text(stringResource(R.string.settings_off), style = MaterialTheme.typography.labelMedium) },
                         selected = config.targetSizeBytes == null,
-                        colors = exportChipColors(Mocha.Pink)
+                        colors = exportChipColors(ClearCutAccents.Pink)
                     )
                     TargetSizePreset.entries.forEach { preset ->
                         FilterChip(
@@ -1226,7 +1227,7 @@ fun ExportSheet(
                             },
                             label = { Text(preset.displayName, style = MaterialTheme.typography.labelMedium) },
                             selected = config.targetSizeBytes == preset.sizeBytes,
-                            colors = exportChipColors(Mocha.Pink)
+                            colors = exportChipColors(ClearCutAccents.Pink)
                         )
                     }
                 }
@@ -1234,7 +1235,7 @@ fun ExportSheet(
                     val mbps = effectiveConfig.videoBitrate / 1_000_000.0
                     Text(
                         text = stringResource(R.string.export_target_bitrate, mbps),
-                        color = Mocha.Subtext0,
+                        color = semanticColors.subtext,
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -1245,7 +1246,7 @@ fun ExportSheet(
             ExportSectionCard(
                 title = stringResource(R.string.export_filename_template),
                 description = stringResource(R.string.export_filename_template_description),
-                accent = Mocha.Lavender
+                accent = ClearCutAccents.Lavender
             ) {
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1264,13 +1265,13 @@ fun ExportSheet(
                             onClick = { onConfigChanged(config.copy(filenameTemplate = tmpl)) },
                             label = { Text(stringResource(labelRes), style = MaterialTheme.typography.labelMedium) },
                             selected = config.filenameTemplate == tmpl,
-                            colors = exportChipColors(Mocha.Lavender)
+                            colors = exportChipColors(ClearCutAccents.Lavender)
                         )
                     }
                 }
                 Text(
                     text = stringResource(R.string.export_current_filename_template, config.filenameTemplate),
-                    color = Mocha.Subtext0,
+                    color = semanticColors.subtext,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -1281,7 +1282,7 @@ fun ExportSheet(
         ExportSectionCard(
             title = stringResource(R.string.export_ready_to_export),
             description = stringResource(R.string.export_ready_to_export_description),
-            accent = Mocha.Rosewater
+            accent = ClearCutAccents.Rosewater
         ) {
             ClearCutPrimaryButton(
                 text = primaryButtonLabel,
@@ -1312,7 +1313,7 @@ fun ExportSheet(
         ExportSectionCard(
             title = stringResource(R.string.export_timeline_exchange),
             description = stringResource(R.string.export_timeline_exchange_description),
-            accent = Mocha.Sapphire
+            accent = ClearCutAccents.Sapphire
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1322,13 +1323,13 @@ fun ExportSheet(
                     text = stringResource(R.string.export_otio),
                     onClick = onExportOtio,
                     modifier = Modifier.weight(1f),
-                    contentColor = Mocha.Sapphire
+                    contentColor = ClearCutAccents.Sapphire
                 )
                 ClearCutSecondaryButton(
                     text = stringResource(R.string.export_fcpxml),
                     onClick = onExportFcpxml,
                     modifier = Modifier.weight(1f),
-                    contentColor = Mocha.Sapphire
+                    contentColor = ClearCutAccents.Sapphire
                 )
             }
         }
@@ -1387,18 +1388,19 @@ private fun ExportSectionCard(
 
 @Composable
 private fun ExportHistorySection(entries: List<ExportHistoryEntry>) {
+    val semanticColors = LocalClearCutColors.current
     val dateFormat = remember {
         DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
     }
     ExportSectionCard(
         title = stringResource(R.string.export_history_title),
         description = stringResource(R.string.export_history_description),
-        accent = Mocha.Teal
+        accent = ClearCutAccents.Teal
     ) {
         entries.forEachIndexed { index, entry ->
             ExportHistoryRow(entry = entry, dateFormat = dateFormat)
             if (index < entries.lastIndex) {
-                HorizontalDivider(color = Mocha.CardStroke.copy(alpha = 0.7f))
+                HorizontalDivider(color = semanticColors.cardStroke.copy(alpha = 0.7f))
             }
         }
     }
@@ -1409,11 +1411,12 @@ private fun ExportHistoryRow(
     entry: ExportHistoryEntry,
     dateFormat: DateFormat
 ) {
+    val semanticColors = LocalClearCutColors.current
     val statusColor = when (entry.status) {
-        ExportHistoryStatus.COMPLETE -> Mocha.Green
-        ExportHistoryStatus.FAILED -> Mocha.Red
-        ExportHistoryStatus.CANCELLED -> Mocha.Peach
-        ExportHistoryStatus.BLOCKED -> Mocha.Yellow
+        ExportHistoryStatus.COMPLETE -> ClearCutAccents.Green
+        ExportHistoryStatus.FAILED -> ClearCutAccents.Red
+        ExportHistoryStatus.CANCELLED -> ClearCutAccents.Peach
+        ExportHistoryStatus.BLOCKED -> ClearCutAccents.Yellow
     }
     val statusLabel = when (entry.status) {
         ExportHistoryStatus.COMPLETE -> stringResource(R.string.export_history_status_complete)
@@ -1451,19 +1454,19 @@ private fun ExportHistoryRow(
             ) {
                 Text(
                     text = entry.outputName ?: entry.projectName,
-                    color = Mocha.Text,
+                    color = semanticColors.text,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
                     text = detail,
-                    color = Mocha.Subtext0,
+                    color = semanticColors.subtext,
                     style = MaterialTheme.typography.bodySmall
                 )
                 entry.diagnosticSummary?.let { diagnostic ->
                     Text(
                         text = diagnostic,
-                        color = if (entry.status == ExportHistoryStatus.COMPLETE) Mocha.Subtext0 else Mocha.Yellow,
+                        color = if (entry.status == ExportHistoryStatus.COMPLETE) semanticColors.subtext else ClearCutAccents.Yellow,
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -1474,7 +1477,7 @@ private fun ExportHistoryRow(
                             entry.mediaBlockingCount,
                             entry.mediaWarningCount
                         ),
-                        color = Mocha.Peach,
+                        color = ClearCutAccents.Peach,
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -1502,12 +1505,13 @@ private fun ExportChoiceGroup(
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
 private fun ColorConfidenceOutlook(report: ExportColorConfidenceEngine.Report) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = if (report.hasWarnings) Mocha.Yellow.copy(alpha = 0.08f) else Mocha.Green.copy(alpha = 0.08f),
+        color = if (report.hasWarnings) ClearCutAccents.Yellow.copy(alpha = 0.08f) else ClearCutAccents.Green.copy(alpha = 0.08f),
         border = BorderStroke(
             1.dp,
-            if (report.hasWarnings) Mocha.Yellow.copy(alpha = 0.24f) else Mocha.Green.copy(alpha = 0.22f)
+            if (report.hasWarnings) ClearCutAccents.Yellow.copy(alpha = 0.24f) else ClearCutAccents.Green.copy(alpha = 0.22f)
         ),
         shape = RoundedCornerShape(Radius.lg)
     ) {
@@ -1517,13 +1521,13 @@ private fun ColorConfidenceOutlook(report: ExportColorConfidenceEngine.Report) {
         ) {
             Text(
                 text = stringResource(R.string.export_color_confidence_title),
-                color = Mocha.Text,
+                color = semanticColors.text,
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold
             )
             Text(
                 text = stringResource(R.string.export_color_confidence_description),
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodySmall
             )
             FlowRow(
@@ -1538,7 +1542,7 @@ private fun ColorConfidenceOutlook(report: ExportColorConfidenceEngine.Report) {
             report.warnings.forEach { warning ->
                 Text(
                     text = warning,
-                    color = Mocha.Yellow,
+                    color = ClearCutAccents.Yellow,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -1549,10 +1553,11 @@ private fun ColorConfidenceOutlook(report: ExportColorConfidenceEngine.Report) {
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
 private fun DeviceTierOutlook(hint: EncoderCapabilityProbe.DeviceEncodingTierHint) {
+    val semanticColors = LocalClearCutColors.current
     val accent = when (hint.tier) {
-        EncoderCapabilityProbe.DeviceEncodingTier.PREMIUM -> Mocha.Mauve
-        EncoderCapabilityProbe.DeviceEncodingTier.ADVANCED -> Mocha.Blue
-        EncoderCapabilityProbe.DeviceEncodingTier.STANDARD -> Mocha.Subtext0
+        EncoderCapabilityProbe.DeviceEncodingTier.PREMIUM -> ClearCutAccents.Mauve
+        EncoderCapabilityProbe.DeviceEncodingTier.ADVANCED -> ClearCutAccents.Blue
+        EncoderCapabilityProbe.DeviceEncodingTier.STANDARD -> semanticColors.subtext
     }
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -1577,14 +1582,14 @@ private fun DeviceTierOutlook(hint: EncoderCapabilityProbe.DeviceEncodingTierHin
                 )
                 Text(
                     text = stringResource(R.string.export_device_tier_title, localizedDeviceTier(hint.tier)),
-                    color = Mocha.Text,
+                    color = semanticColors.text,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold
                 )
             }
             Text(
                 text = hint.detail,
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodySmall
             )
             FlowRow(
@@ -1593,18 +1598,18 @@ private fun DeviceTierOutlook(hint: EncoderCapabilityProbe.DeviceEncodingTierHin
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs)
             ) {
                 if (hint.hasHardwareHevc) {
-                    DeviceCapabilityPill(stringResource(R.string.export_hardware_hevc), Mocha.Blue)
+                    DeviceCapabilityPill(stringResource(R.string.export_hardware_hevc), ClearCutAccents.Blue)
                 }
                 if (hint.hasHardwareAv1) {
-                    DeviceCapabilityPill(stringResource(R.string.export_hardware_av1), Mocha.Green)
+                    DeviceCapabilityPill(stringResource(R.string.export_hardware_av1), ClearCutAccents.Green)
                 }
                 if (hint.hasHardwareVp9) {
-                    DeviceCapabilityPill(stringResource(R.string.export_hardware_vp9), Mocha.Teal)
+                    DeviceCapabilityPill(stringResource(R.string.export_hardware_vp9), ClearCutAccents.Teal)
                 }
                 hint.hdrFormats
                     .sortedBy { it.displayName }
                     .forEach { format ->
-                        DeviceCapabilityPill(format.displayName, Mocha.Yellow)
+                        DeviceCapabilityPill(format.displayName, ClearCutAccents.Yellow)
                     }
             }
         }
@@ -1635,10 +1640,11 @@ private fun ColorConfidencePill(
     chip: ExportColorConfidenceEngine.Chip,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     val accent = when (chip.tone) {
-        ExportColorConfidenceEngine.Tone.GOOD -> Mocha.Green
-        ExportColorConfidenceEngine.Tone.INFO -> Mocha.Blue
-        ExportColorConfidenceEngine.Tone.WARNING -> Mocha.Yellow
+        ExportColorConfidenceEngine.Tone.GOOD -> ClearCutAccents.Green
+        ExportColorConfidenceEngine.Tone.INFO -> ClearCutAccents.Blue
+        ExportColorConfidenceEngine.Tone.WARNING -> ClearCutAccents.Yellow
     }
     Surface(
         modifier = modifier,
@@ -1658,7 +1664,7 @@ private fun ColorConfidencePill(
             )
             Text(
                 text = chip.detail,
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodySmall
             )
         }
@@ -1668,6 +1674,7 @@ private fun ColorConfidencePill(
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
 private fun SmartRenderExportOutlook(summary: SmartRenderEngine.SmartRenderSummary) {
+    val semanticColors = LocalClearCutColors.current
     val passThroughPercent = if (summary.totalDurationMs > 0L) {
         ((summary.passThroughDurationMs * 100L) / summary.totalDurationMs).toInt().coerceIn(0, 100)
     } else {
@@ -1682,8 +1689,8 @@ private fun SmartRenderExportOutlook(summary: SmartRenderEngine.SmartRenderSumma
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Mocha.Blue.copy(alpha = 0.10f),
-        border = BorderStroke(1.dp, Mocha.Blue.copy(alpha = 0.24f)),
+        color = ClearCutAccents.Blue.copy(alpha = 0.10f),
+        border = BorderStroke(1.dp, ClearCutAccents.Blue.copy(alpha = 0.24f)),
         shape = RoundedCornerShape(Radius.lg)
     ) {
         Column(
@@ -1698,23 +1705,23 @@ private fun SmartRenderExportOutlook(summary: SmartRenderEngine.SmartRenderSumma
                 Icon(
                     imageVector = Icons.Default.Layers,
                     contentDescription = null,
-                    tint = Mocha.Blue,
+                    tint = ClearCutAccents.Blue,
                     modifier = Modifier.size(18.dp)
                 )
                 Text(
                     text = stringResource(R.string.export_smart_render_title),
-                    color = Mocha.Text,
+                    color = semanticColors.text,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f)
                 )
                 Surface(
-                    color = Mocha.Blue.copy(alpha = 0.16f),
+                    color = ClearCutAccents.Blue.copy(alpha = 0.16f),
                     shape = RoundedCornerShape(Radius.sm)
                 ) {
                     Text(
                         text = speedupText,
-                        color = Mocha.Blue,
+                        color = ClearCutAccents.Blue,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
@@ -1728,7 +1735,7 @@ private fun SmartRenderExportOutlook(summary: SmartRenderEngine.SmartRenderSumma
                     summary.passThroughSegments,
                     summary.reEncodeSegments
                 ),
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodySmall
             )
             FlowRow(
@@ -1741,14 +1748,14 @@ private fun SmartRenderExportOutlook(summary: SmartRenderEngine.SmartRenderSumma
                         R.string.render_pass_through_duration,
                         formatEtaSeconds((summary.passThroughDurationMs / 1000L).coerceAtLeast(0L))
                     ),
-                    accent = Mocha.Green
+                    accent = ClearCutAccents.Green
                 )
                 SmartRenderMetricPill(
                     text = stringResource(
                         R.string.render_re_encode_duration,
                         formatEtaSeconds((summary.reEncodeDurationMs / 1000L).coerceAtLeast(0L))
                     ),
-                    accent = Mocha.Peach
+                    accent = ClearCutAccents.Peach
                 )
             }
         }
@@ -1791,6 +1798,7 @@ private fun WatermarkSection(
     watermark: Watermark?,
     onWatermarkChanged: (Watermark?) -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     val context = LocalContext.current
     val pickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
@@ -1823,13 +1831,13 @@ private fun WatermarkSection(
                 onWatermarkChanged(null)
             }
         },
-        accent = Mocha.Rosewater
+        accent = ClearCutAccents.Rosewater
     )
 
     if (watermark != null) {
         ExportChoiceGroup(
             title = stringResource(R.string.export_watermark_position),
-            accent = Mocha.Rosewater
+            accent = ClearCutAccents.Rosewater
         ) {
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1840,7 +1848,7 @@ private fun WatermarkSection(
                         onClick = { onWatermarkChanged(watermark.copy(position = pos)) },
                         label = { Text(localizedWatermarkPosition(pos), style = MaterialTheme.typography.labelMedium) },
                         selected = watermark.position == pos,
-                        colors = exportChipColors(Mocha.Rosewater)
+                        colors = exportChipColors(ClearCutAccents.Rosewater)
                     )
                 }
             }
@@ -1849,7 +1857,7 @@ private fun WatermarkSection(
         Column(modifier = Modifier.padding(top = 4.dp)) {
             Text(
                 text = stringResource(R.string.export_watermark_opacity, (watermark.opacity * 100).toInt()),
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.labelMedium
             )
             androidx.compose.material3.Slider(
@@ -1858,15 +1866,15 @@ private fun WatermarkSection(
                 valueRange = 0f..1f,
                 steps = 19,  // 5% step increments
                 colors = androidx.compose.material3.SliderDefaults.colors(
-                    thumbColor = Mocha.Rosewater,
-                    activeTrackColor = Mocha.Rosewater,
-                    inactiveTrackColor = Mocha.Surface2
+                    thumbColor = ClearCutAccents.Rosewater,
+                    activeTrackColor = ClearCutAccents.Rosewater,
+                    inactiveTrackColor = semanticColors.surfaceHigh
                 )
             )
 
             Text(
                 text = stringResource(R.string.export_watermark_scale, watermark.scalePercent),
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.labelMedium
             )
             androidx.compose.material3.Slider(
@@ -1877,9 +1885,9 @@ private fun WatermarkSection(
                 valueRange = 5f..50f,
                 steps = 44,  // 1% step
                 colors = androidx.compose.material3.SliderDefaults.colors(
-                    thumbColor = Mocha.Rosewater,
-                    activeTrackColor = Mocha.Rosewater,
-                    inactiveTrackColor = Mocha.Surface2
+                    thumbColor = ClearCutAccents.Rosewater,
+                    activeTrackColor = ClearCutAccents.Rosewater,
+                    inactiveTrackColor = semanticColors.surfaceHigh
                 )
             )
 
@@ -1892,7 +1900,7 @@ private fun WatermarkSection(
             ) {
                 Text(
                     text = stringResource(R.string.export_watermark_replace),
-                    color = Mocha.Blue
+                    color = ClearCutAccents.Blue
                 )
             }
         }
@@ -1909,6 +1917,7 @@ private fun ExportToggleRow(
     onCheckedChange: (Boolean) -> Unit,
     accent: Color
 ) {
+    val semanticColors = LocalClearCutColors.current
     val colors = LocalClearCutColors.current
     val contentAlpha = if (enabled) 1f else 0.52f
     val semanticState = stringResource(if (checked && enabled) R.string.state_on else R.string.state_off)
@@ -1991,8 +2000,8 @@ private fun ExportToggleRow(
                 modifier = Modifier.clearAndSetSemantics { },
                 colors = SwitchDefaults.colors(
                     checkedTrackColor = accent,
-                    checkedThumbColor = Mocha.Crust,
-                    uncheckedTrackColor = Mocha.Surface1,
+                    checkedThumbColor = semanticColors.onAccent,
+                    uncheckedTrackColor = semanticColors.surface,
                     uncheckedThumbColor = colors.subtext
                 )
             )
@@ -2159,7 +2168,7 @@ private fun ExportStateCard(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(48.dp),
-                            icon = if (tint == Mocha.Red) Icons.Default.Error else null
+                            icon = if (tint == ClearCutAccents.Red) Icons.Default.Error else null
                         )
                     }
                 }
@@ -2205,12 +2214,15 @@ private fun ExportPill(
 }
 
 @Composable
-private fun exportChipColors(accent: Color) = FilterChipDefaults.filterChipColors(
-    containerColor = Mocha.PanelRaised,
-    labelColor = Mocha.Subtext0,
-    selectedContainerColor = accent.copy(alpha = 0.16f),
-    selectedLabelColor = accent
-)
+private fun exportChipColors(accent: Color): androidx.compose.material3.SelectableChipColors {
+    val semanticColors = LocalClearCutColors.current
+    return FilterChipDefaults.filterChipColors(
+        containerColor = semanticColors.panelRaised,
+        labelColor = semanticColors.subtext,
+        selectedContainerColor = accent.copy(alpha = 0.16f),
+        selectedLabelColor = accent
+    )
+}
 
 @Composable
 private fun localizedExportQuality(quality: ExportQuality): String = stringResource(
@@ -2315,6 +2327,7 @@ private fun formatHistoryBytes(bytes: Long): String = when {
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @Composable
 private fun ExportPreviewPlayer(filePath: String) {
+    val semanticColors = LocalClearCutColors.current
     val context = LocalContext.current
     val file = remember(filePath) { java.io.File(filePath) }
     if (!file.exists()) return
@@ -2333,7 +2346,7 @@ private fun ExportPreviewPlayer(filePath: String) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Mocha.Surface0),
+        colors = CardDefaults.cardColors(containerColor = semanticColors.surfaceLow),
         shape = RoundedCornerShape(Radius.lg)
     ) {
         AndroidView(

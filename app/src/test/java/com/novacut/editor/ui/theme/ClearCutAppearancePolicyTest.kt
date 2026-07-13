@@ -23,9 +23,21 @@ class ClearCutAppearancePolicyTest {
     fun highContrastSemanticTextMeetsWcagAa() {
         val colors = ClearCutThemeDefaults.colorsFor(AppearanceMode.HIGH_CONTRAST_DARK)
 
-        assertTrue(ClearCutThemeDefaults.contrastRatio(colors.text, colors.panel) >= 4.5)
-        assertTrue(ClearCutThemeDefaults.contrastRatio(colors.subtext, colors.panel) >= 4.5)
-        assertTrue(ClearCutThemeDefaults.contrastRatio(colors.disabledText, colors.panel) >= 4.5)
+        listOf(
+            colors.background,
+            colors.backgroundMid,
+            colors.panel,
+            colors.panelRaised,
+            colors.panelHighest,
+            colors.surfaceBase,
+            colors.surfaceLow,
+            colors.surface,
+            colors.surfaceHigh,
+        ).forEach { surface ->
+            assertTrue(ClearCutThemeDefaults.contrastRatio(colors.text, surface) >= 4.5)
+            assertTrue(ClearCutThemeDefaults.contrastRatio(colors.subtext, surface) >= 4.5)
+        }
+        assertTrue(ClearCutThemeDefaults.contrastRatio(colors.disabledText, colors.disabledSurface) >= 4.5)
     }
 
     @Test
@@ -51,17 +63,38 @@ class ClearCutAppearancePolicyTest {
     @Test
     fun selectedHighContrastChipHasReadableLabelForCommonAccents() {
         listOf(
-            Mocha.Mauve,
-            Mocha.Sky,
-            Mocha.Green,
-            Mocha.Yellow,
-            Mocha.Peach,
-            Mocha.Red,
+            ClearCutAccents.Lavender,
+            ClearCutAccents.Blue,
+            ClearCutAccents.Sapphire,
+            ClearCutAccents.Sky,
+            ClearCutAccents.Teal,
+            ClearCutAccents.Green,
+            ClearCutAccents.Yellow,
+            ClearCutAccents.Peach,
+            ClearCutAccents.Maroon,
+            ClearCutAccents.Red,
+            ClearCutAccents.Mauve,
+            ClearCutAccents.Pink,
+            ClearCutAccents.Flamingo,
+            ClearCutAccents.Rosewater,
         ).forEach { accent ->
             assertTrue(
                 "Chip label contrast failed for $accent",
-                ClearCutThemeDefaults.contrastRatio(Mocha.Crust, accent) >= 4.5,
+                ClearCutThemeDefaults.contrastRatio(
+                    ClearCutThemeDefaults.colorsFor(AppearanceMode.HIGH_CONTRAST_DARK).onAccent,
+                    accent,
+                ) >= 4.5,
             )
+        }
+    }
+
+    @Test
+    fun highContrastIndicatorsMeetNonTextFloor() {
+        val colors = ClearCutThemeDefaults.colorsFor(AppearanceMode.HIGH_CONTRAST_DARK)
+
+        listOf(colors.overlay, colors.overlayStrong, colors.focusRing).forEach { indicator ->
+            assertTrue(ClearCutThemeDefaults.contrastRatio(indicator, colors.panel) >= 3.0)
+            assertTrue(ClearCutThemeDefaults.contrastRatio(indicator, colors.panelHighest) >= 3.0)
         }
     }
 

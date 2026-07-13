@@ -57,6 +57,28 @@ object Mocha {
     val Rosewater = Color(0xFFF5E0DC)
 }
 
+/**
+ * Stable media/category accents. Feature surfaces may use these to preserve
+ * identity, but structural chrome and readable content must use
+ * [LocalClearCutColors] so High Contrast Dark can strengthen them.
+ */
+object ClearCutAccents {
+    val Lavender = Mocha.Lavender
+    val Blue = Mocha.Blue
+    val Sapphire = Mocha.Sapphire
+    val Sky = Mocha.Sky
+    val Teal = Mocha.Teal
+    val Green = Mocha.Green
+    val Yellow = Mocha.Yellow
+    val Peach = Mocha.Peach
+    val Maroon = Mocha.Maroon
+    val Red = Mocha.Red
+    val Mauve = Mocha.Mauve
+    val Pink = Mocha.Pink
+    val Flamingo = Mocha.Flamingo
+    val Rosewater = Mocha.Rosewater
+}
+
 private val ClearCutDarkColorScheme = darkColorScheme(
     primary = Mocha.Sky,
     onPrimary = Mocha.Crust,
@@ -143,6 +165,7 @@ data class ClearCutSemanticColors(
     val cardStrokeStrong: Color,
     val text: Color,
     val subtext: Color,
+    val subtextStrong: Color,
     val disabledText: Color,
     val accent: Color,
     val accentSecondary: Color,
@@ -153,6 +176,13 @@ data class ClearCutSemanticColors(
     val canvas: Color,
     val selectedSurface: Color,
     val disabledSurface: Color,
+    val surfaceBase: Color,
+    val surfaceLow: Color,
+    val surface: Color,
+    val surfaceHigh: Color,
+    val overlay: Color,
+    val overlayStrong: Color,
+    val onAccent: Color,
 )
 
 val LocalClearCutColors = staticCompositionLocalOf {
@@ -189,6 +219,7 @@ object ClearCutThemeDefaults {
             cardStrokeStrong = Color(0xFFF4F7FF),
             text = Color(0xFFFFFFFF),
             subtext = Color(0xFFF4F7FF),
+            subtextStrong = Color(0xFFFFFFFF),
             disabledText = Color(0xFFBAC2DE),
             accent = Mocha.Sky,
             accentSecondary = Mocha.Peach,
@@ -199,6 +230,13 @@ object ClearCutThemeDefaults {
             canvas = Color(0xFF000000),
             selectedSurface = Mocha.Sky,
             disabledSurface = Color(0xFF111827),
+            surfaceBase = Color(0xFF0C111D),
+            surfaceLow = Color(0xFF172033),
+            surface = Color(0xFF24324A),
+            surfaceHigh = Color(0xFF24324A),
+            overlay = Color(0xFFBAC2DE),
+            overlayStrong = Color(0xFFF4F7FF),
+            onAccent = Color(0xFF05070D),
         )
         AppearanceMode.SYSTEM,
         AppearanceMode.DARK -> ClearCutSemanticColors(
@@ -213,6 +251,7 @@ object ClearCutThemeDefaults {
             cardStrokeStrong = Mocha.CardStrokeStrong,
             text = Mocha.Text,
             subtext = Mocha.Subtext0,
+            subtextStrong = Mocha.Subtext1,
             disabledText = Mocha.Subtext0,
             accent = Mocha.Sky,
             accentSecondary = Mocha.Peach,
@@ -223,6 +262,13 @@ object ClearCutThemeDefaults {
             canvas = Color(0xFF000000),
             selectedSurface = Mocha.Sky.copy(alpha = 0.14f),
             disabledSurface = Mocha.PanelHighest.copy(alpha = 0.48f),
+            surfaceBase = Mocha.Base,
+            surfaceLow = Mocha.Surface0,
+            surface = Mocha.Surface1,
+            surfaceHigh = Mocha.Surface2,
+            overlay = Mocha.Overlay0,
+            overlayStrong = Mocha.Overlay1,
+            onAccent = Mocha.Crust,
         )
     }
 

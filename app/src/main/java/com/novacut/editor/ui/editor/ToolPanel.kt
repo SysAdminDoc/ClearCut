@@ -1,5 +1,6 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -37,7 +38,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.annotation.StringRes
 import com.novacut.editor.R
 import com.novacut.editor.model.*
-import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.LocalClearCutColors
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.TouchTarget
@@ -362,6 +362,7 @@ private fun BottomTabBar(
     onTabTapped: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     val colors = LocalClearCutColors.current
     Surface(
         color = colors.background,
@@ -433,7 +434,7 @@ private fun BottomTabBar(
                                 .width(18.dp)
                                 .background(
                                     Brush.horizontalGradient(
-                                        listOf(Mocha.Panel, Mocha.Panel.copy(alpha = 0f))
+                                        listOf(semanticColors.panel, semanticColors.panel.copy(alpha = 0f))
                                     )
                                 )
                         )
@@ -447,7 +448,7 @@ private fun BottomTabBar(
                                 .width(18.dp)
                                 .background(
                                     Brush.horizontalGradient(
-                                        listOf(Mocha.Panel.copy(alpha = 0f), Mocha.Panel)
+                                        listOf(semanticColors.panel.copy(alpha = 0f), semanticColors.panel)
                                     )
                                 )
                         )
@@ -466,6 +467,7 @@ private fun BottomTabBarItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     val colors = LocalClearCutColors.current
     val isBack = tab.id == "back"
     val tabLabel = if (tab.labelRes != 0) stringResource(tab.labelRes) else ""
@@ -476,14 +478,14 @@ private fun BottomTabBarItem(
     val itemHeight = if (compact) 50.dp else 54.dp
     val itemBorderColor by animateColorAsState(
         targetValue = when {
-            isBack -> Mocha.CardStroke.copy(alpha = 0.38f)
+            isBack -> semanticColors.cardStroke.copy(alpha = 0.38f)
             else -> Color.Transparent
         },
         label = "toolTabItemBorder"
     )
     val itemContainerColor by animateColorAsState(
         targetValue = when {
-            isBack -> Mocha.PanelRaised.copy(alpha = 0.42f)
+            isBack -> semanticColors.panelRaised.copy(alpha = 0.42f)
             else -> Color.Transparent
         },
         label = "toolTabItemContainer"
@@ -491,13 +493,13 @@ private fun BottomTabBarItem(
     val iconTint by animateColorAsState(
         targetValue = when {
             isActive && !isBack -> colors.accent
-            isBack -> Mocha.Text
-            else -> Mocha.Subtext0
+            isBack -> semanticColors.text
+            else -> semanticColors.subtext
         },
         label = "toolTabIconTint"
     )
     val labelColor by animateColorAsState(
-        targetValue = if (isActive && !isBack) colors.accent else Mocha.Subtext0,
+        targetValue = if (isActive && !isBack) colors.accent else semanticColors.subtext,
         label = "toolTabLabelColor"
     )
 
@@ -564,10 +566,11 @@ private fun SubMenuGrid(
     modifier: Modifier = Modifier,
     disabledIds: Set<String> = emptySet()
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
-        color = Mocha.Panel,
+        color = semanticColors.panel,
         shape = RoundedCornerShape(topStart = Radius.sm, topEnd = Radius.sm),
-        border = BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.72f)),
+        border = BorderStroke(1.dp, semanticColors.cardStroke.copy(alpha = 0.72f)),
         modifier = modifier.fillMaxWidth()
     ) {
         LazyRow(
@@ -579,7 +582,7 @@ private fun SubMenuGrid(
             items(items, key = { it.id }) { item ->
                 val isDisabled = item.id in disabledIds
                 val itemLabel = stringResource(item.labelRes)
-                val itemAccent = if (isDisabled) Mocha.Overlay0 else LocalClearCutColors.current.accent
+                val itemAccent = if (isDisabled) semanticColors.overlay else LocalClearCutColors.current.accent
                 Column(
                     modifier = Modifier
                         .width(72.dp)
@@ -599,14 +602,14 @@ private fun SubMenuGrid(
                     Icon(
                         item.icon,
                         contentDescription = null,
-                        tint = if (isDisabled) Mocha.Subtext0 else itemAccent,
+                        tint = if (isDisabled) semanticColors.subtext else itemAccent,
                         modifier = Modifier.size(19.dp)
                     )
                     Spacer(modifier = Modifier.height(3.dp))
                     Text(
                         text = itemLabel,
                         fontSize = 10.sp,
-                        color = Mocha.Subtext0,
+                        color = semanticColors.subtext,
                         textAlign = TextAlign.Center,
                         maxLines = 1,
                         lineHeight = 11.sp,
@@ -627,6 +630,7 @@ fun EffectsPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     var selectedCategory by remember { mutableStateOf(EffectCategory.COLOR) }
     val accent = effectAccent(selectedCategory)
     val effects = remember(selectedCategory) {
@@ -655,7 +659,7 @@ fun EffectsPanel(
             ) {
                 PremiumPanelPill(
                     text = stringResource(R.string.panel_effects_available_count, effects.size),
-                    accent = Mocha.Sapphire
+                    accent = ClearCutAccents.Sapphire
                 )
                 if (selectedClip != null) {
                     PremiumPanelPill(
@@ -667,7 +671,7 @@ fun EffectsPanel(
 
             Text(
                 text = stringResource(R.string.panel_effects_categories),
-                color = Mocha.Rosewater,
+                color = ClearCutAccents.Rosewater,
                 style = MaterialTheme.typography.labelLarge
             )
 
@@ -690,8 +694,8 @@ fun EffectsPanel(
                             )
                         },
                         colors = FilterChipDefaults.filterChipColors(
-                            containerColor = Mocha.Panel,
-                            labelColor = Mocha.Subtext0,
+                            containerColor = semanticColors.panel,
+                            labelColor = semanticColors.subtext,
                             selectedContainerColor = categoryAccent.copy(alpha = 0.18f),
                             selectedLabelColor = categoryAccent
                         )
@@ -703,7 +707,7 @@ fun EffectsPanel(
         Spacer(modifier = Modifier.height(12.dp))
 
         if (clipTrackedObjects.isNotEmpty()) {
-            PremiumPanelCard(accent = Mocha.Sky) {
+            PremiumPanelCard(accent = ClearCutAccents.Sky) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -716,18 +720,18 @@ fun EffectsPanel(
                         Icon(
                             imageVector = Icons.Default.GpsFixed,
                             contentDescription = null,
-                            tint = Mocha.Sky,
+                            tint = ClearCutAccents.Sky,
                             modifier = Modifier.size(18.dp)
                         )
                         Text(
                             text = "Tracked masks",
-                            color = Mocha.Text,
+                            color = semanticColors.text,
                             style = MaterialTheme.typography.titleSmall
                         )
                     }
                     PremiumPanelPill(
                         text = clipTrackedObjects.size.toString(),
-                        accent = Mocha.Sky
+                        accent = ClearCutAccents.Sky
                     )
                 }
 
@@ -762,12 +766,12 @@ fun EffectsPanel(
                                 )
                             },
                             colors = FilterChipDefaults.filterChipColors(
-                                containerColor = Mocha.Panel,
-                                labelColor = Mocha.Subtext0,
-                                iconColor = Mocha.Subtext0,
-                                selectedContainerColor = Mocha.Sky.copy(alpha = 0.18f),
-                                selectedLabelColor = Mocha.Sky,
-                                selectedLeadingIconColor = Mocha.Sky
+                                containerColor = semanticColors.panel,
+                                labelColor = semanticColors.subtext,
+                                iconColor = semanticColors.subtext,
+                                selectedContainerColor = ClearCutAccents.Sky.copy(alpha = 0.18f),
+                                selectedLabelColor = ClearCutAccents.Sky,
+                                selectedLeadingIconColor = ClearCutAccents.Sky
                             )
                         )
                     }
@@ -786,11 +790,11 @@ fun EffectsPanel(
                 Surface(
                     modifier = Modifier.width(112.dp),
                     onClick = { onAddEffect(effectType) },
-                    color = Mocha.PanelHighest,
+                    color = semanticColors.panelHighest,
                     shape = RoundedCornerShape(22.dp),
                     border = BorderStroke(
                         width = 1.dp,
-                        color = if (isApplied) accent.copy(alpha = 0.34f) else Mocha.CardStroke
+                        color = if (isApplied) accent.copy(alpha = 0.34f) else semanticColors.cardStroke
                     )
                 ) {
                     Column(
@@ -807,14 +811,14 @@ fun EffectsPanel(
                                 .clip(RoundedCornerShape(14.dp))
                                 .background(
                                     if (isApplied) accent.copy(alpha = 0.18f)
-                                    else Mocha.Panel
+                                    else semanticColors.panel
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = effectIcon(selectedCategory),
                                 contentDescription = effectType.displayName,
-                                tint = if (isApplied) accent else Mocha.Subtext0,
+                                tint = if (isApplied) accent else semanticColors.subtext,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -822,14 +826,14 @@ fun EffectsPanel(
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(
                                 text = effectType.displayName,
-                                color = Mocha.Text,
+                                color = semanticColors.text,
                                 style = MaterialTheme.typography.titleSmall,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
                                 text = selectedCategory.displayName,
-                                color = Mocha.Subtext0,
+                                color = semanticColors.subtext,
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -837,7 +841,7 @@ fun EffectsPanel(
                         if (isApplied) {
                             PremiumPanelPill(
                                 text = stringResource(R.string.tool_applied),
-                                accent = Mocha.Green
+                                accent = ClearCutAccents.Green
                             )
                         }
                     }
@@ -858,6 +862,7 @@ fun EffectAdjustmentPanel(
     onRemove: () -> Unit,
     onClose: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     val accent = effectAccent(effect.type.category)
 
     PremiumEditorPanel(
@@ -871,13 +876,13 @@ fun EffectAdjustmentPanel(
             PremiumPanelIconButton(
                 icon = if (effect.enabled) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                 contentDescription = if (effect.enabled) stringResource(R.string.tool_disable) else stringResource(R.string.tool_enable),
-                tint = if (effect.enabled) Mocha.Green else Mocha.Subtext0,
+                tint = if (effect.enabled) ClearCutAccents.Green else semanticColors.subtext,
                 onClick = onToggleEnabled
             )
             PremiumPanelIconButton(
                 icon = Icons.Default.Delete,
                 contentDescription = stringResource(R.string.tool_remove),
-                tint = Mocha.Red,
+                tint = ClearCutAccents.Red,
                 onClick = onRemove
             )
         }
@@ -889,7 +894,7 @@ fun EffectAdjustmentPanel(
                 } else {
                     stringResource(R.string.panel_effect_status_disabled)
                 },
-                accent = if (effect.enabled) Mocha.Green else Mocha.Subtext0
+                accent = if (effect.enabled) ClearCutAccents.Green else semanticColors.subtext
             )
             PremiumPanelPill(
                 text = effect.type.category.displayName,
@@ -922,6 +927,7 @@ fun EffectSlider(
     onDragEnded: () -> Unit = {},
     onValueChange: (Float) -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     var isDragging by remember { mutableStateOf(false) }
     val rawMin = if (min.isFinite()) min else 0f
     val rawMax = if (max.isFinite()) max else rawMin + 1f
@@ -929,9 +935,9 @@ fun EffectSlider(
     val rangeEnd = maxOf(rawMin, rawMax).let { if (it > rangeStart) it else rangeStart + 1f }
     val safeValue = if (value.isFinite()) value.coerceIn(rangeStart, rangeEnd) else rangeStart
     Surface(
-        color = Mocha.PanelHighest.copy(alpha = 0.92f),
+        color = semanticColors.panelHighest.copy(alpha = 0.92f),
         shape = RoundedCornerShape(Radius.md),
-        border = BorderStroke(1.dp, Mocha.CardStroke),
+        border = BorderStroke(1.dp, semanticColors.cardStroke),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
@@ -941,12 +947,12 @@ fun EffectSlider(
             ) {
                 Text(
                     text = label,
-                    color = Mocha.Subtext1,
+                    color = semanticColors.subtextStrong,
                     style = MaterialTheme.typography.labelLarge
                 )
                 Text(
                     text = formatEffectValue(safeValue, rangeStart, rangeEnd),
-                    color = Mocha.Rosewater,
+                    color = ClearCutAccents.Rosewater,
                     style = MaterialTheme.typography.labelLarge
                 )
             }
@@ -963,9 +969,9 @@ fun EffectSlider(
                 onValueChangeFinished = { isDragging = false; onDragEnded() },
                 valueRange = rangeStart..rangeEnd,
                 colors = SliderDefaults.colors(
-                    thumbColor = Mocha.Rosewater,
-                    activeTrackColor = Mocha.Mauve,
-                    inactiveTrackColor = Mocha.Surface1
+                    thumbColor = ClearCutAccents.Rosewater,
+                    activeTrackColor = ClearCutAccents.Mauve,
+                    inactiveTrackColor = semanticColors.surface
                 )
             )
         }
@@ -983,21 +989,22 @@ fun SpeedPanel(
     onReversedChanged: (Boolean) -> Unit,
     onClose: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     val presetSpeeds = listOf(0.25f, 0.5f, 0.75f, 1f, 1.5f, 2f, 4f, 8f)
 
     PremiumEditorPanel(
         title = stringResource(R.string.tool_speed),
         subtitle = stringResource(R.string.panel_speed_subtitle),
         icon = Icons.Default.Speed,
-        accent = Mocha.Peach,
+        accent = ClearCutAccents.Peach,
         onClose = onClose,
         modifier = modifier
     ) {
-        PremiumPanelCard(accent = Mocha.Peach) {
+        PremiumPanelCard(accent = ClearCutAccents.Peach) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PremiumPanelPill(
                     text = "${formatEffectValue(currentSpeed, 0.1f, 100f)}x",
-                    accent = Mocha.Rosewater
+                    accent = ClearCutAccents.Rosewater
                 )
                 PremiumPanelPill(
                     text = if (isReversed) {
@@ -1005,7 +1012,7 @@ fun SpeedPanel(
                     } else {
                         stringResource(R.string.panel_speed_reverse_off)
                     },
-                    accent = if (isReversed) Mocha.Red else Mocha.Subtext0
+                    accent = if (isReversed) ClearCutAccents.Red else semanticColors.subtext
                 )
             }
 
@@ -1029,10 +1036,10 @@ fun SpeedPanel(
                         },
                         selected = isActive,
                         colors = FilterChipDefaults.filterChipColors(
-                            containerColor = Mocha.Panel,
-                            labelColor = Mocha.Text,
-                            selectedContainerColor = Mocha.Peach.copy(alpha = 0.2f),
-                            selectedLabelColor = Mocha.Peach
+                            containerColor = semanticColors.panel,
+                            labelColor = semanticColors.text,
+                            selectedContainerColor = ClearCutAccents.Peach.copy(alpha = 0.2f),
+                            selectedLabelColor = ClearCutAccents.Peach
                         )
                     )
                 }
@@ -1041,7 +1048,7 @@ fun SpeedPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Mauve) {
+        PremiumPanelCard(accent = ClearCutAccents.Mauve) {
             EffectSlider(
                 label = stringResource(R.string.tool_custom_speed),
                 value = currentSpeed,
@@ -1053,9 +1060,9 @@ fun SpeedPanel(
             )
 
             Surface(
-                color = Mocha.Panel,
+                color = semanticColors.panel,
                 shape = RoundedCornerShape(Radius.lg),
-                border = BorderStroke(1.dp, Mocha.CardStroke)
+                border = BorderStroke(1.dp, semanticColors.cardStroke)
             ) {
                 Row(
                     modifier = Modifier
@@ -1066,7 +1073,7 @@ fun SpeedPanel(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = stringResource(R.string.tool_reverse),
-                            color = Mocha.Text,
+                            color = semanticColors.text,
                             style = MaterialTheme.typography.titleSmall
                         )
                         Text(
@@ -1075,7 +1082,7 @@ fun SpeedPanel(
                             } else {
                                 stringResource(R.string.panel_speed_reverse_hint_off)
                             },
-                            color = Mocha.Subtext0,
+                            color = semanticColors.subtext,
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -1083,8 +1090,8 @@ fun SpeedPanel(
                         checked = isReversed,
                         onCheckedChange = onReversedChanged,
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = Mocha.Rosewater,
-                            checkedTrackColor = Mocha.Mauve.copy(alpha = 0.4f)
+                            checkedThumbColor = ClearCutAccents.Rosewater,
+                            checkedTrackColor = ClearCutAccents.Mauve.copy(alpha = 0.4f)
                         )
                     )
                 }
@@ -1107,11 +1114,12 @@ fun TransformPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     PremiumEditorPanel(
         title = stringResource(R.string.tool_transform),
         subtitle = stringResource(R.string.panel_transform_subtitle),
         icon = Icons.Default.Transform,
-        accent = Mocha.Sapphire,
+        accent = ClearCutAccents.Sapphire,
         onClose = onClose,
         modifier = modifier,
         scrollable = true,
@@ -1121,19 +1129,19 @@ fun TransformPanel(
                 icon = Icons.Default.Refresh,
                 contentDescription = stringResource(R.string.cd_reset),
                 onClick = onReset,
-                tint = Mocha.Peach
+                tint = ClearCutAccents.Peach
             )
         }
     ) {
-        PremiumPanelCard(accent = Mocha.Sapphire) {
+        PremiumPanelCard(accent = ClearCutAccents.Sapphire) {
             Text(
                 text = stringResource(R.string.panel_transform_summary_title),
-                color = Mocha.Text,
+                color = semanticColors.text,
                 style = MaterialTheme.typography.titleMedium
             )
             Text(
                 text = stringResource(R.string.panel_transform_summary_description),
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodyMedium
             )
             Spacer(modifier = Modifier.height(12.dp))
@@ -1150,25 +1158,25 @@ fun TransformPanel(
                     TransformMetricCard(
                         label = stringResource(R.string.text_editor_position),
                         value = "${formatSigned(clip.positionX)} / ${formatSigned(clip.positionY)}",
-                        accent = Mocha.Sapphire,
+                        accent = ClearCutAccents.Sapphire,
                         modifier = Modifier.width(metricWidth)
                     )
                     TransformMetricCard(
                         label = stringResource(R.string.panel_transform_scale),
                         value = "${formatEffectValue(clip.scaleX, 0.1f, 5f)}x / ${formatEffectValue(clip.scaleY, 0.1f, 5f)}x",
-                        accent = Mocha.Peach,
+                        accent = ClearCutAccents.Peach,
                         modifier = Modifier.width(metricWidth)
                     )
                     TransformMetricCard(
                         label = stringResource(R.string.tool_rotation),
                         value = "${formatSigned(clip.rotation)} deg",
-                        accent = Mocha.Mauve,
+                        accent = ClearCutAccents.Mauve,
                         modifier = Modifier.width(metricWidth)
                     )
                     TransformMetricCard(
                         label = stringResource(R.string.tool_opacity),
                         value = "${(clip.opacity.coerceIn(0f, 1f) * 100).toInt()}%",
-                        accent = Mocha.Green,
+                        accent = ClearCutAccents.Green,
                         modifier = Modifier.width(metricWidth)
                     )
                 }
@@ -1177,15 +1185,15 @@ fun TransformPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Mauve) {
+        PremiumPanelCard(accent = ClearCutAccents.Mauve) {
             Text(
                 text = stringResource(R.string.panel_transform_framing_title),
-                color = Mocha.Text,
+                color = semanticColors.text,
                 style = MaterialTheme.typography.titleMedium
             )
             Text(
                 text = stringResource(R.string.panel_transform_framing_description),
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodyMedium
             )
             Spacer(modifier = Modifier.height(10.dp))
@@ -1205,15 +1213,15 @@ fun TransformPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Green) {
+        PremiumPanelCard(accent = ClearCutAccents.Green) {
             Text(
                 text = stringResource(R.string.panel_transform_presence_title),
-                color = Mocha.Text,
+                color = semanticColors.text,
                 style = MaterialTheme.typography.titleMedium
             )
             Text(
                 text = stringResource(R.string.panel_transform_presence_description),
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodyMedium
             )
             Spacer(modifier = Modifier.height(10.dp))
@@ -1250,20 +1258,21 @@ fun CropPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     PremiumEditorPanel(
         title = stringResource(R.string.tool_crop_aspect_ratio),
         subtitle = stringResource(R.string.panel_crop_subtitle),
         icon = Icons.Default.Crop,
-        accent = Mocha.Sapphire,
+        accent = ClearCutAccents.Sapphire,
         onClose = onClose,
         modifier = modifier,
         scrollable = true,
         closeContentDescription = stringResource(R.string.cd_close_crop_panel)
     ) {
-        PremiumPanelCard(accent = Mocha.Sapphire) {
+        PremiumPanelCard(accent = ClearCutAccents.Sapphire) {
             Text(
                 text = currentAspect.label,
-                color = Mocha.Text,
+                color = semanticColors.text,
                 style = MaterialTheme.typography.headlineMedium
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -1273,26 +1282,26 @@ fun CropPanel(
             ) {
                 PremiumPanelPill(
                     text = stringResource(aspectUseCaseRes(currentAspect)),
-                    accent = Mocha.Sapphire
+                    accent = ClearCutAccents.Sapphire
                 )
                 PremiumPanelPill(
                     text = stringResource(R.string.panel_crop_live_canvas),
-                    accent = Mocha.Rosewater
+                    accent = ClearCutAccents.Rosewater
                 )
             }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Rosewater) {
+        PremiumPanelCard(accent = ClearCutAccents.Rosewater) {
             Text(
                 text = stringResource(R.string.panel_crop_presets_title),
-                color = Mocha.Text,
+                color = semanticColors.text,
                 style = MaterialTheme.typography.titleMedium
             )
             Text(
                 text = stringResource(R.string.panel_crop_presets_description),
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodyMedium
             )
             Spacer(modifier = Modifier.height(12.dp))
@@ -1327,20 +1336,21 @@ private fun CropPresetCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         modifier = modifier,
         onClick = onClick,
-        color = Mocha.PanelHighest,
+        color = semanticColors.panelHighest,
         shape = RoundedCornerShape(Radius.lg),
         border = BorderStroke(
             width = 1.dp,
-            color = if (isActive) Mocha.Sapphire.copy(alpha = 0.32f) else Mocha.CardStroke
+            color = if (isActive) ClearCutAccents.Sapphire.copy(alpha = 0.32f) else semanticColors.cardStroke
         )
     ) {
         Column(
             modifier = Modifier
                 .background(
-                    if (isActive) Mocha.Sapphire.copy(alpha = 0.08f) else Color.Transparent
+                    if (isActive) ClearCutAccents.Sapphire.copy(alpha = 0.08f) else Color.Transparent
                 )
                 .padding(horizontal = 14.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -1360,7 +1370,7 @@ private fun CropPresetCard(
                 modifier = Modifier
                     .size(56.dp)
                     .clip(RoundedCornerShape(Radius.md))
-                    .background(Mocha.Panel),
+                    .background(semanticColors.panel),
                 contentAlignment = Alignment.Center
             ) {
                 Box(
@@ -1368,7 +1378,7 @@ private fun CropPresetCard(
                         .size(width = previewW.dp, height = previewH.dp)
                         .border(
                             width = 2.dp,
-                            color = if (isActive) Mocha.Sapphire else Mocha.Subtext0,
+                            color = if (isActive) ClearCutAccents.Sapphire else semanticColors.subtext,
                             shape = RoundedCornerShape(4.dp)
                         )
                 )
@@ -1377,14 +1387,14 @@ private fun CropPresetCard(
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = preset.ratio.label,
-                    color = if (isActive) Mocha.Sapphire else Mocha.Text,
+                    color = if (isActive) ClearCutAccents.Sapphire else semanticColors.text,
                     style = MaterialTheme.typography.titleSmall,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = stringResource(preset.platformLabelRes),
-                    color = Mocha.Subtext0,
+                    color = semanticColors.subtext,
                     style = MaterialTheme.typography.bodySmall,
                     textAlign = TextAlign.Center,
                     maxLines = 2,
@@ -1407,11 +1417,12 @@ fun TransitionPicker(
     onClose: () -> Unit,
     currentTransition: Transition?
 ) {
+    val semanticColors = LocalClearCutColors.current
     PremiumEditorPanel(
         title = stringResource(R.string.tool_transitions),
         subtitle = stringResource(R.string.panel_transition_subtitle),
         icon = Icons.Default.SwapHoriz,
-        accent = Mocha.Mauve,
+        accent = ClearCutAccents.Mauve,
         onClose = onClose,
         modifier = modifier,
         scrollable = true,
@@ -1422,20 +1433,20 @@ fun TransitionPicker(
                     icon = Icons.Default.Delete,
                     contentDescription = stringResource(R.string.tool_remove),
                     onClick = onRemoveTransition,
-                    tint = Mocha.Red
+                    tint = ClearCutAccents.Red
                 )
             }
         }
     ) {
-        PremiumPanelCard(accent = Mocha.Mauve) {
+        PremiumPanelCard(accent = ClearCutAccents.Mauve) {
             Text(
                 text = stringResource(R.string.panel_transition_summary_title),
-                color = Mocha.Text,
+                color = semanticColors.text,
                 style = MaterialTheme.typography.titleMedium
             )
             Text(
                 text = stringResource(R.string.panel_transition_summary_description),
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodyMedium
             )
             Spacer(modifier = Modifier.height(12.dp))
@@ -1445,7 +1456,7 @@ fun TransitionPicker(
                 } else {
                     stringResource(R.string.panel_transition_none_selected)
                 },
-                color = Mocha.Text,
+                color = semanticColors.text,
                 style = MaterialTheme.typography.headlineMedium
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -1459,7 +1470,7 @@ fun TransitionPicker(
                     } else {
                         stringResource(R.string.panel_transition_pick_one)
                     },
-                    accent = Mocha.Rosewater
+                    accent = ClearCutAccents.Rosewater
                 )
                 if (currentTransition != null) {
                     PremiumPanelPill(
@@ -1467,7 +1478,7 @@ fun TransitionPicker(
                             R.string.panel_transition_duration_value,
                             currentTransition.durationMs
                         ),
-                        accent = Mocha.Peach
+                        accent = ClearCutAccents.Peach
                     )
                 }
             }
@@ -1475,15 +1486,15 @@ fun TransitionPicker(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Rosewater) {
+        PremiumPanelCard(accent = ClearCutAccents.Rosewater) {
             Text(
                 text = stringResource(R.string.panel_transition_presets_title),
-                color = Mocha.Text,
+                color = semanticColors.text,
                 style = MaterialTheme.typography.titleMedium
             )
             Text(
                 text = stringResource(R.string.panel_transition_presets_description),
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodyMedium
             )
             Spacer(modifier = Modifier.height(12.dp))
@@ -1516,15 +1527,15 @@ fun TransitionPicker(
 
         if (currentTransition != null) {
             Spacer(modifier = Modifier.height(12.dp))
-            PremiumPanelCard(accent = Mocha.Peach) {
+            PremiumPanelCard(accent = ClearCutAccents.Peach) {
                 Text(
                     text = stringResource(R.string.panel_transition_duration_title),
-                    color = Mocha.Text,
+                    color = semanticColors.text,
                     style = MaterialTheme.typography.titleMedium
                 )
                 Text(
                     text = stringResource(R.string.panel_transition_duration_description),
-                    color = Mocha.Subtext0,
+                    color = semanticColors.subtext,
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Spacer(modifier = Modifier.height(10.dp))
@@ -1539,15 +1550,15 @@ fun TransitionPicker(
             }
 
             Spacer(modifier = Modifier.height(12.dp))
-            PremiumPanelCard(accent = Mocha.Lavender) {
+            PremiumPanelCard(accent = ClearCutAccents.Lavender) {
                 Text(
                     text = "Easing",
-                    color = Mocha.Text,
+                    color = semanticColors.text,
                     style = MaterialTheme.typography.titleMedium
                 )
                 Text(
                     text = "Control the transition speed curve",
-                    color = Mocha.Subtext0,
+                    color = semanticColors.subtext,
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Spacer(modifier = Modifier.height(10.dp))
@@ -1562,14 +1573,14 @@ fun TransitionPicker(
                             onClick = { onEasingChanged(easing) },
                             label = { Text(easing.displayName) },
                             colors = FilterChipDefaults.filterChipColors(
-                                containerColor = Mocha.Surface0,
-                                selectedContainerColor = Mocha.Lavender.copy(alpha = 0.3f),
-                                labelColor = Mocha.Text,
-                                selectedLabelColor = Mocha.Lavender
+                                containerColor = semanticColors.surfaceLow,
+                                selectedContainerColor = ClearCutAccents.Lavender.copy(alpha = 0.3f),
+                                labelColor = semanticColors.text,
+                                selectedLabelColor = ClearCutAccents.Lavender
                             ),
                             border = FilterChipDefaults.filterChipBorder(
-                                borderColor = if (isSelected) Mocha.Lavender else Mocha.Surface1,
-                                selectedBorderColor = Mocha.Lavender,
+                                borderColor = if (isSelected) ClearCutAccents.Lavender else semanticColors.surface,
+                                selectedBorderColor = ClearCutAccents.Lavender,
                                 enabled = true,
                                 selected = isSelected
                             )
@@ -1588,23 +1599,24 @@ private fun TransitionOptionCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     val icon = transitionIcon(type)
 
     Surface(
         modifier = modifier,
         onClick = onClick,
-        color = Mocha.PanelHighest,
+        color = semanticColors.panelHighest,
         shape = RoundedCornerShape(22.dp),
         border = BorderStroke(
             width = 1.dp,
-            color = if (isActive) Mocha.Mauve.copy(alpha = 0.32f) else Mocha.CardStroke
+            color = if (isActive) ClearCutAccents.Mauve.copy(alpha = 0.32f) else semanticColors.cardStroke
         )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
-                    if (isActive) Mocha.Mauve.copy(alpha = 0.08f) else Color.Transparent
+                    if (isActive) ClearCutAccents.Mauve.copy(alpha = 0.08f) else Color.Transparent
                 )
                 .padding(horizontal = 14.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -1614,19 +1626,19 @@ private fun TransitionOptionCard(
                 modifier = Modifier
                     .size(42.dp)
                     .clip(RoundedCornerShape(14.dp))
-                    .background(if (isActive) Mocha.Mauve.copy(alpha = 0.16f) else Mocha.Panel),
+                    .background(if (isActive) ClearCutAccents.Mauve.copy(alpha = 0.16f) else semanticColors.panel),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     icon,
                     contentDescription = type.displayName,
-                    tint = if (isActive) Mocha.Mauve else Mocha.Subtext0,
+                    tint = if (isActive) ClearCutAccents.Mauve else semanticColors.subtext,
                     modifier = Modifier.size(20.dp)
                 )
             }
             Text(
                 text = type.displayName,
-                color = if (isActive) Mocha.Mauve else Mocha.Text,
+                color = if (isActive) ClearCutAccents.Mauve else semanticColors.text,
                 style = MaterialTheme.typography.titleSmall,
                 textAlign = TextAlign.Center,
                 maxLines = 2
@@ -1642,11 +1654,12 @@ private fun TransformMetricCard(
     accent: Color,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         modifier = modifier,
-        color = Mocha.Panel,
+        color = semanticColors.panel,
         shape = RoundedCornerShape(Radius.md),
-        border = BorderStroke(1.dp, Mocha.CardStroke)
+        border = BorderStroke(1.dp, semanticColors.cardStroke)
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
@@ -1654,7 +1667,7 @@ private fun TransformMetricCard(
         ) {
             Text(
                 text = label,
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.labelMedium
             )
             Text(
@@ -1667,12 +1680,12 @@ private fun TransformMetricCard(
 }
 
 private fun effectAccent(category: EffectCategory): Color = when (category) {
-    EffectCategory.COLOR -> Mocha.Sapphire
-    EffectCategory.FILTER -> Mocha.Mauve
-    EffectCategory.BLUR -> Mocha.Sky
-    EffectCategory.DISTORTION -> Mocha.Peach
-    EffectCategory.KEYING -> Mocha.Green
-    EffectCategory.SPEED -> Mocha.Yellow
+    EffectCategory.COLOR -> ClearCutAccents.Sapphire
+    EffectCategory.FILTER -> ClearCutAccents.Mauve
+    EffectCategory.BLUR -> ClearCutAccents.Sky
+    EffectCategory.DISTORTION -> ClearCutAccents.Peach
+    EffectCategory.KEYING -> ClearCutAccents.Green
+    EffectCategory.SPEED -> ClearCutAccents.Yellow
 }
 
 private fun effectIcon(category: EffectCategory): ImageVector = when (category) {
@@ -1740,11 +1753,12 @@ private fun TextOverlayList(
     onEdit: (String) -> Unit,
     onDelete: (String) -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Mocha.Panel,
+        color = semanticColors.panel,
         shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
-        border = BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.85f))
+        border = BorderStroke(1.dp, semanticColors.cardStroke.copy(alpha = 0.85f))
     ) {
         Column(
             modifier = Modifier
@@ -1763,19 +1777,19 @@ private fun TextOverlayList(
                 ) {
                     Text(
                         text = stringResource(R.string.tool_text_overlays),
-                        color = Mocha.Text,
+                        color = semanticColors.text,
                         style = MaterialTheme.typography.titleSmall
                     )
                     Text(
                         text = stringResource(R.string.tool_text_overlays_description),
-                        color = Mocha.Subtext0,
+                        color = semanticColors.subtext,
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 PremiumPanelPill(
                     text = stringResource(R.string.tool_text_overlays_count, overlays.size),
-                    accent = Mocha.Mauve
+                    accent = ClearCutAccents.Mauve
                 )
             }
 
@@ -1790,9 +1804,9 @@ private fun TextOverlayList(
                     val overlayAccent = Color(overlay.color)
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
-                        color = Mocha.PanelHighest,
+                        color = semanticColors.panelHighest,
                         shape = RoundedCornerShape(18.dp),
-                        border = BorderStroke(1.dp, Mocha.CardStroke)
+                        border = BorderStroke(1.dp, semanticColors.cardStroke)
                     ) {
                         Row(
                             modifier = Modifier
@@ -1826,14 +1840,14 @@ private fun TextOverlayList(
                             ) {
                                 Text(
                                     text = overlay.text.ifBlank { stringResource(R.string.tool_text_overlay_cd) },
-                                    color = Mocha.Text,
+                                    color = semanticColors.text,
                                     style = MaterialTheme.typography.titleSmall,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 PremiumPanelPill(
                                     text = formatTextOverlayRange(overlay),
-                                    accent = Mocha.Lavender
+                                    accent = ClearCutAccents.Lavender
                                 )
                             }
 
@@ -1843,13 +1857,13 @@ private fun TextOverlayList(
                                     icon = Icons.Default.Edit,
                                     contentDescription = stringResource(R.string.tool_edit),
                                     onClick = { onEdit(overlay.id) },
-                                    tint = Mocha.Mauve
+                                    tint = ClearCutAccents.Mauve
                                 )
                                 PremiumPanelIconButton(
                                     icon = Icons.Default.Delete,
                                     contentDescription = stringResource(R.string.tool_delete),
                                     onClick = { onDelete(overlay.id) },
-                                    tint = Mocha.Red
+                                    tint = ClearCutAccents.Red
                                 )
                             }
                         }

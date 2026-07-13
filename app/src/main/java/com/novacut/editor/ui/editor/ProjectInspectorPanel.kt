@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,7 +33,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
-import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
 import java.text.SimpleDateFormat
@@ -64,9 +65,10 @@ fun ProjectInspectorPanel(
     data: ProjectInspectorData,
     onClose: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Mocha.Base,
+        color = semanticColors.surfaceBase,
         shape = RoundedCornerShape(topStart = Radius.xxl, topEnd = Radius.xxl),
         tonalElevation = 4.dp
     ) {
@@ -85,14 +87,14 @@ fun ProjectInspectorPanel(
                     Icon(
                         imageVector = Icons.Default.Info,
                         contentDescription = null,
-                        tint = Mocha.Blue,
+                        tint = ClearCutAccents.Blue,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = stringResource(R.string.inspector_title),
                         style = MaterialTheme.typography.titleMedium,
-                        color = Mocha.Text,
+                        color = semanticColors.text,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -100,7 +102,7 @@ fun ProjectInspectorPanel(
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = stringResource(R.string.cd_close),
-                        tint = Mocha.Subtext0
+                        tint = semanticColors.subtext
                     )
                 }
             }
@@ -109,7 +111,7 @@ fun ProjectInspectorPanel(
                 Text(
                     text = data.projectName,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = Mocha.Subtext1
+                    color = semanticColors.subtextStrong
                 )
                 Spacer(Modifier.height(12.dp))
             }
@@ -161,20 +163,20 @@ fun ProjectInspectorPanel(
                 Spacer(Modifier.height(8.dp))
                 InspectorSection(
                     stringResource(R.string.inspector_section_issues),
-                    accentColor = Mocha.Red
+                    accentColor = ClearCutAccents.Red
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Default.Warning,
                             contentDescription = null,
-                            tint = Mocha.Red,
+                            tint = ClearCutAccents.Red,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
                             text = stringResource(R.string.inspector_missing_media, data.missingMediaCount),
                             style = MaterialTheme.typography.bodySmall,
-                            color = Mocha.Red
+                            color = ClearCutAccents.Red
                         )
                     }
                 }
@@ -226,9 +228,10 @@ fun ProjectInspectorPanel(
 @Composable
 private fun InspectorSection(
     title: String,
-    accentColor: androidx.compose.ui.graphics.Color = Mocha.Blue,
+    accentColor: androidx.compose.ui.graphics.Color = ClearCutAccents.Blue,
     content: @Composable () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -247,7 +250,7 @@ private fun InspectorSection(
         }
         HorizontalDivider(
             modifier = Modifier.padding(vertical = 4.dp),
-            color = Mocha.Surface1,
+            color = semanticColors.surface,
             thickness = 0.5.dp
         )
         content()
@@ -256,6 +259,7 @@ private fun InspectorSection(
 
 @Composable
 private fun InspectorRow(label: String, value: String) {
+    val semanticColors = LocalClearCutColors.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -265,12 +269,12 @@ private fun InspectorRow(label: String, value: String) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = Mocha.Subtext0
+            color = semanticColors.subtext
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodySmall,
-            color = Mocha.Text,
+            color = semanticColors.text,
             fontWeight = FontWeight.Medium
         )
     }

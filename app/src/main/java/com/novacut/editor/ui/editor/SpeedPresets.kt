@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -23,7 +25,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import com.novacut.editor.R
 import com.novacut.editor.model.*
-import com.novacut.editor.ui.theme.Mocha
 
 @Composable
 fun SpeedPresetsPanel(
@@ -31,6 +32,7 @@ fun SpeedPresetsPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     val sections = remember {
         speedPresetSections()
     }
@@ -39,38 +41,38 @@ fun SpeedPresetsPanel(
         title = "Speed Presets",
         subtitle = "Shape tempo, impact, and rhythm with reusable speed curves instead of rebuilding them point by point.",
         icon = Icons.Default.Speed,
-        accent = Mocha.Peach,
+        accent = ClearCutAccents.Peach,
         onClose = onClose,
         modifier = modifier.heightIn(max = 560.dp),
         scrollable = true
     ) {
-        PremiumPanelCard(accent = Mocha.Peach) {
+        PremiumPanelCard(accent = ClearCutAccents.Peach) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 PremiumPanelPill(
                     text = "${SpeedPresetType.entries.size} presets",
-                    accent = Mocha.Peach
+                    accent = ClearCutAccents.Peach
                 )
                 PremiumPanelPill(
                     text = "Reusable curves",
-                    accent = Mocha.Sapphire
+                    accent = ClearCutAccents.Sapphire
                 )
                 PremiumPanelPill(
                     text = "Clip mode",
-                    accent = Mocha.Green
+                    accent = ClearCutAccents.Green
                 )
             }
 
             Text(
                 text = "Speed language",
-                color = Mocha.Rosewater,
+                color = ClearCutAccents.Rosewater,
                 style = MaterialTheme.typography.labelLarge
             )
             Text(
                 text = "Preset curves are best when you want a repeatable editorial feel: hero slow motion, rhythmic pulses, stutters, or bold fast-forward beats.",
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodyMedium
             )
         }
@@ -89,7 +91,7 @@ fun SpeedPresetsPanel(
                 )
                 Text(
                     text = section.subtitle,
-                    color = Mocha.Subtext0,
+                    color = semanticColors.subtext,
                     style = MaterialTheme.typography.bodySmall
                 )
 
@@ -113,6 +115,7 @@ private fun SpeedPresetCard(
     accent: Color,
     onClick: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     val curve = remember(presetType) { generatePresetCurve(presetType) }
     val minMax = remember(curve) {
         curve.points.map { it.speed }.let { speeds ->
@@ -123,7 +126,7 @@ private fun SpeedPresetCard(
     Surface(
         modifier = Modifier.width(164.dp),
         onClick = onClick,
-        color = Mocha.PanelHighest,
+        color = semanticColors.panelHighest,
         shape = RoundedCornerShape(24.dp),
         border = BorderStroke(1.dp, accent.copy(alpha = 0.24f))
     ) {
@@ -134,7 +137,7 @@ private fun SpeedPresetCard(
             Surface(
                 color = accent.copy(alpha = 0.08f),
                 shape = RoundedCornerShape(18.dp),
-                border = BorderStroke(1.dp, Mocha.CardStroke)
+                border = BorderStroke(1.dp, semanticColors.cardStroke)
             ) {
                 Canvas(
                     modifier = Modifier
@@ -150,7 +153,7 @@ private fun SpeedPresetCard(
 
                     val referenceY = (1f - (1f - minSpeed) / speedRange) * height
                     drawLine(
-                        color = Mocha.Surface2,
+                        color = semanticColors.surfaceHigh,
                         start = Offset(0f, referenceY),
                         end = Offset(width, referenceY),
                         strokeWidth = 1f
@@ -181,7 +184,7 @@ private fun SpeedPresetCard(
 
             Text(
                 text = presetType.displayName,
-                color = Mocha.Text,
+                color = semanticColors.text,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
@@ -189,7 +192,7 @@ private fun SpeedPresetCard(
             )
             Text(
                 text = presetType.description,
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodySmall,
                 minLines = 2
             )
@@ -200,7 +203,7 @@ private fun SpeedPresetCard(
                 )
                 PremiumPanelPill(
                     text = speedPresetFeel(presetType),
-                    accent = Mocha.Sky
+                    accent = ClearCutAccents.Sky
                 )
             }
         }
@@ -218,7 +221,7 @@ private fun speedPresetSections(): List<SpeedPresetSection> = listOf(
     SpeedPresetSection(
         title = "Cinematic ramps",
         subtitle = "Use these when you want entrance, release, or crescendo moments to feel composed and deliberate.",
-        accent = Mocha.Peach,
+        accent = ClearCutAccents.Peach,
         presets = listOf(
             SpeedPresetType.BULLET_TIME,
             SpeedPresetType.HERO_TIME,
@@ -231,7 +234,7 @@ private fun speedPresetSections(): List<SpeedPresetSection> = listOf(
     SpeedPresetSection(
         title = "Rhythm and pulse",
         subtitle = "Great for music-driven edits, montage pacing, and beats that need a more graphic editorial pattern.",
-        accent = Mocha.Mauve,
+        accent = ClearCutAccents.Mauve,
         presets = listOf(
             SpeedPresetType.MONTAGE,
             SpeedPresetType.PULSE,
@@ -242,7 +245,7 @@ private fun speedPresetSections(): List<SpeedPresetSection> = listOf(
     SpeedPresetSection(
         title = "Punch and disruption",
         subtitle = "Reach for these when the cut needs freeze moments, stutters, flashes, or aggressive tempo changes.",
-        accent = Mocha.Sapphire,
+        accent = ClearCutAccents.Sapphire,
         presets = listOf(
             SpeedPresetType.JUMP_CUT,
             SpeedPresetType.FLASH,

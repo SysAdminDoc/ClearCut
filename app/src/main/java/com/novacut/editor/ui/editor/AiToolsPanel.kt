@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -55,7 +57,6 @@ import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.engine.segmentation.SegmentationModelState
 import com.novacut.editor.engine.whisper.WhisperModelState
-import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.ClearCutDialogIcon
 import com.novacut.editor.ui.theme.ClearCutPrimaryButton
 import com.novacut.editor.ui.theme.ClearCutSecondaryButton
@@ -71,7 +72,7 @@ data class AiToolConfig(
     val requiresClip: Boolean = true,
     @StringRes val readinessResId: Int = R.string.ai_tool_status_ready,
     @StringRes val readinessHintResId: Int = R.string.ai_tool_ready_hint,
-    val readinessAccent: Color = Mocha.Green
+    val readinessAccent: Color = ClearCutAccents.Green
 )
 
 val aiTools = listOf(
@@ -80,140 +81,140 @@ val aiTools = listOf(
         R.string.ai_tool_cut_assistant,
         R.string.ai_tool_cut_assistant_desc,
         Icons.Default.ContentCut,
-        Mocha.Peach,
+        ClearCutAccents.Peach,
         requiresClip = false,
         readinessResId = R.string.ai_tool_status_review,
         readinessHintResId = R.string.ai_tool_hint_review,
-        readinessAccent = Mocha.Peach
+        readinessAccent = ClearCutAccents.Peach
     ),
     AiToolConfig(
         "auto_captions",
         R.string.ai_tool_auto_captions,
         R.string.ai_tool_auto_captions_desc,
         Icons.Default.ClosedCaption,
-        Mocha.Blue,
+        ClearCutAccents.Blue,
         readinessResId = R.string.ai_tool_status_whisper,
         readinessHintResId = R.string.ai_tool_hint_whisper_optional,
-        readinessAccent = Mocha.Blue
+        readinessAccent = ClearCutAccents.Blue
     ),
     AiToolConfig(
         "remove_bg",
         R.string.ai_tool_remove_bg,
         R.string.ai_tool_remove_bg_desc,
         Icons.Default.Wallpaper,
-        Mocha.Green,
+        ClearCutAccents.Green,
         readinessResId = R.string.ai_tool_status_fallback,
         readinessHintResId = R.string.ai_tool_hint_segmentation_fallback,
-        readinessAccent = Mocha.Teal
+        readinessAccent = ClearCutAccents.Teal
     ),
     AiToolConfig(
         "bg_replace",
         R.string.tool_replace_bg,
         R.string.ai_tool_ai_background_desc,
         Icons.Default.PhotoFilter,
-        Mocha.Lavender,
+        ClearCutAccents.Lavender,
         readinessResId = R.string.ai_tool_status_model_gated,
         readinessHintResId = R.string.ai_tool_hint_model_required,
-        readinessAccent = Mocha.Peach
+        readinessAccent = ClearCutAccents.Peach
     ),
     AiToolConfig(
         "scene_detect",
         R.string.ai_tool_scene_detect,
         R.string.ai_tool_scene_detect_desc,
         Icons.Default.ContentCut,
-        Mocha.Peach
+        ClearCutAccents.Peach
     ),
     AiToolConfig(
         "track_motion",
         R.string.ai_tool_track_motion,
         R.string.ai_tool_track_motion_desc,
         Icons.Default.GpsFixed,
-        Mocha.Mauve
+        ClearCutAccents.Mauve
     ),
     AiToolConfig(
         "face_track",
         R.string.tool_face_track,
         R.string.ai_tool_track_motion_desc,
         Icons.Default.Face,
-        Mocha.Mauve
+        ClearCutAccents.Mauve
     ),
     AiToolConfig(
         "smart_crop",
         R.string.ai_tool_smart_crop,
         R.string.ai_tool_smart_crop_desc,
         Icons.Default.Crop,
-        Mocha.Teal
+        ClearCutAccents.Teal
     ),
     AiToolConfig(
         "auto_color",
         R.string.ai_tool_auto_color,
         R.string.ai_tool_auto_color_desc,
         Icons.Default.Palette,
-        Mocha.Yellow
+        ClearCutAccents.Yellow
     ),
     AiToolConfig(
         "stabilize",
         R.string.ai_tool_stabilize,
         R.string.ai_tool_stabilize_desc,
         Icons.Default.Straighten,
-        Mocha.Sapphire
+        ClearCutAccents.Sapphire
     ),
     AiToolConfig(
         "denoise",
         R.string.ai_tool_denoise,
         R.string.ai_tool_denoise_desc,
         Icons.AutoMirrored.Filled.VolumeOff,
-        Mocha.Flamingo
+        ClearCutAccents.Flamingo
     ),
     AiToolConfig(
         "video_upscale",
         R.string.ai_tool_ai_upscale,
         R.string.ai_tool_ai_upscale_desc,
         Icons.Default.ZoomIn,
-        Mocha.Rosewater,
+        ClearCutAccents.Rosewater,
         readinessResId = R.string.ai_tool_status_model_gated,
         readinessHintResId = R.string.ai_tool_hint_model_required,
-        readinessAccent = Mocha.Peach
+        readinessAccent = ClearCutAccents.Peach
     ),
     AiToolConfig(
         "frame_interp",
         R.string.tool_frame_interp,
         R.string.ai_tool_ai_upscale_desc,
         Icons.Default.SlowMotionVideo,
-        Mocha.Sky,
+        ClearCutAccents.Sky,
         readinessResId = R.string.ai_tool_status_model_gated,
         readinessHintResId = R.string.ai_tool_hint_model_required,
-        readinessAccent = Mocha.Peach
+        readinessAccent = ClearCutAccents.Peach
     ),
     AiToolConfig(
         "ai_background",
         R.string.ai_tool_ai_background,
         R.string.ai_tool_ai_background_desc,
         Icons.Default.PhotoFilter,
-        Mocha.Lavender,
+        ClearCutAccents.Lavender,
         readinessResId = R.string.ai_tool_status_model_gated,
         readinessHintResId = R.string.ai_tool_hint_model_required,
-        readinessAccent = Mocha.Peach
+        readinessAccent = ClearCutAccents.Peach
     ),
     AiToolConfig(
         "ai_stabilize",
         R.string.ai_tool_ai_stabilize,
         R.string.ai_tool_ai_stabilize_desc,
         Icons.Default.Straighten,
-        Mocha.Sky,
+        ClearCutAccents.Sky,
         readinessResId = R.string.ai_tool_status_fallback,
         readinessHintResId = R.string.ai_tool_hint_stabilize_fallback,
-        readinessAccent = Mocha.Teal
+        readinessAccent = ClearCutAccents.Teal
     ),
     AiToolConfig(
         "ai_style_transfer",
         R.string.ai_tool_style_transfer,
         R.string.ai_tool_style_transfer_desc,
         Icons.Default.Style,
-        Mocha.Maroon,
+        ClearCutAccents.Maroon,
         readinessResId = R.string.ai_tool_status_model_gated,
         readinessHintResId = R.string.ai_tool_hint_model_required,
-        readinessAccent = Mocha.Peach
+        readinessAccent = ClearCutAccents.Peach
     )
 )
 
@@ -241,6 +242,7 @@ fun AiToolsPanel(
     onDownloadSegmentation: () -> Unit = {},
     onDeleteSegmentation: () -> Unit = {}
 ) {
+    val semanticColors = LocalClearCutColors.current
     val readyTools = aiTools.filter { !it.requiresClip || hasSelectedClip }
     val lockedTools = aiTools.filter { it.requiresClip && !hasSelectedClip }
     var pendingModelRemoval by remember { mutableStateOf<AiModelRemovalTarget?>(null) }
@@ -249,12 +251,12 @@ fun AiToolsPanel(
         title = stringResource(R.string.ai_tools_title),
         subtitle = "Stage on-device assists, model downloads, and clip-aware magic.",
         icon = Icons.Default.AutoAwesome,
-        accent = Mocha.Mauve,
+        accent = ClearCutAccents.Mauve,
         onClose = onClose,
         modifier = modifier,
         scrollable = true
     ) {
-        PremiumPanelCard(accent = Mocha.Mauve) {
+        PremiumPanelCard(accent = ClearCutAccents.Mauve) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -264,7 +266,7 @@ fun AiToolsPanel(
                     Text(
                         text = "Creative stack",
                         style = MaterialTheme.typography.titleMedium,
-                        color = Mocha.Text
+                        color = semanticColors.text
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
@@ -274,7 +276,7 @@ fun AiToolsPanel(
                             "Most tools unlock once a clip is selected, so the panel explains what is ready now and what needs media."
                         },
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
 
@@ -286,7 +288,7 @@ fun AiToolsPanel(
                 ) {
                     PremiumPanelPill(
                         text = "${readyTools.size} ready",
-                        accent = Mocha.Mauve
+                        accent = ClearCutAccents.Mauve
                     )
                     PremiumPanelPill(
                         text = if (hasSelectedClip) {
@@ -294,11 +296,11 @@ fun AiToolsPanel(
                         } else {
                             stringResource(R.string.ai_tools_awaiting_clip)
                         },
-                        accent = if (hasSelectedClip) Mocha.Green else Mocha.Peach
+                        accent = if (hasSelectedClip) ClearCutAccents.Green else ClearCutAccents.Peach
                     )
                     PremiumPanelPill(
                         text = stringResource(R.string.ai_on_device),
-                        accent = Mocha.Blue
+                        accent = ClearCutAccents.Blue
                     )
                 }
             }
@@ -384,7 +386,7 @@ fun AiToolsPanel(
             Spacer(modifier = Modifier.height(12.dp))
 
             PremiumPanelCard(
-                accent = Mocha.Mauve,
+                accent = ClearCutAccents.Mauve,
                 modifier = Modifier.semantics {
                     liveRegion = LiveRegionMode.Polite
                 }
@@ -396,14 +398,14 @@ fun AiToolsPanel(
                 ) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(22.dp),
-                        color = Mocha.Mauve,
+                        color = ClearCutAccents.Mauve,
                         strokeWidth = 2.dp
                     )
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Processing now",
                             style = MaterialTheme.typography.titleSmall,
-                            color = Mocha.Text
+                            color = semanticColors.text
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
@@ -412,13 +414,13 @@ fun AiToolsPanel(
                                 aiTools.find { it.id == processingTool }?.let { stringResource(it.nameResId) } ?: processingTool
                             ),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Mocha.Subtext0
+                            color = semanticColors.subtext
                         )
                     }
                     ClearCutSecondaryButton(
                         text = stringResource(R.string.cancel),
                         onClick = onCancelProcessing,
-                        contentColor = Mocha.Red,
+                        contentColor = ClearCutAccents.Red,
                         icon = Icons.Default.Close,
                         modifier = Modifier.widthIn(min = 112.dp)
                     )
@@ -431,7 +433,7 @@ fun AiToolsPanel(
         AiToolSection(
             title = stringResource(R.string.ai_tools_ready_now),
             description = stringResource(R.string.ai_tools_ready_now_description),
-            accent = Mocha.Blue,
+            accent = ClearCutAccents.Blue,
             tools = readyTools,
             toolsEnabled = true,
             processingTool = processingTool,
@@ -444,7 +446,7 @@ fun AiToolsPanel(
             AiToolSection(
                 title = stringResource(R.string.ai_tools_needs_clip),
                 description = stringResource(R.string.ai_tools_needs_clip_description),
-                accent = Mocha.Peach,
+                accent = ClearCutAccents.Peach,
                 tools = lockedTools,
                 toolsEnabled = false,
                 processingTool = processingTool,
@@ -481,16 +483,17 @@ private fun AiToolSection(
     onToolSelected: (String) -> Unit,
     onDisabledToolTapped: (String) -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     PremiumPanelCard(accent = accent) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
-            color = Mocha.Text
+            color = semanticColors.text
         )
         Text(
             text = description,
             style = MaterialTheme.typography.bodyMedium,
-            color = Mocha.Subtext0
+            color = semanticColors.subtext
         )
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -522,6 +525,7 @@ private fun AiModelRemovalConfirmDialog(
     onDismissRequest: () -> Unit,
     onConfirm: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     val title = when (target) {
         AiModelRemovalTarget.WHISPER -> stringResource(R.string.ai_remove_whisper_title)
         AiModelRemovalTarget.SEGMENTATION -> stringResource(R.string.ai_remove_segmentation_title)
@@ -536,20 +540,20 @@ private fun AiModelRemovalConfirmDialog(
         icon = {
             ClearCutDialogIcon(
                 icon = Icons.Default.Delete,
-                accent = Mocha.Red
+                accent = ClearCutAccents.Red
             )
         },
         title = {
             Text(
                 text = title,
-                color = Mocha.Text,
+                color = semanticColors.text,
                 style = MaterialTheme.typography.titleLarge
             )
         },
         text = {
             Text(
                 text = body,
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodyMedium
             )
         },
@@ -558,7 +562,7 @@ private fun AiModelRemovalConfirmDialog(
                 text = stringResource(R.string.ai_model_remove_confirm),
                 onClick = onConfirm,
                 icon = Icons.Default.Delete,
-                contentColor = Mocha.Red
+                contentColor = ClearCutAccents.Red
             )
         },
         dismissButton = {
@@ -567,9 +571,9 @@ private fun AiModelRemovalConfirmDialog(
                 onClick = onDismissRequest
             )
         },
-        containerColor = Mocha.PanelHighest,
-        titleContentColor = Mocha.Text,
-        textContentColor = Mocha.Subtext0,
+        containerColor = semanticColors.panelHighest,
+        titleContentColor = semanticColors.text,
+        textContentColor = semanticColors.subtext,
         shape = RoundedCornerShape(Radius.xxl)
     )
 }
@@ -587,6 +591,7 @@ private fun ModelStatusCard(
     secondaryActionLabel: String?,
     onSecondaryAction: (() -> Unit)?
 ) {
+    val semanticColors = LocalClearCutColors.current
     val hasPrimaryAction = primaryActionLabel != null && onPrimaryAction != null
     val hasSecondaryAction = secondaryActionLabel != null && onSecondaryAction != null
 
@@ -620,13 +625,13 @@ private fun ModelStatusCard(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleSmall,
-                    color = Mocha.Text
+                    color = semanticColors.text
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
             }
         }
@@ -643,7 +648,7 @@ private fun ModelStatusCard(
                 Text(
                     text = stringResource(R.string.ai_model_download_progress),
                     style = MaterialTheme.typography.labelMedium,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
                 Text(
                     text = stringResource(R.string.ai_model_download_percent, progressPercent),
@@ -659,7 +664,7 @@ private fun ModelStatusCard(
                     .height(6.dp)
                     .clip(RoundedCornerShape(Radius.sm)),
                 color = accent,
-                trackColor = Mocha.Surface1
+                trackColor = semanticColors.surface
             )
         }
 
@@ -682,7 +687,7 @@ private fun ModelStatusCard(
                     ClearCutSecondaryButton(
                         text = secondaryActionLabel,
                         onClick = onSecondaryAction,
-                        contentColor = Mocha.Red,
+                        contentColor = ClearCutAccents.Red,
                         icon = Icons.Default.Delete,
                         modifier = Modifier.widthIn(min = 112.dp)
                     )
@@ -699,20 +704,21 @@ private fun AiToolCard(
     isProcessing: Boolean,
     onClick: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         modifier = Modifier
             .width(176.dp)
             .height(196.dp)
             .alpha(if (isEnabled) 1f else 0.92f)
             .clickable(enabled = !isProcessing, onClick = onClick),
-        color = if (isEnabled) Mocha.PanelHighest else Mocha.PanelRaised.copy(alpha = 0.85f),
+        color = if (isEnabled) semanticColors.panelHighest else semanticColors.panelRaised.copy(alpha = 0.85f),
         shape = RoundedCornerShape(24.dp),
         border = BorderStroke(
             1.dp,
             when {
                 isProcessing -> tool.color.copy(alpha = 0.55f)
-                isEnabled -> Mocha.CardStrokeStrong
-                else -> Mocha.CardStroke
+                isEnabled -> semanticColors.cardStrokeStrong
+                else -> semanticColors.cardStroke
             }
         )
     ) {
@@ -721,8 +727,8 @@ private fun AiToolCard(
                 Brush.verticalGradient(
                     listOf(
                         tool.color.copy(alpha = if (isEnabled) 0.16f else 0.08f),
-                        Mocha.PanelHighest,
-                        Mocha.PanelRaised
+                        semanticColors.panelHighest,
+                        semanticColors.panelRaised
                     )
                 )
             )
@@ -757,7 +763,7 @@ private fun AiToolCard(
                                 Icon(
                                     imageVector = tool.icon,
                                     contentDescription = stringResource(tool.nameResId),
-                                    tint = if (isEnabled) tool.color else Mocha.Surface2,
+                                    tint = if (isEnabled) tool.color else semanticColors.surfaceHigh,
                                     modifier = Modifier.size(22.dp)
                                 )
                             }
@@ -773,7 +779,7 @@ private fun AiToolCard(
                         accent = when {
                             isProcessing -> tool.color
                             isEnabled -> tool.readinessAccent
-                            else -> Mocha.Peach
+                            else -> ClearCutAccents.Peach
                         }
                     )
                 }
@@ -782,12 +788,12 @@ private fun AiToolCard(
                     Text(
                         text = stringResource(tool.nameResId),
                         style = MaterialTheme.typography.titleSmall,
-                        color = if (isEnabled) Mocha.Text else Mocha.Subtext0
+                        color = if (isEnabled) semanticColors.text else semanticColors.subtext
                     )
                     Text(
                         text = stringResource(tool.descriptionResId),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (isEnabled) Mocha.Subtext0 else Mocha.Overlay1,
+                        color = if (isEnabled) semanticColors.subtext else semanticColors.overlayStrong,
                         maxLines = 3,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -800,7 +806,7 @@ private fun AiToolCard(
                         stringResource(R.string.ai_tool_locked_hint)
                     },
                     style = MaterialTheme.typography.labelMedium,
-                    color = if (isEnabled) tool.color else Mocha.Overlay1,
+                    color = if (isEnabled) tool.color else semanticColors.overlayStrong,
                     textAlign = TextAlign.Start
                 )
             }
@@ -808,16 +814,24 @@ private fun AiToolCard(
     }
 }
 
-private fun modelAccent(state: WhisperModelState): Color = when (state) {
-    WhisperModelState.READY -> Mocha.Blue
-    WhisperModelState.DOWNLOADING -> Mocha.Yellow
-    WhisperModelState.ERROR -> Mocha.Red
-    WhisperModelState.NOT_DOWNLOADED -> Mocha.Surface2
+@Composable
+private fun modelAccent(state: WhisperModelState): Color {
+    val semanticColors = LocalClearCutColors.current
+    return when (state) {
+        WhisperModelState.READY -> ClearCutAccents.Blue
+        WhisperModelState.DOWNLOADING -> ClearCutAccents.Yellow
+        WhisperModelState.ERROR -> ClearCutAccents.Red
+        WhisperModelState.NOT_DOWNLOADED -> semanticColors.surfaceHigh
+    }
 }
 
-private fun segmentationAccent(state: SegmentationModelState): Color = when (state) {
-    SegmentationModelState.READY -> Mocha.Green
-    SegmentationModelState.DOWNLOADING -> Mocha.Yellow
-    SegmentationModelState.ERROR -> Mocha.Red
-    SegmentationModelState.NOT_DOWNLOADED -> Mocha.Surface2
+@Composable
+private fun segmentationAccent(state: SegmentationModelState): Color {
+    val semanticColors = LocalClearCutColors.current
+    return when (state) {
+        SegmentationModelState.READY -> ClearCutAccents.Green
+        SegmentationModelState.DOWNLOADING -> ClearCutAccents.Yellow
+        SegmentationModelState.ERROR -> ClearCutAccents.Red
+        SegmentationModelState.NOT_DOWNLOADED -> semanticColors.surfaceHigh
+    }
 }

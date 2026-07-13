@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -25,7 +27,6 @@ import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.model.SaveIndicatorState
 import com.novacut.editor.ui.theme.Elevation
-import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.Motion
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
@@ -36,12 +37,13 @@ fun AutoSaveIndicator(
     state: SaveIndicatorState,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     var visible by remember { mutableStateOf(false) }
     val accent = when (state) {
-        SaveIndicatorState.SAVING -> Mocha.Sapphire
-        SaveIndicatorState.SAVED -> Mocha.Green
-        SaveIndicatorState.ERROR -> Mocha.Red
-        SaveIndicatorState.HIDDEN -> Mocha.Subtext0
+        SaveIndicatorState.SAVING -> ClearCutAccents.Sapphire
+        SaveIndicatorState.SAVED -> ClearCutAccents.Green
+        SaveIndicatorState.ERROR -> ClearCutAccents.Red
+        SaveIndicatorState.HIDDEN -> semanticColors.subtext
     }
     val label = when (state) {
         SaveIndicatorState.SAVING -> stringResource(R.string.autosave_saving)
@@ -71,9 +73,9 @@ fun AutoSaveIndicator(
         modifier = modifier
     ) {
         Surface(
-            color = Mocha.PanelHighest.copy(alpha = 0.96f),
+            color = semanticColors.panelHighest.copy(alpha = 0.96f),
             shape = RoundedCornerShape(Radius.sm),
-            border = BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
+            border = BorderStroke(1.dp, semanticColors.cardStroke.copy(alpha = 0.9f)),
             shadowElevation = Elevation.toast,
             modifier = Modifier.semantics {
                 contentDescription = label
@@ -142,7 +144,7 @@ fun AutoSaveIndicator(
                 Text(
                     text = label,
                     style = MaterialTheme.typography.labelLarge,
-                    color = if (state == SaveIndicatorState.SAVING) Mocha.Text else accent
+                    color = if (state == SaveIndicatorState.SAVING) semanticColors.text else accent
                 )
             }
         }

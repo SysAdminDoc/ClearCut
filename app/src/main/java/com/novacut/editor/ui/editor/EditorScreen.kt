@@ -2,6 +2,9 @@
 
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
+
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
@@ -53,7 +56,6 @@ import androidx.compose.ui.graphics.Color
 import com.novacut.editor.engine.ExportState
 import com.novacut.editor.model.*
 import com.novacut.editor.ui.ClearCutTestTags
-import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.ClearCutDialogIcon
 import com.novacut.editor.ui.theme.ClearCutChromeIconButton
 import com.novacut.editor.ui.theme.ClearCutPrimaryButton
@@ -93,6 +95,7 @@ fun EditorScreen(
     onBack: () -> Unit = {},
     viewModel: EditorViewModel = hiltViewModel()
 ) {
+    val semanticColors = LocalClearCutColors.current
     val state by viewModel.state.collectAsStateWithLifecycle()
     val playheadState = viewModel.playheadMs.collectAsStateWithLifecycle()
     val playheadMs by playheadState
@@ -434,7 +437,7 @@ fun EditorScreen(
     Box(modifier = Modifier
         .fillMaxSize()
         .testTag(ClearCutTestTags.EDITOR_SCREEN)
-        .background(Mocha.Base)
+        .background(semanticColors.surfaceBase)
         .focusRequester(focusRequester)
         .focusable()
         .onKeyEvent { event ->
@@ -713,16 +716,16 @@ fun EditorScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(max = 210.dp),
-                        colors = CardDefaults.cardColors(containerColor = Mocha.Panel),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
+                        colors = CardDefaults.cardColors(containerColor = semanticColors.panel),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, semanticColors.cardStroke.copy(alpha = 0.9f)),
                         shape = RoundedCornerShape(Radius.xxl)
                     ) {
                         Box(
                             modifier = Modifier.background(
                                 Brush.verticalGradient(
                                     listOf(
-                                        Mocha.PanelHighest.copy(alpha = 0.86f),
-                                        Mocha.Panel
+                                        semanticColors.panelHighest.copy(alpha = 0.86f),
+                                        semanticColors.panel
                                     )
                                 )
                             )
@@ -732,14 +735,14 @@ fun EditorScreen(
                             horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Surface(
-                                    color = Mocha.Sky.copy(alpha = 0.12f),
+                                    color = ClearCutAccents.Sky.copy(alpha = 0.12f),
                                     shape = RoundedCornerShape(Radius.md),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Sky.copy(alpha = 0.24f))
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, ClearCutAccents.Sky.copy(alpha = 0.24f))
                                 ) {
                                     Icon(
                                         Icons.Default.VideoLibrary,
                                         contentDescription = null,
-                                        tint = Mocha.Sky,
+                                        tint = ClearCutAccents.Sky,
                                         modifier = Modifier
                                             .padding(10.dp)
                                             .size(22.dp)
@@ -748,13 +751,13 @@ fun EditorScreen(
                                 Spacer(Modifier.height(Spacing.sm))
                                 Text(
                                     stringResource(R.string.editor_empty_title),
-                                    color = Mocha.Text,
+                                    color = semanticColors.text,
                                     style = MaterialTheme.typography.titleLarge
                                 )
                                 Spacer(Modifier.height(Spacing.xs))
                                 Text(
                                     stringResource(R.string.editor_empty_body),
-                                    color = Mocha.Subtext0,
+                                    color = semanticColors.subtext,
                                     style = MaterialTheme.typography.bodySmall,
                                     textAlign = TextAlign.Center,
                                     maxLines = 2,
@@ -767,7 +770,7 @@ fun EditorScreen(
                                         .widthIn(min = 180.dp)
                                         .height(TouchTarget.minimum)
                                         .clip(RoundedCornerShape(Radius.md))
-                                        .background(Mocha.Sky)
+                                        .background(ClearCutAccents.Sky)
                                         .clickable(onClick = viewModel::showMediaPicker)
                                         .testTag(ClearCutTestTags.EDITOR_EMPTY_ADD_MEDIA),
                                     horizontalArrangement = Arrangement.Center,
@@ -776,13 +779,13 @@ fun EditorScreen(
                                     Icon(
                                         imageVector = Icons.Default.Add,
                                         contentDescription = null,
-                                        tint = Mocha.Midnight,
+                                        tint = semanticColors.background,
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Spacer(Modifier.width(Spacing.sm))
                                     Text(
                                         text = emptyAddMediaLabel,
-                                        color = Mocha.Midnight,
+                                        color = semanticColors.background,
                                         style = MaterialTheme.typography.labelLarge,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
@@ -890,16 +893,16 @@ fun EditorScreen(
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     color = Color.Transparent,
                     shape = RoundedCornerShape(22.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Peach.copy(alpha = 0.2f))
+                    border = androidx.compose.foundation.BorderStroke(1.dp, ClearCutAccents.Peach.copy(alpha = 0.2f))
                 ) {
                     Row(
                         modifier = Modifier
                             .background(
                                 Brush.horizontalGradient(
                                     listOf(
-                                        Mocha.Peach.copy(alpha = 0.18f),
-                                        Mocha.PanelHighest.copy(alpha = 0.96f),
-                                        Mocha.Panel.copy(alpha = 0.98f)
+                                        ClearCutAccents.Peach.copy(alpha = 0.18f),
+                                        semanticColors.panelHighest.copy(alpha = 0.96f),
+                                        semanticColors.panel.copy(alpha = 0.98f)
                                     )
                                 )
                             )
@@ -912,19 +915,19 @@ fun EditorScreen(
                         ) {
                             Text(
                                 text = stringResource(R.string.editor_selection),
-                                color = Mocha.Peach,
+                                color = ClearCutAccents.Peach,
                                 style = MaterialTheme.typography.labelSmall
                             )
                             Text(
                                 text = stringResource(R.string.editor_selected_count, state.selectedClipIds.size),
-                                color = Mocha.Text,
+                                color = semanticColors.text,
                                 style = MaterialTheme.typography.titleSmall
                             )
                         }
                         Surface(
                             shape = RoundedCornerShape(10.dp),
-                            color = Mocha.Red.copy(alpha = 0.14f),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Red.copy(alpha = 0.2f))
+                            color = ClearCutAccents.Red.copy(alpha = 0.14f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, ClearCutAccents.Red.copy(alpha = 0.2f))
                         ) {
                             Row(
                                 modifier = Modifier
@@ -935,13 +938,13 @@ fun EditorScreen(
                                 Icon(
                                     Icons.Default.Delete,
                                     contentDescription = stringResource(R.string.editor_delete_selected),
-                                    tint = Mocha.Red,
+                                    tint = ClearCutAccents.Red,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(Modifier.width(6.dp))
                                 Text(
                                     text = stringResource(R.string.editor_delete),
-                                    color = Mocha.Red,
+                                    color = ClearCutAccents.Red,
                                     style = MaterialTheme.typography.labelLarge
                                 )
                             }
@@ -950,8 +953,8 @@ fun EditorScreen(
                             Spacer(Modifier.width(6.dp))
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
-                                color = Mocha.Mauve.copy(alpha = 0.14f),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Mauve.copy(alpha = 0.2f))
+                                color = ClearCutAccents.Mauve.copy(alpha = 0.14f),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, ClearCutAccents.Mauve.copy(alpha = 0.2f))
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -962,13 +965,13 @@ fun EditorScreen(
                                     Icon(
                                         Icons.Default.ContentPaste,
                                         contentDescription = stringResource(R.string.tool_paste_effects),
-                                        tint = Mocha.Mauve,
+                                        tint = ClearCutAccents.Mauve,
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Spacer(Modifier.width(6.dp))
                                     Text(
                                         text = stringResource(R.string.editor_paste_fx),
-                                        color = Mocha.Mauve,
+                                        color = ClearCutAccents.Mauve,
                                         style = MaterialTheme.typography.labelLarge
                                     )
                                 }
@@ -977,8 +980,8 @@ fun EditorScreen(
                         Spacer(Modifier.width(8.dp))
                         Surface(
                             shape = RoundedCornerShape(10.dp),
-                            color = Mocha.Surface0.copy(alpha = 0.7f),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke)
+                            color = semanticColors.surfaceLow.copy(alpha = 0.7f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, semanticColors.cardStroke)
                         ) {
                             Row(
                                 modifier = Modifier
@@ -988,7 +991,7 @@ fun EditorScreen(
                             ) {
                                 Text(
                                     text = stringResource(R.string.editor_cancel),
-                                    color = Mocha.Subtext0,
+                                    color = semanticColors.subtext,
                                     style = MaterialTheme.typography.labelLarge
                                 )
                             }
@@ -1223,6 +1226,7 @@ private fun EditorTopBar(
     onOpenSnapshots: () -> Unit,
     onApplyCutList: (String) -> Unit = {},
 ) {
+    val semanticColors = LocalClearCutColors.current
     var showOverflow by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
     var showCutListDialog by remember { mutableStateOf(false) }
@@ -1245,20 +1249,20 @@ private fun EditorTopBar(
             icon = {
                 ClearCutDialogIcon(
                     icon = Icons.Default.Delete,
-                    accent = Mocha.Red
+                    accent = ClearCutAccents.Red
                 )
             },
             title = {
                 Text(
                     text = stringResource(R.string.editor_delete),
-                    color = Mocha.Text,
+                    color = semanticColors.text,
                     style = MaterialTheme.typography.titleLarge
                 )
             },
             text = {
                 Text(
                     text = stringResource(R.string.editor_delete_clip_message),
-                    color = Mocha.Subtext0,
+                    color = semanticColors.subtext,
                     style = MaterialTheme.typography.bodyMedium
                 )
             },
@@ -1270,7 +1274,7 @@ private fun EditorTopBar(
                         onDelete()
                     },
                     icon = Icons.Default.Delete,
-                    contentColor = Mocha.Red
+                    contentColor = ClearCutAccents.Red
                 )
             },
             dismissButton = {
@@ -1279,9 +1283,9 @@ private fun EditorTopBar(
                     onClick = { showDeleteConfirmation = false }
                 )
             },
-            containerColor = Mocha.PanelHighest,
-            titleContentColor = Mocha.Text,
-            textContentColor = Mocha.Subtext0,
+            containerColor = semanticColors.panelHighest,
+            titleContentColor = semanticColors.text,
+            textContentColor = semanticColors.subtext,
             shape = RoundedCornerShape(Radius.xxl)
         )
     }
@@ -1295,13 +1299,13 @@ private fun EditorTopBar(
             icon = {
                 ClearCutDialogIcon(
                     icon = Icons.Default.Save,
-                    accent = Mocha.Mauve
+                    accent = ClearCutAccents.Mauve
                 )
             },
             title = {
                 Text(
                     text = stringResource(R.string.editor_save_as_template),
-                    color = Mocha.Text,
+                    color = semanticColors.text,
                     style = MaterialTheme.typography.titleLarge
                 )
             },
@@ -1314,15 +1318,15 @@ private fun EditorTopBar(
                     shape = RoundedCornerShape(Radius.lg),
                     label = { Text(stringResource(R.string.editor_template_name)) },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Mocha.Text,
-                        unfocusedTextColor = Mocha.Text,
-                        cursorColor = Mocha.Mauve,
-                        focusedBorderColor = Mocha.Mauve,
-                        unfocusedBorderColor = Mocha.CardStroke,
-                        focusedLabelColor = Mocha.Mauve,
-                        unfocusedLabelColor = Mocha.Subtext0,
-                        focusedContainerColor = Mocha.PanelRaised,
-                        unfocusedContainerColor = Mocha.PanelRaised
+                        focusedTextColor = semanticColors.text,
+                        unfocusedTextColor = semanticColors.text,
+                        cursorColor = ClearCutAccents.Mauve,
+                        focusedBorderColor = ClearCutAccents.Mauve,
+                        unfocusedBorderColor = semanticColors.cardStroke,
+                        focusedLabelColor = ClearCutAccents.Mauve,
+                        unfocusedLabelColor = semanticColors.subtext,
+                        focusedContainerColor = semanticColors.panelRaised,
+                        unfocusedContainerColor = semanticColors.panelRaised
                     )
                 )
             },
@@ -1343,9 +1347,9 @@ private fun EditorTopBar(
                     onClick = { showSaveTemplateDialog = false }
                 )
             },
-            containerColor = Mocha.PanelHighest,
-            titleContentColor = Mocha.Text,
-            textContentColor = Mocha.Subtext0,
+            containerColor = semanticColors.panelHighest,
+            titleContentColor = semanticColors.text,
+            textContentColor = semanticColors.subtext,
             shape = RoundedCornerShape(Radius.xxl)
         )
     }
@@ -1359,13 +1363,13 @@ private fun EditorTopBar(
             icon = {
                 ClearCutDialogIcon(
                     icon = Icons.Default.Edit,
-                    accent = Mocha.Rosewater
+                    accent = ClearCutAccents.Rosewater
                 )
             },
             title = {
                 Text(
                     text = stringResource(R.string.editor_rename_project),
-                    color = Mocha.Text,
+                    color = semanticColors.text,
                     style = MaterialTheme.typography.titleLarge
                 )
             },
@@ -1378,17 +1382,17 @@ private fun EditorTopBar(
                     shape = RoundedCornerShape(Radius.lg),
                     label = { Text(stringResource(R.string.projects_rename_hint)) },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Mocha.Text,
-                        unfocusedTextColor = Mocha.Text,
-                        cursorColor = Mocha.Mauve,
-                        focusedBorderColor = Mocha.Mauve,
+                        focusedTextColor = semanticColors.text,
+                        unfocusedTextColor = semanticColors.text,
+                        cursorColor = ClearCutAccents.Mauve,
+                        focusedBorderColor = ClearCutAccents.Mauve,
                         // Normalized to match the editor's other input borders so the rename
                         // dialog feels like part of the same surface system rather than a fork.
-                        unfocusedBorderColor = Mocha.CardStroke,
-                        focusedLabelColor = Mocha.Mauve,
-                        unfocusedLabelColor = Mocha.Subtext0,
-                        focusedContainerColor = Mocha.PanelRaised,
-                        unfocusedContainerColor = Mocha.PanelRaised
+                        unfocusedBorderColor = semanticColors.cardStroke,
+                        focusedLabelColor = ClearCutAccents.Mauve,
+                        unfocusedLabelColor = semanticColors.subtext,
+                        focusedContainerColor = semanticColors.panelRaised,
+                        unfocusedContainerColor = semanticColors.panelRaised
                     )
                 )
             },
@@ -1409,9 +1413,9 @@ private fun EditorTopBar(
                     onClick = { showRenameDialog = false }
                 )
             },
-            containerColor = Mocha.PanelHighest,
-            titleContentColor = Mocha.Text,
-            textContentColor = Mocha.Subtext0,
+            containerColor = semanticColors.panelHighest,
+            titleContentColor = semanticColors.text,
+            textContentColor = semanticColors.subtext,
             shape = RoundedCornerShape(Radius.xxl)
         )
     }
@@ -1424,13 +1428,13 @@ private fun EditorTopBar(
             icon = {
                 ClearCutDialogIcon(
                     icon = Icons.Default.ContentPaste,
-                    accent = Mocha.Peach
+                    accent = ClearCutAccents.Peach
                 )
             },
             title = {
                 Text(
                     text = stringResource(R.string.cut_list_paste_title),
-                    color = Mocha.Text,
+                    color = semanticColors.text,
                     style = MaterialTheme.typography.titleLarge
                 )
             },
@@ -1444,15 +1448,15 @@ private fun EditorTopBar(
                     shape = RoundedCornerShape(Radius.lg),
                     label = { Text(stringResource(R.string.cut_list_paste_hint)) },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Mocha.Text,
-                        unfocusedTextColor = Mocha.Text,
-                        cursorColor = Mocha.Peach,
-                        focusedBorderColor = Mocha.Peach,
-                        unfocusedBorderColor = Mocha.CardStroke,
-                        focusedLabelColor = Mocha.Peach,
-                        unfocusedLabelColor = Mocha.Subtext0,
-                        focusedContainerColor = Mocha.PanelRaised,
-                        unfocusedContainerColor = Mocha.PanelRaised
+                        focusedTextColor = semanticColors.text,
+                        unfocusedTextColor = semanticColors.text,
+                        cursorColor = ClearCutAccents.Peach,
+                        focusedBorderColor = ClearCutAccents.Peach,
+                        unfocusedBorderColor = semanticColors.cardStroke,
+                        focusedLabelColor = ClearCutAccents.Peach,
+                        unfocusedLabelColor = semanticColors.subtext,
+                        focusedContainerColor = semanticColors.panelRaised,
+                        unfocusedContainerColor = semanticColors.panelRaised
                     )
                 )
             },
@@ -1473,15 +1477,15 @@ private fun EditorTopBar(
                     onClick = { showCutListDialog = false }
                 )
             },
-            containerColor = Mocha.PanelHighest,
-            titleContentColor = Mocha.Text,
-            textContentColor = Mocha.Subtext0,
+            containerColor = semanticColors.panelHighest,
+            titleContentColor = semanticColors.text,
+            textContentColor = semanticColors.subtext,
             shape = RoundedCornerShape(Radius.xxl)
         )
     }
 
     Surface(
-        color = Mocha.Midnight,
+        color = semanticColors.background,
         modifier = modifier
             .fillMaxWidth()
             .height(if (isCompactBar) 64.dp else 68.dp)
@@ -1492,9 +1496,9 @@ private fun EditorTopBar(
                 .background(
                     Brush.horizontalGradient(
                         listOf(
-                            Mocha.Midnight,
-                            Mocha.Panel.copy(alpha = 0.9f),
-                            Mocha.Midnight
+                            semanticColors.background,
+                            semanticColors.panel.copy(alpha = 0.9f),
+                            semanticColors.background
                         )
                     )
                 )
@@ -1506,9 +1510,9 @@ private fun EditorTopBar(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(
-                    color = Mocha.PanelHighest,
+                    color = semanticColors.panelHighest,
                     shape = RoundedCornerShape(Radius.md),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke)
+                    border = androidx.compose.foundation.BorderStroke(1.dp, semanticColors.cardStroke)
                 ) {
                     IconButton(
                         onClick = onBack,
@@ -1519,7 +1523,7 @@ private fun EditorTopBar(
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.back),
-                            tint = Mocha.Text,
+                            tint = semanticColors.text,
                             modifier = Modifier.size(if (isCompactBar) 18.dp else 20.dp)
                         )
                     }
@@ -1540,10 +1544,10 @@ private fun EditorTopBar(
                     SaveIndicatorState.HIDDEN -> stringResource(R.string.edit_confidence_autosave_ready)
                 }
                 val saveAccent = when (editConfidenceStatus.saveIndicator) {
-                    SaveIndicatorState.SAVING -> Mocha.Sapphire
+                    SaveIndicatorState.SAVING -> ClearCutAccents.Sapphire
                     SaveIndicatorState.SAVED,
-                    SaveIndicatorState.HIDDEN -> Mocha.Green
-                    SaveIndicatorState.ERROR -> Mocha.Red
+                    SaveIndicatorState.HIDDEN -> ClearCutAccents.Green
+                    SaveIndicatorState.ERROR -> ClearCutAccents.Red
                 }
                 Column(
                     modifier = Modifier.weight(1f),
@@ -1551,7 +1555,7 @@ private fun EditorTopBar(
                 ) {
                     Text(
                         text = projectName,
-                        color = Mocha.Text,
+                        color = semanticColors.text,
                         style = MaterialTheme.typography.titleMedium.copy(lineHeight = 18.sp),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -1584,9 +1588,9 @@ private fun EditorTopBar(
                 }
 
                 Surface(
-                    color = Mocha.PanelHighest,
+                    color = semanticColors.panelHighest,
                     shape = RoundedCornerShape(Radius.md),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke)
+                    border = androidx.compose.foundation.BorderStroke(1.dp, semanticColors.cardStroke)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(
@@ -1597,7 +1601,7 @@ private fun EditorTopBar(
                             Icon(
                                 Icons.AutoMirrored.Filled.Undo,
                                 contentDescription = stringResource(R.string.editor_undo),
-                                tint = if (canUndo) Mocha.Text else Mocha.Surface2,
+                                tint = if (canUndo) semanticColors.text else semanticColors.surfaceHigh,
                                 modifier = Modifier.size(if (isCompactBar) 16.dp else 18.dp)
                             )
                         }
@@ -1609,7 +1613,7 @@ private fun EditorTopBar(
                             Icon(
                                 Icons.AutoMirrored.Filled.Redo,
                                 contentDescription = stringResource(R.string.editor_redo),
-                                tint = if (canRedo) Mocha.Text else Mocha.Surface2,
+                                tint = if (canRedo) semanticColors.text else semanticColors.surfaceHigh,
                                 modifier = Modifier.size(if (isCompactBar) 16.dp else 18.dp)
                             )
                         }
@@ -1620,9 +1624,9 @@ private fun EditorTopBar(
 
                 Box {
                     Surface(
-                        color = Mocha.PanelHighest,
+                        color = semanticColors.panelHighest,
                         shape = RoundedCornerShape(Radius.md),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke)
+                        border = androidx.compose.foundation.BorderStroke(1.dp, semanticColors.cardStroke)
                     ) {
                         IconButton(
                             onClick = { showOverflow = true },
@@ -1631,7 +1635,7 @@ private fun EditorTopBar(
                             Icon(
                                 Icons.Default.MoreVert,
                                 contentDescription = stringResource(R.string.editor_more),
-                                tint = Mocha.Text,
+                                tint = semanticColors.text,
                                 modifier = Modifier.size(if (isCompactBar) 18.dp else 20.dp)
                             )
                         }
@@ -1639,17 +1643,17 @@ private fun EditorTopBar(
                     DropdownMenu(
                         expanded = showOverflow,
                         onDismissRequest = { showOverflow = false },
-                        containerColor = Mocha.PanelHighest
+                        containerColor = semanticColors.panelHighest
                     ) {
                         if (selectedClipId != null) {
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.editor_delete), color = Mocha.Red) },
+                                text = { Text(stringResource(R.string.editor_delete), color = ClearCutAccents.Red) },
                                 onClick = {
                                     showOverflow = false
                                     if (confirmBeforeDelete) showDeleteConfirmation = true else onDelete()
                                 },
                                 leadingIcon = {
-                                    Icon(Icons.Default.Delete, contentDescription = null, tint = Mocha.Red)
+                                    Icon(Icons.Default.Delete, contentDescription = null, tint = ClearCutAccents.Red)
                                 }
                             )
                             DropdownMenuItem(
@@ -1748,7 +1752,7 @@ private fun EditorTopBar(
                                     Icon(
                                         Icons.Default.AutoAwesome,
                                         contentDescription = stringResource(R.string.v369_features_label),
-                                        tint = Mocha.Mauve
+                                        tint = ClearCutAccents.Mauve
                                     )
                                 }
                             )
@@ -1774,7 +1778,7 @@ private fun EditorTopBar(
                                     onOpenHistory()
                                 },
                                 leadingIcon = {
-                                    Icon(Icons.Default.History, contentDescription = null, tint = Mocha.Mauve)
+                                    Icon(Icons.Default.History, contentDescription = null, tint = ClearCutAccents.Mauve)
                                 },
                             )
                         }
@@ -1786,7 +1790,7 @@ private fun EditorTopBar(
                                     onOpenSnapshots()
                                 },
                                 leadingIcon = {
-                                    Icon(Icons.Default.Restore, contentDescription = null, tint = Mocha.Green)
+                                    Icon(Icons.Default.Restore, contentDescription = null, tint = ClearCutAccents.Green)
                                 },
                             )
                         }
@@ -1794,7 +1798,7 @@ private fun EditorTopBar(
                     DropdownMenu(
                         expanded = showAddTrackMenu,
                         onDismissRequest = { showAddTrackMenu = false },
-                        containerColor = Mocha.PanelHighest
+                        containerColor = semanticColors.panelHighest
                     ) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.editor_video_track)) },
@@ -1828,7 +1832,7 @@ private fun EditorTopBar(
                             Icons.Default.Search,
                             contentDescription = stringResource(R.string.tool_search),
                             modifier = Modifier.size(19.dp),
-                            tint = Mocha.Subtext1
+                            tint = semanticColors.subtextStrong
                         )
                     }
 
@@ -1838,8 +1842,8 @@ private fun EditorTopBar(
                 Button(
                     onClick = onExport,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Mocha.Sky,
-                        contentColor = Mocha.Midnight
+                        containerColor = ClearCutAccents.Sky,
+                        contentColor = semanticColors.background
                     ),
                     shape = RoundedCornerShape(Radius.md),
                     contentPadding = PaddingValues(horizontal = if (isCompactBar) 12.dp else 14.dp, vertical = 0.dp),

@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -52,7 +54,6 @@ import com.novacut.editor.engine.SilenceDetectionEngine.CutProposal
 import com.novacut.editor.engine.SilenceDetectionEngine.ProposalCategory
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.Track
-import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.ClearCutPrimaryButton
 import com.novacut.editor.ui.theme.ClearCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
@@ -70,6 +71,7 @@ fun CutAssistantReviewPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     val clipLookup = remember(tracks) {
         tracks.flatMap { it.clips }.associateBy { it.id }
     }
@@ -83,13 +85,13 @@ fun CutAssistantReviewPanel(
         title = stringResource(R.string.cut_assistant_title),
         subtitle = stringResource(R.string.cut_assistant_subtitle),
         icon = Icons.Default.ContentCut,
-        accent = Mocha.Peach,
+        accent = ClearCutAccents.Peach,
         onClose = onClose,
         closeContentDescription = stringResource(R.string.cut_assistant_close_cd),
         modifier = modifier,
         scrollable = false
     ) {
-        PremiumPanelCard(accent = Mocha.Peach) {
+        PremiumPanelCard(accent = ClearCutAccents.Peach) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -99,13 +101,13 @@ fun CutAssistantReviewPanel(
                     Text(
                         text = stringResource(R.string.cut_assistant_overview_title),
                         style = MaterialTheme.typography.titleMedium,
-                        color = Mocha.Text
+                        color = semanticColors.text
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = stringResource(R.string.cut_assistant_overview_body),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
 
@@ -121,11 +123,11 @@ fun CutAssistantReviewPanel(
                             acceptedCount,
                             acceptedCount
                         ),
-                        accent = if (acceptedCount > 0) Mocha.Green else Mocha.Overlay1
+                        accent = if (acceptedCount > 0) ClearCutAccents.Green else semanticColors.overlayStrong
                     )
                     PremiumPanelPill(
                         text = stringResource(R.string.cut_assistant_reclaim_pill, reclaimLabel),
-                        accent = Mocha.Peach
+                        accent = ClearCutAccents.Peach
                     )
                 }
             }
@@ -141,15 +143,15 @@ fun CutAssistantReviewPanel(
                         proposalCount,
                         proposalCount
                     ),
-                    accent = Mocha.Blue
+                    accent = ClearCutAccents.Blue
                 )
                 PremiumPanelPill(
                     text = stringResource(R.string.cut_assistant_silence_count, silenceCount),
-                    accent = Mocha.Mauve
+                    accent = ClearCutAccents.Mauve
                 )
                 PremiumPanelPill(
                     text = stringResource(R.string.cut_assistant_filler_count, fillerCount),
-                    accent = Mocha.Teal
+                    accent = ClearCutAccents.Teal
                 )
             }
         }
@@ -173,16 +175,16 @@ fun CutAssistantReviewPanel(
                 }
             }
 
-            PremiumPanelCard(accent = Mocha.Blue) {
+            PremiumPanelCard(accent = ClearCutAccents.Blue) {
                 Text(
                     text = stringResource(R.string.cut_assistant_review_title),
                     style = MaterialTheme.typography.titleMedium,
-                    color = Mocha.Text
+                    color = semanticColors.text
                 )
                 Text(
                     text = stringResource(R.string.cut_assistant_review_body),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -255,7 +257,7 @@ fun CutAssistantReviewPanel(
                     Text(
                         text = stringResource(R.string.cut_assistant_none_selected_hint),
                         style = MaterialTheme.typography.bodySmall,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
             }
@@ -268,21 +270,22 @@ private fun CutAssistantEmptyState(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    PremiumPanelCard(accent = Mocha.Green, modifier = modifier) {
+    val semanticColors = LocalClearCutColors.current
+    PremiumPanelCard(accent = ClearCutAccents.Green, modifier = modifier) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.Top
         ) {
             Surface(
-                color = Mocha.Green.copy(alpha = 0.12f),
+                color = ClearCutAccents.Green.copy(alpha = 0.12f),
                 shape = RoundedCornerShape(18.dp),
-                border = BorderStroke(1.dp, Mocha.Green.copy(alpha = 0.2f))
+                border = BorderStroke(1.dp, ClearCutAccents.Green.copy(alpha = 0.2f))
             ) {
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = null,
-                    tint = Mocha.Green,
+                    tint = ClearCutAccents.Green,
                     modifier = Modifier.padding(12.dp)
                 )
             }
@@ -293,12 +296,12 @@ private fun CutAssistantEmptyState(
                 Text(
                     text = stringResource(R.string.cut_assistant_empty_title),
                     style = MaterialTheme.typography.titleMedium,
-                    color = Mocha.Text
+                    color = semanticColors.text
                 )
                 Text(
                     text = stringResource(R.string.cut_assistant_empty_body),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
             }
         }
@@ -319,9 +322,10 @@ private fun CutProposalReviewCard(
     onToggle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     val accent = when (proposal.reason) {
-        CutProposal.Reason.SILENCE -> Mocha.Mauve
-        CutProposal.Reason.FILLER_WORD -> Mocha.Teal
+        CutProposal.Reason.SILENCE -> ClearCutAccents.Mauve
+        CutProposal.Reason.FILLER_WORD -> ClearCutAccents.Teal
     }
     val reasonLabel = when (proposal.reason) {
         CutProposal.Reason.SILENCE -> stringResource(R.string.cut_assistant_reason_silence)
@@ -341,11 +345,11 @@ private fun CutProposalReviewCard(
         modifier = modifier
             .fillMaxWidth()
             .clickable(role = Role.Checkbox, onClick = onToggle),
-        color = if (isAccepted) Mocha.PanelHighest else Mocha.PanelRaised.copy(alpha = 0.78f),
+        color = if (isAccepted) semanticColors.panelHighest else semanticColors.panelRaised.copy(alpha = 0.78f),
         shape = RoundedCornerShape(Radius.xl),
         border = BorderStroke(
             1.dp,
-            if (isAccepted) accent.copy(alpha = 0.42f) else Mocha.CardStroke
+            if (isAccepted) accent.copy(alpha = 0.42f) else semanticColors.cardStroke
         )
     ) {
         Box(
@@ -353,7 +357,7 @@ private fun CutProposalReviewCard(
                 Brush.verticalGradient(
                     listOf(
                         accent.copy(alpha = if (isAccepted) 0.12f else 0.05f),
-                        Mocha.PanelHighest.copy(alpha = 0.98f)
+                        semanticColors.panelHighest.copy(alpha = 0.98f)
                     )
                 )
             )
@@ -399,7 +403,7 @@ private fun CutProposalReviewCard(
                         Text(
                             text = reasonLabel,
                             style = MaterialTheme.typography.titleSmall,
-                            color = Mocha.Text,
+                            color = semanticColors.text,
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.weight(1f)
                         )
@@ -416,7 +420,7 @@ private fun CutProposalReviewCard(
                     Text(
                         text = detail,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Mocha.Subtext0,
+                        color = semanticColors.subtext,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -427,7 +431,7 @@ private fun CutProposalReviewCard(
                     ) {
                         PremiumPanelPill(
                             text = stringResource(R.string.cut_assistant_clip_pill, clipName),
-                            accent = Mocha.Blue
+                            accent = ClearCutAccents.Blue
                         )
                         PremiumPanelPill(
                             text = stringResource(

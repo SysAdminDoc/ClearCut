@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -32,7 +34,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.novacut.editor.R
 import com.novacut.editor.ui.ClearCutTestTags
-import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.Motion
 import com.novacut.editor.ui.theme.ClearCutPrimaryButton
 import com.novacut.editor.ui.theme.ClearCutSecondaryButton
@@ -79,6 +80,7 @@ fun FirstRunTutorial(
     onComplete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     var currentStep by remember { mutableIntStateOf(0) }
 
     Box(
@@ -95,9 +97,9 @@ fun FirstRunTutorial(
             .background(
                 Brush.verticalGradient(
                     colorStops = arrayOf(
-                        0f to Mocha.Crust.copy(alpha = 0.96f),
-                        0.48f to Mocha.Midnight.copy(alpha = 0.96f),
-                        1f to Mocha.Crust.copy(alpha = 0.94f)
+                        0f to semanticColors.onAccent.copy(alpha = 0.96f),
+                        0.48f to semanticColors.background.copy(alpha = 0.96f),
+                        1f to semanticColors.onAccent.copy(alpha = 0.94f)
                     )
                 )
             )
@@ -106,9 +108,9 @@ fun FirstRunTutorial(
         // and easy to misclick; a subtle pill treatment gives it a clear affordance without
         // competing with the primary "Next" CTA.
         Surface(
-            color = Mocha.Surface0.copy(alpha = 0.6f),
+            color = semanticColors.surfaceLow.copy(alpha = 0.6f),
             shape = RoundedCornerShape(Radius.sm),
-            border = BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.6f)),
+            border = BorderStroke(1.dp, semanticColors.cardStroke.copy(alpha = 0.6f)),
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(Spacing.lg)
@@ -118,7 +120,7 @@ fun FirstRunTutorial(
         ) {
             Text(
                 text = stringResource(R.string.tutorial_skip),
-                color = Mocha.Subtext1,
+                color = semanticColors.subtextStrong,
                 style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
             )
@@ -144,9 +146,9 @@ fun FirstRunTutorial(
                 modifier = Modifier
                     .padding(horizontal = Spacing.xxl)
                     .widthIn(max = 340.dp),
-                color = Mocha.PanelHighest,
+                color = semanticColors.panelHighest,
                 shape = RoundedCornerShape(Radius.xxl),
-                border = BorderStroke(1.dp, Mocha.CardStrokeStrong.copy(alpha = 0.85f)),
+                border = BorderStroke(1.dp, semanticColors.cardStrokeStrong.copy(alpha = 0.85f)),
                 shadowElevation = 12.dp
             ) {
                 Column(
@@ -155,9 +157,9 @@ fun FirstRunTutorial(
                         .background(
                             Brush.verticalGradient(
                                 colorStops = arrayOf(
-                                    0f to Mocha.Mauve.copy(alpha = 0.08f),
-                                    0.6f to Mocha.PanelHighest,
-                                    1f to Mocha.PanelHighest
+                                    0f to ClearCutAccents.Mauve.copy(alpha = 0.08f),
+                                    0.6f to semanticColors.panelHighest,
+                                    1f to semanticColors.panelHighest
                                 )
                             )
                         )
@@ -175,7 +177,7 @@ fun FirstRunTutorial(
                     Icon(
                         imageVector = tutorialStep.arrowIcon,
                         contentDescription = null,
-                        tint = Mocha.Mauve.copy(alpha = 0.85f),
+                        tint = ClearCutAccents.Mauve.copy(alpha = 0.85f),
                         modifier = Modifier.size(24.dp)
                     )
 
@@ -187,16 +189,16 @@ fun FirstRunTutorial(
                         modifier = Modifier
                             .size(64.dp)
                             .clip(CircleShape)
-                            .background(Mocha.Mauve.copy(alpha = 0.14f))
+                            .background(ClearCutAccents.Mauve.copy(alpha = 0.14f))
                             .border(
-                                BorderStroke(1.dp, Mocha.Mauve.copy(alpha = 0.24f)),
+                                BorderStroke(1.dp, ClearCutAccents.Mauve.copy(alpha = 0.24f)),
                                 CircleShape
                             )
                     ) {
                         Icon(
                             imageVector = tutorialStep.icon,
                             contentDescription = null,
-                            tint = Mocha.Mauve,
+                            tint = ClearCutAccents.Mauve,
                             modifier = Modifier.size(30.dp)
                         )
                     }
@@ -205,7 +207,7 @@ fun FirstRunTutorial(
 
                     Text(
                         text = stringResource(tutorialStep.titleRes),
-                        color = Mocha.Text,
+                        color = semanticColors.text,
                         style = MaterialTheme.typography.headlineMedium,
                         textAlign = TextAlign.Center
                     )
@@ -214,7 +216,7 @@ fun FirstRunTutorial(
 
                     Text(
                         text = stringResource(tutorialStep.descriptionRes),
-                        color = Mocha.Subtext1,
+                        color = semanticColors.subtextStrong,
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = TextAlign.Center
                     )
@@ -222,13 +224,13 @@ fun FirstRunTutorial(
                     Spacer(modifier = Modifier.height(Spacing.md))
 
                     Surface(
-                        color = Mocha.Surface0.copy(alpha = 0.72f),
+                        color = semanticColors.surfaceLow.copy(alpha = 0.72f),
                         shape = RoundedCornerShape(Radius.sm),
-                        border = BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.75f))
+                        border = BorderStroke(1.dp, semanticColors.cardStroke.copy(alpha = 0.75f))
                     ) {
                         Text(
                             text = stepCounter,
-                            color = Mocha.Subtext1,
+                            color = semanticColors.subtextStrong,
                             style = MaterialTheme.typography.labelMedium,
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
                         )
@@ -262,8 +264,8 @@ fun FirstRunTutorial(
                                     .height(8.dp)
                                     .clip(RoundedCornerShape(Radius.sm))
                                     .background(
-                                        if (index == step) Mocha.Mauve
-                                        else Mocha.Surface1.copy(alpha = 0.7f)
+                                        if (index == step) ClearCutAccents.Mauve
+                                        else semanticColors.surface.copy(alpha = 0.7f)
                                     )
                             )
                         }

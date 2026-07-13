@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import android.graphics.Bitmap
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -54,7 +56,6 @@ import com.novacut.editor.model.Clip
 import com.novacut.editor.model.ClipLabel
 import com.novacut.editor.model.KeyframeProperty
 import com.novacut.editor.ui.theme.ClearCutChromeIconButton
-import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
 import com.novacut.editor.ui.theme.TouchTarget
@@ -75,6 +76,7 @@ fun BoxScope.EditorOverlayHost(
     autoSaveTopPadding: Dp,
     isTutorialOpen: Boolean
 ) {
+    val semanticColors = LocalClearCutColors.current
     if (state.isDrawingMode || state.drawingPaths.isNotEmpty()) {
         DrawingCanvas(
             paths = state.drawingPaths,
@@ -163,8 +165,8 @@ fun BoxScope.EditorOverlayHost(
             .zIndex(20f)
     ) {
         Card(
-            colors = CardDefaults.cardColors(containerColor = Mocha.Panel),
-            border = BorderStroke(1.dp, Mocha.CardStrokeStrong.copy(alpha = 0.86f)),
+            colors = CardDefaults.cardColors(containerColor = semanticColors.panel),
+            border = BorderStroke(1.dp, semanticColors.cardStrokeStrong.copy(alpha = 0.86f)),
             shape = RoundedCornerShape(topStart = Radius.xxl, topEnd = Radius.xxl),
             modifier = Modifier
                 .fillMaxWidth()
@@ -175,8 +177,8 @@ fun BoxScope.EditorOverlayHost(
                     .background(
                         Brush.verticalGradient(
                             listOf(
-                                Mocha.PanelHighest.copy(alpha = 0.86f),
-                                Mocha.Panel
+                                semanticColors.panelHighest.copy(alpha = 0.86f),
+                                semanticColors.panel
                             )
                         )
                     )
@@ -190,12 +192,12 @@ fun BoxScope.EditorOverlayHost(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             stringResource(R.string.panel_editor_clip_label),
-                            color = Mocha.Text,
+                            color = semanticColors.text,
                             style = MaterialTheme.typography.titleSmall
                         )
                         Text(
                             stringResource(R.string.clip_label_picker_description),
-                            color = Mocha.Subtext0,
+                            color = semanticColors.subtext,
                             style = MaterialTheme.typography.bodySmall,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
@@ -226,13 +228,13 @@ fun BoxScope.EditorOverlayHost(
                                 .size(TouchTarget.minimum)
                                 .clip(CircleShape)
                                 .background(
-                                    if (label == ClipLabel.NONE) Mocha.Surface2 else Color(label.argb)
+                                    if (label == ClipLabel.NONE) semanticColors.surfaceHigh else Color(label.argb)
                                 )
                                 .then(
                                     if (isSelected) {
-                                        Modifier.border(2.dp, Mocha.Text, CircleShape)
+                                        Modifier.border(2.dp, semanticColors.text, CircleShape)
                                     } else {
-                                        Modifier.border(1.dp, Mocha.CardStroke.copy(alpha = 0.7f), CircleShape)
+                                        Modifier.border(1.dp, semanticColors.cardStroke.copy(alpha = 0.7f), CircleShape)
                                     }
                                 )
                                 .semantics { contentDescription = labelName }
@@ -244,7 +246,7 @@ fun BoxScope.EditorOverlayHost(
                                 Icon(
                                     Icons.Default.Close,
                                     labelName,
-                                    tint = Mocha.Subtext0,
+                                    tint = semanticColors.subtext,
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
@@ -252,7 +254,7 @@ fun BoxScope.EditorOverlayHost(
                                 Icon(
                                     Icons.Default.Check,
                                     labelName,
-                                    tint = Mocha.Crust,
+                                    tint = semanticColors.onAccent,
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
@@ -283,9 +285,9 @@ fun BoxScope.EditorOverlayHost(
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 120.dp, start = 16.dp, end = 16.dp)
                 .zIndex(11f),
-            containerColor = Mocha.PanelHighest,
-            contentColor = Mocha.Text,
-            actionContentColor = Mocha.Peach,
+            containerColor = semanticColors.panelHighest,
+            contentColor = semanticColors.text,
+            actionContentColor = ClearCutAccents.Peach,
             action = {
                 TextButton(onClick = {
                     viewModel.undo()
@@ -311,7 +313,7 @@ fun BoxScope.EditorOverlayHost(
                 Icon(
                     imageVector = Icons.Default.Restore,
                     contentDescription = null,
-                    tint = Mocha.Peach,
+                    tint = ClearCutAccents.Peach,
                     modifier = Modifier.size(18.dp)
                 )
                 Text(

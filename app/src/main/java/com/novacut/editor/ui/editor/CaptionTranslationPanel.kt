@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -37,7 +39,6 @@ import com.novacut.editor.R
 import com.novacut.editor.engine.CaptionTranslationEngine.EditorRow
 import com.novacut.editor.engine.CaptionTranslationEngine.EditorRowState
 import com.novacut.editor.engine.CaptionTranslationEngine.LanguagePairQuality
-import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.Radius
 
 /**
@@ -107,19 +108,20 @@ fun CaptionTranslationPanel(
 
 @Composable
 private fun Header() {
+    val semanticColors = LocalClearCutColors.current
     Column(
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
         Text(
             text = stringResource(R.string.caption_translation_title),
-            color = Mocha.Text,
+            color = semanticColors.text,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = stringResource(R.string.caption_translation_subtitle),
-            color = Mocha.Subtext0,
+            color = semanticColors.subtext,
             style = MaterialTheme.typography.bodySmall,
         )
     }
@@ -157,9 +159,10 @@ private fun TargetPicker(
 
 @Composable
 private fun LanguageChip(code: String, selected: Boolean, onClick: () -> Unit) {
-    val container = if (selected) Mocha.Mauve.copy(alpha = 0.18f) else Mocha.PanelHighest.copy(alpha = 0.5f)
-    val border = if (selected) Mocha.Mauve.copy(alpha = 0.62f) else Mocha.CardStrokeStrong.copy(alpha = 0.5f)
-    val textColor = if (selected) Mocha.Text else Mocha.Subtext0
+    val semanticColors = LocalClearCutColors.current
+    val container = if (selected) ClearCutAccents.Mauve.copy(alpha = 0.18f) else semanticColors.panelHighest.copy(alpha = 0.5f)
+    val border = if (selected) ClearCutAccents.Mauve.copy(alpha = 0.62f) else semanticColors.cardStrokeStrong.copy(alpha = 0.5f)
+    val textColor = if (selected) semanticColors.text else semanticColors.subtext
     Text(
         text = code.uppercase(),
         color = textColor,
@@ -189,28 +192,33 @@ private fun QualityChip(quality: LanguagePairQuality) {
     )
 }
 
-private fun qualityColor(quality: LanguagePairQuality): Color = when (quality) {
-    LanguagePairQuality.EXCELLENT -> Mocha.Green
-    LanguagePairQuality.GOOD -> Mocha.Sky
-    LanguagePairQuality.FAIR -> Mocha.Yellow
-    LanguagePairQuality.EXPERIMENTAL -> Mocha.Peach
-    LanguagePairQuality.UNKNOWN -> Mocha.Subtext0
+@Composable
+private fun qualityColor(quality: LanguagePairQuality): Color {
+    val semanticColors = LocalClearCutColors.current
+    return when (quality) {
+        LanguagePairQuality.EXCELLENT -> ClearCutAccents.Green
+        LanguagePairQuality.GOOD -> ClearCutAccents.Sky
+        LanguagePairQuality.FAIR -> ClearCutAccents.Yellow
+        LanguagePairQuality.EXPERIMENTAL -> ClearCutAccents.Peach
+        LanguagePairQuality.UNKNOWN -> semanticColors.subtext
+    }
 }
 
 @Composable
 private fun EmptyState() {
+    val semanticColors = LocalClearCutColors.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
             .clip(RoundedCornerShape(Radius.md))
-            .background(Mocha.PanelHighest.copy(alpha = 0.42f))
+            .background(semanticColors.panelHighest.copy(alpha = 0.42f))
             .padding(horizontal = 14.dp, vertical = 18.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = stringResource(R.string.caption_translation_no_target),
-            color = Mocha.Subtext0,
+            color = semanticColors.subtext,
             style = MaterialTheme.typography.bodySmall,
         )
     }
@@ -222,21 +230,22 @@ private fun TranslationRow(
     onUserEdit: (String) -> Unit,
     onRegenerate: () -> Unit,
 ) {
+    val semanticColors = LocalClearCutColors.current
     val seg = row.segment
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
             .clip(RoundedCornerShape(Radius.lg))
-            .border(BorderStroke(1.dp, Mocha.CardStrokeStrong.copy(alpha = 0.4f)), RoundedCornerShape(Radius.lg))
-            .background(Mocha.PanelHighest.copy(alpha = 0.45f))
+            .border(BorderStroke(1.dp, semanticColors.cardStrokeStrong.copy(alpha = 0.4f)), RoundedCornerShape(Radius.lg))
+            .background(semanticColors.panelHighest.copy(alpha = 0.45f))
             .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         // Source row (read-only).
         Text(
             text = seg.sourceText,
-            color = Mocha.Subtext0,
+            color = semanticColors.subtext,
             style = MaterialTheme.typography.bodySmall,
         )
         // Target row (editable). Status chip on the right.
@@ -263,18 +272,19 @@ private fun EditableTargetField(
     onChange: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val semanticColors = LocalClearCutColors.current
     BasicTextField(
         value = text,
         onValueChange = onChange,
         enabled = !pending,
         textStyle = TextStyle(
-            color = if (pending) Mocha.Subtext0 else Mocha.Text,
+            color = if (pending) semanticColors.subtext else semanticColors.text,
             fontSize = MaterialTheme.typography.bodyMedium.fontSize,
         ),
-        cursorBrush = SolidColor(Mocha.Mauve),
+        cursorBrush = SolidColor(ClearCutAccents.Mauve),
         modifier = modifier
             .clip(RoundedCornerShape(Radius.md))
-            .background(Mocha.Mantle.copy(alpha = 0.6f))
+            .background(semanticColors.backgroundMid.copy(alpha = 0.6f))
             .padding(horizontal = 10.dp, vertical = 8.dp),
     )
 }
@@ -282,9 +292,9 @@ private fun EditableTargetField(
 @Composable
 private fun RowStatusChip(state: EditorRowState) {
     val (label, color) = when (state) {
-        EditorRowState.TRANSLATED -> stringResource(R.string.caption_translation_status_translated) to Mocha.Green
-        EditorRowState.USER_EDITED -> stringResource(R.string.caption_translation_status_edited) to Mocha.Sky
-        EditorRowState.REGENERATE_PENDING -> stringResource(R.string.caption_translation_status_pending) to Mocha.Yellow
+        EditorRowState.TRANSLATED -> stringResource(R.string.caption_translation_status_translated) to ClearCutAccents.Green
+        EditorRowState.USER_EDITED -> stringResource(R.string.caption_translation_status_edited) to ClearCutAccents.Sky
+        EditorRowState.REGENERATE_PENDING -> stringResource(R.string.caption_translation_status_pending) to ClearCutAccents.Yellow
     }
     Text(
         text = label,
@@ -300,7 +310,8 @@ private fun RowStatusChip(state: EditorRowState) {
 
 @Composable
 private fun RegenerateButton(enabled: Boolean, onClick: () -> Unit) {
-    val accent = if (enabled) Mocha.Mauve else Mocha.Subtext0.copy(alpha = 0.4f)
+    val semanticColors = LocalClearCutColors.current
+    val accent = if (enabled) ClearCutAccents.Mauve else semanticColors.subtext.copy(alpha = 0.4f)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier

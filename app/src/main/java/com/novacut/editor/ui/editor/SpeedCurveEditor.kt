@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -59,7 +61,6 @@ import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.model.SpeedCurve
 import com.novacut.editor.model.SpeedPoint
-import com.novacut.editor.ui.theme.Mocha
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.exp
@@ -80,6 +81,7 @@ fun SpeedCurveEditor(
     onSpeedDragStarted: () -> Unit = {},
     onSpeedDragEnded: () -> Unit = {}
 ) {
+    val semanticColors = LocalClearCutColors.current
     var curveMode by remember { mutableStateOf(speedCurve != null) }
     var selectedCurvePointIndex by remember { mutableIntStateOf(-1) }
     val activeCurve = speedCurve ?: SpeedCurve.constant(constantSpeed)
@@ -90,13 +92,13 @@ fun SpeedCurveEditor(
         title = stringResource(R.string.speed_title),
         subtitle = stringResource(R.string.panel_speed_subtitle),
         icon = Icons.Default.FastForward,
-        accent = if (curveMode) Mocha.Mauve else Mocha.Peach,
+        accent = if (curveMode) ClearCutAccents.Mauve else ClearCutAccents.Peach,
         onClose = onClose,
         closeContentDescription = stringResource(R.string.cd_close_speed_curve),
         modifier = modifier,
         scrollable = true
     ) {
-        PremiumPanelCard(accent = if (curveMode) Mocha.Mauve else Mocha.Peach) {
+        PremiumPanelCard(accent = if (curveMode) ClearCutAccents.Mauve else ClearCutAccents.Peach) {
             BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                 val isCompactLayout = maxWidth < 420.dp
                 if (isCompactLayout) {
@@ -134,7 +136,7 @@ fun SpeedCurveEditor(
             }
 
             Surface(
-                color = Mocha.PanelRaised,
+                color = semanticColors.panelRaised,
                 shape = RoundedCornerShape(18.dp)
             ) {
                 Row(
@@ -151,7 +153,7 @@ fun SpeedCurveEditor(
                                 .weight(1f)
                                 .clip(RoundedCornerShape(14.dp))
                                 .background(
-                                    if (curveMode == isCurve) Mocha.Mauve.copy(alpha = 0.18f) else Color.Transparent
+                                    if (curveMode == isCurve) ClearCutAccents.Mauve.copy(alpha = 0.18f) else Color.Transparent
                                 )
                                 .clickable {
                                     curveMode = isCurve
@@ -170,7 +172,7 @@ fun SpeedCurveEditor(
                             Text(
                                 text = label,
                                 style = MaterialTheme.typography.labelLarge,
-                                color = if (curveMode == isCurve) Mocha.Mauve else Mocha.Subtext0
+                                color = if (curveMode == isCurve) ClearCutAccents.Mauve else semanticColors.subtext
                             )
                         }
                     }
@@ -181,16 +183,16 @@ fun SpeedCurveEditor(
         Spacer(modifier = Modifier.height(12.dp))
 
         if (curveMode) {
-            PremiumPanelCard(accent = Mocha.Mauve) {
+            PremiumPanelCard(accent = ClearCutAccents.Mauve) {
                 Text(
                     text = stringResource(R.string.speed_presets),
                     style = MaterialTheme.typography.titleMedium,
-                    color = Mocha.Text
+                    color = semanticColors.text
                 )
                 Text(
                     text = stringResource(R.string.speed_curve_hint),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
                 // Grouped presets — Ramps (time-varying curves) and Constants (uniform speeds).
                 // Sub-headers make presets more discoverable; users who don't know "ramp up" vs.
@@ -198,7 +200,7 @@ fun SpeedCurveEditor(
                 Text(
                     text = stringResource(R.string.speed_preset_group_ramps),
                     style = MaterialTheme.typography.labelMedium,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -214,8 +216,8 @@ fun SpeedCurveEditor(
                             onClick = { onSpeedCurveChanged(preset) },
                             label = { Text(label) },
                             colors = FilterChipDefaults.filterChipColors(
-                                labelColor = Mocha.Text,
-                                containerColor = Mocha.PanelRaised
+                                labelColor = semanticColors.text,
+                                containerColor = semanticColors.panelRaised
                             )
                         )
                     }
@@ -224,7 +226,7 @@ fun SpeedCurveEditor(
                 Text(
                     text = stringResource(R.string.speed_preset_group_constants),
                     style = MaterialTheme.typography.labelMedium,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -240,8 +242,8 @@ fun SpeedCurveEditor(
                             onClick = { onSpeedCurveChanged(preset) },
                             label = { Text(label) },
                             colors = FilterChipDefaults.filterChipColors(
-                                labelColor = Mocha.Text,
-                                containerColor = Mocha.PanelRaised
+                                labelColor = semanticColors.text,
+                                containerColor = semanticColors.panelRaised
                             )
                         )
                     }
@@ -252,15 +254,15 @@ fun SpeedCurveEditor(
                 ) {
                     PremiumPanelPill(
                         text = stringResource(R.string.speed_curve_points_label, activeCurve.points.size),
-                        accent = Mocha.Sapphire
+                        accent = ClearCutAccents.Sapphire
                     )
                     PremiumPanelPill(
                         text = stringResource(R.string.speed_curve_average_label, averageCurveSpeed),
-                        accent = Mocha.Mauve
+                        accent = ClearCutAccents.Mauve
                     )
                     PremiumPanelPill(
                         text = stringResource(R.string.speed_curve_peak_label, peakCurveSpeed),
-                        accent = Mocha.Peach
+                        accent = ClearCutAccents.Peach
                     )
                 }
                 SpeedCurveCanvas(
@@ -272,7 +274,7 @@ fun SpeedCurveEditor(
                         .fillMaxWidth()
                         .height(200.dp)
                         .clip(RoundedCornerShape(20.dp))
-                        .background(Mocha.Surface0)
+                        .background(semanticColors.surfaceLow)
                 )
                 SpeedPointNumericEditor(
                     curve = activeCurve,
@@ -289,16 +291,16 @@ fun SpeedCurveEditor(
                 )
             }
         } else {
-            PremiumPanelCard(accent = Mocha.Peach) {
+            PremiumPanelCard(accent = ClearCutAccents.Peach) {
                 Text(
                     text = stringResource(R.string.speed_label, constantSpeed),
                     style = MaterialTheme.typography.titleMedium,
-                    color = Mocha.Text
+                    color = semanticColors.text
                 )
                 Text(
                     text = stringResource(R.string.speed_constant_hint),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -314,10 +316,10 @@ fun SpeedCurveEditor(
                             },
                             label = { Text(formatSpeedChip(speed)) },
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = Mocha.Mauve.copy(alpha = 0.2f),
-                                selectedLabelColor = Mocha.Mauve,
-                                labelColor = Mocha.Subtext0,
-                                containerColor = Mocha.PanelRaised
+                                selectedContainerColor = ClearCutAccents.Mauve.copy(alpha = 0.2f),
+                                selectedLabelColor = ClearCutAccents.Mauve,
+                                labelColor = semanticColors.subtext,
+                                containerColor = semanticColors.panelRaised
                             )
                         )
                     }
@@ -345,9 +347,9 @@ fun SpeedCurveEditor(
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = SliderDefaults.colors(
-                        thumbColor = Mocha.Mauve,
-                        activeTrackColor = Mocha.Mauve.copy(alpha = 0.6f),
-                        inactiveTrackColor = Mocha.Surface1
+                        thumbColor = ClearCutAccents.Mauve,
+                        activeTrackColor = ClearCutAccents.Mauve.copy(alpha = 0.6f),
+                        inactiveTrackColor = semanticColors.surface
                     )
                 )
             }
@@ -355,7 +357,7 @@ fun SpeedCurveEditor(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = if (isReversed) Mocha.Peach else Mocha.Sapphire) {
+        PremiumPanelCard(accent = if (isReversed) ClearCutAccents.Peach else ClearCutAccents.Sapphire) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -371,14 +373,14 @@ fun SpeedCurveEditor(
                     Icon(
                         imageVector = Icons.Default.SwapHoriz,
                         contentDescription = stringResource(R.string.cd_reverse_speed),
-                        tint = if (isReversed) Mocha.Peach else Mocha.Sapphire,
+                        tint = if (isReversed) ClearCutAccents.Peach else ClearCutAccents.Sapphire,
                         modifier = Modifier.size(20.dp)
                     )
                     Column {
                         Text(
                             text = stringResource(R.string.speed_reverse_playback),
                             style = MaterialTheme.typography.titleSmall,
-                            color = Mocha.Text
+                            color = semanticColors.text
                         )
                         Text(
                             text = if (isReversed) {
@@ -387,14 +389,14 @@ fun SpeedCurveEditor(
                                 stringResource(R.string.panel_speed_reverse_hint_off)
                             },
                             style = MaterialTheme.typography.bodySmall,
-                            color = Mocha.Subtext0
+                            color = semanticColors.subtext
                         )
                     }
                 }
                 Switch(
                     checked = isReversed,
                     onCheckedChange = onReversedChanged,
-                    colors = SwitchDefaults.colors(checkedTrackColor = Mocha.Peach)
+                    colors = SwitchDefaults.colors(checkedTrackColor = ClearCutAccents.Peach)
                 )
             }
         }
@@ -416,7 +418,7 @@ private fun SpeedSummaryPills(
     ) {
         PremiumPanelPill(
             text = if (curveMode) stringResource(R.string.panel_speed_ramp) else stringResource(R.string.panel_speed_constant),
-            accent = if (curveMode) Mocha.Mauve else Mocha.Peach
+            accent = if (curveMode) ClearCutAccents.Mauve else ClearCutAccents.Peach
         )
         PremiumPanelPill(
             text = if (curveMode) {
@@ -424,26 +426,27 @@ private fun SpeedSummaryPills(
             } else {
                 stringResource(R.string.speed_current_label, constantSpeed)
             },
-            accent = if (curveMode) Mocha.Mauve else Mocha.Peach
+            accent = if (curveMode) ClearCutAccents.Mauve else ClearCutAccents.Peach
         )
         PremiumPanelPill(
             text = if (isReversed) stringResource(R.string.panel_speed_reverse_on) else stringResource(R.string.panel_speed_reverse_off),
-            accent = if (isReversed) Mocha.Peach else Mocha.Sapphire
+            accent = if (isReversed) ClearCutAccents.Peach else ClearCutAccents.Sapphire
         )
         PremiumPanelPill(
             text = stringResource(R.string.speed_clip_duration_label, formatTimestamp(clipDurationMs)),
-            accent = Mocha.Blue
+            accent = ClearCutAccents.Blue
         )
     }
 }
 
 @Composable
 private fun SpeedSummaryText(curveMode: Boolean) {
+    val semanticColors = LocalClearCutColors.current
     Column {
         Text(
             text = stringResource(R.string.speed_summary_title),
             style = MaterialTheme.typography.titleMedium,
-            color = Mocha.Text
+            color = semanticColors.text
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
@@ -453,7 +456,7 @@ private fun SpeedSummaryText(curveMode: Boolean) {
                 stringResource(R.string.speed_mode_constant_description)
             },
             style = MaterialTheme.typography.bodyMedium,
-            color = Mocha.Subtext0
+            color = semanticColors.subtext
         )
     }
 }
@@ -466,6 +469,7 @@ private fun SpeedPointNumericEditor(
     onDeletePoint: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     if (selectedIndex !in curve.points.indices) return
     val point = curve.points[selectedIndex]
     val positionDescription = stringResource(R.string.speed_point_position_cd)
@@ -482,7 +486,7 @@ private fun SpeedPointNumericEditor(
         Text(
             text = stringResource(R.string.speed_point_number, selectedIndex + 1),
             style = MaterialTheme.typography.labelMedium,
-            color = Mocha.Peach
+            color = ClearCutAccents.Peach
         )
         OutlinedTextField(
             value = formatEditorDecimal(point.position.toDouble() * 100.0, 1),
@@ -501,10 +505,10 @@ private fun SpeedPointNumericEditor(
                 .weight(1f)
                 .semantics { contentDescription = positionDescription },
             colors = OutlinedTextFieldDefaults.colors(
-                focusedTextColor = Mocha.Text,
-                unfocusedTextColor = Mocha.Subtext0,
-                focusedBorderColor = Mocha.Peach,
-                unfocusedBorderColor = Mocha.Surface1
+                focusedTextColor = semanticColors.text,
+                unfocusedTextColor = semanticColors.subtext,
+                focusedBorderColor = ClearCutAccents.Peach,
+                unfocusedBorderColor = semanticColors.surface
             )
         )
         OutlinedTextField(
@@ -523,10 +527,10 @@ private fun SpeedPointNumericEditor(
                 .weight(1f)
                 .semantics { contentDescription = multiplierDescription },
             colors = OutlinedTextFieldDefaults.colors(
-                focusedTextColor = Mocha.Text,
-                unfocusedTextColor = Mocha.Subtext0,
-                focusedBorderColor = Mocha.Peach,
-                unfocusedBorderColor = Mocha.Surface1
+                focusedTextColor = semanticColors.text,
+                unfocusedTextColor = semanticColors.subtext,
+                focusedBorderColor = ClearCutAccents.Peach,
+                unfocusedBorderColor = semanticColors.surface
             )
         )
         if (selectedIndex > 0 && selectedIndex < curve.points.lastIndex) {
@@ -534,7 +538,7 @@ private fun SpeedPointNumericEditor(
                 onClick = onDeletePoint,
                 modifier = Modifier.semantics { contentDescription = deleteDescription }
             ) {
-                Icon(Icons.Default.Delete, contentDescription = null, tint = Mocha.Red)
+                Icon(Icons.Default.Delete, contentDescription = null, tint = ClearCutAccents.Red)
             }
         }
     }
@@ -644,15 +648,15 @@ private fun SpeedCurveCanvas(
             val y = (1f - (speed - minSpeed) / speedRange) * h
             if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
-        drawPath(path, Mocha.Peach, style = Stroke(2.5f))
+        drawPath(path, ClearCutAccents.Peach, style = Stroke(2.5f))
 
         curve.points.forEachIndexed { i, point ->
             val px = point.position * w
             val py = (1f - (point.speed - minSpeed) / speedRange) * h
             if (i == selectedIndex) {
-                drawCircle(Mocha.Yellow, 14f, Offset(px, py))
+                drawCircle(ClearCutAccents.Yellow, 14f, Offset(px, py))
             }
-            drawCircle(Mocha.Peach, 8f, Offset(px, py))
+            drawCircle(ClearCutAccents.Peach, 8f, Offset(px, py))
             drawCircle(Color.White, 5f, Offset(px, py))
         }
     }

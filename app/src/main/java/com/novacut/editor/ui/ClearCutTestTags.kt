@@ -13,6 +13,7 @@ object ClearCutTestTags {
     const val EDITOR_EMPTY_ADD_MEDIA = "editor.emptyAddMedia"
     const val EDITOR_EXPORT = "editor.export"
     const val EDITOR_COMPOUND_BREADCRUMB = "editor.compoundBreadcrumb"
+    const val EDITOR_DESKTOP_SIDEBAR = "editor.desktopSidebar"
 
     const val MEDIA_PICKER_SHEET = "mediaPicker.sheet"
     const val MEDIA_PICKER_CLOSE = "mediaPicker.close"

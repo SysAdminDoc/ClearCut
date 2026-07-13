@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -41,7 +43,6 @@ import com.novacut.editor.engine.MediaHealthReport
 import com.novacut.editor.engine.MediaRelinkProbe
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.Track
-import com.novacut.editor.ui.theme.Mocha
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -75,6 +76,7 @@ fun MediaManagerPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     val context = LocalContext.current
     var assets by remember(tracks, relinkReports) { mutableStateOf(emptyList<MediaAsset>()) }
     var isAnalyzing by remember(tracks, relinkReports) { mutableStateOf(true) }
@@ -114,12 +116,12 @@ fun MediaManagerPanel(
         else -> stringResource(R.string.media_manager_status_healthy)
     }
     val statusAccent = when {
-        isAnalyzing -> Mocha.Blue
-        healthBlockingCount > 0 -> Mocha.Red
-        missingCount > 0 -> Mocha.Red
-        healthWarningCount > 0 -> Mocha.Peach
-        emptyTrackCount > 0 -> Mocha.Yellow
-        else -> Mocha.Green
+        isAnalyzing -> ClearCutAccents.Blue
+        healthBlockingCount > 0 -> ClearCutAccents.Red
+        missingCount > 0 -> ClearCutAccents.Red
+        healthWarningCount > 0 -> ClearCutAccents.Peach
+        emptyTrackCount > 0 -> ClearCutAccents.Yellow
+        else -> ClearCutAccents.Green
     }
     val projectHealthLabel = when {
         mediaHealthReport == null -> stringResource(R.string.media_health_unavailable)
@@ -150,13 +152,13 @@ fun MediaManagerPanel(
         title = stringResource(R.string.media_manager_title),
         subtitle = stringResource(R.string.media_manager_subtitle),
         icon = Icons.Default.PermMedia,
-        accent = if (missingCount > 0) Mocha.Red else Mocha.Blue,
+        accent = if (missingCount > 0) ClearCutAccents.Red else ClearCutAccents.Blue,
         onClose = onClose,
         closeContentDescription = stringResource(R.string.media_manager_close_cd),
         modifier = modifier,
         scrollable = true
     ) {
-        PremiumPanelCard(accent = if (missingCount > 0) Mocha.Red else Mocha.Blue) {
+        PremiumPanelCard(accent = if (missingCount > 0) ClearCutAccents.Red else ClearCutAccents.Blue) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -166,13 +168,13 @@ fun MediaManagerPanel(
                     Text(
                         text = stringResource(R.string.media_manager_health_title),
                         style = MaterialTheme.typography.titleMedium,
-                        color = Mocha.Text
+                        color = semanticColors.text
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = stringResource(R.string.media_manager_health_description),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
 
@@ -184,7 +186,7 @@ fun MediaManagerPanel(
                 ) {
                     PremiumPanelPill(
                         text = if (isAnalyzing) "Analyzing..." else formatFileSize(totalSize),
-                        accent = Mocha.Peach
+                        accent = ClearCutAccents.Peach
                     )
                     PremiumPanelPill(
                         text = statusLabel,
@@ -200,36 +202,36 @@ fun MediaManagerPanel(
                 MediaHealthMetric(
                     title = stringResource(R.string.media_stat_assets),
                     value = if (isAnalyzing) "..." else assets.size.toString(),
-                    accent = Mocha.Blue,
+                    accent = ClearCutAccents.Blue,
                     modifier = Modifier.widthIn(min = 132.dp)
                 )
                 MediaHealthMetric(
                     title = stringResource(R.string.media_stat_size),
                     value = if (isAnalyzing) "..." else formatFileSize(totalSize),
-                    accent = Mocha.Peach,
+                    accent = ClearCutAccents.Peach,
                     modifier = Modifier.widthIn(min = 132.dp)
                 )
                 MediaHealthMetric(
                     title = stringResource(R.string.media_stat_missing),
                     value = if (isAnalyzing) "..." else missingCount.toString(),
-                    accent = if (missingCount > 0) Mocha.Red else Mocha.Green,
+                    accent = if (missingCount > 0) ClearCutAccents.Red else ClearCutAccents.Green,
                     modifier = Modifier.widthIn(min = 132.dp)
                 )
                 MediaHealthMetric(
                     title = stringResource(R.string.media_stat_project_health),
                     value = projectHealthLabel,
                     accent = when {
-                        healthBlockingCount > 0 -> Mocha.Red
-                        healthWarningCount > 0 -> Mocha.Peach
-                        mediaHealthReport == null -> Mocha.Overlay1
-                        else -> Mocha.Green
+                        healthBlockingCount > 0 -> ClearCutAccents.Red
+                        healthWarningCount > 0 -> ClearCutAccents.Peach
+                        mediaHealthReport == null -> semanticColors.overlayStrong
+                        else -> ClearCutAccents.Green
                     },
                     modifier = Modifier.widthIn(min = 132.dp)
                 )
                 MediaHealthMetric(
                     title = stringResource(R.string.media_stat_empty_tracks),
                     value = emptyTrackCount.toString(),
-                    accent = if (emptyTrackCount > 0) Mocha.Yellow else Mocha.Green,
+                    accent = if (emptyTrackCount > 0) ClearCutAccents.Yellow else ClearCutAccents.Green,
                     modifier = Modifier.widthIn(min = 132.dp)
                 )
             }
@@ -237,9 +239,9 @@ fun MediaManagerPanel(
             if (isAnalyzing) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = Mocha.PanelRaised,
+                    color = semanticColors.panelRaised,
                     shape = RoundedCornerShape(18.dp),
-                    border = BorderStroke(1.dp, Mocha.CardStroke)
+                    border = BorderStroke(1.dp, semanticColors.cardStroke)
                 ) {
                     Row(
                         modifier = Modifier
@@ -252,7 +254,7 @@ fun MediaManagerPanel(
                             modifier = Modifier
                                 .height(18.dp)
                                 .width(18.dp),
-                            color = Mocha.Blue,
+                            color = ClearCutAccents.Blue,
                             strokeWidth = 2.dp
                         )
                         Column(
@@ -262,13 +264,13 @@ fun MediaManagerPanel(
                             Text(
                                 text = stringResource(R.string.media_manager_scanning_title),
                                 style = MaterialTheme.typography.titleSmall,
-                                color = Mocha.Text,
+                                color = semanticColors.text,
                                 fontWeight = FontWeight.Medium
                             )
                             Text(
                                 text = stringResource(R.string.media_manager_scanning_body),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Mocha.Subtext0
+                                color = semanticColors.subtext
                             )
                         }
                     }
@@ -290,9 +292,9 @@ fun MediaManagerPanel(
                         else -> stringResource(R.string.media_manager_ready_body)
                     },
                     accent = when {
-                        missingCount > 0 -> Mocha.Red
-                        assets.isEmpty() -> Mocha.Blue
-                        else -> Mocha.Green
+                        missingCount > 0 -> ClearCutAccents.Red
+                        assets.isEmpty() -> ClearCutAccents.Blue
+                        else -> ClearCutAccents.Green
                     },
                     icon = when {
                         missingCount > 0 -> Icons.Default.BrokenImage
@@ -309,8 +311,8 @@ fun MediaManagerPanel(
                 onClick = onBulkRelinkMissing,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Mocha.Red,
-                    contentColor = Mocha.Base
+                    containerColor = ClearCutAccents.Red,
+                    contentColor = semanticColors.surfaceBase
                 ),
                 shape = RoundedCornerShape(18.dp)
             ) {
@@ -331,7 +333,7 @@ fun MediaManagerPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Blue) {
+        PremiumPanelCard(accent = ClearCutAccents.Blue) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -341,13 +343,13 @@ fun MediaManagerPanel(
                     Text(
                         text = stringResource(R.string.media_manager_assets_title),
                         style = MaterialTheme.typography.titleMedium,
-                        color = Mocha.Text
+                        color = semanticColors.text
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = stringResource(R.string.media_manager_assets_description),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
 
@@ -356,9 +358,9 @@ fun MediaManagerPanel(
                 PremiumPanelPill(
                     text = assetCountLabel,
                     accent = when {
-                        missingCount > 0 -> Mocha.Peach
-                        assets.isEmpty() -> Mocha.Overlay0
-                        else -> Mocha.Blue
+                        missingCount > 0 -> ClearCutAccents.Peach
+                        assets.isEmpty() -> semanticColors.overlay
+                        else -> ClearCutAccents.Blue
                     }
                 )
             }
@@ -369,7 +371,7 @@ fun MediaManagerPanel(
                     MediaManagerMessageCard(
                         title = stringResource(R.string.media_manager_empty_title),
                         body = stringResource(R.string.media_manager_empty_body),
-                        accent = Mocha.Blue,
+                        accent = ClearCutAccents.Blue,
                         icon = Icons.Default.PermMedia
                     )
                 }
@@ -393,11 +395,11 @@ fun MediaManagerPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = if (emptyTrackCount > 0) Mocha.Yellow else Mocha.Green) {
+        PremiumPanelCard(accent = if (emptyTrackCount > 0) ClearCutAccents.Yellow else ClearCutAccents.Green) {
             Text(
                 text = stringResource(R.string.media_manager_cleanup_title),
                 style = MaterialTheme.typography.titleMedium,
-                color = Mocha.Text
+                color = semanticColors.text
             )
             Text(
                 text = if (emptyTrackCount > 0) {
@@ -406,12 +408,12 @@ fun MediaManagerPanel(
                     stringResource(R.string.media_manager_cleanup_ready)
                 },
                 style = MaterialTheme.typography.bodyMedium,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
 
             PremiumPanelPill(
                 text = emptyTrackLabel,
-                accent = if (emptyTrackCount > 0) Mocha.Yellow else Mocha.Green
+                accent = if (emptyTrackCount > 0) ClearCutAccents.Yellow else ClearCutAccents.Green
             )
 
             Button(
@@ -419,10 +421,10 @@ fun MediaManagerPanel(
                 enabled = emptyTrackCount > 0,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Mocha.Yellow,
-                    contentColor = Mocha.Base,
-                    disabledContainerColor = Mocha.Surface1,
-                    disabledContentColor = Mocha.Subtext0
+                    containerColor = ClearCutAccents.Yellow,
+                    contentColor = semanticColors.surfaceBase,
+                    disabledContainerColor = semanticColors.surface,
+                    disabledContentColor = semanticColors.subtext
                 ),
                 shape = RoundedCornerShape(18.dp)
             ) {
@@ -444,6 +446,7 @@ private fun MediaHealthMetric(
     accent: Color,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         modifier = modifier,
         color = accent.copy(alpha = 0.12f),
@@ -457,7 +460,7 @@ private fun MediaHealthMetric(
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelLarge,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
             Text(
                 text = value,
@@ -477,6 +480,7 @@ private fun MediaManagerMessageCard(
     icon: ImageVector,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = accent.copy(alpha = 0.08f),
@@ -516,7 +520,7 @@ private fun MediaManagerMessageCard(
                 Text(
                     text = body,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
             }
         }
@@ -530,10 +534,11 @@ private fun MediaAssetCard(
     onJumpToClip: (String) -> Unit,
     onRelinkMedia: (Uri) -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     val accent = when (asset.relinkState) {
-        MediaRelinkProbe.RelinkState.OK -> Mocha.Blue
-        MediaRelinkProbe.RelinkState.MISSING -> Mocha.Red
-        MediaRelinkProbe.RelinkState.UNKNOWN -> Mocha.Peach
+        MediaRelinkProbe.RelinkState.OK -> ClearCutAccents.Blue
+        MediaRelinkProbe.RelinkState.MISSING -> ClearCutAccents.Red
+        MediaRelinkProbe.RelinkState.UNKNOWN -> ClearCutAccents.Peach
     }
     val statusLabel = stringResource(
         when (asset.relinkState) {
@@ -550,11 +555,11 @@ private fun MediaAssetCard(
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = if (asset.isAccessible) Mocha.PanelRaised else Mocha.Red.copy(alpha = 0.08f),
+        color = if (asset.isAccessible) semanticColors.panelRaised else ClearCutAccents.Red.copy(alpha = 0.08f),
         shape = RoundedCornerShape(20.dp),
         border = BorderStroke(
             1.dp,
-            if (asset.isAccessible) Mocha.CardStroke else Mocha.Red.copy(alpha = 0.2f)
+            if (asset.isAccessible) semanticColors.cardStroke else ClearCutAccents.Red.copy(alpha = 0.2f)
         )
     ) {
         Column(
@@ -590,7 +595,7 @@ private fun MediaAssetCard(
                         Text(
                             text = asset.fileName,
                             style = MaterialTheme.typography.titleSmall,
-                            color = if (asset.isAccessible) Mocha.Text else Mocha.Red,
+                            color = if (asset.isAccessible) semanticColors.text else ClearCutAccents.Red,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             fontWeight = FontWeight.Medium
@@ -603,7 +608,7 @@ private fun MediaAssetCard(
                                 formatDuration(asset.durationMs)
                             ),
                             style = MaterialTheme.typography.bodySmall,
-                            color = Mocha.Subtext0
+                            color = semanticColors.subtext
                         )
                     }
                 }
@@ -643,7 +648,7 @@ private fun MediaAssetCard(
             ) {
                 PremiumPanelPill(
                     text = usageLabel,
-                    accent = if (asset.isAccessible) Mocha.Green else Mocha.Peach
+                    accent = if (asset.isAccessible) ClearCutAccents.Green else ClearCutAccents.Peach
                 )
 
                 FlowRow(
@@ -670,8 +675,8 @@ private fun MediaAssetCard(
                         OutlinedButton(
                             onClick = { onJumpToClip(asset.usedInClipIds.first()) },
                             shape = RoundedCornerShape(16.dp),
-                            border = BorderStroke(1.dp, Mocha.Blue.copy(alpha = 0.25f)),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Blue)
+                            border = BorderStroke(1.dp, ClearCutAccents.Blue.copy(alpha = 0.25f)),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = ClearCutAccents.Blue)
                         ) {
                             androidx.compose.material3.Icon(
                                 imageVector = Icons.Default.MyLocation,

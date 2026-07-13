@@ -4,9 +4,15 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.133-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.134-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.134 Complete semantic feature theming
+
+- Editor, export, and media-picker features no longer read raw palette tokens: structural text/panels/surfaces/strokes/indicators now follow the active semantic palette, while category identity uses one audited accent contract.
+- High Contrast Dark now reaches custom timeline, preview, curve, mask, mixer, scope, and transform surfaces; contrast tests cover every semantic elevation and category accent, and a source ratchet prevents raw-token regressions.
+- Added an instrumentation render smoke for High Contrast Dark across phone editor/media/export and forced desktop editor/export, with accessibility checks and captured roots at both layouts.
 
 ### v3.74.133 Narrow lint workarounds
 

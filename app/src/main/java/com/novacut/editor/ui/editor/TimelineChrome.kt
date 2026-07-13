@@ -27,7 +27,6 @@ import androidx.compose.ui.unit.dp
 import com.novacut.editor.model.TrackType
 import com.novacut.editor.ui.theme.ClearCutChromeIconButton
 import com.novacut.editor.ui.theme.LocalClearCutColors
-import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.TouchTarget
 import java.util.Locale
@@ -161,6 +160,7 @@ internal fun TimelineClipBadge(
     accent: Color,
     compact: Boolean = false
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         color = accent.copy(alpha = 0.18f),
         shape = RoundedCornerShape(Radius.sm),
@@ -168,7 +168,7 @@ internal fun TimelineClipBadge(
     ) {
         Text(
             text = text,
-            color = Mocha.Text,
+            color = semanticColors.text,
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.padding(
                 horizontal = if (compact) 6.dp else 8.dp,

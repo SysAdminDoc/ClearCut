@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -24,7 +26,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.novacut.editor.R
 import com.novacut.editor.model.*
-import com.novacut.editor.ui.theme.Mocha
 import kotlin.math.*
 
 enum class ColorGradingTab(val label: String) {
@@ -44,13 +45,14 @@ fun ColorGradingPanel(
     onLutImport: () -> Unit,
     onClose: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     var activeTab by remember { mutableStateOf(ColorGradingTab.WHEELS) }
 
     PremiumEditorPanel(
         title = stringResource(R.string.color_grading_title),
         subtitle = stringResource(R.string.panel_color_grading_subtitle),
         icon = Icons.Default.Palette,
-        accent = Mocha.Peach,
+        accent = ClearCutAccents.Peach,
         onClose = onClose,
         closeContentDescription = stringResource(R.string.cd_close_color_grading),
         modifier = modifier,
@@ -60,11 +62,11 @@ fun ColorGradingPanel(
                 icon = Icons.Default.Refresh,
                 contentDescription = stringResource(R.string.cd_reset),
                 onClick = { onColorGradeChanged(ColorGrade()) },
-                tint = Mocha.Peach
+                tint = ClearCutAccents.Peach
             )
         }
     ) {
-        PremiumPanelCard(accent = Mocha.Peach) {
+        PremiumPanelCard(accent = ClearCutAccents.Peach) {
             BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                 val isCompactLayout = maxWidth < 420.dp
                 if (isCompactLayout) {
@@ -73,27 +75,27 @@ fun ColorGradingPanel(
                             Text(
                                 text = stringResource(R.string.color_grading_summary_title),
                                 style = MaterialTheme.typography.titleMedium,
-                                color = Mocha.Text
+                                color = semanticColors.text
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
                                 text = colorGradeSummary(colorGrade),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Mocha.Subtext0
+                                color = semanticColors.subtext
                             )
                         }
                         FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            PremiumPanelPill(text = activeTab.label, accent = Mocha.Peach)
+                            PremiumPanelPill(text = activeTab.label, accent = ClearCutAccents.Peach)
                             PremiumPanelPill(
                                 text = if (colorGrade.hslQualifier != null) {
                                     stringResource(R.string.color_grading_qualifier_on)
                                 } else {
                                     stringResource(R.string.color_grading_qualifier_off)
                                 },
-                                accent = if (colorGrade.hslQualifier != null) Mocha.Mauve else Mocha.Overlay1
+                                accent = if (colorGrade.hslQualifier != null) ClearCutAccents.Mauve else semanticColors.overlayStrong
                             )
                         }
                     }
@@ -107,13 +109,13 @@ fun ColorGradingPanel(
                             Text(
                                 text = stringResource(R.string.color_grading_summary_title),
                                 style = MaterialTheme.typography.titleMedium,
-                                color = Mocha.Text
+                                color = semanticColors.text
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
                                 text = colorGradeSummary(colorGrade),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Mocha.Subtext0
+                                color = semanticColors.subtext
                             )
                         }
 
@@ -123,14 +125,14 @@ fun ColorGradingPanel(
                             horizontalAlignment = Alignment.End,
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            PremiumPanelPill(text = activeTab.label, accent = Mocha.Peach)
+                            PremiumPanelPill(text = activeTab.label, accent = ClearCutAccents.Peach)
                             PremiumPanelPill(
                                 text = if (colorGrade.hslQualifier != null) {
                                     stringResource(R.string.color_grading_qualifier_on)
                                 } else {
                                     stringResource(R.string.color_grading_qualifier_off)
                                 },
-                                accent = if (colorGrade.hslQualifier != null) Mocha.Mauve else Mocha.Overlay1
+                                accent = if (colorGrade.hslQualifier != null) ClearCutAccents.Mauve else semanticColors.overlayStrong
                             )
                         }
                     }
@@ -171,20 +173,21 @@ private fun ColorWheelsContent(
     onChange: (ColorGrade) -> Unit,
     onDragStarted: () -> Unit = {}
 ) {
+    val semanticColors = LocalClearCutColors.current
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        PremiumPanelCard(accent = Mocha.Rosewater) {
+        PremiumPanelCard(accent = ClearCutAccents.Rosewater) {
             Text(
                 text = stringResource(R.string.color_grading_tone_wheels_title),
                 style = MaterialTheme.typography.titleMedium,
-                color = Mocha.Text
+                color = semanticColors.text
             )
             Text(
                 text = stringResource(R.string.color_grading_tone_wheels_description),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
             BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                 val itemWidth = if (maxWidth < 420.dp) {
@@ -222,20 +225,20 @@ private fun ColorWheelsContent(
             }
         }
 
-        PremiumPanelCard(accent = Mocha.Sapphire) {
+        PremiumPanelCard(accent = ClearCutAccents.Sapphire) {
             Text(
                 text = stringResource(R.string.color_grading_offset),
                 style = MaterialTheme.typography.titleMedium,
-                color = Mocha.Text
+                color = semanticColors.text
             )
             Text(
                 text = stringResource(R.string.color_grading_offset_description),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
-            GradingSlider("R", grade.offsetR, -0.5f, 0.5f, Mocha.Red) { onChange(grade.copy(offsetR = it)) }
-            GradingSlider("G", grade.offsetG, -0.5f, 0.5f, Mocha.Green) { onChange(grade.copy(offsetG = it)) }
-            GradingSlider("B", grade.offsetB, -0.5f, 0.5f, Mocha.Blue) { onChange(grade.copy(offsetB = it)) }
+            GradingSlider("R", grade.offsetR, -0.5f, 0.5f, ClearCutAccents.Red) { onChange(grade.copy(offsetR = it)) }
+            GradingSlider("G", grade.offsetG, -0.5f, 0.5f, ClearCutAccents.Green) { onChange(grade.copy(offsetG = it)) }
+            GradingSlider("B", grade.offsetB, -0.5f, 0.5f, ClearCutAccents.Blue) { onChange(grade.copy(offsetB = it)) }
         }
     }
 }
@@ -248,18 +251,19 @@ private fun ColorWheel(
     modifier: Modifier = Modifier,
     onDragStarted: () -> Unit = {}
 ) {
+    val semanticColors = LocalClearCutColors.current
     Column(
         modifier = modifier.padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        PremiumPanelPill(text = label, accent = Mocha.Peach)
+        PremiumPanelPill(text = label, accent = ClearCutAccents.Peach)
         Spacer(Modifier.height(8.dp))
 
         Box(
             modifier = Modifier
                 .size(98.dp)
                 .clip(CircleShape)
-                .background(Mocha.PanelRaised)
+                .background(semanticColors.panelRaised)
                 .drawBehind {
                     val center = Offset(size.width / 2, size.height / 2)
                     val radius = size.minDimension / 2
@@ -302,7 +306,7 @@ private fun ColorWheel(
 
         Text(
             text = stringResource(R.string.cd_reset),
-            color = Mocha.Peach,
+            color = ClearCutAccents.Peach,
             style = MaterialTheme.typography.labelMedium,
             modifier = Modifier
                 .clickable { onChanged(0f, 0f, 0f) }
@@ -320,6 +324,7 @@ private fun GradingSlider(
     color: Color,
     onChanged: (Float) -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -344,7 +349,7 @@ private fun GradingSlider(
             colors = SliderDefaults.colors(
                 thumbColor = color,
                 activeTrackColor = color.copy(alpha = 0.6f),
-                inactiveTrackColor = Mocha.Surface1
+                inactiveTrackColor = semanticColors.surface
             )
         )
     }
@@ -357,6 +362,7 @@ private fun CurvesContent(
     onChange: (ColorGrade) -> Unit,
     onDragStarted: () -> Unit = {}
 ) {
+    val semanticColors = LocalClearCutColors.current
     var activeCurve by remember { mutableStateOf("master") }
     val curves = grade.curves
 
@@ -371,37 +377,37 @@ private fun CurvesContent(
             else -> curves.master
         }
         val curveColor = when (activeCurve) {
-            "red" -> Mocha.Red
-            "green" -> Mocha.Green
-            "blue" -> Mocha.Blue
-            else -> Mocha.Text
+            "red" -> ClearCutAccents.Red
+            "green" -> ClearCutAccents.Green
+            "blue" -> ClearCutAccents.Blue
+            else -> semanticColors.text
         }
 
         PremiumPanelCard(accent = curveColor) {
             Text(
                 text = stringResource(R.string.color_grading_curve_response_title),
                 style = MaterialTheme.typography.titleMedium,
-                color = Mocha.Text
+                color = semanticColors.text
             )
             Text(
                 text = stringResource(R.string.color_grading_curve_response_description),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                listOf("master" to Mocha.Text, "red" to Mocha.Red, "green" to Mocha.Green, "blue" to Mocha.Blue).forEach { (id, color) ->
+                listOf("master" to semanticColors.text, "red" to ClearCutAccents.Red, "green" to ClearCutAccents.Green, "blue" to ClearCutAccents.Blue).forEach { (id, color) ->
                     val selected = activeCurve == id
                     Surface(
-                        color = if (selected) color.copy(alpha = 0.16f) else Mocha.PanelRaised,
+                        color = if (selected) color.copy(alpha = 0.16f) else semanticColors.panelRaised,
                         shape = RoundedCornerShape(16.dp),
-                        border = BorderStroke(1.dp, if (selected) color.copy(alpha = 0.24f) else Mocha.CardStroke)
+                        border = BorderStroke(1.dp, if (selected) color.copy(alpha = 0.24f) else semanticColors.cardStroke)
                     ) {
                         Text(
                             text = id.replaceFirstChar { it.uppercase() },
-                            color = if (selected) color else Mocha.Subtext0,
+                            color = if (selected) color else semanticColors.subtext,
                             style = MaterialTheme.typography.labelLarge,
                             modifier = Modifier
                                 .clickable { activeCurve = id }
@@ -426,7 +432,7 @@ private fun CurvesContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(220.dp)
-                    .background(Mocha.PanelRaised, RoundedCornerShape(20.dp))
+                    .background(semanticColors.panelRaised, RoundedCornerShape(20.dp))
             )
         }
     }
@@ -440,6 +446,7 @@ private fun CurveEditor(
     onDragStarted: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     var dragIndex by remember { mutableIntStateOf(-1) }
 
     Canvas(
@@ -487,12 +494,12 @@ private fun CurveEditor(
         // Grid lines
         for (i in 1..3) {
             val pos = i / 4f
-            drawLine(Mocha.Surface2, Offset(pos * w, 0f), Offset(pos * w, h), 1f)
-            drawLine(Mocha.Surface2, Offset(0f, pos * h), Offset(w, pos * h), 1f)
+            drawLine(semanticColors.surfaceHigh, Offset(pos * w, 0f), Offset(pos * w, h), 1f)
+            drawLine(semanticColors.surfaceHigh, Offset(0f, pos * h), Offset(w, pos * h), 1f)
         }
 
         // Diagonal reference line
-        drawLine(Mocha.Surface1, Offset(0f, h), Offset(w, 0f), 1f)
+        drawLine(semanticColors.surface, Offset(0f, h), Offset(w, 0f), 1f)
 
         // Draw curve
         if (points.size >= 2) {
@@ -565,13 +572,14 @@ private fun HslContent(
     onChange: (ColorGrade) -> Unit,
     onDragStarted: () -> Unit = {}
 ) {
+    val semanticColors = LocalClearCutColors.current
     val hsl = grade.hslQualifier ?: HslQualifier()
 
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        PremiumPanelCard(accent = Mocha.Mauve) {
+        PremiumPanelCard(accent = ClearCutAccents.Mauve) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -581,13 +589,13 @@ private fun HslContent(
                     Text(
                         text = stringResource(R.string.color_grading_hsl_qualifier),
                         style = MaterialTheme.typography.titleMedium,
-                        color = Mocha.Text
+                        color = semanticColors.text
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "Isolate a color range before nudging hue, saturation, or luminance.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
                 Switch(
@@ -595,54 +603,54 @@ private fun HslContent(
                     onCheckedChange = { enabled ->
                         onChange(grade.copy(hslQualifier = if (enabled) HslQualifier() else null))
                     },
-                    colors = SwitchDefaults.colors(checkedTrackColor = Mocha.Mauve)
+                    colors = SwitchDefaults.colors(checkedTrackColor = ClearCutAccents.Mauve)
                 )
             }
         }
 
         if (grade.hslQualifier != null) {
-            PremiumPanelCard(accent = Mocha.Yellow) {
+            PremiumPanelCard(accent = ClearCutAccents.Yellow) {
                 Text(
                     text = stringResource(R.string.color_grading_selection),
                     style = MaterialTheme.typography.titleMedium,
-                    color = Mocha.Text
+                    color = semanticColors.text
                 )
-                GradingSlider("Hue", hsl.hueCenter, 0f, 360f, Mocha.Yellow) {
+                GradingSlider("Hue", hsl.hueCenter, 0f, 360f, ClearCutAccents.Yellow) {
                     onChange(grade.copy(hslQualifier = hsl.copy(hueCenter = it)))
                 }
-                GradingSlider("Width", hsl.hueWidth, 1f, 180f, Mocha.Yellow) {
+                GradingSlider("Width", hsl.hueWidth, 1f, 180f, ClearCutAccents.Yellow) {
                     onChange(grade.copy(hslQualifier = hsl.copy(hueWidth = it)))
                 }
-                GradingSlider("Sat Min", hsl.satMin, 0f, 1f, Mocha.Mauve) {
+                GradingSlider("Sat Min", hsl.satMin, 0f, 1f, ClearCutAccents.Mauve) {
                     onChange(grade.copy(hslQualifier = hsl.copy(satMin = it)))
                 }
-                GradingSlider("Sat Max", hsl.satMax, 0f, 1f, Mocha.Mauve) {
+                GradingSlider("Sat Max", hsl.satMax, 0f, 1f, ClearCutAccents.Mauve) {
                     onChange(grade.copy(hslQualifier = hsl.copy(satMax = it)))
                 }
-                GradingSlider("Lum Min", hsl.lumMin, 0f, 1f, Mocha.Text) {
+                GradingSlider("Lum Min", hsl.lumMin, 0f, 1f, semanticColors.text) {
                     onChange(grade.copy(hslQualifier = hsl.copy(lumMin = it)))
                 }
-                GradingSlider("Lum Max", hsl.lumMax, 0f, 1f, Mocha.Text) {
+                GradingSlider("Lum Max", hsl.lumMax, 0f, 1f, semanticColors.text) {
                     onChange(grade.copy(hslQualifier = hsl.copy(lumMax = it)))
                 }
-                GradingSlider("Soft", hsl.softness, 0f, 0.5f, Mocha.Peach) {
+                GradingSlider("Soft", hsl.softness, 0f, 0.5f, ClearCutAccents.Peach) {
                     onChange(grade.copy(hslQualifier = hsl.copy(softness = it)))
                 }
             }
 
-            PremiumPanelCard(accent = Mocha.Sapphire) {
+            PremiumPanelCard(accent = ClearCutAccents.Sapphire) {
                 Text(
                     text = stringResource(R.string.color_grading_adjustment),
                     style = MaterialTheme.typography.titleMedium,
-                    color = Mocha.Text
+                    color = semanticColors.text
                 )
-                GradingSlider("Hue", hsl.adjustHue, -180f, 180f, Mocha.Yellow) {
+                GradingSlider("Hue", hsl.adjustHue, -180f, 180f, ClearCutAccents.Yellow) {
                     onChange(grade.copy(hslQualifier = hsl.copy(adjustHue = it)))
                 }
-                GradingSlider("Sat", hsl.adjustSat, -1f, 1f, Mocha.Mauve) {
+                GradingSlider("Sat", hsl.adjustSat, -1f, 1f, ClearCutAccents.Mauve) {
                     onChange(grade.copy(hslQualifier = hsl.copy(adjustSat = it)))
                 }
-                GradingSlider("Lum", hsl.adjustLum, -1f, 1f, Mocha.Text) {
+                GradingSlider("Lum", hsl.adjustLum, -1f, 1f, semanticColors.text) {
                     onChange(grade.copy(hslQualifier = hsl.copy(adjustLum = it)))
                 }
             }
@@ -656,11 +664,12 @@ private fun LutContent(
     onChange: (ColorGrade) -> Unit,
     onLutImport: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        PremiumPanelCard(accent = Mocha.Mauve) {
+        PremiumPanelCard(accent = ClearCutAccents.Mauve) {
             if (grade.lutPath != null) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -671,31 +680,31 @@ private fun LutContent(
                         Text(
                             text = stringResource(R.string.color_grading_active_lut),
                             style = MaterialTheme.typography.titleMedium,
-                            color = Mocha.Text
+                            color = semanticColors.text
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = grade.lutPath.substringAfterLast("/"),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Mocha.Subtext0
+                            color = semanticColors.subtext
                         )
                     }
                     PremiumPanelIconButton(
                         icon = Icons.Default.Delete,
                         contentDescription = stringResource(R.string.cd_remove_lut),
                         onClick = { onChange(grade.copy(lutPath = null, lutIntensity = 1f)) },
-                        tint = Mocha.Red
+                        tint = ClearCutAccents.Red
                     )
                 }
 
-                GradingSlider("Intensity", grade.lutIntensity, 0f, 1f, Mocha.Mauve) {
+                GradingSlider("Intensity", grade.lutIntensity, 0f, 1f, ClearCutAccents.Mauve) {
                     onChange(grade.copy(lutIntensity = it))
                 }
             } else {
                 Text(
                     text = stringResource(R.string.color_grading_no_lut_loaded),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
             }
         }
@@ -704,8 +713,8 @@ private fun LutContent(
             onClick = onLutImport,
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Mocha.Mauve.copy(alpha = 0.18f),
-                contentColor = Mocha.Mauve
+                containerColor = ClearCutAccents.Mauve.copy(alpha = 0.18f),
+                contentColor = ClearCutAccents.Mauve
             ),
             shape = RoundedCornerShape(18.dp)
         ) {
@@ -722,21 +731,22 @@ private fun ColorGradingTabChip(
     selected: Boolean,
     onClick: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     val accent = when (tab) {
-        ColorGradingTab.WHEELS -> Mocha.Peach
-        ColorGradingTab.CURVES -> Mocha.Sapphire
-        ColorGradingTab.HSL -> Mocha.Mauve
-        ColorGradingTab.LUT -> Mocha.Lavender
+        ColorGradingTab.WHEELS -> ClearCutAccents.Peach
+        ColorGradingTab.CURVES -> ClearCutAccents.Sapphire
+        ColorGradingTab.HSL -> ClearCutAccents.Mauve
+        ColorGradingTab.LUT -> ClearCutAccents.Lavender
     }
 
     Surface(
-        color = if (selected) accent.copy(alpha = 0.16f) else Mocha.PanelRaised,
+        color = if (selected) accent.copy(alpha = 0.16f) else semanticColors.panelRaised,
         shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(1.dp, if (selected) accent.copy(alpha = 0.24f) else Mocha.CardStroke)
+        border = BorderStroke(1.dp, if (selected) accent.copy(alpha = 0.24f) else semanticColors.cardStroke)
     ) {
         Text(
             text = tab.label,
-            color = if (selected) accent else Mocha.Subtext0,
+            color = if (selected) accent else semanticColors.subtext,
             style = MaterialTheme.typography.labelLarge,
             modifier = Modifier
                 .clickable(onClick = onClick)

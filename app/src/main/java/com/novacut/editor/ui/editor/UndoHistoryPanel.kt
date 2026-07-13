@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -32,7 +34,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.model.UndoHistoryEntry
-import com.novacut.editor.ui.theme.Mocha
 import kotlinx.coroutines.delay
 
 @Composable
@@ -43,6 +44,7 @@ fun UndoHistoryPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val selectedUndoIndex = (currentIndex - 1).coerceAtLeast(-1)
     val futureCount = remember(entries, selectedUndoIndex) {
@@ -65,13 +67,13 @@ fun UndoHistoryPanel(
         title = stringResource(R.string.undo_history_title),
         subtitle = stringResource(R.string.undo_history_subtitle),
         icon = Icons.Default.History,
-        accent = Mocha.Mauve,
+        accent = ClearCutAccents.Mauve,
         onClose = onClose,
         closeContentDescription = stringResource(R.string.undo_history_close),
         modifier = modifier,
         scrollable = true
     ) {
-        PremiumPanelCard(accent = Mocha.Mauve) {
+        PremiumPanelCard(accent = ClearCutAccents.Mauve) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -81,7 +83,7 @@ fun UndoHistoryPanel(
                     Text(
                         text = stringResource(R.string.undo_history_stack_title),
                         style = MaterialTheme.typography.titleMedium,
-                        color = Mocha.Text
+                        color = semanticColors.text
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
@@ -91,7 +93,7 @@ fun UndoHistoryPanel(
                             stringResource(R.string.undo_history_stack_ready_summary)
                         },
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
 
@@ -103,12 +105,12 @@ fun UndoHistoryPanel(
                 ) {
                     PremiumPanelPill(
                         text = actionCountLabel,
-                        accent = Mocha.Mauve
+                        accent = ClearCutAccents.Mauve
                     )
                     if (futureCount > 0) {
                         PremiumPanelPill(
                             text = stringResource(R.string.undo_history_newer_count, futureCount),
-                            accent = Mocha.Overlay1
+                            accent = semanticColors.overlayStrong
                         )
                     }
                     PremiumPanelPill(
@@ -117,7 +119,7 @@ fun UndoHistoryPanel(
                         } else {
                             stringResource(R.string.undo_history_live_state)
                         },
-                        accent = Mocha.Green
+                        accent = ClearCutAccents.Green
                     )
                 }
             }
@@ -125,12 +127,12 @@ fun UndoHistoryPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Blue) {
+        PremiumPanelCard(accent = ClearCutAccents.Blue) {
             if (entries.isEmpty()) {
                 UndoHistoryMessageCard(
                     title = stringResource(R.string.undo_history_empty_title),
                     body = stringResource(R.string.undo_history_empty_body),
-                    accent = Mocha.Blue,
+                    accent = ClearCutAccents.Blue,
                     icon = Icons.Default.History
                 )
             } else {
@@ -141,14 +143,14 @@ fun UndoHistoryPanel(
                     if (futureCount > 0) {
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
-                            color = Mocha.Surface0,
+                            color = semanticColors.surfaceLow,
                             shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
-                            border = BorderStroke(1.dp, Mocha.CardStroke)
+                            border = BorderStroke(1.dp, semanticColors.cardStroke)
                         ) {
                             Text(
                                 text = stringResource(R.string.undo_history_future_hint),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Mocha.Subtext0,
+                                color = semanticColors.subtext,
                                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
                             )
                         }
@@ -184,6 +186,7 @@ private fun UndoHistoryMessageCard(
     icon: ImageVector,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = accent.copy(alpha = 0.08f),
@@ -223,7 +226,7 @@ private fun UndoHistoryMessageCard(
                 Text(
                     text = body,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
             }
         }
@@ -238,11 +241,12 @@ private fun UndoHistoryRow(
     relativeTime: String,
     onClick: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     val canRestore = !isCurrent && !isFuture
     val accent = when {
-        isCurrent -> Mocha.Mauve
-        isFuture -> Mocha.Overlay1
-        else -> Mocha.Blue
+        isCurrent -> ClearCutAccents.Mauve
+        isFuture -> semanticColors.overlayStrong
+        else -> ClearCutAccents.Blue
     }
 
     Surface(
@@ -251,16 +255,16 @@ private fun UndoHistoryRow(
             .alpha(if (canRestore || isCurrent) 1f else 0.82f),
         color = when {
             isCurrent -> accent.copy(alpha = 0.14f)
-            isFuture -> Mocha.PanelHighest
-            else -> Mocha.PanelRaised
+            isFuture -> semanticColors.panelHighest
+            else -> semanticColors.panelRaised
         },
         shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
         border = BorderStroke(
             1.dp,
             when {
                 isCurrent -> accent.copy(alpha = 0.24f)
-                isFuture -> Mocha.CardStroke.copy(alpha = 0.72f)
-                else -> Mocha.CardStroke
+                isFuture -> semanticColors.cardStroke.copy(alpha = 0.72f)
+                else -> semanticColors.cardStroke
             }
         )
     ) {
@@ -294,14 +298,14 @@ private fun UndoHistoryRow(
                     Text(
                         text = entry.description,
                         style = MaterialTheme.typography.titleSmall,
-                        color = if (isFuture) Mocha.Subtext0 else Mocha.Text,
+                        color = if (isFuture) semanticColors.subtext else semanticColors.text,
                         fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Medium
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = relativeTime,
                         style = MaterialTheme.typography.bodySmall,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
             }

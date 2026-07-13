@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -50,7 +52,6 @@ import com.novacut.editor.model.AudioEffect
 import com.novacut.editor.model.AudioEffectType
 import com.novacut.editor.model.Track
 import com.novacut.editor.model.TrackType
-import com.novacut.editor.ui.theme.Mocha
 
 private const val AUDIO_ROUTING_RENDERER_AVAILABLE = false
 
@@ -73,6 +74,7 @@ fun AudioMixerPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     var selectedEffectTrack by remember { mutableStateOf<String?>(null) }
     var selectedEffectId by remember { mutableStateOf<String?>(null) }
     val selectedTrack = tracks.find { it.id == selectedEffectTrack }
@@ -82,13 +84,13 @@ fun AudioMixerPanel(
         title = androidx.compose.ui.res.stringResource(R.string.panel_audio_mixer_title),
         subtitle = "Balance channels, shape stereo placement, and stack live FX from one stage.",
         icon = Icons.Default.Tune,
-        accent = Mocha.Sapphire,
+        accent = ClearCutAccents.Sapphire,
         onClose = onClose,
         closeContentDescription = androidx.compose.ui.res.stringResource(R.string.cd_close_audio_panel),
         modifier = modifier,
         scrollable = true
     ) {
-        PremiumPanelCard(accent = Mocha.Sapphire) {
+        PremiumPanelCard(accent = ClearCutAccents.Sapphire) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -98,7 +100,7 @@ fun AudioMixerPanel(
                     Text(
                         text = "Session overview",
                         style = MaterialTheme.typography.titleMedium,
-                        color = Mocha.Text
+                        color = semanticColors.text
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
@@ -108,7 +110,7 @@ fun AudioMixerPanel(
                             "Scroll the strips to stage levels, then open FX on any track to dial in the chain."
                         },
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
 
@@ -126,12 +128,12 @@ fun AudioMixerPanel(
                     }
                     PremiumPanelPill(
                         text = "${tracks.size} tracks live",
-                        accent = Mocha.Sapphire
+                        accent = ClearCutAccents.Sapphire
                     )
                     if (AUDIO_ROUTING_RENDERER_AVAILABLE) {
                         PremiumPanelPill(
                             text = "$activeEffects FX staged",
-                            accent = if (activeEffects > 0) Mocha.Mauve else Mocha.Overlay1
+                            accent = if (activeEffects > 0) ClearCutAccents.Mauve else semanticColors.overlayStrong
                         )
                     }
                 }
@@ -141,17 +143,17 @@ fun AudioMixerPanel(
         Spacer(modifier = Modifier.height(12.dp))
 
         PremiumPanelCard(
-            accent = Mocha.Blue
+            accent = ClearCutAccents.Blue
         ) {
             Text(
                 text = "Channel strips",
                 style = MaterialTheme.typography.titleMedium,
-                color = Mocha.Text
+                color = semanticColors.text
             )
             Text(
                 text = "Each strip exposes rendered volume, mute, and solo controls.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -210,7 +212,7 @@ fun AudioMixerPanel(
                                     tracks.indexOf(track) + 1
                                 ),
                                 style = MaterialTheme.typography.titleMedium,
-                                color = Mocha.Text
+                                color = semanticColors.text
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
@@ -220,7 +222,7 @@ fun AudioMixerPanel(
                                     "Tap a processor to tweak its parameters or remove it from the chain."
                                 },
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Mocha.Subtext0
+                                color = semanticColors.subtext
                             )
                         }
 
@@ -232,14 +234,14 @@ fun AudioMixerPanel(
 
                     if (track.audioEffects.isEmpty()) {
                         Surface(
-                            color = Mocha.PanelRaised,
+                            color = semanticColors.panelRaised,
                             shape = RoundedCornerShape(20.dp),
-                            border = BorderStroke(1.dp, Mocha.CardStroke)
+                            border = BorderStroke(1.dp, semanticColors.cardStroke)
                         ) {
                             Text(
                                 text = androidx.compose.ui.res.stringResource(R.string.panel_audio_mixer_no_effects),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Mocha.Subtext0,
+                                color = semanticColors.subtext,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)
                             )
                         }
@@ -284,9 +286,9 @@ private fun AddEffectButton(
 
     Box {
         Surface(
-            color = Mocha.Green.copy(alpha = 0.14f),
+            color = ClearCutAccents.Green.copy(alpha = 0.14f),
             shape = RoundedCornerShape(18.dp),
-            border = BorderStroke(1.dp, Mocha.Green.copy(alpha = 0.24f))
+            border = BorderStroke(1.dp, ClearCutAccents.Green.copy(alpha = 0.24f))
         ) {
             Row(
                 modifier = Modifier
@@ -298,13 +300,13 @@ private fun AddEffectButton(
                 Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = androidx.compose.ui.res.stringResource(R.string.cd_mixer_add_effect),
-                    tint = Mocha.Green,
+                    tint = ClearCutAccents.Green,
                     modifier = Modifier.size(18.dp)
                 )
                 Text(
                     text = "Add FX",
                     style = MaterialTheme.typography.labelLarge,
-                    color = Mocha.Green
+                    color = ClearCutAccents.Green
                 )
             }
         }
@@ -341,6 +343,7 @@ private fun ChannelStrip(
     onEffectsClicked: () -> Unit,
     isEffectsExpanded: Boolean
 ) {
+    val semanticColors = LocalClearCutColors.current
     val accent = track.type.mixerAccent()
     val panDesc = androidx.compose.ui.res.stringResource(R.string.cd_mixer_pan)
     val muteDesc = androidx.compose.ui.res.stringResource(
@@ -355,11 +358,11 @@ private fun ChannelStrip(
         modifier = Modifier
             .width(132.dp)
             .fillMaxHeight(),
-        color = Mocha.PanelHighest,
+        color = semanticColors.panelHighest,
         shape = RoundedCornerShape(24.dp),
         border = BorderStroke(
             1.dp,
-            if (isEffectsExpanded) accent.copy(alpha = 0.55f) else Mocha.CardStrokeStrong
+            if (isEffectsExpanded) accent.copy(alpha = 0.55f) else semanticColors.cardStrokeStrong
         )
     ) {
         Box(
@@ -367,8 +370,8 @@ private fun ChannelStrip(
                 Brush.verticalGradient(
                     listOf(
                         accent.copy(alpha = 0.12f),
-                        Mocha.PanelHighest,
-                        Mocha.PanelRaised
+                        semanticColors.panelHighest,
+                        semanticColors.panelRaised
                     )
                 )
             )
@@ -391,7 +394,7 @@ private fun ChannelStrip(
                     Text(
                         text = track.type.displayLabel(),
                         style = MaterialTheme.typography.labelMedium,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
 
@@ -409,7 +412,7 @@ private fun ChannelStrip(
                     Text(
                         text = formatVolume(track.volume),
                         style = MaterialTheme.typography.titleSmall,
-                        color = Mocha.Text
+                        color = semanticColors.text
                     )
                 }
 
@@ -445,7 +448,7 @@ private fun ChannelStrip(
                             colors = SliderDefaults.colors(
                                 thumbColor = accent,
                                 activeTrackColor = accent.copy(alpha = 0.65f),
-                                inactiveTrackColor = Mocha.Surface1
+                                inactiveTrackColor = semanticColors.surface
                             )
                         )
                     }
@@ -473,9 +476,9 @@ private fun ChannelStrip(
                                 valueRange = -1f..1f,
                                 modifier = Modifier.semantics { contentDescription = panDesc },
                                 colors = SliderDefaults.colors(
-                                    thumbColor = Mocha.Mauve,
-                                    activeTrackColor = Mocha.Mauve.copy(alpha = 0.65f),
-                                    inactiveTrackColor = Mocha.Surface1
+                                    thumbColor = ClearCutAccents.Mauve,
+                                    activeTrackColor = ClearCutAccents.Mauve.copy(alpha = 0.65f),
+                                    inactiveTrackColor = semanticColors.surface
                                 )
                             )
                         }
@@ -488,7 +491,7 @@ private fun ChannelStrip(
                 ) {
                     MixerToggleButton(
                         label = androidx.compose.ui.res.stringResource(R.string.panel_audio_mixer_mute),
-                        accent = Mocha.Red,
+                        accent = ClearCutAccents.Red,
                         active = track.isMuted,
                         contentDescription = muteDesc,
                         onClick = onMuteToggled,
@@ -496,7 +499,7 @@ private fun ChannelStrip(
                     )
                     MixerToggleButton(
                         label = androidx.compose.ui.res.stringResource(R.string.panel_audio_mixer_solo),
-                        accent = Mocha.Yellow,
+                        accent = ClearCutAccents.Yellow,
                         active = track.isSolo,
                         contentDescription = soloDesc,
                         onClick = onSoloToggled,
@@ -525,8 +528,9 @@ private fun MixerControlBlock(
     accent: Color,
     content: @Composable () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
-        color = Mocha.PanelRaised.copy(alpha = 0.92f),
+        color = semanticColors.panelRaised.copy(alpha = 0.92f),
         shape = RoundedCornerShape(18.dp),
         border = BorderStroke(1.dp, accent.copy(alpha = 0.12f))
     ) {
@@ -540,7 +544,7 @@ private fun MixerControlBlock(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
             Text(
                 text = valueLabel,
@@ -561,16 +565,17 @@ private fun MixerToggleButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         modifier = modifier.semantics { this.contentDescription = contentDescription },
-        color = if (active) accent.copy(alpha = 0.18f) else Mocha.PanelRaised,
+        color = if (active) accent.copy(alpha = 0.18f) else semanticColors.panelRaised,
         shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(1.dp, if (active) accent.copy(alpha = 0.26f) else Mocha.CardStroke)
+        border = BorderStroke(1.dp, if (active) accent.copy(alpha = 0.26f) else semanticColors.cardStroke)
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
-            color = if (active) accent else Mocha.Subtext0,
+            color = if (active) accent else semanticColors.subtext,
             modifier = Modifier
                 .clickable(onClick = onClick)
                 .padding(horizontal = 8.dp, vertical = 8.dp)
@@ -584,6 +589,7 @@ private fun VUMeter(
     right: Float,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     val smoothedLeft by animateFloatAsState(
         targetValue = left.coerceIn(0f, 1f),
         animationSpec = tween(durationMillis = if (left > 0f) 50 else 150),
@@ -602,20 +608,20 @@ private fun VUMeter(
         val gap = w * 0.12f
 
         drawRoundRect(
-            color = Mocha.Panel,
+            color = semanticColors.panel,
             cornerRadius = CornerRadius(20f, 20f)
         )
         drawRoundRect(
-            color = Mocha.CardStrokeStrong,
+            color = semanticColors.cardStrokeStrong,
             cornerRadius = CornerRadius(20f, 20f),
             style = Stroke(width = 1f)
         )
 
         val leftHeight = h * smoothedLeft
         val leftColor = when {
-            smoothedLeft > 0.9f -> Mocha.Red
-            smoothedLeft > 0.7f -> Mocha.Yellow
-            else -> Mocha.Green
+            smoothedLeft > 0.9f -> ClearCutAccents.Red
+            smoothedLeft > 0.7f -> ClearCutAccents.Yellow
+            else -> ClearCutAccents.Green
         }
         drawRect(
             color = leftColor,
@@ -625,9 +631,9 @@ private fun VUMeter(
 
         val rightHeight = h * smoothedRight
         val rightColor = when {
-            smoothedRight > 0.9f -> Mocha.Red
-            smoothedRight > 0.7f -> Mocha.Yellow
-            else -> Mocha.Green
+            smoothedRight > 0.9f -> ClearCutAccents.Red
+            smoothedRight > 0.7f -> ClearCutAccents.Yellow
+            else -> ClearCutAccents.Green
         }
         drawRect(
             color = rightColor,
@@ -638,7 +644,7 @@ private fun VUMeter(
         for (i in 1..4) {
             val y = h * i / 5f
             drawLine(
-                color = Mocha.Surface2.copy(alpha = 0.45f),
+                color = semanticColors.surfaceHigh.copy(alpha = 0.45f),
                 start = Offset(0f, y),
                 end = Offset(w, y),
                 strokeWidth = 1f
@@ -649,21 +655,22 @@ private fun VUMeter(
 
 @Composable
 private fun MasterBusStrip() {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         modifier = Modifier
             .width(132.dp)
             .fillMaxHeight(),
-        color = Mocha.PanelHighest,
+        color = semanticColors.panelHighest,
         shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, Mocha.Mauve.copy(alpha = 0.32f))
+        border = BorderStroke(1.dp, ClearCutAccents.Mauve.copy(alpha = 0.32f))
     ) {
         Box(
             modifier = Modifier.background(
                 Brush.verticalGradient(
                     listOf(
-                        Mocha.Mauve.copy(alpha = 0.16f),
-                        Mocha.PanelHighest,
-                        Mocha.PanelRaised
+                        ClearCutAccents.Mauve.copy(alpha = 0.16f),
+                        semanticColors.panelHighest,
+                        semanticColors.panelRaised
                     )
                 )
             )
@@ -677,26 +684,26 @@ private fun MasterBusStrip() {
             ) {
                 PremiumPanelPill(
                     text = androidx.compose.ui.res.stringResource(R.string.panel_audio_mixer_master),
-                    accent = Mocha.Mauve
+                    accent = ClearCutAccents.Mauve
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Icon(
                     imageVector = Icons.Default.GraphicEq,
                     contentDescription = androidx.compose.ui.res.stringResource(R.string.cd_mixer_master),
-                    tint = Mocha.Mauve,
+                    tint = ClearCutAccents.Mauve,
                     modifier = Modifier.size(34.dp)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = "Master bus",
                     style = MaterialTheme.typography.titleSmall,
-                    color = Mocha.Text
+                    color = semanticColors.text
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "Reference output",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
             }
         }
@@ -710,12 +717,13 @@ private fun AudioEffectChip(
     onClick: () -> Unit,
     onRemove: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
-        color = if (isSelected) Mocha.Mauve.copy(alpha = 0.16f) else Mocha.PanelRaised,
+        color = if (isSelected) ClearCutAccents.Mauve.copy(alpha = 0.16f) else semanticColors.panelRaised,
         shape = RoundedCornerShape(18.dp),
         border = BorderStroke(
             1.dp,
-            if (isSelected) Mocha.Mauve.copy(alpha = 0.3f) else Mocha.CardStroke
+            if (isSelected) ClearCutAccents.Mauve.copy(alpha = 0.3f) else semanticColors.cardStroke
         )
     ) {
         Row(
@@ -729,21 +737,21 @@ private fun AudioEffectChip(
                 modifier = Modifier
                     .size(8.dp)
                     .background(
-                        if (effect.enabled) Mocha.Green else Mocha.Red,
+                        if (effect.enabled) ClearCutAccents.Green else ClearCutAccents.Red,
                         RoundedCornerShape(10.dp)
                     )
             )
             Text(
                 text = effect.type.displayName,
                 style = MaterialTheme.typography.labelLarge,
-                color = if (isSelected) Mocha.Mauve else Mocha.Text,
+                color = if (isSelected) ClearCutAccents.Mauve else semanticColors.text,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Icon(
                 imageVector = Icons.Default.Close,
                 contentDescription = androidx.compose.ui.res.stringResource(R.string.cd_mixer_remove_effect),
-                tint = Mocha.Subtext0,
+                tint = semanticColors.subtext,
                 modifier = Modifier
                     .size(16.dp)
                     .clickable(onClick = onRemove)
@@ -757,10 +765,11 @@ private fun AudioEffectParams(
     effect: AudioEffect,
     onParamChanged: (String, Float) -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
-        color = Mocha.PanelRaised,
+        color = semanticColors.panelRaised,
         shape = RoundedCornerShape(22.dp),
-        border = BorderStroke(1.dp, Mocha.CardStrokeStrong)
+        border = BorderStroke(1.dp, semanticColors.cardStrokeStrong)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -769,12 +778,12 @@ private fun AudioEffectParams(
             Text(
                 text = effect.type.displayName,
                 style = MaterialTheme.typography.titleMedium,
-                color = Mocha.Text
+                color = semanticColors.text
             )
             Text(
                 text = "Adjust the selected processor in real time while the preview keeps playing above.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
 
             effect.params.toSortedMap().forEach { (param, value) ->
@@ -788,12 +797,12 @@ private fun AudioEffectParams(
                         Text(
                             text = formatParamName(param),
                             style = MaterialTheme.typography.labelLarge,
-                            color = Mocha.Text
+                            color = semanticColors.text
                         )
                         Text(
                             text = formatParamValue(param, value),
                             style = MaterialTheme.typography.labelLarge,
-                            color = Mocha.Mauve
+                            color = ClearCutAccents.Mauve
                         )
                     }
                     Slider(
@@ -801,9 +810,9 @@ private fun AudioEffectParams(
                         onValueChange = { onParamChanged(param, it) },
                         valueRange = range.first..range.second,
                         colors = SliderDefaults.colors(
-                            thumbColor = Mocha.Mauve,
-                            activeTrackColor = Mocha.Mauve.copy(alpha = 0.6f),
-                            inactiveTrackColor = Mocha.Surface1
+                            thumbColor = ClearCutAccents.Mauve,
+                            activeTrackColor = ClearCutAccents.Mauve.copy(alpha = 0.6f),
+                            inactiveTrackColor = semanticColors.surface
                         )
                     )
                 }
@@ -877,11 +886,11 @@ private fun TrackType.displayLabel(): String = when (this) {
 }
 
 private fun TrackType.mixerAccent(): Color = when (this) {
-    TrackType.VIDEO -> Mocha.Blue
-    TrackType.AUDIO -> Mocha.Green
-    TrackType.OVERLAY -> Mocha.Peach
-    TrackType.TEXT -> Mocha.Mauve
-    TrackType.ADJUSTMENT -> Mocha.Yellow
+    TrackType.VIDEO -> ClearCutAccents.Blue
+    TrackType.AUDIO -> ClearCutAccents.Green
+    TrackType.OVERLAY -> ClearCutAccents.Peach
+    TrackType.TEXT -> ClearCutAccents.Mauve
+    TrackType.ADJUSTMENT -> ClearCutAccents.Yellow
 }
 
 private fun formatVolume(value: Float): String = "${(value * 100).toInt()}%"

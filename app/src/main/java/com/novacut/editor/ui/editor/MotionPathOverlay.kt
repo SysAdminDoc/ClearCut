@@ -1,5 +1,6 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -11,7 +12,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import com.novacut.editor.engine.KeyframeEngine
 import com.novacut.editor.model.Keyframe
 import com.novacut.editor.model.KeyframeProperty
-import com.novacut.editor.ui.theme.Mocha
 
 /**
  * Draws the motion path (position X/Y keyframes) on the video preview as a bezier curve.
@@ -49,7 +49,7 @@ fun MotionPathOverlay(
 
             if (i == 0) path.moveTo(screenX, screenY) else path.lineTo(screenX, screenY)
         }
-        drawPath(path, Mocha.Yellow.copy(alpha = 0.6f), style = Stroke(width = 2f))
+        drawPath(path, ClearCutAccents.Yellow.copy(alpha = 0.6f), style = Stroke(width = 2f))
 
         // Draw keyframe dots on the path
         val allPosKfs = keyframes.filter {
@@ -63,7 +63,7 @@ fun MotionPathOverlay(
             val screenY = h / 2f + py * h / 2f
 
             drawCircle(Color.White, 5f, Offset(screenX, screenY))
-            drawCircle(Mocha.Mauve, 3.5f, Offset(screenX, screenY))
+            drawCircle(ClearCutAccents.Mauve, 3.5f, Offset(screenX, screenY))
         }
 
         // Draw current position indicator
@@ -73,7 +73,7 @@ fun MotionPathOverlay(
         val currentScreenY = h / 2f + currentPy * h / 2f
 
         drawCircle(Color.White, 8f, Offset(currentScreenX, currentScreenY))
-        drawCircle(Mocha.Red, 6f, Offset(currentScreenX, currentScreenY))
+        drawCircle(ClearCutAccents.Red, 6f, Offset(currentScreenX, currentScreenY))
 
         // Direction arrow at current position
         if (clipDurationMs > 0) {
@@ -95,7 +95,7 @@ fun MotionPathOverlay(
                     moveTo(currentScreenX + ndx, currentScreenY + ndy)
                     lineTo(currentScreenX + ndx + ndy * 0.4f, currentScreenY + ndy - ndx * 0.4f)
                 }
-                drawPath(arrowPath, Mocha.Red, style = Stroke(2f))
+                drawPath(arrowPath, ClearCutAccents.Red, style = Stroke(2f))
             }
         }
     }

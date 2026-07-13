@@ -16,7 +16,8 @@ internal fun DrawScope.drawTimeRuler(
     pixelsPerMs: Float,
     width: Float,
     height: Float,
-    textMeasurer: TextMeasurer
+    textMeasurer: TextMeasurer,
+    labelColor: Color,
 ) {
     if (pixelsPerMs <= 0f || !pixelsPerMs.isFinite() || width <= 0f) return
     val intervalMs = when {
@@ -29,7 +30,7 @@ internal fun DrawScope.drawTimeRuler(
     val startMs = (scrollOffsetMs / intervalMs) * intervalMs
     var currentMs = startMs
     val labelStyle = TextStyle(
-        color = Color(0xFFA6ADC8), // Mocha.Subtext0
+        color = labelColor,
         fontSize = 9.sp
     )
 

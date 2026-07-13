@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -44,7 +46,6 @@ import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.model.MarkerColor
 import com.novacut.editor.model.TimelineMarker
-import com.novacut.editor.ui.theme.Mocha
 import java.util.Locale
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -57,6 +58,7 @@ fun MarkerListPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     var filterColor by remember { mutableStateOf<MarkerColor?>(null) }
     var searchQuery by remember { mutableStateOf("") }
     val filtered = markers
@@ -72,13 +74,13 @@ fun MarkerListPanel(
         title = stringResource(R.string.panel_markers_title),
         subtitle = stringResource(R.string.panel_markers_subtitle),
         icon = Icons.Default.BookmarkBorder,
-        accent = Mocha.Blue,
+        accent = ClearCutAccents.Blue,
         onClose = onClose,
         closeContentDescription = stringResource(R.string.cd_close_markers),
         modifier = modifier,
         scrollable = true
     ) {
-        PremiumPanelCard(accent = Mocha.Blue) {
+        PremiumPanelCard(accent = ClearCutAccents.Blue) {
             BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                 val isCompactLayout = maxWidth < 420.dp
                 if (isCompactLayout) {
@@ -87,7 +89,7 @@ fun MarkerListPanel(
                             Text(
                                 text = stringResource(R.string.panel_marker_header, filtered.size),
                                 style = MaterialTheme.typography.titleMedium,
-                                color = Mocha.Text
+                                color = semanticColors.text
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
@@ -97,7 +99,7 @@ fun MarkerListPanel(
                                     stringResource(R.string.panel_marker_browse_description)
                                 },
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Mocha.Subtext0
+                                color = semanticColors.subtext
                             )
                         }
                         FlowRow(
@@ -106,11 +108,11 @@ fun MarkerListPanel(
                         ) {
                             PremiumPanelPill(
                                 text = stringResource(R.string.panel_marker_total, markers.size),
-                                accent = Mocha.Blue
+                                accent = ClearCutAccents.Blue
                             )
                             PremiumPanelPill(
                                 text = filterColor?.name ?: stringResource(R.string.panel_marker_all),
-                                accent = filterColor?.let(::markerAccent) ?: Mocha.Green
+                                accent = filterColor?.let(::markerAccent) ?: ClearCutAccents.Green
                             )
                         }
                     }
@@ -124,7 +126,7 @@ fun MarkerListPanel(
                             Text(
                                 text = stringResource(R.string.panel_marker_header, filtered.size),
                                 style = MaterialTheme.typography.titleMedium,
-                                color = Mocha.Text
+                                color = semanticColors.text
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
@@ -134,7 +136,7 @@ fun MarkerListPanel(
                                     stringResource(R.string.panel_marker_browse_description)
                                 },
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Mocha.Subtext0
+                                color = semanticColors.subtext
                             )
                         }
 
@@ -145,11 +147,11 @@ fun MarkerListPanel(
                         ) {
                             PremiumPanelPill(
                                 text = stringResource(R.string.panel_marker_total, markers.size),
-                                accent = Mocha.Blue
+                                accent = ClearCutAccents.Blue
                             )
                             PremiumPanelPill(
                                 text = filterColor?.name ?: stringResource(R.string.panel_marker_all),
-                                accent = filterColor?.let(::markerAccent) ?: Mocha.Green
+                                accent = filterColor?.let(::markerAccent) ?: ClearCutAccents.Green
                             )
                         }
                     }
@@ -164,22 +166,22 @@ fun MarkerListPanel(
                 placeholder = {
                     Text(
                         text = stringResource(R.string.panel_marker_search),
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = stringResource(R.string.cd_search),
-                        tint = Mocha.Subtext0
+                        tint = semanticColors.subtext
                     )
                 },
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Mocha.Blue,
-                    unfocusedBorderColor = Mocha.CardStroke,
-                    focusedTextColor = Mocha.Text,
-                    unfocusedTextColor = Mocha.Text,
-                    cursorColor = Mocha.Blue
+                    focusedBorderColor = ClearCutAccents.Blue,
+                    unfocusedBorderColor = semanticColors.cardStroke,
+                    focusedTextColor = semanticColors.text,
+                    unfocusedTextColor = semanticColors.text,
+                    cursorColor = ClearCutAccents.Blue
                 )
             )
 
@@ -189,7 +191,7 @@ fun MarkerListPanel(
             ) {
                 MarkerFilterChip(
                     label = stringResource(R.string.panel_marker_all),
-                    accent = Mocha.Blue,
+                    accent = ClearCutAccents.Blue,
                     selected = filterColor == null,
                     onClick = { filterColor = null }
                 )
@@ -206,7 +208,7 @@ fun MarkerListPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Green) {
+        PremiumPanelCard(accent = ClearCutAccents.Green) {
             if (filtered.isEmpty()) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -215,7 +217,7 @@ fun MarkerListPanel(
                     Icon(
                         imageVector = Icons.Default.BookmarkBorder,
                         contentDescription = stringResource(R.string.cd_bookmarks),
-                        tint = Mocha.Overlay1,
+                        tint = semanticColors.overlayStrong,
                         modifier = Modifier.size(30.dp)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
@@ -226,7 +228,7 @@ fun MarkerListPanel(
                             stringResource(R.string.panel_marker_no_matches)
                         },
                         style = MaterialTheme.typography.titleSmall,
-                        color = Mocha.Text
+                        color = semanticColors.text
                     )
                     Text(
                         text = if (markers.isEmpty()) {
@@ -235,7 +237,7 @@ fun MarkerListPanel(
                             stringResource(R.string.panel_marker_filtered_description)
                         },
                         style = MaterialTheme.typography.bodySmall,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
             } else {
@@ -265,15 +267,16 @@ private fun MarkerRow(
     onDelete: () -> Unit,
     onUpdateLabel: (String) -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     var editingLabel by remember { mutableStateOf(false) }
     var labelText by remember(marker.label) { mutableStateOf(marker.label) }
     val accent = markerAccent(marker.color)
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Mocha.PanelRaised,
+        color = semanticColors.panelRaised,
         shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, Mocha.CardStroke)
+        border = BorderStroke(1.dp, semanticColors.cardStroke)
     ) {
         Column(
             modifier = Modifier
@@ -310,12 +313,12 @@ private fun MarkerRow(
                                 onValueChange = { labelText = it },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
-                                textStyle = MaterialTheme.typography.bodyMedium.copy(color = Mocha.Text),
+                                textStyle = MaterialTheme.typography.bodyMedium.copy(color = semanticColors.text),
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = accent,
-                                    unfocusedBorderColor = Mocha.CardStroke,
-                                    focusedTextColor = Mocha.Text,
-                                    unfocusedTextColor = Mocha.Text,
+                                    unfocusedBorderColor = semanticColors.cardStroke,
+                                    focusedTextColor = semanticColors.text,
+                                    unfocusedTextColor = semanticColors.text,
                                     cursorColor = accent
                                 )
                             )
@@ -323,7 +326,7 @@ private fun MarkerRow(
                             Text(
                                 text = marker.label.ifBlank { stringResource(R.string.panel_marker_default_name) },
                                 style = MaterialTheme.typography.titleSmall,
-                                color = Mocha.Text,
+                                color = semanticColors.text,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -341,7 +344,7 @@ private fun MarkerRow(
                 Text(
                     text = marker.notes,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Mocha.Subtext0,
+                    color = semanticColors.subtext,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -359,7 +362,7 @@ private fun MarkerRow(
                     } else {
                         stringResource(R.string.panel_marker_rename)
                     },
-                    accent = if (editingLabel) Mocha.Green else Mocha.Subtext0,
+                    accent = if (editingLabel) ClearCutAccents.Green else semanticColors.subtext,
                     onClick = {
                         if (editingLabel) {
                             val updatedLabel = labelText.trim()
@@ -372,7 +375,7 @@ private fun MarkerRow(
                 MarkerAction(
                     icon = Icons.Default.Delete,
                     label = stringResource(R.string.panel_marker_delete),
-                    accent = Mocha.Red,
+                    accent = ClearCutAccents.Red,
                     onClick = onDelete
                 )
             }
@@ -387,15 +390,16 @@ private fun MarkerFilterChip(
     selected: Boolean,
     onClick: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
-        color = if (selected) accent.copy(alpha = 0.16f) else Mocha.PanelRaised,
+        color = if (selected) accent.copy(alpha = 0.16f) else semanticColors.panelRaised,
         shape = RoundedCornerShape(10.dp),
-        border = BorderStroke(1.dp, if (selected) accent.copy(alpha = 0.24f) else Mocha.CardStroke)
+        border = BorderStroke(1.dp, if (selected) accent.copy(alpha = 0.24f) else semanticColors.cardStroke)
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelLarge,
-            color = if (selected) accent else Mocha.Subtext0,
+            color = if (selected) accent else semanticColors.subtext,
             modifier = Modifier
                 .clickable(onClick = onClick)
                 .padding(horizontal = 12.dp, vertical = 8.dp)

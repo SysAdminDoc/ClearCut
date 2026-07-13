@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
@@ -41,7 +43,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.engine.TtsEngine
-import com.novacut.editor.ui.theme.Mocha
 
 private const val TTS_MAX_CHARS = 2000
 
@@ -56,6 +57,7 @@ fun TtsPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     var text by remember { mutableStateOf("") }
     var selectedStyle by remember { mutableStateOf(TtsEngine.VoiceStyle.NARRATOR) }
     val preparedText = text.trim()
@@ -65,7 +67,7 @@ fun TtsPanel(
         title = stringResource(R.string.tts_title),
         subtitle = stringResource(R.string.panel_tts_subtitle),
         icon = Icons.Default.RecordVoiceOver,
-        accent = Mocha.Mauve,
+        accent = ClearCutAccents.Mauve,
         onClose = {
             onStopPreview()
             onClose()
@@ -79,29 +81,29 @@ fun TtsPanel(
                     icon = Icons.Default.Clear,
                     contentDescription = stringResource(R.string.tts_clear_cd),
                     onClick = { text = "" },
-                    tint = Mocha.Red
+                    tint = ClearCutAccents.Red
                 )
             }
         }
     ) {
         if (!isAvailable) {
-            PremiumPanelCard(accent = Mocha.Red) {
+            PremiumPanelCard(accent = ClearCutAccents.Red) {
                 Text(
                     text = stringResource(R.string.panel_tts_unavailable_title),
-                    color = Mocha.Text,
+                    color = semanticColors.text,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
                     text = stringResource(R.string.panel_tts_not_available),
-                    color = Mocha.Subtext0,
+                    color = semanticColors.subtext,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
             return@PremiumEditorPanel
         }
 
-        PremiumPanelCard(accent = Mocha.Mauve) {
+        PremiumPanelCard(accent = ClearCutAccents.Mauve) {
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -113,27 +115,27 @@ fun TtsPanel(
                     } else {
                         stringResource(R.string.panel_tts_status_ready)
                     },
-                    accent = if (isSynthesizing) Mocha.Peach else Mocha.Green
+                    accent = if (isSynthesizing) ClearCutAccents.Peach else ClearCutAccents.Green
                 )
                 PremiumPanelPill(
                     text = selectedStyle.displayName,
-                    accent = Mocha.Sapphire
+                    accent = ClearCutAccents.Sapphire
                 )
                 PremiumPanelPill(
                     text = stringResource(R.string.panel_tts_chars_format, preparedText.length),
-                    accent = Mocha.Yellow
+                    accent = ClearCutAccents.Yellow
                 )
             }
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
                 text = stringResource(R.string.panel_tts_script_title),
-                color = Mocha.Rosewater,
+                color = ClearCutAccents.Rosewater,
                 style = MaterialTheme.typography.labelLarge
             )
             Text(
                 text = stringResource(R.string.panel_tts_script_description),
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodyMedium
             )
 
@@ -145,13 +147,13 @@ fun TtsPanel(
                 placeholder = {
                     Text(
                         text = stringResource(R.string.tts_enter_text),
-                        color = Mocha.Overlay0
+                        color = semanticColors.overlay
                     )
                 },
                 supportingText = {
                     Text(
                         text = "${text.length} / $TTS_MAX_CHARS",
-                        color = if (text.length >= TTS_MAX_CHARS) Mocha.Peach else Mocha.Subtext0,
+                        color = if (text.length >= TTS_MAX_CHARS) ClearCutAccents.Peach else semanticColors.subtext,
                         style = MaterialTheme.typography.labelSmall
                     )
                 },
@@ -161,28 +163,28 @@ fun TtsPanel(
                 maxLines = 6,
                 shape = RoundedCornerShape(20.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Mocha.Mauve,
-                    unfocusedBorderColor = Mocha.CardStroke,
-                    focusedTextColor = Mocha.Text,
-                    unfocusedTextColor = Mocha.Text,
-                    cursorColor = Mocha.Mauve,
-                    focusedContainerColor = Mocha.Panel,
-                    unfocusedContainerColor = Mocha.Panel
+                    focusedBorderColor = ClearCutAccents.Mauve,
+                    unfocusedBorderColor = semanticColors.cardStroke,
+                    focusedTextColor = semanticColors.text,
+                    unfocusedTextColor = semanticColors.text,
+                    cursorColor = ClearCutAccents.Mauve,
+                    focusedContainerColor = semanticColors.panel,
+                    unfocusedContainerColor = semanticColors.panel
                 )
             )
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Sapphire) {
+        PremiumPanelCard(accent = ClearCutAccents.Sapphire) {
             Text(
                 text = stringResource(R.string.panel_tts_voice_direction_title),
-                color = Mocha.Rosewater,
+                color = ClearCutAccents.Rosewater,
                 style = MaterialTheme.typography.labelLarge
             )
             Text(
                 text = stringResource(R.string.panel_tts_voice_direction_description),
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodyMedium
             )
             Spacer(modifier = Modifier.height(12.dp))
@@ -210,7 +212,7 @@ fun TtsPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Blue) {
+        PremiumPanelCard(accent = ClearCutAccents.Blue) {
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -218,34 +220,34 @@ fun TtsPanel(
             ) {
                 PremiumPanelPill(
                     text = stringResource(R.string.tts_speed_format, selectedStyle.rate),
-                    accent = Mocha.Sky
+                    accent = ClearCutAccents.Sky
                 )
                 PremiumPanelPill(
                     text = stringResource(R.string.tts_pitch_format, selectedStyle.pitch),
-                    accent = Mocha.Pink
+                    accent = ClearCutAccents.Pink
                 )
             }
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
                 text = stringResource(R.string.panel_tts_delivery_title),
-                color = Mocha.Rosewater,
+                color = ClearCutAccents.Rosewater,
                 style = MaterialTheme.typography.labelLarge
             )
             Text(
                 text = stringResource(R.string.panel_tts_delivery_description),
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodyMedium
             )
             Text(
                 text = stringResource(R.string.panel_tts_piper_hint),
-                color = Mocha.Overlay1,
+                color = semanticColors.overlayStrong,
                 style = MaterialTheme.typography.bodySmall
             )
             if (!hasScript) {
                 Text(
                     text = stringResource(R.string.panel_tts_empty_hint),
-                    color = Mocha.Subtext0,
+                    color = semanticColors.subtext,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -296,16 +298,17 @@ private fun VoiceStyleCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val accent = if (selected) Mocha.Mauve else Mocha.Sapphire
+    val semanticColors = LocalClearCutColors.current
+    val accent = if (selected) ClearCutAccents.Mauve else ClearCutAccents.Sapphire
 
     Surface(
         onClick = onClick,
         modifier = modifier,
-        color = if (selected) accent.copy(alpha = 0.12f) else Mocha.PanelHighest,
+        color = if (selected) accent.copy(alpha = 0.12f) else semanticColors.panelHighest,
         shape = RoundedCornerShape(22.dp),
         border = BorderStroke(
             1.dp,
-            if (selected) accent.copy(alpha = 0.3f) else Mocha.CardStroke
+            if (selected) accent.copy(alpha = 0.3f) else semanticColors.cardStroke
         )
     ) {
         Column(
@@ -316,13 +319,13 @@ private fun VoiceStyleCard(
         ) {
             Text(
                 text = style.displayName,
-                color = if (selected) accent else Mocha.Text,
+                color = if (selected) accent else semanticColors.text,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold
             )
             Text(
                 text = stringResource(voiceStyleDescriptionRes(style)),
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodySmall
             )
             FlowRow(
@@ -331,11 +334,11 @@ private fun VoiceStyleCard(
             ) {
                 PremiumPanelPill(
                     text = stringResource(R.string.tts_speed_format, style.rate),
-                    accent = Mocha.Sky
+                    accent = ClearCutAccents.Sky
                 )
                 PremiumPanelPill(
                     text = stringResource(R.string.tts_pitch_format, style.pitch),
-                    accent = Mocha.Pink
+                    accent = ClearCutAccents.Pink
                 )
             }
         }
@@ -348,16 +351,17 @@ private fun TtsPreviewButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     OutlinedButton(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier.fillMaxWidth(),
         colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = Mocha.Mauve
+            contentColor = ClearCutAccents.Mauve
         ),
         border = BorderStroke(
             1.dp,
-            if (enabled) Mocha.Mauve else Mocha.CardStroke
+            if (enabled) ClearCutAccents.Mauve else semanticColors.cardStroke
         ),
         shape = RoundedCornerShape(18.dp)
     ) {
@@ -382,20 +386,21 @@ private fun TtsGenerateButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     Button(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier.fillMaxWidth(),
         colors = ButtonDefaults.buttonColors(
-            containerColor = Mocha.Mauve,
-            contentColor = Mocha.Base
+            containerColor = ClearCutAccents.Mauve,
+            contentColor = semanticColors.surfaceBase
         ),
         shape = RoundedCornerShape(18.dp)
     ) {
         if (isSynthesizing) {
             CircularProgressIndicator(
                 modifier = Modifier.size(16.dp),
-                color = Mocha.Base,
+                color = semanticColors.surfaceBase,
                 strokeWidth = 2.dp
             )
             Spacer(modifier = Modifier.width(8.dp))

@@ -1,11 +1,11 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.novacut.editor.ui.theme.Mocha
 
 /**
  * Adaptive layout wrapper for editor that switches between phone and tablet layouts.
@@ -20,12 +20,13 @@ fun AdaptiveEditorLayout(
     toolPanel: @Composable (Modifier) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     if (isWideScreen) {
         // Tablet/foldable: horizontal layout
         Row(
             modifier = modifier
                 .fillMaxSize()
-                .background(Mocha.Base)
+                .background(semanticColors.surfaceBase)
         ) {
             // Left: Preview + Tools stacked
             Column(
@@ -42,7 +43,7 @@ fun AdaptiveEditorLayout(
                 modifier = Modifier
                     .width(1.dp)
                     .fillMaxHeight()
-                    .background(Mocha.Surface0)
+                    .background(semanticColors.surfaceLow)
             )
 
             // Right: Full-height timeline
@@ -57,7 +58,7 @@ fun AdaptiveEditorLayout(
         Column(
             modifier = modifier
                 .fillMaxSize()
-                .background(Mocha.Base)
+                .background(semanticColors.surfaceBase)
         ) {
             preview(Modifier.weight(0.3f))
             timeline(Modifier.weight(0.4f))

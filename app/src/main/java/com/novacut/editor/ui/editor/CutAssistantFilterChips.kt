@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,7 +24,6 @@ import com.novacut.editor.R
 import com.novacut.editor.engine.CutAssistantEngine
 import com.novacut.editor.engine.SilenceDetectionEngine.CutProposal
 import com.novacut.editor.engine.SilenceDetectionEngine.ProposalCategory
-import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.Radius
 
 /**
@@ -125,9 +126,10 @@ private fun FilterChip(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    val container = if (selected) Mocha.Mauve.copy(alpha = 0.18f) else Mocha.PanelHighest.copy(alpha = 0.5f)
-    val border = if (selected) Mocha.Mauve.copy(alpha = 0.62f) else Mocha.CardStrokeStrong.copy(alpha = 0.5f)
-    val textColor = if (selected) Mocha.Text else Mocha.Subtext0
+    val semanticColors = LocalClearCutColors.current
+    val container = if (selected) ClearCutAccents.Mauve.copy(alpha = 0.18f) else semanticColors.panelHighest.copy(alpha = 0.5f)
+    val border = if (selected) ClearCutAccents.Mauve.copy(alpha = 0.62f) else semanticColors.cardStrokeStrong.copy(alpha = 0.5f)
+    val textColor = if (selected) semanticColors.text else semanticColors.subtext
     Text(
         text = label,
         color = textColor,

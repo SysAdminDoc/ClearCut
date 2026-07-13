@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -32,7 +34,6 @@ import com.novacut.editor.R
 import com.novacut.editor.model.DrawingPath
 import com.novacut.editor.ui.theme.ClearCutChromeIconButton
 import com.novacut.editor.ui.theme.ClearCutPrimaryButton
-import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
 import com.novacut.editor.ui.theme.TouchTarget
@@ -56,12 +57,13 @@ fun DrawingOverlayPanel(
     onClear: () -> Unit,
     onDone: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     var isEraser by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Mocha.Mantle, RoundedCornerShape(topStart = Radius.xxl, topEnd = Radius.xxl))
+            .background(semanticColors.backgroundMid, RoundedCornerShape(topStart = Radius.xxl, topEnd = Radius.xxl))
             .padding(Spacing.lg)
     ) {
         Row(
@@ -69,7 +71,7 @@ fun DrawingOverlayPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(stringResource(R.string.panel_drawing_title), color = Mocha.Text, fontSize = 16.sp)
+            Text(stringResource(R.string.panel_drawing_title), color = semanticColors.text, fontSize = 16.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 @Suppress("DEPRECATION")
                 ClearCutChromeIconButton(
@@ -82,9 +84,9 @@ fun DrawingOverlayPanel(
                     icon = Icons.Default.DeleteSweep,
                     contentDescription = stringResource(R.string.cd_drawing_clear),
                     onClick = onClear,
-                    tint = Mocha.Red,
-                    containerColor = Mocha.Red.copy(alpha = 0.10f),
-                    borderColor = Mocha.Red.copy(alpha = 0.20f),
+                    tint = ClearCutAccents.Red,
+                    containerColor = ClearCutAccents.Red.copy(alpha = 0.10f),
+                    borderColor = ClearCutAccents.Red.copy(alpha = 0.20f),
                     iconSize = 20.dp
                 )
                 ClearCutPrimaryButton(
@@ -125,8 +127,8 @@ fun DrawingOverlayPanel(
                             .clip(CircleShape)
                             .background(Color(color.toULong()), CircleShape)
                             .then(
-                                if (isSelected) Modifier.border(2.dp, Mocha.Text, CircleShape)
-                                else Modifier.border(1.dp, Mocha.CardStroke.copy(alpha = 0.55f), CircleShape)
+                                if (isSelected) Modifier.border(2.dp, semanticColors.text, CircleShape)
+                                else Modifier.border(1.dp, semanticColors.cardStroke.copy(alpha = 0.55f), CircleShape)
                             )
                     )
                 }
@@ -138,9 +140,9 @@ fun DrawingOverlayPanel(
                 icon = Icons.Default.SquareFoot,
                 contentDescription = stringResource(R.string.cd_drawing_eraser),
                 onClick = { isEraser = !isEraser },
-                tint = if (isEraser) Mocha.Text else Mocha.Subtext0,
-                containerColor = if (isEraser) Mocha.Surface1 else Mocha.PanelHighest,
-                borderColor = if (isEraser) Mocha.Mauve.copy(alpha = 0.55f) else Mocha.CardStroke,
+                tint = if (isEraser) semanticColors.text else semanticColors.subtext,
+                containerColor = if (isEraser) semanticColors.surface else semanticColors.panelHighest,
+                borderColor = if (isEraser) ClearCutAccents.Mauve.copy(alpha = 0.55f) else semanticColors.cardStroke,
                 iconSize = 20.dp
             )
         }
@@ -151,19 +153,19 @@ fun DrawingOverlayPanel(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(stringResource(R.string.panel_drawing_size), color = Mocha.Subtext0, fontSize = 12.sp, modifier = Modifier.width(36.dp))
+            Text(stringResource(R.string.panel_drawing_size), color = semanticColors.subtext, fontSize = 12.sp, modifier = Modifier.width(36.dp))
             Slider(
                 value = drawingStrokeWidth,
                 onValueChange = onStrokeWidthChanged,
                 valueRange = 2f..20f,
                 modifier = Modifier.weight(1f),
                 colors = SliderDefaults.colors(
-                    thumbColor = Mocha.Mauve,
-                    activeTrackColor = Mocha.Mauve,
-                    inactiveTrackColor = Mocha.Surface1
+                    thumbColor = ClearCutAccents.Mauve,
+                    activeTrackColor = ClearCutAccents.Mauve,
+                    inactiveTrackColor = semanticColors.surface
                 )
             )
-            Text("${drawingStrokeWidth.toInt()}dp", color = Mocha.Subtext0, fontSize = 12.sp, modifier = Modifier.width(36.dp))
+            Text("${drawingStrokeWidth.toInt()}dp", color = semanticColors.subtext, fontSize = 12.sp, modifier = Modifier.width(36.dp))
         }
     }
 }

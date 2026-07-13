@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -48,22 +50,21 @@ import com.novacut.editor.R
 import com.novacut.editor.model.Keyframe
 import com.novacut.editor.model.KeyframeInterpolation
 import com.novacut.editor.model.KeyframeProperty
-import com.novacut.editor.ui.theme.Mocha
 import java.util.Locale
 
 private val PROPERTY_COLORS = mapOf(
-    KeyframeProperty.POSITION_X to Mocha.Red,
-    KeyframeProperty.POSITION_Y to Mocha.Green,
-    KeyframeProperty.SCALE_X to Mocha.Blue,
-    KeyframeProperty.SCALE_Y to Mocha.Teal,
-    KeyframeProperty.ROTATION to Mocha.Yellow,
-    KeyframeProperty.OPACITY to Mocha.Mauve,
-    KeyframeProperty.VOLUME to Mocha.Peach,
-    KeyframeProperty.ANCHOR_X to Mocha.Red.copy(alpha = 0.5f),
-    KeyframeProperty.ANCHOR_Y to Mocha.Green.copy(alpha = 0.5f),
-    KeyframeProperty.MASK_FEATHER to Mocha.Teal.copy(alpha = 0.5f),
-    KeyframeProperty.MASK_EXPANSION to Mocha.Blue.copy(alpha = 0.5f),
-    KeyframeProperty.MASK_OPACITY to Mocha.Mauve.copy(alpha = 0.5f)
+    KeyframeProperty.POSITION_X to ClearCutAccents.Red,
+    KeyframeProperty.POSITION_Y to ClearCutAccents.Green,
+    KeyframeProperty.SCALE_X to ClearCutAccents.Blue,
+    KeyframeProperty.SCALE_Y to ClearCutAccents.Teal,
+    KeyframeProperty.ROTATION to ClearCutAccents.Yellow,
+    KeyframeProperty.OPACITY to ClearCutAccents.Mauve,
+    KeyframeProperty.VOLUME to ClearCutAccents.Peach,
+    KeyframeProperty.ANCHOR_X to ClearCutAccents.Red.copy(alpha = 0.5f),
+    KeyframeProperty.ANCHOR_Y to ClearCutAccents.Green.copy(alpha = 0.5f),
+    KeyframeProperty.MASK_FEATHER to ClearCutAccents.Teal.copy(alpha = 0.5f),
+    KeyframeProperty.MASK_EXPANSION to ClearCutAccents.Blue.copy(alpha = 0.5f),
+    KeyframeProperty.MASK_OPACITY to ClearCutAccents.Mauve.copy(alpha = 0.5f)
 )
 
 private val CORE_KEYFRAME_PROPERTIES = listOf(
@@ -90,6 +91,7 @@ fun KeyframeCurveEditor(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     var selectedKeyframe by remember { mutableStateOf<Keyframe?>(null) }
     var showPresets by remember { mutableStateOf(false) }
 
@@ -100,7 +102,7 @@ fun KeyframeCurveEditor(
     }
 
     val currentSelection = selectedKeyframe
-    val selectionAccent = selectedKeyframe?.let { PROPERTY_COLORS[it.property] } ?: Mocha.Mauve
+    val selectionAccent = selectedKeyframe?.let { PROPERTY_COLORS[it.property] } ?: ClearCutAccents.Mauve
     val activeKeyframeCount = keyframes.count { it.property in activeProperties }
     val summaryBody = when {
         activeProperties.isEmpty() -> stringResource(R.string.panel_keyframes_summary_empty)
@@ -126,7 +128,7 @@ fun KeyframeCurveEditor(
                     icon = Icons.Default.AutoAwesome,
                     contentDescription = stringResource(R.string.cd_keyframe_presets),
                     onClick = { showPresets = true },
-                    tint = Mocha.Yellow
+                    tint = ClearCutAccents.Yellow
                 )
                 DropdownMenu(
                     expanded = showPresets,
@@ -152,7 +154,7 @@ fun KeyframeCurveEditor(
 
                     Text(
                         text = stringResource(R.string.keyframe_preset_group_cinematic),
-                        color = Mocha.Subtext0,
+                        color = semanticColors.subtext,
                         style = MaterialTheme.typography.labelSmall,
                         modifier = androidx.compose.ui.Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                     )
@@ -164,10 +166,10 @@ fun KeyframeCurveEditor(
                         DropdownMenuItem(text = { Text(text = label) }, onClick = { applyPreset(id) })
                     }
 
-                    androidx.compose.material3.HorizontalDivider(color = Mocha.CardStroke.copy(alpha = 0.4f))
+                    androidx.compose.material3.HorizontalDivider(color = semanticColors.cardStroke.copy(alpha = 0.4f))
                     Text(
                         text = stringResource(R.string.keyframe_preset_group_fades),
-                        color = Mocha.Subtext0,
+                        color = semanticColors.subtext,
                         style = MaterialTheme.typography.labelSmall,
                         modifier = androidx.compose.ui.Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                     )
@@ -178,10 +180,10 @@ fun KeyframeCurveEditor(
                         DropdownMenuItem(text = { Text(text = label) }, onClick = { applyPreset(id) })
                     }
 
-                    androidx.compose.material3.HorizontalDivider(color = Mocha.CardStroke.copy(alpha = 0.4f))
+                    androidx.compose.material3.HorizontalDivider(color = semanticColors.cardStroke.copy(alpha = 0.4f))
                     Text(
                         text = stringResource(R.string.keyframe_preset_group_emphasis),
-                        color = Mocha.Subtext0,
+                        color = semanticColors.subtext,
                         style = MaterialTheme.typography.labelSmall,
                         modifier = androidx.compose.ui.Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                     )
@@ -199,13 +201,13 @@ fun KeyframeCurveEditor(
         PremiumPanelCard(accent = selectionAccent) {
             Text(
                 text = stringResource(R.string.panel_keyframes_summary_title),
-                color = Mocha.Text,
+                color = semanticColors.text,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
             Text(
                 text = summaryBody,
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodyMedium
             )
             FlowRow(
@@ -226,24 +228,24 @@ fun KeyframeCurveEditor(
                         activeKeyframeCount,
                         activeKeyframeCount
                     ),
-                    accent = Mocha.Sky
+                    accent = ClearCutAccents.Sky
                 )
                 PremiumPanelPill(
                     text = stringResource(
                         R.string.panel_keyframes_playhead_format,
                         formatEditorTimestamp(playheadMs)
                     ),
-                    accent = Mocha.Blue
+                    accent = ClearCutAccents.Blue
                 )
             }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Sapphire) {
+        PremiumPanelCard(accent = ClearCutAccents.Sapphire) {
             Text(
                 text = stringResource(R.string.panel_keyframes_properties_title),
-                color = Mocha.Text,
+                color = semanticColors.text,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
@@ -253,7 +255,7 @@ fun KeyframeCurveEditor(
                 } else {
                     stringResource(R.string.panel_keyframes_properties_description)
                 },
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodyMedium
             )
             FlowRow(
@@ -263,7 +265,7 @@ fun KeyframeCurveEditor(
             ) {
                 CORE_KEYFRAME_PROPERTIES.forEach { property ->
                     val isActive = property in activeProperties
-                    val chipAccent = PROPERTY_COLORS[property] ?: Mocha.Text
+                    val chipAccent = PROPERTY_COLORS[property] ?: semanticColors.text
                     FilterChip(
                         selected = isActive,
                         onClick = { onPropertyToggled(property) },
@@ -276,7 +278,7 @@ fun KeyframeCurveEditor(
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = chipAccent.copy(alpha = 0.18f),
                             selectedLabelColor = chipAccent,
-                            labelColor = Mocha.Subtext0
+                            labelColor = semanticColors.subtext
                         ),
                         leadingIcon = if (isActive) {
                             {
@@ -296,10 +298,10 @@ fun KeyframeCurveEditor(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Blue) {
+        PremiumPanelCard(accent = ClearCutAccents.Blue) {
             Text(
                 text = stringResource(R.string.panel_keyframes_curve_title),
-                color = Mocha.Text,
+                color = semanticColors.text,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
@@ -309,7 +311,7 @@ fun KeyframeCurveEditor(
                 } else {
                     stringResource(R.string.panel_keyframes_curve_description)
                 },
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodyMedium
             )
             if (clipDurationMs > 0L) {
@@ -335,13 +337,13 @@ fun KeyframeCurveEditor(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(216.dp)
-                        .background(Mocha.Surface0, RoundedCornerShape(18.dp))
+                        .background(semanticColors.surfaceLow, RoundedCornerShape(18.dp))
                         .padding(8.dp)
                 )
             } else {
                 Text(
                     text = stringResource(R.string.panel_keyframes_curve_unavailable),
-                    color = Mocha.Subtext0,
+                    color = semanticColors.subtext,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
@@ -353,13 +355,13 @@ fun KeyframeCurveEditor(
             if (currentSelection == null) {
                 Text(
                     text = stringResource(R.string.panel_keyframes_selection_empty_title),
-                    color = Mocha.Text,
+                    color = semanticColors.text,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
                     text = stringResource(R.string.panel_keyframes_selection_empty_body),
-                    color = Mocha.Subtext0,
+                    color = semanticColors.subtext,
                     style = MaterialTheme.typography.bodyMedium
                 )
             } else {
@@ -372,14 +374,14 @@ fun KeyframeCurveEditor(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = stringResource(R.string.panel_keyframes_selection_title),
-                            color = Mocha.Text,
+                            color = semanticColors.text,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = stringResource(R.string.panel_keyframes_selection_description),
-                            color = Mocha.Subtext0,
+                            color = semanticColors.subtext,
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
@@ -391,7 +393,7 @@ fun KeyframeCurveEditor(
                             onDeleteKeyframe(keyframe)
                             selectedKeyframe = null
                         },
-                        tint = Mocha.Red
+                        tint = ClearCutAccents.Red
                     )
                 }
 
@@ -411,20 +413,20 @@ fun KeyframeCurveEditor(
                             R.string.panel_keyframes_time_format,
                             formatEditorTimestamp(keyframe.timeOffsetMs)
                         ),
-                        accent = Mocha.Sky
+                        accent = ClearCutAccents.Sky
                     )
                     PremiumPanelPill(
                         text = stringResource(
                             R.string.panel_keyframes_interpolation_format,
                             keyframe.interpolation.displayLabel()
                         ),
-                        accent = Mocha.Pink
+                        accent = ClearCutAccents.Pink
                     )
                 }
 
                 Text(
                     text = keyframe.property.displayLabel(),
-                    color = PROPERTY_COLORS[keyframe.property] ?: Mocha.Text,
+                    color = PROPERTY_COLORS[keyframe.property] ?: semanticColors.text,
                     style = MaterialTheme.typography.labelLarge
                 )
 
@@ -454,7 +456,7 @@ fun KeyframeCurveEditor(
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = selectionAccent.copy(alpha = 0.18f),
                                 selectedLabelColor = selectionAccent,
-                                labelColor = Mocha.Subtext0
+                                labelColor = semanticColors.subtext
                             )
                         )
                     }
@@ -493,13 +495,13 @@ fun KeyframeCurveEditor(
                         singleLine = true,
                         modifier = Modifier.weight(1f),
                         colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Mocha.Text,
-                            unfocusedTextColor = Mocha.Text,
-                            focusedBorderColor = Mocha.Sky,
-                            unfocusedBorderColor = Mocha.Surface1,
-                            focusedLabelColor = Mocha.Sky,
-                            unfocusedLabelColor = Mocha.Subtext0,
-                            cursorColor = Mocha.Sky
+                            focusedTextColor = semanticColors.text,
+                            unfocusedTextColor = semanticColors.text,
+                            focusedBorderColor = ClearCutAccents.Sky,
+                            unfocusedBorderColor = semanticColors.surface,
+                            focusedLabelColor = ClearCutAccents.Sky,
+                            unfocusedLabelColor = semanticColors.subtext,
+                            cursorColor = ClearCutAccents.Sky
                         ),
                         textStyle = MaterialTheme.typography.bodyMedium
                     )
@@ -523,12 +525,12 @@ fun KeyframeCurveEditor(
                         singleLine = true,
                         modifier = Modifier.weight(1f),
                         colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Mocha.Text,
-                            unfocusedTextColor = Mocha.Text,
+                            focusedTextColor = semanticColors.text,
+                            unfocusedTextColor = semanticColors.text,
                             focusedBorderColor = PROPERTY_COLORS[keyframe.property] ?: selectionAccent,
-                            unfocusedBorderColor = Mocha.Surface1,
+                            unfocusedBorderColor = semanticColors.surface,
                             focusedLabelColor = PROPERTY_COLORS[keyframe.property] ?: selectionAccent,
-                            unfocusedLabelColor = Mocha.Subtext0,
+                            unfocusedLabelColor = semanticColors.subtext,
                             cursorColor = PROPERTY_COLORS[keyframe.property] ?: selectionAccent
                         ),
                         textStyle = MaterialTheme.typography.bodyMedium
@@ -551,6 +553,7 @@ private fun CurveCanvas(
     onAddKeyframe: (KeyframeProperty, Long, Float) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     if (clipDurationMs <= 0L) return
 
     androidx.compose.foundation.Canvas(
@@ -613,7 +616,7 @@ private fun CurveCanvas(
             val propertyKeyframes = keyframes.filter { it.property == property }.sortedBy { it.timeOffsetMs }
             if (propertyKeyframes.size < 2) return@forEach
 
-            val color = PROPERTY_COLORS[property] ?: Mocha.Text
+            val color = PROPERTY_COLORS[property] ?: semanticColors.text
             val range = getPropertyRange(property)
             val rangeSpan = range.second - range.first
 
@@ -633,7 +636,7 @@ private fun CurveCanvas(
 
         keyframes.forEach { keyframe ->
             if (keyframe.property !in activeProperties) return@forEach
-            val color = PROPERTY_COLORS[keyframe.property] ?: Mocha.Text
+            val color = PROPERTY_COLORS[keyframe.property] ?: semanticColors.text
             val range = getPropertyRange(keyframe.property)
             val x = (keyframe.timeOffsetMs.toFloat() / clipDurationMs) * width
             val y = (1f - (keyframe.value - range.first) / (range.second - range.first)) * height

@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -37,7 +39,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
-import com.novacut.editor.ui.theme.Mocha
 
 enum class NormalizationMode(val labelResId: Int, val targetLufs: Float) {
     YOUTUBE(R.string.audio_norm_youtube, -14f),
@@ -58,6 +59,7 @@ fun AudioNormPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     var selectedMode by remember { mutableStateOf(NormalizationMode.YOUTUBE) }
     var customLufs by remember { mutableFloatStateOf(-14f) }
     val targetLufs = if (selectedMode == NormalizationMode.CUSTOM) customLufs else selectedMode.targetLufs
@@ -66,12 +68,12 @@ fun AudioNormPanel(
         title = stringResource(R.string.audio_norm_title),
         subtitle = stringResource(R.string.audio_norm_subtitle),
         icon = Icons.Default.GraphicEq,
-        accent = Mocha.Mauve,
+        accent = ClearCutAccents.Mauve,
         onClose = onClose,
         modifier = modifier,
         scrollable = true
     ) {
-        PremiumPanelCard(accent = Mocha.Mauve) {
+        PremiumPanelCard(accent = ClearCutAccents.Mauve) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -81,13 +83,13 @@ fun AudioNormPanel(
                     Text(
                         text = stringResource(R.string.audio_norm_loudness_target_title),
                         style = MaterialTheme.typography.titleMedium,
-                        color = Mocha.Text
+                        color = semanticColors.text
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = stringResource(R.string.audio_norm_loudness_target_description),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
 
@@ -99,11 +101,11 @@ fun AudioNormPanel(
                 ) {
                     PremiumPanelPill(
                         text = stringResource(R.string.audio_norm_current_percent, (currentVolume * 100f).toInt()),
-                        accent = Mocha.Blue
+                        accent = ClearCutAccents.Blue
                     )
                     PremiumPanelPill(
                         text = formatLufs(targetLufs),
-                        accent = Mocha.Mauve
+                        accent = ClearCutAccents.Mauve
                     )
                 }
             }
@@ -111,16 +113,16 @@ fun AudioNormPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Blue) {
+        PremiumPanelCard(accent = ClearCutAccents.Blue) {
             Text(
                 text = stringResource(R.string.audio_norm_profiles_title),
                 style = MaterialTheme.typography.titleMedium,
-                color = Mocha.Text
+                color = semanticColors.text
             )
             Text(
                 text = stringResource(R.string.audio_norm_description),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
 
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -137,7 +139,7 @@ fun AudioNormPanel(
         if (selectedMode == NormalizationMode.CUSTOM) {
             Spacer(modifier = Modifier.height(12.dp))
 
-            PremiumPanelCard(accent = Mocha.Peach) {
+            PremiumPanelCard(accent = ClearCutAccents.Peach) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -147,20 +149,20 @@ fun AudioNormPanel(
                         Text(
                             text = stringResource(R.string.audio_norm_target),
                             style = MaterialTheme.typography.titleMedium,
-                            color = Mocha.Text
+                            color = semanticColors.text
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = stringResource(R.string.audio_norm_custom_description),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Mocha.Subtext0
+                            color = semanticColors.subtext
                         )
                     }
 
                     Spacer(modifier = Modifier.width(12.dp))
                     PremiumPanelPill(
                         text = formatLufs(customLufs),
-                        accent = Mocha.Peach
+                        accent = ClearCutAccents.Peach
                     )
                 }
 
@@ -169,9 +171,9 @@ fun AudioNormPanel(
                     onValueChange = { customLufs = it },
                     valueRange = -30f..-5f,
                     colors = SliderDefaults.colors(
-                        thumbColor = Mocha.Peach,
-                        activeTrackColor = Mocha.Peach.copy(alpha = 0.7f),
-                        inactiveTrackColor = Mocha.Surface1
+                        thumbColor = ClearCutAccents.Peach,
+                        activeTrackColor = ClearCutAccents.Peach.copy(alpha = 0.7f),
+                        inactiveTrackColor = semanticColors.surface
                     )
                 )
 
@@ -179,15 +181,15 @@ fun AudioNormPanel(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(stringResource(R.string.audio_norm_min_lufs), style = MaterialTheme.typography.labelMedium, color = Mocha.Subtext0)
-                    Text(stringResource(R.string.audio_norm_max_lufs), style = MaterialTheme.typography.labelMedium, color = Mocha.Subtext0)
+                    Text(stringResource(R.string.audio_norm_min_lufs), style = MaterialTheme.typography.labelMedium, color = semanticColors.subtext)
+                    Text(stringResource(R.string.audio_norm_max_lufs), style = MaterialTheme.typography.labelMedium, color = semanticColors.subtext)
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Green) {
+        PremiumPanelCard(accent = ClearCutAccents.Green) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -197,27 +199,27 @@ fun AudioNormPanel(
                     Text(
                         text = stringResource(R.string.audio_norm_apply_title),
                         style = MaterialTheme.typography.titleMedium,
-                        color = Mocha.Text
+                        color = semanticColors.text
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = stringResource(R.string.audio_norm_apply_description),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
 
                 Spacer(modifier = Modifier.width(12.dp))
                 PremiumPanelPill(
                     text = stringResource(selectedMode.labelResId),
-                    accent = Mocha.Green
+                    accent = ClearCutAccents.Green
                 )
             }
 
             Button(
                 onClick = { onNormalize(targetLufs) },
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve),
+                colors = ButtonDefaults.buttonColors(containerColor = ClearCutAccents.Mauve),
                 shape = RoundedCornerShape(18.dp),
                 enabled = hasSelectedClip
             ) {
@@ -234,7 +236,7 @@ fun AudioNormPanel(
             Button(
                 onClick = { onNormalizeAll(targetLufs) },
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = Mocha.Green),
+                colors = ButtonDefaults.buttonColors(containerColor = ClearCutAccents.Green),
                 shape = RoundedCornerShape(18.dp)
             ) {
                 androidx.compose.material3.Icon(
@@ -254,20 +256,21 @@ private fun NormalizationModeRow(
     selected: Boolean,
     onSelect: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     val accent = when (mode) {
-        NormalizationMode.CUSTOM -> Mocha.Peach
-        NormalizationMode.LOUD -> Mocha.Red
-        NormalizationMode.BROADCAST, NormalizationMode.CINEMA -> Mocha.Blue
-        else -> Mocha.Mauve
+        NormalizationMode.CUSTOM -> ClearCutAccents.Peach
+        NormalizationMode.LOUD -> ClearCutAccents.Red
+        NormalizationMode.BROADCAST, NormalizationMode.CINEMA -> ClearCutAccents.Blue
+        else -> ClearCutAccents.Mauve
     }
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = if (selected) accent.copy(alpha = 0.14f) else Mocha.PanelRaised,
+        color = if (selected) accent.copy(alpha = 0.14f) else semanticColors.panelRaised,
         shape = RoundedCornerShape(20.dp),
         border = BorderStroke(
             1.dp,
-            if (selected) accent.copy(alpha = 0.28f) else Mocha.CardStroke
+            if (selected) accent.copy(alpha = 0.28f) else semanticColors.cardStroke
         )
     ) {
         Row(
@@ -292,7 +295,7 @@ private fun NormalizationModeRow(
                     Text(
                         text = stringResource(mode.labelResId),
                         style = MaterialTheme.typography.titleSmall,
-                        color = Mocha.Text
+                        color = semanticColors.text
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
@@ -302,7 +305,7 @@ private fun NormalizationModeRow(
                             stringResource(R.string.audio_norm_recommended_for, stringResource(mode.labelResId).lowercase())
                         },
                         style = MaterialTheme.typography.bodySmall,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
             }

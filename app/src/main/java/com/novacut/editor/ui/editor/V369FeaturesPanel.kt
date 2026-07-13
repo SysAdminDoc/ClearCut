@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -31,7 +33,6 @@ import com.novacut.editor.R
 import com.novacut.editor.engine.ColorBlindPreviewEngine
 import com.novacut.editor.engine.DirectPublishEngine
 import com.novacut.editor.engine.KaraokeCaptionEngine
-import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.ClearCutFilterChip
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
@@ -56,6 +57,7 @@ fun V369FeaturesPanel(
     viewModel: EditorViewModel,
     onDismiss: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     val state by viewModel.state.collectAsStateWithLifecycle()
     val v = state.v369
     val hasClip = state.selectedClipId != null
@@ -64,7 +66,7 @@ fun V369FeaturesPanel(
         title = stringResource(R.string.v369_features_label),
         subtitle = stringResource(R.string.v369_subtitle),
         icon = Icons.Default.AutoAwesome,
-        accent = Mocha.Mauve,
+        accent = ClearCutAccents.Mauve,
         onClose = onDismiss,
         scrollable = true
     ) {
@@ -79,14 +81,14 @@ fun V369FeaturesPanel(
         FeatureCard(
             title = stringResource(R.string.v369_text_edit_title),
             subtitle = stringResource(R.string.v369_text_edit_subtitle),
-            accent = Mocha.Blue,
+            accent = ClearCutAccents.Blue,
             icon = Icons.AutoMirrored.Filled.Subject
         ) {
             val transcript = v.transcript
             Text(
                 if (transcript == null) stringResource(R.string.v369_text_edit_need_transcript)
                 else stringResource(R.string.v369_text_edit_words_status, transcript.words.size, v.selectedWordIndices.size),
-                color = Mocha.Subtext1,
+                color = semanticColors.subtextStrong,
                 style = MaterialTheme.typography.bodySmall
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -103,12 +105,12 @@ fun V369FeaturesPanel(
         FeatureCard(
             title = stringResource(R.string.v369_chapters_title),
             subtitle = stringResource(R.string.v369_chapters_subtitle),
-            accent = Mocha.Green,
+            accent = ClearCutAccents.Green,
             icon = Icons.AutoMirrored.Filled.ViewList
         ) {
             Text(
                 pluralStringResource(R.plurals.v369_chapter_candidates_ready, v.chapterCandidates.size, v.chapterCandidates.size),
-                color = Mocha.Subtext1,
+                color = semanticColors.subtextStrong,
                 style = MaterialTheme.typography.bodySmall
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -125,10 +127,10 @@ fun V369FeaturesPanel(
         FeatureCard(
             title = stringResource(R.string.v369_talking_head_title),
             subtitle = stringResource(R.string.v369_talking_head_subtitle),
-            accent = Mocha.Sapphire,
+            accent = ClearCutAccents.Sapphire,
             icon = Icons.Default.Face
         ) {
-            if (v.isTrackingFaces) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Mocha.Sapphire)
+            if (v.isTrackingFaces) LinearProgressIndicator(Modifier.fillMaxWidth(), color = ClearCutAccents.Sapphire)
             TinyButton(stringResource(R.string.v369_track_selected_clip), enabled = hasClip && !v.isTrackingFaces) {
                 state.selectedClipId?.let { viewModel.v369Delegate.trackTalkingHead(it) }
             }
@@ -138,7 +140,7 @@ fun V369FeaturesPanel(
         FeatureCard(
             title = stringResource(R.string.v369_karaoke_title),
             subtitle = stringResource(R.string.v369_karaoke_subtitle),
-            accent = Mocha.Yellow,
+            accent = ClearCutAccents.Yellow,
             icon = Icons.Default.Mic
         ) {
             Row(
@@ -152,7 +154,7 @@ fun V369FeaturesPanel(
                         selected = v.karaokeStyle == style,
                         onClick = { viewModel.v369Delegate.setKaraokeStyle(style) },
                         text = karaokeStyleLabel(style),
-                        accent = Mocha.Yellow
+                        accent = ClearCutAccents.Yellow
                     )
                 }
             }
@@ -165,7 +167,7 @@ fun V369FeaturesPanel(
         FeatureCard(
             title = stringResource(R.string.v369_stream_copy_title),
             subtitle = stringResource(R.string.v369_stream_copy_subtitle),
-            accent = Mocha.Teal,
+            accent = ClearCutAccents.Teal,
             icon = Icons.Default.Speed
         ) {
             val elig = v.streamCopyEligibility
@@ -175,14 +177,14 @@ fun V369FeaturesPanel(
                 else -> stringResource(R.string.v369_stream_copy_reencode, elig.reason)
             }
             val color = when {
-                elig == null -> Mocha.Subtext1
-                elig.eligible -> Mocha.Green
-                else -> Mocha.Peach
+                elig == null -> semanticColors.subtextStrong
+                elig.eligible -> ClearCutAccents.Green
+                else -> ClearCutAccents.Peach
             }
             Text(label, color = color, style = MaterialTheme.typography.bodySmall)
             Text(
                 stringResource(R.string.v369_stream_copy_hint),
-                color = Mocha.Overlay1,
+                color = semanticColors.overlayStrong,
                 style = MaterialTheme.typography.labelMedium
             )
             TinyButton(stringResource(R.string.v369_check_eligibility)) {
@@ -194,7 +196,7 @@ fun V369FeaturesPanel(
         FeatureCard(
             title = stringResource(R.string.v369_content_id_title),
             subtitle = stringResource(R.string.v369_content_id_subtitle),
-            accent = Mocha.Red,
+            accent = ClearCutAccents.Red,
             icon = Icons.Default.Copyright
         ) {
             val result = v.contentIdResult
@@ -202,11 +204,11 @@ fun V369FeaturesPanel(
                 val matchedTitle = result.matchedTitle
                 val txt = if (matchedTitle != null) stringResource(R.string.v369_content_id_match, matchedTitle)
                 else stringResource(R.string.v369_content_id_hash, result.hash.take(16))
-                Text(txt, color = Mocha.Subtext1, style = MaterialTheme.typography.bodySmall)
+                Text(txt, color = semanticColors.subtextStrong, style = MaterialTheme.typography.bodySmall)
             }
             Text(
                 stringResource(R.string.v369_content_id_hint),
-                color = Mocha.Overlay1,
+                color = semanticColors.overlayStrong,
                 style = MaterialTheme.typography.labelMedium
             )
             TinyButton(stringResource(R.string.v369_check_last_export), enabled = state.lastExportedFilePath != null) {
@@ -218,7 +220,7 @@ fun V369FeaturesPanel(
         FeatureCard(
             title = stringResource(R.string.v369_direct_publish_title),
             subtitle = stringResource(R.string.v369_direct_publish_subtitle),
-            accent = Mocha.Pink,
+            accent = ClearCutAccents.Pink,
             icon = Icons.Default.Share
         ) {
             var title by rememberSaveable(state.project.id) { mutableStateOf(state.project.name) }
@@ -229,21 +231,21 @@ fun V369FeaturesPanel(
                 singleLine = true,
                 shape = RoundedCornerShape(Radius.md),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Mocha.PanelHighest,
-                    unfocusedContainerColor = Mocha.PanelHighest.copy(alpha = 0.72f),
-                    focusedBorderColor = Mocha.Pink.copy(alpha = 0.64f),
-                    unfocusedBorderColor = Mocha.CardStroke,
-                    cursorColor = Mocha.Pink,
-                    focusedTextColor = Mocha.Text,
-                    unfocusedTextColor = Mocha.Text,
-                    focusedLabelColor = Mocha.Pink,
-                    unfocusedLabelColor = Mocha.Subtext0
+                    focusedContainerColor = semanticColors.panelHighest,
+                    unfocusedContainerColor = semanticColors.panelHighest.copy(alpha = 0.72f),
+                    focusedBorderColor = ClearCutAccents.Pink.copy(alpha = 0.64f),
+                    unfocusedBorderColor = semanticColors.cardStroke,
+                    cursorColor = ClearCutAccents.Pink,
+                    focusedTextColor = semanticColors.text,
+                    unfocusedTextColor = semanticColors.text,
+                    focusedLabelColor = ClearCutAccents.Pink,
+                    unfocusedLabelColor = semanticColors.subtext
                 ),
                 textStyle = MaterialTheme.typography.bodyMedium
             )
             Text(
                 stringResource(R.string.v369_direct_publish_handoff_hint),
-                color = Mocha.Overlay1,
+                color = semanticColors.overlayStrong,
                 style = MaterialTheme.typography.labelMedium
             )
             val hasExport = state.lastExportedFilePath != null
@@ -274,14 +276,14 @@ fun V369FeaturesPanel(
         FeatureCard(
             title = stringResource(R.string.v369_flash_safety_title),
             subtitle = stringResource(R.string.v369_flash_safety_subtitle),
-            accent = Mocha.Peach,
+            accent = ClearCutAccents.Peach,
             icon = Icons.Default.FlashOn
         ) {
-            if (v.isAnalyzingFlashes) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Mocha.Peach)
+            if (v.isAnalyzingFlashes) LinearProgressIndicator(Modifier.fillMaxWidth(), color = ClearCutAccents.Peach)
             if (v.flashWarnings.isNotEmpty()) {
                 Text(
                     pluralStringResource(R.plurals.v369_flash_risky_segments, v.flashWarnings.size, v.flashWarnings.size),
-                    color = Mocha.Peach,
+                    color = ClearCutAccents.Peach,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -294,7 +296,7 @@ fun V369FeaturesPanel(
         FeatureCard(
             title = stringResource(R.string.v369_color_blind_title),
             subtitle = stringResource(R.string.v369_color_blind_subtitle),
-            accent = Mocha.Mauve,
+            accent = ClearCutAccents.Mauve,
             icon = Icons.Default.Palette
         ) {
             Row(
@@ -308,13 +310,13 @@ fun V369FeaturesPanel(
                         selected = v.colorBlindMode == mode,
                         onClick = { viewModel.v369Delegate.setColorBlindMode(mode) },
                         text = colorBlindModeLabel(mode),
-                        accent = Mocha.Mauve
+                        accent = ClearCutAccents.Mauve
                     )
                 }
             }
             Text(
                 stringResource(R.string.v369_color_blind_hint),
-                color = Mocha.Overlay1,
+                color = semanticColors.overlayStrong,
                 style = MaterialTheme.typography.labelMedium
             )
         }
@@ -323,10 +325,10 @@ fun V369FeaturesPanel(
         FeatureCard(
             title = stringResource(R.string.v369_thumbnail_title),
             subtitle = stringResource(R.string.v369_thumbnail_subtitle),
-            accent = Mocha.Sky,
+            accent = ClearCutAccents.Sky,
             icon = Icons.Default.Image
         ) {
-            if (v.isScoringThumbnails) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Mocha.Sky)
+            if (v.isScoringThumbnails) LinearProgressIndicator(Modifier.fillMaxWidth(), color = ClearCutAccents.Sky)
             if (v.thumbnailCandidates.isNotEmpty()) {
                 Row(
                     modifier = Modifier
@@ -345,11 +347,11 @@ fun V369FeaturesPanel(
                                     modifier = Modifier
                                         .size(width = 96.dp, height = 54.dp)
                                         .clip(RoundedCornerShape(8.dp))
-                                        .border(1.dp, Mocha.Sky.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                                        .border(1.dp, ClearCutAccents.Sky.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
                                 )
                                 Text(
                                     stringResource(R.string.v369_thumbnail_score_format, cand.score),
-                                    color = Mocha.Subtext0,
+                                    color = semanticColors.subtext,
                                     style = MaterialTheme.typography.labelSmall
                                 )
                             }
@@ -366,7 +368,7 @@ fun V369FeaturesPanel(
         FeatureCard(
             title = stringResource(R.string.v369_hdr_title),
             subtitle = stringResource(R.string.v369_hdr_subtitle),
-            accent = Mocha.Rosewater,
+            accent = ClearCutAccents.Rosewater,
             icon = Icons.Default.Hd
         ) {
             val hdr = state.exportConfig.hdr10PlusMetadata
@@ -387,7 +389,7 @@ fun V369FeaturesPanel(
                         hdr -> stringResource(R.string.v369_hdr_enabled)
                         else -> stringResource(R.string.v369_hdr_off)
                     },
-                    color = Mocha.Subtext1,
+                    color = semanticColors.subtextStrong,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -397,12 +399,12 @@ fun V369FeaturesPanel(
         FeatureCard(
             title = stringResource(R.string.v369_sdh_title),
             subtitle = stringResource(R.string.v369_sdh_subtitle),
-            accent = Mocha.Maroon,
+            accent = ClearCutAccents.Maroon,
             icon = Icons.Default.Hearing
         ) {
             Text(
                 stringResource(R.string.v369_sdh_hint),
-                color = Mocha.Subtext1,
+                color = semanticColors.subtextStrong,
                 style = MaterialTheme.typography.bodySmall
             )
         }
@@ -411,14 +413,14 @@ fun V369FeaturesPanel(
         FeatureCard(
             title = stringResource(R.string.v369_dex_title),
             subtitle = stringResource(R.string.v369_dex_subtitle),
-            accent = Mocha.Lavender,
+            accent = ClearCutAccents.Lavender,
             icon = Icons.Default.DesktopWindows
         ) {
             val override by viewModel.desktopOverride.collectAsStateWithLifecycle()
             val active = LocalLayoutMode.current == LayoutMode.DESKTOP
             Text(
                 if (active) stringResource(R.string.v369_dex_active) else stringResource(R.string.v369_dex_phone),
-                color = if (active) Mocha.Green else Mocha.Subtext1,
+                color = if (active) ClearCutAccents.Green else semanticColors.subtextStrong,
                 style = MaterialTheme.typography.bodySmall
             )
             Row(
@@ -436,7 +438,7 @@ fun V369FeaturesPanel(
                             com.novacut.editor.engine.DesktopOverride.FORCE_ON -> stringResource(R.string.v369_dex_desktop)
                             com.novacut.editor.engine.DesktopOverride.FORCE_OFF -> stringResource(R.string.v369_dex_phone_chip)
                         },
-                        accent = Mocha.Lavender
+                        accent = ClearCutAccents.Lavender
                     )
                 }
             }
@@ -446,7 +448,7 @@ fun V369FeaturesPanel(
         FeatureCard(
             title = stringResource(R.string.v369_one_handed_title),
             subtitle = stringResource(R.string.v369_one_handed_subtitle),
-            accent = Mocha.Flamingo,
+            accent = ClearCutAccents.Flamingo,
             icon = Icons.Default.TouchApp
         ) {
             val one by viewModel.oneHandedMode.collectAsStateWithLifecycle()
@@ -455,7 +457,7 @@ fun V369FeaturesPanel(
                 Spacer(Modifier.width(8.dp))
                 Text(
                 if (one) stringResource(R.string.v369_one_handed_active) else stringResource(R.string.state_off),
-                    color = Mocha.Subtext1,
+                    color = semanticColors.subtextStrong,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -465,7 +467,7 @@ fun V369FeaturesPanel(
         FeatureCard(
             title = stringResource(R.string.v369_midi_title),
             subtitle = stringResource(R.string.v369_midi_subtitle),
-            accent = Mocha.Flamingo,
+            accent = ClearCutAccents.Flamingo,
             icon = Icons.Default.Tune
         ) {
             val midiScanningToast = stringResource(R.string.v369_midi_scanning)
@@ -496,19 +498,19 @@ private fun CreatorReadinessStrip(
         ReadinessCard(
             label = stringResource(R.string.v369_readiness_clip),
             value = if (hasClip) stringResource(R.string.v369_readiness_clip_selected) else stringResource(R.string.v369_readiness_choose_one),
-            accent = if (hasClip) Mocha.Green else Mocha.Peach,
+            accent = if (hasClip) ClearCutAccents.Green else ClearCutAccents.Peach,
             icon = Icons.Default.Movie
         )
         ReadinessCard(
             label = stringResource(R.string.v369_readiness_transcript),
             value = if (hasTranscript) stringResource(R.string.ai_tool_status_ready) else stringResource(R.string.v369_readiness_run_captions),
-            accent = if (hasTranscript) Mocha.Green else Mocha.Sapphire,
+            accent = if (hasTranscript) ClearCutAccents.Green else ClearCutAccents.Sapphire,
             icon = Icons.Default.ClosedCaption
         )
         ReadinessCard(
             label = stringResource(R.string.export_title),
             value = if (hasExport) stringResource(R.string.v369_readiness_available) else stringResource(R.string.v369_readiness_render_first),
-            accent = if (hasExport) Mocha.Green else Mocha.Mauve,
+            accent = if (hasExport) ClearCutAccents.Green else ClearCutAccents.Mauve,
             icon = Icons.Default.FileUpload
         )
     }
@@ -521,8 +523,9 @@ private fun ReadinessCard(
     accent: Color,
     icon: ImageVector
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
-        color = Mocha.PanelHighest,
+        color = semanticColors.panelHighest,
         shape = RoundedCornerShape(Radius.lg),
         border = BorderStroke(1.dp, accent.copy(alpha = 0.24f))
     ) {
@@ -535,7 +538,7 @@ private fun ReadinessCard(
             Column {
                 Text(
                     text = label,
-                    color = Mocha.Subtext0,
+                    color = semanticColors.subtext,
                     style = MaterialTheme.typography.labelSmall
                 )
                 Text(
@@ -556,10 +559,11 @@ private fun FeatureCard(
     icon: ImageVector,
     body: @Composable ColumnScope.() -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     var expanded by remember { mutableStateOf(false) }
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Mocha.PanelRaised,
+        color = semanticColors.panelRaised,
         shape = RoundedCornerShape(Radius.xl),
         border = BorderStroke(1.dp, accent.copy(alpha = if (expanded) 0.52f else 0.28f))
     ) {
@@ -593,19 +597,19 @@ private fun FeatureCard(
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
                         title,
-                        color = Mocha.Text,
+                        color = semanticColors.text,
                         style = MaterialTheme.typography.titleSmall
                     )
                     Text(
                         subtitle,
-                        color = Mocha.Subtext0,
+                        color = semanticColors.subtext,
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
                 Icon(
                     if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                     contentDescription = if (expanded) stringResource(R.string.v369_collapse_format, title) else stringResource(R.string.v369_expand_format, title),
-                    tint = Mocha.Subtext0,
+                    tint = semanticColors.subtext,
                     modifier = Modifier.size(22.dp)
                 )
             }
@@ -618,14 +622,15 @@ private fun FeatureCard(
 
 @Composable
 private fun TinyButton(label: String, enabled: Boolean = true, onClick: () -> Unit) {
+    val semanticColors = LocalClearCutColors.current
     TextButton(
         onClick = onClick,
         enabled = enabled,
         shape = RoundedCornerShape(Radius.md),
         colors = ButtonDefaults.textButtonColors(
-            containerColor = if (enabled) Mocha.Mauve.copy(alpha = 0.10f) else Color.Transparent,
-            contentColor = Mocha.Mauve,
-            disabledContentColor = Mocha.Overlay0
+            containerColor = if (enabled) ClearCutAccents.Mauve.copy(alpha = 0.10f) else Color.Transparent,
+            contentColor = ClearCutAccents.Mauve,
+            disabledContentColor = semanticColors.overlay
         ),
         modifier = Modifier.defaultMinSize(minHeight = 40.dp)
     ) {

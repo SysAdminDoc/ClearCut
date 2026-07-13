@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.export
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -41,7 +43,6 @@ import com.novacut.editor.ui.editor.PremiumEditorPanel
 import com.novacut.editor.ui.editor.PremiumPanelCard
 import com.novacut.editor.ui.editor.PremiumPanelIconButton
 import com.novacut.editor.ui.editor.PremiumPanelPill
-import com.novacut.editor.ui.theme.Mocha
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -53,6 +54,7 @@ fun BatchExportPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     var showPresetPicker by remember { mutableStateOf(queue.isEmpty()) }
     val audioOnlyLabel = stringResource(R.string.batch_export_audio_only)
     val audioStemsLabel = stringResource(R.string.batch_export_audio_stems)
@@ -72,7 +74,7 @@ fun BatchExportPanel(
         title = stringResource(R.string.batch_export_title),
         subtitle = "Queue multiple delivery variants, social presets, or utility exports and send them out in one run.",
         icon = Icons.Default.FileUpload,
-        accent = Mocha.Mauve,
+        accent = ClearCutAccents.Mauve,
         onClose = onClose,
         modifier = modifier,
         scrollable = true,
@@ -85,11 +87,11 @@ fun BatchExportPanel(
                     stringResource(R.string.batch_export_add_cd)
                 },
                 onClick = { showPresetPicker = !showPresetPicker },
-                tint = if (showPresetPicker) Mocha.Peach else Mocha.Green
+                tint = if (showPresetPicker) ClearCutAccents.Peach else ClearCutAccents.Green
             )
         }
     ) {
-        PremiumPanelCard(accent = Mocha.Mauve) {
+        PremiumPanelCard(accent = ClearCutAccents.Mauve) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -99,13 +101,13 @@ fun BatchExportPanel(
                     Text(
                         text = stringResource(R.string.batch_export_queue_title),
                         style = MaterialTheme.typography.titleMedium,
-                        color = Mocha.Text
+                        color = semanticColors.text
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = stringResource(R.string.batch_export_queue_description),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
 
@@ -117,11 +119,11 @@ fun BatchExportPanel(
                 ) {
                     PremiumPanelPill(
                         text = "${queue.size} total",
-                        accent = Mocha.Blue
+                        accent = ClearCutAccents.Blue
                     )
                     PremiumPanelPill(
                         text = activeLabel,
-                        accent = if (failedCount > 0) Mocha.Red else Mocha.Mauve
+                        accent = if (failedCount > 0) ClearCutAccents.Red else ClearCutAccents.Mauve
                     )
                 }
             }
@@ -132,30 +134,30 @@ fun BatchExportPanel(
             ) {
                 PremiumPanelPill(
                     text = "$queuedCount queued",
-                    accent = Mocha.Blue
+                    accent = ClearCutAccents.Blue
                 )
                 if (inProgressCount > 0) {
                     PremiumPanelPill(
                         text = "$inProgressCount exporting",
-                        accent = Mocha.Mauve
+                        accent = ClearCutAccents.Mauve
                     )
                 }
                 if (completedCount > 0) {
                     PremiumPanelPill(
                         text = "$completedCount done",
-                        accent = Mocha.Green
+                        accent = ClearCutAccents.Green
                     )
                 }
                 if (failedCount > 0) {
                     PremiumPanelPill(
                         text = "$failedCount failed",
-                        accent = Mocha.Red
+                        accent = ClearCutAccents.Red
                     )
                 }
                 if (cancelledCount > 0) {
                     PremiumPanelPill(
                         text = "$cancelledCount cancelled",
-                        accent = Mocha.Yellow
+                        accent = ClearCutAccents.Yellow
                     )
                 }
             }
@@ -164,16 +166,16 @@ fun BatchExportPanel(
         if (showPresetPicker) {
             Spacer(modifier = Modifier.height(12.dp))
 
-            PremiumPanelCard(accent = Mocha.Blue) {
+            PremiumPanelCard(accent = ClearCutAccents.Blue) {
                 Text(
                     text = stringResource(R.string.batch_export_add_platform_preset),
                     style = MaterialTheme.typography.titleMedium,
-                    color = Mocha.Text
+                    color = semanticColors.text
                 )
                 Text(
                     text = stringResource(R.string.batch_export_add_targets_description),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
 
                 FlowRow(
@@ -201,10 +203,10 @@ fun BatchExportPanel(
                                 )
                             },
                             colors = FilterChipDefaults.filterChipColors(
-                                containerColor = Mocha.PanelRaised,
-                                labelColor = Mocha.Subtext0,
-                                selectedContainerColor = Mocha.Blue.copy(alpha = 0.16f),
-                                selectedLabelColor = Mocha.Blue
+                                containerColor = semanticColors.panelRaised,
+                                labelColor = semanticColors.subtext,
+                                selectedContainerColor = ClearCutAccents.Blue.copy(alpha = 0.16f),
+                                selectedLabelColor = ClearCutAccents.Blue
                             )
                         )
                     }
@@ -216,7 +218,7 @@ fun BatchExportPanel(
                 ) {
                     UtilityExportChip(
                         label = audioOnlyLabel,
-                        accent = Mocha.Peach,
+                        accent = ClearCutAccents.Peach,
                         onClick = {
                             onAddItem(
                                 ExportConfig(exportAudioOnly = true),
@@ -227,7 +229,7 @@ fun BatchExportPanel(
                     )
                     UtilityExportChip(
                         label = audioStemsLabel,
-                        accent = Mocha.Yellow,
+                        accent = ClearCutAccents.Yellow,
                         onClick = {
                             onAddItem(
                                 ExportConfig(exportStemsOnly = true),
@@ -242,11 +244,11 @@ fun BatchExportPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Green) {
+        PremiumPanelCard(accent = ClearCutAccents.Green) {
             Text(
                 text = stringResource(R.string.batch_export_queued_title),
                 style = MaterialTheme.typography.titleMedium,
-                color = Mocha.Text
+                color = semanticColors.text
             )
             Text(
                 text = if (queue.isEmpty()) {
@@ -255,15 +257,15 @@ fun BatchExportPanel(
                     stringResource(R.string.batch_export_queued_description)
                 },
                 style = MaterialTheme.typography.bodyMedium,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
 
             if (queue.isEmpty()) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = Mocha.PanelRaised,
+                    color = semanticColors.panelRaised,
                     shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(1.dp, Mocha.CardStroke)
+                    border = BorderStroke(1.dp, semanticColors.cardStroke)
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -272,12 +274,12 @@ fun BatchExportPanel(
                         Text(
                             text = stringResource(R.string.batch_export_empty_title),
                             style = MaterialTheme.typography.titleSmall,
-                            color = Mocha.Text
+                            color = semanticColors.text
                         )
                         Text(
                             text = stringResource(R.string.batch_export_empty_description),
                             style = MaterialTheme.typography.bodySmall,
-                            color = Mocha.Subtext0
+                            color = semanticColors.subtext
                         )
                     }
                 }
@@ -296,22 +298,22 @@ fun BatchExportPanel(
         if (queue.isNotEmpty()) {
             Spacer(modifier = Modifier.height(12.dp))
 
-            PremiumPanelCard(accent = Mocha.Green) {
+            PremiumPanelCard(accent = ClearCutAccents.Green) {
                 Text(
                     text = stringResource(R.string.batch_export_run_title),
                     style = MaterialTheme.typography.titleMedium,
-                    color = Mocha.Text
+                    color = semanticColors.text
                 )
                 Text(
                     text = stringResource(R.string.batch_export_run_description),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
 
                 Button(
                     onClick = onStartBatch,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve),
+                    colors = ButtonDefaults.buttonColors(containerColor = ClearCutAccents.Mauve),
                     shape = RoundedCornerShape(18.dp)
                 ) {
                     androidx.compose.material3.Icon(
@@ -355,12 +357,13 @@ private fun BatchExportItemRow(
     item: BatchExportItem,
     onRemove: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     val accent = when (item.status) {
-        BatchExportStatus.QUEUED -> Mocha.Blue
-        BatchExportStatus.IN_PROGRESS -> Mocha.Mauve
-        BatchExportStatus.COMPLETED -> Mocha.Green
-        BatchExportStatus.FAILED -> Mocha.Red
-        BatchExportStatus.CANCELLED -> Mocha.Yellow
+        BatchExportStatus.QUEUED -> ClearCutAccents.Blue
+        BatchExportStatus.IN_PROGRESS -> ClearCutAccents.Mauve
+        BatchExportStatus.COMPLETED -> ClearCutAccents.Green
+        BatchExportStatus.FAILED -> ClearCutAccents.Red
+        BatchExportStatus.CANCELLED -> ClearCutAccents.Yellow
     }
     val statusLabel = when (item.status) {
         BatchExportStatus.QUEUED -> stringResource(R.string.batch_export_status_queued)
@@ -373,11 +376,11 @@ private fun BatchExportItemRow(
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = if (item.status == BatchExportStatus.IN_PROGRESS) accent.copy(alpha = 0.12f) else Mocha.PanelRaised,
+        color = if (item.status == BatchExportStatus.IN_PROGRESS) accent.copy(alpha = 0.12f) else semanticColors.panelRaised,
         shape = RoundedCornerShape(20.dp),
         border = BorderStroke(
             1.dp,
-            if (item.status == BatchExportStatus.IN_PROGRESS) accent.copy(alpha = 0.22f) else Mocha.CardStroke
+            if (item.status == BatchExportStatus.IN_PROGRESS) accent.copy(alpha = 0.22f) else semanticColors.cardStroke
         )
     ) {
         Column(
@@ -395,14 +398,14 @@ private fun BatchExportItemRow(
                     Text(
                         text = item.outputName,
                         style = MaterialTheme.typography.titleSmall,
-                        color = Mocha.Text,
+                        color = semanticColors.text,
                         fontWeight = FontWeight.Medium
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = item.config.describeForQueue(),
                         style = MaterialTheme.typography.bodySmall,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
 
@@ -422,7 +425,7 @@ private fun BatchExportItemRow(
                             icon = Icons.Default.Close,
                             contentDescription = stringResource(R.string.batch_export_remove_cd),
                             onClick = onRemove,
-                            tint = Mocha.Subtext0
+                            tint = semanticColors.subtext
                         )
                     } else {
                         CircularProgressIndicator(
@@ -430,7 +433,7 @@ private fun BatchExportItemRow(
                             modifier = Modifier
                                 .width(24.dp)
                                 .height(24.dp),
-                            color = Mocha.Mauve,
+                            color = ClearCutAccents.Mauve,
                             strokeWidth = 2.5.dp
                         )
                     }
@@ -444,14 +447,14 @@ private fun BatchExportItemRow(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(8.dp)
-                            .background(Mocha.Surface1, RoundedCornerShape(10.dp)),
-                        color = Mocha.Mauve,
-                        trackColor = Mocha.Surface1
+                            .background(semanticColors.surface, RoundedCornerShape(10.dp)),
+                        color = ClearCutAccents.Mauve,
+                        trackColor = semanticColors.surface
                     )
                     Text(
                         text = stringResource(R.string.batch_export_status_in_progress),
                         style = MaterialTheme.typography.labelMedium,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
             }

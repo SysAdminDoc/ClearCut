@@ -1,5 +1,6 @@
 package com.novacut.editor.ui.mediapicker
 
+import com.novacut.editor.ui.theme.ClearCutAccents
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -51,7 +52,6 @@ import com.novacut.editor.ui.editor.PremiumPanelPill
 import com.novacut.editor.ui.editor.PremiumSnackbarHost
 import com.novacut.editor.ui.editor.ToastSeverity
 import com.novacut.editor.ui.theme.LocalClearCutColors
-import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.ClearCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
@@ -93,6 +93,7 @@ fun MediaPickerSheet(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var pendingMediaType by remember { mutableStateOf("video") }
@@ -424,7 +425,7 @@ fun MediaPickerSheet(
         title = stringResource(R.string.media_picker_title),
         subtitle = stringResource(R.string.media_picker_subtitle),
         icon = Icons.Default.PermMedia,
-        accent = Mocha.Blue,
+        accent = ClearCutAccents.Blue,
         onClose = onClose,
         closeButtonTestTag = ClearCutTestTags.MEDIA_PICKER_CLOSE,
         modifier = modifier
@@ -448,26 +449,26 @@ fun MediaPickerSheet(
             Spacer(modifier = Modifier.height(12.dp))
         }
 
-        PremiumPanelCard(accent = Mocha.Blue) {
+        PremiumPanelCard(accent = ClearCutAccents.Blue) {
             Text(
                 text = stringResource(R.string.media_picker_library_title),
                 style = MaterialTheme.typography.titleMedium,
-                color = Mocha.Text
+                color = semanticColors.text
             )
             Text(
                 text = stringResource(R.string.media_picker_library_description),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
-                PremiumPanelPill(text = librarySourceLabel, accent = Mocha.Blue)
-                PremiumPanelPill(text = stringResource(R.string.media_picker_source_audio), accent = Mocha.Peach)
+                PremiumPanelPill(text = librarySourceLabel, accent = ClearCutAccents.Blue)
+                PremiumPanelPill(text = stringResource(R.string.media_picker_source_audio), accent = ClearCutAccents.Peach)
                 PremiumPanelPill(
                     text = stringResource(R.string.media_picker_source_kept_local),
-                    accent = Mocha.Teal
+                    accent = ClearCutAccents.Teal
                 )
             }
 
@@ -475,7 +476,7 @@ fun MediaPickerSheet(
                 icon = Icons.Default.Videocam,
                 label = stringResource(R.string.media_picker_video),
                 description = stringResource(R.string.media_picker_video_description),
-                color = Mocha.Blue,
+                color = ClearCutAccents.Blue,
                 enabled = actionsEnabled,
                 onClick = {
                     if (usePhotoPicker) {
@@ -493,7 +494,7 @@ fun MediaPickerSheet(
                 icon = Icons.Default.Image,
                 label = stringResource(R.string.media_picker_image),
                 description = stringResource(R.string.media_picker_image_description),
-                color = Mocha.Green,
+                color = ClearCutAccents.Green,
                 enabled = actionsEnabled,
                 onClick = {
                     if (usePhotoPicker) {
@@ -511,7 +512,7 @@ fun MediaPickerSheet(
                 icon = Icons.Default.MusicNote,
                 label = stringResource(R.string.media_picker_audio),
                 description = stringResource(R.string.media_picker_audio_description),
-                color = Mocha.Peach,
+                color = ClearCutAccents.Peach,
                 enabled = actionsEnabled,
                 onClick = {
                     pendingMediaType = "audio"
@@ -540,28 +541,28 @@ fun MediaPickerSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = TouchTarget.minimum),
-                contentColor = Mocha.Mauve,
+                contentColor = ClearCutAccents.Mauve,
                 enabled = actionsEnabled
             )
             Text(
                 text = stringResource(R.string.media_picker_multi_description),
                 style = MaterialTheme.typography.bodySmall,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Red) {
+        PremiumPanelCard(accent = ClearCutAccents.Red) {
             Text(
                 text = stringResource(R.string.media_picker_capture_title),
                 style = MaterialTheme.typography.titleMedium,
-                color = Mocha.Text
+                color = semanticColors.text
             )
             Text(
                 text = stringResource(R.string.media_picker_capture_description),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
             ClearCutSecondaryButton(
                 text = stringResource(R.string.media_picker_record_video),
@@ -572,7 +573,7 @@ fun MediaPickerSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = TouchTarget.minimum),
-                contentColor = Mocha.Red,
+                contentColor = ClearCutAccents.Red,
                 enabled = actionsEnabled
             )
         }
@@ -581,8 +582,9 @@ fun MediaPickerSheet(
 
 @Composable
 private fun MediaImportStatusCard(operation: MediaPickerOperationState) {
+    val semanticColors = LocalClearCutColors.current
     PremiumPanelCard(
-        accent = Mocha.Mauve,
+        accent = ClearCutAccents.Mauve,
         modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
     ) {
         Row(
@@ -592,19 +594,19 @@ private fun MediaImportStatusCard(operation: MediaPickerOperationState) {
         ) {
             CircularProgressIndicator(
                 modifier = Modifier.size(24.dp),
-                color = Mocha.Mauve,
+                color = ClearCutAccents.Mauve,
                 strokeWidth = 2.dp
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = operation.title,
                     style = MaterialTheme.typography.titleSmall,
-                    color = Mocha.Text
+                    color = semanticColors.text
                 )
                 Text(
                     text = operation.description,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
             }
         }
@@ -613,8 +615,8 @@ private fun MediaImportStatusCard(operation: MediaPickerOperationState) {
                 .fillMaxWidth()
                 .height(5.dp)
                 .clip(RoundedCornerShape(Radius.sm)),
-            color = Mocha.Mauve,
-            trackColor = Mocha.Surface1
+            color = ClearCutAccents.Mauve,
+            trackColor = semanticColors.surface
         )
     }
 }

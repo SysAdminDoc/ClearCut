@@ -2,6 +2,9 @@
 
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -29,7 +32,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.engine.TimelineExchangeValidator
-import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.ClearCutDialogIcon
 import com.novacut.editor.ui.theme.ClearCutPrimaryButton
 import com.novacut.editor.ui.theme.Radius
@@ -42,6 +44,7 @@ internal fun AiRequirementInfoChip(
     accent: Color,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         modifier = modifier,
         color = accent.copy(alpha = 0.1f),
@@ -55,7 +58,7 @@ internal fun AiRequirementInfoChip(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
             Text(
                 text = value,
@@ -73,7 +76,8 @@ internal fun BackupImportReportDialog(
     feedback: BackupImportFeedback,
     onDismiss: () -> Unit
 ) {
-    val accent = if (feedback.succeeded) Mocha.Green else Mocha.Red
+    val semanticColors = LocalClearCutColors.current
+    val accent = if (feedback.succeeded) ClearCutAccents.Green else ClearCutAccents.Red
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = {
@@ -85,7 +89,7 @@ internal fun BackupImportReportDialog(
         title = {
             Text(
                 text = feedback.title,
-                color = Mocha.Text,
+                color = semanticColors.text,
                 style = MaterialTheme.typography.titleLarge
             )
         },
@@ -99,9 +103,9 @@ internal fun BackupImportReportDialog(
                 icon = Icons.Default.Check
             )
         },
-        containerColor = Mocha.PanelHighest,
-        titleContentColor = Mocha.Text,
-        textContentColor = Mocha.Subtext0,
+        containerColor = semanticColors.panelHighest,
+        titleContentColor = semanticColors.text,
+        textContentColor = semanticColors.subtext,
         shape = RoundedCornerShape(Radius.xxl)
     )
 }
@@ -111,6 +115,7 @@ private fun BackupImportReportBody(
     feedback: BackupImportFeedback,
     accent: Color
 ) {
+    val semanticColors = LocalClearCutColors.current
     val report = feedback.report
     Column(
         modifier = Modifier
@@ -120,14 +125,14 @@ private fun BackupImportReportBody(
     ) {
         Text(
             text = feedback.body,
-            color = Mocha.Subtext0,
+            color = semanticColors.subtext,
             style = MaterialTheme.typography.bodyMedium
         )
         feedback.errorMessage?.let {
             ReportCallout(
                 title = "Reason",
                 body = it,
-                accent = Mocha.Red
+                accent = ClearCutAccents.Red
             )
         }
         FlowRow(
@@ -135,15 +140,15 @@ private fun BackupImportReportBody(
             verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(Spacing.sm)
         ) {
             ReportMetric("Schema", "v${report.schemaVersion}", accent)
-            ReportMetric("Media", "${report.mediaResolved}/${report.mediaTotal}", if (report.mediaMissing > 0) Mocha.Peach else Mocha.Green)
-            ReportMetric("Warnings", report.warnings.size.toString(), if (report.warnings.isEmpty()) Mocha.Green else Mocha.Yellow)
-            ReportMetric("Project ID", if (report.projectIdCollided) "Regenerated" else "Clean", if (report.projectIdCollided) Mocha.Sapphire else Mocha.Green)
+            ReportMetric("Media", "${report.mediaResolved}/${report.mediaTotal}", if (report.mediaMissing > 0) ClearCutAccents.Peach else ClearCutAccents.Green)
+            ReportMetric("Warnings", report.warnings.size.toString(), if (report.warnings.isEmpty()) ClearCutAccents.Green else ClearCutAccents.Yellow)
+            ReportMetric("Project ID", if (report.projectIdCollided) "Regenerated" else "Clean", if (report.projectIdCollided) ClearCutAccents.Sapphire else ClearCutAccents.Green)
         }
         if (report.mediaMissing > 0) {
             ReportCallout(
                 title = "Missing media",
                 body = "${report.mediaMissing} linked file(s) were not bundled or could not be restored. Relink them before export.",
-                accent = Mocha.Peach
+                accent = ClearCutAccents.Peach
             )
             report.unresolvedMediaUris.take(4).forEach { uri ->
                 ReportIssueRow(
@@ -151,13 +156,13 @@ private fun BackupImportReportBody(
                     path = uri,
                     message = "Still points to the original location.",
                     suggestedFix = "Open Media Manager and relink this asset.",
-                    accent = Mocha.Peach
+                    accent = ClearCutAccents.Peach
                 )
             }
             if (report.unresolvedMediaUris.size > 4) {
                 Text(
                     text = "+${report.unresolvedMediaUris.size - 4} more missing media reference(s)",
-                    color = Mocha.Subtext0,
+                    color = semanticColors.subtext,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -168,7 +173,7 @@ private fun BackupImportReportBody(
                 path = "Archive",
                 message = warning,
                 suggestedFix = null,
-                accent = Mocha.Yellow
+                accent = ClearCutAccents.Yellow
             )
         }
     }
@@ -179,10 +184,11 @@ internal fun TimelineExchangeReportDialog(
     feedback: TimelineExchangeFeedback,
     onDismiss: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     val accent = when {
-        !feedback.succeeded -> Mocha.Red
-        feedback.report.warnings.isNotEmpty() -> Mocha.Yellow
-        else -> Mocha.Green
+        !feedback.succeeded -> ClearCutAccents.Red
+        feedback.report.warnings.isNotEmpty() -> ClearCutAccents.Yellow
+        else -> ClearCutAccents.Green
     }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -195,7 +201,7 @@ internal fun TimelineExchangeReportDialog(
         title = {
             Text(
                 text = feedback.title,
-                color = Mocha.Text,
+                color = semanticColors.text,
                 style = MaterialTheme.typography.titleLarge
             )
         },
@@ -209,9 +215,9 @@ internal fun TimelineExchangeReportDialog(
                 icon = Icons.Default.Check
             )
         },
-        containerColor = Mocha.PanelHighest,
-        titleContentColor = Mocha.Text,
-        textContentColor = Mocha.Subtext0,
+        containerColor = semanticColors.panelHighest,
+        titleContentColor = semanticColors.text,
+        textContentColor = semanticColors.subtext,
         shape = RoundedCornerShape(Radius.xxl)
     )
 }
@@ -221,6 +227,7 @@ private fun TimelineExchangeReportBody(
     feedback: TimelineExchangeFeedback,
     accent: Color
 ) {
+    val semanticColors = LocalClearCutColors.current
     val report = feedback.report
     Column(
         modifier = Modifier
@@ -230,14 +237,14 @@ private fun TimelineExchangeReportBody(
     ) {
         Text(
             text = feedback.body,
-            color = Mocha.Subtext0,
+            color = semanticColors.subtext,
             style = MaterialTheme.typography.bodyMedium
         )
         feedback.outputFileName?.let {
             ReportCallout(
                 title = "Saved file",
                 body = it,
-                accent = Mocha.Green
+                accent = ClearCutAccents.Green
             )
         }
         FlowRow(
@@ -245,15 +252,15 @@ private fun TimelineExchangeReportBody(
             verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(Spacing.sm)
         ) {
             ReportMetric("Format", report.format.displayName, accent)
-            ReportMetric("Blocking", report.errors.size.toString(), if (report.errors.isEmpty()) Mocha.Green else Mocha.Red)
-            ReportMetric("Lossy", report.warnings.size.toString(), if (report.warnings.isEmpty()) Mocha.Green else Mocha.Yellow)
-            ReportMetric("Notes", report.infos.size.toString(), Mocha.Sapphire)
+            ReportMetric("Blocking", report.errors.size.toString(), if (report.errors.isEmpty()) ClearCutAccents.Green else ClearCutAccents.Red)
+            ReportMetric("Lossy", report.warnings.size.toString(), if (report.warnings.isEmpty()) ClearCutAccents.Green else ClearCutAccents.Yellow)
+            ReportMetric("Notes", report.infos.size.toString(), ClearCutAccents.Sapphire)
         }
         report.issues.take(8).forEach { issue ->
             val issueAccent = when (issue.severity) {
-                TimelineExchangeValidator.Severity.ERROR -> Mocha.Red
-                TimelineExchangeValidator.Severity.WARNING -> Mocha.Yellow
-                TimelineExchangeValidator.Severity.INFO -> Mocha.Sapphire
+                TimelineExchangeValidator.Severity.ERROR -> ClearCutAccents.Red
+                TimelineExchangeValidator.Severity.WARNING -> ClearCutAccents.Yellow
+                TimelineExchangeValidator.Severity.INFO -> ClearCutAccents.Sapphire
             }
             ReportIssueRow(
                 severity = issue.severity.name.lowercase().replaceFirstChar { it.uppercase() },
@@ -266,7 +273,7 @@ private fun TimelineExchangeReportBody(
         if (report.issues.size > 8) {
             Text(
                 text = "+${report.issues.size - 8} more issue(s)",
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodySmall
             )
         }
@@ -279,6 +286,7 @@ private fun ReportMetric(
     value: String,
     accent: Color
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         color = accent.copy(alpha = 0.11f),
         shape = RoundedCornerShape(Radius.sm),
@@ -290,7 +298,7 @@ private fun ReportMetric(
         ) {
             Text(
                 text = label,
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.labelSmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -312,6 +320,7 @@ private fun ReportCallout(
     body: String,
     accent: Color
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = accent.copy(alpha = 0.09f),
@@ -329,7 +338,7 @@ private fun ReportCallout(
             )
             Text(
                 text = body,
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodySmall
             )
         }
@@ -344,9 +353,10 @@ private fun ReportIssueRow(
     suggestedFix: String?,
     accent: Color
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Mocha.Panel.copy(alpha = 0.74f),
+        color = semanticColors.panel.copy(alpha = 0.74f),
         shape = RoundedCornerShape(Radius.lg),
         border = BorderStroke(1.dp, accent.copy(alpha = 0.2f))
     ) {
@@ -363,13 +373,13 @@ private fun ReportIssueRow(
             )
             Text(
                 text = message,
-                color = Mocha.Text,
+                color = semanticColors.text,
                 style = MaterialTheme.typography.bodySmall
             )
             if (!suggestedFix.isNullOrBlank()) {
                 Text(
                     text = suggestedFix,
-                    color = Mocha.Subtext0,
+                    color = semanticColors.subtext,
                     style = MaterialTheme.typography.bodySmall
                 )
             }

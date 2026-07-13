@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -20,7 +22,6 @@ import androidx.compose.ui.res.stringResource
 import com.novacut.editor.R
 import com.novacut.editor.ui.theme.ClearCutPrimaryButton
 import com.novacut.editor.ui.theme.ClearCutSecondaryButton
-import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.Motion
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
@@ -32,6 +33,7 @@ fun AiSuggestionBanner(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     AnimatedVisibility(
         visible = suggestion != null,
         enter = slideInVertically(
@@ -46,9 +48,9 @@ fun AiSuggestionBanner(
     ) {
         suggestion?.let { s ->
             Surface(
-                color = Mocha.Panel,
+                color = semanticColors.panel,
                 shape = RoundedCornerShape(Radius.xl),
-                border = BorderStroke(1.dp, Mocha.Mauve.copy(alpha = 0.22f)),
+                border = BorderStroke(1.dp, ClearCutAccents.Mauve.copy(alpha = 0.22f)),
                 shadowElevation = 3.dp,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -61,23 +63,23 @@ fun AiSuggestionBanner(
                         .background(
                             Brush.horizontalGradient(
                                 listOf(
-                                    Mocha.Mauve.copy(alpha = 0.12f),
-                                    Mocha.PanelHighest.copy(alpha = 0.8f),
-                                    Mocha.Panel
+                                    ClearCutAccents.Mauve.copy(alpha = 0.12f),
+                                    semanticColors.panelHighest.copy(alpha = 0.8f),
+                                    semanticColors.panel
                                 )
                             )
                         )
                         .padding(horizontal = Spacing.md, vertical = Spacing.sm)
                 ) {
                     Surface(
-                        color = Mocha.Mauve.copy(alpha = 0.14f),
+                        color = ClearCutAccents.Mauve.copy(alpha = 0.14f),
                         shape = RoundedCornerShape(Radius.md),
-                        border = BorderStroke(1.dp, Mocha.Mauve.copy(alpha = 0.2f))
+                        border = BorderStroke(1.dp, ClearCutAccents.Mauve.copy(alpha = 0.2f))
                     ) {
                         Icon(
                             imageVector = Icons.Default.AutoAwesome,
                             contentDescription = stringResource(R.string.cd_ai_suggestion),
-                            tint = Mocha.Rosewater,
+                            tint = ClearCutAccents.Rosewater,
                             modifier = Modifier
                                 .padding(Spacing.sm)
                                 .size(18.dp)
@@ -86,7 +88,7 @@ fun AiSuggestionBanner(
                     Spacer(modifier = Modifier.width(Spacing.md))
                     Text(
                         text = s.message,
-                        color = Mocha.Text,
+                        color = semanticColors.text,
                         style = MaterialTheme.typography.bodySmall,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,

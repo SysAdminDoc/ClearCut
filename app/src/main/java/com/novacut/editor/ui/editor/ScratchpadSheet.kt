@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -30,7 +32,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
-import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
 import kotlinx.coroutines.delay
@@ -48,6 +49,7 @@ fun ScratchpadSheet(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     // Key the remember to the project id via initialNotes so opening a different
     // project reloads its notes instead of sticking to the previous project's state.
     var text by remember(initialNotes) { mutableStateOf(initialNotes) }
@@ -67,16 +69,16 @@ fun ScratchpadSheet(
         title = stringResource(R.string.scratchpad_title),
         subtitle = projectName.ifBlank { stringResource(R.string.scratchpad_subtitle_default) },
         icon = Icons.AutoMirrored.Filled.Notes,
-        accent = Mocha.Yellow,
+        accent = ClearCutAccents.Yellow,
         onClose = onClose,
         modifier = modifier,
         closeContentDescription = stringResource(R.string.scratchpad_close_content_description)
     ) {
         val isSaved = text == committed.value
-        PremiumPanelCard(accent = Mocha.Yellow) {
+        PremiumPanelCard(accent = ClearCutAccents.Yellow) {
             Text(
                 text = stringResource(R.string.scratchpad_hint),
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodyMedium
             )
 
@@ -101,19 +103,19 @@ fun ScratchpadSheet(
             placeholder = {
                 Text(
                     text = stringResource(R.string.scratchpad_placeholder),
-                    color = Mocha.Subtext0.copy(alpha = 0.7f)
+                    color = semanticColors.subtext.copy(alpha = 0.7f)
                 )
             },
             colors = OutlinedTextFieldDefaults.colors(
-                focusedTextColor = Mocha.Text,
-                unfocusedTextColor = Mocha.Text,
-                focusedBorderColor = Mocha.Yellow.copy(alpha = 0.88f),
-                unfocusedBorderColor = Mocha.CardStroke,
-                focusedContainerColor = Mocha.PanelHighest,
-                unfocusedContainerColor = Mocha.PanelRaised,
-                cursorColor = Mocha.Yellow,
-                focusedPlaceholderColor = Mocha.Subtext0,
-                unfocusedPlaceholderColor = Mocha.Overlay1
+                focusedTextColor = semanticColors.text,
+                unfocusedTextColor = semanticColors.text,
+                focusedBorderColor = ClearCutAccents.Yellow.copy(alpha = 0.88f),
+                unfocusedBorderColor = semanticColors.cardStroke,
+                focusedContainerColor = semanticColors.panelHighest,
+                unfocusedContainerColor = semanticColors.panelRaised,
+                cursorColor = ClearCutAccents.Yellow,
+                focusedPlaceholderColor = semanticColors.subtext,
+                unfocusedPlaceholderColor = semanticColors.overlayStrong
             ),
             shape = RoundedCornerShape(Radius.xl),
             textStyle = MaterialTheme.typography.bodyLarge
@@ -126,7 +128,8 @@ private fun ScratchpadStatusPill(
     text: String,
     saved: Boolean
 ) {
-    val accent = if (saved) Mocha.Green else Mocha.Sapphire
+    val semanticColors = LocalClearCutColors.current
+    val accent = if (saved) ClearCutAccents.Green else ClearCutAccents.Sapphire
     Surface(
         color = accent.copy(alpha = 0.1f),
         shape = RoundedCornerShape(Radius.sm),
@@ -136,7 +139,7 @@ private fun ScratchpadStatusPill(
             modifier = Modifier
                 .background(
                     Brush.horizontalGradient(
-                        listOf(accent.copy(alpha = 0.1f), Mocha.PanelHighest.copy(alpha = 0.0f))
+                        listOf(accent.copy(alpha = 0.1f), semanticColors.panelHighest.copy(alpha = 0.0f))
                     )
                 )
                 .padding(horizontal = Spacing.md, vertical = Spacing.sm),

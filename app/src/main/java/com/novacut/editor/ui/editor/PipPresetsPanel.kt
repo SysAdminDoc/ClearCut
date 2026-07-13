@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -40,7 +42,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.novacut.editor.R
-import com.novacut.editor.ui.theme.Mocha
 
 data class PipPreset(
     val name: String,
@@ -71,40 +72,41 @@ fun PipPresetsPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     val sections = rememberPipSections()
 
     PremiumEditorPanel(
         title = stringResource(R.string.pip_title),
         subtitle = "Stage facecam, commentary, and split-screen layouts without manually repositioning every shot.",
         icon = Icons.Default.PictureInPicture,
-        accent = Mocha.Sapphire,
+        accent = ClearCutAccents.Sapphire,
         onClose = onClose,
         modifier = modifier.heightIn(max = 520.dp),
         scrollable = true
     ) {
-        PremiumPanelCard(accent = Mocha.Sapphire) {
+        PremiumPanelCard(accent = ClearCutAccents.Sapphire) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 PremiumPanelPill(
                     text = "${pipPresets.size} layouts",
-                    accent = Mocha.Sapphire
+                    accent = ClearCutAccents.Sapphire
                 )
                 PremiumPanelPill(
                     text = "Corners, splits, hero",
-                    accent = Mocha.Teal
+                    accent = ClearCutAccents.Teal
                 )
             }
 
             Text(
                 text = "Layout presets",
-                color = Mocha.Rosewater,
+                color = ClearCutAccents.Rosewater,
                 style = MaterialTheme.typography.labelLarge
             )
             Text(
                 text = "Choose a starting composition, then fine-tune transform and crop only if the shot needs something custom.",
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodyMedium
             )
         }
@@ -123,7 +125,7 @@ fun PipPresetsPanel(
                 )
                 Text(
                     text = section.subtitle,
-                    color = Mocha.Subtext0,
+                    color = semanticColors.subtext,
                     style = MaterialTheme.typography.bodySmall
                 )
 
@@ -160,6 +162,7 @@ fun ChromaKeyPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     val keyColor = Color(
         red = keyColorR.coerceIn(0f, 1f),
         green = keyColorG.coerceIn(0f, 1f),
@@ -170,7 +173,7 @@ fun ChromaKeyPanel(
         title = stringResource(R.string.panel_chroma_key_title),
         subtitle = "Cleanly isolate keyed footage, reduce spill, and refine the matte before you composite it over the timeline.",
         icon = Icons.Default.Visibility,
-        accent = Mocha.Green,
+        accent = ClearCutAccents.Green,
         onClose = onClose,
         modifier = modifier.heightIn(max = 560.dp),
         scrollable = true,
@@ -179,32 +182,32 @@ fun ChromaKeyPanel(
                 icon = Icons.Default.Visibility,
                 contentDescription = stringResource(R.string.panel_chroma_key_alpha_matte),
                 onClick = onShowAlphaMatte,
-                tint = Mocha.Peach
+                tint = ClearCutAccents.Peach
             )
         }
     ) {
-        PremiumPanelCard(accent = Mocha.Green) {
+        PremiumPanelCard(accent = ClearCutAccents.Green) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 PremiumPanelPill(
                     text = "Similarity ${formatUnit(similarity)}",
-                    accent = Mocha.Green
+                    accent = ClearCutAccents.Green
                 )
                 PremiumPanelPill(
                     text = "Smoothness ${formatUnit(smoothness)}",
-                    accent = Mocha.Sapphire
+                    accent = ClearCutAccents.Sapphire
                 )
                 PremiumPanelPill(
                     text = "Spill ${formatUnit(spillSuppression)}",
-                    accent = Mocha.Yellow
+                    accent = ClearCutAccents.Yellow
                 )
             }
 
             Text(
                 text = "Key source",
-                color = Mocha.Rosewater,
+                color = ClearCutAccents.Rosewater,
                 style = MaterialTheme.typography.labelLarge
             )
 
@@ -225,7 +228,7 @@ fun ChromaKeyPanel(
                 }
                 Text(
                     text = "Use a clean screen color first, then open the matte view if edges or spill need more attention.",
-                    color = Mocha.Subtext0,
+                    color = semanticColors.subtext,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
@@ -233,10 +236,10 @@ fun ChromaKeyPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Peach) {
+        PremiumPanelCard(accent = ClearCutAccents.Peach) {
             Text(
                 text = stringResource(R.string.panel_chroma_key_color),
-                color = Mocha.Rosewater,
+                color = ClearCutAccents.Rosewater,
                 style = MaterialTheme.typography.labelLarge
             )
 
@@ -283,34 +286,34 @@ fun ChromaKeyPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Sapphire) {
+        PremiumPanelCard(accent = ClearCutAccents.Sapphire) {
             Text(
                 text = stringResource(R.string.panel_chroma_key_refinement),
-                color = Mocha.Rosewater,
+                color = ClearCutAccents.Rosewater,
                 style = MaterialTheme.typography.labelLarge
             )
             Text(
                 text = "Raise similarity to catch more of the screen, add smoothness to soften harsh edges, and suppress spill once the matte feels stable.",
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodyMedium
             )
 
             ChromaSlider(
                 label = stringResource(R.string.chroma_similarity),
                 value = similarity,
-                color = Mocha.Green,
+                color = ClearCutAccents.Green,
                 onChanged = onSimilarityChanged
             )
             ChromaSlider(
                 label = stringResource(R.string.chroma_smoothness),
                 value = smoothness,
-                color = Mocha.Sapphire,
+                color = ClearCutAccents.Sapphire,
                 onChanged = onSmoothnessChanged
             )
             ChromaSlider(
                 label = stringResource(R.string.chroma_spill_suppress),
                 value = spillSuppression,
-                color = Mocha.Yellow,
+                color = ClearCutAccents.Yellow,
                 onChanged = onSpillChanged
             )
         }
@@ -323,10 +326,11 @@ private fun PipPresetCard(
     accent: Color,
     onClick: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         modifier = Modifier.width(148.dp),
         onClick = onClick,
-        color = Mocha.PanelHighest,
+        color = semanticColors.panelHighest,
         shape = RoundedCornerShape(22.dp),
         border = BorderStroke(1.dp, accent.copy(alpha = 0.22f))
     ) {
@@ -338,7 +342,7 @@ private fun PipPresetCard(
                 modifier = Modifier
                     .width(116.dp)
                     .height(84.dp)
-                    .background(Mocha.Base, RoundedCornerShape(18.dp))
+                    .background(semanticColors.surfaceBase, RoundedCornerShape(18.dp))
             ) {
                 androidx.compose.foundation.Canvas(
                     modifier = Modifier
@@ -346,7 +350,7 @@ private fun PipPresetCard(
                         .padding(10.dp)
                 ) {
                     drawRect(
-                        color = Mocha.Subtext0.copy(alpha = 0.18f),
+                        color = semanticColors.subtext.copy(alpha = 0.18f),
                         topLeft = Offset(4f, 4f),
                         size = Size(size.width - 8f, size.height - 8f),
                         style = Stroke(1.3f)
@@ -373,7 +377,7 @@ private fun PipPresetCard(
 
             Text(
                 text = preset.name,
-                color = Mocha.Text,
+                color = semanticColors.text,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
@@ -381,7 +385,7 @@ private fun PipPresetCard(
             )
             Text(
                 text = pipPresetDescription(preset.name),
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodySmall,
                 minLines = 2
             )
@@ -396,13 +400,14 @@ private fun KeyColorSwatch(
     selected: Boolean,
     onClick: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         onClick = onClick,
         color = color.copy(alpha = 0.14f),
         shape = RoundedCornerShape(18.dp),
         border = BorderStroke(
             1.dp,
-            if (selected) Mocha.Mauve else color.copy(alpha = 0.28f)
+            if (selected) ClearCutAccents.Mauve else color.copy(alpha = 0.28f)
         )
     ) {
         Column(
@@ -417,7 +422,7 @@ private fun KeyColorSwatch(
             )
             Text(
                 text = label,
-                color = if (selected) Mocha.Mauve else Mocha.Text,
+                color = if (selected) ClearCutAccents.Mauve else semanticColors.text,
                 style = MaterialTheme.typography.labelMedium
             )
         }
@@ -431,6 +436,7 @@ private fun ChromaSlider(
     color: Color,
     onChanged: (Float) -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -438,7 +444,7 @@ private fun ChromaSlider(
         ) {
             Text(
                 text = label,
-                color = Mocha.Subtext1,
+                color = semanticColors.subtextStrong,
                 style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.weight(1f)
             )
@@ -456,7 +462,7 @@ private fun ChromaSlider(
             colors = SliderDefaults.colors(
                 thumbColor = color,
                 activeTrackColor = color.copy(alpha = 0.68f),
-                inactiveTrackColor = Mocha.Surface0
+                inactiveTrackColor = semanticColors.surfaceLow
             )
         )
     }
@@ -474,19 +480,19 @@ private fun rememberPipSections(): List<PipPresetSection> = listOf(
     PipPresetSection(
         title = "Corners and cams",
         subtitle = "Use these for facecam reactions, webcam inserts, and creator commentary.",
-        accent = Mocha.Sapphire,
+        accent = ClearCutAccents.Sapphire,
         presets = pipPresets.filter { it.name in setOf("Top Left", "Top Right", "Bottom Left", "Bottom Right", "Circle Cam", "Center Small") }
     ),
     PipPresetSection(
         title = "Split layouts",
         subtitle = "Balanced side-by-side and stacked frames for interviews, explainers, and comparisons.",
-        accent = Mocha.Green,
+        accent = ClearCutAccents.Green,
         presets = pipPresets.filter { it.name in setOf("Left Half", "Right Half", "Top Half", "Bottom Half") }
     ),
     PipPresetSection(
         title = "Hero treatments",
         subtitle = "Larger overlays for lower-thirds, focus windows, and full takeover layouts.",
-        accent = Mocha.Peach,
+        accent = ClearCutAccents.Peach,
         presets = pipPresets.filter { it.name in setOf("Lower Third", "Full Screen") }
     )
 )

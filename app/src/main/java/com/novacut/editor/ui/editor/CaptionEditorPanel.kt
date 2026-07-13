@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -46,7 +48,6 @@ import com.novacut.editor.engine.CaptionTranslationEngine.LanguagePairQuality
 import com.novacut.editor.model.Caption
 import com.novacut.editor.model.CaptionStyle
 import com.novacut.editor.model.CaptionStyleType
-import com.novacut.editor.ui.theme.Mocha
 import java.util.Locale
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -70,6 +71,7 @@ fun CaptionEditorPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     var editingCaption by remember { mutableStateOf<Caption?>(null) }
     var selectedStyleType by remember { mutableStateOf(CaptionStyleType.SUBTITLE_BAR) }
     // This panel survives clip switches (it lives in a keyless BottomSheetSlot), so the
@@ -98,7 +100,7 @@ fun CaptionEditorPanel(
         title = stringResource(R.string.caption_title),
         subtitle = "Write, time, and style captions that feel polished instead of bolted onto the cut.",
         icon = Icons.Default.ClosedCaption,
-        accent = Mocha.Yellow,
+        accent = ClearCutAccents.Yellow,
         onClose = onClose,
         closeContentDescription = stringResource(R.string.caption_close_cd),
         modifier = modifier,
@@ -108,17 +110,17 @@ fun CaptionEditorPanel(
                 icon = Icons.Default.AutoAwesome,
                 contentDescription = stringResource(R.string.cd_caption_auto),
                 onClick = onGenerateAutoCaption,
-                tint = Mocha.Yellow
+                tint = ClearCutAccents.Yellow
             )
             PremiumPanelIconButton(
                 icon = Icons.Default.Add,
                 contentDescription = stringResource(R.string.caption_add_cd),
                 onClick = ::createCaption,
-                tint = Mocha.Green
+                tint = ClearCutAccents.Green
             )
         }
     ) {
-        PremiumPanelCard(accent = if (activeCaptionCount > 0) Mocha.Green else Mocha.Yellow) {
+        PremiumPanelCard(accent = if (activeCaptionCount > 0) ClearCutAccents.Green else ClearCutAccents.Yellow) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -128,13 +130,13 @@ fun CaptionEditorPanel(
                     Text(
                         text = "Caption system",
                         style = MaterialTheme.typography.titleMedium,
-                        color = Mocha.Text
+                        color = semanticColors.text
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = "Manage timing, coverage, and default styling for every subtitle block on the selected clip.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
 
@@ -144,10 +146,10 @@ fun CaptionEditorPanel(
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    PremiumPanelPill(text = "${captions.size} total", accent = Mocha.Blue)
+                    PremiumPanelPill(text = "${captions.size} total", accent = ClearCutAccents.Blue)
                     PremiumPanelPill(
                         text = if (activeCaptionCount > 0) "$activeCaptionCount live" else "Ready",
-                        accent = if (activeCaptionCount > 0) Mocha.Green else Mocha.Yellow
+                        accent = if (activeCaptionCount > 0) ClearCutAccents.Green else ClearCutAccents.Yellow
                     )
                 }
             }
@@ -160,13 +162,13 @@ fun CaptionEditorPanel(
                 CaptionMetric(
                     title = "Playhead",
                     value = formatSeconds(playheadMs),
-                    accent = Mocha.Peach,
+                    accent = ClearCutAccents.Peach,
                     modifier = Modifier.widthIn(min = 132.dp)
                 )
                 CaptionMetric(
                     title = "Default Style",
                     value = selectedStyleType.displayName,
-                    accent = Mocha.Mauve,
+                    accent = ClearCutAccents.Mauve,
                     modifier = Modifier.widthIn(min = 132.dp)
                 )
             }
@@ -174,16 +176,16 @@ fun CaptionEditorPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Mauve) {
+        PremiumPanelCard(accent = ClearCutAccents.Mauve) {
             Text(
                 text = "Default style for new captions",
                 style = MaterialTheme.typography.titleMedium,
-                color = Mocha.Text
+                color = semanticColors.text
             )
             Text(
                 text = "Pick the starting treatment here, then fine-tune any individual caption below.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
 
             FlowRow(
@@ -204,10 +206,10 @@ fun CaptionEditorPanel(
                             )
                         },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Mocha.Mauve.copy(alpha = 0.18f),
-                            selectedLabelColor = Mocha.Mauve,
-                            containerColor = Mocha.PanelRaised,
-                            labelColor = Mocha.Subtext0
+                            selectedContainerColor = ClearCutAccents.Mauve.copy(alpha = 0.18f),
+                            selectedLabelColor = ClearCutAccents.Mauve,
+                            containerColor = semanticColors.panelRaised,
+                            labelColor = semanticColors.subtext
                         )
                     )
                 }
@@ -216,7 +218,7 @@ fun CaptionEditorPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Green) {
+        PremiumPanelCard(accent = ClearCutAccents.Green) {
             CaptionTranslationPanel(
                 rows = translationRows,
                 sourceLang = translationSourceLang,
@@ -231,11 +233,11 @@ fun CaptionEditorPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Blue) {
+        PremiumPanelCard(accent = ClearCutAccents.Blue) {
             Text(
                 text = "Caption list",
                 style = MaterialTheme.typography.titleMedium,
-                color = Mocha.Text
+                color = semanticColors.text
             )
             Text(
                 text = if (captions.isEmpty()) {
@@ -244,15 +246,15 @@ fun CaptionEditorPanel(
                     "Tap a caption to refine its text, timing, and placement."
                 },
                 style = MaterialTheme.typography.bodyMedium,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
 
             if (captions.isEmpty()) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = Mocha.PanelRaised,
+                    color = semanticColors.panelRaised,
                     shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(1.dp, Mocha.CardStroke)
+                    border = BorderStroke(1.dp, semanticColors.cardStroke)
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -262,12 +264,12 @@ fun CaptionEditorPanel(
                         Text(
                             text = stringResource(R.string.caption_no_captions),
                             style = MaterialTheme.typography.titleSmall,
-                            color = Mocha.Text
+                            color = semanticColors.text
                         )
                         Text(
                             text = "Auto-captions are best for a quick first pass. Manual captions are great for hero text and exact pacing.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Mocha.Subtext0
+                            color = semanticColors.subtext
                         )
                         if (isCompactLayout) {
                             Column(
@@ -278,8 +280,8 @@ fun CaptionEditorPanel(
                                     onClick = onGenerateAutoCaption,
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(18.dp),
-                                    border = BorderStroke(1.dp, Mocha.Yellow.copy(alpha = 0.35f)),
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Yellow)
+                                    border = BorderStroke(1.dp, ClearCutAccents.Yellow.copy(alpha = 0.35f)),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = ClearCutAccents.Yellow)
                                 ) {
                                     androidx.compose.material3.Icon(
                                         imageVector = Icons.Default.AutoAwesome,
@@ -293,7 +295,7 @@ fun CaptionEditorPanel(
                                     onClick = ::createCaption,
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(18.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve)
+                                    colors = ButtonDefaults.buttonColors(containerColor = ClearCutAccents.Mauve)
                                 ) {
                                     androidx.compose.material3.Icon(
                                         imageVector = Icons.Default.Add,
@@ -312,8 +314,8 @@ fun CaptionEditorPanel(
                                     onClick = onGenerateAutoCaption,
                                     modifier = Modifier.weight(1f),
                                     shape = RoundedCornerShape(18.dp),
-                                    border = BorderStroke(1.dp, Mocha.Yellow.copy(alpha = 0.35f)),
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Yellow)
+                                    border = BorderStroke(1.dp, ClearCutAccents.Yellow.copy(alpha = 0.35f)),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = ClearCutAccents.Yellow)
                                 ) {
                                     androidx.compose.material3.Icon(
                                         imageVector = Icons.Default.AutoAwesome,
@@ -327,7 +329,7 @@ fun CaptionEditorPanel(
                                     onClick = ::createCaption,
                                     modifier = Modifier.weight(1f),
                                     shape = RoundedCornerShape(18.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve)
+                                    colors = ButtonDefaults.buttonColors(containerColor = ClearCutAccents.Mauve)
                                 ) {
                                     androidx.compose.material3.Icon(
                                         imageVector = Icons.Default.Add,
@@ -361,16 +363,16 @@ fun CaptionEditorPanel(
         editingCaption?.let { caption ->
             Spacer(modifier = Modifier.height(12.dp))
 
-            PremiumPanelCard(accent = Mocha.Yellow) {
+            PremiumPanelCard(accent = ClearCutAccents.Yellow) {
                 Text(
                     text = "Edit caption",
                     style = MaterialTheme.typography.titleMedium,
-                    color = Mocha.Text
+                    color = semanticColors.text
                 )
                 Text(
                     text = "Refine the line, tighten the timing, and place it exactly where it belongs.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
 
                 CaptionEditForm(
@@ -394,6 +396,7 @@ private fun CaptionMetric(
     accent: androidx.compose.ui.graphics.Color,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         modifier = modifier,
         color = accent.copy(alpha = 0.12f),
@@ -407,7 +410,7 @@ private fun CaptionMetric(
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelLarge,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
             Text(
                 text = value,
@@ -427,22 +430,23 @@ private fun CaptionListCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     val isActive = playheadMs in caption.startTimeMs..caption.endTimeMs
     val accent = when {
-        isEditing -> Mocha.Mauve
-        isActive -> Mocha.Green
-        else -> Mocha.Blue
+        isEditing -> ClearCutAccents.Mauve
+        isActive -> ClearCutAccents.Green
+        else -> ClearCutAccents.Blue
     }
 
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onEdit),
-        color = if (isEditing) accent.copy(alpha = 0.12f) else Mocha.PanelRaised,
+        color = if (isEditing) accent.copy(alpha = 0.12f) else semanticColors.panelRaised,
         shape = RoundedCornerShape(20.dp),
         border = BorderStroke(
             1.dp,
-            if (isEditing || isActive) accent.copy(alpha = 0.2f) else Mocha.CardStroke
+            if (isEditing || isActive) accent.copy(alpha = 0.2f) else semanticColors.cardStroke
         )
     ) {
         Column(
@@ -460,7 +464,7 @@ private fun CaptionListCard(
                     Text(
                         text = caption.text,
                         style = MaterialTheme.typography.titleSmall,
-                        color = Mocha.Text,
+                        color = semanticColors.text,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         fontWeight = FontWeight.Medium
@@ -469,7 +473,7 @@ private fun CaptionListCard(
                     Text(
                         text = "${formatSeconds(caption.startTimeMs)} - ${formatSeconds(caption.endTimeMs)}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
 
@@ -497,7 +501,7 @@ private fun CaptionListCard(
                         "Manual caption"
                     },
                     style = MaterialTheme.typography.labelMedium,
-                    color = if (caption.words.isNotEmpty()) Mocha.Peach else Mocha.Subtext0
+                    color = if (caption.words.isNotEmpty()) ClearCutAccents.Peach else semanticColors.subtext
                 )
 
                 Row(
@@ -508,13 +512,13 @@ private fun CaptionListCard(
                         icon = Icons.Default.Edit,
                         contentDescription = stringResource(R.string.cd_caption_edit),
                         onClick = onEdit,
-                        tint = Mocha.Blue
+                        tint = ClearCutAccents.Blue
                     )
                     PremiumPanelIconButton(
                         icon = Icons.Default.Delete,
                         contentDescription = stringResource(R.string.caption_delete_cd),
                         onClick = onDelete,
-                        tint = Mocha.Red
+                        tint = ClearCutAccents.Red
                     )
                 }
             }
@@ -530,6 +534,7 @@ private fun CaptionEditForm(
     onUpdate: (Caption) -> Unit,
     onDone: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     val isCompactLayout = LocalConfiguration.current.screenWidthDp < 430
     val captionStylesSectionDescription = stringResource(R.string.cd_caption_styles_section)
     var text by remember(caption.id) { mutableStateOf(caption.text) }
@@ -546,13 +551,13 @@ private fun CaptionEditForm(
             modifier = Modifier.fillMaxWidth(),
             label = { Text(stringResource(R.string.caption_text_hint)) },
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Mocha.Mauve,
-                unfocusedBorderColor = Mocha.CardStroke,
-                focusedTextColor = Mocha.Text,
-                unfocusedTextColor = Mocha.Text,
-                cursorColor = Mocha.Mauve,
-                focusedLabelColor = Mocha.Mauve,
-                unfocusedLabelColor = Mocha.Subtext0
+                focusedBorderColor = ClearCutAccents.Mauve,
+                unfocusedBorderColor = semanticColors.cardStroke,
+                focusedTextColor = semanticColors.text,
+                unfocusedTextColor = semanticColors.text,
+                cursorColor = ClearCutAccents.Mauve,
+                focusedLabelColor = ClearCutAccents.Mauve,
+                unfocusedLabelColor = semanticColors.subtext
             ),
             maxLines = 3,
             textStyle = TextStyle(fontSize = 15.sp)
@@ -566,13 +571,13 @@ private fun CaptionEditForm(
             CaptionMetric(
                 title = "Start",
                 value = formatSeconds((startTime * 1000f).toLong()),
-                accent = Mocha.Blue,
+                accent = ClearCutAccents.Blue,
                 modifier = Modifier.widthIn(min = 132.dp)
             )
             CaptionMetric(
                 title = "End",
                 value = formatSeconds((endTime * 1000f).toLong()),
-                accent = Mocha.Green,
+                accent = ClearCutAccents.Green,
                 modifier = Modifier.widthIn(min = 132.dp)
             )
         }
@@ -581,14 +586,14 @@ private fun CaptionEditForm(
             label = stringResource(R.string.caption_start_time),
             value = startTime,
             valueRange = 0f..(clipDurationMs / 1000f),
-            accent = Mocha.Blue,
+            accent = ClearCutAccents.Blue,
             onValueChange = { startTime = it.coerceAtMost(endTime) }
         )
         CaptionSlider(
             label = stringResource(R.string.caption_end_time),
             value = endTime,
             valueRange = 0f..(clipDurationMs / 1000f),
-            accent = Mocha.Green,
+            accent = ClearCutAccents.Green,
             onValueChange = { endTime = it.coerceAtLeast(startTime) }
         )
 
@@ -596,7 +601,7 @@ private fun CaptionEditForm(
             Text(
                 text = stringResource(R.string.panel_caption_style_label),
                 style = MaterialTheme.typography.labelLarge,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
             FlowRow(
                 modifier = Modifier.semantics {
@@ -611,10 +616,10 @@ private fun CaptionEditForm(
                         onClick = { styleType = type },
                         label = { Text(type.displayName) },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Mocha.Mauve.copy(alpha = 0.18f),
-                            selectedLabelColor = Mocha.Mauve,
-                            containerColor = Mocha.PanelRaised,
-                            labelColor = Mocha.Subtext0
+                            selectedContainerColor = ClearCutAccents.Mauve.copy(alpha = 0.18f),
+                            selectedLabelColor = ClearCutAccents.Mauve,
+                            containerColor = semanticColors.panelRaised,
+                            labelColor = semanticColors.subtext
                         )
                     )
                 }
@@ -625,7 +630,7 @@ private fun CaptionEditForm(
             label = stringResource(R.string.caption_font_size),
             value = fontSize,
             valueRange = 16f..72f,
-            accent = Mocha.Mauve,
+            accent = ClearCutAccents.Mauve,
             onValueChange = { fontSize = it },
             valueFormatter = { "${it.toInt()} pt" }
         )
@@ -633,7 +638,7 @@ private fun CaptionEditForm(
             label = stringResource(R.string.panel_caption_position_y),
             value = positionY,
             valueRange = 0.1f..0.95f,
-            accent = Mocha.Yellow,
+            accent = ClearCutAccents.Yellow,
             onValueChange = { positionY = it },
             valueFormatter = { "%.0f%%".format(it * 100f) }
         )
@@ -647,8 +652,8 @@ private fun CaptionEditForm(
                     onClick = onDone,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(18.dp),
-                    border = BorderStroke(1.dp, Mocha.CardStroke),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Subtext0)
+                    border = BorderStroke(1.dp, semanticColors.cardStroke),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = semanticColors.subtext)
                 ) {
                     Text(text = stringResource(R.string.done))
                 }
@@ -671,7 +676,7 @@ private fun CaptionEditForm(
                     },
                     enabled = text.isNotBlank(),
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve),
+                    colors = ButtonDefaults.buttonColors(containerColor = ClearCutAccents.Mauve),
                     shape = RoundedCornerShape(18.dp)
                 ) {
                     Text(text = stringResource(R.string.panel_caption_save))
@@ -686,8 +691,8 @@ private fun CaptionEditForm(
                     onClick = onDone,
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(18.dp),
-                    border = BorderStroke(1.dp, Mocha.CardStroke),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Mocha.Subtext0)
+                    border = BorderStroke(1.dp, semanticColors.cardStroke),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = semanticColors.subtext)
                 ) {
                     Text(text = stringResource(R.string.done))
                 }
@@ -710,7 +715,7 @@ private fun CaptionEditForm(
                     },
                     enabled = text.isNotBlank(),
                     modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = Mocha.Mauve),
+                    colors = ButtonDefaults.buttonColors(containerColor = ClearCutAccents.Mauve),
                     shape = RoundedCornerShape(18.dp)
                 ) {
                     Text(text = stringResource(R.string.panel_caption_save))
@@ -729,6 +734,7 @@ private fun CaptionSlider(
     onValueChange: (Float) -> Unit,
     valueFormatter: (Float) -> String = { "%.1fs".format(it) }
 ) {
+    val semanticColors = LocalClearCutColors.current
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -738,7 +744,7 @@ private fun CaptionSlider(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelLarge,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
             PremiumPanelPill(text = valueFormatter(value), accent = accent)
         }
@@ -749,7 +755,7 @@ private fun CaptionSlider(
             colors = SliderDefaults.colors(
                 thumbColor = accent,
                 activeTrackColor = accent,
-                inactiveTrackColor = Mocha.Surface1
+                inactiveTrackColor = semanticColors.surface
             )
         )
     }

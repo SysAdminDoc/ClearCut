@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -24,7 +26,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.novacut.editor.R
 import com.novacut.editor.model.*
-import com.novacut.editor.ui.theme.Mocha
 
 @Composable
 fun TextEditorSheet(
@@ -36,6 +37,7 @@ fun TextEditorSheet(
     importedFonts: List<Pair<String, String>> = emptyList(),
     onImportFont: () -> Unit = {}
 ) {
+    val semanticColors = LocalClearCutColors.current
     val defaultText = stringResource(R.string.text_editor_your_text)
     // Key all state to the overlay id (or "new" sentinel) so editing a different
     // overlay without disposing the sheet resets all fields to that overlay's values
@@ -94,7 +96,7 @@ fun TextEditorSheet(
         title = stringResource(R.string.text_editor_title),
         subtitle = stringResource(R.string.panel_text_editor_subtitle),
         icon = Icons.Default.Title,
-        accent = Mocha.Sapphire,
+        accent = ClearCutAccents.Sapphire,
         onClose = onClose,
         modifier = modifier,
         scrollable = true,
@@ -134,10 +136,10 @@ fun TextEditorSheet(
                 },
                 enabled = text.isNotBlank(),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Mocha.Rosewater,
-                    contentColor = Mocha.Midnight,
-                    disabledContainerColor = Mocha.PanelHighest,
-                    disabledContentColor = Mocha.Subtext0
+                    containerColor = ClearCutAccents.Rosewater,
+                    contentColor = semanticColors.background,
+                    disabledContainerColor = semanticColors.panelHighest,
+                    disabledContentColor = semanticColors.subtext
                 ),
                 shape = RoundedCornerShape(16.dp)
             ) {
@@ -148,10 +150,10 @@ fun TextEditorSheet(
             }
         }
     ) {
-        PremiumPanelCard(accent = Mocha.Sapphire) {
+        PremiumPanelCard(accent = ClearCutAccents.Sapphire) {
             Text(
                 text = stringResource(R.string.panel_text_editor_preview),
-                color = Mocha.Rosewater,
+                color = ClearCutAccents.Rosewater,
                 style = MaterialTheme.typography.labelLarge
             )
             Box(
@@ -162,9 +164,9 @@ fun TextEditorSheet(
                     .background(
                         Brush.verticalGradient(
                             listOf(
-                                Mocha.Panel.copy(alpha = 0.98f),
-                                Mocha.PanelHighest,
-                                Mocha.Panel
+                                semanticColors.panel.copy(alpha = 0.98f),
+                                semanticColors.panelHighest,
+                                semanticColors.panel
                             )
                         )
                     )
@@ -187,21 +189,21 @@ fun TextEditorSheet(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PremiumPanelPill(
                     text = "${fontSize.toInt()}pt",
-                    accent = Mocha.Sapphire
+                    accent = ClearCutAccents.Sapphire
                 )
                 PremiumPanelPill(
                     text = "${"%.1f".format(duration / 1000f)}s",
-                    accent = Mocha.Peach
+                    accent = ClearCutAccents.Peach
                 )
             }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Mauve) {
+        PremiumPanelCard(accent = ClearCutAccents.Mauve) {
             Text(
                 text = stringResource(R.string.panel_text_editor_style),
-                color = Mocha.Rosewater,
+                color = ClearCutAccents.Rosewater,
                 style = MaterialTheme.typography.labelLarge
             )
             OutlinedTextField(
@@ -211,15 +213,15 @@ fun TextEditorSheet(
                 label = { Text(stringResource(R.string.panel_text_editor_text_label)) },
                 shape = RoundedCornerShape(20.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Mocha.Mauve,
-                    unfocusedBorderColor = Mocha.CardStroke,
-                    focusedTextColor = Mocha.Text,
-                    unfocusedTextColor = Mocha.Text,
-                    focusedLabelColor = Mocha.Mauve,
-                    unfocusedLabelColor = Mocha.Subtext0,
-                    cursorColor = Mocha.Mauve,
-                    focusedContainerColor = Mocha.Panel,
-                    unfocusedContainerColor = Mocha.Panel
+                    focusedBorderColor = ClearCutAccents.Mauve,
+                    unfocusedBorderColor = semanticColors.cardStroke,
+                    focusedTextColor = semanticColors.text,
+                    unfocusedTextColor = semanticColors.text,
+                    focusedLabelColor = ClearCutAccents.Mauve,
+                    unfocusedLabelColor = semanticColors.subtext,
+                    cursorColor = ClearCutAccents.Mauve,
+                    focusedContainerColor = semanticColors.panel,
+                    unfocusedContainerColor = semanticColors.panel
                 ),
                 maxLines = 3
             )
@@ -231,10 +233,10 @@ fun TextEditorSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(stringResource(R.string.text_editor_font), color = Mocha.Subtext1, style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.text_editor_font), color = semanticColors.subtextStrong, style = MaterialTheme.typography.labelLarge)
                 Text(
                     text = "Import",
-                    color = Mocha.Mauve,
+                    color = ClearCutAccents.Mauve,
                     style = MaterialTheme.typography.labelMedium,
                     modifier = Modifier
                         .clickable { onImportFont() }
@@ -248,10 +250,10 @@ fun TextEditorSheet(
                         label = { Text(label, style = MaterialTheme.typography.labelMedium) },
                         selected = fontFamily == family,
                         colors = FilterChipDefaults.filterChipColors(
-                            containerColor = Mocha.Panel,
-                            labelColor = Mocha.Text,
-                            selectedContainerColor = Mocha.Mauve.copy(alpha = 0.18f),
-                            selectedLabelColor = Mocha.Mauve
+                            containerColor = semanticColors.panel,
+                            labelColor = semanticColors.text,
+                            selectedContainerColor = ClearCutAccents.Mauve.copy(alpha = 0.18f),
+                            selectedLabelColor = ClearCutAccents.Mauve
                         )
                     )
                 }
@@ -263,9 +265,9 @@ fun TextEditorSheet(
                     label = { Text("B", fontWeight = FontWeight.Bold) },
                     selected = bold,
                     colors = FilterChipDefaults.filterChipColors(
-                        containerColor = Mocha.Panel,
-                        selectedContainerColor = Mocha.Mauve.copy(alpha = 0.18f),
-                        selectedLabelColor = Mocha.Mauve
+                        containerColor = semanticColors.panel,
+                        selectedContainerColor = ClearCutAccents.Mauve.copy(alpha = 0.18f),
+                        selectedLabelColor = ClearCutAccents.Mauve
                     )
                 )
                 FilterChip(
@@ -273,9 +275,9 @@ fun TextEditorSheet(
                     label = { Text("I") },
                     selected = italic,
                     colors = FilterChipDefaults.filterChipColors(
-                        containerColor = Mocha.Panel,
-                        selectedContainerColor = Mocha.Mauve.copy(alpha = 0.18f),
-                        selectedLabelColor = Mocha.Mauve
+                        containerColor = semanticColors.panel,
+                        selectedContainerColor = ClearCutAccents.Mauve.copy(alpha = 0.18f),
+                        selectedLabelColor = ClearCutAccents.Mauve
                     )
                 )
                 FilterChip(
@@ -283,9 +285,9 @@ fun TextEditorSheet(
                     label = { Icon(Icons.AutoMirrored.Filled.FormatAlignLeft, stringResource(R.string.cd_align_left), modifier = Modifier.size(16.dp)) },
                     selected = alignment == TextAlignment.LEFT,
                     colors = FilterChipDefaults.filterChipColors(
-                        containerColor = Mocha.Panel,
-                        selectedContainerColor = Mocha.Mauve.copy(alpha = 0.18f),
-                        selectedLabelColor = Mocha.Mauve
+                        containerColor = semanticColors.panel,
+                        selectedContainerColor = ClearCutAccents.Mauve.copy(alpha = 0.18f),
+                        selectedLabelColor = ClearCutAccents.Mauve
                     )
                 )
                 FilterChip(
@@ -293,9 +295,9 @@ fun TextEditorSheet(
                     label = { Icon(Icons.Default.FormatAlignCenter, stringResource(R.string.cd_align_center), modifier = Modifier.size(16.dp)) },
                     selected = alignment == TextAlignment.CENTER,
                     colors = FilterChipDefaults.filterChipColors(
-                        containerColor = Mocha.Panel,
-                        selectedContainerColor = Mocha.Mauve.copy(alpha = 0.18f),
-                        selectedLabelColor = Mocha.Mauve
+                        containerColor = semanticColors.panel,
+                        selectedContainerColor = ClearCutAccents.Mauve.copy(alpha = 0.18f),
+                        selectedLabelColor = ClearCutAccents.Mauve
                     )
                 )
                 FilterChip(
@@ -303,14 +305,14 @@ fun TextEditorSheet(
                     label = { Icon(Icons.AutoMirrored.Filled.FormatAlignRight, stringResource(R.string.cd_align_right), modifier = Modifier.size(16.dp)) },
                     selected = alignment == TextAlignment.RIGHT,
                     colors = FilterChipDefaults.filterChipColors(
-                        containerColor = Mocha.Panel,
-                        selectedContainerColor = Mocha.Mauve.copy(alpha = 0.18f),
-                        selectedLabelColor = Mocha.Mauve
+                        containerColor = semanticColors.panel,
+                        selectedContainerColor = ClearCutAccents.Mauve.copy(alpha = 0.18f),
+                        selectedLabelColor = ClearCutAccents.Mauve
                     )
                 )
             }
 
-            Text(stringResource(R.string.text_editor_color), color = Mocha.Subtext1, style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(R.string.text_editor_color), color = semanticColors.subtextStrong, style = MaterialTheme.typography.labelLarge)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(colorOptions) { color ->
                     Box(
@@ -319,8 +321,8 @@ fun TextEditorSheet(
                             .clip(CircleShape)
                             .background(Color(color))
                             .then(
-                                if (selectedColor == color) Modifier.border(2.dp, Mocha.Mauve, CircleShape)
-                                else Modifier.border(1.dp, Mocha.CardStroke, CircleShape)
+                                if (selectedColor == color) Modifier.border(2.dp, ClearCutAccents.Mauve, CircleShape)
+                                else Modifier.border(1.dp, semanticColors.cardStroke, CircleShape)
                             )
                             .clickable { selectedColor = color }
                     )
@@ -330,17 +332,17 @@ fun TextEditorSheet(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Peach) {
+        PremiumPanelCard(accent = ClearCutAccents.Peach) {
             Text(
                 text = stringResource(R.string.panel_text_editor_timing),
-                color = Mocha.Rosewater,
+                color = ClearCutAccents.Rosewater,
                 style = MaterialTheme.typography.labelLarge
             )
             EffectSlider(stringResource(R.string.panel_text_editor_horizontal), positionX, 0f, 1f) { positionX = it }
             EffectSlider(stringResource(R.string.panel_text_editor_vertical), positionY, 0f, 1f) { positionY = it }
             EffectSlider(stringResource(R.string.panel_text_editor_duration_seconds), duration / 1000f, 0.5f, 10f) { duration = it * 1000f }
 
-            Text(stringResource(R.string.text_editor_enter_animation), color = Mocha.Subtext1, style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(R.string.text_editor_enter_animation), color = semanticColors.subtextStrong, style = MaterialTheme.typography.labelLarge)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(TextAnimation.entries.toList()) { anim ->
                     FilterChip(
@@ -348,16 +350,16 @@ fun TextEditorSheet(
                         label = { Text(anim.displayName, style = MaterialTheme.typography.labelMedium) },
                         selected = animIn == anim,
                         colors = FilterChipDefaults.filterChipColors(
-                            containerColor = Mocha.Panel,
-                            labelColor = Mocha.Text,
-                            selectedContainerColor = Mocha.Peach.copy(alpha = 0.18f),
-                            selectedLabelColor = Mocha.Peach
+                            containerColor = semanticColors.panel,
+                            labelColor = semanticColors.text,
+                            selectedContainerColor = ClearCutAccents.Peach.copy(alpha = 0.18f),
+                            selectedLabelColor = ClearCutAccents.Peach
                         )
                     )
                 }
             }
 
-            Text(stringResource(R.string.text_editor_exit_animation), color = Mocha.Subtext1, style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(R.string.text_editor_exit_animation), color = semanticColors.subtextStrong, style = MaterialTheme.typography.labelLarge)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(TextAnimation.entries.toList()) { anim ->
                     FilterChip(
@@ -365,10 +367,10 @@ fun TextEditorSheet(
                         label = { Text(anim.displayName, style = MaterialTheme.typography.labelMedium) },
                         selected = animOut == anim,
                         colors = FilterChipDefaults.filterChipColors(
-                            containerColor = Mocha.Panel,
-                            labelColor = Mocha.Text,
-                            selectedContainerColor = Mocha.Peach.copy(alpha = 0.18f),
-                            selectedLabelColor = Mocha.Peach
+                            containerColor = semanticColors.panel,
+                            labelColor = semanticColors.text,
+                            selectedContainerColor = ClearCutAccents.Peach.copy(alpha = 0.18f),
+                            selectedLabelColor = ClearCutAccents.Peach
                         )
                     )
                 }
@@ -377,10 +379,10 @@ fun TextEditorSheet(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Green) {
+        PremiumPanelCard(accent = ClearCutAccents.Green) {
             Text(
                 text = stringResource(R.string.panel_text_editor_appearance),
-                color = Mocha.Rosewater,
+                color = ClearCutAccents.Rosewater,
                 style = MaterialTheme.typography.labelLarge
             )
             EffectSlider(stringResource(R.string.panel_text_editor_shadow_x), shadowOffsetX, -10f, 10f) { shadowOffsetX = it }
@@ -388,7 +390,7 @@ fun TextEditorSheet(
             EffectSlider(stringResource(R.string.panel_text_editor_shadow_blur), shadowBlur, 0f, 20f) { shadowBlur = it }
             EffectSlider(stringResource(R.string.panel_text_editor_glow_radius), glowRadius, 0f, 30f) { glowRadius = it }
 
-            Text(stringResource(R.string.text_editor_glow_color), color = Mocha.Subtext1, style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(R.string.text_editor_glow_color), color = semanticColors.subtextStrong, style = MaterialTheme.typography.labelLarge)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(listOf(
                     0x00000000L, 0xFFFFFFFF, 0xFFF38BA8, 0xFFFAB387,
@@ -398,17 +400,17 @@ fun TextEditorSheet(
                         modifier = Modifier
                             .size(26.dp)
                             .clip(CircleShape)
-                            .background(if (color == 0x00000000L) Mocha.Panel else Color(color))
+                            .background(if (color == 0x00000000L) semanticColors.panel else Color(color))
                             .then(
-                                if (glowColor == color) Modifier.border(2.dp, Mocha.Green, CircleShape)
-                                else Modifier.border(1.dp, Mocha.CardStroke, CircleShape)
+                                if (glowColor == color) Modifier.border(2.dp, ClearCutAccents.Green, CircleShape)
+                                else Modifier.border(1.dp, semanticColors.cardStroke, CircleShape)
                             )
                             .clickable { glowColor = color }
                     ) {
                         if (color == 0x00000000L) {
                             Text(
                                 text = stringResource(R.string.text_editor_off),
-                                color = Mocha.Subtext0,
+                                color = semanticColors.subtext,
                                 fontSize = 7.sp,
                                 modifier = Modifier.align(Alignment.Center)
                             )

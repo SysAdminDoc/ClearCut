@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.export
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -31,7 +33,6 @@ import com.novacut.editor.R
 import com.novacut.editor.engine.AiUsageLedger
 import com.novacut.editor.engine.AiUsageLedger.Chip
 import com.novacut.editor.engine.AiUsageLedger.Severity
-import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.Radius
 
 /**
@@ -60,17 +61,18 @@ fun AiUseConfidenceRow(
     modifier: Modifier = Modifier,
     onChipClick: (Chip) -> Unit = {},
 ) {
+    val semanticColors = LocalClearCutColors.current
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
             text = stringResource(R.string.export_ai_use_title),
-            color = Mocha.Text,
+            color = semanticColors.text,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = stringResource(R.string.export_ai_use_description),
-            color = Mocha.Subtext0,
+            color = semanticColors.subtext,
             style = MaterialTheme.typography.bodySmall,
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -91,20 +93,22 @@ fun AiUseConfidenceRow(
 
 @Composable
 private fun EmptyAiUseRow() {
+    val semanticColors = LocalClearCutColors.current
     Text(
         text = stringResource(R.string.export_ai_use_empty),
-        color = Mocha.Subtext1,
+        color = semanticColors.subtextStrong,
         style = MaterialTheme.typography.bodySmall,
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(Radius.md))
-            .background(Mocha.PanelHighest.copy(alpha = 0.42f))
+            .background(semanticColors.panelHighest.copy(alpha = 0.42f))
             .padding(horizontal = 12.dp, vertical = 8.dp),
     )
 }
 
 @Composable
 private fun AiUseChip(chip: Chip, onClick: () -> Unit) {
+    val semanticColors = LocalClearCutColors.current
     val accent = severityColor(chip.severity)
     val severityLabel = severityLabel(chip.severity)
     val container = accent.copy(alpha = 0.16f)
@@ -127,7 +131,7 @@ private fun AiUseChip(chip: Chip, onClick: () -> Unit) {
         Spacer(modifier = Modifier.height(1.dp))
         Text(
             text = "  ${chip.effectKindLabel}  ·  ${chip.describe()}",
-            color = Mocha.Text,
+            color = semanticColors.text,
             style = MaterialTheme.typography.labelSmall,
         )
     }
@@ -146,10 +150,10 @@ private fun severityColor(s: Severity): Color = when (s) {
     // Severity rank: REQUIRED is the strongest disclosure ask. Use Peach so
     // it reads as "attention" without escalating to error-red, which would
     // wrongly imply the export will fail.
-    Severity.DISCLOSURE_REQUIRED -> Mocha.Peach
+    Severity.DISCLOSURE_REQUIRED -> ClearCutAccents.Peach
     // Recommended is informational; Sky reads as a friendly heads-up.
-    Severity.DISCLOSURE_RECOMMENDED -> Mocha.Sky
+    Severity.DISCLOSURE_RECOMMENDED -> ClearCutAccents.Sky
     // Internal-only is the lowest signal; muted Green matches "everything
     // here ran locally and needs no disclosure."
-    Severity.INTERNAL_ONLY -> Mocha.Green
+    Severity.INTERNAL_ONLY -> ClearCutAccents.Green
 }

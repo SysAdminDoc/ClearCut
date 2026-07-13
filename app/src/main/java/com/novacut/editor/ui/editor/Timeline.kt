@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import android.graphics.Bitmap
 import androidx.compose.foundation.*
 import androidx.compose.foundation.combinedClickable
@@ -54,7 +56,6 @@ import androidx.compose.ui.unit.sp
 import com.novacut.editor.R
 import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.model.*
-import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.Radius
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
@@ -81,6 +82,7 @@ private fun TrimNumericInputRow(
     onTrimDragEnded: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     var startText by remember(clipId) {
         mutableStateOf(formatTrimTime(trimStartMs))
     }
@@ -107,7 +109,7 @@ private fun TrimNumericInputRow(
         Text(
             text = stringResource(R.string.timeline_trim_in),
             style = MaterialTheme.typography.labelSmall,
-            color = Mocha.Peach
+            color = ClearCutAccents.Peach
         )
         OutlinedTextField(
             value = startText,
@@ -123,7 +125,7 @@ private fun TrimNumericInputRow(
                 onTrimChanged(clipId, clamped, null)
             },
             singleLine = true,
-            textStyle = MaterialTheme.typography.bodySmall.copy(color = Mocha.Text),
+            textStyle = MaterialTheme.typography.bodySmall.copy(color = semanticColors.text),
             modifier = Modifier
                 .weight(1f)
                 .height(42.dp)
@@ -136,14 +138,14 @@ private fun TrimNumericInputRow(
                 }
                 .semantics { contentDescription = trimStartDescription },
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Mocha.Peach,
-                unfocusedBorderColor = Mocha.Surface1
+                focusedBorderColor = ClearCutAccents.Peach,
+                unfocusedBorderColor = semanticColors.surface
             )
         )
         Text(
             text = stringResource(R.string.timeline_trim_out),
             style = MaterialTheme.typography.labelSmall,
-            color = Mocha.Peach
+            color = ClearCutAccents.Peach
         )
         OutlinedTextField(
             value = endText,
@@ -159,7 +161,7 @@ private fun TrimNumericInputRow(
                 onTrimChanged(clipId, null, clamped)
             },
             singleLine = true,
-            textStyle = MaterialTheme.typography.bodySmall.copy(color = Mocha.Text),
+            textStyle = MaterialTheme.typography.bodySmall.copy(color = semanticColors.text),
             modifier = Modifier
                 .weight(1f)
                 .height(42.dp)
@@ -172,14 +174,14 @@ private fun TrimNumericInputRow(
                 }
                 .semantics { contentDescription = trimEndDescription },
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Mocha.Peach,
-                unfocusedBorderColor = Mocha.Surface1
+                focusedBorderColor = ClearCutAccents.Peach,
+                unfocusedBorderColor = semanticColors.surface
             )
         )
         Text(
             text = formatTrimTime(sourceDurationMs),
             style = MaterialTheme.typography.labelSmall,
-            color = Mocha.Subtext0
+            color = semanticColors.subtext
         )
     }
 }
@@ -223,10 +225,11 @@ private fun TimelineHeaderSummary(
     compact: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     Column(modifier = modifier) {
         Text(
             text = stringResource(R.string.timeline_title),
-            color = Mocha.Text,
+            color = semanticColors.text,
             style = if (compact) {
                 MaterialTheme.typography.titleMedium
             } else {
@@ -241,7 +244,7 @@ private fun TimelineHeaderSummary(
                 formatTimelineTime(playheadMs),
                 formatTimelineTime(totalDurationMs),
             ),
-            color = Mocha.Subtext0,
+            color = semanticColors.subtext,
             style = MaterialTheme.typography.bodySmall,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -370,6 +373,7 @@ fun Timeline(
     missingClipIds: Set<String> = emptySet(),
     engine: VideoEngine
 ) {
+    val semanticColors = LocalClearCutColors.current
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
     val isCompactTimeline = screenWidth < 430.dp
     val density = LocalDensity.current
@@ -513,8 +517,8 @@ fun Timeline(
         Brush.verticalGradient(
             listOf(
                 Color.Transparent,
-                Mocha.Crust.copy(alpha = 0.18f),
-                Mocha.Crust.copy(alpha = 0.42f)
+                semanticColors.onAccent.copy(alpha = 0.18f),
+                semanticColors.onAccent.copy(alpha = 0.42f)
             )
         )
     }
@@ -563,14 +567,14 @@ fun Timeline(
 
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = Mocha.Midnight,
+        color = semanticColors.background,
         shape = RoundedCornerShape(Radius.sm),
-        border = BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.72f))
+        border = BorderStroke(1.dp, semanticColors.cardStroke.copy(alpha = 0.72f))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Mocha.Midnight)
+                .background(semanticColors.background)
         ) {
             if (isCompactTimeline) {
                 Row(
@@ -662,7 +666,7 @@ fun Timeline(
                                 markerCountLabel,
                             )
                         },
-                        color = if (isTrimMode) Mocha.Peach else Mocha.Subtext0,
+                        color = if (isTrimMode) ClearCutAccents.Peach else semanticColors.subtext,
                         style = MaterialTheme.typography.labelSmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -683,7 +687,7 @@ fun Timeline(
                     DropdownMenu(
                         expanded = timelineOptionsExpanded,
                         onDismissRequest = { timelineOptionsExpanded = false },
-                        containerColor = Mocha.PanelHighest,
+                        containerColor = semanticColors.panelHighest,
                     ) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.cd_add_marker)) },
@@ -720,14 +724,14 @@ fun Timeline(
                         .fillMaxWidth()
                         .padding(horizontal = chromePadding)
                         .clip(RoundedCornerShape(Radius.lg))
-                        .background(Mocha.Peach.copy(alpha = 0.12f))
-                        .border(1.dp, Mocha.Peach.copy(alpha = 0.18f), RoundedCornerShape(Radius.lg))
+                        .background(ClearCutAccents.Peach.copy(alpha = 0.12f))
+                        .border(1.dp, ClearCutAccents.Peach.copy(alpha = 0.18f), RoundedCornerShape(Radius.lg))
                         .padding(horizontal = 12.dp, vertical = 7.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         stringResource(R.string.timeline_trim_mode_hint),
-                        color = Mocha.Peach,
+                        color = ClearCutAccents.Peach,
                         style = MaterialTheme.typography.labelMedium
                     )
                 }
@@ -771,7 +775,7 @@ fun Timeline(
                         Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                             Text(
                                 text = stringResource(R.string.timeline_tracks_label),
-                                color = Mocha.Text,
+                                color = semanticColors.text,
                                 style = if (isCompactTimeline) {
                                     MaterialTheme.typography.labelMedium
                                 } else {
@@ -781,7 +785,7 @@ fun Timeline(
                             if (!isCompactTimeline) {
                                 Text(
                                     text = totalClipLabel,
-                                    color = Mocha.Subtext0,
+                                    color = semanticColors.subtext,
                                     style = MaterialTheme.typography.labelSmall
                                 )
                             }
@@ -815,14 +819,14 @@ fun Timeline(
                                     .fillMaxWidth()
                                     .height(currentTrackHeight)
                                     .padding(bottom = 4.dp),
-                                color = Mocha.Crust.copy(alpha = 0.98f),
+                                color = semanticColors.onAccent.copy(alpha = 0.98f),
                                 shape = RoundedCornerShape(Radius.sm),
                                 border = BorderStroke(
                                     1.dp,
                                     if (track.id == selectedTrackId) {
                                         trackColor.copy(alpha = 0.52f)
                                     } else {
-                                        Mocha.CardStroke.copy(alpha = 0.72f)
+                                        semanticColors.cardStroke.copy(alpha = 0.72f)
                                     }
                                 )
                             ) {
@@ -833,8 +837,8 @@ fun Timeline(
                                             Brush.horizontalGradient(
                                                 listOf(
                                                     trackColor.copy(alpha = 0.12f),
-                                                    Mocha.Crust,
-                                                    Mocha.Mantle
+                                                    semanticColors.onAccent,
+                                                    semanticColors.backgroundMid
                                                 )
                                             )
                                         )
@@ -877,7 +881,7 @@ fun Timeline(
                                                             track.index + 1,
                                                         )
                                                     },
-                                                    color = Mocha.Text,
+                                                    color = semanticColors.text,
                                                     style = if (isCompactTimeline) {
                                                         MaterialTheme.typography.labelMedium
                                                     } else {
@@ -889,7 +893,7 @@ fun Timeline(
                                                 if (!isCompactTimeline) {
                                                     Text(
                                                         text = trackSummary,
-                                                        color = Mocha.Subtext0,
+                                                        color = semanticColors.subtext,
                                                         style = MaterialTheme.typography.labelSmall,
                                                         maxLines = 1,
                                                         overflow = TextOverflow.Ellipsis
@@ -981,7 +985,7 @@ fun Timeline(
                                                     DropdownMenu(
                                                         expanded = trackMenuExpanded,
                                                         onDismissRequest = { trackMenuExpanded = false },
-                                                        containerColor = Mocha.PanelHighest,
+                                                        containerColor = semanticColors.panelHighest,
                                                         shape = RoundedCornerShape(Radius.md)
                                                     ) {
                                                         if (isCompactTimeline) {
@@ -1027,7 +1031,7 @@ fun Timeline(
                                                             text = {
                                                                 Text(
                                                                     text = stringResource(R.string.timeline_track_make_smaller),
-                                                                    color = Mocha.Text
+                                                                    color = semanticColors.text
                                                                 )
                                                             },
                                                             leadingIcon = {
@@ -1046,7 +1050,7 @@ fun Timeline(
                                                             text = {
                                                                 Text(
                                                                     text = stringResource(R.string.timeline_track_make_larger),
-                                                                    color = Mocha.Text
+                                                                    color = semanticColors.text
                                                                 )
                                                             },
                                                             leadingIcon = {
@@ -1079,12 +1083,12 @@ fun Timeline(
                         .background(
                             Brush.verticalGradient(
                                 listOf(
-                                    Mocha.Mantle.copy(alpha = 0.98f),
-                                    Mocha.Base
+                                    semanticColors.backgroundMid.copy(alpha = 0.98f),
+                                    semanticColors.surfaceBase
                                 )
                             )
                         )
-                        .border(1.dp, Mocha.CardStroke.copy(alpha = 0.6f), RoundedCornerShape(Radius.sm))
+                        .border(1.dp, semanticColors.cardStroke.copy(alpha = 0.6f), RoundedCornerShape(Radius.sm))
                         .clipToBounds()
                         .onSizeChanged {
                             timelineWidthPx = it.width.toFloat()
@@ -1125,8 +1129,8 @@ fun Timeline(
                                 .background(
                                     Brush.horizontalGradient(
                                         listOf(
-                                            Mocha.Crust,
-                                            Mocha.Mantle
+                                            semanticColors.onAccent,
+                                            semanticColors.backgroundMid
                                         )
                                     )
                                 )
@@ -1206,7 +1210,8 @@ fun Timeline(
                                 pixelsPerMs = pixelsPerMs,
                                 width = size.width,
                                 height = size.height,
-                                textMeasurer = textMeasurer
+                                textMeasurer = textMeasurer,
+                                labelColor = semanticColors.subtext,
                             )
 
                             // Draw timeline marker flags
@@ -1253,7 +1258,7 @@ fun Timeline(
                             ) {
                                 Text(
                                     text = tappedMarker.label,
-                                    color = Mocha.Crust,
+                                    color = semanticColors.onAccent,
                                     fontSize = 9.sp,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
@@ -1279,14 +1284,14 @@ fun Timeline(
                                     Brush.horizontalGradient(
                                         listOf(
                                             trackColor.copy(alpha = 0.06f),
-                                            Mocha.Base,
-                                            Mocha.Mantle
+                                            semanticColors.surfaceBase,
+                                            semanticColors.backgroundMid
                                         )
                                     )
                                 )
                                 .border(
                                     width = 0.5.dp,
-                                    color = Mocha.Surface0.copy(alpha = 0.5f),
+                                    color = semanticColors.surfaceLow.copy(alpha = 0.5f),
                                     shape = RoundedCornerShape(0.dp)
                                 )
                                 .pointerInput(track.id, track.type) {
@@ -1389,7 +1394,7 @@ fun Timeline(
                                             R.string.timeline_track_empty
                                         }
                                     ),
-                                    color = Mocha.Subtext0,
+                                    color = semanticColors.subtext,
                                     style = if (isCompactTimeline) {
                                         MaterialTheme.typography.labelSmall
                                     } else {
@@ -1418,7 +1423,7 @@ fun Timeline(
                                         ) {
                                             Text(
                                                 text = overlay.text,
-                                                color = Mocha.Text,
+                                                color = semanticColors.text,
                                                 style = MaterialTheme.typography.labelSmall,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis
@@ -1603,20 +1608,20 @@ fun Timeline(
                                         Brush.horizontalGradient(
                                             when {
                                                 isClipMissing -> listOf(
-                                                    Mocha.Red.copy(alpha = 0.38f),
-                                                    Mocha.Crust.copy(alpha = 0.85f)
+                                                    ClearCutAccents.Red.copy(alpha = 0.38f),
+                                                    semanticColors.onAccent.copy(alpha = 0.85f)
                                                 )
                                                 isSelected -> listOf(
                                                     clipColor.copy(alpha = 0.64f),
-                                                    Mocha.PanelHighest.copy(alpha = 0.94f)
+                                                    semanticColors.panelHighest.copy(alpha = 0.94f)
                                                 )
                                                 isMultiSelected -> listOf(
-                                                    Mocha.Peach.copy(alpha = 0.58f),
-                                                    Mocha.PanelHighest.copy(alpha = 0.9f)
+                                                    ClearCutAccents.Peach.copy(alpha = 0.58f),
+                                                    semanticColors.panelHighest.copy(alpha = 0.9f)
                                                 )
                                                 else -> listOf(
                                                     clipColor.copy(alpha = 0.44f),
-                                                    Mocha.Panel.copy(alpha = 0.92f)
+                                                    semanticColors.panel.copy(alpha = 0.92f)
                                                 )
                                             }
                                         )
@@ -1634,10 +1639,10 @@ fun Timeline(
                                                 Modifier.border(
                                                     if (isClipMissing) 2.dp else if (isSelected) 2.dp else 1.dp,
                                                     when {
-                                                        isClipMissing -> Mocha.Red.copy(alpha = 0.85f)
+                                                        isClipMissing -> ClearCutAccents.Red.copy(alpha = 0.85f)
                                                         isSelected -> clipColor
-                                                        isKeyboardFocused -> Mocha.Sky.copy(alpha = 0.95f)
-                                                        isMultiSelected -> Mocha.Peach.copy(alpha = 0.85f)
+                                                        isKeyboardFocused -> ClearCutAccents.Sky.copy(alpha = 0.95f)
+                                                        isMultiSelected -> ClearCutAccents.Peach.copy(alpha = 0.85f)
                                                         else -> clipColor.copy(alpha = 0.25f)
                                                     },
                                                     RoundedCornerShape(Radius.xs)
@@ -1898,7 +1903,7 @@ fun Timeline(
                                                 Canvas(modifier = Modifier.fillMaxSize()) {
                                                     val step = 12f * density.density
                                                     val stroke = 1.2f * density.density
-                                                    val lineColor = Mocha.Red.copy(alpha = 0.25f)
+                                                    val lineColor = ClearCutAccents.Red.copy(alpha = 0.25f)
                                                     var x = -size.height
                                                     while (x < size.width + size.height) {
                                                         drawLine(
@@ -1913,7 +1918,7 @@ fun Timeline(
                                                 Icon(
                                                     imageVector = Icons.Default.BrokenImage,
                                                     contentDescription = stringResource(R.string.cd_clip_source_missing),
-                                                    tint = Mocha.Red.copy(alpha = 0.7f),
+                                                    tint = ClearCutAccents.Red.copy(alpha = 0.7f),
                                                     modifier = Modifier.size(18.dp)
                                                 )
                                             }
@@ -1940,7 +1945,7 @@ fun Timeline(
                                                     Spacer(modifier = Modifier.width(6.dp))
                                                     TimelineClipBadge(
                                                         text = formatSpeedLabel(clip.speed),
-                                                        accent = Mocha.Yellow,
+                                                        accent = ClearCutAccents.Yellow,
                                                         compact = compactClipBadges
                                                     )
                                                 }
@@ -1949,7 +1954,7 @@ fun Timeline(
                                                     Icon(
                                                         imageVector = Icons.Default.Lock,
                                                         contentDescription = stringResource(R.string.cd_clip_locked),
-                                                        tint = Mocha.Text.copy(alpha = 0.72f),
+                                                        tint = semanticColors.text.copy(alpha = 0.72f),
                                                         modifier = Modifier.size(12.dp)
                                                     )
                                                 }
@@ -1957,7 +1962,7 @@ fun Timeline(
                                                     Spacer(modifier = Modifier.width(6.dp))
                                                     TimelineClipBadge(
                                                         text = stringResource(R.string.timeline_effect_count_badge, clip.effects.size),
-                                                        accent = Mocha.Mauve,
+                                                        accent = ClearCutAccents.Mauve,
                                                         compact = compactClipBadges
                                                     )
                                                 }
@@ -1967,7 +1972,7 @@ fun Timeline(
                                                 if (showClipName) {
                                                     Text(
                                                         text = clipFileName,
-                                                        color = Mocha.Text,
+                                                        color = semanticColors.text,
                                                         style = if (compactClipBadges) {
                                                             MaterialTheme.typography.labelMedium
                                                         } else {
@@ -1980,13 +1985,13 @@ fun Timeline(
                                                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                                     TimelineClipBadge(
                                                         text = formatTimelineDurationLabel(clip.durationMs),
-                                                        accent = Mocha.Sky,
+                                                        accent = ClearCutAccents.Sky,
                                                         compact = compactClipBadges
                                                     )
                                                     if (showKeyframeBadge) {
                                                         TimelineClipBadge(
                                                             text = stringResource(R.string.timeline_keyframe_count_badge, clip.keyframes.size),
-                                                            accent = Mocha.Rosewater,
+                                                            accent = ClearCutAccents.Rosewater,
                                                             compact = compactClipBadges
                                                         )
                                                     }
@@ -2022,7 +2027,7 @@ fun Timeline(
                                                     val gap = 3f * density.density
                                                     for (i in -1..1) {
                                                         drawLine(
-                                                            color = Mocha.Crust.copy(alpha = 0.85f),
+                                                            color = semanticColors.onAccent.copy(alpha = 0.85f),
                                                             start = Offset(cx + i * gap, size.height * 0.28f),
                                                             end = Offset(cx + i * gap, size.height * 0.72f),
                                                             strokeWidth = 1.2f * density.density
@@ -2048,7 +2053,7 @@ fun Timeline(
                                                     val gap = 3f * density.density
                                                     for (i in -1..1) {
                                                         drawLine(
-                                                            color = Mocha.Crust.copy(alpha = 0.85f),
+                                                            color = semanticColors.onAccent.copy(alpha = 0.85f),
                                                             start = Offset(cx + i * gap, size.height * 0.28f),
                                                             end = Offset(cx + i * gap, size.height * 0.72f),
                                                             strokeWidth = 1.2f * density.density
@@ -2069,8 +2074,8 @@ fun Timeline(
                                                     .background(
                                                         Brush.horizontalGradient(
                                                             colors = listOf(
-                                                                Mocha.Yellow.copy(alpha = 0.5f),
-                                                                Mocha.Yellow.copy(alpha = 0f)
+                                                                ClearCutAccents.Yellow.copy(alpha = 0.5f),
+                                                                ClearCutAccents.Yellow.copy(alpha = 0f)
                                                             )
                                                         )
                                                     )
@@ -2079,7 +2084,7 @@ fun Timeline(
                                                 Icon(
                                                     imageVector = Icons.Filled.SwapHoriz,
                                                     contentDescription = null,
-                                                    tint = Mocha.Yellow,
+                                                    tint = ClearCutAccents.Yellow,
                                                     modifier = Modifier
                                                         .align(Alignment.CenterStart)
                                                         .padding(start = 1.dp)
@@ -2099,8 +2104,8 @@ fun Timeline(
                                                     .background(
                                                         Brush.horizontalGradient(
                                                             colors = listOf(
-                                                                Mocha.Yellow.copy(alpha = 0f),
-                                                                Mocha.Yellow.copy(alpha = 0.5f)
+                                                                ClearCutAccents.Yellow.copy(alpha = 0f),
+                                                                ClearCutAccents.Yellow.copy(alpha = 0.5f)
                                                             )
                                                         )
                                                     )
@@ -2116,7 +2121,7 @@ fun Timeline(
                                                     val x = (kf.timeOffsetMs / clipDuration) * size.width
                                                     if (x in 0f..size.width) {
                                                         drawCircle(
-                                                            color = Color(0xFFF5C2E7), // Mocha.Pink
+                                                            color = Color(0xFFF5C2E7), // ClearCutAccents.Pink
                                                             radius = 3f,
                                                             center = Offset(x, size.height - 6f)
                                                         )
@@ -2228,7 +2233,7 @@ fun Timeline(
                                         .fillMaxHeight()
                                 ) {
                                     drawRect(
-                                        color = Mocha.Sky,
+                                        color = ClearCutAccents.Sky,
                                         size = Size(2f * density.density, size.height)
                                     )
                                 }
@@ -2253,7 +2258,7 @@ fun Timeline(
                             lineTo(size.width, 0f)
                             close()
                         }
-                        drawPath(path, Mocha.Sky)
+                        drawPath(path, ClearCutAccents.Sky)
                     }
                 }
             }

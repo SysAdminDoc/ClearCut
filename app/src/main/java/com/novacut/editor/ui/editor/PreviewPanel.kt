@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import android.graphics.Bitmap
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -68,7 +70,6 @@ import com.novacut.editor.model.ImageOverlay
 import com.novacut.editor.model.TextAlignment
 import com.novacut.editor.model.TextOverlay
 import com.novacut.editor.ui.theme.ClearCutChromeIconButton
-import com.novacut.editor.ui.theme.Mocha
 import com.novacut.editor.ui.theme.Radius
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -108,6 +109,7 @@ fun PreviewPanel(
     onToggleSplitPreview: () -> Unit = {},
     hasActiveEffects: Boolean = false
 ) {
+    val semanticColors = LocalClearCutColors.current
     val currentTimelineUri = currentTimelineClip?.let { it.proxyUri ?: it.sourceUri }
     val currentClipIsStillImage = remember(currentTimelineUri) {
         currentTimelineUri?.let(engine::isStillImage) == true
@@ -131,7 +133,7 @@ fun PreviewPanel(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(Mocha.Midnight)
+            .background(semanticColors.background)
             .padding(horizontal = 4.dp, vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -139,14 +141,14 @@ fun PreviewPanel(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
-            colors = CardDefaults.cardColors(containerColor = Mocha.Crust),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.72f)),
+            colors = CardDefaults.cardColors(containerColor = semanticColors.onAccent),
+            border = androidx.compose.foundation.BorderStroke(1.dp, semanticColors.cardStroke.copy(alpha = 0.72f)),
             shape = RoundedCornerShape(Radius.sm)
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Mocha.Crust)
+                    .background(semanticColors.onAccent)
             ) {
                 BoxWithConstraints(
                     modifier = Modifier.fillMaxSize(),
@@ -164,7 +166,7 @@ fun PreviewPanel(
                         modifier = Modifier
                             .size(frameWidth, frameHeight)
                             .clip(RoundedCornerShape(Radius.xs))
-                            .background(Mocha.Crust)
+                            .background(semanticColors.onAccent)
                             .then(
                                 // `awaitEachGesture` lets us bracket each gesture so we can
                                 // fire `onPreviewTransformEnded` when the user lifts their
@@ -270,7 +272,7 @@ fun PreviewPanel(
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .background(Mocha.Crust)
+                                        .background(semanticColors.onAccent)
                                 )
                             }
 
@@ -283,7 +285,7 @@ fun PreviewPanel(
                                     loading = {
                                         CircularProgressIndicator(
                                             modifier = Modifier.size(36.dp),
-                                            color = Mocha.Mauve,
+                                            color = ClearCutAccents.Mauve,
                                             strokeWidth = 3.dp
                                         )
                                     },
@@ -337,9 +339,9 @@ fun PreviewPanel(
                                         icon = Icons.Default.Insights,
                                         contentDescription = stringResource(R.string.preview_scopes),
                                         onClick = onToggleScopes,
-                                        tint = Mocha.Subtext0.copy(alpha = 0.9f),
-                                        containerColor = Mocha.Midnight.copy(alpha = 0.72f),
-                                        borderColor = Mocha.CardStroke,
+                                        tint = semanticColors.subtext.copy(alpha = 0.9f),
+                                        containerColor = semanticColors.background.copy(alpha = 0.72f),
+                                        borderColor = semanticColors.cardStroke,
                                         shape = RoundedCornerShape(Radius.md)
                                     )
                                 }
@@ -347,9 +349,9 @@ fun PreviewPanel(
                                     icon = Icons.Default.GridOn,
                                     contentDescription = stringResource(R.string.preview_composition_guides),
                                     onClick = onToggleCompositionGuides,
-                                    tint = if (showCompositionGuides) Mocha.Sky else Mocha.Subtext0.copy(alpha = 0.9f),
-                                    containerColor = if (showCompositionGuides) Mocha.Sky.copy(alpha = 0.22f) else Mocha.Midnight.copy(alpha = 0.72f),
-                                    borderColor = if (showCompositionGuides) Mocha.Sky.copy(alpha = 0.6f) else Mocha.CardStroke,
+                                    tint = if (showCompositionGuides) ClearCutAccents.Sky else semanticColors.subtext.copy(alpha = 0.9f),
+                                    containerColor = if (showCompositionGuides) ClearCutAccents.Sky.copy(alpha = 0.22f) else semanticColors.background.copy(alpha = 0.72f),
+                                    borderColor = if (showCompositionGuides) ClearCutAccents.Sky.copy(alpha = 0.6f) else semanticColors.cardStroke,
                                     shape = RoundedCornerShape(Radius.md),
                                 )
                                 if (hasActiveEffects) {
@@ -357,9 +359,9 @@ fun PreviewPanel(
                                         icon = Icons.Default.Compare,
                                         contentDescription = stringResource(R.string.preview_compare),
                                         onClick = onToggleSplitPreview,
-                                        tint = if (isSplitPreviewEnabled) Mocha.Teal else Mocha.Subtext0.copy(alpha = 0.9f),
-                                        containerColor = if (isSplitPreviewEnabled) Mocha.Teal.copy(alpha = 0.3f) else Mocha.Midnight.copy(alpha = 0.72f),
-                                        borderColor = if (isSplitPreviewEnabled) Mocha.Teal.copy(alpha = 0.6f) else Mocha.CardStroke,
+                                        tint = if (isSplitPreviewEnabled) ClearCutAccents.Teal else semanticColors.subtext.copy(alpha = 0.9f),
+                                        containerColor = if (isSplitPreviewEnabled) ClearCutAccents.Teal.copy(alpha = 0.3f) else semanticColors.background.copy(alpha = 0.72f),
+                                        borderColor = if (isSplitPreviewEnabled) ClearCutAccents.Teal.copy(alpha = 0.6f) else semanticColors.cardStroke,
                                         shape = RoundedCornerShape(Radius.md),
                                     )
                                 }
@@ -369,7 +371,7 @@ fun PreviewPanel(
                         if (isBuffering && isPlaybackRequested && totalDurationMs > 0 && !showGapState) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(36.dp),
-                                color = Mocha.Sky,
+                                color = ClearCutAccents.Sky,
                                 strokeWidth = 3.dp
                             )
                         }
@@ -379,16 +381,16 @@ fun PreviewPanel(
                                 modifier = Modifier
                                     .align(Alignment.BottomStart)
                                     .padding(8.dp),
-                                color = Mocha.Midnight.copy(alpha = 0.82f),
+                                color = semanticColors.background.copy(alpha = 0.82f),
                                 shape = RoundedCornerShape(Radius.sm),
                                 border = androidx.compose.foundation.BorderStroke(
                                     1.dp,
-                                    Mocha.CardStroke.copy(alpha = 0.82f),
+                                    semanticColors.cardStroke.copy(alpha = 0.82f),
                                 ),
                             ) {
                                 Text(
                                     text = "${formatTimecode(playheadMs)} / ${formatTimecode(totalDurationMs)}",
-                                    color = Mocha.Text,
+                                    color = semanticColors.text,
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.Medium,
                                     modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
@@ -398,8 +400,8 @@ fun PreviewPanel(
 
                         if (!isPlaying && totalDurationMs == 0L) {
                             Card(
-                                colors = CardDefaults.cardColors(containerColor = Mocha.Panel.copy(alpha = 0.86f)),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
+                                colors = CardDefaults.cardColors(containerColor = semanticColors.panel.copy(alpha = 0.86f)),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, semanticColors.cardStroke.copy(alpha = 0.9f)),
                                 shape = RoundedCornerShape(Radius.xl)
                             ) {
                                 Column(
@@ -408,14 +410,14 @@ fun PreviewPanel(
                                     verticalArrangement = Arrangement.Center
                                 ) {
                                     Surface(
-                                        color = Mocha.Sky.copy(alpha = 0.12f),
+                                        color = ClearCutAccents.Sky.copy(alpha = 0.12f),
                                         shape = RoundedCornerShape(Radius.md),
-                                        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Sky.copy(alpha = 0.22f))
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, ClearCutAccents.Sky.copy(alpha = 0.22f))
                                     ) {
                                         Icon(
                                             Icons.Default.VideoLibrary,
                                             contentDescription = stringResource(R.string.cd_preview_empty),
-                                            tint = Mocha.Sky,
+                                            tint = ClearCutAccents.Sky,
                                             modifier = Modifier
                                                 .padding(16.dp)
                                                 .size(24.dp)
@@ -424,7 +426,7 @@ fun PreviewPanel(
                                     Spacer(modifier = Modifier.height(10.dp))
                                     Text(
                                         stringResource(R.string.preview_add_media),
-                                        color = Mocha.Text,
+                                        color = semanticColors.text,
                                         style = MaterialTheme.typography.titleSmall
                                     )
                                 }
@@ -438,9 +440,9 @@ fun PreviewPanel(
         Spacer(modifier = Modifier.height(4.dp))
 
         Surface(
-            color = Mocha.Midnight,
+            color = semanticColors.background,
             shape = RoundedCornerShape(Radius.sm),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.64f)),
+            border = androidx.compose.foundation.BorderStroke(1.dp, semanticColors.cardStroke.copy(alpha = 0.64f)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(
@@ -455,8 +457,8 @@ fun PreviewPanel(
                         if (isLooping) R.string.preview_disable_loop else R.string.preview_enable_loop
                     ),
                     onClick = onToggleLoop,
-                    tint = if (isLooping) Mocha.Sky else Mocha.Subtext0,
-                    containerColor = if (isLooping) Mocha.Sky.copy(alpha = 0.14f) else Color.Transparent,
+                    tint = if (isLooping) ClearCutAccents.Sky else semanticColors.subtext,
+                    containerColor = if (isLooping) ClearCutAccents.Sky.copy(alpha = 0.14f) else Color.Transparent,
                     borderColor = Color.Transparent,
                     shape = RoundedCornerShape(Radius.sm),
                     size = 40.dp,
@@ -467,7 +469,7 @@ fun PreviewPanel(
                     icon = Icons.Default.SkipPrevious,
                     contentDescription = stringResource(R.string.preview_previous_frame),
                     onClick = { onSeek((playheadMs - frameDurationMs).coerceAtLeast(0L)) },
-                    tint = Mocha.Text,
+                    tint = semanticColors.text,
                     containerColor = Color.Transparent,
                     borderColor = Color.Transparent,
                     shape = RoundedCornerShape(Radius.sm),
@@ -482,9 +484,9 @@ fun PreviewPanel(
                         stringResource(R.string.preview_play)
                     },
                     onClick = onTogglePlayback,
-                    tint = Mocha.Midnight,
-                    containerColor = Mocha.Sky,
-                    borderColor = Mocha.Sky.copy(alpha = 0.72f),
+                    tint = semanticColors.background,
+                    containerColor = ClearCutAccents.Sky,
+                    borderColor = ClearCutAccents.Sky.copy(alpha = 0.72f),
                     shape = RoundedCornerShape(Radius.sm),
                     size = 44.dp,
                     iconSize = 22.dp,
@@ -493,7 +495,7 @@ fun PreviewPanel(
                     icon = Icons.Default.SkipNext,
                     contentDescription = stringResource(R.string.preview_next_frame),
                     onClick = { onSeek((playheadMs + frameDurationMs).coerceAtMost(totalDurationMs)) },
-                    tint = Mocha.Text,
+                    tint = semanticColors.text,
                     containerColor = Color.Transparent,
                     borderColor = Color.Transparent,
                     shape = RoundedCornerShape(Radius.sm),
@@ -503,7 +505,7 @@ fun PreviewPanel(
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
                     text = "${aspectRatio.label}  •  $frameRate fps",
-                    color = Mocha.Subtext0,
+                    color = semanticColors.subtext,
                     style = MaterialTheme.typography.labelSmall,
                     maxLines = 1,
                 )
@@ -518,6 +520,7 @@ private fun BoxScope.PreviewImageOverlay(
     frameWidth: androidx.compose.ui.unit.Dp,
     frameHeight: androidx.compose.ui.unit.Dp,
 ) {
+    val semanticColors = LocalClearCutColors.current
     val safeScale = overlay.scale.takeIf { it.isFinite() }?.coerceIn(0.01f, 2f) ?: 0.3f
     val width = frameWidth * safeScale
     val density = LocalDensity.current
@@ -543,21 +546,21 @@ private fun BoxScope.PreviewImageOverlay(
             Box(Modifier.size(32.dp), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(22.dp),
-                    color = Mocha.Mauve,
+                    color = ClearCutAccents.Mauve,
                     strokeWidth = 2.dp,
                 )
             }
         },
         error = {
             Surface(
-                color = Mocha.Midnight.copy(alpha = 0.72f),
+                color = semanticColors.background.copy(alpha = 0.72f),
                 shape = RoundedCornerShape(10.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke),
+                border = androidx.compose.foundation.BorderStroke(1.dp, semanticColors.cardStroke),
             ) {
                 Icon(
                     Icons.Default.BrokenImage,
                     contentDescription = stringResource(R.string.cd_preview_image_overlay_missing),
-                    tint = Mocha.Rosewater,
+                    tint = ClearCutAccents.Rosewater,
                     modifier = Modifier
                         .padding(10.dp)
                         .size(22.dp),
@@ -573,9 +576,10 @@ private fun PreviewGapState(
     jumpToContentMs: Long?,
     onJumpToContent: (Long) -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     Card(
-        colors = CardDefaults.cardColors(containerColor = Mocha.Panel.copy(alpha = 0.9f)),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
+        colors = CardDefaults.cardColors(containerColor = semanticColors.panel.copy(alpha = 0.9f)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, semanticColors.cardStroke.copy(alpha = 0.9f)),
         shape = RoundedCornerShape(Radius.xl)
     ) {
         Column(
@@ -584,14 +588,14 @@ private fun PreviewGapState(
             verticalArrangement = Arrangement.Center
         ) {
             Surface(
-                color = Mocha.Mauve.copy(alpha = 0.14f),
+                color = ClearCutAccents.Mauve.copy(alpha = 0.14f),
                 shape = CircleShape,
-                border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Mauve.copy(alpha = 0.22f))
+                border = androidx.compose.foundation.BorderStroke(1.dp, ClearCutAccents.Mauve.copy(alpha = 0.22f))
             ) {
                 Icon(
                     Icons.Default.Timeline,
                     contentDescription = stringResource(R.string.preview_gap_title),
-                    tint = Mocha.Rosewater,
+                    tint = ClearCutAccents.Rosewater,
                     modifier = Modifier
                         .padding(16.dp)
                         .size(24.dp)
@@ -600,7 +604,7 @@ private fun PreviewGapState(
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = stringResource(R.string.preview_gap_title),
-                color = Mocha.Text,
+                color = semanticColors.text,
                 style = MaterialTheme.typography.titleMedium,
                 textAlign = TextAlign.Center
             )
@@ -611,7 +615,7 @@ private fun PreviewGapState(
                 } else {
                     stringResource(R.string.preview_gap_body)
                 },
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center
             )
@@ -620,8 +624,8 @@ private fun PreviewGapState(
                 Button(
                     onClick = { onJumpToContent(jumpToContentMs) },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Mocha.Rosewater,
-                        contentColor = Mocha.Midnight
+                        containerColor = ClearCutAccents.Rosewater,
+                        contentColor = semanticColors.background
                     ),
                     shape = RoundedCornerShape(Radius.xl)
                 ) {
@@ -640,9 +644,10 @@ private fun PreviewGapState(
 
 @Composable
 private fun PreviewUnavailableState() {
+    val semanticColors = LocalClearCutColors.current
     Card(
-        colors = CardDefaults.cardColors(containerColor = Mocha.Panel.copy(alpha = 0.9f)),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
+        colors = CardDefaults.cardColors(containerColor = semanticColors.panel.copy(alpha = 0.9f)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, semanticColors.cardStroke.copy(alpha = 0.9f)),
         shape = RoundedCornerShape(Radius.xl)
     ) {
         Column(
@@ -651,14 +656,14 @@ private fun PreviewUnavailableState() {
             verticalArrangement = Arrangement.Center
         ) {
             Surface(
-                color = Mocha.Mauve.copy(alpha = 0.14f),
+                color = ClearCutAccents.Mauve.copy(alpha = 0.14f),
                 shape = CircleShape,
-                border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Mauve.copy(alpha = 0.22f))
+                border = androidx.compose.foundation.BorderStroke(1.dp, ClearCutAccents.Mauve.copy(alpha = 0.22f))
             ) {
                 Icon(
                     Icons.Default.BrokenImage,
                     contentDescription = stringResource(R.string.preview_unavailable_title),
-                    tint = Mocha.Rosewater,
+                    tint = ClearCutAccents.Rosewater,
                     modifier = Modifier
                         .padding(16.dp)
                         .size(24.dp)
@@ -667,14 +672,14 @@ private fun PreviewUnavailableState() {
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = stringResource(R.string.preview_unavailable_title),
-                color = Mocha.Text,
+                color = semanticColors.text,
                 style = MaterialTheme.typography.titleMedium,
                 textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = stringResource(R.string.preview_unavailable_body),
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center
             )
@@ -684,10 +689,11 @@ private fun PreviewUnavailableState() {
 
 @Composable
 private fun PreviewPlaybackErrorState(onOpenMediaManager: () -> Unit) {
+    val semanticColors = LocalClearCutColors.current
     Card(
         modifier = Modifier.padding(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Mocha.Panel.copy(alpha = 0.96f)),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Red.copy(alpha = 0.7f)),
+        colors = CardDefaults.cardColors(containerColor = semanticColors.panel.copy(alpha = 0.96f)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, ClearCutAccents.Red.copy(alpha = 0.7f)),
         shape = RoundedCornerShape(Radius.xl),
     ) {
         Column(
@@ -698,26 +704,26 @@ private fun PreviewPlaybackErrorState(onOpenMediaManager: () -> Unit) {
             Icon(
                 Icons.Default.BrokenImage,
                 contentDescription = null,
-                tint = Mocha.Red,
+                tint = ClearCutAccents.Red,
                 modifier = Modifier.size(26.dp),
             )
             Text(
                 text = stringResource(R.string.preview_playback_error_title),
-                color = Mocha.Text,
+                color = semanticColors.text,
                 style = MaterialTheme.typography.titleMedium,
                 textAlign = TextAlign.Center,
             )
             Text(
                 text = stringResource(R.string.preview_playback_error_body),
-                color = Mocha.Subtext0,
+                color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
             )
             Button(
                 onClick = onOpenMediaManager,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Mocha.Sky,
-                    contentColor = Mocha.Midnight,
+                    containerColor = ClearCutAccents.Sky,
+                    contentColor = semanticColors.background,
                 ),
                 shape = RoundedCornerShape(Radius.xl),
             ) {
@@ -816,7 +822,7 @@ fun formatTimestamp(ms: Long): String {
 @Composable
 private fun CompositionGuidesOverlay() {
     val guideColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.3f)
-    val safeZoneColor = Mocha.Yellow.copy(alpha = 0.25f)
+    val safeZoneColor = ClearCutAccents.Yellow.copy(alpha = 0.25f)
     androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
         val w = size.width
         val h = size.height
@@ -866,6 +872,7 @@ private fun BoxScope.SplitPreviewOverlay(
     frameWidthDp: androidx.compose.ui.unit.Dp,
     frameHeightDp: androidx.compose.ui.unit.Dp,
 ) {
+    val semanticColors = LocalClearCutColors.current
     val density = LocalDensity.current
     val frameWidthPx = with(density) { frameWidthDp.toPx() }
     val frameHeightPx = with(density) { frameHeightDp.toPx() }
@@ -913,7 +920,7 @@ private fun BoxScope.SplitPreviewOverlay(
             }
 
             drawLine(
-                color = Mocha.Text,
+                color = semanticColors.text,
                 start = Offset(wipeX, 0f),
                 end = Offset(wipeX, size.height),
                 strokeWidth = 3f
@@ -921,12 +928,12 @@ private fun BoxScope.SplitPreviewOverlay(
 
             val handleRadius = 10f
             drawCircle(
-                color = Mocha.Text,
+                color = semanticColors.text,
                 radius = handleRadius,
                 center = Offset(wipeX, size.height / 2f)
             )
             drawCircle(
-                color = Mocha.Crust,
+                color = semanticColors.onAccent,
                 radius = handleRadius - 3f,
                 center = Offset(wipeX, size.height / 2f)
             )
@@ -939,23 +946,23 @@ private fun BoxScope.SplitPreviewOverlay(
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Surface(
-                color = Mocha.Midnight.copy(alpha = 0.72f),
+                color = semanticColors.background.copy(alpha = 0.72f),
                 shape = RoundedCornerShape(6.dp),
             ) {
                 Text(
                     stringResource(R.string.preview_compare_original),
-                    color = Mocha.Teal,
+                    color = ClearCutAccents.Teal,
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                 )
             }
             Surface(
-                color = Mocha.Midnight.copy(alpha = 0.72f),
+                color = semanticColors.background.copy(alpha = 0.72f),
                 shape = RoundedCornerShape(6.dp),
             ) {
                 Text(
                     stringResource(R.string.preview_compare_edited),
-                    color = Mocha.Rosewater,
+                    color = ClearCutAccents.Rosewater,
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                 )
@@ -972,9 +979,9 @@ private fun BoxScope.SplitPreviewOverlay(
                 .padding(horizontal = 48.dp, vertical = 0.dp)
                 .height(24.dp),
             colors = SliderDefaults.colors(
-                thumbColor = Mocha.Text,
-                activeTrackColor = Mocha.Teal.copy(alpha = 0.5f),
-                inactiveTrackColor = Mocha.Rosewater.copy(alpha = 0.5f)
+                thumbColor = semanticColors.text,
+                activeTrackColor = ClearCutAccents.Teal.copy(alpha = 0.5f),
+                inactiveTrackColor = ClearCutAccents.Rosewater.copy(alpha = 0.5f)
             )
         )
     }

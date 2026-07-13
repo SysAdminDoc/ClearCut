@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -21,7 +23,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.model.AspectRatio
-import com.novacut.editor.ui.theme.Mocha
 
 private data class ReframeOption(
     val ratio: AspectRatio,
@@ -45,12 +46,13 @@ fun SmartReframePanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     val isCompactGrid = LocalConfiguration.current.screenWidthDp < 430
     PremiumEditorPanel(
         title = stringResource(R.string.smart_reframe_title),
         subtitle = stringResource(R.string.smart_reframe_subtitle),
         icon = Icons.Default.Crop,
-        accent = Mocha.Mauve,
+        accent = ClearCutAccents.Mauve,
         onClose = onClose,
         closeContentDescription = stringResource(R.string.smart_reframe_close_cd),
         modifier = modifier,
@@ -59,13 +61,13 @@ fun SmartReframePanel(
             if (isProcessing) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(18.dp),
-                    color = Mocha.Mauve,
+                    color = ClearCutAccents.Mauve,
                     strokeWidth = 2.dp
                 )
             }
         }
     ) {
-        PremiumPanelCard(accent = Mocha.Mauve) {
+        PremiumPanelCard(accent = ClearCutAccents.Mauve) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -75,13 +77,13 @@ fun SmartReframePanel(
                     Text(
                         text = stringResource(R.string.smart_reframe_current_frame_title),
                         style = MaterialTheme.typography.titleMedium,
-                        color = Mocha.Text
+                        color = semanticColors.text
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = stringResource(R.string.smart_reframe_current_frame_description),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
 
@@ -93,11 +95,11 @@ fun SmartReframePanel(
                 ) {
                     PremiumPanelPill(
                         text = currentAspect.label,
-                        accent = Mocha.Mauve
+                        accent = ClearCutAccents.Mauve
                     )
                     PremiumPanelPill(
                         text = if (isProcessing) stringResource(R.string.smart_reframe_processing) else stringResource(R.string.smart_reframe_targets_count, reframeOptions.size),
-                        accent = if (isProcessing) Mocha.Peach else Mocha.Blue
+                        accent = if (isProcessing) ClearCutAccents.Peach else ClearCutAccents.Blue
                     )
                 }
             }
@@ -105,16 +107,16 @@ fun SmartReframePanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Blue) {
+        PremiumPanelCard(accent = ClearCutAccents.Blue) {
             Text(
                 text = stringResource(R.string.smart_reframe_destination_title),
                 style = MaterialTheme.typography.titleMedium,
-                color = Mocha.Text
+                color = semanticColors.text
             )
             Text(
                 text = stringResource(R.string.smart_reframe_destination_description),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
 
             FlowRow(
@@ -145,17 +147,18 @@ private fun SmartReframeCard(
     previewMaxSize: Dp,
     modifier: Modifier = Modifier
 ) {
-    val accent = if (isSelected) Mocha.Mauve else Mocha.Blue
+    val semanticColors = LocalClearCutColors.current
+    val accent = if (isSelected) ClearCutAccents.Mauve else ClearCutAccents.Blue
     val previewRatio = option.ratio.toFloat()
     val (previewWidth, previewHeight) = computePreviewDimensions(previewRatio, previewMaxSize)
 
     Surface(
         modifier = modifier,
-        color = if (isSelected) accent.copy(alpha = 0.12f) else Mocha.PanelRaised,
+        color = if (isSelected) accent.copy(alpha = 0.12f) else semanticColors.panelRaised,
         shape = RoundedCornerShape(22.dp),
         border = BorderStroke(
             width = 1.dp,
-            color = if (isSelected) accent.copy(alpha = 0.28f) else Mocha.CardStroke
+            color = if (isSelected) accent.copy(alpha = 0.28f) else semanticColors.cardStroke
         )
     ) {
         Column(
@@ -171,7 +174,7 @@ private fun SmartReframeCard(
                     .width(previewWidth)
                     .height(previewHeight)
                     .background(
-                        color = if (isSelected) accent.copy(alpha = 0.18f) else Mocha.Base,
+                        color = if (isSelected) accent.copy(alpha = 0.18f) else semanticColors.surfaceBase,
                         shape = RoundedCornerShape(14.dp)
                     ),
                 contentAlignment = Alignment.Center
@@ -181,7 +184,7 @@ private fun SmartReframeCard(
                         .width(previewWidth * 0.62f)
                         .height(previewHeight * 0.62f)
                         .background(
-                            color = if (isSelected) accent.copy(alpha = 0.28f) else Mocha.Surface1,
+                            color = if (isSelected) accent.copy(alpha = 0.28f) else semanticColors.surface,
                             shape = RoundedCornerShape(10.dp)
                         )
                 )
@@ -194,13 +197,13 @@ private fun SmartReframeCard(
                 Text(
                     text = option.ratio.label,
                     style = MaterialTheme.typography.titleMedium,
-                    color = if (isSelected) accent else Mocha.Text,
+                    color = if (isSelected) accent else semanticColors.text,
                     textAlign = TextAlign.Center
                 )
                 Text(
                     text = stringResource(option.platformResId),
                     style = MaterialTheme.typography.bodySmall,
-                    color = Mocha.Subtext0,
+                    color = semanticColors.subtext,
                     textAlign = TextAlign.Center
                 )
             }

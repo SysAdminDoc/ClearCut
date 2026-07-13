@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -36,7 +38,6 @@ import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.ai.AutoEditIntent
 import com.novacut.editor.ai.AutoEditResult
-import com.novacut.editor.ui.theme.Mocha
 
 @Composable
 fun AutoEditPanel(
@@ -50,6 +51,7 @@ fun AutoEditPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     var intent by remember { mutableStateOf(AutoEditIntent.HIGHLIGHT_REEL) }
     var targetDurationMs by remember { mutableStateOf(60_000L) }
 
@@ -57,21 +59,21 @@ fun AutoEditPanel(
         title = stringResource(R.string.auto_edit_title),
         subtitle = stringResource(R.string.auto_edit_subtitle),
         icon = Icons.Default.AutoFixHigh,
-        accent = Mocha.Mauve,
+        accent = ClearCutAccents.Mauve,
         onClose = onClose,
         modifier = modifier,
         scrollable = true
     ) {
-        PremiumPanelCard(accent = Mocha.Mauve) {
+        PremiumPanelCard(accent = ClearCutAccents.Mauve) {
             Text(
                 text = stringResource(R.string.auto_edit_source_overview_title),
                 style = MaterialTheme.typography.titleMedium,
-                color = Mocha.Text
+                color = semanticColors.text
             )
             Text(
                 text = stringResource(R.string.auto_edit_description),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
 
             Row(
@@ -82,21 +84,21 @@ fun AutoEditPanel(
                     label = stringResource(R.string.auto_edit_info_clips),
                     value = clipCount.toString(),
                     icon = Icons.Default.Videocam,
-                    accent = Mocha.Blue,
+                    accent = ClearCutAccents.Blue,
                     modifier = Modifier.weight(1f)
                 )
                 AutoEditInfoCard(
                     label = stringResource(R.string.auto_edit_info_music),
                     value = if (hasAudio) stringResource(R.string.auto_edit_info_yes) else stringResource(R.string.auto_edit_info_no),
                     icon = Icons.Default.MusicNote,
-                    accent = if (hasAudio) Mocha.Green else Mocha.Overlay1,
+                    accent = if (hasAudio) ClearCutAccents.Green else semanticColors.overlayStrong,
                     modifier = Modifier.weight(1f)
                 )
                 AutoEditInfoCard(
                     label = stringResource(R.string.auto_edit_info_target),
                     value = stringResource(R.string.auto_edit_duration_seconds, targetDurationMs / 1_000L),
                     icon = Icons.Default.Timer,
-                    accent = Mocha.Peach,
+                    accent = ClearCutAccents.Peach,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -104,16 +106,16 @@ fun AutoEditPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Blue) {
+        PremiumPanelCard(accent = ClearCutAccents.Blue) {
             Text(
                 text = stringResource(R.string.auto_edit_intent_title),
                 style = MaterialTheme.typography.titleMedium,
-                color = Mocha.Text
+                color = semanticColors.text
             )
             Text(
                 text = stringResource(R.string.auto_edit_brief_unsupported),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
             AutoEditIntent.entries.forEach { option ->
                 FilterChip(
@@ -138,11 +140,11 @@ fun AutoEditPanel(
         Spacer(modifier = Modifier.height(12.dp))
 
         if (proposal != null) {
-            PremiumPanelCard(accent = Mocha.Green) {
+            PremiumPanelCard(accent = ClearCutAccents.Green) {
                 Text(
                     text = stringResource(R.string.auto_edit_review_title),
                     style = MaterialTheme.typography.titleMedium,
-                    color = Mocha.Text
+                    color = semanticColors.text
                 )
                 Text(
                     text = stringResource(
@@ -152,7 +154,7 @@ fun AutoEditPanel(
                         proposal.confidence * 100f
                     ),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
                 proposal.segments.forEachIndexed { index, segment ->
                     Text(
@@ -166,12 +168,12 @@ fun AutoEditPanel(
                             segment.score * 100f
                         ),
                         style = MaterialTheme.typography.bodySmall,
-                        color = Mocha.Text
+                        color = semanticColors.text
                     )
                     Text(
                         text = segment.rationale.joinToString(" · "),
                         style = MaterialTheme.typography.bodySmall,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                     Text(
                         text = stringResource(
@@ -182,14 +184,14 @@ fun AutoEditPanel(
                             segment.scoreComponents.audioEnergy * 100f
                         ),
                         style = MaterialTheme.typography.bodySmall,
-                        color = Mocha.Overlay1
+                        color = semanticColors.overlayStrong
                     )
                 }
                 if (proposal.warnings.isNotEmpty()) {
                     Text(
                         text = stringResource(R.string.auto_edit_review_warning),
                         style = MaterialTheme.typography.bodySmall,
-                        color = Mocha.Peach
+                        color = ClearCutAccents.Peach
                     )
                 }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -202,11 +204,11 @@ fun AutoEditPanel(
                 }
             }
         } else {
-        PremiumPanelCard(accent = if (intent == AutoEditIntent.BEAT_SYNC && hasAudio) Mocha.Green else Mocha.Peach) {
+        PremiumPanelCard(accent = if (intent == AutoEditIntent.BEAT_SYNC && hasAudio) ClearCutAccents.Green else ClearCutAccents.Peach) {
             Text(
                 text = stringResource(R.string.auto_edit_generate_title),
                 style = MaterialTheme.typography.titleMedium,
-                color = Mocha.Text
+                color = semanticColors.text
             )
             Text(
                 text = if (intent == AutoEditIntent.BEAT_SYNC && hasAudio) {
@@ -217,7 +219,7 @@ fun AutoEditPanel(
                     stringResource(R.string.auto_edit_generate_visual)
                 },
                 style = MaterialTheme.typography.bodyMedium,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
 
             Row(
@@ -226,11 +228,11 @@ fun AutoEditPanel(
             ) {
                 PremiumPanelPill(
                     text = stringResource(R.string.auto_edit_clip_count, clipCount),
-                    accent = Mocha.Blue
+                    accent = ClearCutAccents.Blue
                 )
                 PremiumPanelPill(
                     text = if (hasAudio) stringResource(R.string.auto_edit_audio_ready) else stringResource(R.string.auto_edit_no_soundtrack),
-                    accent = if (hasAudio) Mocha.Green else Mocha.Peach
+                    accent = if (hasAudio) ClearCutAccents.Green else ClearCutAccents.Peach
                 )
             }
 
@@ -239,17 +241,17 @@ fun AutoEditPanel(
                 enabled = clipCount > 0 && !isProcessing,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Mocha.Mauve,
-                    contentColor = Mocha.Base,
-                    disabledContainerColor = Mocha.Surface1,
-                    disabledContentColor = Mocha.Subtext0
+                    containerColor = ClearCutAccents.Mauve,
+                    contentColor = semanticColors.surfaceBase,
+                    disabledContainerColor = semanticColors.surface,
+                    disabledContentColor = semanticColors.subtext
                 ),
                 shape = RoundedCornerShape(18.dp)
             ) {
                 if (isProcessing) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(16.dp),
-                        color = Mocha.Base,
+                        color = semanticColors.surfaceBase,
                         strokeWidth = 2.dp
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -268,7 +270,7 @@ fun AutoEditPanel(
                 Text(
                     text = stringResource(R.string.panel_auto_edit_add_music_hint),
                     style = MaterialTheme.typography.bodySmall,
-                    color = Mocha.Subtext0
+                    color = semanticColors.subtext
                 )
             }
             if (isProcessing) {
@@ -298,6 +300,7 @@ private fun AutoEditInfoCard(
     accent: Color,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     PremiumPanelCard(accent = accent, modifier = modifier) {
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -312,12 +315,12 @@ private fun AutoEditInfoCard(
             Text(
                 text = value,
                 style = MaterialTheme.typography.titleMedium,
-                color = Mocha.Text
+                color = semanticColors.text
             )
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodySmall,
-                color = Mocha.Subtext0
+                color = semanticColors.subtext
             )
         }
     }

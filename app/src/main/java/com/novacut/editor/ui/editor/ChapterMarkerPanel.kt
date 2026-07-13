@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -31,7 +33,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.model.ChapterMarker
-import com.novacut.editor.ui.theme.Mocha
 
 private data class DisplayChapter(
     val originalIndex: Int,
@@ -49,6 +50,7 @@ fun ChapterMarkerPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semanticColors = LocalClearCutColors.current
     var editingIndex by remember { mutableIntStateOf(-1) }
     var editingTitle by remember { mutableStateOf("") }
     val sortedChapters = remember(chapters) {
@@ -62,7 +64,7 @@ fun ChapterMarkerPanel(
         title = stringResource(R.string.chapter_title),
         subtitle = "Drop navigation points at the playhead so long edits feel structured and easy to skim.",
         icon = Icons.Default.Bookmarks,
-        accent = Mocha.Yellow,
+        accent = ClearCutAccents.Yellow,
         onClose = onClose,
         closeContentDescription = stringResource(R.string.chapter_close_cd),
         modifier = modifier,
@@ -72,12 +74,12 @@ fun ChapterMarkerPanel(
                 icon = Icons.Default.Add,
                 contentDescription = stringResource(R.string.chapter_add_cd),
                 onClick = { onAddChapter(ChapterMarker(playheadMs, nextChapterLabel)) },
-                tint = Mocha.Green,
-                containerColor = Mocha.PanelHighest
+                tint = ClearCutAccents.Green,
+                containerColor = semanticColors.panelHighest
             )
         }
     ) {
-        PremiumPanelCard(accent = Mocha.Yellow) {
+        PremiumPanelCard(accent = ClearCutAccents.Yellow) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -87,13 +89,13 @@ fun ChapterMarkerPanel(
                     Text(
                         text = "Chapter rail",
                         style = MaterialTheme.typography.titleMedium,
-                        color = Mocha.Text
+                        color = semanticColors.text
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = stringResource(R.string.chapter_description),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
 
@@ -105,11 +107,11 @@ fun ChapterMarkerPanel(
                 ) {
                     PremiumPanelPill(
                         text = "${chapters.size} chapters",
-                        accent = Mocha.Yellow
+                        accent = ClearCutAccents.Yellow
                     )
                     PremiumPanelPill(
                         text = "Playhead ${formatChapterTimestamp(playheadMs)}",
-                        accent = Mocha.Blue
+                        accent = ClearCutAccents.Blue
                     )
                 }
             }
@@ -117,7 +119,7 @@ fun ChapterMarkerPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PremiumPanelCard(accent = Mocha.Blue) {
+        PremiumPanelCard(accent = ClearCutAccents.Blue) {
             if (sortedChapters.isEmpty()) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -126,26 +128,26 @@ fun ChapterMarkerPanel(
                     Icon(
                         imageVector = Icons.Default.Bookmarks,
                         contentDescription = stringResource(R.string.cd_bookmarks),
-                        tint = Mocha.Overlay1,
+                        tint = semanticColors.overlayStrong,
                         modifier = Modifier.size(30.dp)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = stringResource(R.string.chapter_empty),
                         style = MaterialTheme.typography.titleSmall,
-                        color = Mocha.Text
+                        color = semanticColors.text
                     )
                     Text(
                         text = "Use the add button to drop a chapter at the current playhead and start shaping the timeline.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Mocha.Subtext0
+                        color = semanticColors.subtext
                     )
                 }
             } else {
                 Text(
                     text = "Chapter list",
                     style = MaterialTheme.typography.titleMedium,
-                    color = Mocha.Text
+                    color = semanticColors.text
                 )
 
                 Column(
@@ -198,13 +200,14 @@ private fun ChapterRow(
     onSave: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val semanticColors = LocalClearCutColors.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = if (isEditing) Mocha.Yellow.copy(alpha = 0.14f) else Mocha.PanelRaised,
+        color = if (isEditing) ClearCutAccents.Yellow.copy(alpha = 0.14f) else semanticColors.panelRaised,
         shape = RoundedCornerShape(20.dp),
         border = BorderStroke(
             1.dp,
-            if (isEditing) Mocha.Yellow.copy(alpha = 0.28f) else Mocha.CardStroke
+            if (isEditing) ClearCutAccents.Yellow.copy(alpha = 0.28f) else semanticColors.cardStroke
         )
     ) {
         Column(
@@ -227,13 +230,13 @@ private fun ChapterRow(
                     Box(
                         modifier = Modifier
                             .size(34.dp)
-                            .background(Mocha.Yellow.copy(alpha = 0.18f), RoundedCornerShape(12.dp)),
+                            .background(ClearCutAccents.Yellow.copy(alpha = 0.18f), RoundedCornerShape(12.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = "${index + 1}",
                             style = MaterialTheme.typography.labelLarge,
-                            color = Mocha.Yellow
+                            color = ClearCutAccents.Yellow
                         )
                     }
 
@@ -241,7 +244,7 @@ private fun ChapterRow(
                         Text(
                             text = formatChapterTimestamp(chapter.timeMs),
                             style = MaterialTheme.typography.labelLarge,
-                            color = Mocha.Blue
+                            color = ClearCutAccents.Blue
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         if (isEditing) {
@@ -250,26 +253,26 @@ private fun ChapterRow(
                                 onValueChange = onEditingTitleChanged,
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
-                                textStyle = MaterialTheme.typography.bodyMedium.copy(color = Mocha.Text),
+                                textStyle = MaterialTheme.typography.bodyMedium.copy(color = semanticColors.text),
                                 placeholder = {
                                     Text(
                                         text = stringResource(R.string.chapter_label_hint),
-                                        color = Mocha.Subtext0
+                                        color = semanticColors.subtext
                                     )
                                 },
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = Mocha.Yellow,
-                                    unfocusedBorderColor = Mocha.CardStroke,
-                                    focusedTextColor = Mocha.Text,
-                                    unfocusedTextColor = Mocha.Text,
-                                    cursorColor = Mocha.Yellow
+                                    focusedBorderColor = ClearCutAccents.Yellow,
+                                    unfocusedBorderColor = semanticColors.cardStroke,
+                                    focusedTextColor = semanticColors.text,
+                                    unfocusedTextColor = semanticColors.text,
+                                    cursorColor = ClearCutAccents.Yellow
                                 )
                             )
                         } else {
                             Text(
                                 text = chapter.title,
                                 style = MaterialTheme.typography.titleSmall,
-                                color = Mocha.Text,
+                                color = semanticColors.text,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -279,7 +282,7 @@ private fun ChapterRow(
 
                 PremiumPanelPill(
                     text = if (isEditing) "Editing" else "Jump",
-                    accent = if (isEditing) Mocha.Yellow else Mocha.Green
+                    accent = if (isEditing) ClearCutAccents.Yellow else ClearCutAccents.Green
                 )
             }
 
@@ -291,7 +294,7 @@ private fun ChapterRow(
                 ChapterAction(
                     icon = if (isEditing) Icons.Default.Check else Icons.Default.Edit,
                     label = if (isEditing) "Save" else "Edit",
-                    accent = if (isEditing) Mocha.Green else Mocha.Subtext0,
+                    accent = if (isEditing) ClearCutAccents.Green else semanticColors.subtext,
                     contentDescription = stringResource(
                         if (isEditing) R.string.cd_chapter_save else R.string.cd_chapter_edit
                     ),
@@ -301,7 +304,7 @@ private fun ChapterRow(
                 ChapterAction(
                     icon = Icons.Default.Delete,
                     label = "Delete",
-                    accent = Mocha.Red,
+                    accent = ClearCutAccents.Red,
                     contentDescription = stringResource(R.string.cd_chapter_delete),
                     onClick = onDelete
                 )
