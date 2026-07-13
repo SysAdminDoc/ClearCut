@@ -1035,6 +1035,10 @@ fun EditorScreen(
                             viewModel.endTrim()
                             isTimelineEditGestureActive = false
                         },
+                        onTrimDragCanceled = {
+                            viewModel.cancelTrim()
+                            isTimelineEditGestureActive = false
+                        },
                         onTimelineWidthChanged = viewModel::setTimelineWidth,
                         onToggleTrackMute = viewModel::toggleTrackMute,
                         onToggleTrackVisible = viewModel::toggleTrackVisibility,
@@ -1058,12 +1062,20 @@ fun EditorScreen(
                             viewModel.endSlideEdit()
                             isTimelineEditGestureActive = false
                         },
+                        onSlideEditCanceled = {
+                            viewModel.cancelSlideEdit()
+                            isTimelineEditGestureActive = false
+                        },
                         onSlipEditStarted = {
                             isTimelineEditGestureActive = true
                             viewModel.beginSlipEdit()
                         },
                         onSlipEditEnded = {
                             viewModel.endSlipEdit()
+                            isTimelineEditGestureActive = false
+                        },
+                        onSlipEditCanceled = {
+                            viewModel.cancelSlipEdit()
                             isTimelineEditGestureActive = false
                         },
                         onToggleTrackCollapsed = viewModel::toggleTrackCollapsed,

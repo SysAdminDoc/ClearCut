@@ -52,6 +52,30 @@ class TimelineEditingTest {
     }
 
     @Test
+    fun `slip planner distinguishes clamped no-op from effective delta`() {
+        val atSourceStart = clip(
+            id = "clip",
+            timelineStartMs = 0L,
+            trimStartMs = 0L,
+            trimEndMs = 500L,
+            sourceDurationMs = 1_000L,
+        )
+        val tracks = listOf(Track(type = TrackType.VIDEO, index = 0, clips = listOf(atSourceStart)))
+
+        assertEquals(
+            tracks,
+            slipLinkedClipsOnTimeline(tracks, setOf(atSourceStart.id), slipAmountMs = -100L),
+        )
+        val shifted = slipLinkedClipsOnTimeline(
+            tracks,
+            setOf(atSourceStart.id),
+            slipAmountMs = 100L,
+        )
+        assertEquals(100L, shifted.single().clips.single().trimStartMs)
+        assertEquals(600L, shifted.single().clips.single().trimEndMs)
+    }
+
+    @Test
     fun `playback session resets for ended idle failed and watchdog recovery states`() {
         assertTrue(playbackSessionNeedsReset(false, Player.STATE_ENDED, false))
         assertTrue(playbackSessionNeedsReset(false, Player.STATE_IDLE, false))

@@ -1,0 +1,3 @@
+Trim, slip, and slide now preserve redo for canceled, clamped, and no-op gestures.
+Pointer cancellation restores the pre-gesture timeline without committing history.
+Successful drags still create exactly one undo entry at gesture end.

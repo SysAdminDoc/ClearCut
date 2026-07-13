@@ -696,6 +696,9 @@ class EditorViewModel @Inject constructor(
         mediaImportEngine = mediaImportEngine,
         appContext = appContext,
         scope = viewModelScope, saveUndoState = ::saveUndoState, showToast = ::showToast,
+        beginGestureUndo = ::beginTimelineGestureUndo,
+        markGestureMutation = ::markTimelineGestureMutation,
+        finishGestureUndo = ::finishTimelineGestureUndo,
         rebuildPlayerTimeline = ::rebuildPlayerTimeline, saveProject = ::saveProject,
         refreshExtendedTrimPreview = ::refreshExtendedTrimPreview,
         seekPreviewTo = ::seekTo,
@@ -1435,6 +1438,11 @@ class EditorViewModel @Inject constructor(
         extendedTrimPreviewJob?.cancel()
         extendedTrimPreviewJob = null
         clipEditingDelegate.endTrim()
+    }
+    fun cancelTrim() {
+        extendedTrimPreviewJob?.cancel()
+        extendedTrimPreviewJob = null
+        clipEditingDelegate.endTrim(commit = false)
     }
     fun beginSpeedChange() = clipEditingDelegate.beginSpeedChange()
     fun setClipSpeed(clipId: String, speed: Float) = clipEditingDelegate.setClipSpeed(clipId, speed)
@@ -3934,38 +3942,55 @@ class EditorViewModel @Inject constructor(
     // --- Slip/Slide Edit ---
     private var isSlipEditActive = false
     private var isSlideEditActive = false
+    private val timelineGestureUndo = GestureUndoTransaction<UndoAction> { initial, current ->
+        hasSameClipTiming(initial.tracks, current.tracks)
+    }
 
     fun beginSlipEdit() {
         if (isSlipEditActive) return
+        if (!beginTimelineGestureUndo("Slip edit")) return
         isSlipEditActive = true
-        saveUndoState("Slip edit")
         // Freeze the player while the user drags so we don't rebuild it on every
         // pixel of motion. `setScrubbingMode(true)` lets ExoPlayer skip the expensive
         // seek+decode work; the actual timeline rebuild happens in endSlipEdit.
         videoEngine.setScrubbingMode(true)
     }
 
-    fun endSlipEdit() {
+    fun endSlipEdit() = finishSlipEdit(commit = true)
+
+    fun cancelSlipEdit() = finishSlipEdit(commit = false)
+
+    private fun finishSlipEdit(commit: Boolean) {
         if (!isSlipEditActive) return
         isSlipEditActive = false
+        val finish = finishTimelineGestureUndo("Slip edit", commit)
         videoEngine.setScrubbingMode(false)
-        rebuildPlayerTimeline()
-        saveProject()
+        if (finish.hadMutation) {
+            rebuildPlayerTimeline()
+            saveProject()
+        }
     }
 
     fun beginSlideEdit() {
         if (isSlideEditActive) return
+        if (!beginTimelineGestureUndo("Slide edit")) return
         isSlideEditActive = true
-        saveUndoState("Slide edit")
         videoEngine.setScrubbingMode(true)
     }
 
-    fun endSlideEdit() {
+    fun endSlideEdit() = finishSlideEdit(commit = true)
+
+    fun cancelSlideEdit() = finishSlideEdit(commit = false)
+
+    private fun finishSlideEdit(commit: Boolean) {
         if (!isSlideEditActive) return
         isSlideEditActive = false
+        val finish = finishTimelineGestureUndo("Slide edit", commit)
         videoEngine.setScrubbingMode(false)
-        rebuildPlayerTimeline()
-        saveProject()
+        if (finish.hadMutation) {
+            rebuildPlayerTimeline()
+            saveProject()
+        }
     }
 
     fun slipClip(clipId: String, slipAmountMs: Long) {
@@ -3976,18 +4001,12 @@ class EditorViewModel @Inject constructor(
         ) {
             return
         }
-        _state.update { s ->
-            s.copy(tracks = s.tracks.map { track ->
-                track.copy(clips = track.clips.map { clip ->
-                    if (clip.id in linkedIds) {
-                        val sourceWindow = (clip.trimEndMs - clip.trimStartMs).coerceAtLeast(100L)
-                        val maxTrimStart = (clip.sourceDurationMs - sourceWindow).coerceAtLeast(0L)
-                        val newTrimStart = (clip.trimStartMs + slipAmountMs).coerceIn(0L, maxTrimStart)
-                        val newTrimEnd = newTrimStart + sourceWindow
-                        clip.copy(trimStartMs = newTrimStart, trimEndMs = newTrimEnd)
-                    } else clip
-                })
-            })
+        val currentTracks = _state.value.tracks
+        val candidateTracks = slipLinkedClipsOnTimeline(currentTracks, linkedIds, slipAmountMs)
+        if (hasSameClipTiming(candidateTracks, currentTracks)) return
+        markTimelineGestureMutation("Slip edit")
+        _state.update { state ->
+            state.copy(tracks = slipLinkedClipsOnTimeline(state.tracks, linkedIds, slipAmountMs))
         }
         // Intentionally NOT calling rebuildPlayerTimeline() here. Slip-drag fires
         // this method at touch-event rate (60–120 Hz); rebuilding ExoPlayer's
@@ -4019,8 +4038,7 @@ class EditorViewModel @Inject constructor(
         val synchronizedDelta = appliedDelta.coerceIn(minDelta, maxDelta)
         if (synchronizedDelta == 0L) return
 
-        _state.update { s ->
-            s.copy(tracks = s.tracks.map { track ->
+        val candidateTracks = tracks.map { track ->
                 when {
                     track.id == primaryLocation.track.id -> {
                         slideClipOnTrack(
@@ -4039,8 +4057,10 @@ class EditorViewModel @Inject constructor(
                     }
                     else -> track
                 }
-            })
-        }
+            }
+        if (hasSameClipTiming(candidateTracks, tracks)) return
+        markTimelineGestureMutation("Slide edit")
+        _state.update { it.copy(tracks = candidateTracks) }
         // Deferred to endSlideEdit() to avoid per-frame player rebuilds during drag.
         // Same perf fix as slipClip — see comment there.
     }
@@ -5430,29 +5450,85 @@ class EditorViewModel @Inject constructor(
         showToast(text(R.string.vm_aspect_ratio_toast, aspect.label))
     }
 
-    private fun saveUndoState(description: String) {
+    private fun captureUndoAction(description: String): UndoAction {
+        val state = _state.value
+        return UndoAction(
+            description = description,
+            tracks = state.tracks.map { it.copy() },
+            textOverlays = state.textOverlays.toList(),
+            imageOverlays = state.imageOverlays.toList(),
+            timelineMarkers = state.timelineMarkers.toList(),
+            chapterMarkers = state.chapterMarkers.toList(),
+            drawingPaths = state.drawingPaths.toList(),
+            beatMarkers = state.beatMarkers.toList(),
+            trackedObjects = state.trackedObjects.toList(),
+            playheadMs = _playheadMs.value,
+            selectedClipId = state.selectedClipId,
+            selectedTrackId = state.selectedTrackId,
+            selectedClipIds = state.selectedClipIds,
+            aiUsageLedger = state.aiUsageLedger,
+        )
+    }
+
+    private fun pushUndoAction(action: UndoAction) {
         _state.update { state ->
-            val action = UndoAction(
-                description = description,
-                tracks = state.tracks.map { it.copy() },
-                textOverlays = state.textOverlays.toList(),
-                imageOverlays = state.imageOverlays.toList(),
-                timelineMarkers = state.timelineMarkers.toList(),
-                chapterMarkers = state.chapterMarkers.toList(),
-                drawingPaths = state.drawingPaths.toList(),
-                beatMarkers = state.beatMarkers.toList(),
-                trackedObjects = state.trackedObjects.toList(),
-                playheadMs = state.playheadMs,
-                selectedClipId = state.selectedClipId,
-                selectedTrackId = state.selectedTrackId,
-                selectedClipIds = state.selectedClipIds,
-                aiUsageLedger = state.aiUsageLedger
-            )
             state.copy(
                 undoStack = (state.undoStack + action).takeLast(50),
-                redoStack = emptyList()
+                redoStack = emptyList(),
             )
         }
+    }
+
+    private fun restoreUndoAction(action: UndoAction) {
+        _state.update { state ->
+            val restored = recalculateDuration(
+                state.copy(
+                    tracks = action.tracks,
+                    textOverlays = action.textOverlays,
+                    imageOverlays = action.imageOverlays,
+                    timelineMarkers = action.timelineMarkers,
+                    chapterMarkers = action.chapterMarkers,
+                    drawingPaths = action.drawingPaths,
+                    beatMarkers = action.beatMarkers,
+                    trackedObjects = action.trackedObjects,
+                    selectedClipId = action.selectedClipId,
+                    selectedTrackId = action.selectedTrackId,
+                    selectedClipIds = action.selectedClipIds,
+                    ai = state.ai.copy(usageLedger = action.aiUsageLedger),
+                )
+            )
+            restored.copy(
+                playheadMs = action.playheadMs.coerceIn(
+                    0L,
+                    restored.totalDurationMs.coerceAtLeast(0L),
+                )
+            )
+        }
+        _playheadMs.value = _state.value.playheadMs
+    }
+
+    private fun beginTimelineGestureUndo(description: String): Boolean =
+        timelineGestureUndo.begin(description)
+
+    private fun markTimelineGestureMutation(description: String) {
+        timelineGestureUndo.captureBeforeMutation(description) {
+            captureUndoAction(description)
+        }
+    }
+
+    private fun finishTimelineGestureUndo(
+        description: String,
+        commit: Boolean,
+    ): GestureFinishResult = timelineGestureUndo.finish(
+        description = description,
+        commit = commit,
+        current = { captureUndoAction(description) },
+        onCommit = ::pushUndoAction,
+        onCancel = ::restoreUndoAction,
+    )
+
+    private fun saveUndoState(description: String) {
+        pushUndoAction(captureUndoAction(description))
     }
 
     // AI Tools

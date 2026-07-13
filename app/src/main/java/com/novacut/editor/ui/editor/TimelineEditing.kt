@@ -651,6 +651,45 @@ internal fun trimLinkedClipsOnTimeline(
     return updatedTracks
 }
 
+internal fun hasSameClipTiming(left: List<Track>, right: List<Track>): Boolean {
+    if (left.size != right.size) return false
+    return left.zip(right).all { (leftTrack, rightTrack) ->
+        leftTrack.id == rightTrack.id &&
+            leftTrack.clips.size == rightTrack.clips.size &&
+            leftTrack.clips.zip(rightTrack.clips).all { (leftClip, rightClip) ->
+                leftClip.id == rightClip.id &&
+                    leftClip.timelineStartMs == rightClip.timelineStartMs &&
+                    leftClip.trimStartMs == rightClip.trimStartMs &&
+                    leftClip.trimEndMs == rightClip.trimEndMs
+            }
+    }
+}
+
+internal fun slipLinkedClipsOnTimeline(
+    tracks: List<Track>,
+    targetClipIds: Set<String>,
+    slipAmountMs: Long,
+): List<Track> {
+    var changed = false
+    val updatedTracks = tracks.map { track ->
+        val updatedClips = track.clips.map clipMap@{ clip ->
+            if (clip.id !in targetClipIds) return@clipMap clip
+            val sourceWindow = (clip.trimEndMs - clip.trimStartMs).coerceAtLeast(100L)
+            val maxTrimStart = (clip.sourceDurationMs - sourceWindow).coerceAtLeast(0L)
+            val newTrimStart = (clip.trimStartMs + slipAmountMs).coerceIn(0L, maxTrimStart)
+            val newTrimEnd = newTrimStart + sourceWindow
+            if (newTrimStart == clip.trimStartMs && newTrimEnd == clip.trimEndMs) {
+                return@clipMap clip
+            }
+            changed = true
+            clip.copy(trimStartMs = newTrimStart, trimEndMs = newTrimEnd)
+        }
+        if (updatedClips.indices.all { updatedClips[it] === track.clips[it] }) track
+        else track.copy(clips = updatedClips)
+    }
+    return if (changed) updatedTracks else tracks
+}
+
 private fun trimLinkedClipStarts(
     tracks: List<Track>,
     anchorClipId: String,

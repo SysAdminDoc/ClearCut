@@ -342,6 +342,7 @@ fun Timeline(
     onTrimChanged: (clipId: String, newTrimStartMs: Long?, newTrimEndMs: Long?) -> Unit = { _, _, _ -> },
     onTrimDragStarted: () -> Unit = {},
     onTrimDragEnded: () -> Unit = {},
+    onTrimDragCanceled: () -> Unit = {},
     onTimelineWidthChanged: (Float) -> Unit = {},
     onToggleTrackMute: (String) -> Unit = {},
     onToggleTrackVisible: (String) -> Unit = {},
@@ -356,8 +357,10 @@ fun Timeline(
     onSlipClip: (clipId: String, deltaMs: Long) -> Unit = { _, _ -> },
     onSlideEditStarted: () -> Unit = {},
     onSlideEditEnded: () -> Unit = {},
+    onSlideEditCanceled: () -> Unit = {},
     onSlipEditStarted: () -> Unit = {},
     onSlipEditEnded: () -> Unit = {},
+    onSlipEditCanceled: () -> Unit = {},
     onToggleTrackCollapsed: (String) -> Unit = {},
     onToggleTrackWaveform: (String) -> Unit = {},
     onCollapseAllTracks: () -> Unit = {},
@@ -1741,9 +1744,9 @@ fun Timeline(
                                                         onDragCancel = {
                                                             when (zone) {
                                                                 TimelineClipGestureZone.TRIM_LEFT,
-                                                                TimelineClipGestureZone.TRIM_RIGHT -> onTrimDragEnded()
-                                                                TimelineClipGestureZone.SLIP -> onSlipEditEnded()
-                                                                TimelineClipGestureZone.SLIDE -> onSlideEditEnded()
+                                                                TimelineClipGestureZone.TRIM_RIGHT -> onTrimDragCanceled()
+                                                                TimelineClipGestureZone.SLIP -> onSlipEditCanceled()
+                                                                TimelineClipGestureZone.SLIDE -> onSlideEditCanceled()
                                                                 TimelineClipGestureZone.NONE -> Unit
                                                             }
                                                             zone = TimelineClipGestureZone.NONE

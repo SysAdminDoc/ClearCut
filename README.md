@@ -4,9 +4,15 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.137-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.138-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.138 Transactional timeline gestures
+
+- Trim, slip, and slide now capture their pre-edit undo snapshot only before the first effective timing change, keeping undo and redo byte-for-byte unchanged for taps, clamped drags, and other no-ops.
+- Pointer cancellation restores the pre-gesture tracks, selection, and playhead without committing history; a drag that returns to its original timing also adds no undo entry.
+- Successful gestures still commit exactly one history entry at gesture end, clear redo only then, and rebuild/persist once. Timing-signature comparisons avoid Android `Uri` equality affecting no-op detection.
 
 ### v3.74.137 Live extended-trim preview
 

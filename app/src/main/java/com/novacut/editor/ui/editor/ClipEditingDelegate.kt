@@ -35,6 +35,9 @@ class ClipEditingDelegate(
     private val appContext: Context,
     private val scope: CoroutineScope,
     private val saveUndoState: (String) -> Unit,
+    private val beginGestureUndo: (String) -> Boolean,
+    private val markGestureMutation: (String) -> Unit,
+    private val finishGestureUndo: (String, Boolean) -> GestureFinishResult,
     private val showToast: (String) -> Unit,
     private val rebuildPlayerTimeline: () -> Unit,
     private val saveProject: () -> Unit,
@@ -671,7 +674,7 @@ class ClipEditingDelegate(
             showToast(appContext.getString(R.string.clip_track_locked_toast))
             return
         }
-        saveUndoState("Trim clip")
+        if (!beginGestureUndo("Trim clip")) return
         preparedTrimRanges = stateFlow.value.tracks
             .flatMap(Track::clips)
             .filter { it.id in targetIds }
@@ -685,6 +688,16 @@ class ClipEditingDelegate(
     fun trimClip(clipId: String, newTrimStartMs: Long? = null, newTrimEndMs: Long? = null) {
         val targetIds = linkedClipIds(stateFlow.value.tracks, clipId)
         if (tracksContainLockedClip(targetIds)) return
+        val currentTracks = stateFlow.value.tracks
+        val candidateTracks = trimLinkedClipsOnTimeline(
+            tracks = currentTracks,
+            anchorClipId = clipId,
+            targetClipIds = targetIds,
+            requestedTrimStartMs = newTrimStartMs,
+            requestedTrimEndMs = newTrimEndMs,
+        )
+        if (hasSameClipTiming(candidateTracks, currentTracks)) return
+        markGestureMutation("Trim clip")
         var previewSeekMs: Long? = null
         stateFlow.update { state ->
             val tracks = trimLinkedClipsOnTimeline(
@@ -733,13 +746,16 @@ class ClipEditingDelegate(
         // player timeline every tick.
     }
 
-    fun endTrim() {
+    fun endTrim(commit: Boolean = true) {
+        val finish = finishGestureUndo("Trim clip", commit)
         videoEngine.setScrubbingMode(false)
-        rebuildPlayerTimeline()
-        lastTrimPreviewSeekMs?.let(seekPreviewTo)
+        if (finish.hadMutation) {
+            rebuildPlayerTimeline()
+            if (commit) lastTrimPreviewSeekMs?.let(seekPreviewTo)
+            saveProject()
+        }
         lastTrimPreviewSeekMs = null
         preparedTrimRanges = emptyMap()
-        saveProject()
     }
 
     // --- Speed ---

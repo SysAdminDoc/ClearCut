@@ -93,6 +93,40 @@ class EditorPlaybackContractTest {
     }
 
     @Test
+    fun `timeline edit gestures defer undo and route pointer cancellation to rollback`() {
+        val delegate = locate(
+            "app/src/main/java/com/novacut/editor/ui/editor/ClipEditingDelegate.kt"
+        ).readText()
+        val viewModel = locate(
+            "app/src/main/java/com/novacut/editor/ui/editor/EditorViewModel.kt"
+        ).readText()
+        val timeline = locate(
+            "app/src/main/java/com/novacut/editor/ui/editor/Timeline.kt"
+        ).readText()
+        val trimBegin = delegate.substring(
+            delegate.indexOf("fun beginTrim()"),
+            delegate.indexOf("fun trimClip(")
+        )
+        val gestureBlock = viewModel.substring(
+            viewModel.indexOf("fun beginSlipEdit()"),
+            viewModel.indexOf("// --- Export ---")
+        )
+        val cancelBlock = timeline.substring(
+            timeline.indexOf("onDragCancel = {", timeline.indexOf("TimelineClipGestureZone.TRIM_LEFT")),
+            timeline.indexOf("onDrag = {", timeline.indexOf("onDragCancel = {", timeline.indexOf("TimelineClipGestureZone.TRIM_LEFT")))
+        )
+
+        assertFalse(trimBegin.contains("saveUndoState("))
+        assertFalse(gestureBlock.substringBefore("fun slipClip(").contains("saveUndoState("))
+        assertTrue(gestureBlock.contains("markTimelineGestureMutation(\"Slip edit\")"))
+        assertTrue(gestureBlock.contains("markTimelineGestureMutation(\"Slide edit\")"))
+        assertTrue(cancelBlock.contains("onTrimDragCanceled()"))
+        assertTrue(cancelBlock.contains("onSlipEditCanceled()"))
+        assertTrue(cancelBlock.contains("onSlideEditCanceled()"))
+        assertFalse(cancelBlock.contains("onTrimDragEnded()"))
+    }
+
+    @Test
     fun `live preview excludes single input transition shaders`() {
         val engine = locate("app/src/main/java/com/novacut/editor/engine/VideoEngine.kt").readText()
         assertTrue(engine.contains("if (!previewMode) {\n                clip.headTransition"))
