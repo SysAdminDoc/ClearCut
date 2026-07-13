@@ -1225,7 +1225,7 @@ class VideoEngine @Inject constructor(
                     // only when strokes are active so the cheap text path is
                     // unchanged for the vast majority of overlays.
                     if (overlay.strokeWidth > 0f) {
-                        add(StrokedTextBitmapOverlay(overlay, relStart, relEnd))
+                        add(StrokedTextBitmapOverlay(overlay, relStart, relEnd, fontRegistry))
                     } else {
                         add(ExportTextOverlay(overlay, relStart, relEnd, fontRegistry))
                     }

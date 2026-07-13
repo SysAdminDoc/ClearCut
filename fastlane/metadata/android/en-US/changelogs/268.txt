@@ -1,0 +1,1 @@
+Hardened CJK, Arabic, and mixed-direction captions with script-aware system font fallback, one-paragraph bidi highlighting, grapheme-safe typewriter reveals, shaped bitmap overlays, styled Unicode ASS burn-in, and native-graphics regression fixtures.

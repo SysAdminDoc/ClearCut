@@ -8,6 +8,14 @@ import org.junit.Test
 class FFmpegEngineTest {
 
     @Test
+    fun subtitleFilterEscapesAssPathAndProvidesAndroidFonts() {
+        assertEquals(
+            "subtitles=C\\:\\\\Exports\\\\caption\\'s.ass:fontsdir=/system/fonts",
+            FFmpegEngine.subtitleFilter("C:\\Exports\\caption's.ass"),
+        )
+    }
+
+    @Test
     fun msToSeconds_zero() {
         assertEquals("0.000", FFmpegEngine.msToSeconds(0L))
     }

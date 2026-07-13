@@ -13,14 +13,22 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.novacut.editor.model.Caption
 import com.novacut.editor.model.CaptionStyle
 import com.novacut.editor.model.CaptionStyleType
+import com.novacut.editor.engine.BidiTextPolicy
+import com.novacut.editor.engine.CaptionFontFallbackPolicy
+import com.novacut.editor.engine.CaptionTextLayoutPolicy
 
 /**
  * Renders active captions on the video preview during playback.
@@ -72,9 +80,10 @@ private fun SubtitleBarCaption(caption: Caption, progress: Float) {
         fontSize = style.fontSize.sp,
         fontWeight = FontWeight.Medium,
         textAlign = TextAlign.Center,
-        fontFamily = fontFamilyFromName(style.fontFamily),
+        fontFamily = fontFamilyFromName(style.fontFamily, caption.text),
         style = TextStyle(
-            shadow = captionTextShadow(style)
+            shadow = captionTextShadow(style),
+            textDirection = textDirectionFor(caption.text),
         ),
         modifier = Modifier
             .drawBehind {
@@ -99,22 +108,16 @@ private fun WordByWordCaption(caption: Caption, currentTimeMs: Long) {
         currentTimeMs in it.startTimeMs..it.endTimeMs
     }
 
-    Row(
+    Text(
+        text = highlightedWords(caption) { word -> word == activeWord },
         modifier = Modifier.padding(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.Center
-    ) {
-        caption.words.forEach { word ->
-            val isActive = word == activeWord
-            Text(
-                text = word.text + " ",
-                color = if (isActive) Color(style.highlightColor) else Color(style.color).copy(alpha = 0.5f),
-                fontSize = (if (isActive) style.fontSize * 1.15f else style.fontSize).sp,
-                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-                fontFamily = fontFamilyFromName(style.fontFamily),
-                style = TextStyle(shadow = captionTextShadow(style))
-            )
-        }
-    }
+        textAlign = TextAlign.Center,
+        fontFamily = fontFamilyFromName(style.fontFamily, caption.text),
+        style = TextStyle(
+            shadow = captionTextShadow(style),
+            textDirection = textDirectionFor(caption.text),
+        ),
+    )
 }
 
 @Composable
@@ -125,7 +128,8 @@ private fun KaraokeCaption(caption: Caption, currentTimeMs: Long) {
     }
 
     val style = caption.style
-    Row(
+    Text(
+        text = highlightedWords(caption) { word -> currentTimeMs >= word.startTimeMs },
         modifier = Modifier
             .drawBehind {
                 drawRoundRect(
@@ -134,20 +138,13 @@ private fun KaraokeCaption(caption: Caption, currentTimeMs: Long) {
                 )
             }
             .padding(horizontal = 12.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.Center
-    ) {
-        caption.words.forEach { word ->
-            val highlighted = currentTimeMs >= word.startTimeMs
-            Text(
-                text = word.text + " ",
-                color = if (highlighted) Color(style.highlightColor) else Color(style.color),
-                fontSize = style.fontSize.sp,
-                fontWeight = FontWeight.Medium,
-                fontFamily = fontFamilyFromName(style.fontFamily),
-                style = TextStyle(shadow = captionTextShadow(style))
-            )
-        }
-    }
+        textAlign = TextAlign.Center,
+        fontFamily = fontFamilyFromName(style.fontFamily, caption.text),
+        style = TextStyle(
+            shadow = captionTextShadow(style),
+            textDirection = textDirectionFor(caption.text),
+        ),
+    )
 }
 
 @Composable
@@ -161,8 +158,11 @@ private fun BounceCaption(caption: Caption, progress: Float) {
         fontSize = style.fontSize.sp,
         fontWeight = FontWeight.Bold,
         textAlign = TextAlign.Center,
-        fontFamily = fontFamilyFromName(style.fontFamily),
-        style = TextStyle(shadow = captionTextShadow(style)),
+        fontFamily = fontFamilyFromName(style.fontFamily, caption.text),
+        style = TextStyle(
+            shadow = captionTextShadow(style),
+            textDirection = textDirectionFor(caption.text),
+        ),
         modifier = Modifier
             .offset(y = (-bounceOffset).dp)
             .drawBehind {
@@ -178,8 +178,7 @@ private fun BounceCaption(caption: Caption, progress: Float) {
 @Composable
 private fun TypewriterCaption(caption: Caption, progress: Float) {
     val style = caption.style
-    val visibleChars = (caption.text.length * progress).toInt().coerceIn(0, caption.text.length)
-    val displayText = caption.text.take(visibleChars)
+    val displayText = CaptionTextLayoutPolicy.visiblePrefix(caption.text, progress)
 
     if (displayText.isNotEmpty()) {
         Text(
@@ -187,9 +186,12 @@ private fun TypewriterCaption(caption: Caption, progress: Float) {
             color = Color(style.color),
             fontSize = style.fontSize.sp,
             fontWeight = FontWeight.Normal,
-            fontFamily = FontFamily.Monospace,
+            fontFamily = fontFamilyFromName("monospace", displayText),
             textAlign = TextAlign.Center,
-            style = TextStyle(shadow = captionTextShadow(style)),
+            style = TextStyle(
+                shadow = captionTextShadow(style),
+                textDirection = textDirectionFor(displayText),
+            ),
             modifier = Modifier
                 .drawBehind {
                     drawRoundRect(
@@ -217,9 +219,10 @@ private fun MinimalCaption(caption: Caption, progress: Float) {
         fontSize = style.fontSize.sp,
         fontWeight = FontWeight.Normal,
         textAlign = TextAlign.Center,
-        fontFamily = fontFamilyFromName(style.fontFamily),
+        fontFamily = fontFamilyFromName(style.fontFamily, caption.text),
         style = TextStyle(
-            shadow = captionTextShadow(style, alpha)
+            shadow = captionTextShadow(style, alpha),
+            textDirection = textDirectionFor(caption.text),
         )
     )
 }
@@ -238,11 +241,48 @@ private fun captionTextShadow(style: CaptionStyle, alpha: Float = 1f): Shadow? =
     else -> null
 }
 
-private fun fontFamilyFromName(name: String): FontFamily = when (name) {
-    "serif" -> FontFamily.Serif
-    "monospace" -> FontFamily.Monospace
-    "cursive" -> FontFamily.Cursive
-    "sans-serif-medium" -> FontFamily.SansSerif
-    "sans-serif-condensed" -> FontFamily.SansSerif
-    else -> FontFamily.SansSerif
+private fun fontFamilyFromName(name: String, text: String): FontFamily {
+    if (CaptionFontFallbackPolicy.fallbackForText(text) !=
+        CaptionFontFallbackPolicy.FontFamily.SYSTEM_SANS_SERIF
+    ) return FontFamily.SansSerif
+    return when (name) {
+        "serif" -> FontFamily.Serif
+        "monospace" -> FontFamily.Monospace
+        "cursive" -> FontFamily.Cursive
+        else -> FontFamily.SansSerif
+    }
+}
+
+private fun textDirectionFor(text: String): TextDirection =
+    if (BidiTextPolicy.baseDirection(text) == BidiTextPolicy.Direction.RTL) {
+        TextDirection.Rtl
+    } else {
+        TextDirection.Ltr
+    }
+
+private fun highlightedWords(
+    caption: Caption,
+    highlighted: (com.novacut.editor.model.CaptionWord) -> Boolean,
+): AnnotatedString = buildAnnotatedString {
+    caption.words.forEachIndexed { index, word ->
+        val isHighlighted = highlighted(word)
+        withStyle(
+            SpanStyle(
+                color = if (isHighlighted) {
+                    Color(caption.style.highlightColor)
+                } else {
+                    Color(caption.style.color).copy(alpha = if (caption.style.type == CaptionStyleType.WORD_BY_WORD) 0.5f else 1f)
+                },
+                fontSize = (if (isHighlighted && caption.style.type == CaptionStyleType.WORD_BY_WORD) {
+                    caption.style.fontSize * 1.15f
+                } else {
+                    caption.style.fontSize
+                }).sp,
+                fontWeight = if (isHighlighted) FontWeight.Bold else FontWeight.Normal,
+            )
+        ) {
+            append(word.text)
+        }
+        if (index < caption.words.lastIndex) append(' ')
+    }
 }

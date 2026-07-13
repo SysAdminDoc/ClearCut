@@ -4,9 +4,15 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.134-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.135-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.135 Shaped CJK and RTL captions
+
+- Caption preview keeps highlighted Arabic/mixed text in one bidi-shaped paragraph, resolves CJK/Arabic system fallback families, and reveals typewriter text only at grapheme boundaries.
+- ASS burn-in now preserves Unicode and caption styling with per-script Noto families from Android system fonts; requested burn-in failures stop the export instead of silently shipping an uncaptioned video.
+- Media3 text overlays use glyph-aware fallback, while stroked overlays use `StaticLayout` for shaping, bidi, wrapping, and bounds. JVM/native-graphics fixtures cover CJK, Japanese, Korean, Arabic, mixed direction, supplementary RTL, combining marks, and emoji ZWJ sequences.
 
 ### v3.74.134 Complete semantic feature theming
 

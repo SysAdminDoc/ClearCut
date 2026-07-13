@@ -279,7 +279,7 @@ class FFmpegEngine @Inject constructor(
         if (vv != null) return@withContext NativeProcessingPolicy.logAndReject(vv)
         val vs = NativeProcessingPolicy.validateSubtitleFile(subtitleFile, "burnSubtitles")
         if (vs != null) return@withContext NativeProcessingPolicy.logAndReject(vs)
-        val filter = "subtitles=${escapeFilterPath(subtitleFile.absolutePath)}"
+        val filter = subtitleFilter(subtitleFile.absolutePath)
         executeArguments(
             listOf(
                 "-y",
@@ -566,6 +566,10 @@ class FFmpegEngine @Inject constructor(
                 .replace(":", "\\:")
                 .replace("'", "\\'")
         }
+
+        fun subtitleFilter(subtitlePath: String): String =
+            "subtitles=${escapeFilterPath(subtitlePath)}:" +
+                "fontsdir=${escapeFilterPath(CaptionFontFallbackPolicy.ANDROID_SYSTEM_FONT_DIRECTORY)}"
 
         fun escapeConcatPath(path: String): String = path.replace("'", "'\\''")
 

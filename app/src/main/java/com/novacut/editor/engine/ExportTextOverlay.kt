@@ -11,8 +11,8 @@ import android.text.style.BackgroundColorSpan
 import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
 import android.text.TextPaint
+import android.text.TextDirectionHeuristics
 import android.text.style.MetricAffectingSpan
-import android.text.style.TypefaceSpan
 import androidx.media3.common.util.UnstableApi
 import com.novacut.editor.model.TextAlignment
 import com.novacut.editor.model.TextAnimation
@@ -46,9 +46,7 @@ internal class ExportTextOverlay(
         val rawDisplay = when {
             overlay.animationIn == TextAnimation.TYPEWRITER -> {
                 val elapsed = timeMs - relStartMs
-                val charCount = ((elapsed.toFloat() / animDurationMs) * fullText.length)
-                    .toInt().coerceIn(0, fullText.length)
-                fullText.substring(0, charCount)
+                CaptionTextLayoutPolicy.visiblePrefix(fullText, elapsed.toFloat() / animDurationMs)
             }
             overlay.wordStaggerMs > 0L -> {
                 val elapsed = timeMs - relStartMs
@@ -62,7 +60,9 @@ internal class ExportTextOverlay(
         // an RTL strong character; pure-ASCII captions skip the wrap so the
         // common path stays allocation-free.
         val displayText = if (BidiTextPolicy.needsBidiWrap(rawDisplay)) {
-            BidiFormatter.getInstance().unicodeWrap(rawDisplay)
+            BidiFormatter.getInstance(
+                BidiTextPolicy.baseDirection(rawDisplay) == BidiTextPolicy.Direction.RTL
+            ).unicodeWrap(rawDisplay, TextDirectionHeuristics.FIRSTSTRONG_LTR, true) ?: rawDisplay
         } else {
             rawDisplay
         }
@@ -88,18 +88,19 @@ internal class ExportTextOverlay(
             if (style != Typeface.NORMAL) {
                 text.setSpan(StyleSpan(style), 0, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
-            val customTypeface = fontRegistry?.resolveTypeface(overlay.fontFamily)
-            if (customTypeface != null) {
-                text.setSpan(
-                    CustomTypefaceSpan(customTypeface),
-                    0, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                )
-            } else {
-                text.setSpan(
-                    TypefaceSpan(overlay.fontFamily),
-                    0, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                )
-            }
+            val resolvedTypeface = fontRegistry?.resolveTypefaceForText(
+                fontFamily = overlay.fontFamily,
+                text = rawDisplay,
+                bold = overlay.bold,
+                italic = overlay.italic,
+            ) ?: Typeface.create(
+                CaptionFontFallbackPolicy.familyNameForText(overlay.fontFamily, rawDisplay),
+                style,
+            )
+            text.setSpan(
+                CustomTypefaceSpan(resolvedTypeface),
+                0, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
             if (overlay.backgroundColor.toInt() and 0xFF000000.toInt() != 0) {
                 val bgAlpha = (currentAlpha * ((overlay.backgroundColor.toInt() ushr 24) and 0xFF)).toInt().coerceIn(0, 255)
                 val bgColor = (overlay.backgroundColor.toInt() and 0x00FFFFFF) or (bgAlpha shl 24)

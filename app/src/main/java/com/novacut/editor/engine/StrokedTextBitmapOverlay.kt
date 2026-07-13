@@ -3,9 +3,11 @@ package com.novacut.editor.engine
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
-import android.graphics.Rect
 import android.graphics.Typeface
-import android.text.BidiFormatter
+import android.text.Layout
+import android.text.StaticLayout
+import android.text.TextDirectionHeuristics
+import android.text.TextPaint
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.BitmapOverlay
 import com.novacut.editor.model.TextAlignment
@@ -36,6 +38,7 @@ internal class StrokedTextBitmapOverlay(
     private val overlay: TextOverlay,
     private val relStartMs: Long,
     private val relEndMs: Long,
+    private val fontRegistry: FontRegistry? = null,
     /** Maximum rendered dimension. Capped to prevent OOM on 4K/8K exports. */
     private val canvasDim: Int = 1920
 ) : BitmapOverlay() {
@@ -66,9 +69,7 @@ internal class StrokedTextBitmapOverlay(
         val fullText = overlay.text
         val displayText = if (overlay.animationIn == TextAnimation.TYPEWRITER) {
             val elapsed = timeMs - relStartMs
-            val charCount = ((elapsed.toFloat() / animDurationMs) * fullText.length)
-                .toInt().coerceIn(0, fullText.length)
-            fullText.substring(0, charCount)
+            CaptionTextLayoutPolicy.visiblePrefix(fullText, elapsed.toFloat() / animDurationMs)
         } else fullText
         if (displayText.isEmpty()) return blank()
 
@@ -123,36 +124,44 @@ internal class StrokedTextBitmapOverlay(
         )
     }
 
-    private fun drawBitmap(rawText: String): Bitmap {
+    private fun drawBitmap(text: String): Bitmap {
         // R5.4b — apply Unicode bidi reordering before Canvas.drawText for
         // any caption that carries an RTL strong character. Pure ASCII /
         // Latin captions skip the wrap (and its U+200E / U+200F mark
         // insertion) to keep the common path allocation-free.
-        val text = if (BidiTextPolicy.needsBidiWrap(rawText)) {
-            BidiFormatter.getInstance().unicodeWrap(rawText)
-        } else {
-            rawText
-        }
-        val paintFill = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
+        val paintFill = TextPaint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
             color = applyAlpha(overlay.color.toInt(), currentAlpha)
             textSize = overlay.fontSize
-            typeface = typefaceFor(overlay.fontFamily, overlay.bold, overlay.italic)
+            typeface = typefaceFor(overlay.fontFamily, text, overlay.bold, overlay.italic)
             style = Paint.Style.FILL
             letterSpacing = overlay.letterSpacing.coerceIn(-0.3f, 1f)
         }
-        val paintStroke = Paint(paintFill).apply {
+        val paintStroke = TextPaint(paintFill).apply {
             color = applyAlpha(overlay.strokeColor.toInt(), currentAlpha)
             style = Paint.Style.STROKE
             strokeWidth = overlay.strokeWidth.coerceAtLeast(0f)
             strokeJoin = Paint.Join.ROUND
             strokeCap = Paint.Cap.ROUND
         }
-        // Measure with the stroke paint because stroke widens the glyph bounds.
-        val bounds = Rect()
-        paintStroke.getTextBounds(text, 0, text.length, bounds)
         val pad = (overlay.strokeWidth.coerceAtLeast(0f) * 2f).toInt() + 16
-        val w = (bounds.width() + pad * 2).coerceAtLeast(2).coerceAtMost(canvasDim)
-        val h = (paintFill.fontMetrics.let { it.bottom - it.top }.toInt() + pad * 2)
+        val maxTextWidth = (canvasDim - pad * 2).coerceAtLeast(2)
+        val contentWidth = kotlin.math.ceil(Layout.getDesiredWidth(text, paintStroke).toDouble())
+            .toInt().coerceIn(2, maxTextWidth)
+        val alignment = when (overlay.alignment) {
+            TextAlignment.LEFT -> Layout.Alignment.ALIGN_NORMAL
+            TextAlignment.CENTER -> Layout.Alignment.ALIGN_CENTER
+            TextAlignment.RIGHT -> Layout.Alignment.ALIGN_OPPOSITE
+        }
+        fun buildLayout(paint: TextPaint) = StaticLayout.Builder
+            .obtain(text, 0, text.length, paint, contentWidth)
+            .setAlignment(alignment)
+            .setIncludePad(false)
+            .setTextDirection(TextDirectionHeuristics.FIRSTSTRONG_LTR)
+            .build()
+        val fillLayout = buildLayout(paintFill)
+        val strokeLayout = buildLayout(paintStroke)
+        val w = (contentWidth + pad * 2).coerceAtMost(canvasDim)
+        val h = (maxOf(fillLayout.height, strokeLayout.height) + pad * 2)
             .coerceAtLeast(2).coerceAtMost(canvasDim)
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bmp)
@@ -167,17 +176,14 @@ internal class StrokedTextBitmapOverlay(
             canvas.drawRect(0f, 0f, w.toFloat(), h.toFloat(), bgPaint)
         }
 
-        val baselineY = pad - paintFill.fontMetrics.top
-        val anchorX = when (overlay.alignment) {
-            TextAlignment.LEFT -> pad.toFloat()
-            TextAlignment.CENTER -> (w - bounds.width()) / 2f - bounds.left
-            TextAlignment.RIGHT -> (w - bounds.width()).toFloat() - pad - bounds.left
-        }
+        canvas.save()
+        canvas.translate(pad.toFloat(), pad.toFloat())
         // Stroke first so fill paints on top — the standard Canvas outline text pattern.
         if (paintStroke.strokeWidth > 0f) {
-            canvas.drawText(text, anchorX, baselineY, paintStroke)
+            strokeLayout.draw(canvas)
         }
-        canvas.drawText(text, anchorX, baselineY, paintFill)
+        fillLayout.draw(canvas)
+        canvas.restore()
         return bmp
     }
 
@@ -186,15 +192,15 @@ internal class StrokedTextBitmapOverlay(
         return (a.toInt().coerceIn(0, 255) shl 24) or (color and 0x00FFFFFF)
     }
 
-    private fun typefaceFor(family: String, bold: Boolean, italic: Boolean): Typeface {
-        val base = Typeface.create(family, Typeface.NORMAL)
+    private fun typefaceFor(family: String, text: String, bold: Boolean, italic: Boolean): Typeface {
+        fontRegistry?.let { return it.resolveTypefaceForText(family, text, bold, italic) }
         val style = when {
             bold && italic -> Typeface.BOLD_ITALIC
             bold -> Typeface.BOLD
             italic -> Typeface.ITALIC
             else -> Typeface.NORMAL
         }
-        return if (style == Typeface.NORMAL) base else Typeface.create(base, style)
+        return Typeface.create(CaptionFontFallbackPolicy.familyNameForText(family, text), style)
     }
 
     private fun blank(): Bitmap {

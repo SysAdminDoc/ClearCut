@@ -2,6 +2,7 @@ package com.novacut.editor.engine
 
 import android.content.Context
 import android.graphics.Typeface
+import android.graphics.Paint
 import android.net.Uri
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -86,6 +87,51 @@ class FontRegistry @Inject constructor(
         typefaceCache[fileName]?.let { return it }
         val file = File(fontsDir, fileName)
         return loadTypeface(file)?.also { typefaceCache[fileName] = it }
+    }
+
+    fun resolveTypefaceForText(
+        fontFamily: String,
+        text: String,
+        bold: Boolean = false,
+        italic: Boolean = false,
+    ): Typeface {
+        val requested = resolveTypeface(fontFamily)
+            ?: Typeface.create(fontFamily.takeIf { it.isNotBlank() } ?: "sans-serif", Typeface.NORMAL)
+        val base = if (supportsText(requested, text)) {
+            requested
+        } else {
+            val fallbackName = CaptionFontFallbackPolicy.familyNameForText("sans-serif", text)
+            Typeface.create(fallbackName, Typeface.NORMAL)
+        }
+        val style = when {
+            bold && italic -> Typeface.BOLD_ITALIC
+            bold -> Typeface.BOLD
+            italic -> Typeface.ITALIC
+            else -> Typeface.NORMAL
+        }
+        return if (style == Typeface.NORMAL) base else Typeface.create(base, style)
+    }
+
+    internal fun supportsText(typeface: Typeface, text: String): Boolean {
+        if (text.isEmpty()) return true
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            this.typeface = typeface
+            textSize = 48f
+        }
+        var index = 0
+        while (index < text.length) {
+            val codePoint = Character.codePointAt(text, index)
+            val type = Character.getType(codePoint)
+            val skip = Character.isWhitespace(codePoint) ||
+                type == Character.CONTROL.toInt() ||
+                type == Character.FORMAT.toInt() ||
+                type == Character.NON_SPACING_MARK.toInt() ||
+                type == Character.COMBINING_SPACING_MARK.toInt() ||
+                type == Character.ENCLOSING_MARK.toInt()
+            if (!skip && !paint.hasGlyph(String(Character.toChars(codePoint)))) return false
+            index += Character.charCount(codePoint)
+        }
+        return true
     }
 
     fun isCustomFont(fontFamily: String): Boolean = fontFamily.startsWith(CUSTOM_PREFIX)

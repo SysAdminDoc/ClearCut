@@ -133,4 +133,27 @@ class CaptionFontFallbackPolicyTest {
         assertFalse(CaptionFontFallbackPolicy.rendersWithSystemFontsOnly("ja"))
         assertFalse(CaptionFontFallbackPolicy.rendersWithSystemFontsOnly("ar"))
     }
+
+    @Test
+    fun contentInferenceSelectsInstalledAndroidFallbackFamilies() {
+        assertEquals(FontFamily.NOTO_CJK_SC, CaptionFontFallbackPolicy.fallbackForText("\u4F60\u597D\u4E16\u754C"))
+        assertEquals(FontFamily.NOTO_CJK_JP, CaptionFontFallbackPolicy.fallbackForText("\u65E5\u672C\u8A9E\u30C6\u30B9\u30C8"))
+        assertEquals(FontFamily.NOTO_CJK_KR, CaptionFontFallbackPolicy.fallbackForText("\uC548\uB155\uD558\uC138\uC694"))
+        assertEquals(FontFamily.NOTO_ARABIC, CaptionFontFallbackPolicy.fallbackForText("\u0645\u0631\u062D\u0628\u0627"))
+        assertEquals(FontFamily.NOTO_HEBREW, CaptionFontFallbackPolicy.fallbackForText("\u05E9\u05DC\u05D5\u05DD"))
+        assertEquals(FontFamily.SYSTEM_SANS_SERIF, CaptionFontFallbackPolicy.fallbackForText("ClearCut 2026"))
+    }
+
+    @Test
+    fun complexScriptOverridesUnsupportedGenericFamilyName() {
+        assertEquals(
+            "Noto Sans CJK SC",
+            CaptionFontFallbackPolicy.familyNameForText("serif", "\u4F60\u597D"),
+        )
+        assertEquals(
+            "Noto Sans Arabic",
+            CaptionFontFallbackPolicy.familyNameForText("custom:LatinDisplay.ttf", "\u0645\u0631\u062D\u0628\u0627"),
+        )
+        assertEquals("serif", CaptionFontFallbackPolicy.familyNameForText("serif", "Hello"))
+    }
 }

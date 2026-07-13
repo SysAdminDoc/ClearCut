@@ -100,6 +100,21 @@ class BidiTextPolicyTest {
     }
 
     @Test
+    fun mixedTextRetainsFirstStrongBaseDirection() {
+        assertEquals(Direction.RTL, BidiTextPolicy.baseDirection("\u0645\u0631\u062D\u0628\u0627 2026 ClearCut"))
+        assertEquals(Direction.LTR, BidiTextPolicy.baseDirection("ClearCut 2026 \u0645\u0631\u062D\u0628\u0627"))
+        assertEquals(PreferredAlignment.END, BidiTextPolicy.recommendAlignment("\u0645\u0631\u062D\u0628\u0627 ClearCut"))
+        assertEquals(PreferredAlignment.START, BidiTextPolicy.recommendAlignment("ClearCut \u0645\u0631\u062D\u0628\u0627"))
+    }
+
+    @Test
+    fun supplementaryPlaneRtlCodePointIsClassified() {
+        val oldSouthArabian = String(Character.toChars(0x10A60))
+        assertEquals(Direction.RTL, BidiTextPolicy.classify(oldSouthArabian))
+        assertTrue(BidiTextPolicy.needsBidiWrap(oldSouthArabian))
+    }
+
+    @Test
     fun needsBidiWrap_isFalseForPureAscii() {
         assertFalse(BidiTextPolicy.needsBidiWrap("Hello"))
         assertFalse(BidiTextPolicy.needsBidiWrap(""))

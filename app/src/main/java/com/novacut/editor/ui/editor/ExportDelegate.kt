@@ -1011,7 +1011,7 @@ class ExportDelegate(
                     }
                 }
 
-                if (configWithChapters.burnSubtitles && ffmpegEngine != null && ffmpegEngine.isAvailable()) {
+                if (configWithChapters.burnSubtitles) {
                     val burnCaptions = tracks.flatMap { t -> t.clips }.flatMap { clip ->
                         clip.captions.map { c ->
                             c.copy(
@@ -1021,26 +1021,68 @@ class ExportDelegate(
                         }
                     }
                     if (burnCaptions.isNotEmpty()) {
+                        var assFile: java.io.File? = null
+                        var burnedFile: java.io.File? = null
                         try {
-                            val assFile = java.io.File(
+                            val engine = ffmpegEngine?.takeIf { it.isAvailable() }
+                                ?: error("Subtitle burn-in engine is unavailable")
+                            assFile = java.io.File(
                                 outputFile.parentFile,
                                 "${outputFile.nameWithoutExtension}_burn.ass"
                             )
-                            com.novacut.editor.engine.SubtitleExporter.export(
+                            check(com.novacut.editor.engine.SubtitleExporter.export(
                                 burnCaptions, com.novacut.editor.model.SubtitleFormat.ASS, assFile
-                            )
-                            val burnedFile = java.io.File(
+                            )) { "Could not create the ASS burn-in document" }
+                            burnedFile = java.io.File(
                                 outputFile.parentFile,
                                 "${outputFile.nameWithoutExtension}_burned.mp4"
                             )
-                            val ok = ffmpegEngine.burnSubtitles(outputFile, assFile, burnedFile)
-                            if (ok && burnedFile.isFile && burnedFile.length() > 0L) {
-                                outputFile.delete()
-                                burnedFile.renameTo(outputFile)
+                            check(engine.burnSubtitles(outputFile, assFile, burnedFile)) {
+                                "libass subtitle rendering failed"
                             }
-                            assFile.delete()
+                            check(burnedFile.isFile && burnedFile.length() > 0L) {
+                                "Subtitle renderer produced no output"
+                            }
+                            check(outputFile.delete() && burnedFile.renameTo(outputFile)) {
+                                "Could not replace the uncaptioned export"
+                            }
                         } catch (e: Exception) {
-                            android.util.Log.w("ExportDelegate", "Subtitle burn-in failed, keeping original", e)
+                            android.util.Log.e("ExportDelegate", "Requested subtitle burn-in failed", e)
+                            assFile?.delete()
+                            burnedFile?.delete()
+                            outputFile.delete()
+                            val message = text(R.string.export_video_failed_message)
+                            updateExport {
+                                it.copy(
+                                    state = ExportState.ERROR,
+                                    errorMessage = message,
+                                    lastExportedFilePath = null
+                                )
+                            }
+                            recordExportHistory(
+                                sourceState = currentState,
+                                status = ExportHistoryStatus.FAILED,
+                                startedAtMs = startedAtMs,
+                                outputFile = null,
+                                config = configWithChapters,
+                                timelineDurationMs = totalDurationMs,
+                                errorMessage = message,
+                                diagnosticSummary = "Requested subtitle burn-in failed.",
+                                healthReport = healthReport
+                            )
+                            recordExportIncident(
+                                sourceState = currentState,
+                                failedPhase = "subtitle-burn",
+                                error = e,
+                                errorMessage = e.message ?: e::class.java.simpleName,
+                                config = configWithChapters,
+                                timelineDurationMs = totalDurationMs,
+                                startedAtMs = startedAtMs,
+                                healthReport = healthReport
+                            )
+                            return@launch
+                        } finally {
+                            assFile?.delete()
                         }
                     }
                 }

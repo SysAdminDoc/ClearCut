@@ -19,6 +19,8 @@ import java.util.Locale
  */
 object CaptionFontFallbackPolicy {
 
+    const val ANDROID_SYSTEM_FONT_DIRECTORY = "/system/fonts"
+
     /**
      * The Noto subset families ClearCut intends to bundle. Each entry maps to
      * a `<font>` family name the renderer can resolve via `Typeface.create`
@@ -36,52 +38,52 @@ object CaptionFontFallbackPolicy {
             coversWritingSystems = listOf("Latin", "Cyrillic", "Greek"),
         ),
         NOTO_CJK_SC(
-            familyName = "noto-sans-sc",
+            familyName = "Noto Sans CJK SC",
             approxBundleBytes = 20_000_000L,
             coversWritingSystems = listOf("Han (Simplified)"),
         ),
         NOTO_CJK_TC(
-            familyName = "noto-sans-tc",
+            familyName = "Noto Sans CJK TC",
             approxBundleBytes = 20_000_000L,
             coversWritingSystems = listOf("Han (Traditional)"),
         ),
         NOTO_CJK_JP(
-            familyName = "noto-sans-jp",
+            familyName = "Noto Sans CJK JP",
             approxBundleBytes = 20_000_000L,
             coversWritingSystems = listOf("Han + Kana + Hiragana"),
         ),
         NOTO_CJK_KR(
-            familyName = "noto-sans-kr",
+            familyName = "Noto Sans CJK KR",
             approxBundleBytes = 20_000_000L,
             coversWritingSystems = listOf("Hangul"),
         ),
         NOTO_ARABIC(
-            familyName = "noto-sans-arabic",
+            familyName = "Noto Sans Arabic",
             approxBundleBytes = 1_200_000L,
             coversWritingSystems = listOf("Arabic"),
         ),
         NOTO_HEBREW(
-            familyName = "noto-sans-hebrew",
+            familyName = "Noto Sans Hebrew",
             approxBundleBytes = 700_000L,
             coversWritingSystems = listOf("Hebrew"),
         ),
         NOTO_DEVANAGARI(
-            familyName = "noto-sans-devanagari",
+            familyName = "Noto Sans Devanagari",
             approxBundleBytes = 1_000_000L,
             coversWritingSystems = listOf("Devanagari (Hindi, Marathi, Sanskrit)"),
         ),
         NOTO_BENGALI(
-            familyName = "noto-sans-bengali",
+            familyName = "Noto Sans Bengali",
             approxBundleBytes = 900_000L,
             coversWritingSystems = listOf("Bengali"),
         ),
         NOTO_TAMIL(
-            familyName = "noto-sans-tamil",
+            familyName = "Noto Sans Tamil",
             approxBundleBytes = 600_000L,
             coversWritingSystems = listOf("Tamil"),
         ),
         NOTO_THAI(
-            familyName = "noto-sans-thai",
+            familyName = "Noto Sans Thai",
             approxBundleBytes = 500_000L,
             coversWritingSystems = listOf("Thai"),
         ),
@@ -134,4 +136,38 @@ object CaptionFontFallbackPolicy {
      */
     fun rendersWithSystemFontsOnly(languageTag: String): Boolean =
         fallbackFor(languageTag) == FontFamily.SYSTEM_SANS_SERIF
+
+    /** Infer the required system fallback directly from caption content. */
+    fun fallbackForText(text: String): FontFamily {
+        var sawHan = false
+        var index = 0
+        while (index < text.length) {
+            val codePoint = Character.codePointAt(text, index)
+            when (Character.UnicodeScript.of(codePoint)) {
+                Character.UnicodeScript.HIRAGANA,
+                Character.UnicodeScript.KATAKANA -> return FontFamily.NOTO_CJK_JP
+                Character.UnicodeScript.HANGUL -> return FontFamily.NOTO_CJK_KR
+                Character.UnicodeScript.HAN -> sawHan = true
+                Character.UnicodeScript.ARABIC -> return FontFamily.NOTO_ARABIC
+                Character.UnicodeScript.HEBREW -> return FontFamily.NOTO_HEBREW
+                Character.UnicodeScript.DEVANAGARI -> return FontFamily.NOTO_DEVANAGARI
+                Character.UnicodeScript.BENGALI -> return FontFamily.NOTO_BENGALI
+                Character.UnicodeScript.TAMIL -> return FontFamily.NOTO_TAMIL
+                Character.UnicodeScript.THAI,
+                Character.UnicodeScript.LAO -> return FontFamily.NOTO_THAI
+                else -> Unit
+            }
+            index += Character.charCount(codePoint)
+        }
+        return if (sawHan) FontFamily.NOTO_CJK_SC else FontFamily.SYSTEM_SANS_SERIF
+    }
+
+    fun familyNameForText(requestedFamily: String, text: String): String {
+        val fallback = fallbackForText(text)
+        return if (fallback == FontFamily.SYSTEM_SANS_SERIF) {
+            requestedFamily.takeIf { it.isNotBlank() } ?: FontFamily.SYSTEM_SANS_SERIF.familyName
+        } else {
+            fallback.familyName
+        }
+    }
 }

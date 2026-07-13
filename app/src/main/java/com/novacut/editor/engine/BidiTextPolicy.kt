@@ -64,14 +64,17 @@ object BidiTextPolicy {
         if (text.isEmpty()) return Direction.LTR
         var sawLtr = false
         var sawRtl = false
-        for (c in text) {
-            when (strongDirection(c)) {
+        var index = 0
+        while (index < text.length) {
+            val codePoint = Character.codePointAt(text, index)
+            when (strongDirection(codePoint)) {
                 Direction.LTR -> sawLtr = true
                 Direction.RTL -> sawRtl = true
                 Direction.MIXED -> Unit
             }
             // Short-circuit as soon as we have both — no need to scan a long caption.
             if (sawLtr && sawRtl) return Direction.MIXED
+            index += Character.charCount(codePoint)
         }
         return when {
             sawRtl && !sawLtr -> Direction.RTL
@@ -92,6 +95,23 @@ object BidiTextPolicy {
         Direction.LTR, Direction.MIXED -> PreferredAlignment.START
     }
 
+    /** First-strong paragraph direction, retained even for mixed text. */
+    fun baseDirection(text: String): Direction {
+        var index = 0
+        while (index < text.length) {
+            val codePoint = Character.codePointAt(text, index)
+            when (val direction = strongDirection(codePoint)) {
+                Direction.LTR, Direction.RTL -> return direction
+                Direction.MIXED -> Unit
+            }
+            index += Character.charCount(codePoint)
+        }
+        return Direction.LTR
+    }
+
+    fun recommendAlignment(text: String): PreferredAlignment =
+        if (baseDirection(text) == Direction.RTL) PreferredAlignment.END else PreferredAlignment.START
+
     /**
      * True when [text] contains any strong RTL character. Cheap predicate
      * the Compose layer can use to decide whether to call
@@ -100,8 +120,11 @@ object BidiTextPolicy {
      */
     fun needsBidiWrap(text: String): Boolean {
         if (text.isEmpty()) return false
-        for (c in text) {
-            if (strongDirection(c) == Direction.RTL) return true
+        var index = 0
+        while (index < text.length) {
+            val codePoint = Character.codePointAt(text, index)
+            if (strongDirection(codePoint) == Direction.RTL) return true
+            index += Character.charCount(codePoint)
         }
         return false
     }
@@ -123,28 +146,12 @@ object BidiTextPolicy {
      *    where Java surrogates require pair handling; not exhaustive but
      *    sufficient for caption text).
      */
-    private fun strongDirection(c: Char): Direction {
-        val code = c.code
-        // ASCII letters are the common-case LTR class.
-        if (code < 0x80) {
-            return when {
-                c.isLetter() -> Direction.LTR
-                else -> Direction.MIXED
-            }
-        }
-        return when (code) {
-            // Hebrew + Hebrew Presentation Forms.
-            in 0x0590..0x05FF, in 0xFB1D..0xFB4F -> Direction.RTL
-            // Arabic + Arabic Supplement + NKo + Syriac + Thaana.
-            in 0x0600..0x06FF,
-            in 0x0700..0x074F,
-            in 0x0750..0x077F,
-            in 0x0780..0x07BF,
-            in 0x07C0..0x07FF -> Direction.RTL
-            // Arabic Presentation Forms A and B.
-            in 0xFB50..0xFDFF, in 0xFE70..0xFEFF -> Direction.RTL
-            // Default to LTR for any other strong letter; MIXED for non-letters.
-            else -> if (c.isLetter()) Direction.LTR else Direction.MIXED
+    private fun strongDirection(codePoint: Int): Direction {
+        return when (Character.getDirectionality(codePoint)) {
+            Character.DIRECTIONALITY_LEFT_TO_RIGHT -> Direction.LTR
+            Character.DIRECTIONALITY_RIGHT_TO_LEFT,
+            Character.DIRECTIONALITY_RIGHT_TO_LEFT_ARABIC -> Direction.RTL
+            else -> Direction.MIXED
         }
     }
 }
