@@ -14,6 +14,7 @@ object LocalNetworkPermissionPolicy {
     const val ANDROID_17_PERMISSION = "android.permission.ACCESS_LOCAL_NETWORK"
 
     enum class GateState {
+        FEATURE_DISABLED,
         NOT_REQUIRED,
         ALLOWED,
         NEEDS_PERMISSION,
@@ -37,7 +38,9 @@ object LocalNetworkPermissionPolicy {
         scope: OutputStreamingEngine.LocalNetworkScope,
         runtimeSdkInt: Int,
         targetSdkInt: Int,
+        featureEnabled: Boolean = true,
     ): String? {
+        if (!featureEnabled) return null
         if (!scope.requiresLocalNetworkPermission()) return null
         return when {
             runtimeSdkInt >= ANDROID_17_API && targetSdkInt >= ANDROID_17_API -> ANDROID_17_PERMISSION
@@ -52,8 +55,12 @@ object LocalNetworkPermissionPolicy {
         targetSdkInt: Int,
         permissionGranted: Boolean,
         permissionDenied: Boolean = false,
+        featureEnabled: Boolean = true,
     ): Decision {
-        val permission = permissionFor(scope, runtimeSdkInt, targetSdkInt)
+        if (!featureEnabled) {
+            return Decision(scope = scope, gateState = GateState.FEATURE_DISABLED)
+        }
+        val permission = permissionFor(scope, runtimeSdkInt, targetSdkInt, featureEnabled)
             ?: return Decision(scope = scope, gateState = GateState.NOT_REQUIRED)
         val gateState = when {
             permissionGranted -> GateState.ALLOWED

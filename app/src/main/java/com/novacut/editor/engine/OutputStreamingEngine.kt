@@ -3,6 +3,7 @@ package com.novacut.editor.engine
 import android.content.Context
 import android.os.Build
 import android.util.Log
+import com.novacut.editor.BuildConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -95,6 +96,7 @@ class OutputStreamingEngine @Inject constructor(
 
     /** Whether a streaming library is wired into the build. */
     fun isAvailable(): Boolean {
+        if (!BuildConfig.LOCAL_NETWORK_STREAMING_ENABLED) return false
         cachedAvailability?.let { return it }
         // Probe the documented activation candidates in priority order. The
         // first class that resolves is enough to flip the gate; the actual
@@ -223,6 +225,7 @@ class OutputStreamingEngine @Inject constructor(
         targetSdkInt: Int = context.applicationInfo?.targetSdkVersion ?: 0,
         permissionGranted: Boolean = false,
         permissionDenied: Boolean = false,
+        streamingEnabled: Boolean = BuildConfig.LOCAL_NETWORK_STREAMING_ENABLED,
     ): LocalNetworkPermissionPolicy.Decision =
         LocalNetworkPermissionPolicy.evaluate(
             scope = classifyNetworkScope(url),
@@ -230,6 +233,7 @@ class OutputStreamingEngine @Inject constructor(
             targetSdkInt = targetSdkInt,
             permissionGranted = permissionGranted,
             permissionDenied = permissionDenied,
+            featureEnabled = streamingEnabled,
         )
 
     fun permissionAwareLocalNetworkFailureMessage(
@@ -239,6 +243,7 @@ class OutputStreamingEngine @Inject constructor(
         permissionGranted: Boolean = false,
         permissionDenied: Boolean = false,
         throwable: Throwable? = null,
+        streamingEnabled: Boolean = BuildConfig.LOCAL_NETWORK_STREAMING_ENABLED,
     ): String? =
         LocalNetworkPermissionPolicy.permissionFailureMessage(
             decision = localNetworkPermissionDecision(
@@ -247,6 +252,7 @@ class OutputStreamingEngine @Inject constructor(
                 targetSdkInt = targetSdkInt,
                 permissionGranted = permissionGranted,
                 permissionDenied = permissionDenied,
+                streamingEnabled = streamingEnabled,
             ),
             throwable = throwable,
         )
@@ -315,6 +321,13 @@ class OutputStreamingEngine @Inject constructor(
      * become the real start once a library is wired (see class docstring).
      */
     suspend fun start(destination: OutputDestination): StreamStatus {
+        if (!BuildConfig.LOCAL_NETWORK_STREAMING_ENABLED) {
+            Log.d(TAG, "start: local-network streaming is compiled out")
+            return StreamStatus(
+                state = StreamState.ERROR,
+                errorMessage = "Live streaming is disabled in this build",
+            )
+        }
         Log.d(TAG, "start: stub — no live-streaming library wired (target=${destination.protocol})")
         return StreamStatus(
             state = StreamState.ERROR,

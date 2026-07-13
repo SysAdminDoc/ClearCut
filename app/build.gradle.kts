@@ -30,8 +30,8 @@ android {
         applicationId = "com.novacut.editor"
         minSdk = 26
         targetSdk = 36
-        versionCode = 263
-        versionName = "3.74.130"
+        versionCode = 264
+        versionName = "3.74.131"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // Passive, opt-in update check for sideload / GitHub-release installs.
@@ -39,6 +39,7 @@ android {
         // compile the network version check out entirely; the Settings toggle
         // then never appears and UpdateChecker short-circuits to Unavailable.
         buildConfigField("boolean", "UPDATE_CHECK_AVAILABLE", "true")
+        buildConfigField("boolean", "LOCAL_NETWORK_STREAMING_ENABLED", "false")
     }
 
     signingConfigs {
@@ -86,6 +87,13 @@ android {
             } else {
                 signingConfigs.getByName("debug")
             }
+        }
+        create("streaming") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".streaming"
+            versionNameSuffix = "-streaming"
+            matchingFallbacks += listOf("debug")
+            buildConfigField("boolean", "LOCAL_NETWORK_STREAMING_ENABLED", "true")
         }
     }
 

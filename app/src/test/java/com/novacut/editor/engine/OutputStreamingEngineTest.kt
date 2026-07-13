@@ -1,6 +1,8 @@
 package com.novacut.editor.engine
 
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
@@ -17,6 +19,31 @@ import org.junit.Test
 class OutputStreamingEngineTest {
 
     private val engine = OutputStreamingEngine(context = throwingContext())
+
+    @Test
+    fun normalBuildCompilesStreamingAndPermissionRequestsOut() {
+        assertFalse(engine.isAvailable())
+        val decision = engine.localNetworkPermissionDecision(
+            url = "rtmp://192.168.1.5/app",
+            runtimeSdkInt = 37,
+            targetSdkInt = 37,
+        )
+        assertEquals(LocalNetworkPermissionPolicy.GateState.FEATURE_DISABLED, decision.gateState)
+        assertNull(decision.permissionName)
+        assertFalse(decision.canAttemptConnection)
+        val start = runBlocking {
+            engine.start(
+                OutputStreamingEngine.OutputDestination(
+                    id = "disabled",
+                    displayName = "Disabled",
+                    protocol = OutputStreamingEngine.Protocol.RTMP,
+                    url = "rtmp://192.168.1.5/app",
+                )
+            )
+        }
+        assertEquals(OutputStreamingEngine.StreamState.ERROR, start.state)
+        assertEquals("Live streaming is disabled in this build", start.errorMessage)
+    }
 
     /**
      * Test seam for the @ApplicationContext injection. The engine never
@@ -282,11 +309,13 @@ class OutputStreamingEngineTest {
             url = "rtmp://live.twitch.tv/app",
             runtimeSdkInt = 36,
             targetSdkInt = 36,
+            streamingEnabled = true,
         )
         val lanDecision = engine.localNetworkPermissionDecision(
             url = "rtmp://192.168.1.5/app",
             runtimeSdkInt = 36,
             targetSdkInt = 36,
+            streamingEnabled = true,
         )
 
         assertEquals(LocalNetworkPermissionPolicy.GateState.NOT_REQUIRED, publicDecision.gateState)
@@ -301,6 +330,7 @@ class OutputStreamingEngineTest {
             runtimeSdkInt = 37,
             targetSdkInt = 37,
             throwable = java.net.SocketTimeoutException("timed out"),
+            streamingEnabled = true,
         )
         val lanMessage = engine.permissionAwareLocalNetworkFailureMessage(
             url = "rtmp://192.168.1.5/app",
@@ -308,6 +338,7 @@ class OutputStreamingEngineTest {
             targetSdkInt = 37,
             permissionDenied = true,
             throwable = java.net.SocketTimeoutException("timed out"),
+            streamingEnabled = true,
         )
 
         assertNull(publicMessage)

@@ -4,9 +4,14 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.130-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.131-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.131 Minimal normal-build permissions
+
+- Normal debug/release APKs no longer declare dormant Nearby or local-network permissions, and the streaming engine is compile-time disabled even if an incidental backend class appears.
+- A side-by-side `streaming` preview variant alone carries the future Android 16/17 permission/rationale contract; merged-manifest, policy, privacy, and Play-listing validators lock the split.
 
 ### v3.74.130 Storage-safe exports
 
@@ -464,6 +469,8 @@ Open-source notices are available in **Settings > Third-party notices > Open sou
 | `VIBRATE` | Haptic feedback |
 
 Media access uses the system Photo Picker (`ActivityResultContracts.PickVisualMedia`) and `ACTION_OPEN_DOCUMENT` exclusively — ClearCut requests **no** broad `READ_MEDIA_VIDEO` / `READ_MEDIA_IMAGES` / `READ_MEDIA_AUDIO` / `READ_EXTERNAL_STORAGE` / `WRITE_EXTERNAL_STORAGE` permissions, so the per-URI grant model survives background kill without the Android 14 Selected Photos compatibility-mode loss.
+
+Normal debug and release APKs omit dormant Nearby/local-network permissions. Those declarations exist only in the side-by-side `streaming` preview build, whose backend remains unavailable and cannot request access in normal builds.
 
 ## Known Limitations
 - Multi-sequence export now honors track opacity through Media3 compositor settings, and all 18 fallback blend modes render distinctly; true source-over-destination blend math still needs a custom programmable compositor because Media3's public settings only expose alpha/transform

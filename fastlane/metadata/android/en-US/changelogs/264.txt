@@ -1,0 +1,2 @@
+Normal APKs no longer declare dormant Nearby or local-network permissions.
+Only a separate streaming preview build carries the future permission contract, while normal builds compile streaming and permission requests off.

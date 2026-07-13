@@ -11,6 +11,22 @@ import java.io.File
 class LocalNetworkPermissionPolicyTest {
 
     @Test
+    fun disabledFeatureNeverRequestsOrAttemptsLocalConnections() {
+        OutputStreamingEngine.LocalNetworkScope.entries.forEach { scope ->
+            val decision = LocalNetworkPermissionPolicy.evaluate(
+                scope = scope,
+                runtimeSdkInt = 37,
+                targetSdkInt = 37,
+                permissionGranted = true,
+                featureEnabled = false,
+            )
+            assertEquals(LocalNetworkPermissionPolicy.GateState.FEATURE_DISABLED, decision.gateState)
+            assertNull(decision.permissionName)
+            assertFalse(decision.canAttemptConnection)
+        }
+    }
+
+    @Test
     fun publicInternetAndLoopbackNeverRequireLocalNetworkPermission() {
         val publicDecision = LocalNetworkPermissionPolicy.evaluate(
             scope = OutputStreamingEngine.LocalNetworkScope.PUBLIC_INTERNET,
@@ -133,23 +149,35 @@ class LocalNetworkPermissionPolicyTest {
     }
 
     @Test
-    fun manifestDeclaresAndroid16AndAndroid17LocalNetworkPermissions() {
-        val manifest = locateManifest()
-        val text = manifest.readText()
+    fun normalManifestOmitsPermissionsAndStreamingVariantOwnsThem() {
+        val mainText = locateManifest("main").readText()
+        val streamingText = locateManifest("streaming").readText()
 
-        assertTrue(text.contains("android.permission.NEARBY_WIFI_DEVICES"))
-        assertTrue(text.contains("android:usesPermissionFlags=\"neverForLocation\""))
-        assertTrue(text.contains("android.permission.ACCESS_LOCAL_NETWORK"))
-        assertTrue(text.contains("tools:targetApi=\"37\""))
+        assertFalse(mainText.contains("android.permission.NEARBY_WIFI_DEVICES"))
+        assertFalse(mainText.contains("android.permission.ACCESS_LOCAL_NETWORK"))
+        assertTrue(streamingText.contains("android.permission.NEARBY_WIFI_DEVICES"))
+        assertTrue(streamingText.contains("android:usesPermissionFlags=\"neverForLocation\""))
+        assertTrue(streamingText.contains("android.permission.ACCESS_LOCAL_NETWORK"))
+        assertTrue(streamingText.contains("tools:targetApi=\"37\""))
+
+        val buildFile = locateProjectFile("app/build.gradle.kts").readText()
+        assertTrue(buildFile.contains("LOCAL_NETWORK_STREAMING_ENABLED\", \"false"))
+        assertTrue(buildFile.contains("create(\"streaming\")"))
+        assertTrue(buildFile.contains("LOCAL_NETWORK_STREAMING_ENABLED\", \"true"))
     }
 
-    private fun locateManifest(): File {
+    private fun locateManifest(sourceSet: String): File {
         val candidates = listOf(
-            File("app/src/main/AndroidManifest.xml"),
-            File("src/main/AndroidManifest.xml"),
-            File("../app/src/main/AndroidManifest.xml"),
+            File("app/src/$sourceSet/AndroidManifest.xml"),
+            File("src/$sourceSet/AndroidManifest.xml"),
+            File("../app/src/$sourceSet/AndroidManifest.xml"),
         )
         return candidates.firstOrNull { it.exists() }
             ?: error("AndroidManifest.xml not found")
+    }
+
+    private fun locateProjectFile(relative: String): File {
+        val candidates = listOf(File(relative), File("../$relative"))
+        return candidates.firstOrNull { it.isFile } ?: error("$relative not found")
     }
 }

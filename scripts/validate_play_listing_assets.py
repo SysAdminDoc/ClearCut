@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 LOCALE = ROOT / "fastlane" / "metadata" / "android" / "en-US"
 IMAGES = LOCALE / "images"
 MANIFEST = ROOT / "app" / "src" / "main" / "AndroidManifest.xml"
+STREAMING_MANIFEST = ROOT / "app" / "src" / "streaming" / "AndroidManifest.xml"
 
 
 class ListingError(RuntimeError):
@@ -119,10 +120,23 @@ def require_privacy_docs() -> None:
 
     data_safety = read_text(ROOT / "docs" / "play-data-safety.md")
     manifest = read_text(MANIFEST)
+    streaming_manifest = read_text(STREAMING_MANIFEST)
     permissions = sorted(set(re.findall(r'android:name="(android\.permission\.[A-Z_]+)"', manifest)))
     missing = [permission for permission in permissions if permission not in data_safety]
     if missing:
         raise ListingError(f"docs/play-data-safety.md is missing manifest permissions: {', '.join(missing)}")
+    local_permissions = {
+        "android.permission.NEARBY_WIFI_DEVICES",
+        "android.permission.ACCESS_LOCAL_NETWORK",
+    }
+    if any(permission in manifest for permission in local_permissions):
+        raise ListingError("normal builds must not declare dormant local-network permissions")
+    missing_streaming = sorted(permission for permission in local_permissions if permission not in streaming_manifest)
+    if missing_streaming:
+        raise ListingError(f"streaming manifest is missing permissions: {', '.join(missing_streaming)}")
+    undocumented_streaming = sorted(permission for permission in local_permissions if permission not in data_safety)
+    if undocumented_streaming:
+        raise ListingError(f"data safety worksheet is missing streaming permissions: {', '.join(undocumented_streaming)}")
     for required in (
         "Project content",
         "Media metadata",
