@@ -1,6 +1,7 @@
 package com.novacut.editor
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
@@ -11,8 +12,11 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.tryPerformAccessibilityChecks
 import com.novacut.editor.ui.ClearCutTestTags
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import androidx.test.filters.SdkSuppress
 
 class ClearCutSmokeTest {
     @get:Rule
@@ -66,6 +70,47 @@ class ClearCutSmokeTest {
         compose.onNodeWithTag(ClearCutTestTags.SETTINGS_BACK).performClick()
 
         compose.waitUntilAtLeastOneExists(ClearCutTestTags.PROJECTS_SCREEN)
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 33)
+    fun pseudoLocalesRenderExpandedAndRtlExportSurfaces() {
+        try {
+            setApplicationLocale("en-XA")
+            compose.onNodeWithTag(ClearCutTestTags.PROJECTS_SCREEN).assertIsDisplayed()
+            compose.onNodeWithTag(ClearCutTestTags.PROJECTS_CREATE_PROJECT).performClick()
+            compose.onNodeWithTag(ClearCutTestTags.TEMPLATE_BLANK)
+                .performScrollTo()
+                .performClick()
+            compose.waitUntilAtLeastOneExists(ClearCutTestTags.EDITOR_SCREEN)
+            dismissTutorialIfPresent()
+            compose.onNodeWithTag(ClearCutTestTags.EDITOR_EXPORT).performClick()
+            compose.onNodeWithTag(ClearCutTestTags.EXPORT_SHEET).assertIsDisplayed()
+            compose.assertAccessibilityChecksPass()
+            assertTrue(compose.onRoot().captureToImage().width > 0)
+
+            setApplicationLocale("ar-XB")
+            compose.onNodeWithTag(ClearCutTestTags.EXPORT_SHEET).assertIsDisplayed()
+            compose.assertAccessibilityChecksPass()
+            assertEquals(
+                android.view.View.LAYOUT_DIRECTION_RTL,
+                compose.activity.resources.configuration.layoutDirection,
+            )
+            assertTrue(compose.onRoot().captureToImage().width > 0)
+        } finally {
+            compose.activity
+                .getSystemService(android.app.LocaleManager::class.java)
+                .applicationLocales = android.os.LocaleList.getEmptyLocaleList()
+        }
+    }
+
+    private fun setApplicationLocale(languageTag: String) {
+        compose.activity
+            .getSystemService(android.app.LocaleManager::class.java)
+            .applicationLocales = android.os.LocaleList.forLanguageTags(languageTag)
+        compose.waitUntil(timeoutMillis = 10_000L) {
+            compose.activity.resources.configuration.locales[0].toLanguageTag() == languageTag
+        }
     }
 
     private fun dismissTutorialIfPresent() {

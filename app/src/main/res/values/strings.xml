@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ClearCut</string>
-    <string name="app_version">v3.74.131</string>
+    <string name="app_version">v3.74.132</string>
 
     <!-- Cut list / marker import -->
     <string name="cut_list_import_empty">Nothing to import — paste time ranges or markers first</string>
@@ -345,6 +345,72 @@
     <string name="export_storage_suggestion_gif">Try a smaller GIF width, lower frame rate, or shorter range.</string>
     <string name="export_storage_suggestion_batch">Remove batch items or lower their resolution and quality.</string>
     <string name="export_storage_suggestion_frame">Free storage or capture a smaller frame.</string>
+    <string name="export_fps_value">%1$d fps</string>
+    <string name="export_pixels_value">%1$d px</string>
+    <plurals name="export_columns_count">
+        <item quantity="one">%1$d column</item>
+        <item quantity="other">%1$d columns</item>
+    </plurals>
+    <string name="export_suggested_resolution">Suggested: %1$s</string>
+    <string name="export_suggested_resolution_fps">Suggested: %1$s, %2$d fps</string>
+    <string name="export_exceeds_source_resolution">Export exceeds source resolution</string>
+    <string name="export_target_bitrate">Target bitrate: %1$.1f Mbps</string>
+    <string name="export_bitrate_estimated_size">%1$s · ~%2$s</string>
+    <string name="export_progress_percent">%1$d%%</string>
+    <string name="export_filename_name">Name</string>
+    <string name="export_filename_name_date">Name + Date</string>
+    <string name="export_filename_name_timestamp">Name + Timestamp</string>
+    <string name="export_filename_name_specs">Name + Specs</string>
+    <string name="export_filename_name_preset">Name + Preset</string>
+    <string name="export_filename_name_duration">Name + Duration</string>
+    <string name="export_filename_name_size">Name + Size</string>
+    <string name="speed_point_number">Point %1$d</string>
+    <string name="speed_point_position" formatted="false">Position %</string>
+    <string name="speed_point_position_cd">Speed point position percent</string>
+    <string name="speed_point_multiplier_cd">Speed point multiplier value</string>
+    <string name="speed_point_delete_cd">Delete speed point</string>
+    <string name="speed_curve_canvas_cd">Speed curve. Double-tap to add a point, tap to select, and drag to move.</string>
+    <string name="timeline_trim_in">In:</string>
+    <string name="timeline_trim_out">Out:</string>
+    <string name="timeline_trim_start_seconds_cd">Trim start time in seconds</string>
+    <string name="timeline_trim_end_seconds_cd">Trim end time in seconds</string>
+    <string name="timeline_effect_count_badge">FX %1$d</string>
+    <string name="timeline_keyframe_count_badge">%1$d KF</string>
+    <string name="timeline_playhead_total">%1$s / %2$s</string>
+    <string name="timeline_status">%1$s · %2$d%% · %3$s</string>
+    <string name="timeline_status_with_snap">%1$s · %2$d%% · %3$s · %4$s</string>
+    <string name="timeline_track_number">%1$s %2$d</string>
+    <string name="mask_feather">Feather</string>
+    <string name="mask_expansion">Expansion</string>
+    <string name="mask_control_points">Control Points</string>
+    <string name="mask_point_top_left">Top-left</string>
+    <string name="mask_point_bottom_right">Bottom-right</string>
+    <string name="mask_point_center">Center</string>
+    <string name="mask_point_radius">Radius</string>
+    <string name="mask_point_start">Start</string>
+    <string name="mask_point_end">End</string>
+    <string name="mask_point_x_percent" formatted="false">X%</string>
+    <string name="mask_point_y_percent" formatted="false">Y%</string>
+    <string name="mask_point_x_coordinate_cd">%1$s X coordinate percent</string>
+    <string name="mask_point_y_coordinate_cd">%1$s Y coordinate percent</string>
+    <string name="mask_type_rectangle">Rectangle</string>
+    <string name="mask_type_ellipse">Ellipse</string>
+    <string name="mask_type_freehand">Freehand</string>
+    <string name="mask_type_linear_gradient">Linear gradient</string>
+    <string name="mask_type_radial_gradient">Radial gradient</string>
+    <string name="export_quality_small_file">Small file</string>
+    <string name="export_quality_balanced">Balanced</string>
+    <string name="export_quality_best">Best quality</string>
+    <string name="export_capture_format_png">PNG</string>
+    <string name="export_capture_format_jpeg_small">JPEG (smaller)</string>
+    <string name="watermark_position_top_left">Top left</string>
+    <string name="watermark_position_top_right">Top right</string>
+    <string name="watermark_position_bottom_left">Bottom left</string>
+    <string name="watermark_position_bottom_right">Bottom right</string>
+    <string name="watermark_position_center">Center</string>
+    <string name="export_device_tier_standard">Standard</string>
+    <string name="export_device_tier_advanced">Advanced</string>
+    <string name="export_device_tier_premium">Premium</string>
     <string name="export_save_failed_toast">Save failed. Check storage access and try again.</string>
     <string name="ai_processing_format">Processing: %1$s\u2026</string>
     <string name="ai_tools_ready_now">Ready Now</string>

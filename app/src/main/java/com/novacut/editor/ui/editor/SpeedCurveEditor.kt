@@ -468,6 +468,9 @@ private fun SpeedPointNumericEditor(
 ) {
     if (selectedIndex !in curve.points.indices) return
     val point = curve.points[selectedIndex]
+    val positionDescription = stringResource(R.string.speed_point_position_cd)
+    val multiplierDescription = stringResource(R.string.speed_point_multiplier_cd)
+    val deleteDescription = stringResource(R.string.speed_point_delete_cd)
 
     Row(
         modifier = modifier
@@ -477,7 +480,7 @@ private fun SpeedPointNumericEditor(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "Pt ${selectedIndex + 1}",
+            text = stringResource(R.string.speed_point_number, selectedIndex + 1),
             style = MaterialTheme.typography.labelMedium,
             color = Mocha.Peach
         )
@@ -491,12 +494,12 @@ private fun SpeedPointNumericEditor(
                 updated[selectedIndex] = updated[selectedIndex].copy(position = clamped)
                 onCurveChanged(SpeedCurve(updated))
             },
-            label = { Text("Pos %") },
+            label = { Text(stringResource(R.string.speed_point_position)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             singleLine = true,
             modifier = Modifier
                 .weight(1f)
-                .semantics { contentDescription = "Speed point position percent" },
+                .semantics { contentDescription = positionDescription },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = Mocha.Text,
                 unfocusedTextColor = Mocha.Subtext0,
@@ -513,12 +516,12 @@ private fun SpeedPointNumericEditor(
                 updated[selectedIndex] = updated[selectedIndex].copy(speed = newSpeed)
                 onCurveChanged(SpeedCurve(updated))
             },
-            label = { Text("Speed") },
+            label = { Text(stringResource(R.string.speed_title)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             singleLine = true,
             modifier = Modifier
                 .weight(1f)
-                .semantics { contentDescription = "Speed point multiplier value" },
+                .semantics { contentDescription = multiplierDescription },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = Mocha.Text,
                 unfocusedTextColor = Mocha.Subtext0,
@@ -529,7 +532,7 @@ private fun SpeedPointNumericEditor(
         if (selectedIndex > 0 && selectedIndex < curve.points.lastIndex) {
             IconButton(
                 onClick = onDeletePoint,
-                modifier = Modifier.semantics { contentDescription = "Delete speed point" }
+                modifier = Modifier.semantics { contentDescription = deleteDescription }
             ) {
                 Icon(Icons.Default.Delete, contentDescription = null, tint = Mocha.Red)
             }
@@ -552,9 +555,10 @@ private fun SpeedCurveCanvas(
     val currentOnCurveChanged by rememberUpdatedState(onCurveChanged)
     val currentOnPointSelected by rememberUpdatedState(onPointSelected)
 
+    val canvasDescription = stringResource(R.string.speed_curve_canvas_cd)
     androidx.compose.foundation.Canvas(
         modifier = modifier
-            .semantics { contentDescription = "Speed curve canvas. Double-tap to add point, tap to select, drag to move." }
+            .semantics { contentDescription = canvasDescription }
             .pointerInput(Unit) {
                 detectTapGestures(
                     onTap = { offset ->

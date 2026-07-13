@@ -1,0 +1,1 @@
+Localized export, timeline, speed-curve, and mask controls in English and Spanish. Added strict locale key, plural, duplicate, and placeholder checks; debug en-XA/ar-XB layout smoke coverage; and single-action mask switches with localized state descriptions.

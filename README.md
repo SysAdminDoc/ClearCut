@@ -4,9 +4,15 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.131-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.132-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.132 Locale and accessibility parity
+
+- English and Spanish resource keys, plural quantities, and format placeholders now have a strict parity ratchet; the export, timeline, speed-curve, and mask surfaces no longer expose reachable English-only copy or enum labels.
+- Debug builds generate and register expanded en-XA and RTL ar-XB pseudo-locales, with an instrumentation smoke that renders the critical export flow, runs accessibility checks, captures both layouts, and verifies RTL direction.
+- Mask toggles now present one switch action with a localized state description, while export column choices use locale-aware plurals.
 
 ### v3.74.131 Minimal normal-build permissions
 

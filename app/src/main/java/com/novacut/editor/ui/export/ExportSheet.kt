@@ -55,6 +55,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
@@ -219,25 +220,28 @@ fun ExportSheet(
     }
 
     val summaryDetail = when {
-        config.captureFrameOnly -> stringResource(R.string.export_capture_details_format, config.captureFormat.displayName)
+        config.captureFrameOnly -> stringResource(R.string.export_capture_details_format, localizedFrameCaptureFormat(config.captureFormat))
         config.exportAsGif -> stringResource(R.string.export_gif_details_format, config.gifMaxWidth, config.gifFrameRate)
         config.exportStemsOnly -> stringResource(R.string.export_stems_details_format, config.audioCodec.label, config.audioBitrate / 1000)
         config.exportAudioOnly -> stringResource(R.string.export_audio_details_format, config.audioCodec.label, config.audioBitrate / 1000)
-        else -> buildString {
-            append(stringResource(R.string.export_bitrate_format, effectiveConfig.videoBitrate / 1_000_000, bitrateDescription))
-            estimatedSize?.let {
-                append("  •  ~")
-                append(it)
-            }
+        else -> {
+            val bitrate = stringResource(
+                R.string.export_bitrate_format,
+                effectiveConfig.videoBitrate / 1_000_000,
+                bitrateDescription,
+            )
+            if (estimatedSize != null) {
+                stringResource(R.string.export_bitrate_estimated_size, bitrate, estimatedSize)
+            } else bitrate
         }
     }
 
     val outputDetailsPrimary = when {
-        config.captureFrameOnly -> stringResource(R.string.export_capture_details_format, config.captureFormat.displayName)
+        config.captureFrameOnly -> stringResource(R.string.export_capture_details_format, localizedFrameCaptureFormat(config.captureFormat))
         config.exportAsGif -> stringResource(R.string.export_gif_details_format, config.gifMaxWidth, config.gifFrameRate)
         config.exportStemsOnly -> stringResource(R.string.export_stems_details_format, config.audioCodec.label, config.audioBitrate / 1000)
         config.exportAudioOnly -> stringResource(R.string.export_audio_details_format, config.audioCodec.label, config.audioBitrate / 1000)
-        else -> stringResource(R.string.export_codec_quality_format, config.codec.label, config.quality.label)
+        else -> stringResource(R.string.export_codec_quality_format, config.codec.label, localizedExportQuality(config.quality))
     }
 
     val outputDetailsSecondary = when {
@@ -399,7 +403,7 @@ fun ExportSheet(
                 title = stringResource(R.string.export_exporting),
                 body = bodyParts,
                 progress = exportProgress,
-                progressLabel = "$percent%",
+                progressLabel = stringResource(R.string.export_progress_percent, percent),
                 secondaryBody = etaLabel,
                 primaryLabel = stringResource(R.string.export_cancel),
                 onPrimary = onCancel,
@@ -498,12 +502,12 @@ fun ExportSheet(
                     ) {
                         when {
                             config.captureFrameOnly -> {
-                                ExportPill(config.captureFormat.displayName, Mocha.Mauve)
+                                ExportPill(localizedFrameCaptureFormat(config.captureFormat), Mocha.Mauve)
                                 ExportPill(aspectRatio.label, Mocha.Sapphire)
                             }
                             config.exportAsGif -> {
-                                ExportPill("${config.gifFrameRate}fps", Mocha.Mauve)
-                                ExportPill("${config.gifMaxWidth}px", Mocha.Sapphire)
+                                ExportPill(stringResource(R.string.export_fps_value, config.gifFrameRate), Mocha.Mauve)
+                                ExportPill(stringResource(R.string.export_pixels_value, config.gifMaxWidth), Mocha.Sapphire)
                                 ExportPill(aspectRatio.label, Mocha.Teal)
                             }
                             config.exportStemsOnly -> {
@@ -515,9 +519,9 @@ fun ExportSheet(
                                 ExportPill(config.audioCodec.label, Mocha.Sapphire)
                             }
                             else -> {
-                                ExportPill("${config.frameRate}fps", Mocha.Mauve)
+                                ExportPill(stringResource(R.string.export_fps_value, config.frameRate), Mocha.Mauve)
                                 ExportPill(config.codec.label, Mocha.Sapphire)
-                                ExportPill(config.quality.label, Mocha.Teal)
+                                ExportPill(localizedExportQuality(config.quality), Mocha.Teal)
                             }
                         }
                     }
@@ -753,7 +757,7 @@ fun ExportSheet(
                         listOf(10, 15, 20).forEach { frameRate ->
                             FilterChip(
                                 onClick = { onConfigChanged(config.copy(gifFrameRate = frameRate)) },
-                                label = { Text("${frameRate}fps", style = MaterialTheme.typography.labelMedium) },
+                                label = { Text(stringResource(R.string.export_fps_value, frameRate), style = MaterialTheme.typography.labelMedium) },
                                 selected = config.gifFrameRate == frameRate,
                                 colors = exportChipColors(Mocha.Mauve)
                             )
@@ -772,7 +776,7 @@ fun ExportSheet(
                         listOf(320, 480, 640).forEach { maxWidth ->
                             FilterChip(
                                 onClick = { onConfigChanged(config.copy(gifMaxWidth = maxWidth)) },
-                                label = { Text("${maxWidth}px", style = MaterialTheme.typography.labelMedium) },
+                                label = { Text(stringResource(R.string.export_pixels_value, maxWidth), style = MaterialTheme.typography.labelMedium) },
                                 selected = config.gifMaxWidth == maxWidth,
                                 colors = exportChipColors(Mocha.Mauve)
                             )
@@ -856,7 +860,7 @@ fun ExportSheet(
                         listOf(2, 3, 4, 5, 6).forEach { cols ->
                             FilterChip(
                                 onClick = { onConfigChanged(config.copy(contactSheetColumns = cols)) },
-                                label = { Text("$cols columns", style = MaterialTheme.typography.labelMedium) },
+                                label = { Text(pluralStringResource(R.plurals.export_columns_count, cols, cols), style = MaterialTheme.typography.labelMedium) },
                                 selected = config.contactSheetColumns == cols,
                                 colors = exportChipColors(Mocha.Flamingo)
                             )
@@ -888,9 +892,10 @@ fun ExportSheet(
             if (videoModeEnabled && suggestedResolution != null &&
                 (suggestedResolution != config.resolution || (suggestedFps != null && suggestedFps != config.frameRate))
             ) {
-                val label = buildString {
-                    append("Suggested: ${suggestedResolution.label}")
-                    if (suggestedFps != null) append(" ${suggestedFps}fps")
+                val label = if (suggestedFps != null) {
+                    stringResource(R.string.export_suggested_resolution_fps, suggestedResolution.label, suggestedFps)
+                } else {
+                    stringResource(R.string.export_suggested_resolution, suggestedResolution.label)
                 }
                 val upscaleWarning = config.resolution.height > suggestedResolution.height
                 Surface(
@@ -928,14 +933,14 @@ fun ExportSheet(
                             )
                             if (upscaleWarning) {
                                 Text(
-                                    "Export exceeds source resolution",
+                                    stringResource(R.string.export_exceeds_source_resolution),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = Mocha.Subtext0
                                 )
                             }
                         }
                         Text(
-                            "Apply",
+                            stringResource(R.string.ai_apply),
                             style = MaterialTheme.typography.labelMedium,
                             color = Mocha.Mauve
                         )
@@ -974,7 +979,7 @@ fun ExportSheet(
                         listOf(24, 30, 60).forEach { frameRate ->
                             FilterChip(
                                 onClick = { onConfigChanged(config.copy(frameRate = frameRate)) },
-                                label = { Text("${frameRate}fps", style = MaterialTheme.typography.labelMedium) },
+                                label = { Text(stringResource(R.string.export_fps_value, frameRate), style = MaterialTheme.typography.labelMedium) },
                                 selected = config.frameRate == frameRate,
                                 colors = exportChipColors(Mocha.Mauve)
                             )
@@ -1047,7 +1052,7 @@ fun ExportSheet(
                         ExportQuality.entries.forEach { quality ->
                             FilterChip(
                                 onClick = { onConfigChanged(config.copy(quality = quality)) },
-                                label = { Text(quality.label, style = MaterialTheme.typography.labelMedium) },
+                                label = { Text(localizedExportQuality(quality), style = MaterialTheme.typography.labelMedium) },
                                 selected = config.quality == quality,
                                 colors = exportChipColors(Mocha.Teal)
                             )
@@ -1210,7 +1215,7 @@ fun ExportSheet(
                         onClick = {
                             onConfigChanged(config.copy(targetSizeBytes = null, bitrateOverride = null))
                         },
-                        label = { Text("Off", style = MaterialTheme.typography.labelMedium) },
+                        label = { Text(stringResource(R.string.settings_off), style = MaterialTheme.typography.labelMedium) },
                         selected = config.targetSizeBytes == null,
                         colors = exportChipColors(Mocha.Pink)
                     )
@@ -1228,7 +1233,7 @@ fun ExportSheet(
                 if (config.targetSizeBytes != null && totalDurationMs > 0L) {
                     val mbps = effectiveConfig.videoBitrate / 1_000_000.0
                     Text(
-                        text = "Target bitrate: %.1f Mbps".format(mbps),
+                        text = stringResource(R.string.export_target_bitrate, mbps),
                         color = Mocha.Subtext0,
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -1247,17 +1252,17 @@ fun ExportSheet(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     listOf(
-                        "{name}" to "Name",
-                        "{name}_{date}" to "Name + Date",
-                        "{name}_{date}_{time}" to "Name + Timestamp",
-                        "{name}_{res}_{fps}" to "Name + Specs",
-                        "{name}_{preset}" to "Name + Preset",
-                        "{name}_{duration}" to "Name + Duration",
-                        "{name}_{sizeMB}" to "Name + Size"
-                    ).forEach { (tmpl, label) ->
+                        "{name}" to R.string.export_filename_name,
+                        "{name}_{date}" to R.string.export_filename_name_date,
+                        "{name}_{date}_{time}" to R.string.export_filename_name_timestamp,
+                        "{name}_{res}_{fps}" to R.string.export_filename_name_specs,
+                        "{name}_{preset}" to R.string.export_filename_name_preset,
+                        "{name}_{duration}" to R.string.export_filename_name_duration,
+                        "{name}_{sizeMB}" to R.string.export_filename_name_size
+                    ).forEach { (tmpl, labelRes) ->
                         FilterChip(
                             onClick = { onConfigChanged(config.copy(filenameTemplate = tmpl)) },
-                            label = { Text(label, style = MaterialTheme.typography.labelMedium) },
+                            label = { Text(stringResource(labelRes), style = MaterialTheme.typography.labelMedium) },
                             selected = config.filenameTemplate == tmpl,
                             colors = exportChipColors(Mocha.Lavender)
                         )
@@ -1571,7 +1576,7 @@ private fun DeviceTierOutlook(hint: EncoderCapabilityProbe.DeviceEncodingTierHin
                     modifier = Modifier.size(18.dp)
                 )
                 Text(
-                    text = stringResource(R.string.export_device_tier_title, hint.tier.displayName),
+                    text = stringResource(R.string.export_device_tier_title, localizedDeviceTier(hint.tier)),
                     color = Mocha.Text,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold
@@ -1833,7 +1838,7 @@ private fun WatermarkSection(
                 WatermarkPosition.entries.forEach { pos ->
                     FilterChip(
                         onClick = { onWatermarkChanged(watermark.copy(position = pos)) },
-                        label = { Text(pos.displayName, style = MaterialTheme.typography.labelMedium) },
+                        label = { Text(localizedWatermarkPosition(pos), style = MaterialTheme.typography.labelMedium) },
                         selected = watermark.position == pos,
                         colors = exportChipColors(Mocha.Rosewater)
                     )
@@ -2205,6 +2210,43 @@ private fun exportChipColors(accent: Color) = FilterChipDefaults.filterChipColor
     labelColor = Mocha.Subtext0,
     selectedContainerColor = accent.copy(alpha = 0.16f),
     selectedLabelColor = accent
+)
+
+@Composable
+private fun localizedExportQuality(quality: ExportQuality): String = stringResource(
+    when (quality) {
+        ExportQuality.LOW -> R.string.export_quality_small_file
+        ExportQuality.MEDIUM -> R.string.export_quality_balanced
+        ExportQuality.HIGH -> R.string.export_quality_best
+    }
+)
+
+@Composable
+private fun localizedFrameCaptureFormat(format: FrameCaptureFormat): String = stringResource(
+    when (format) {
+        FrameCaptureFormat.PNG -> R.string.export_capture_format_png
+        FrameCaptureFormat.JPEG -> R.string.export_capture_format_jpeg_small
+    }
+)
+
+@Composable
+private fun localizedWatermarkPosition(position: WatermarkPosition): String = stringResource(
+    when (position) {
+        WatermarkPosition.TOP_LEFT -> R.string.watermark_position_top_left
+        WatermarkPosition.TOP_RIGHT -> R.string.watermark_position_top_right
+        WatermarkPosition.BOTTOM_LEFT -> R.string.watermark_position_bottom_left
+        WatermarkPosition.BOTTOM_RIGHT -> R.string.watermark_position_bottom_right
+        WatermarkPosition.CENTER -> R.string.watermark_position_center
+    }
+)
+
+@Composable
+private fun localizedDeviceTier(tier: EncoderCapabilityProbe.DeviceEncodingTier): String = stringResource(
+    when (tier) {
+        EncoderCapabilityProbe.DeviceEncodingTier.STANDARD -> R.string.export_device_tier_standard
+        EncoderCapabilityProbe.DeviceEncodingTier.ADVANCED -> R.string.export_device_tier_advanced
+        EncoderCapabilityProbe.DeviceEncodingTier.PREMIUM -> R.string.export_device_tier_premium
+    }
 )
 
 private fun estimateExportBytes(totalDurationMs: Long, config: ExportConfig): Long {

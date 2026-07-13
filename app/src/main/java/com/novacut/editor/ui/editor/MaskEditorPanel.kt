@@ -5,6 +5,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -52,7 +53,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -108,7 +111,7 @@ fun MaskEditorPanel(
                 ) {
                     MaskType.entries.forEach { type ->
                         DropdownMenuItem(
-                            text = { Text(type.displayName) },
+                            text = { Text(localizedMaskTypeName(type)) },
                             onClick = {
                                 onMaskAdded(type)
                                 showAddMenu = false
@@ -146,7 +149,7 @@ fun MaskEditorPanel(
                                 accent = Mocha.Blue
                             )
                             PremiumPanelPill(
-                                text = selectedMask?.type?.displayName ?: stringResource(R.string.mask_selection_none),
+                                text = if (selectedMask != null) localizedMaskTypeName(selectedMask.type) else stringResource(R.string.mask_selection_none),
                                 accent = if (selectedMask != null) Mocha.Mauve else Mocha.Subtext0
                             )
                         }
@@ -182,7 +185,7 @@ fun MaskEditorPanel(
                                 accent = Mocha.Blue
                             )
                             PremiumPanelPill(
-                                text = selectedMask?.type?.displayName ?: stringResource(R.string.mask_selection_none),
+                                text = if (selectedMask != null) localizedMaskTypeName(selectedMask.type) else stringResource(R.string.mask_selection_none),
                                 accent = if (selectedMask != null) Mocha.Mauve else Mocha.Subtext0
                             )
                         }
@@ -239,10 +242,10 @@ fun MaskEditorPanel(
                     ) {
                         androidx.compose.material3.Icon(
                             imageVector = maskTypeIcon(type),
-                            contentDescription = type.displayName
+                            contentDescription = localizedMaskTypeName(type)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = type.displayName)
+                        Text(text = localizedMaskTypeName(type))
                     }
                 }
             }
@@ -278,7 +281,7 @@ fun MaskEditorPanel(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = selectedMask.type.displayName,
+                                    text = localizedMaskTypeName(selectedMask.type),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = Mocha.Subtext0
                                 )
@@ -311,7 +314,7 @@ fun MaskEditorPanel(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = selectedMask.type.displayName,
+                                    text = localizedMaskTypeName(selectedMask.type),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = Mocha.Subtext0
                                 )
@@ -335,7 +338,7 @@ fun MaskEditorPanel(
                 }
 
                 MaskSliderRow(
-                    label = "Feather",
+                    label = stringResource(R.string.mask_feather),
                     value = selectedMask.feather,
                     min = 0f,
                     max = 100f,
@@ -343,7 +346,7 @@ fun MaskEditorPanel(
                     onChanged = { onMaskUpdated(selectedMask.copy(feather = it)) }
                 )
                 MaskSliderRow(
-                    label = "Opacity",
+                    label = stringResource(R.string.tool_opacity),
                     value = selectedMask.opacity,
                     min = 0f,
                     max = 1f,
@@ -352,7 +355,7 @@ fun MaskEditorPanel(
                     valueFormatter = { "%.0f%%".format(it * 100f) }
                 )
                 MaskSliderRow(
-                    label = "Expansion",
+                    label = stringResource(R.string.mask_expansion),
                     value = selectedMask.expansion,
                     min = -50f,
                     max = 50f,
@@ -458,12 +461,12 @@ private fun MaskChip(
         ) {
             androidx.compose.material3.Icon(
                 imageVector = maskTypeIcon(mask.type),
-                contentDescription = mask.type.displayName,
+                contentDescription = localizedMaskTypeName(mask.type),
                 tint = accent
             )
             Column {
                 Text(
-                    text = mask.type.displayName,
+                    text = localizedMaskTypeName(mask.type),
                     style = MaterialTheme.typography.labelLarge,
                     color = if (isSelected) accent else Mocha.Text
                 )
@@ -525,6 +528,7 @@ private fun MaskToggleRow(
     accent: Color,
     onCheckedChange: (Boolean) -> Unit
 ) {
+    val switchState = stringResource(if (checked) R.string.settings_on else R.string.settings_off)
     Surface(
         color = Mocha.PanelRaised,
         shape = RoundedCornerShape(18.dp),
@@ -533,7 +537,12 @@ private fun MaskToggleRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { onCheckedChange(!checked) }
+                .semantics { stateDescription = switchState }
+                .toggleable(
+                    value = checked,
+                    role = Role.Switch,
+                    onValueChange = onCheckedChange
+                )
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
@@ -556,7 +565,7 @@ private fun MaskToggleRow(
 
             Switch(
                 checked = checked,
-                onCheckedChange = onCheckedChange,
+                onCheckedChange = null,
                 colors = SwitchDefaults.colors(checkedTrackColor = accent)
             )
         }
@@ -569,9 +578,15 @@ private fun MaskPointCoordinateEditor(
     onMaskUpdated: (Mask) -> Unit
 ) {
     val pointLabels = when (mask.type) {
-        MaskType.RECTANGLE -> if (mask.points.size >= 2) listOf("Top-Left", "Bottom-Right") else emptyList()
-        MaskType.ELLIPSE -> if (mask.points.size >= 2) listOf("Center", "Radius") else emptyList()
-        MaskType.LINEAR_GRADIENT, MaskType.RADIAL_GRADIENT -> if (mask.points.size >= 2) listOf("Start", "End") else emptyList()
+        MaskType.RECTANGLE -> if (mask.points.size >= 2) {
+            listOf(stringResource(R.string.mask_point_top_left), stringResource(R.string.mask_point_bottom_right))
+        } else emptyList()
+        MaskType.ELLIPSE -> if (mask.points.size >= 2) {
+            listOf(stringResource(R.string.mask_point_center), stringResource(R.string.mask_point_radius))
+        } else emptyList()
+        MaskType.LINEAR_GRADIENT, MaskType.RADIAL_GRADIENT -> if (mask.points.size >= 2) {
+            listOf(stringResource(R.string.mask_point_start), stringResource(R.string.mask_point_end))
+        } else emptyList()
         else -> emptyList()
     }
     if (pointLabels.isEmpty()) return
@@ -581,13 +596,15 @@ private fun MaskPointCoordinateEditor(
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Text(
-            text = "Control Points",
+            text = stringResource(R.string.mask_control_points),
             style = MaterialTheme.typography.labelMedium,
             color = Mocha.Subtext0
         )
         pointLabels.forEachIndexed { index, label ->
             if (index >= mask.points.size) return@forEachIndexed
             val point = mask.points[index]
+            val xDescription = stringResource(R.string.mask_point_x_coordinate_cd, label)
+            val yDescription = stringResource(R.string.mask_point_y_coordinate_cd, label)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -608,13 +625,13 @@ private fun MaskPointCoordinateEditor(
                         updatedPoints[index] = updatedPoints[index].copy(x = newX)
                         onMaskUpdated(mask.copy(points = updatedPoints))
                     },
-                    label = { Text("X%") },
+                    label = { Text(stringResource(R.string.mask_point_x_percent)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
                     modifier = Modifier
                         .weight(1f)
                         .height(48.dp)
-                        .semantics { contentDescription = "$label X coordinate percent" },
+                        .semantics { contentDescription = xDescription },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Mocha.Text,
                         unfocusedTextColor = Mocha.Subtext0,
@@ -631,13 +648,13 @@ private fun MaskPointCoordinateEditor(
                         updatedPoints[index] = updatedPoints[index].copy(y = newY)
                         onMaskUpdated(mask.copy(points = updatedPoints))
                     },
-                    label = { Text("Y%") },
+                    label = { Text(stringResource(R.string.mask_point_y_percent)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
                     modifier = Modifier
                         .weight(1f)
                         .height(48.dp)
-                        .semantics { contentDescription = "$label Y coordinate percent" },
+                        .semantics { contentDescription = yDescription },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Mocha.Text,
                         unfocusedTextColor = Mocha.Subtext0,
@@ -657,6 +674,17 @@ private fun maskTypeIcon(type: MaskType): ImageVector = when (type) {
     MaskType.LINEAR_GRADIENT -> Icons.Default.Gradient
     MaskType.RADIAL_GRADIENT -> Icons.Default.BlurCircular
 }
+
+@Composable
+private fun localizedMaskTypeName(type: MaskType): String = stringResource(
+    when (type) {
+        MaskType.RECTANGLE -> R.string.mask_type_rectangle
+        MaskType.ELLIPSE -> R.string.mask_type_ellipse
+        MaskType.FREEHAND -> R.string.mask_type_freehand
+        MaskType.LINEAR_GRADIENT -> R.string.mask_type_linear_gradient
+        MaskType.RADIAL_GRADIENT -> R.string.mask_type_radial_gradient
+    }
+)
 
 /**
  * Preview overlay for drawing masks on the video preview.

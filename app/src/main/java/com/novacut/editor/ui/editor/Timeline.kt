@@ -89,6 +89,8 @@ private fun TrimNumericInputRow(
     }
     var startEditActive by remember(clipId) { mutableStateOf(false) }
     var endEditActive by remember(clipId) { mutableStateOf(false) }
+    val trimStartDescription = stringResource(R.string.timeline_trim_start_seconds_cd)
+    val trimEndDescription = stringResource(R.string.timeline_trim_end_seconds_cd)
 
     LaunchedEffect(clipId, trimStartMs, startEditActive) {
         if (!startEditActive) startText = formatTrimTime(trimStartMs)
@@ -103,7 +105,7 @@ private fun TrimNumericInputRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "In:",
+            text = stringResource(R.string.timeline_trim_in),
             style = MaterialTheme.typography.labelSmall,
             color = Mocha.Peach
         )
@@ -132,14 +134,14 @@ private fun TrimNumericInputRow(
                     }
                     if (!focus.isFocused) startText = formatTrimTime(trimStartMs)
                 }
-                .semantics { contentDescription = "Trim start time in seconds" },
+                .semantics { contentDescription = trimStartDescription },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Mocha.Peach,
                 unfocusedBorderColor = Mocha.Surface1
             )
         )
         Text(
-            text = "Out:",
+            text = stringResource(R.string.timeline_trim_out),
             style = MaterialTheme.typography.labelSmall,
             color = Mocha.Peach
         )
@@ -168,7 +170,7 @@ private fun TrimNumericInputRow(
                     }
                     if (!focus.isFocused) endText = formatTrimTime(trimEndMs)
                 }
-                .semantics { contentDescription = "Trim end time in seconds" },
+                .semantics { contentDescription = trimEndDescription },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Mocha.Peach,
                 unfocusedBorderColor = Mocha.Surface1
@@ -234,7 +236,11 @@ private fun TimelineHeaderSummary(
             overflow = TextOverflow.Ellipsis
         )
         Text(
-            text = "${formatTimelineTime(playheadMs)} / ${formatTimelineTime(totalDurationMs)}",
+            text = stringResource(
+                R.string.timeline_playhead_total,
+                formatTimelineTime(playheadMs),
+                formatTimelineTime(totalDurationMs),
+            ),
             color = Mocha.Subtext0,
             style = MaterialTheme.typography.bodySmall,
             maxLines = 1,
@@ -640,16 +646,21 @@ fun Timeline(
                         else -> null
                     }
                     Text(
-                        text = buildString {
-                            append(modeLabel)
-                            append("  •  ")
-                            append((zoomLevel * 100f).roundToInt())
-                            append("%  •  ")
-                            append(markerCountLabel)
-                            if (snapLabel != null) {
-                                append("  •  ")
-                                append(snapLabel)
-                            }
+                        text = if (snapLabel != null) {
+                            stringResource(
+                                R.string.timeline_status_with_snap,
+                                modeLabel,
+                                (zoomLevel * 100f).roundToInt(),
+                                markerCountLabel,
+                                snapLabel,
+                            )
+                        } else {
+                            stringResource(
+                                R.string.timeline_status,
+                                modeLabel,
+                                (zoomLevel * 100f).roundToInt(),
+                                markerCountLabel,
+                            )
                         },
                         color = if (isTrimMode) Mocha.Peach else Mocha.Subtext0,
                         style = MaterialTheme.typography.labelSmall,
@@ -860,7 +871,11 @@ fun Timeline(
                                                     text = if (isCompactTimeline) {
                                                         compactTrackLabelForType(track.type)
                                                     } else {
-                                                        "${compactTrackLabelForType(track.type)} ${track.index + 1}"
+                                                        stringResource(
+                                                            R.string.timeline_track_number,
+                                                            compactTrackLabelForType(track.type),
+                                                            track.index + 1,
+                                                        )
                                                     },
                                                     color = Mocha.Text,
                                                     style = if (isCompactTimeline) {
@@ -1941,7 +1956,7 @@ fun Timeline(
                                                 if (showEffectsBadge) {
                                                     Spacer(modifier = Modifier.width(6.dp))
                                                     TimelineClipBadge(
-                                                        text = "FX ${clip.effects.size}",
+                                                        text = stringResource(R.string.timeline_effect_count_badge, clip.effects.size),
                                                         accent = Mocha.Mauve,
                                                         compact = compactClipBadges
                                                     )
@@ -1970,7 +1985,7 @@ fun Timeline(
                                                     )
                                                     if (showKeyframeBadge) {
                                                         TimelineClipBadge(
-                                                            text = "${clip.keyframes.size} KF",
+                                                            text = stringResource(R.string.timeline_keyframe_count_badge, clip.keyframes.size),
                                                             accent = Mocha.Rosewater,
                                                             compact = compactClipBadges
                                                         )
