@@ -4,9 +4,14 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.132-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.133-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.133 Narrow lint workarounds
+
+- Independently re-tested every disabled Compose/lifecycle source detector and restored `RememberInComposition`, `AutoboxingStateCreation`, and `UnrememberedMutableState` across main, unit-test, and Android-test analysis.
+- The three remaining binary-incompatible detectors have exact current failure evidence, an opt-in per-detector Gradle probe, and a dependency-version ratchet that forces review after AGP, Kotlin, Compose, or lifecycle upgrades.
 
 ### v3.74.132 Locale and accessibility parity
 

@@ -1,0 +1,1 @@
+Re-enabled three formerly suppressed Compose lint detectors after independent validation. Kept only three proven binary-incompatible detectors, with a one-at-a-time probe and dependency-version ratchet for mandatory revalidation after upgrades.

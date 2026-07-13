@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ClearCut</string>
-    <string name="app_version">v3.74.132</string>
+    <string name="app_version">v3.74.133</string>
 
     <!-- Importación de listas de cortes y marcadores -->
     <string name="cut_list_import_empty">No hay nada que importar: primero pega rangos de tiempo o marcadores</string>

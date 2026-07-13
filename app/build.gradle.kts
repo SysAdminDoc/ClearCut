@@ -30,8 +30,8 @@ android {
         applicationId = "com.novacut.editor"
         minSdk = 26
         targetSdk = 36
-        versionCode = 265
-        versionName = "3.74.132"
+        versionCode = 266
+        versionName = "3.74.133"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // Passive, opt-in update check for sideload / GitHub-release installs.
@@ -129,19 +129,21 @@ android {
     }
 
     lint {
-        // androidx.lifecycle's NullSafeMutableLiveData detector crashes under
-        // the current Kotlin 2.1 / AGP 8.7 lint stack, and ClearCut has no
-        // LiveData call sites for this detector to inspect. The Compose
-        // detectors below currently crash in UAST with the same stack rather
-        // than reporting actionable source findings.
-        disable += listOf(
+        // Independently re-probed on 2026-07-12 with AGP 8.7.3, Kotlin 2.1.21,
+        // lifecycle 2.10.0, and Compose BOM 2026.06.00. Each detector throws an
+        // IncompatibleClassChangeError in AiFeatures.kt because its lint jar
+        // expects a different Kotlin analysis API. Pass -PcleancutLintProbe=<id>
+        // to enable exactly one workaround detector after a dependency upgrade.
+        val sourceDetectorCrashWorkarounds = listOf(
             "NullSafeMutableLiveData",
             "FrequentlyChangingValue",
-            "FlowOperatorInvokedInComposition",
-            "RememberInComposition",
-            "AutoboxingStateCreation",
-            "UnrememberedMutableState"
+            "FlowOperatorInvokedInComposition"
         )
+        val probeDetector = providers.gradleProperty("cleancutLintProbe").orNull
+        require(probeDetector == null || probeDetector in sourceDetectorCrashWorkarounds) {
+            "Unknown cleancutLintProbe detector: $probeDetector"
+        }
+        disable += sourceDetectorCrashWorkarounds.filterNot { it == probeDetector }
         baseline = file("lint-baseline.xml")
         abortOnError = true
         htmlReport = true
