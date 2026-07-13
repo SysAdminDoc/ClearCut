@@ -46,7 +46,7 @@ class ProjectDatabaseMigrationTest {
                 *ProjectDatabase.ALL_MIGRATIONS
             ).use { db ->
                 db.query(
-                    "SELECT name, notes, deletedAtEpochMs FROM projects WHERE id = ?",
+                    "SELECT name, notes, deletedAtEpochMs, frameRateNumerator, frameRateDenominator FROM projects WHERE id = ?",
                     arrayOf(projectId(startVersion))
                 ).use { cursor ->
                     assertTrue("Project row from v$startVersion should survive", cursor.moveToFirst())
@@ -57,6 +57,8 @@ class ProjectDatabaseMigrationTest {
                     } else {
                         assertTrue(cursor.isNull(2))
                     }
+                    assertEquals(24, cursor.getInt(3))
+                    assertEquals(1, cursor.getInt(4))
                     assertFalse(cursor.moveToNext())
                 }
 
@@ -84,7 +86,7 @@ class ProjectDatabaseMigrationTest {
             projectId(version),
             "Migrated v$version",
             "RATIO_16_9",
-            30,
+            24,
             "FHD_1080P",
             1_000L,
             2_000L,
@@ -134,7 +136,7 @@ class ProjectDatabaseMigrationTest {
 
     companion object {
         private const val COMMITTED_SCHEMA_START_VERSION = 4
-        private const val CURRENT_SCHEMA_VERSION = 8
+        private const val CURRENT_SCHEMA_VERSION = 9
         private const val DELETED_AT = 12_345L
     }
 }

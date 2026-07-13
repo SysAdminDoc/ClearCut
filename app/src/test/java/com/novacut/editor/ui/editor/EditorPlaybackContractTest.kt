@@ -124,6 +124,9 @@ class EditorPlaybackContractTest {
         assertTrue(cancelBlock.contains("onSlipEditCanceled()"))
         assertTrue(cancelBlock.contains("onSlideEditCanceled()"))
         assertFalse(cancelBlock.contains("onTrimDragEnded()"))
+        assertTrue(timeline.contains("totalDeltaXPx += dragAmount.x"))
+        assertTrue(timeline.contains("val currentClip = gestureStartClip ?: return@detectDragGestures"))
+        assertTrue(timeline.contains("deltaXPx = totalDeltaXPx"))
     }
 
     @Test

@@ -545,6 +545,8 @@ class ProjectListViewModel @Inject constructor(
                     name = normalizeProjectName(template.name),
                     aspectRatio = template.aspectRatio,
                     frameRate = template.frameRate,
+                    frameRateNumerator = template.frameRateNumerator,
+                    frameRateDenominator = template.frameRateDenominator,
                     resolution = template.resolution,
                     templateId = template.id
                 )

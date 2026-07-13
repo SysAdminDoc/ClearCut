@@ -229,7 +229,8 @@ class AudioMixerDelegate(
                     return@launch
                 }
 
-                val beatTimestamps = analysis.beats.map { it.timestampMs }
+                val timebase = stateFlow.value.project.timelineTimebase
+                val beatTimestamps = analysis.beats.map { timebase.snapMs(it.timestampMs) }.distinct()
                 stateFlow.update { it.copy(beatMarkers = beatTimestamps, isAnalyzingBeats = false) }
                 saveProject()
                 val bpmText = if (analysis.bpm > 0f) {

@@ -257,7 +257,10 @@ class V369Delegate(
         if (cands.isEmpty()) return
         saveUndoState("Apply auto-chapters")
         stateFlow.update {
-            val markers = cands.map { ChapterMarker(timeMs = it.timeMs, title = it.title) }
+            val timebase = it.project.timelineTimebase
+            val markers = cands.map {
+                ChapterMarker(timeMs = timebase.snapMs(it.timeMs), title = it.title)
+            }
             it.copy(chapterMarkers = markers)
         }
         saveProject()

@@ -12,6 +12,7 @@ import com.novacut.editor.model.MaskKeyframe
 import com.novacut.editor.model.MotionTrackPoint
 import com.novacut.editor.model.MotionTrackingData
 import com.novacut.editor.model.Track
+import com.novacut.editor.model.TimelineTimebase
 import kotlin.math.abs
 import kotlin.math.ceil
 
@@ -169,12 +170,16 @@ internal fun removeClipsWithoutRipple(tracks: List<Track>, clipIds: Set<String>)
     }
 }
 
-internal fun rippleDeleteClips(tracks: List<Track>, clipIds: Set<String>): List<Track> {
+internal fun rippleDeleteClips(
+    tracks: List<Track>,
+    clipIds: Set<String>,
+    timebase: TimelineTimebase? = null,
+): List<Track> {
     if (clipIds.isEmpty()) return tracks
     return tracks.map { track ->
         val removedRanges = track.clips
             .filter { it.id in clipIds }
-            .map { it.timelineStartMs to it.timelineEndMs }
+            .map { timebase.toTimelineUnit(it.timelineStartMs) to timebase.toTimelineUnit(it.timelineEndMs) }
             .sortedBy { it.first }
         if (removedRanges.isEmpty()) return@map track
 
@@ -184,10 +189,14 @@ internal fun rippleDeleteClips(tracks: List<Track>, clipIds: Set<String>): List<
                 .map { clip ->
                     val shiftMs = mergedDurationEndingAtOrBefore(
                         ranges = removedRanges,
-                        positionMs = clip.timelineStartMs
+                        positionMs = timebase.toTimelineUnit(clip.timelineStartMs)
                     )
                     if (shiftMs == 0L) clip
-                    else clip.copy(timelineStartMs = (clip.timelineStartMs - shiftMs).coerceAtLeast(0L))
+                    else clip.copy(
+                        timelineStartMs = timebase.fromTimelineUnit(
+                            (timebase.toTimelineUnit(clip.timelineStartMs) - shiftMs).coerceAtLeast(0L)
+                        )
+                    )
                 }
         )
     }
@@ -217,33 +226,40 @@ private fun mergedDurationEndingAtOrBefore(
 /** Move a global timeline marker with one track's ripple edit. */
 internal fun rippleTimelinePosition(
     positionMs: Long,
-    removedRanges: List<Pair<Long, Long>>
+    removedRanges: List<Pair<Long, Long>>,
+    timebase: TimelineTimebase? = null,
 ): Long? {
     val normalized = removedRanges
+        .map { (start, end) -> timebase.toTimelineUnit(start) to timebase.toTimelineUnit(end) }
         .filter { (start, end) -> end > start }
         .sortedBy { it.first }
-    if (normalized.any { (start, end) -> positionMs >= start && positionMs < end }) {
+    val position = timebase.toTimelineUnit(positionMs)
+    if (normalized.any { (start, end) -> position >= start && position < end }) {
         return null
     }
-    return (positionMs - mergedDurationEndingAtOrBefore(normalized, positionMs))
-        .coerceAtLeast(0L)
+    return timebase.fromTimelineUnit(
+        (position - mergedDurationEndingAtOrBefore(normalized, position)).coerceAtLeast(0L)
+    )
 }
 
 /** Keep preview playback attached to the edit point after a ripple delete. */
 internal fun ripplePlaybackPosition(
     positionMs: Long,
-    removedRanges: List<Pair<Long, Long>>
+    removedRanges: List<Pair<Long, Long>>,
+    timebase: TimelineTimebase? = null,
 ): Long {
     val normalized = removedRanges
+        .map { (start, end) -> timebase.toTimelineUnit(start) to timebase.toTimelineUnit(end) }
         .filter { (start, end) -> end > start }
         .sortedBy { it.first }
+    val position = timebase.toTimelineUnit(positionMs)
     var removedBeforeMs = 0L
     var currentStartMs: Long? = null
     var currentEndMs = 0L
 
     fun consumeRange(startMs: Long, endMs: Long): Long? {
-        if (positionMs < startMs) return (positionMs - removedBeforeMs).coerceAtLeast(0L)
-        if (positionMs < endMs) return (startMs - removedBeforeMs).coerceAtLeast(0L)
+        if (position < startMs) return (position - removedBeforeMs).coerceAtLeast(0L)
+        if (position < endMs) return (startMs - removedBeforeMs).coerceAtLeast(0L)
         removedBeforeMs += (endMs - startMs).coerceAtLeast(0L)
         return null
     }
@@ -255,16 +271,22 @@ internal fun ripplePlaybackPosition(
         } else if (startMs <= currentEndMs) {
             currentEndMs = maxOf(currentEndMs, endMs)
         } else {
-            consumeRange(currentStartMs!!, currentEndMs)?.let { return it }
+            consumeRange(currentStartMs!!, currentEndMs)?.let { return timebase.fromTimelineUnit(it) }
             currentStartMs = startMs
             currentEndMs = endMs
         }
     }
     currentStartMs?.let { startMs ->
-        consumeRange(startMs, currentEndMs)?.let { return it }
+        consumeRange(startMs, currentEndMs)?.let { return timebase.fromTimelineUnit(it) }
     }
-    return (positionMs - removedBeforeMs).coerceAtLeast(0L)
+    return timebase.fromTimelineUnit((position - removedBeforeMs).coerceAtLeast(0L))
 }
+
+private fun TimelineTimebase?.toTimelineUnit(timeMs: Long): Long =
+    this?.frameIndexAt(timeMs) ?: timeMs
+
+private fun TimelineTimebase?.fromTimelineUnit(unit: Long): Long =
+    this?.timeMsAt(unit) ?: unit
 
 /** Verify that both split boundaries are safe for every linked member. */
 internal fun canDeleteTimelineRangeAtomically(
@@ -669,15 +691,31 @@ internal fun slipLinkedClipsOnTimeline(
     tracks: List<Track>,
     targetClipIds: Set<String>,
     slipAmountMs: Long,
+    timebase: TimelineTimebase? = null,
 ): List<Track> {
+    val requestedFrameDelta = timebase?.let {
+        val sign = if (slipAmountMs < 0L) -1L else 1L
+        sign * it.frameIndexAt(kotlin.math.abs(slipAmountMs))
+    }
     var changed = false
     val updatedTracks = tracks.map { track ->
         val updatedClips = track.clips.map clipMap@{ clip ->
             if (clip.id !in targetClipIds) return@clipMap clip
             val sourceWindow = (clip.trimEndMs - clip.trimStartMs).coerceAtLeast(100L)
             val maxTrimStart = (clip.sourceDurationMs - sourceWindow).coerceAtLeast(0L)
-            val newTrimStart = (clip.trimStartMs + slipAmountMs).coerceIn(0L, maxTrimStart)
-            val newTrimEnd = newTrimStart + sourceWindow
+            val newTrimStart: Long
+            val newTrimEnd: Long
+            if (timebase != null && requestedFrameDelta != null) {
+                val startFrame = timebase.frameIndexAt(clip.trimStartMs)
+                val endFrame = timebase.frameIndexAt(clip.trimEndMs)
+                val maximumEndFrame = timebase.frameIndexAtOrBefore(clip.sourceDurationMs)
+                val appliedFrames = requestedFrameDelta.coerceIn(-startFrame, maximumEndFrame - endFrame)
+                newTrimStart = timebase.timeMsAt(startFrame + appliedFrames)
+                newTrimEnd = timebase.timeMsAt(endFrame + appliedFrames)
+            } else {
+                newTrimStart = (clip.trimStartMs + slipAmountMs).coerceIn(0L, maxTrimStart)
+                newTrimEnd = newTrimStart + sourceWindow
+            }
             if (newTrimStart == clip.trimStartMs && newTrimEnd == clip.trimEndMs) {
                 return@clipMap clip
             }
@@ -705,22 +743,44 @@ private fun trimLinkedClipStarts(
     val simulatedAnchor = simulatedAnchorTrack.clips.firstOrNull { it.id == anchorClipId }
         ?: return tracks
     val requestedDeltaMs = simulatedAnchor.timelineStartMs - anchor.clip.timelineStartMs
-    if (requestedDeltaMs == 0L) return tracks
+    return trimLinkedClipStartToTimelineTime(
+        tracks,
+        anchorClipId,
+        targetClipIds,
+        anchor.clip.timelineStartMs + requestedDeltaMs,
+    )
+}
+
+internal fun trimLinkedClipStartToTimelineTime(
+    tracks: List<Track>,
+    anchorClipId: String,
+    targetClipIds: Set<String>,
+    requestedTimelineStartMs: Long,
+    timebase: TimelineTimebase? = null,
+): List<Track> {
+    val anchor = tracks.findClipLocation(anchorClipId) ?: return tracks
+    val requestedDelta = timebase?.let {
+        it.frameIndexAt(requestedTimelineStartMs) - it.frameIndexAt(anchor.clip.timelineStartMs)
+    } ?: (requestedTimelineStartMs - anchor.clip.timelineStartMs)
+    if (requestedDelta == 0L) return tracks
 
     val resolvedDeltas = targetClipIds.mapNotNull { clipId ->
         val location = tracks.findClipLocation(clipId) ?: return@mapNotNull null
         val simulatedTrack = trimClipStartToTimelineStart(
             track = location.track,
             clipId = clipId,
-            requestedTimelineStartMs = location.clip.timelineStartMs + requestedDeltaMs
+            requestedTimelineStartMs = timebase?.addFrames(location.clip.timelineStartMs, requestedDelta)
+                ?: location.clip.timelineStartMs + requestedDelta
         )
         val simulatedClip = simulatedTrack.clips.firstOrNull { it.id == clipId }
             ?: return@mapNotNull null
-        simulatedClip.timelineStartMs - location.clip.timelineStartMs
+        timebase?.let {
+            it.frameIndexAt(simulatedClip.timelineStartMs) - it.frameIndexAt(location.clip.timelineStartMs)
+        } ?: (simulatedClip.timelineStartMs - location.clip.timelineStartMs)
     }
     if (resolvedDeltas.size != targetClipIds.size) return tracks
-    val sharedDeltaMs = mostRestrictiveSharedDelta(requestedDeltaMs, resolvedDeltas)
-    if (sharedDeltaMs == 0L) return tracks
+    val sharedDelta = mostRestrictiveSharedDelta(requestedDelta, resolvedDeltas)
+    if (sharedDelta == 0L) return tracks
 
     return tracks.map { track ->
         targetClipIds.fold(track) { currentTrack, clipId ->
@@ -729,7 +789,8 @@ private fun trimLinkedClipStarts(
             trimClipStartToTimelineStart(
                 track = currentTrack,
                 clipId = clipId,
-                requestedTimelineStartMs = clip.timelineStartMs + sharedDeltaMs
+                requestedTimelineStartMs = timebase?.addFrames(clip.timelineStartMs, sharedDelta)
+                    ?: clip.timelineStartMs + sharedDelta
             )
         }
     }
@@ -750,22 +811,44 @@ private fun trimLinkedClipEnds(
     val simulatedAnchor = simulatedAnchorTrack.clips.firstOrNull { it.id == anchorClipId }
         ?: return tracks
     val requestedDeltaMs = simulatedAnchor.timelineEndMs - anchor.clip.timelineEndMs
-    if (requestedDeltaMs == 0L) return tracks
+    return trimLinkedClipEndToTimelineTime(
+        tracks,
+        anchorClipId,
+        targetClipIds,
+        anchor.clip.timelineEndMs + requestedDeltaMs,
+    )
+}
+
+internal fun trimLinkedClipEndToTimelineTime(
+    tracks: List<Track>,
+    anchorClipId: String,
+    targetClipIds: Set<String>,
+    requestedTimelineEndMs: Long,
+    timebase: TimelineTimebase? = null,
+): List<Track> {
+    val anchor = tracks.findClipLocation(anchorClipId) ?: return tracks
+    val requestedDelta = timebase?.let {
+        it.frameIndexAt(requestedTimelineEndMs) - it.frameIndexAt(anchor.clip.timelineEndMs)
+    } ?: (requestedTimelineEndMs - anchor.clip.timelineEndMs)
+    if (requestedDelta == 0L) return tracks
 
     val resolvedDeltas = targetClipIds.mapNotNull { clipId ->
         val location = tracks.findClipLocation(clipId) ?: return@mapNotNull null
         val simulatedTrack = trimClipEndToTimelineEnd(
             track = location.track,
             clipId = clipId,
-            requestedTimelineEndMs = location.clip.timelineEndMs + requestedDeltaMs
+            requestedTimelineEndMs = timebase?.addFrames(location.clip.timelineEndMs, requestedDelta)
+                ?: location.clip.timelineEndMs + requestedDelta
         )
         val simulatedClip = simulatedTrack.clips.firstOrNull { it.id == clipId }
             ?: return@mapNotNull null
-        simulatedClip.timelineEndMs - location.clip.timelineEndMs
+        timebase?.let {
+            it.frameIndexAt(simulatedClip.timelineEndMs) - it.frameIndexAt(location.clip.timelineEndMs)
+        } ?: (simulatedClip.timelineEndMs - location.clip.timelineEndMs)
     }
     if (resolvedDeltas.size != targetClipIds.size) return tracks
-    val sharedDeltaMs = mostRestrictiveSharedDelta(requestedDeltaMs, resolvedDeltas)
-    if (sharedDeltaMs == 0L) return tracks
+    val sharedDelta = mostRestrictiveSharedDelta(requestedDelta, resolvedDeltas)
+    if (sharedDelta == 0L) return tracks
 
     return tracks.map { track ->
         targetClipIds.fold(track) { currentTrack, clipId ->
@@ -774,7 +857,8 @@ private fun trimLinkedClipEnds(
             trimClipEndToTimelineEnd(
                 track = currentTrack,
                 clipId = clipId,
-                requestedTimelineEndMs = clip.timelineEndMs + sharedDeltaMs
+                requestedTimelineEndMs = timebase?.addFrames(clip.timelineEndMs, sharedDelta)
+                    ?: clip.timelineEndMs + sharedDelta
             )
         }
     }

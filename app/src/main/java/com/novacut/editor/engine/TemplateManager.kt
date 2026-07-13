@@ -22,6 +22,8 @@ data class UserTemplate(
     val description: String = "",
     val aspectRatio: AspectRatio,
     val frameRate: Int = 30,
+    val frameRateNumerator: Int = frameRate,
+    val frameRateDenominator: Int = 1,
     val resolution: Resolution = Resolution.FHD_1080P,
     val trackTypes: List<TrackType>,
     val textOverlayCount: Int = 0,
@@ -107,6 +109,8 @@ class TemplateManager @Inject constructor(
             description = normalizeTemplateDescription(description),
             aspectRatio = project.aspectRatio,
             frameRate = project.frameRate,
+            frameRateNumerator = project.frameRateNumerator,
+            frameRateDenominator = project.frameRateDenominator,
             resolution = project.resolution,
             trackTypes = tracks.map { it.type }.ifEmpty { defaultTemplateTrackTypes },
             textOverlayCount = textOverlays.size,
@@ -293,6 +297,11 @@ class TemplateManager @Inject constructor(
             description = normalizeTemplateDescription(json.optString("description", "")),
             aspectRatio = parseAspectRatio(json.optString("aspectRatio", "RATIO_16_9")),
             frameRate = json.optInt("frameRate", 30).coerceIn(1, 240),
+            frameRateNumerator = json.optInt(
+                "frameRateNumerator",
+                json.optInt("frameRate", 30),
+            ).coerceIn(1, 240_000),
+            frameRateDenominator = json.optInt("frameRateDenominator", 1).coerceIn(1, 10_000),
             resolution = parseResolution(json.optString("resolution", "FHD_1080P")),
             trackTypes = normalizedTrackTypes,
             textOverlayCount = state.textOverlays.size,
@@ -311,6 +320,8 @@ class TemplateManager @Inject constructor(
             put("description", template.description)
             put("aspectRatio", template.aspectRatio.name)
             put("frameRate", template.frameRate)
+            put("frameRateNumerator", template.frameRateNumerator)
+            put("frameRateDenominator", template.frameRateDenominator)
             put("resolution", template.resolution.name)
             put("trackTypes", JSONArray(template.trackTypes.map { it.name }))
             put("textOverlayCount", template.textOverlayCount)

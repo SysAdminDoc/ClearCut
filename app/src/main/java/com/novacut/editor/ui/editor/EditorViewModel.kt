@@ -704,6 +704,8 @@ class EditorViewModel @Inject constructor(
         seekPreviewTo = ::seekTo,
         currentPlayheadMs = { _playheadMs.value },
         updateLivePlayheadMs = { _playheadMs.value = it },
+        quantizeTimeMs = ::quantizeProjectTimeMs,
+        previousFrameTimeMs = ::previousProjectFrameTimeMs,
         recalculateDuration = ::recalculateDuration,
         onClipAdded = { clipId, uri ->
             viewModelScope.launch(Dispatchers.IO) {
@@ -731,7 +733,8 @@ class EditorViewModel @Inject constructor(
 
     val overlayDelegate = OverlayDelegate(
         stateFlow = _state, saveUndoState = ::saveUndoState, showToast = ::showToast,
-        saveProject = ::saveProject, appContext = appContext
+        saveProject = ::saveProject, quantizeTimeMs = ::quantizeProjectTimeMs,
+        appContext = appContext
     )
 
     val v369Delegate = V369Delegate(
@@ -1678,8 +1681,22 @@ class EditorViewModel @Inject constructor(
     private var isScrubbing = false
     private var scrubSeekJob: kotlinx.coroutines.Job? = null
 
+    private fun quantizeProjectTimeMs(timeMs: Long): Long =
+        _state.value.project.timelineTimebase.snapMs(timeMs)
+
+    private fun quantizeProjectDurationMs(durationMs: Long): Long {
+        val sign = if (durationMs < 0L) -1L else 1L
+        return sign * _state.value.project.timelineTimebase.snapMs(kotlin.math.abs(durationMs))
+    }
+
+    private fun previousProjectFrameTimeMs(boundaryMs: Long): Long {
+        val timebase = _state.value.project.timelineTimebase
+        val boundaryFrame = timebase.frameIndexAt(boundaryMs)
+        return timebase.timeMsAt((boundaryFrame - 1L).coerceAtLeast(0L))
+    }
+
     fun seekTo(positionMs: Long) {
-        val clamped = positionMs.coerceIn(0L, _state.value.totalDurationMs.coerceAtLeast(0L))
+        val clamped = quantizeProjectTimeInRange(positionMs, _state.value.totalDurationMs)
         _playheadMs.value = clamped
         if (isScrubbing) {
             // During scrub: debounce ExoPlayer seeks to every 80ms, skip full state copy
@@ -1693,6 +1710,13 @@ class EditorViewModel @Inject constructor(
         videoEngine.seekTo(clamped)
         _state.update { it.copy(playheadMs = clamped) }
         if (_state.value.panels.isOpen(PanelId.SCOPES)) updateScopeFrame()
+    }
+
+    private fun quantizeProjectTimeInRange(positionMs: Long, maximumMs: Long): Long {
+        val timebase = _state.value.project.timelineTimebase
+        val maximumFrame = timebase.frameIndexAtOrBefore(maximumMs)
+        val requestedFrame = timebase.frameIndexAt(positionMs)
+        return timebase.timeMsAt(requestedFrame.coerceIn(0L, maximumFrame))
     }
 
     /** Enable scrubbing mode during timeline drag for smoother seeking. */
@@ -2708,6 +2732,8 @@ class EditorViewModel @Inject constructor(
                 val effectiveSampleRate = if (clipDurationSec > 0) (waveform.size / clipDurationSec).toInt().coerceAtLeast(1) else 4000
                 val sourceBeats = com.novacut.editor.engine.AudioEffectsEngine.detectBeats(pcm, effectiveSampleRate, 1)
                 val beats = mapSourceMarkersToTimeline(audioClip, sourceBeats)
+                    .map(_state.value.project.timelineTimebase::snapMs)
+                    .distinct()
                 _state.update { it.copy(beatMarkers = beats, isAnalyzingBeats = false) }
                 showToast(text(R.string.vm_beats_detected_toast, beats.size))
             } catch (e: Exception) {
@@ -2758,7 +2784,7 @@ class EditorViewModel @Inject constructor(
         hideBeatSync()
     }
     fun tapBeatMarker() {
-        val currentMs = _playheadMs.value
+        val currentMs = quantizeProjectTimeMs(_playheadMs.value)
         var changed = false
         _state.update { s ->
             val existing = s.beatMarkers
@@ -3391,9 +3417,10 @@ class EditorViewModel @Inject constructor(
     // Helper for beat sync splitting
     private fun splitClipAt(clipId: String, positionMs: Long): Map<String, String> {
         val initialState = _state.value
-        val clipIdsToSplit = linkedSplitCandidateIds(initialState.tracks, setOf(clipId), positionMs)
+        val splitPositionMs = initialState.project.timelineTimebase.snapMs(positionMs)
+        val clipIdsToSplit = linkedSplitCandidateIds(initialState.tracks, setOf(clipId), splitPositionMs)
         if (clipIdsToSplit.isEmpty()) return emptyMap()
-        val regroupedClipIds = regroupedClipIdsForSplit(initialState.tracks, clipIdsToSplit, positionMs)
+        val regroupedClipIds = regroupedClipIdsForSplit(initialState.tracks, clipIdsToSplit, splitPositionMs)
         if (initialState.tracks.any { track ->
                 track.isLocked && track.clips.any { it.id in clipIdsToSplit || it.id in regroupedClipIds }
             }
@@ -3428,14 +3455,14 @@ class EditorViewModel @Inject constructor(
                         if (newId == null) {
                             val rightGroupId = clip.groupId?.let { newGroupIdsByOldId[it] }
                             add(
-                                if (rightGroupId != null && clip.timelineStartMs >= positionMs) {
+                                if (rightGroupId != null && clip.timelineStartMs >= splitPositionMs) {
                                     clip.copy(groupId = rightGroupId)
                                 } else clip
                             )
                         } else {
                             val split = splitTimelineClip(
                                 clip = clip,
-                                playheadMs = positionMs,
+                                playheadMs = splitPositionMs,
                                 newClipId = newId,
                                 newLinkedClipId = clip.linkedClipId?.let { newIdsByOldId[it] ?: it },
                                 rightGroupId = clip.groupId?.let { newGroupIdsByOldId[it] },
@@ -3625,22 +3652,23 @@ class EditorViewModel @Inject constructor(
                             ?: return@update s
                         appliedSecondsReclaimed += deletedSpanMs
                         appliedCount++
+                        val timebase = s.project.timelineTimebase
                         s.copy(
-                            tracks = rippleDeleteClips(s.tracks, middleClipIds),
+                            tracks = rippleDeleteClips(s.tracks, middleClipIds, timebase),
                             waveforms = s.waveforms - middleClipIds,
                             trackedObjects = s.trackedObjects.filterNot {
                                 it.sourceClipId in middleClipIds
                             },
                             timelineMarkers = s.timelineMarkers.mapNotNull { marker ->
-                                rippleTimelinePosition(marker.timeMs, markerRippleRanges)
+                                rippleTimelinePosition(marker.timeMs, markerRippleRanges, timebase)
                                     ?.let { marker.copy(timeMs = it) }
                             },
                             chapterMarkers = s.chapterMarkers.mapNotNull { marker ->
-                                rippleTimelinePosition(marker.timeMs, markerRippleRanges)
+                                rippleTimelinePosition(marker.timeMs, markerRippleRanges, timebase)
                                     ?.let { marker.copy(timeMs = it) }
                             },
                             beatMarkers = s.beatMarkers.mapNotNull { markerMs ->
-                                rippleTimelinePosition(markerMs, markerRippleRanges)
+                                rippleTimelinePosition(markerMs, markerRippleRanges, timebase)
                             }
                         )
                     }
@@ -3942,6 +3970,8 @@ class EditorViewModel @Inject constructor(
     // --- Slip/Slide Edit ---
     private var isSlipEditActive = false
     private var isSlideEditActive = false
+    private var slipEditStartTracks: List<Track>? = null
+    private var slideEditStartTracks: List<Track>? = null
     private val timelineGestureUndo = GestureUndoTransaction<UndoAction> { initial, current ->
         hasSameClipTiming(initial.tracks, current.tracks)
     }
@@ -3950,6 +3980,7 @@ class EditorViewModel @Inject constructor(
         if (isSlipEditActive) return
         if (!beginTimelineGestureUndo("Slip edit")) return
         isSlipEditActive = true
+        slipEditStartTracks = _state.value.tracks
         // Freeze the player while the user drags so we don't rebuild it on every
         // pixel of motion. `setScrubbingMode(true)` lets ExoPlayer skip the expensive
         // seek+decode work; the actual timeline rebuild happens in endSlipEdit.
@@ -3964,6 +3995,7 @@ class EditorViewModel @Inject constructor(
         if (!isSlipEditActive) return
         isSlipEditActive = false
         val finish = finishTimelineGestureUndo("Slip edit", commit)
+        slipEditStartTracks = null
         videoEngine.setScrubbingMode(false)
         if (finish.hadMutation) {
             rebuildPlayerTimeline()
@@ -3975,6 +4007,7 @@ class EditorViewModel @Inject constructor(
         if (isSlideEditActive) return
         if (!beginTimelineGestureUndo("Slide edit")) return
         isSlideEditActive = true
+        slideEditStartTracks = _state.value.tracks
         videoEngine.setScrubbingMode(true)
     }
 
@@ -3986,6 +4019,7 @@ class EditorViewModel @Inject constructor(
         if (!isSlideEditActive) return
         isSlideEditActive = false
         val finish = finishTimelineGestureUndo("Slide edit", commit)
+        slideEditStartTracks = null
         videoEngine.setScrubbingMode(false)
         if (finish.hadMutation) {
             rebuildPlayerTimeline()
@@ -3994,20 +4028,24 @@ class EditorViewModel @Inject constructor(
     }
 
     fun slipClip(clipId: String, slipAmountMs: Long) {
-        val linkedIds = linkedClipIds(_state.value.tracks, clipId)
-        if (_state.value.tracks.any { track ->
+        if (quantizeProjectDurationMs(slipAmountMs) == 0L) return
+        val baseTracks = slipEditStartTracks ?: _state.value.tracks
+        val linkedIds = linkedClipIds(baseTracks, clipId)
+        if (baseTracks.any { track ->
                 track.isLocked && track.clips.any { it.id in linkedIds }
             }
         ) {
             return
         }
-        val currentTracks = _state.value.tracks
-        val candidateTracks = slipLinkedClipsOnTimeline(currentTracks, linkedIds, slipAmountMs)
-        if (hasSameClipTiming(candidateTracks, currentTracks)) return
+        val candidateTracks = slipLinkedClipsOnTimeline(
+            baseTracks,
+            linkedIds,
+            slipAmountMs,
+            _state.value.project.timelineTimebase,
+        )
+        if (hasSameClipTiming(candidateTracks, baseTracks)) return
         markTimelineGestureMutation("Slip edit")
-        _state.update { state ->
-            state.copy(tracks = slipLinkedClipsOnTimeline(state.tracks, linkedIds, slipAmountMs))
-        }
+        _state.update { it.copy(tracks = candidateTracks) }
         // Intentionally NOT calling rebuildPlayerTimeline() here. Slip-drag fires
         // this method at touch-event rate (60–120 Hz); rebuilding ExoPlayer's
         // MediaItem set on every tick was the root cause of the "clunky" timeline.
@@ -4016,53 +4054,80 @@ class EditorViewModel @Inject constructor(
     }
 
     fun slideClip(clipId: String, slideAmountMs: Long) {
-        val tracks = _state.value.tracks
-        val linkedLocation = tracks.findClipLocation(clipId)?.clip?.linkedClipId
-            ?.let { linkedId -> tracks.findClipLocation(linkedId) }
-        val primaryLocation = tracks.findClipLocation(clipId) ?: return
-        if (primaryLocation.track.isLocked || (linkedLocation?.track?.isLocked == true)) return
-
-        val primaryBounds = calculateSlideBounds(primaryLocation.track, clipId) ?: return
-        var minDelta = primaryBounds.minStartMs - primaryBounds.currentStartMs
-        var maxDelta = primaryBounds.maxStartMs - primaryBounds.currentStartMs
-
-        linkedLocation?.let { location ->
-            val linkedBounds = calculateSlideBounds(location.track, location.clip.id) ?: return
-            minDelta = maxOf(minDelta, linkedBounds.minStartMs - linkedBounds.currentStartMs)
-            maxDelta = minOf(maxDelta, linkedBounds.maxStartMs - linkedBounds.currentStartMs)
-        }
-
-        if (maxDelta < minDelta) return
-        val appliedDelta = (primaryBounds.currentStartMs + slideAmountMs)
-            .coerceIn(primaryBounds.minStartMs, primaryBounds.maxStartMs) - primaryBounds.currentStartMs
-        val synchronizedDelta = appliedDelta.coerceIn(minDelta, maxDelta)
-        if (synchronizedDelta == 0L) return
-
-        val candidateTracks = tracks.map { track ->
-                when {
-                    track.id == primaryLocation.track.id -> {
-                        slideClipOnTrack(
-                            track = track,
-                            clipId = clipId,
-                            newStartMs = primaryBounds.currentStartMs + synchronizedDelta
-                        )
-                    }
-                    linkedLocation != null && track.id == linkedLocation.track.id -> {
-                        val linkedBounds = calculateSlideBounds(track, linkedLocation.clip.id) ?: return@map track
-                        slideClipOnTrack(
-                            track = track,
-                            clipId = linkedLocation.clip.id,
-                            newStartMs = linkedBounds.currentStartMs + synchronizedDelta
-                        )
-                    }
-                    else -> track
-                }
-            }
+        if (quantizeProjectDurationMs(slideAmountMs) == 0L) return
+        val tracks = slideEditStartTracks ?: _state.value.tracks
+        val candidateTracks = planSlideTracks(tracks, clipId, slideAmountMs)
         if (hasSameClipTiming(candidateTracks, tracks)) return
         markTimelineGestureMutation("Slide edit")
         _state.update { it.copy(tracks = candidateTracks) }
         // Deferred to endSlideEdit() to avoid per-frame player rebuilds during drag.
         // Same perf fix as slipClip — see comment there.
+    }
+
+    private fun planSlideTracks(
+        tracks: List<Track>,
+        clipId: String,
+        slideAmountMs: Long,
+    ): List<Track> {
+        val linkedLocation = tracks.findClipLocation(clipId)?.clip?.linkedClipId
+            ?.let { linkedId -> tracks.findClipLocation(linkedId) }
+        val primaryLocation = tracks.findClipLocation(clipId) ?: return tracks
+        if (primaryLocation.track.isLocked || (linkedLocation?.track?.isLocked == true)) return tracks
+
+        val primaryBounds = calculateSlideBounds(primaryLocation.track, clipId) ?: return tracks
+        val timebase = _state.value.project.timelineTimebase
+        val requestedDeltaFrames = if (slideAmountMs < 0L) {
+            -timebase.frameIndexAt(kotlin.math.abs(slideAmountMs))
+        } else {
+            timebase.frameIndexAt(slideAmountMs)
+        }
+        val primaryFrame = timebase.frameIndexAt(primaryBounds.currentStartMs)
+        var minDeltaFrames = timebase.frameIndexAtOrAfter(primaryBounds.minStartMs) - primaryFrame
+        var maxDeltaFrames = timebase.frameIndexAtOrBefore(primaryBounds.maxStartMs) - primaryFrame
+
+        linkedLocation?.let { location ->
+            val linkedBounds = calculateSlideBounds(location.track, location.clip.id) ?: return tracks
+            val linkedFrame = timebase.frameIndexAt(linkedBounds.currentStartMs)
+            minDeltaFrames = maxOf(
+                minDeltaFrames,
+                timebase.frameIndexAtOrAfter(linkedBounds.minStartMs) - linkedFrame,
+            )
+            maxDeltaFrames = minOf(
+                maxDeltaFrames,
+                timebase.frameIndexAtOrBefore(linkedBounds.maxStartMs) - linkedFrame,
+            )
+        }
+
+        if (maxDeltaFrames < minDeltaFrames) return tracks
+        val synchronizedDeltaFrames = requestedDeltaFrames.coerceIn(minDeltaFrames, maxDeltaFrames)
+        if (synchronizedDeltaFrames == 0L) return tracks
+
+        return tracks.map { track ->
+            when {
+                track.id == primaryLocation.track.id -> {
+                    slideClipOnTrack(
+                        track = track,
+                        clipId = clipId,
+                        newStartMs = timebase.addFrames(
+                            primaryBounds.currentStartMs,
+                            synchronizedDeltaFrames,
+                        )
+                    )
+                }
+                linkedLocation != null && track.id == linkedLocation.track.id -> {
+                    val linkedBounds = calculateSlideBounds(track, linkedLocation.clip.id) ?: return@map track
+                    slideClipOnTrack(
+                        track = track,
+                        clipId = linkedLocation.clip.id,
+                        newStartMs = timebase.addFrames(
+                            linkedBounds.currentStartMs,
+                            synchronizedDeltaFrames,
+                        )
+                    )
+                }
+                else -> track
+            }
+        }
     }
 
     // --- Export ---
@@ -4498,7 +4563,7 @@ class EditorViewModel @Inject constructor(
     fun addChapterMarker(marker: ChapterMarker) {
         saveUndoState("Add chapter")
         val totalDuration = _state.value.totalDurationMs
-        val clampedMarker = marker.copy(timeMs = marker.timeMs.coerceIn(0L, totalDuration))
+        val clampedMarker = marker.copy(timeMs = quantizeProjectTimeInRange(marker.timeMs, totalDuration))
         _state.update { s ->
             val updated = (s.chapterMarkers + clampedMarker).sortedBy { it.timeMs }
             s.copy(chapterMarkers = updated)
@@ -4510,7 +4575,7 @@ class EditorViewModel @Inject constructor(
     fun updateChapterMarker(index: Int, marker: ChapterMarker) {
         saveUndoState("Update chapter")
         val totalDuration = _state.value.totalDurationMs
-        val clampedMarker = marker.copy(timeMs = marker.timeMs.coerceIn(0L, totalDuration))
+        val clampedMarker = marker.copy(timeMs = quantizeProjectTimeInRange(marker.timeMs, totalDuration))
         _state.update { s ->
             if (index in s.chapterMarkers.indices) {
                 val updated = s.chapterMarkers.toMutableList()
@@ -5422,7 +5487,7 @@ class EditorViewModel @Inject constructor(
             exportResolution = s.exportConfig.resolution.name,
             exportCodec = s.exportConfig.codec.name,
             exportFrameRate = s.exportConfig.frameRate,
-            dbSchemaVersion = 8,
+            dbSchemaVersion = 9,
             backupFileCount = storageInfo.backupFileCount,
             effectCount = allClips.sumOf { it.effects.size },
             keyframeCount = allClips.sumOf { it.keyframes.size }

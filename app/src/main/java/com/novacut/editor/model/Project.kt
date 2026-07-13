@@ -12,6 +12,8 @@ data class Project(
     val name: String = "Untitled",
     val aspectRatio: AspectRatio = AspectRatio.RATIO_16_9,
     val frameRate: Int = 30,
+    val frameRateNumerator: Int = frameRate,
+    val frameRateDenominator: Int = 1,
     val resolution: Resolution = Resolution.FHD_1080P,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
@@ -22,7 +24,26 @@ data class Project(
     val version: Int = 1,
     val notes: String = "",
     val deletedAtEpochMs: Long? = null
-)
+) {
+    val timelineTimebase: TimelineTimebase
+        get() {
+            val numerator = frameRateNumerator.coerceIn(1, 240_000)
+            val denominator = frameRateDenominator.coerceIn(1, 10_000)
+            val divisor = greatestCommonDivisor(numerator, denominator)
+            return TimelineTimebase(numerator / divisor, denominator / divisor)
+        }
+}
+
+private fun greatestCommonDivisor(left: Int, right: Int): Int {
+    var a = left
+    var b = right
+    while (b != 0) {
+        val remainder = a % b
+        a = b
+        b = remainder
+    }
+    return a.coerceAtLeast(1)
+}
 
 enum class AspectRatio(val widthRatio: Int, val heightRatio: Int, val label: String) {
     RATIO_16_9(16, 9, "16:9"),

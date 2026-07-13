@@ -1187,7 +1187,7 @@ private fun ProjectCard(
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             ProjectMetadataChip(text = project.resolution.label, accent = Mocha.Rosewater)
-                            ProjectMetadataChip(text = "${project.frameRate} fps", accent = Mocha.Mauve)
+                            ProjectMetadataChip(text = project.timelineTimebase.frameRateLabel, accent = Mocha.Mauve)
                             ProjectMetadataChip(text = projectDuration, accent = Mocha.Sapphire)
                             if (project.templateId != null) {
                                 ProjectMetadataChip(

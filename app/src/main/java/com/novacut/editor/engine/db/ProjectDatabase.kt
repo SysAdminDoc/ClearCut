@@ -10,7 +10,7 @@ import com.novacut.editor.model.AspectRatio
 import com.novacut.editor.model.Resolution
 import kotlinx.coroutines.flow.Flow
 
-@Database(entities = [Project::class, ProjectMediaAssetEntity::class], version = 8, exportSchema = true)
+@Database(entities = [Project::class, ProjectMediaAssetEntity::class], version = 9, exportSchema = true)
 @TypeConverters(Converters::class)
 abstract class ProjectDatabase : RoomDatabase() {
     abstract fun projectDao(): ProjectDao
@@ -87,6 +87,14 @@ abstract class ProjectDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE projects ADD COLUMN frameRateNumerator INTEGER NOT NULL DEFAULT 30")
+                db.execSQL("ALTER TABLE projects ADD COLUMN frameRateDenominator INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("UPDATE projects SET frameRateNumerator = frameRate")
+            }
+        }
+
         val ALL_MIGRATIONS = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
@@ -94,7 +102,8 @@ abstract class ProjectDatabase : RoomDatabase() {
             MIGRATION_4_5,
             MIGRATION_5_6,
             MIGRATION_6_7,
-            MIGRATION_7_8
+            MIGRATION_7_8,
+            MIGRATION_8_9
         )
     }
 }

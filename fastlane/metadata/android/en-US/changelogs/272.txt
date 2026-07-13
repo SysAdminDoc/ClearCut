@@ -1,0 +1,3 @@
+Timeline edits now resolve on deterministic project-frame boundaries, including NTSC rates.
+Linked trims, slips, slides, and ripple deletes use frame deltas to prevent timestamp drift.
+Preview labels, project templates, and database migrations preserve the rational timebase.

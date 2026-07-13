@@ -16,6 +16,7 @@ class OverlayDelegate(
     private val saveUndoState: (String) -> Unit,
     private val showToast: (String) -> Unit,
     private val saveProject: () -> Unit,
+    private val quantizeTimeMs: (Long) -> Long,
     private val appContext: Context
 ) {
     // --- Text Overlays ---
@@ -106,7 +107,11 @@ class OverlayDelegate(
 
     fun addTimelineMarker(label: String = "", color: MarkerColor = MarkerColor.BLUE) {
         saveUndoState("Add marker")
-        val marker = TimelineMarker(timeMs = stateFlow.value.playheadMs, label = label, color = color)
+        val marker = TimelineMarker(
+            timeMs = quantizeTimeMs(stateFlow.value.playheadMs),
+            label = label,
+            color = color,
+        )
         stateFlow.update { it.copy(timelineMarkers = (it.timelineMarkers + marker).sortedBy { m -> m.timeMs }) }
         saveProject()
         showToast(appContext.getString(R.string.overlay_marker_added_toast))
@@ -142,7 +147,7 @@ class OverlayDelegate(
         saveUndoState("Import cut list")
         val newMarkers = buildList {
             result.entries.forEach { entry ->
-                val start = entry.startMs.coerceAtLeast(0L)
+                val start = quantizeTimeMs(entry.startMs.coerceAtLeast(0L))
                 val end = entry.endMs
                 if (end == null) {
                     add(TimelineMarker(timeMs = start, label = entry.label, color = MarkerColor.BLUE))
@@ -157,7 +162,7 @@ class OverlayDelegate(
                     )
                     add(
                         TimelineMarker(
-                            timeMs = end.coerceAtLeast(0L),
+                            timeMs = quantizeTimeMs(end.coerceAtLeast(0L)),
                             label = appContext.getString(R.string.cut_list_range_out, base),
                             color = MarkerColor.ORANGE
                         )

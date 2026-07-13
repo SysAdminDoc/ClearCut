@@ -30,8 +30,8 @@ android {
         applicationId = "com.novacut.editor"
         minSdk = 26
         targetSdk = 36
-        versionCode = 271
-        versionName = "3.74.138"
+        versionCode = 272
+        versionName = "3.74.139"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // Passive, opt-in update check for sideload / GitHub-release installs.
@@ -226,6 +226,10 @@ tasks.configureEach {
 }
 
 dependencies {
+    // Room 2.8.4's migration bundle serializers are generated against 1.8.1.
+    // Lifecycle otherwise constrains Android tests to 1.7.3, which crashes
+    // MigrationTestHelper before migrations can run (AbstractMethodError).
+    implementation(platform("org.jetbrains.kotlinx:kotlinx-serialization-bom:1.8.1"))
     // Core
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.exifinterface)

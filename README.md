@@ -4,9 +4,15 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.138-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.139-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.139 Frame-quantized timeline edits
+
+- Project timing now uses a persisted rational timebase with deterministic NTSC frame conversion; new splits, trims, slips, slides, ripple deletes, markers, chapters, and explicit seeks resolve on project-frame boundaries.
+- Linked edits carry frame deltas instead of rounded millisecond deltas, preventing 29.97 fps drift such as 67 ms becoming 66 ms after a ripple or linked positions shifting to 134 ms instead of 133 ms.
+- Preview and project cards show resolved frame-rate/timecode labels. Room schema 9 and template interchange preserve the rational timebase while leaving legacy timeline data unchanged until edited.
 
 ### v3.74.138 Transactional timeline gestures
 

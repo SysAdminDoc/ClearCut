@@ -45,6 +45,8 @@ class ClipEditingDelegate(
     private val seekPreviewTo: (Long) -> Unit,
     private val currentPlayheadMs: () -> Long,
     private val updateLivePlayheadMs: (Long) -> Unit,
+    private val quantizeTimeMs: (Long) -> Long,
+    private val previousFrameTimeMs: (Long) -> Long,
     private val recalculateDuration: (EditorState) -> EditorState,
     private val onClipAdded: ((clipId: String, uri: Uri) -> Unit)? = null
 ) {
@@ -335,7 +337,8 @@ class ClipEditingDelegate(
         } else {
             emptyList()
         }
-        val rippledPlayheadMs = ripplePlaybackPosition(livePlayheadMs, markerRippleRanges)
+        val timebase = state.project.timelineTimebase
+        val rippledPlayheadMs = ripplePlaybackPosition(livePlayheadMs, markerRippleRanges, timebase)
         saveUndoState(
             when {
                 clipIdsToDelete.size == 1 && ripple -> "Delete clip"
@@ -348,7 +351,7 @@ class ClipEditingDelegate(
         stateFlow.update { state ->
             recalculateDuration(state.copy(
                 tracks = if (ripple) {
-                    rippleDeleteClips(state.tracks, clipIdsToDelete)
+                    rippleDeleteClips(state.tracks, clipIdsToDelete, timebase)
                 } else {
                     removeClipsWithoutRipple(state.tracks, clipIdsToDelete)
                 },
@@ -359,15 +362,15 @@ class ClipEditingDelegate(
                 waveforms = state.waveforms - clipIdsToDelete,
                 trackedObjects = state.trackedObjects.filterNot { it.sourceClipId in clipIdsToDelete },
                 timelineMarkers = state.timelineMarkers.mapNotNull { marker ->
-                    rippleTimelinePosition(marker.timeMs, markerRippleRanges)
+                    rippleTimelinePosition(marker.timeMs, markerRippleRanges, timebase)
                         ?.let { marker.copy(timeMs = it) }
                 },
                 chapterMarkers = state.chapterMarkers.mapNotNull { marker ->
-                    rippleTimelinePosition(marker.timeMs, markerRippleRanges)
+                    rippleTimelinePosition(marker.timeMs, markerRippleRanges, timebase)
                         ?.let { marker.copy(timeMs = it) }
                 },
                 beatMarkers = state.beatMarkers.mapNotNull { markerMs ->
-                    rippleTimelinePosition(markerMs, markerRippleRanges)
+                    rippleTimelinePosition(markerMs, markerRippleRanges, timebase)
                 }
             ))
         }
@@ -545,7 +548,7 @@ class ClipEditingDelegate(
 
     // --- Split Clip ---
     fun splitClipAtPlayhead() {
-        val playhead = currentPlayheadMs()
+        val playhead = quantizeTimeMs(currentPlayheadMs())
         val state = stateFlow.value
         val selectedIds = state.selectedClipIds.ifEmpty {
             setOfNotNull(state.selectedClipId ?: clipAtPlayhead(state, playhead))
@@ -689,35 +692,44 @@ class ClipEditingDelegate(
         val targetIds = linkedClipIds(stateFlow.value.tracks, clipId)
         if (tracksContainLockedClip(targetIds)) return
         val currentTracks = stateFlow.value.tracks
-        val candidateTracks = trimLinkedClipsOnTimeline(
+        val rawCandidateTracks = trimLinkedClipsOnTimeline(
             tracks = currentTracks,
             anchorClipId = clipId,
             targetClipIds = targetIds,
             requestedTrimStartMs = newTrimStartMs,
             requestedTrimEndMs = newTrimEndMs,
         )
+        val rawCandidate = rawCandidateTracks.findClipLocation(clipId)?.clip
+        val candidateTracks = when {
+            newTrimStartMs != null && rawCandidate != null -> trimLinkedClipStartToTimelineTime(
+                currentTracks,
+                clipId,
+                targetIds,
+                quantizeTimeMs(rawCandidate.timelineStartMs),
+                stateFlow.value.project.timelineTimebase,
+            )
+            newTrimEndMs != null && rawCandidate != null -> trimLinkedClipEndToTimelineTime(
+                currentTracks,
+                clipId,
+                targetIds,
+                quantizeTimeMs(rawCandidate.timelineEndMs),
+                stateFlow.value.project.timelineTimebase,
+            )
+            else -> rawCandidateTracks
+        }
         if (hasSameClipTiming(candidateTracks, currentTracks)) return
         markGestureMutation("Trim clip")
         var previewSeekMs: Long? = null
         stateFlow.update { state ->
-            val tracks = trimLinkedClipsOnTimeline(
-                tracks = state.tracks,
-                anchorClipId = clipId,
-                targetClipIds = targetIds,
-                requestedTrimStartMs = newTrimStartMs,
-                requestedTrimEndMs = newTrimEndMs
-            )
-            val updatedState = recalculateDuration(state.copy(tracks = tracks))
+            val updatedState = recalculateDuration(state.copy(tracks = candidateTracks))
             val previewClip = updatedState.tracks
                 .asSequence()
                 .flatMap { it.clips.asSequence() }
                 .firstOrNull { it.id == clipId }
-            val frameStepMs = (1000L / updatedState.project.frameRate.coerceAtLeast(1))
-                .coerceAtLeast(1L)
             previewSeekMs = when {
                 previewClip == null -> null
                 newTrimStartMs != null -> previewClip.timelineStartMs
-                newTrimEndMs != null -> (previewClip.timelineEndMs - frameStepMs)
+                newTrimEndMs != null -> previousFrameTimeMs(previewClip.timelineEndMs)
                     .coerceAtLeast(previewClip.timelineStartMs)
                 else -> null
             }?.coerceIn(0L, updatedState.totalDurationMs.coerceAtLeast(0L))

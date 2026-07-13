@@ -86,6 +86,8 @@ fun PreviewPanel(
     isLooping: Boolean = false,
     aspectRatio: AspectRatio = AspectRatio.RATIO_16_9,
     frameRate: Int = 30,
+    frameRateLabel: String = "$frameRate fps",
+    resolvedFrameTimecode: String? = null,
     onTogglePlayback: () -> Unit,
     onToggleLoop: () -> Unit = {},
     onSeek: (Long) -> Unit,
@@ -481,7 +483,15 @@ fun PreviewPanel(
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
-                    text = "${aspectRatio.label}  •  $frameRate fps",
+                    text = buildString {
+                        append(aspectRatio.label)
+                        append("  •  ")
+                        append(frameRateLabel)
+                        resolvedFrameTimecode?.let {
+                            append("  •  ")
+                            append(it)
+                        }
+                    },
                     color = semanticColors.subtext,
                     style = MaterialTheme.typography.labelSmall,
                     maxLines = 1,

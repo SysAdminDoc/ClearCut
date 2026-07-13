@@ -76,6 +76,22 @@ class TimelineEditingTest {
     }
 
     @Test
+    fun `ntsc slip shifts source boundaries by frames rather than rounded milliseconds`() {
+        val source = clip("source", 0L, 33L, 100L, 1_000L)
+        val tracks = listOf(Track(type = TrackType.VIDEO, index = 0, clips = listOf(source)))
+
+        val shifted = slipLinkedClipsOnTimeline(
+            tracks,
+            setOf(source.id),
+            slipAmountMs = 33L,
+            timebase = TimelineTimebase.NTSC_29_97,
+        ).single().clips.single()
+
+        assertEquals(67L, shifted.trimStartMs)
+        assertEquals(133L, shifted.trimEndMs)
+    }
+
+    @Test
     fun `playback session resets for ended idle failed and watchdog recovery states`() {
         assertTrue(playbackSessionNeedsReset(false, Player.STATE_ENDED, false))
         assertTrue(playbackSessionNeedsReset(false, Player.STATE_IDLE, false))
@@ -622,6 +638,42 @@ class TimelineEditingTest {
         assertEquals(listOf("first", "last"), result[0].clips.map { it.id })
         assertEquals(listOf(1_000L, 2_500L), result[0].clips.map { it.timelineStartMs })
         assertEquals(5_000L, result[1].clips.single().timelineStartMs)
+    }
+
+    @Test
+    fun `ntsc ripple subtracts frame indices without timestamp drift`() {
+        val removed = clip("removed", 33L, 0L, 34L, 34L)
+        val later = clip("later", 100L, 0L, 100L, 100L)
+        val tracks = listOf(Track(type = TrackType.VIDEO, index = 0, clips = listOf(removed, later)))
+
+        val result = rippleDeleteClips(tracks, setOf(removed.id), TimelineTimebase.NTSC_29_97)
+
+        assertEquals(67L, result.single().clips.single().timelineStartMs)
+        assertEquals(
+            67L,
+            rippleTimelinePosition(100L, listOf(33L to 67L), TimelineTimebase.NTSC_29_97),
+        )
+    }
+
+    @Test
+    fun `linked ntsc trim applies the same frame delta at each absolute boundary`() {
+        val first = clip("first", 33L, 0L, 500L, 500L)
+        val linked = clip("linked", 100L, 0L, 500L, 500L)
+        val tracks = listOf(
+            Track(type = TrackType.VIDEO, index = 0, clips = listOf(first)),
+            Track(type = TrackType.AUDIO, index = 1, clips = listOf(linked)),
+        )
+
+        val result = trimLinkedClipStartToTimelineTime(
+            tracks,
+            anchorClipId = first.id,
+            targetClipIds = setOf(first.id, linked.id),
+            requestedTimelineStartMs = 67L,
+            timebase = TimelineTimebase.NTSC_29_97,
+        )
+
+        assertEquals(67L, result[0].clips.single().timelineStartMs)
+        assertEquals(133L, result[1].clips.single().timelineStartMs)
     }
 
     @Test

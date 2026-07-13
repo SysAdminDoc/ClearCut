@@ -816,6 +816,8 @@ fun EditorScreen(
                     isLooping = state.isLooping,
                     aspectRatio = state.project.aspectRatio,
                     frameRate = state.project.frameRate,
+                    frameRateLabel = state.project.timelineTimebase.frameRateLabel,
+                    resolvedFrameTimecode = state.project.timelineTimebase.formatTimecode(playheadMs),
                     onTogglePlayback = viewModel::togglePlayback,
                     onToggleLoop = viewModel::toggleLoop,
                     onSeek = viewModel::seekTo,

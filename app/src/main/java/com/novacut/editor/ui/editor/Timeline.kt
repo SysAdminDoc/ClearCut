@@ -1709,10 +1709,16 @@ fun Timeline(
                                                 if (!track.isLocked) Modifier.pointerInput(clip.id, currentIsTrimMode) {
                                                     val trimHandleWidthPx = trimHandleTouchWidth.toPx()
                                                     var zone: TimelineClipGestureZone = TimelineClipGestureZone.NONE
+                                                    var gestureStartClip: Clip? = null
+                                                    var gestureStartTracks: List<Track> = emptyList()
+                                                    var totalDeltaXPx = 0f
                                                     detectDragGestures(
                                                         onDragStart = { offset ->
                                                             val ppm = currentZoomLevel * BASE_SCALE
                                                             val currentClip = findClipInTracks(currentTracks, clip.id)
+                                                            gestureStartClip = currentClip
+                                                            gestureStartTracks = currentTracks
+                                                            totalDeltaXPx = 0f
                                                             val clipWidthLocal = currentClip?.durationMs?.times(ppm) ?: 0f
                                                             zone = resolveTimelineClipGestureZone(
                                                                 touchXPx = offset.x,
@@ -1740,6 +1746,8 @@ fun Timeline(
                                                                 TimelineClipGestureZone.NONE -> Unit
                                                             }
                                                             zone = TimelineClipGestureZone.NONE
+                                                            gestureStartClip = null
+                                                            gestureStartTracks = emptyList()
                                                         },
                                                         onDragCancel = {
                                                             when (zone) {
@@ -1750,17 +1758,19 @@ fun Timeline(
                                                                 TimelineClipGestureZone.NONE -> Unit
                                                             }
                                                             zone = TimelineClipGestureZone.NONE
+                                                            gestureStartClip = null
+                                                            gestureStartTracks = emptyList()
                                                         },
                                                         onDrag = { change, dragAmount ->
                                                             val ppm = currentZoomLevel * BASE_SCALE
                                                             if (ppm < 0.001f) return@detectDragGestures
-                                                            val currentClip = findClipInTracks(currentTracks, clip.id)
-                                                                ?: return@detectDragGestures
+                                                            totalDeltaXPx += dragAmount.x
+                                                            val currentClip = gestureStartClip ?: return@detectDragGestures
                                                             when (
                                                                 val action = resolveTimelineClipGestureAction(
                                                                     zone = zone,
                                                                     clip = currentClip,
-                                                                    deltaXPx = dragAmount.x,
+                                                                    deltaXPx = totalDeltaXPx,
                                                                     pixelsPerMs = ppm
                                                                 )
                                                             ) {
@@ -1781,10 +1791,10 @@ fun Timeline(
                                                                         .toLong()
                                                                         .coerceAtLeast(1L)
                                                                     val snapTargetsLocal = timelineSlideSnapTargets(
-                                                                        tracks = currentTracks,
+                                                                        tracks = gestureStartTracks,
                                                                         draggedClipId = clip.id,
                                                                         excludedClipIds = linkedClipIds(
-                                                                            currentTracks,
+                                                                            gestureStartTracks,
                                                                             clip.id
                                                                         ),
                                                                         playheadMs = currentPlayheadMs,

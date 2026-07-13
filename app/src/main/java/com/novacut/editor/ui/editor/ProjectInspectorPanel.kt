@@ -54,7 +54,7 @@ data class ProjectInspectorData(
     val exportResolution: String = "",
     val exportCodec: String = "",
     val exportFrameRate: Int = 30,
-    val dbSchemaVersion: Int = 8,
+    val dbSchemaVersion: Int = 9,
     val backupFileCount: Int = 0,
     val effectCount: Int = 0,
     val keyframeCount: Int = 0
