@@ -14,6 +14,44 @@ import org.junit.Test
 class TimelineEditingTest {
 
     @Test
+    fun `trim preview refreshes only when retained media extends beyond prepared range`() {
+        val prepared = PreparedTrimRange(startMs = 200L, endMs = 800L)
+
+        assertFalse(
+            trimExtendsPreparedRange(
+                prepared,
+                clip("same", 0L, 200L, 800L, 1_000L)
+            )
+        )
+        assertFalse(
+            trimExtendsPreparedRange(
+                prepared,
+                clip("inward", 0L, 300L, 700L, 1_000L)
+            )
+        )
+        assertTrue(
+            trimExtendsPreparedRange(
+                prepared,
+                clip("earlier", 0L, 100L, 800L, 1_000L)
+            )
+        )
+        assertTrue(
+            trimExtendsPreparedRange(
+                prepared,
+                clip("later", 0L, 200L, 900L, 1_000L)
+            )
+        )
+        // The gesture-start range stays immutable, so a retract followed by a
+        // smaller re-extension remains eligible even if an earlier refresh ran.
+        assertTrue(
+            trimExtendsPreparedRange(
+                prepared,
+                clip("re-extended", 0L, 150L, 800L, 1_000L)
+            )
+        )
+    }
+
+    @Test
     fun `playback session resets for ended idle failed and watchdog recovery states`() {
         assertTrue(playbackSessionNeedsReset(false, Player.STATE_ENDED, false))
         assertTrue(playbackSessionNeedsReset(false, Player.STATE_IDLE, false))

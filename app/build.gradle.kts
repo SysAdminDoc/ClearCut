@@ -30,8 +30,8 @@ android {
         applicationId = "com.novacut.editor"
         minSdk = 26
         targetSdk = 36
-        versionCode = 269
-        versionName = "3.74.136"
+        versionCode = 270
+        versionName = "3.74.137"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // Passive, opt-in update check for sideload / GitHub-release installs.
@@ -131,7 +131,7 @@ android {
     lint {
         // Independently re-probed on 2026-07-12 with AGP 8.7.3, Kotlin 2.1.21,
         // lifecycle 2.10.0, and Compose BOM 2026.06.00. Each detector throws an
-        // IncompatibleClassChangeError in AiFeatures.kt because its lint jar
+        // IncompatibleClassChangeError while scanning Kotlin sources because its lint jar
         // expects a different Kotlin analysis API. Pass -PcleancutLintProbe=<id>
         // to enable exactly one workaround detector after a dependency upgrade.
         val sourceDetectorCrashWorkarounds = listOf(
@@ -139,7 +139,8 @@ android {
             "FrequentlyChangingValue",
             "FlowOperatorInvokedInComposition",
             "RememberInComposition",
-            "AutoboxingStateCreation"
+            "AutoboxingStateCreation",
+            "UnrememberedMutableState"
         )
         val probeDetector = providers.gradleProperty("cleancutLintProbe").orNull
         require(probeDetector == null || probeDetector in sourceDetectorCrashWorkarounds) {

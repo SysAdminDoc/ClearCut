@@ -1,7 +1,6 @@
 package com.novacut.editor
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -21,14 +20,10 @@ class LintDetectorRatchetTest {
                 "FlowOperatorInvokedInComposition",
                 "RememberInComposition",
                 "AutoboxingStateCreation",
+                "UnrememberedMutableState",
             ),
             QUOTED_VALUE.findAll(workaroundBlock).map { it.groupValues[1] }.toSet(),
         )
-        listOf(
-            "UnrememberedMutableState",
-        ).forEach { detector ->
-            assertFalse("Passing detector was globally disabled again: $detector", detector in workaroundBlock)
-        }
         assertTrue("Per-detector re-probe escape hatch was removed.", "filterNot { it == probeDetector }" in build)
     }
 

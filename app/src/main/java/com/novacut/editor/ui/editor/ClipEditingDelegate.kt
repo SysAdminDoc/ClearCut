@@ -18,6 +18,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
 
+internal data class PreparedTrimRange(val startMs: Long, val endMs: Long)
+
+internal fun trimExtendsPreparedRange(prepared: PreparedTrimRange, clip: Clip): Boolean =
+    clip.trimStartMs < prepared.startMs || clip.trimEndMs > prepared.endMs
+
 /**
  * Delegate handling clip editing operations: add, select, delete, duplicate,
  * merge, split, trim, speed, and reverse.
@@ -33,6 +38,7 @@ class ClipEditingDelegate(
     private val showToast: (String) -> Unit,
     private val rebuildPlayerTimeline: () -> Unit,
     private val saveProject: () -> Unit,
+    private val refreshExtendedTrimPreview: () -> Unit,
     private val seekPreviewTo: (Long) -> Unit,
     private val currentPlayheadMs: () -> Long,
     private val updateLivePlayheadMs: (Long) -> Unit,
@@ -57,6 +63,7 @@ class ClipEditingDelegate(
     private val bulkDeleteWindowMs = 10_000L
     private val bulkDeleteThreshold = 3
     private var lastTrimPreviewSeekMs: Long? = null
+    private var preparedTrimRanges: Map<String, PreparedTrimRange> = emptyMap()
     // --- Add Clip ---
     fun addClipToTrack(uri: Uri, trackType: TrackType = TrackType.VIDEO) {
         scope.launch {
@@ -665,6 +672,10 @@ class ClipEditingDelegate(
             return
         }
         saveUndoState("Trim clip")
+        preparedTrimRanges = stateFlow.value.tracks
+            .flatMap(Track::clips)
+            .filter { it.id in targetIds }
+            .associate { it.id to PreparedTrimRange(it.trimStartMs, it.trimEndMs) }
         // Trim drags need live frame feedback at the in/out boundary. ExoPlayer's
         // scrubbing optimization can hold the surface on a loading frame here, so
         // leave normal decode enabled and avoid only the expensive timeline rebuild.
@@ -699,8 +710,22 @@ class ClipEditingDelegate(
             }?.coerceIn(0L, updatedState.totalDurationMs.coerceAtLeast(0L))
             updatedState
         }
+        var extendedPreparedRange = false
+        stateFlow.value.tracks
+            .flatMap(Track::clips)
+            .filter { it.id in targetIds }
+            .forEach { updatedClip ->
+                val prepared = preparedTrimRanges[updatedClip.id] ?: return@forEach
+                if (trimExtendsPreparedRange(prepared, updatedClip)) {
+                    extendedPreparedRange = true
+                }
+            }
         lastTrimPreviewSeekMs = previewSeekMs
         previewSeekMs?.let(seekPreviewTo)
+        // Keep the gesture-start range immutable. The throttled callback builds
+        // whatever state is current when it fires, so treating a requested range
+        // as already prepared would miss extend/retract/re-extend sequences.
+        if (extendedPreparedRange) refreshExtendedTrimPreview()
         // rebuildPlayerTimeline() moved to endTrim() — trim fires at touch-event
         // rate during drag, and rebuilding ExoPlayer's MediaItem set on every
         // tick was the primary source of timeline clunkiness. beginTrim already
@@ -713,6 +738,7 @@ class ClipEditingDelegate(
         rebuildPlayerTimeline()
         lastTrimPreviewSeekMs?.let(seekPreviewTo)
         lastTrimPreviewSeekMs = null
+        preparedTrimRanges = emptyMap()
         saveProject()
     }
 

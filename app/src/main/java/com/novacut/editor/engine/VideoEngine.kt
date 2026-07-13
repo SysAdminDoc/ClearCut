@@ -1306,7 +1306,9 @@ class VideoEngine @Inject constructor(
 
         val itemBuilder = EditedMediaItem.Builder(mediaItem)
             .setEffects(Effects(audioProcessors, videoEffects))
-            .setDurationUs(durationMsToUs((clip.trimEndMs - clip.trimStartMs).coerceAtLeast(1L)))
+            // Media3 applies clipping to this declared input duration. Supplying
+            // the retained duration makes any non-zero trim start invalid.
+            .setDurationUs(durationMsToUs(clip.sourceDurationMs.coerceAtLeast(1L)))
 
         applyClipSpeed(itemBuilder, clip)
         return itemBuilder.build()
@@ -1554,7 +1556,7 @@ class VideoEngine @Inject constructor(
                         val itemBuilder = EditedMediaItem.Builder(mediaItem)
                                 .setEffects(Effects(processors, emptyList()))
                                 .setRemoveVideo(true)
-                                .setDurationUs(durationMsToUs((clip.trimEndMs - clip.trimStartMs).coerceAtLeast(1L)))
+                                .setDurationUs(durationMsToUs(clip.sourceDurationMs.coerceAtLeast(1L)))
                         applyClipSpeed(itemBuilder, clip)
                         builder.addItem(itemBuilder.build())
                     }

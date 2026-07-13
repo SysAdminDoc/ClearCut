@@ -4,9 +4,16 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.136-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.137-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.137 Live extended-trim preview
+
+- Dragging either trim edge now keeps direct seeks for retained media and throttles composition refreshes only when the gesture exposes media outside the range prepared at gesture start.
+- Pending trim refreshes are canceled before the final gesture rebuild, while an immutable prepared-range snapshot keeps extend/retract/re-extend sequences correct without rebuilding on every pointer event.
+- Media3 preview items now declare original source duration before clipping, fixing non-zero trim starts that were rejected before decode. A physical-device two-color H.264 fixture verifies both the trimmed and newly exposed boundary frames.
+- A clean lint rebuild reproduced the same Kotlin analysis API crash in `UnrememberedMutableState`; it joins the exact per-detector workaround/probe set until the pinned analysis stack changes.
 
 ### v3.74.136 Multi-track live composition
 
@@ -14,7 +21,7 @@
 - Preview and export share persisted track ordering, absolute sequence gaps, mute/solo/volume policy, linked-audio suppression, clip speed, fades, and volume automation; composition rebuilds preserve the playhead and requested playback state.
 - Missing upper layers become transparent sequence gaps instead of black frames that hide lower video. Proxy resolution, preview-safe effects, adjustment layers, and color-blind simulation remain in the composition graph.
 - Physical-device offscreen integration proves two simultaneous visual sequences composite with the expected z-order/opacity, seek together, and accept a gap-only replacement graph; pure tests cover overlap ordering, gaps, visibility, mute, solo, gain, and sampled speed changes.
-- Clean lint analysis proved `RememberInComposition` and `AutoboxingStateCreation` still crash against the pinned Kotlin analysis API; both are back in the exact workaround set while `UnrememberedMutableState` remains enabled.
+- Clean lint analysis proved `RememberInComposition`, `AutoboxingStateCreation`, and `UnrememberedMutableState` crash against the pinned Kotlin analysis API; all remain in the exact re-probeable workaround set.
 
 ### v3.74.135 Shaped CJK and RTL captions
 

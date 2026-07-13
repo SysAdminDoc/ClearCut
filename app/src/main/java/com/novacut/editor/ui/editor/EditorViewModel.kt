@@ -697,6 +697,7 @@ class EditorViewModel @Inject constructor(
         appContext = appContext,
         scope = viewModelScope, saveUndoState = ::saveUndoState, showToast = ::showToast,
         rebuildPlayerTimeline = ::rebuildPlayerTimeline, saveProject = ::saveProject,
+        refreshExtendedTrimPreview = ::refreshExtendedTrimPreview,
         seekPreviewTo = ::seekTo,
         currentPlayheadMs = { _playheadMs.value },
         updateLivePlayheadMs = { _playheadMs.value = it },
@@ -1281,6 +1282,16 @@ class EditorViewModel @Inject constructor(
     }
 
     private var previewRebuildJob: Job? = null
+    private var extendedTrimPreviewJob: Job? = null
+
+    private fun refreshExtendedTrimPreview() {
+        if (extendedTrimPreviewJob?.isActive == true) return
+        extendedTrimPreviewJob = viewModelScope.launch {
+            delay(100L)
+            rebuildPlayerTimeline()
+            extendedTrimPreviewJob = null
+        }
+    }
 
     /** Debounce expensive composition graph replacement during slider and gesture updates. */
     private fun updatePreview() {
@@ -1420,7 +1431,11 @@ class EditorViewModel @Inject constructor(
     fun splitClipAtPlayhead() = clipEditingDelegate.splitClipAtPlayhead()
     fun beginTrim() = clipEditingDelegate.beginTrim()
     fun trimClip(clipId: String, newTrimStartMs: Long? = null, newTrimEndMs: Long? = null) = clipEditingDelegate.trimClip(clipId, newTrimStartMs, newTrimEndMs)
-    fun endTrim() = clipEditingDelegate.endTrim()
+    fun endTrim() {
+        extendedTrimPreviewJob?.cancel()
+        extendedTrimPreviewJob = null
+        clipEditingDelegate.endTrim()
+    }
     fun beginSpeedChange() = clipEditingDelegate.beginSpeedChange()
     fun setClipSpeed(clipId: String, speed: Float) = clipEditingDelegate.setClipSpeed(clipId, speed)
     fun endSpeedChange() = clipEditingDelegate.endSpeedChange()

@@ -63,6 +63,36 @@ class EditorPlaybackContractTest {
     }
 
     @Test
+    fun `extended trim preview is throttled against the gesture start range`() {
+        val delegate = locate(
+            "app/src/main/java/com/novacut/editor/ui/editor/ClipEditingDelegate.kt"
+        ).readText()
+        val viewModel = locate(
+            "app/src/main/java/com/novacut/editor/ui/editor/EditorViewModel.kt"
+        ).readText()
+        val trimBlock = delegate.substring(
+            delegate.indexOf("fun beginTrim()"),
+            delegate.indexOf("// --- Speed ---")
+        )
+        val refreshBlock = viewModel.substring(
+            viewModel.indexOf("private fun refreshExtendedTrimPreview()"),
+            viewModel.indexOf("private fun updatePreview()")
+        )
+        val endTrimBlock = viewModel.substring(
+            viewModel.indexOf("fun endTrim()"),
+            viewModel.indexOf("fun beginSpeedChange()")
+        )
+
+        assertTrue(trimBlock.contains("trimExtendsPreparedRange(prepared, updatedClip)"))
+        assertTrue(trimBlock.contains("if (extendedPreparedRange) refreshExtendedTrimPreview()"))
+        assertFalse(trimBlock.contains("preparedTrimRanges = preparedTrimRanges +"))
+        assertTrue(refreshBlock.contains("if (extendedTrimPreviewJob?.isActive == true) return"))
+        assertTrue(refreshBlock.contains("delay(100L)"))
+        assertTrue(refreshBlock.contains("rebuildPlayerTimeline()"))
+        assertTrue(endTrimBlock.contains("extendedTrimPreviewJob?.cancel()"))
+    }
+
+    @Test
     fun `live preview excludes single input transition shaders`() {
         val engine = locate("app/src/main/java/com/novacut/editor/engine/VideoEngine.kt").readText()
         assertTrue(engine.contains("if (!previewMode) {\n                clip.headTransition"))
@@ -83,6 +113,7 @@ class EditorPlaybackContractTest {
         assertTrue(engine.contains("allowAudioTransmux = false"))
         assertTrue(engine.contains("addGap(durationMsToUs(compositionDurationMs))"))
         assertTrue(engine.contains("applyClipSpeed(itemBuilder, clip)"))
+        assertTrue(engine.contains("setDurationUs(durationMsToUs(clip.sourceDurationMs.coerceAtLeast(1L)))"))
         assertFalse(viewModel.contains("startGapPlayback"))
         assertFalse(previewPanel.contains("currentClipIsStillImage"))
     }

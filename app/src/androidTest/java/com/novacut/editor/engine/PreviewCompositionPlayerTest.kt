@@ -38,6 +38,92 @@ import java.util.concurrent.atomic.AtomicReference
 @androidx.annotation.OptIn(ExperimentalApi::class)
 class PreviewCompositionPlayerTest {
     @Test
+    fun trimmedAndExtendedCompositionsDecodeTheirBoundaryFrames() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val source = File(context.cacheDir, "trim-boundary.mp4")
+        instrumentation.context.assets.open("trim-boundary.mp4").use { input ->
+            source.outputStream().use(input::copyTo)
+        }
+        val ready = AtomicReference(CountDownLatch(1))
+        val failure = AtomicReference<PlaybackException?>()
+        val playerRef = AtomicReference<CompositionPlayer>()
+        val imageThread = HandlerThread("trim-boundary-frames").apply { start() }
+        val imageReader = ImageReader.newInstance(64, 64, PixelFormat.RGBA_8888, 3)
+        val latestColor = AtomicReference<Int?>()
+        val listener = object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_READY) ready.get().countDown()
+            }
+
+            override fun onPlayerError(error: PlaybackException) {
+                failure.set(error)
+                ready.get().countDown()
+            }
+        }
+        imageReader.setOnImageAvailableListener({ reader ->
+            reader.acquireLatestImage()?.use { image ->
+                val plane = image.planes.single()
+                val offset = 32 * plane.rowStride + 32 * plane.pixelStride
+                val buffer = plane.buffer
+                latestColor.set(
+                    Color.rgb(
+                        buffer.get(offset).toInt() and 0xff,
+                        buffer.get(offset + 1).toInt() and 0xff,
+                        buffer.get(offset + 2).toInt() and 0xff,
+                    )
+                )
+            }
+        }, Handler(imageThread.looper))
+
+        try {
+            instrumentation.runOnMainSync {
+                val player = CompositionPlayer.Builder(context)
+                    .setVideoGraphFactory(MultipleInputVideoGraph.Factory())
+                    .build()
+                player.addListener(listener)
+                player.setVideoSurface(imageReader.surface, Size(64, 64))
+                player.setComposition(videoComposition(source, 500L, 1_000L))
+                player.prepare()
+                playerRef.set(player)
+            }
+            assertTrue("trimmed preview did not reach READY", ready.get().await(20, TimeUnit.SECONDS))
+            assertNull("trimmed preview failed: ${failure.get()?.message}", failure.get())
+            val trimmedColor = renderLatestColor(instrumentation, playerRef.get(), latestColor)
+            assertTrue(
+                "trimmed center rgb=${Color.red(trimmedColor)},${Color.green(trimmedColor)},${Color.blue(trimmedColor)}",
+                Color.blue(trimmedColor) > 200 && Color.red(trimmedColor) < 40
+            )
+
+            val extendedReady = CountDownLatch(1)
+            ready.set(extendedReady)
+            instrumentation.runOnMainSync {
+                playerRef.get().release()
+                val player = CompositionPlayer.Builder(context)
+                    .setVideoGraphFactory(MultipleInputVideoGraph.Factory())
+                    .build()
+                player.addListener(listener)
+                player.setVideoSurface(imageReader.surface, Size(64, 64))
+                player.setComposition(videoComposition(source, 0L, 1_000L), 0L)
+                player.prepare()
+                playerRef.set(player)
+            }
+            assertTrue("extended preview did not reach READY", extendedReady.await(20, TimeUnit.SECONDS))
+            assertNull("extended preview failed: ${failure.get()?.message}", failure.get())
+            val extendedColor = renderLatestColor(instrumentation, playerRef.get(), latestColor)
+            assertTrue(
+                "extended center rgb=${Color.red(extendedColor)},${Color.green(extendedColor)},${Color.blue(extendedColor)}",
+                Color.red(extendedColor) > 200 && Color.blue(extendedColor) < 40
+            )
+        } finally {
+            instrumentation.runOnMainSync { playerRef.get()?.release() }
+            imageReader.close()
+            imageThread.quitSafely()
+            source.delete()
+        }
+    }
+
+    @Test
     fun gapOnlyCompositionReplacesStaleVisualContent() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
@@ -180,6 +266,44 @@ class PreviewCompositionPlayerTest {
         return EditedMediaItemSequence.Builder(setOf(C.TRACK_TYPE_VIDEO))
             .addItem(item)
             .build()
+    }
+
+    private fun videoComposition(file: File, trimStartMs: Long, trimEndMs: Long): Composition {
+        val mediaItem = MediaItem.Builder()
+            .setUri(Uri.fromFile(file))
+            .setClippingConfiguration(
+                MediaItem.ClippingConfiguration.Builder()
+                    .setStartPositionMs(trimStartMs)
+                    .setEndPositionMs(trimEndMs)
+                    .build()
+            )
+            .build()
+        val sequence = EditedMediaItemSequence.Builder(setOf(C.TRACK_TYPE_VIDEO))
+            .addItem(
+                EditedMediaItem.Builder(mediaItem)
+                    .setDurationUs(1_000_000L)
+                    .build()
+            )
+            .build()
+        return Composition.Builder(listOf(sequence)).build()
+    }
+
+    private fun renderLatestColor(
+        instrumentation: android.app.Instrumentation,
+        player: CompositionPlayer,
+        latestColor: AtomicReference<Int?>,
+    ): Int {
+        latestColor.set(null)
+        instrumentation.runOnMainSync {
+            player.seekTo(0L)
+            player.play()
+        }
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10L)
+        while (latestColor.get() == null && System.nanoTime() < deadline) {
+            Thread.sleep(20L)
+        }
+        instrumentation.runOnMainSync { player.pause() }
+        return requireNotNull(latestColor.get()) { "preview produced no decoded frame" }
     }
 
     private fun createStill(file: File, color: Int): File {

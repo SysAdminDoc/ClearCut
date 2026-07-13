@@ -1,0 +1,3 @@
+Trim edges now preview newly exposed frames during the drag with throttled composition refreshes.
+Fixed non-zero trim starts rejected by Media3 preview preparation.
+Added physical-device decoded-frame coverage for trimmed and extended ranges.
