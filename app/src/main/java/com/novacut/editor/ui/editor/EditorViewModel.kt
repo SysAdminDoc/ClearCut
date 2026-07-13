@@ -18,6 +18,8 @@ import com.novacut.editor.engine.AiUsageLedger
 import com.novacut.editor.engine.AppSettings
 import com.novacut.editor.engine.AudioEngine
 import com.novacut.editor.engine.AutoSaveState
+import com.novacut.editor.engine.AutoSaveRequest
+import com.novacut.editor.engine.projectStateFingerprint
 import com.novacut.editor.engine.ExportIncidentStore
 import com.novacut.editor.engine.ExportState
 import com.novacut.editor.engine.ExportStoragePolicy
@@ -92,6 +94,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -363,6 +367,7 @@ data class EditorState(
     val proxySettings: ProxySettings = ProxySettings(),
     // Auto-save indicator
     val saveIndicator: com.novacut.editor.model.SaveIndicatorState = com.novacut.editor.model.SaveIndicatorState.HIDDEN,
+    val isProjectDirty: Boolean = false,
     // Undo history
     val undoHistoryEntries: List<com.novacut.editor.model.UndoHistoryEntry> = emptyList(),
     // Beat sync
@@ -492,6 +497,9 @@ data class UndoAction(
     val drawingPaths: List<com.novacut.editor.model.DrawingPath> = emptyList(),
     val beatMarkers: List<Long> = emptyList(),
     val trackedObjects: List<com.novacut.editor.model.TrackedObject> = emptyList(),
+    val globalTransitions: List<GlobalTransition> = emptyList(),
+    val storyboardCards: List<StoryboardCard> = emptyList(),
+    val transcript: Transcript? = null,
     val playheadMs: Long = 0L,
     val selectedClipId: String? = null,
     val selectedTrackId: String? = null,
@@ -604,6 +612,8 @@ class EditorViewModel @Inject constructor(
     private var latestSettings: AppSettings? = null
     private var lastAutoSaveRunning: Boolean? = null
     private var lastAutoSaveIntervalSec: Int? = null
+    private val savedStateTracker = SavedStateTracker()
+    private val projectSaveMutex = Mutex()
     private var mediaRelinkProbeJob: Job? = null
     private var captionTranslationJob: Job? = null
     private var autoEditJob: Job? = null
@@ -878,6 +888,18 @@ class EditorViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            _state
+                .map(::dirtyTrackingKey)
+                .distinctUntilChanged()
+                .collectLatest {
+                    if (!recoveryOpenComplete || autoSaveBlockedByRecovery) return@collectLatest
+                    delay(100L)
+                    val current = currentProjectFingerprint()
+                    applySavedStateStatus(savedStateTracker.contentChanged(current))
+                }
+        }
+
+        viewModelScope.launch {
             videoEngine.exportProgress.collect { progress ->
                 _state.update { it.copyExport { export -> export.copy(progress = progress) } }
             }
@@ -1088,6 +1110,11 @@ class EditorViewModel @Inject constructor(
         }
         autoSaveBlockedByRecovery = shouldBlockAutoSaveForRecoveryOutcome(outcome)
         recoveryOpenComplete = true
+        if (autoSaveBlockedByRecovery) {
+            showSaveIndicator(com.novacut.editor.model.SaveIndicatorState.ERROR)
+        } else {
+            applySavedStateStatus(savedStateTracker.establishBaseline(currentProjectFingerprint()))
+        }
         recoveryOpenFeedbackFor(outcome, expectRecovery)?.let { feedback ->
             showToast(feedback.message, feedback.severity)
         }
@@ -1173,21 +1200,58 @@ class EditorViewModel @Inject constructor(
             autoSave.startAutoSave(
                 projectId ?: _state.value.project.id,
                 intervalMs = current.autoSaveIntervalSec * 1000L,
-                onSaveResult = { succeeded ->
-                    showSaveIndicator(
-                        if (succeeded) {
-                            com.novacut.editor.model.SaveIndicatorState.SAVED
-                        } else {
-                            com.novacut.editor.model.SaveIndicatorState.ERROR
+                onSaveResult = { succeeded, request ->
+                    viewModelScope.launch {
+                        projectSaveMutex.withLock {
+                            val currentFingerprint = currentProjectFingerprint()
+                            val attempt = request?.let {
+                                SaveAttempt(it.saveToken, it.documentFingerprint)
+                            }
+                            if (succeeded && request != null && attempt != null) {
+                                try {
+                                    if (currentFingerprint == request.documentFingerprint) {
+                                        projectDao.insertProject(request.project)
+                                        projectDao.replaceProjectMediaAssets(
+                                            request.project.id,
+                                            request.state.mediaAssets.toProjectMediaAssetEntities(request.project.id),
+                                        )
+                                        applySavedProjectMetadata(request.project)
+                                    }
+                                    applySavedStateStatus(
+                                        savedStateTracker.saveSucceeded(attempt, currentProjectFingerprint())
+                                    )
+                                } catch (e: Exception) {
+                                    if (e is CancellationException) throw e
+                                    Log.e("EditorVM", "Periodic project save failed", e)
+                                    applySavedStateStatus(
+                                        savedStateTracker.saveFailed(attempt, currentProjectFingerprint())
+                                    )
+                                }
+                            } else if (attempt != null) {
+                                applySavedStateStatus(
+                                    savedStateTracker.saveFailed(attempt, currentProjectFingerprint())
+                                )
+                            } else {
+                                applySavedStateStatus(
+                                    savedStateTracker.externalSaveFailed(currentProjectFingerprint())
+                                )
+                            }
                         }
-                    )
+                    }
                 }
             ) {
-                showSaveIndicator(com.novacut.editor.model.SaveIndicatorState.SAVING)
                 val s = _state.value
-                val state = buildAutoSaveState(s)
-                persistProjectMediaAssets(state)
-                state
+                val project = projectForSave(s)
+                val state = buildAutoSaveState(s, project.id)
+                val fingerprint = projectStateFingerprint(project, state)
+                val (attempt, _) = savedStateTracker.beginSave(fingerprint)
+                showSaveIndicator(com.novacut.editor.model.SaveIndicatorState.SAVING)
+                AutoSaveRequest(
+                    project = project,
+                    state = state,
+                    saveToken = attempt.token,
+                    documentFingerprint = attempt.fingerprint,
+                )
             }
         } else {
             autoSave.stop()
@@ -2588,6 +2652,9 @@ class EditorViewModel @Inject constructor(
                 drawingPaths = target.drawingPaths,
                 beatMarkers = target.beatMarkers,
                 trackedObjects = target.trackedObjects,
+                globalTransitions = target.globalTransitions,
+                storyboardCards = target.storyboardCards,
+                v369 = state.v369.copy(transcript = target.transcript),
                 selectedClipId = target.selectedClipId,
                 selectedTrackId = target.selectedTrackId,
                 selectedClipIds = target.selectedClipIds,
@@ -2603,6 +2670,9 @@ class EditorViewModel @Inject constructor(
                     drawingPaths = state.drawingPaths.toList(),
                     beatMarkers = state.beatMarkers.toList(),
                     trackedObjects = state.trackedObjects.toList(),
+                    globalTransitions = state.globalTransitions.toList(),
+                    storyboardCards = state.storyboardCards.toList(),
+                    transcript = state.v369.transcript,
                     playheadMs = _playheadMs.value,
                     selectedClipId = state.selectedClipId,
                     selectedTrackId = state.selectedTrackId,
@@ -5120,6 +5190,9 @@ class EditorViewModel @Inject constructor(
             drawingPaths = _state.value.drawingPaths.toList(),
             beatMarkers = _state.value.beatMarkers.toList(),
             trackedObjects = _state.value.trackedObjects.toList(),
+            globalTransitions = _state.value.globalTransitions.toList(),
+            storyboardCards = _state.value.storyboardCards.toList(),
+            transcript = _state.value.v369.transcript,
             playheadMs = _playheadMs.value,
             selectedClipId = _state.value.selectedClipId,
             selectedTrackId = _state.value.selectedTrackId,
@@ -5137,6 +5210,9 @@ class EditorViewModel @Inject constructor(
                 drawingPaths = action.drawingPaths,
                 beatMarkers = action.beatMarkers,
                 trackedObjects = action.trackedObjects,
+                globalTransitions = action.globalTransitions,
+                storyboardCards = action.storyboardCards,
+                v369 = it.v369.copy(transcript = action.transcript),
                 selectedClipId = action.selectedClipId,
                 selectedTrackId = action.selectedTrackId,
                 selectedClipIds = action.selectedClipIds,
@@ -5174,6 +5250,9 @@ class EditorViewModel @Inject constructor(
             drawingPaths = _state.value.drawingPaths.toList(),
             beatMarkers = _state.value.beatMarkers.toList(),
             trackedObjects = _state.value.trackedObjects.toList(),
+            globalTransitions = _state.value.globalTransitions.toList(),
+            storyboardCards = _state.value.storyboardCards.toList(),
+            transcript = _state.value.v369.transcript,
             playheadMs = _playheadMs.value,
             selectedClipId = _state.value.selectedClipId,
             selectedTrackId = _state.value.selectedTrackId,
@@ -5191,6 +5270,9 @@ class EditorViewModel @Inject constructor(
                 drawingPaths = action.drawingPaths,
                 beatMarkers = action.beatMarkers,
                 trackedObjects = action.trackedObjects,
+                globalTransitions = action.globalTransitions,
+                storyboardCards = action.storyboardCards,
+                v369 = it.v369.copy(transcript = action.transcript),
                 selectedClipId = action.selectedClipId,
                 selectedTrackId = action.selectedTrackId,
                 selectedClipIds = action.selectedClipIds,
@@ -5359,6 +5441,38 @@ class EditorViewModel @Inject constructor(
         )
     }
 
+    private fun dirtyTrackingKey(state: EditorState): AutoSaveState = AutoSaveState(
+        projectId = state.project.id,
+        timestamp = 0L,
+        tracks = state.tracks,
+        textOverlays = state.textOverlays,
+        imageOverlays = state.imageOverlays,
+        timelineMarkers = state.timelineMarkers,
+        playheadMs = 0L,
+        chapterMarkers = state.chapterMarkers,
+        drawingPaths = state.drawingPaths,
+        beatMarkers = state.beatMarkers,
+        transcript = state.v369.transcript,
+        trackedObjects = state.trackedObjects,
+        aiUsageLedger = state.aiUsageLedger,
+        storyboardCards = state.storyboardCards,
+        globalTransitions = state.globalTransitions,
+        exportWatermark = state.exportConfig.watermark,
+    )
+
+    private fun currentProjectFingerprint(state: EditorState = _state.value): String =
+        projectStateFingerprint(state.project, buildAutoSaveState(state))
+
+    private fun applySavedStateStatus(status: SavedStateStatus) {
+        _state.update { state ->
+            if (state.isProjectDirty == status.isDirty) state
+            else state.copy(isProjectDirty = status.isDirty)
+        }
+        if (_state.value.saveIndicator != status.indicator) {
+            showSaveIndicator(status.indicator)
+        }
+    }
+
     private fun projectMediaAssetsFor(state: EditorState): List<ProjectMediaAsset> {
         val cacheKey = mediaManifestCacheKey(state.tracks, state.imageOverlays)
         return synchronized(projectMediaManifestCacheLock) {
@@ -5388,55 +5502,73 @@ class EditorViewModel @Inject constructor(
     private fun analyzeMediaHealthForRecovery(recovery: AutoSaveState) =
         MediaHealth.analyze(recovery)
 
-    private fun persistProjectMediaAssets(state: AutoSaveState) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                projectDao.replaceProjectMediaAssets(
-                    state.projectId,
-                    state.mediaAssets.toProjectMediaAssetEntities(state.projectId)
-                )
-            } catch (e: Exception) {
-                Log.w("EditorVM", "Failed to persist media asset manifest for ${state.projectId}", e)
-            }
-        }
-    }
-
     private fun sanitizedProjectFileStem(name: String): String {
         return sanitizeFileName(name, fallback = "ClearCut")
     }
 
     fun saveProject() {
+        val snapshot = _state.value
+        val project = projectForSave(snapshot)
+        val autoSaveState = buildAutoSaveState(snapshot, project.id)
+        val fingerprint = projectStateFingerprint(project, autoSaveState)
+        val (attempt, status) = savedStateTracker.beginSave(fingerprint)
+        applySavedStateStatus(status)
+
         viewModelScope.launch {
-            try {
-                val s = _state.value
-                val firstClipUri = s.tracks
-                    .filter { it.type == TrackType.VIDEO }
-                    .flatMap { it.clips }
-                    .firstOrNull()?.sourceUri?.toString()
+            projectSaveMutex.withLock {
+                try {
+                    projectDao.insertProject(project)
+                    projectDao.replaceProjectMediaAssets(
+                        project.id,
+                        autoSaveState.mediaAssets.toProjectMediaAssetEntities(project.id),
+                    )
+                    applySavedProjectMetadata(project)
 
-                val project = s.project.copy(
-                    updatedAt = System.currentTimeMillis(),
-                    durationMs = s.totalDurationMs,
-                    thumbnailUri = firstClipUri
-                )
-                val autoSaveState = buildAutoSaveState(s, project.id)
-                projectDao.insertProject(project)
-                projectDao.replaceProjectMediaAssets(
-                    project.id,
-                    autoSaveState.mediaAssets.toProjectMediaAssetEntities(project.id)
-                )
-                _state.update { it.copy(project = project) }
-
-                // Persist track/clip data immediately (don't wait for auto-save timer).
-                if (recoveryOpenComplete && !autoSaveBlockedByRecovery &&
-                    !autoSave.saveNow(project.id, autoSaveState)
-                ) {
-                    showSaveIndicator(com.novacut.editor.model.SaveIndicatorState.ERROR)
+                    // Persist the exact snapshot fingerprinted above. Capturing inside
+                    // the coroutine allowed a newer edit to be mislabeled as saved.
+                    if (recoveryOpenComplete && !autoSaveBlockedByRecovery &&
+                        autoSave.saveNow(project.id, autoSaveState)
+                    ) {
+                        applySavedStateStatus(
+                            savedStateTracker.saveSucceeded(attempt, currentProjectFingerprint())
+                        )
+                    } else {
+                        applySavedStateStatus(
+                            savedStateTracker.saveFailed(attempt, currentProjectFingerprint())
+                        )
+                    }
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.e("EditorVM", "Project save failed", e)
+                    applySavedStateStatus(
+                        savedStateTracker.saveFailed(attempt, currentProjectFingerprint())
+                    )
                 }
-            } catch (e: Exception) {
-                Log.e("EditorVM", "Project save failed", e)
-                showSaveIndicator(com.novacut.editor.model.SaveIndicatorState.ERROR)
             }
+        }
+    }
+
+    private fun projectForSave(state: EditorState): Project {
+        val firstClipUri = state.tracks
+            .filter { it.type == TrackType.VIDEO }
+            .flatMap { it.clips }
+            .firstOrNull()?.sourceUri?.toString()
+        return state.project.copy(
+            updatedAt = System.currentTimeMillis(),
+            durationMs = state.totalDurationMs,
+            thumbnailUri = firstClipUri,
+        )
+    }
+
+    private fun applySavedProjectMetadata(project: Project) {
+        _state.update { current ->
+            current.copy(
+                project = current.project.copy(
+                    updatedAt = project.updatedAt,
+                    durationMs = project.durationMs,
+                    thumbnailUri = project.thumbnailUri,
+                )
+            )
         }
     }
 
@@ -5527,6 +5659,9 @@ class EditorViewModel @Inject constructor(
             drawingPaths = state.drawingPaths.toList(),
             beatMarkers = state.beatMarkers.toList(),
             trackedObjects = state.trackedObjects.toList(),
+            globalTransitions = state.globalTransitions.toList(),
+            storyboardCards = state.storyboardCards.toList(),
+            transcript = state.v369.transcript,
             playheadMs = _playheadMs.value,
             selectedClipId = state.selectedClipId,
             selectedTrackId = state.selectedTrackId,
@@ -5556,6 +5691,9 @@ class EditorViewModel @Inject constructor(
                     drawingPaths = action.drawingPaths,
                     beatMarkers = action.beatMarkers,
                     trackedObjects = action.trackedObjects,
+                    globalTransitions = action.globalTransitions,
+                    storyboardCards = action.storyboardCards,
+                    v369 = state.v369.copy(transcript = action.transcript),
                     selectedClipId = action.selectedClipId,
                     selectedTrackId = action.selectedTrackId,
                     selectedClipIds = action.selectedClipIds,

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ClearCut</string>
-    <string name="app_version">v3.74.139</string>
+    <string name="app_version">v3.74.140</string>
 
     <!-- Importación de listas de cortes y marcadores -->
     <string name="cut_list_import_empty">No hay nada que importar: primero pega rangos de tiempo o marcadores</string>
@@ -1501,6 +1501,7 @@
     <string name="autosave_saving">Guardando\u2026</string>
     <string name="autosave_saved">Guardado</string>
     <string name="autosave_failed">Error al guardar</string>
+    <string name="autosave_unsaved">Cambios sin guardar</string>
     <string name="edit_confidence_autosave_ready">Autoguardado listo</string>
     <string name="edit_confidence_undo_redo">%1$d deshacer / %2$d rehacer</string>
     <string name="clip_label">Etiqueta</string>

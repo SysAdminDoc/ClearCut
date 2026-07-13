@@ -655,13 +655,15 @@ fun EditorScreen(
                 state.undoStack.size,
                 state.redoStack.size,
                 state.projectSnapshots.size,
-                state.saveIndicator
+                state.saveIndicator,
+                state.isProjectDirty,
             ) {
                 editConfidenceStatusFor(
                     undoableEdits = state.undoStack.size,
                     redoableEdits = state.redoStack.size,
                     restorePoints = state.projectSnapshots.size,
-                    saveIndicator = state.saveIndicator
+                    saveIndicator = state.saveIndicator,
+                    isDirty = state.isProjectDirty,
                 )
             }
 
@@ -1543,17 +1545,21 @@ private fun EditorTopBar(
                     stringResource(R.string.settings_mode_easy)
                 }
                 val modeChipDescription = stringResource(R.string.editor_mode_chip_cd, modeLabel)
-                val saveLabel = when (editConfidenceStatus.saveIndicator) {
-                    SaveIndicatorState.SAVING -> stringResource(R.string.autosave_saving)
-                    SaveIndicatorState.SAVED -> stringResource(R.string.autosave_saved)
-                    SaveIndicatorState.ERROR -> stringResource(R.string.autosave_failed)
-                    SaveIndicatorState.HIDDEN -> stringResource(R.string.edit_confidence_autosave_ready)
+                val saveLabel = when {
+                    editConfidenceStatus.saveIndicator == SaveIndicatorState.ERROR ->
+                        stringResource(R.string.autosave_failed)
+                    editConfidenceStatus.saveIndicator == SaveIndicatorState.SAVING ->
+                        stringResource(R.string.autosave_saving)
+                    editConfidenceStatus.isDirty -> stringResource(R.string.autosave_unsaved)
+                    editConfidenceStatus.saveIndicator == SaveIndicatorState.SAVED ->
+                        stringResource(R.string.autosave_saved)
+                    else -> stringResource(R.string.edit_confidence_autosave_ready)
                 }
-                val saveAccent = when (editConfidenceStatus.saveIndicator) {
-                    SaveIndicatorState.SAVING -> ClearCutAccents.Sapphire
-                    SaveIndicatorState.SAVED,
-                    SaveIndicatorState.HIDDEN -> ClearCutAccents.Green
-                    SaveIndicatorState.ERROR -> ClearCutAccents.Red
+                val saveAccent = when {
+                    editConfidenceStatus.saveIndicator == SaveIndicatorState.ERROR -> ClearCutAccents.Red
+                    editConfidenceStatus.saveIndicator == SaveIndicatorState.SAVING -> ClearCutAccents.Sapphire
+                    editConfidenceStatus.isDirty -> ClearCutAccents.Peach
+                    else -> ClearCutAccents.Green
                 }
                 Column(
                     modifier = Modifier.weight(1f),
@@ -1574,10 +1580,10 @@ private fun EditorTopBar(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
-                            imageVector = if (editConfidenceStatus.saveNeedsAttention) {
-                                Icons.Default.Warning
-                            } else {
-                                Icons.Default.CheckCircle
+                            imageVector = when {
+                                editConfidenceStatus.saveNeedsAttention -> Icons.Default.Warning
+                                editConfidenceStatus.isDirty -> Icons.Default.Edit
+                                else -> Icons.Default.CheckCircle
                             },
                             contentDescription = null,
                             tint = saveAccent,

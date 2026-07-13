@@ -1,0 +1,3 @@
+Saved-state tracking now marks new edits as unsaved and clears the marker when undo returns exactly to the saved baseline.
+Ordered save snapshots prevent edits made during a save or stale periodic callbacks from being mislabeled as current.
+Save failures stay visible until a successful retry, with expanded undo coverage for transitions, storyboards, and transcripts.

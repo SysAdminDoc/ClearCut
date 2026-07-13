@@ -48,4 +48,16 @@ class EditConfidenceStatusTest {
         assertTrue(error.saveNeedsAttention)
         assertFalse(saving.saveNeedsAttention)
     }
+
+    @Test
+    fun dirtyStateIsIndependentFromTransientSaveIndicator() {
+        val dirty = editConfidenceStatusFor(1, 0, 1, SaveIndicatorState.HIDDEN, isDirty = true)
+        val saving = editConfidenceStatusFor(1, 0, 1, SaveIndicatorState.SAVING, isDirty = true)
+        val error = editConfidenceStatusFor(1, 0, 1, SaveIndicatorState.ERROR, isDirty = true)
+
+        assertTrue(dirty.isDirty)
+        assertTrue(saving.isDirty)
+        assertTrue(error.isDirty)
+        assertTrue(error.saveNeedsAttention)
+    }
 }

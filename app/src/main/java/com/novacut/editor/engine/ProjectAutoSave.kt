@@ -12,11 +12,62 @@ import org.json.JSONArray
 import org.json.JSONObject
 import android.util.Log
 import java.io.File
+import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val TAG = "ProjectAutoSave"
 private const val MAX_AUTOSAVE_FILE_BYTES = 25_000_000L
+
+data class AutoSaveRequest(
+    val project: Project,
+    val state: AutoSaveState,
+    val saveToken: Long,
+    val documentFingerprint: String,
+)
+
+internal fun autoSavePersistenceFingerprint(state: AutoSaveState): String {
+    val canonical = state.copy(timestamp = 0L).serialize()
+    return sha256(canonical)
+}
+
+internal fun projectStateFingerprint(project: Project, state: AutoSaveState): String {
+    val canonicalTracks = state.tracks.map { track ->
+        track.copy(clips = track.clips.map(Clip::canonicalDocumentClip))
+    }
+    val canonicalState = state.copy(
+        timestamp = 0L,
+        playheadMs = 0L,
+        tracks = canonicalTracks,
+        mediaAssets = emptyList(),
+    ).serialize()
+    val projectIdentity = JSONObject().apply {
+        put("id", project.id)
+        put("name", project.name)
+        put("aspectRatio", project.aspectRatio.name)
+        put("frameRateNumerator", project.frameRateNumerator)
+        put("frameRateDenominator", project.frameRateDenominator)
+        put("resolution", project.resolution.name)
+        put("templateId", project.templateId)
+        put("proxyEnabled", project.proxyEnabled)
+        put("version", project.version)
+        put("notes", project.notes)
+    }.toString()
+    return sha256("$projectIdentity\n$canonicalState")
+}
+
+private fun Clip.canonicalDocumentClip(): Clip = copy(
+    assetId = null,
+    proxyUri = null,
+    sourceColorMetadata = sourceColorMetadata.copy(inspectedAtMs = 0L),
+    compoundClips = compoundClips.map(Clip::canonicalDocumentClip),
+)
+
+private fun sha256(contents: String): String {
+    return MessageDigest.getInstance("SHA-256")
+        .digest(contents.toByteArray(Charsets.UTF_8))
+        .joinToString("") { byte -> "%02x".format(byte) }
+}
 
 internal fun collectMediaReferenceUrisFromAutoSaveJson(raw: String): Set<String> {
     val mediaUriKeys = listOf("sourceUri", "managedUri")
@@ -38,7 +89,7 @@ class ProjectAutoSave @Inject constructor(
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val autoSaveDir = File(context.filesDir, "autosave").apply { mkdirs() }
     private val saveMutex = Mutex()
-    private val lastSavedFingerprints = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private val lastSavedFingerprints = java.util.concurrent.ConcurrentHashMap<String, String>()
     @Volatile
     private var autoSaveJob: Job? = null
     private var consecutiveFailures = 0
@@ -46,22 +97,26 @@ class ProjectAutoSave @Inject constructor(
     fun startAutoSave(
         projectId: String,
         intervalMs: Long = 30_000,
-        onSaveResult: (Boolean) -> Unit = {},
-        getState: () -> AutoSaveState
+        onSaveResult: (Boolean, AutoSaveRequest?) -> Unit = { _, _ -> },
+        getRequest: () -> AutoSaveRequest,
     ) {
         autoSaveJob?.cancel()
         consecutiveFailures = 0
         autoSaveJob = scope.launch {
             while (isActive) {
                 delay(intervalMs.coerceIn(10_000, 600_000))
+                var request: AutoSaveRequest? = null
                 try {
-                    saveState(projectId, getState())
+                    request = getRequest()
+                    val fingerprint = autoSavePersistenceFingerprint(request.state)
+                    saveState(projectId, request.state, fingerprint)
                     consecutiveFailures = 0
-                    onSaveResult(true)
+                    onSaveResult(true, request)
                 } catch (e: Exception) {
+                    if (e is CancellationException) throw e
                     consecutiveFailures++
                     Log.e(TAG, "Auto-save failed for $projectId (attempt $consecutiveFailures)", e)
-                    onSaveResult(false)
+                    onSaveResult(false, request)
                     if (consecutiveFailures >= 3) {
                         Log.w(TAG, "Auto-save has failed $consecutiveFailures times in a row for $projectId")
                     }
@@ -72,9 +127,10 @@ class ProjectAutoSave @Inject constructor(
 
     suspend fun saveNow(projectId: String, state: AutoSaveState): Boolean = withContext(Dispatchers.IO) {
         try {
-            saveState(projectId, state)
+            saveState(projectId, state, autoSavePersistenceFingerprint(state))
             true
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.e(TAG, "Manual save failed for $projectId", e)
             false
         }
@@ -292,13 +348,16 @@ class ProjectAutoSave @Inject constructor(
         }.onFailure { e -> Log.w(TAG, "Failed to sweep orphan .tmp files on release()", e) }
     }
 
-    private suspend fun saveState(projectId: String, state: AutoSaveState) = saveMutex.withLock {
+    private suspend fun saveState(
+        projectId: String,
+        state: AutoSaveState,
+        fingerprint: String,
+    ) = saveMutex.withLock {
         val contents = state.serialize()
         // Skip the temp-write + double-rename + backup churn when nothing
         // changed since the last save — the periodic loop fires every 30s
         // regardless of activity, which otherwise grinds flash storage all
         // session long on an idle project.
-        val fingerprint = contents.length.toLong() * 31 + contents.hashCode()
         if (lastSavedFingerprints[projectId] == fingerprint && getAutoSaveFile(projectId).exists()) {
             return@withLock
         }
@@ -1136,7 +1195,7 @@ data class AutoSaveState(
                 metadata.colorTransfer?.let { put("colorTransfer", it) }
                 put("inspectedAtMs", metadata.inspectedAtMs)
                 put("hdrFormats", JSONArray().apply {
-                    metadata.hdrFormats.forEach { put(it.name) }
+                    metadata.hdrFormats.sortedBy { it.name }.forEach { put(it.name) }
                 })
             }
         }
@@ -1150,7 +1209,7 @@ data class AutoSaveState(
                     ?.takeIf { it.isNotBlank() }
                     ?.let { put("targetTrackedObjectId", it) }
                 put("params", JSONObject().apply {
-                    effect.params.forEach { (k, v) -> putSafeFloat(k, v) }
+                    effect.params.toSortedMap().forEach { (k, v) -> putSafeFloat(k, v) }
                 })
                 if (effect.keyframes.isNotEmpty()) {
                     put("keyframes", JSONArray().apply {
@@ -1297,7 +1356,7 @@ data class AutoSaveState(
                 put("type", ae.type.name)
                 put("enabled", ae.enabled)
                 put("params", JSONObject().apply {
-                    ae.params.forEach { (k, v) -> putSafeFloat(k, v) }
+                    ae.params.toSortedMap().forEach { (k, v) -> putSafeFloat(k, v) }
                 })
             }
         }

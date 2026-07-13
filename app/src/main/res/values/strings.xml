@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ClearCut</string>
-    <string name="app_version">v3.74.139</string>
+    <string name="app_version">v3.74.140</string>
 
     <!-- Cut list / marker import -->
     <string name="cut_list_import_empty">Nothing to import — paste time ranges or markers first</string>
@@ -1604,6 +1604,7 @@
     <string name="autosave_saving">Saving\u2026</string>
     <string name="autosave_saved">Saved</string>
     <string name="autosave_failed">Save failed</string>
+    <string name="autosave_unsaved">Unsaved changes</string>
     <string name="edit_confidence_autosave_ready">Autosave ready</string>
     <string name="edit_confidence_undo_redo">%1$d undo / %2$d redo</string>
 

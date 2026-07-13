@@ -4,9 +4,16 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.139-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.140-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.140 Trustworthy saved-state tracking
+
+- The editor now compares a canonical document fingerprint with the latest completed save, so new edits show as unsaved and undoing exactly to the saved baseline clears the modified state.
+- Manual and periodic saves carry ordered snapshot tokens; edits made during a save and stale success/failure callbacks can no longer be mislabeled as current persistence.
+- Autosave errors remain visible until a successful retry. Fingerprints ignore timestamps, playhead position, proxy paths, media verification refreshes, and map/set iteration order while retaining every persisted edit domain.
+- Undo snapshots now restore global transitions, storyboard cards, and transcripts, allowing those edits to return to the same clean baseline.
 
 ### v3.74.139 Frame-quantized timeline edits
 
