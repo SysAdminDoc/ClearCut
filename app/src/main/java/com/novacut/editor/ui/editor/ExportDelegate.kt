@@ -19,6 +19,8 @@ import com.novacut.editor.engine.ExportHistoryStore
 import com.novacut.editor.engine.ExportIncidentBuilder
 import com.novacut.editor.engine.ExportIncidentStore
 import com.novacut.editor.engine.ExportService
+import com.novacut.editor.engine.ExportStoragePolicy
+import com.novacut.editor.engine.ExportStorageException
 import com.novacut.editor.engine.ExportState
 import com.novacut.editor.engine.MediaHealthReport
 import com.novacut.editor.engine.MixedRenderExportPlanner
@@ -29,6 +31,8 @@ import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.engine.buildExportHistoryEntry
 import com.novacut.editor.engine.exportMimeTypeFor
 import com.novacut.editor.engine.exportUsesImageCollection
+import com.novacut.editor.engine.exportStorageFailureMessage
+import com.novacut.editor.engine.querySourceSize
 import com.novacut.editor.engine.sanitizeFileName
 import com.novacut.editor.engine.writeFileAtomically
 import com.novacut.editor.engine.writeUtf8TextAtomically
@@ -394,6 +398,33 @@ class ExportDelegate(
         val hasOverlays = textOverlays.isNotEmpty() || state.imageOverlays.isNotEmpty()
         val eligibility = engine.analyze(tracks, hasOverlays)
         if (!eligibility.eligible) return false
+        val storageCheck = ExportStoragePolicy.check(
+            request = ExportStoragePolicy.request(
+                totalDurationMs,
+                config,
+                tracks,
+                sourceSizeBytes = { clip -> querySourceSize(appContext, clip.sourceUri).takeIf { it > 0L } },
+            ),
+            outputDirectory = outputFile.parentFile ?: appContext.cacheDir,
+            cacheDirectory = appContext.cacheDir,
+        )
+        if (!storageCheck.canProceed) {
+            val message = appContext.exportStorageFailureMessage(requireNotNull(storageCheck.failure))
+            updateExport { it.copy(state = ExportState.ERROR, progress = 0f, errorMessage = message) }
+            recordExportHistory(
+                sourceState = state,
+                status = ExportHistoryStatus.BLOCKED,
+                startedAtMs = startedAtMs,
+                outputFile = null,
+                config = config,
+                timelineDurationMs = totalDurationMs,
+                errorMessage = message,
+                diagnosticSummary = "Storage changed before stream-copy output started.",
+                healthReport = healthReport,
+            )
+            showToast(message)
+            return true
+        }
         val ok = engine.execute(eligibility, outputFile.absolutePath) { progress ->
             updateExport { it.copy(progress = progress) }
         }
@@ -551,6 +582,42 @@ class ExportDelegate(
         } else config
         val tracks = currentState.tracks
         val textOverlays = currentState.textOverlays
+
+        withContext(Dispatchers.IO) { outputDir.mkdirs() }
+        val storageCheck = ExportStoragePolicy.check(
+            request = ExportStoragePolicy.request(
+                totalDurationMs,
+                configWithChapters,
+                tracks,
+                sourceSizeBytes = { clip -> querySourceSize(appContext, clip.sourceUri).takeIf { it > 0L } },
+            ),
+            outputDirectory = outputDir,
+            cacheDirectory = appContext.cacheDir,
+        )
+        if (!storageCheck.canProceed) {
+            val message = appContext.exportStorageFailureMessage(requireNotNull(storageCheck.failure))
+            updateExport {
+                it.copy(
+                    state = ExportState.ERROR,
+                    progress = 0f,
+                    errorMessage = message,
+                    lastExportedFilePath = null,
+                )
+            }
+            recordExportHistory(
+                sourceState = currentState,
+                status = ExportHistoryStatus.BLOCKED,
+                startedAtMs = System.currentTimeMillis(),
+                outputFile = null,
+                config = configWithChapters,
+                timelineDurationMs = totalDurationMs,
+                errorMessage = message,
+                diagnosticSummary = "Storage preflight blocked export before output work started.",
+                healthReport = healthReport,
+            )
+            showToast(message)
+            return
+        }
 
         // Contact-sheet export path — renders one PNG grid of clip thumbnails.
         // Short path because there's no Transformer, no foreground service, no audio.
@@ -1007,7 +1074,11 @@ class ExportDelegate(
 
             fun handleVideoExportError(e: Exception) {
                 outputFile.delete()
-                val message = text(R.string.export_video_failed_message)
+                val message = if (e is ExportStorageException) {
+                    appContext.exportStorageFailureMessage(e.failure)
+                } else {
+                    text(R.string.export_video_failed_message)
+                }
                 val technicalMessage = e.message ?: e::class.java.simpleName
                 updateExport {
                     it.copy(
@@ -1315,6 +1386,32 @@ class ExportDelegate(
                 appContext.getExternalFilesDir(Environment.DIRECTORY_MOVIES) ?: appContext.filesDir,
                 "ClearCut"
             ).apply { mkdirs() }
+            val batchState = stateFlow.value
+            val durationMs = batchState.tracks.flatMap { it.clips }
+                .maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L
+            val storageCheck = ExportStoragePolicy.checkBatch(
+                requests = queue.map { item ->
+                    ExportStoragePolicy.request(
+                        durationMs,
+                        item.config,
+                        batchState.tracks,
+                        sourceSizeBytes = { clip -> querySourceSize(appContext, clip.sourceUri).takeIf { it > 0L } },
+                    )
+                },
+                outputDirectory = outputDir,
+                cacheDirectory = appContext.cacheDir,
+            )
+            if (!storageCheck.canProceed) {
+                val message = appContext.exportStorageFailureMessage(requireNotNull(storageCheck.failure))
+                updateExport { export ->
+                    export.copy(
+                        state = ExportState.ERROR,
+                        errorMessage = message,
+                    )
+                }
+                showToast(message)
+                return@launch
+            }
             val originalConfig = stateFlow.value.exportConfig
             try {
                 for ((index, item) in queue.withIndex()) {

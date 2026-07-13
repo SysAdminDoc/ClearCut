@@ -4,9 +4,14 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.129-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.130-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.130 Storage-safe exports
+
+- Every export checks destination and scratch capacity before dispatch, then checks again immediately before stream copy, each Transformer run, mixed concat, and frame capture.
+- The planner merges same-volume demand, accounts for retained reverse/mixed/burn files and complete batches, blocks unbounded sizes, and reports localized required/available values with smaller alternatives.
 
 ### v3.74.129 Reproducible native video stack
 

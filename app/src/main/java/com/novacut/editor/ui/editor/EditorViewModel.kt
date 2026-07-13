@@ -21,6 +21,9 @@ import com.novacut.editor.engine.AudioEngine
 import com.novacut.editor.engine.AutoSaveState
 import com.novacut.editor.engine.ExportIncidentStore
 import com.novacut.editor.engine.ExportState
+import com.novacut.editor.engine.ExportStoragePolicy
+import com.novacut.editor.engine.FRAME_CAPTURE_DIR_NAME
+import com.novacut.editor.engine.exportStorageFailureMessage
 import com.novacut.editor.engine.FontRegistry
 import com.novacut.editor.engine.ProjectAutoSave
 import com.novacut.editor.engine.ProjectArchive
@@ -5197,6 +5200,24 @@ class EditorViewModel @Inject constructor(
                 val quality = if (config.captureFormat == FrameCaptureFormat.JPEG) 90 else 100
                 val ext = config.captureFormat.extension
                 val captureTimeUs = _playheadMs.value * 1000
+                val outputDirectory = java.io.File(appContext.filesDir, FRAME_CAPTURE_DIR_NAME)
+                val storageCheck = ExportStoragePolicy.check(
+                    request = ExportStoragePolicy.request(
+                        durationMs = 0L,
+                        config = config.copy(captureFrameOnly = true),
+                        tracks = _state.value.tracks,
+                    ),
+                    outputDirectory = outputDirectory,
+                    cacheDirectory = appContext.cacheDir,
+                )
+                if (!storageCheck.canProceed) {
+                    val message = appContext.exportStorageFailureMessage(requireNotNull(storageCheck.failure))
+                    _state.update {
+                        it.copyExport { export -> export.copy(state = ExportState.ERROR, errorMessage = message) }
+                    }
+                    showToast(message)
+                    return@launch
+                }
                 val file = withContext(Dispatchers.IO) {
                     val bitmap = videoEngine.extractThumbnail(clip.sourceUri, captureTimeUs)
                         ?: throw IllegalStateException("No frame available at the current timestamp")

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ClearCut</string>
-    <string name="app_version">v3.74.129</string>
+    <string name="app_version">v3.74.130</string>
 
     <!-- Importación de listas de cortes y marcadores -->
     <string name="cut_list_import_empty">No hay nada que importar: primero pega rangos de tiempo o marcadores</string>
@@ -321,6 +321,15 @@
     <string name="color_lut_import_failed_toast">No se pudo importar el LUT. Revise el archivo e inténtelo de nuevo.</string>
     <string name="color_lut_too_large_toast">El LUT es demasiado grande. El límite es 32 MB.</string>
     <string name="export_video_failed_message">La exportación falló. Revise la línea de tiempo e inténtelo de nuevo.</string>
+    <string name="export_storage_unknown_size">ClearCut no puede limitar de forma segura el uso de almacenamiento de esta exportación. %1$s</string>
+    <string name="export_storage_insufficient">No hay suficiente %1$s: se necesitan %2$s y hay %3$s disponibles. %4$s</string>
+    <string name="export_storage_location_output">espacio en el destino de exportación</string>
+    <string name="export_storage_location_cache">almacenamiento temporal</string>
+    <string name="export_storage_location_shared">almacenamiento compartido de exportación y archivos temporales</string>
+    <string name="export_storage_suggestion_video">Pruebe una resolución o calidad menor, un intervalo más corto o desactive los subtítulos incrustados.</string>
+    <string name="export_storage_suggestion_gif">Pruebe un GIF más estrecho, una frecuencia de fotogramas menor o un intervalo más corto.</string>
+    <string name="export_storage_suggestion_batch">Quite elementos del lote o reduzca su resolución y calidad.</string>
+    <string name="export_storage_suggestion_frame">Libere almacenamiento o capture un fotograma más pequeño.</string>
     <string name="export_save_failed_toast">No se pudo guardar. Revise el acceso al almacenamiento e inténtelo de nuevo.</string>
     <string name="ai_processing_format">Procesamiento: %1$s\u2026</string>
     <string name="ai_tools_ready_now">Listo ahora</string>

@@ -1,0 +1,2 @@
+Exports now verify destination and temporary storage before dispatch and again immediately before rendering.
+Checks cover reverse, mixed, subtitle burn-in, GIF, frame capture, and full batches with clear required/available values and smaller alternatives.

@@ -73,6 +73,7 @@ import com.novacut.editor.engine.ExportColorConfidenceEngine
 import com.novacut.editor.engine.ExportHistoryEntry
 import com.novacut.editor.engine.ExportHistoryStatus
 import com.novacut.editor.engine.ExportState
+import com.novacut.editor.engine.ExportStoragePolicy
 import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.platform.LocalContext
@@ -2208,8 +2209,15 @@ private fun exportChipColors(accent: Color) = FilterChipDefaults.filterChipColor
 
 private fun estimateExportBytes(totalDurationMs: Long, config: ExportConfig): Long {
     if (totalDurationMs <= 0L) return 0L
-    val totalBitrate = config.videoBitrate + config.audioBitrate
-    return (totalBitrate.toLong() * totalDurationMs) / 8000L
+    return ExportStoragePolicy.estimate(
+        ExportStoragePolicy.Request(
+            durationMs = totalDurationMs,
+            videoBitrate = config.videoBitrate,
+            audioBitrate = config.audioBitrate,
+            mode = ExportStoragePolicy.Mode.VIDEO,
+            targetSizeBytes = config.targetSizeBytes,
+        )
+    ).finalOutputBytes
 }
 
 private fun estimateExportSize(

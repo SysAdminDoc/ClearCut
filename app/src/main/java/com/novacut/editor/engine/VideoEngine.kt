@@ -487,6 +487,22 @@ class VideoEngine @Inject constructor(
         onComplete: () -> Unit = {},
         onError: (Exception) -> Unit = {}
     ) {
+        val storageCheck = ExportStoragePolicy.check(
+            request = ExportStoragePolicy.request(
+                durationMs = tracks.flatMap { it.clips }
+                    .maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L,
+                config = config,
+                tracks = tracks,
+                sourceSizeBytes = { clip -> querySourceSize(context, clip.sourceUri).takeIf { it > 0L } },
+            ),
+            outputDirectory = outputFile.parentFile ?: context.cacheDir,
+            cacheDirectory = context.cacheDir,
+        )
+        if (!storageCheck.canProceed) {
+            val failure = requireNotNull(storageCheck.failure)
+            onError(ExportStorageException(failure, context.exportStorageFailureMessage(failure)))
+            return
+        }
         // Atomic check-and-set to prevent two concurrent exports from racing
         synchronized(this) {
             if (_exportState.value == ExportState.EXPORTING) {
@@ -519,6 +535,13 @@ class VideoEngine @Inject constructor(
                 mimeType = transformerPlan.mimeType,
                 config = config,
                 outputFile = outputFile,
+                storageRequest = ExportStoragePolicy.request(
+                    durationMs = processedTracks.flatMap { it.clips }
+                        .maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L,
+                    config = config,
+                    tracks = processedTracks,
+                    sourceSizeBytes = { clip -> querySourceSize(context, clip.sourceUri).takeIf { it > 0L } },
+                ),
                 onProgress = onProgress,
                 onComplete = {
                     reversedTempFiles.forEach { it.delete() }
@@ -656,6 +679,24 @@ class VideoEngine @Inject constructor(
             return false
         }
 
+        val storageCheck = ExportStoragePolicy.check(
+            request = ExportStoragePolicy.request(
+                durationMs = tracks.flatMap { it.clips }
+                    .maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L,
+                config = config,
+                tracks = tracks,
+                mixedRender = true,
+                sourceSizeBytes = { clip -> querySourceSize(context, clip.sourceUri).takeIf { it > 0L } },
+            ),
+            outputDirectory = outputFile.parentFile ?: context.cacheDir,
+            cacheDirectory = context.cacheDir,
+        )
+        if (!storageCheck.canProceed) {
+            val failure = requireNotNull(storageCheck.failure)
+            onError(ExportStorageException(failure, context.exportStorageFailureMessage(failure)))
+            return true
+        }
+
         synchronized(this) {
             if (_exportState.value == ExportState.EXPORTING) {
                 Log.w(TAG, "Export already in progress")
@@ -708,6 +749,15 @@ class VideoEngine @Inject constructor(
                                 "Mixed stream-copy run ${execution.index} is not eligible: ${eligibility.reason}"
                             )
                         }
+                        requireStorageImmediatelyBeforeOutput(
+                            request = ExportStoragePolicy.request(
+                                durationMs = execution.run.durationMs,
+                                config = config,
+                                tracks = runTracks,
+                                sourceSizeBytes = { clip -> querySourceSize(context, clip.sourceUri).takeIf { it > 0L } },
+                            ),
+                            outputFile = runOutput,
+                        )
                         val ok = streamCopyEngine.execute(
                             e = eligibility,
                             outputPath = runOutput.absolutePath,
@@ -739,6 +789,12 @@ class VideoEngine @Inject constructor(
                             mimeType = transformerPlan.mimeType,
                             config = config,
                             outputFile = runOutput,
+                            storageRequest = ExportStoragePolicy.request(
+                                durationMs = execution.run.durationMs,
+                                config = config,
+                                tracks = runTracks,
+                                sourceSizeBytes = { clip -> querySourceSize(context, clip.sourceUri).takeIf { it > 0L } },
+                            ),
                             onProgress = { progress ->
                                 publishMixedProgress(completedWeight, stepWeight, progress)
                             },
@@ -762,6 +818,18 @@ class VideoEngine @Inject constructor(
             val concatInputs = concat.inputs.map { name ->
                 outputsByName[name] ?: throw IllegalStateException("Mixed concat input missing: $name")
             }
+            requireStorageImmediatelyBeforeOutput(
+                request = ExportStoragePolicy.request(
+                    durationMs = tracks.flatMap { it.clips }
+                        .maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L,
+                    config = config,
+                    tracks = tracks.map { track ->
+                        track.copy(clips = track.clips.map { it.copy(isReversed = false) })
+                    },
+                    sourceSizeBytes = { clip -> querySourceSize(context, clip.sourceUri).takeIf { it > 0L } },
+                ),
+                outputFile = outputFile,
+            )
             activeExportOutputFile = outputFile
             val concatOk = ffmpegEngine.concat(
                 inputFiles = concatInputs,
@@ -1644,6 +1712,7 @@ class VideoEngine @Inject constructor(
         mimeType: String,
         config: ExportConfig,
         outputFile: File,
+        storageRequest: ExportStoragePolicy.Request,
         onProgress: (Float) -> Unit,
         onComplete: () -> Unit,
         onError: (Exception) -> Unit,
@@ -1657,6 +1726,7 @@ class VideoEngine @Inject constructor(
             if (_exportState.value != ExportState.EXPORTING) {
                 throw CancellationException("Export cancelled before encoding started")
             }
+            requireStorageImmediatelyBeforeOutput(storageRequest, outputFile)
             var terminalReached = false
             val transformer = Transformer.Builder(context)
                 .setVideoMimeType(mimeType)
@@ -1787,6 +1857,25 @@ class VideoEngine @Inject constructor(
             // then try to delete that stale path and log an IO error.
             activeExportOutputFile = null
         }
+    }
+
+    private fun requireStorageImmediatelyBeforeOutput(
+        request: ExportStoragePolicy.Request,
+        outputFile: File,
+    ) {
+        val check = ExportStoragePolicy.check(
+            request = request,
+            outputDirectory = outputFile.parentFile ?: context.cacheDir,
+            cacheDirectory = context.cacheDir,
+        )
+        val failure = check.failure ?: return
+        val message = context.exportStorageFailureMessage(failure)
+        _exportErrorMessage.value = message
+        _exportState.value = ExportState.ERROR
+        _exportProgress.value = 0f
+        activeExportOutputFile = null
+        runCatching { outputFile.delete() }
+        throw ExportStorageException(failure, message)
     }
 
     @androidx.annotation.OptIn(UnstableApi::class)
