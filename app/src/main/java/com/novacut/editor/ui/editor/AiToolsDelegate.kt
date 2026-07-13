@@ -706,7 +706,6 @@ class AiToolsDelegate(
                 state.copy(tracks = tracks)
             }
             rebuildPlayerTimeline()
-            getSelectedClip()?.let { videoEngine.applyPreviewEffects(it) }
             saveProject()
             recordAiUsageForClip(
                 clip = clip,

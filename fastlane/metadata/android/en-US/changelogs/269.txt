@@ -1,0 +1,1 @@
+Live preview now composites every visible video and overlay track and mixes audible music and voiceover lanes on one synchronized timeline. Track mute, solo, volume, gaps, speed, fades, and missing layers now behave like export.

@@ -1,11 +1,15 @@
 package com.novacut.editor.engine
 
 import android.content.Context
+import android.content.BroadcastReceiver
+import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
+import android.media.AudioManager
 import android.net.Uri
 import android.util.Log
 import android.webkit.MimeTypeMap
@@ -15,11 +19,11 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.common.audio.AudioProcessor
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.common.util.ExperimentalApi
 import androidx.media3.effect.*
 import androidx.media3.exoplayer.DefaultLoadControl
-import androidx.media3.exoplayer.DefaultRenderersFactory
-import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.transformer.*
+import androidx.core.content.ContextCompat
 import com.novacut.editor.engine.EffectBuilder.addColorGradingEffects
 import com.novacut.editor.engine.EffectBuilder.addOpacityAndTransformEffects
 import com.novacut.editor.engine.segmentation.SegmentationEngine
@@ -35,6 +39,19 @@ import javax.inject.Singleton
 
 private const val TAG = "VideoEngine"
 private const val DEFAULT_STILL_IMAGE_DURATION_MS = 3_000L
+private const val SPEED_CURVE_PREVIEW_STEP_US = 10_000L
+
+internal fun nextSampledSpeedChangeTimeUs(
+    timeUs: Long,
+    durationUs: Long,
+    stepUs: Long = SPEED_CURVE_PREVIEW_STEP_US,
+): Long {
+    if (timeUs < 0L || durationUs <= 0L || stepUs <= 0L || timeUs >= durationUs) return C.TIME_UNSET
+    val bucket = timeUs / stepUs
+    if (bucket >= Long.MAX_VALUE / stepUs) return C.TIME_UNSET
+    val nextUs = (bucket + 1L) * stepUs
+    return if (nextUs < durationUs) nextUs else C.TIME_UNSET
+}
 
 internal fun playbackSessionNeedsReset(
     forceRestart: Boolean,
@@ -89,7 +106,7 @@ internal fun coalesceAdjacentPreviewCuts(clips: List<Clip>): List<Clip> {
 }
 
 @Singleton
-@androidx.annotation.OptIn(UnstableApi::class)
+@androidx.annotation.OptIn(UnstableApi::class, ExperimentalApi::class)
 class VideoEngine @Inject constructor(
     @ApplicationContext private val context: Context,
     private val segmentationEngine: SegmentationEngine,
@@ -103,20 +120,6 @@ class VideoEngine @Inject constructor(
         val hasVisual: Boolean,
         val hasAudio: Boolean
     )
-
-    private data class PreviewSeekTarget(
-        val mediaItemIndex: Int,
-        val mediaPositionMs: Long
-    )
-
-    private data class PreviewSegment(
-        val clip: Clip?,
-        val timelineStartMs: Long,
-        val durationMs: Long,
-        val mediaUri: Uri
-    ) {
-        val timelineEndMs: Long get() = timelineStartMs + durationMs
-    }
 
     private data class VisualTrackSequence(
         val sequence: EditedMediaItemSequence,
@@ -136,15 +139,22 @@ class VideoEngine @Inject constructor(
         val mimeType: String
     )
 
-    private var player: ExoPlayer? = null
+    private var player: CompositionPlayer? = null
     private var playerListener: Player.Listener? = null
-    private var transitionListener: Player.Listener? = null
+    private var previewCompositionPlan = PreviewCompositionPlan.create(emptyList())
+    private var previewTracks: List<Track> = emptyList()
+    private var previewMissingClipIds: Set<String> = emptySet()
+    private var previewConfig: ExportConfig = ExportConfig()
+    private var noisyReceiverRegistered = false
+    private val noisyReceiver = object : BroadcastReceiver() {
+        override fun onReceive(receivingContext: Context?, intent: Intent?) {
+            if (intent?.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY) {
+                player?.pause()
+            }
+        }
+    }
 
-    // Clips for per-clip effect switching during playback
-    private var videoClips: List<Clip> = emptyList()
-    private var previewSegments: List<PreviewSegment> = emptyList()
     private var previewTrackedObjects: List<TrackedObject> = emptyList()
-    @Volatile private var previewGapUri: Uri? = null
     // Memory-bounded bitmap cache — uses 1/8 of available heap
     // Don't recycle evicted bitmaps — they may still be referenced by Compose Image nodes
     private val thumbnailCache = object : android.util.LruCache<String, Bitmap>(
@@ -168,9 +178,6 @@ class VideoEngine @Inject constructor(
         }
     }
 
-    // Clip durations for multi-clip seek/playhead calculations
-    private var clipDurationsMs: List<Long> = emptyList()
-
     // Active Transformer for export cancellation
     @Volatile private var activeTransformer: Transformer? = null
     @Volatile private var activeExportOutputFile: File? = null
@@ -187,11 +194,10 @@ class VideoEngine @Inject constructor(
     val exportErrorMessage: StateFlow<String?> = _exportErrorMessage
 
     /**
-     * Get or create ExoPlayer. Must be called from main thread.
-     * ExoPlayer requires a Looper for creation and all API calls.
+     * Get or create the composition-backed preview player. Must be called from main thread.
      */
     @androidx.annotation.OptIn(UnstableApi::class)
-    fun getPlayer(): ExoPlayer {
+    fun getPlayer(): Player {
         if (player == null) {
             val loadControl = DefaultLoadControl.Builder()
                 .setBufferDurationsMs(
@@ -202,20 +208,26 @@ class VideoEngine @Inject constructor(
                 )
                 .setPrioritizeTimeOverSizeThresholds(true)
                 .build()
-            val renderersFactory = DefaultRenderersFactory(context)
-                .setEnableDecoderFallback(true)
             val previewAudioAttributes = ClearCutAudioFocusPolicy.buildPreviewAttributes()
-            player = ExoPlayer.Builder(context)
+            player = CompositionPlayer.Builder(context)
                 .setLoadControl(loadControl)
-                .setRenderersFactory(renderersFactory)
+                .setVideoGraphFactory(MultipleInputVideoGraph.Factory())
+                .setAudioAttributes(previewAudioAttributes, true)
                 .build()
                 .apply {
-                    setAudioAttributes(previewAudioAttributes, true)
-                    setHandleAudioBecomingNoisy(true)
                     playerListener?.let(::addListener)
                 }
+            if (!noisyReceiverRegistered) {
+                ContextCompat.registerReceiver(
+                    context,
+                    noisyReceiver,
+                    IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY),
+                    ContextCompat.RECEIVER_NOT_EXPORTED,
+                )
+                noisyReceiverRegistered = true
+            }
         }
-        return requireNotNull(player) { "ExoPlayer failed to initialize" }
+        return requireNotNull(player) { "CompositionPlayer failed to initialize" }
     }
 
     /**
@@ -237,92 +249,46 @@ class VideoEngine @Inject constructor(
         playerListener = null
     }
 
-    fun prepareClip(uri: Uri) {
-        val p = getPlayer()
-        val mediaItem = if (isImageUri(uri)) {
-            MediaItem.Builder()
-                .setUri(uri)
-                .setImageDurationMs(DEFAULT_STILL_IMAGE_DURATION_MS)
-                .build()
-        } else {
-            MediaItem.fromUri(uri)
-        }
-        p.setMediaItem(mediaItem)
-        p.prepare()
-    }
-
     @androidx.annotation.OptIn(UnstableApi::class)
     fun prepareTimeline(
         tracks: List<Track>,
         missingClipIds: Set<String> = emptySet(),
-        startPositionMs: Long = 0L
+        startPositionMs: Long = 0L,
+        config: ExportConfig = ExportConfig(),
+        trackedObjects: List<TrackedObject> = emptyList(),
     ) {
-        val p = getPlayer()
+        val p = getPlayer() as CompositionPlayer
         val resumePlayback = p.playWhenReady && p.playbackState != Player.STATE_ENDED
         p.pause()
-        videoClips = coalesceAdjacentPreviewCuts(collectPreviewClips(tracks))
-        val timelineEndMs = tracks.maxOfOrNull { track ->
-            track.clips.maxOfOrNull { clip -> clip.timelineEndMs } ?: 0L
-        } ?: 0L
-        previewSegments = buildPreviewSegments(videoClips, timelineEndMs, missingClipIds)
-        if (previewSegments.isEmpty()) {
-            p.clearMediaItems()
-            clipDurationsMs = emptyList()
-            return
-        }
-        clipDurationsMs = previewSegments.map { it.durationMs }
-        val mediaItems = previewSegments.map(::buildMediaItemForPreviewSegment)
-        val startTarget = requireNotNull(resolvePreviewSeekTarget(startPositionMs))
-        // Replacing the playlist and seeking in separate calls lets playback
-        // briefly restart at item zero while cuts/deletes are rebuilding the
-        // preview. Set the new playlist and its edit-point position atomically.
-        p.setMediaItems(
-            mediaItems,
-            startTarget.mediaItemIndex,
-            startTarget.mediaPositionMs
+        previewTrackedObjects = trackedObjects
+        previewTracks = tracks
+        previewMissingClipIds = missingClipIds
+        previewConfig = config
+        previewCompositionPlan = PreviewCompositionPlan.create(tracks)
+        val composition = buildPreviewComposition(
+            plan = previewCompositionPlan,
+            tracks = tracks,
+            missingClipIds = missingClipIds,
+            config = config,
+            trackedObjects = trackedObjects,
         )
+        p.setComposition(composition, startPositionMs.coerceIn(0L, previewCompositionPlan.durationMs))
+        setPreviewSpeed(1f)
         p.prepare()
         if (resumePlayback) p.play()
-
-        // Install per-clip effect switching listener
-        transitionListener?.let { p.removeListener(it) }
-        transitionListener = object : Player.Listener {
-            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-                applyEffectsForCurrentClip()
-            }
-        }
-        transitionListener?.let(p::addListener)
-
-        // Apply effects for the initial clip
-        applyEffectsForCurrentClip()
     }
-
-    fun getPreviewClipAt(index: Int): Clip? = previewSegments.getOrNull(index)?.clip
 
     fun seekTo(positionMs: Long) {
-        val p = player ?: return
-        val target = resolvePreviewSeekTarget(positionMs)
-        if (target != null) {
-            p.seekTo(target.mediaItemIndex, target.mediaPositionMs)
-        } else {
-            p.seekTo(positionMs.coerceAtLeast(0L))
-        }
+        player?.seekTo(positionMs.coerceIn(0L, previewCompositionPlan.durationMs))
     }
 
-    fun getAbsolutePositionMs(): Long {
-        val p = player ?: return 0L
-        val segment = previewSegments.getOrNull(p.currentMediaItemIndex) ?: return p.currentPosition
-        return segment.clip?.let { clip ->
-            previewTimelinePositionForMediaPosition(clip, p.currentPosition)
-        } ?: (segment.timelineStartMs + p.currentPosition)
-            .coerceIn(segment.timelineStartMs, segment.timelineEndMs)
-    }
+    fun getAbsolutePositionMs(): Long = player?.currentPosition
+        ?.coerceIn(0L, previewCompositionPlan.durationMs) ?: 0L
 
     fun play() { player?.play() }
 
     fun playFromTimelinePosition(positionMs: Long, restartSession: Boolean = false) {
         val p = player ?: return
-        val target = resolvePreviewSeekTarget(positionMs)
         val resetSession = playbackSessionNeedsReset(
             forceRestart = restartSession,
             playbackState = p.playbackState,
@@ -335,12 +301,7 @@ class VideoEngine @Inject constructor(
             // Stop first so prepare creates a fresh period at the edit point.
             p.stop()
         }
-        target?.let {
-            // A playlist rebuilt at a cut boundary can still be buffering or
-            // ended when the user presses Play. Reassert the resolved item and
-            // offset here so play never inherits a stale ended media period.
-            p.seekTo(it.mediaItemIndex, it.mediaPositionMs)
-        }
+        p.seekTo(positionMs.coerceIn(0L, previewCompositionPlan.durationMs))
         if (resetSession || p.playbackState == Player.STATE_IDLE) {
             p.prepare()
         }
@@ -921,7 +882,9 @@ class VideoEngine @Inject constructor(
         globalTransitions: List<GlobalTransition> = emptyList()
     ): TransformerExportPlan {
         val visibleVideoTracks = tracks
-            .sortedBy { it.index }
+            // Media3 composites lower input IDs above later inputs. Assign the
+            // highest persisted track index first so overlays remain above base video.
+            .sortedByDescending { it.index }
             .filter {
                 (it.type == TrackType.VIDEO || it.type == TrackType.OVERLAY) &&
                     it.isVisible &&
@@ -969,7 +932,7 @@ class VideoEngine @Inject constructor(
             )
         }
 
-        val audioSequences = buildAudioSequences(tracks, soloTrackIds)
+        val audioSequences = buildAudioSequences(tracks, soloTrackIds, totalTimelineDurationMs)
         val allSequences = buildList {
             visualTrackSequences.forEach { add(it.sequence) }
             addAll(audioSequences)
@@ -1013,7 +976,8 @@ class VideoEngine @Inject constructor(
         textOverlays: List<com.novacut.editor.model.TextOverlay>,
         imageOverlays: List<ImageOverlay>,
         lottieOverlays: List<LottieOverlaySpec>,
-        trackedObjects: List<TrackedObject>
+        trackedObjects: List<TrackedObject>,
+        previewMode: Boolean = false,
     ): List<VisualTrackSequence> {
         return visibleVideoTracks.mapIndexed { inputId, track ->
             val includesEmbeddedAudio = track.clips.any { clip ->
@@ -1039,7 +1003,8 @@ class VideoEngine @Inject constructor(
                     imageOverlays = imageOverlays,
                     lottieOverlays = lottieOverlays,
                     trackedObjects = trackedObjects,
-                    globalTransitions = globalTransitions
+                    globalTransitions = globalTransitions,
+                    previewMode = previewMode,
                 ),
                 hasEmbeddedAudio = hasEmbeddedAudio,
                 compositorLayer = ClearCutCompositorLayer(
@@ -1067,7 +1032,8 @@ class VideoEngine @Inject constructor(
         imageOverlays: List<ImageOverlay>,
         lottieOverlays: List<LottieOverlaySpec>,
         trackedObjects: List<TrackedObject>,
-        globalTransitions: List<GlobalTransition> = emptyList()
+        globalTransitions: List<GlobalTransition> = emptyList(),
+        previewMode: Boolean = false,
     ): EditedMediaItemSequence {
         val sortedClips = clips.filter { it.durationMs > 0L }.sortedBy { it.timelineStartMs }
         val trackTypes = if (videoMuted) {
@@ -1104,7 +1070,8 @@ class VideoEngine @Inject constructor(
                             lottieOverlays = lottieOverlays,
                             trackedObjects = trackedObjects,
                             nextClipTransition = nextTransition,
-                            globalTransitions = globalTransitions
+                            globalTransitions = globalTransitions,
+                            previewMode = previewMode,
                         )
                     )
                     clipIndex++
@@ -1129,7 +1096,8 @@ class VideoEngine @Inject constructor(
         lottieOverlays: List<LottieOverlaySpec>,
         trackedObjects: List<TrackedObject>,
         nextClipTransition: Transition? = null,
-        globalTransitions: List<GlobalTransition> = emptyList()
+        globalTransitions: List<GlobalTransition> = emptyList(),
+        previewMode: Boolean = false,
     ): EditedMediaItem {
         val mediaItem = buildMediaItemForClip(clip, clip.sourceUri)
         val linkedAudioTrackPresent = clip.linkedClipId?.let { linkedId ->
@@ -1140,7 +1108,9 @@ class VideoEngine @Inject constructor(
 
         val videoEffects = buildList<androidx.media3.common.Effect> {
             val clipTrackedObjects = trackedObjects.filter { it.sourceClipId == clip.id && it.isEnabled }
-            for (effect in clip.effects.filter { it.enabled }) {
+            for (effect in clip.effects.filter {
+                it.enabled && (!previewMode || it.type != EffectType.BG_REMOVAL)
+            }) {
                 EffectBuilder.buildVideoEffect(
                     effect = effect,
                     segmentationEngine = segmentationEngine,
@@ -1180,11 +1150,12 @@ class VideoEngine @Inject constructor(
                 add(EffectShaders.blendMode(clip.blendMode, clip.opacity))
             }
 
-            clip.headTransition?.let { add(EffectBuilder.buildTransitionEffect(it)) }
-            nextClipTransition?.let { add(EffectBuilder.buildTransitionOutEffect(it, clip.durationMs)) }
-
-            GlobalTransitionEffect.forClip(globalTransitions, clip.timelineStartMs, clip.timelineEndMs)
-                ?.let { add(it) }
+            if (!previewMode) {
+                clip.headTransition?.let { add(EffectBuilder.buildTransitionEffect(it)) }
+                nextClipTransition?.let { add(EffectBuilder.buildTransitionOutEffect(it, clip.durationMs)) }
+                GlobalTransitionEffect.forClip(globalTransitions, clip.timelineStartMs, clip.timelineEndMs)
+                    ?.let { add(it) }
+            }
 
             addOpacityAndTransformEffects(clip)
 
@@ -1303,7 +1274,11 @@ class VideoEngine @Inject constructor(
                 }
             }
 
-            add(FrameDropEffect.createDefaultFrameDropEffect(config.frameRate.toFloat()))
+            if (previewMode) {
+                ColorBlindGlEffect.create(colorBlindMode)?.let { add(it) }
+            } else {
+                add(FrameDropEffect.createDefaultFrameDropEffect(config.frameRate.toFloat()))
+            }
             add(Presentation.createForWidthAndHeight(targetW, targetH, Presentation.LAYOUT_SCALE_TO_FIT))
         }
 
@@ -1331,7 +1306,13 @@ class VideoEngine @Inject constructor(
 
         val itemBuilder = EditedMediaItem.Builder(mediaItem)
             .setEffects(Effects(audioProcessors, videoEffects))
+            .setDurationUs(durationMsToUs((clip.trimEndMs - clip.trimStartMs).coerceAtLeast(1L)))
 
+        applyClipSpeed(itemBuilder, clip)
+        return itemBuilder.build()
+    }
+
+    private fun applyClipSpeed(itemBuilder: EditedMediaItem.Builder, clip: Clip) {
         if (clip.speedCurve != null && clip.speedCurve.points.size >= 2) {
             val curve = clip.speedCurve
             val clipDurMs = clip.trimEndMs - clip.trimStartMs
@@ -1340,7 +1321,11 @@ class VideoEngine @Inject constructor(
                     val timeMs = presentationTimeUs / 1000L
                     return curve.getSpeedAt(timeMs, clipDurMs).coerceIn(0.1f, 100f)
                 }
-                override fun getNextSpeedChangeTimeUs(timeUs: Long): Long = androidx.media3.common.C.TIME_UNSET
+                override fun getNextSpeedChangeTimeUs(timeUs: Long): Long =
+                    nextSampledSpeedChangeTimeUs(
+                        timeUs = timeUs,
+                        durationUs = durationMsToUs(clipDurMs),
+                    )
             })
         } else if (clip.speed != 1.0f) {
             val constSpeed = clip.speed.coerceIn(0.1f, 100f)
@@ -1349,8 +1334,6 @@ class VideoEngine @Inject constructor(
                 override fun getNextSpeedChangeTimeUs(timeUs: Long): Long = androidx.media3.common.C.TIME_UNSET
             })
         }
-
-        return itemBuilder.build()
     }
 
     private fun buildMediaItemForClip(
@@ -1370,18 +1353,6 @@ class VideoEngine @Inject constructor(
                         .setEndPositionMs(clip.trimEndMs)
                         .build()
                 )
-                .build()
-        }
-    }
-
-    private fun buildMediaItemForPreviewSegment(segment: PreviewSegment): MediaItem {
-        val clip = segment.clip
-        return if (clip != null) {
-            buildMediaItemForClip(clip, segment.mediaUri)
-        } else {
-            MediaItem.Builder()
-                .setUri(segment.mediaUri)
-                .setImageDurationMs(segment.durationMs.coerceAtLeast(1L))
                 .build()
         }
     }
@@ -1466,16 +1437,89 @@ class VideoEngine @Inject constructor(
     }
 
     @androidx.annotation.OptIn(UnstableApi::class)
+    private fun buildPreviewComposition(
+        plan: PreviewCompositionPlan,
+        tracks: List<Track>,
+        missingClipIds: Set<String>,
+        config: ExportConfig,
+        trackedObjects: List<TrackedObject>,
+    ): Composition {
+        val compositionDurationMs = plan.durationMs.coerceAtLeast(1L)
+        val previewConfig = config.copy(resolution = Resolution.HD_720P)
+        val (targetW, targetH) = previewConfig.resolution.forAspect(previewConfig.aspectRatio)
+        val resolvedTracks = tracks.map { track ->
+            track.copy(
+                clips = track.clips
+                    .filterNot { it.id in missingClipIds }
+                    .let { clips ->
+                        if (track.type == TrackType.VIDEO || track.type == TrackType.OVERLAY) {
+                            coalesceAdjacentPreviewCuts(clips).map { clip ->
+                                clip.copy(sourceUri = resolvePreviewMediaUri(clip))
+                            }
+                        } else {
+                            clips
+                        }
+                    }
+            )
+        }
+        val resolvedById = resolvedTracks.associateBy(Track::id)
+        val visualTracks = plan.visualTracks.mapNotNull { resolvedById[it.id] }
+            .filter { it.clips.any { clip -> clip.durationMs > 0L } }
+        val visualSequences = buildVideoSequences(
+            visibleVideoTracks = visualTracks,
+            soloTrackIds = plan.soloTrackIds,
+            tracks = resolvedTracks,
+            totalTimelineDurationMs = compositionDurationMs,
+            config = previewConfig,
+            targetW = targetW,
+            targetH = targetH,
+            textOverlays = emptyList(),
+            imageOverlays = emptyList(),
+            lottieOverlays = emptyList(),
+            trackedObjects = trackedObjects,
+            previewMode = true,
+        )
+        val audioSequences = buildAudioSequences(
+            tracks = resolvedTracks,
+            soloTrackIds = plan.soloTrackIds,
+            totalTimelineDurationMs = compositionDurationMs,
+        )
+        val sequences = buildList {
+            if (visualSequences.isEmpty()) {
+                add(
+                    EditedMediaItemSequence.Builder(setOf(C.TRACK_TYPE_VIDEO))
+                        .addGap(durationMsToUs(compositionDurationMs))
+                        .build()
+                )
+            } else {
+                visualSequences.forEach { add(it.sequence) }
+            }
+            addAll(audioSequences)
+        }
+        return buildComposition(
+            sequences = sequences,
+            hasAudioTracks = audioSequences.isNotEmpty(),
+            hasEmbeddedVisualAudio = visualSequences.any { it.hasEmbeddedAudio },
+            targetWidth = targetW,
+            targetHeight = targetH,
+            hasMultipleVideoSequences = visualSequences.size > 1,
+            compositorLayers = visualSequences.map { it.compositorLayer },
+            allowAudioTransmux = false,
+        )
+    }
+
+    @androidx.annotation.OptIn(UnstableApi::class)
     private fun buildAudioSequences(
         tracks: List<Track>,
-        soloTrackIds: Set<String>
+        soloTrackIds: Set<String>,
+        totalTimelineDurationMs: Long,
     ): List<EditedMediaItemSequence> {
         val audioTracks = tracks
             .sortedBy { it.index }
             .filter { it.type == TrackType.AUDIO && it.clips.isNotEmpty() && isTrackAudibleForMix(it, soloTrackIds) }
         return audioTracks.map { at ->
             val builder = EditedMediaItemSequence.Builder(setOf(C.TRACK_TYPE_AUDIO))
-            for (step in buildTimelineSequenceSteps(at.clips)) {
+            for (step in buildTimelineSequenceSteps(at.clips, totalTimelineDurationMs)) {
                 when (step) {
                     is TimelineSequenceStep.GapStep -> {
                         builder.addGap(durationMsToUs(step.durationMs))
@@ -1507,12 +1551,12 @@ class VideoEngine @Inject constructor(
                                 ))
                             }
                         }
-                        builder.addItem(
-                            EditedMediaItem.Builder(mediaItem)
+                        val itemBuilder = EditedMediaItem.Builder(mediaItem)
                                 .setEffects(Effects(processors, emptyList()))
                                 .setRemoveVideo(true)
-                                .build()
-                        )
+                                .setDurationUs(durationMsToUs((clip.trimEndMs - clip.trimStartMs).coerceAtLeast(1L)))
+                        applyClipSpeed(itemBuilder, clip)
+                        builder.addItem(itemBuilder.build())
                     }
                 }
             }
@@ -1526,57 +1570,6 @@ class VideoEngine @Inject constructor(
             .firstOrNull { (it.type == TrackType.VIDEO || it.type == TrackType.OVERLAY) && it.isVisible && it.clips.isNotEmpty() }
             ?: return emptyList()
         return primaryVisualTrack.clips.sortedBy { it.timelineStartMs }
-    }
-
-    private fun buildPreviewSegments(
-        clips: List<Clip>,
-        totalTimelineDurationMs: Long,
-        missingClipIds: Set<String> = emptySet()
-    ): List<PreviewSegment> {
-        if (clips.isEmpty()) return emptyList()
-
-        val segments = mutableListOf<PreviewSegment>()
-        val gapUri = getPreviewGapUri()
-        var cursorMs = 0L
-
-        clips.forEach { clip ->
-            if (clip.timelineStartMs > cursorMs) {
-                segments += PreviewSegment(
-                    clip = null,
-                    timelineStartMs = cursorMs,
-                    durationMs = clip.timelineStartMs - cursorMs,
-                    mediaUri = gapUri
-                )
-            }
-            if (clip.id in missingClipIds) {
-                segments += PreviewSegment(
-                    clip = clip,
-                    timelineStartMs = clip.timelineStartMs,
-                    durationMs = clip.durationMs,
-                    mediaUri = gapUri
-                )
-            } else {
-                segments += PreviewSegment(
-                    clip = clip,
-                    timelineStartMs = clip.timelineStartMs,
-                    durationMs = clip.durationMs,
-                    mediaUri = resolvePreviewMediaUri(clip)
-                )
-            }
-            cursorMs = clip.timelineEndMs
-        }
-
-        val timelineEndMs = maxOf(totalTimelineDurationMs, cursorMs)
-        if (timelineEndMs > cursorMs) {
-            segments += PreviewSegment(
-                clip = null,
-                timelineStartMs = cursorMs,
-                durationMs = timelineEndMs - cursorMs,
-                mediaUri = gapUri
-            )
-        }
-
-        return segments.filter { it.durationMs > 0L }
     }
 
     private fun resolvePreviewMediaUri(clip: Clip): Uri {
@@ -1603,66 +1596,6 @@ class VideoEngine @Inject constructor(
         }
     }
 
-    private fun getPreviewGapUri(): Uri {
-        previewGapUri?.let { return it }
-        synchronized(this) {
-            previewGapUri?.let { return it }
-
-            val dir = File(context.filesDir, "preview")
-            if (!dir.exists()) {
-                dir.mkdirs()
-            }
-            val file = File(dir, "gap_frame.png")
-            if (!file.exists() || file.length() == 0L) {
-                val bitmap = Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888)
-                try {
-                    bitmap.eraseColor(Color.BLACK)
-                    writeFileAtomically(file, requireNonEmpty = true) { tempFile ->
-                        tempFile.outputStream().use { output ->
-                            if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)) {
-                                throw IllegalStateException("Gap-frame encoder returned no data")
-                            }
-                        }
-                    }
-                } finally {
-                    bitmap.recycle()
-                }
-            }
-            return Uri.fromFile(file).also { previewGapUri = it }
-        }
-    }
-
-    private fun resolvePreviewSeekTarget(positionMs: Long): PreviewSeekTarget? {
-        if (previewSegments.isEmpty()) return null
-
-        val targetMs = positionMs.coerceAtLeast(0L)
-
-        previewSegments.forEachIndexed { index, segment ->
-            if (targetMs < segment.timelineEndMs) {
-                return PreviewSeekTarget(
-                    mediaItemIndex = index,
-                    mediaPositionMs = segment.clip?.let { clip ->
-                        previewMediaPositionForTimelinePosition(clip, targetMs)
-                    } ?: (targetMs - segment.timelineStartMs)
-                        .coerceIn(0L, (segment.durationMs - 1L).coerceAtLeast(0L))
-                )
-            }
-        }
-
-        val lastSegment = previewSegments.last()
-        return PreviewSeekTarget(
-            mediaItemIndex = previewSegments.lastIndex,
-            // A clip segment's media time is trim-relative, not timeline-relative:
-            // for a sped-up final clip durationMs (timeline length) != the media
-            // clipping length, so using it directly under-seeks. Map the last
-            // retained frame through the same timeline->media helper the in-loop
-            // branch uses. Gap segments have no clip, so fall back to their span.
-            mediaPositionMs = lastSegment.clip?.let { clip ->
-                previewMediaPositionForTimelinePosition(clip, lastSegment.timelineEndMs - 1L)
-            } ?: (lastSegment.durationMs - 1L).coerceAtLeast(0L)
-        )
-    }
-
     private fun isTrackAudibleForMix(track: Track, soloTrackIds: Set<String>): Boolean {
         return track.isVisible && !track.isMuted && (soloTrackIds.isEmpty() || track.id in soloTrackIds)
     }
@@ -1676,10 +1609,14 @@ class VideoEngine @Inject constructor(
         targetHeight: Int,
         hasMultipleVideoSequences: Boolean = false,
         preserveHdr: Boolean = false,
-        compositorLayers: List<ClearCutCompositorLayer> = emptyList()
+        compositorLayers: List<ClearCutCompositorLayer> = emptyList(),
+        allowAudioTransmux: Boolean = true,
     ): Composition {
         val builder = Composition.Builder(sequences)
-            .setTransmuxAudio(!hasAudioTracks && hasEmbeddedVisualAudio && !hasMultipleVideoSequences)
+            .setTransmuxAudio(
+                allowAudioTransmux && !hasAudioTracks &&
+                    hasEmbeddedVisualAudio && !hasMultipleVideoSequences
+            )
         if (hasMultipleVideoSequences) {
             builder.setVideoCompositorSettings(
                 ClearCutVideoCompositorSettings(
@@ -1914,31 +1851,6 @@ class VideoEngine @Inject constructor(
 
     // --- Preview effects & speed ---
 
-    /**
-     * Apply visual effects to ExoPlayer preview for the given clip.
-     * Builds RgbMatrix/GlEffect effects from the clip's enabled effects, opacity, and transforms.
-     * Includes transition-in for this clip and transition-out if the next clip has a transition.
-     * Does NOT include speed (handled via PlaybackParameters), text overlays, Presentation, or FrameDropEffect.
-     */
-    @androidx.annotation.OptIn(UnstableApi::class)
-    fun applyPreviewEffects(
-        clip: Clip?,
-        trackedObjects: List<TrackedObject> = previewTrackedObjects
-    ) {
-        previewTrackedObjects = trackedObjects
-        val p = player ?: return
-        if (clip == null) {
-            p.setVideoEffects(emptyList())
-            return
-        }
-        val effects = buildPreviewEffectsForClip(clip, trackedObjects)
-        try {
-            p.setVideoEffects(effects)
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to apply preview effects", e)
-        }
-    }
-
     // v3.69 color-blind preview — a single-mode post-effect appended to every
     // clip's preview chain. Never touches the export path.
     @Volatile
@@ -1947,85 +1859,14 @@ class VideoEngine @Inject constructor(
     fun setColorBlindMode(mode: ColorBlindPreviewEngine.Mode) {
         if (mode == colorBlindMode) return
         colorBlindMode = mode
-        // Re-apply effects so the preview updates without the user having to
-        // scrub. We target the currently visible clip; if there isn't one
-        // (e.g. empty project), the next applyPreviewEffects() call will pick
-        // up the new mode.
-        applyEffectsForCurrentClip()
-    }
-
-    /**
-     * Apply effects for the currently playing clip during playback.
-     * Called automatically by the media item transition listener.
-     */
-    @androidx.annotation.OptIn(UnstableApi::class)
-    private fun applyEffectsForCurrentClip() {
-        val p = player ?: return
-        val index = p.currentMediaItemIndex
-        if (index < 0 || index >= previewSegments.size) return
-        val clip = previewSegments[index].clip
-        if (clip == null) {
-            p.setVideoEffects(emptyList())
-            setPreviewSpeed(1f)
-            return
-        }
-        val effects = buildPreviewEffectsForClip(clip, previewTrackedObjects)
-        try {
-            p.setVideoEffects(effects)
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to apply effects for clip $index", e)
-        }
-        syncPreviewSpeedForCurrentPosition()
-    }
-
-    /**
-     * Build the complete effect chain for a clip preview, including:
-     * - User effects (filters, color grading, blend modes)
-     * - Opacity and transform
-     *
-     * Timeline transitions are intentionally excluded here. A dissolve needs
-     * both adjacent frames and a compositor; dynamically swapping single-input
-     * GlEffects only fades through black and can leave Media3's frame processor
-     * stuck after a playlist rebuild or rewind. Transitions remain preserved
-     * in the project and are rendered by the export composition.
-     */
-    @UnstableApi
-    private fun buildPreviewEffectsForClip(
-        clip: Clip,
-        trackedObjects: List<TrackedObject>
-    ): List<androidx.media3.common.Effect> = buildList {
-        val clipTrackedObjects = trackedObjects.filter { it.sourceClipId == clip.id && it.isEnabled }
-        // User effects (skip BG_REMOVAL in preview — per-frame segmentation is too slow for realtime)
-        for (effect in clip.effects.filter { it.enabled && it.type != EffectType.BG_REMOVAL }) {
-            EffectBuilder.buildVideoEffect(
-                effect = effect,
-                segmentationEngine = segmentationEngine,
-                trackedObjects = clipTrackedObjects,
-                sourceTimeOffsetMs = clip.trimStartMs
-            )?.let { add(it) }
-        }
-        // Color grading (lift/gamma/gain + HSL + LUT)
-        addColorGradingEffects(clip)
-        // Blend mode
-        if (clip.blendMode != com.novacut.editor.model.BlendMode.NORMAL) {
-            add(EffectShaders.blendMode(clip.blendMode, clip.opacity))
-        }
-        // Opacity + transform (keyframe-animated or static)
-        addOpacityAndTransformEffects(clip)
-        // Color-blind preview simulation — applied last so the user sees the
-        // final composited frame under the simulated CVD. Only added when
-        // the mode is non-OFF so OFF has zero overhead.
-        ColorBlindGlEffect.create(colorBlindMode)?.let { add(it) }
-    }
-
-    /**
-     * Set ExoPlayer playback speed for preview. Does not affect export.
-     */
-    fun setPreviewVolume(volume: Float) {
-        try {
-            player?.volume = if (volume.isFinite()) volume.coerceIn(0f, 1f) else 1f
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to set preview volume", e)
+        if (previewTracks.isNotEmpty()) {
+            prepareTimeline(
+                tracks = previewTracks,
+                missingClipIds = previewMissingClipIds,
+                startPositionMs = getAbsolutePositionMs(),
+                config = previewConfig,
+                trackedObjects = previewTrackedObjects,
+            )
         }
     }
 
@@ -2036,21 +1877,6 @@ class VideoEngine @Inject constructor(
         } catch (e: Exception) {
             Log.w(TAG, "Failed to set preview speed", e)
         }
-    }
-
-    /** Keep speed-ramp preview playback aligned with the current source frame. */
-    fun syncPreviewSpeedForCurrentPosition() {
-        val p = player ?: return
-        val clip = previewSegments.getOrNull(p.currentMediaItemIndex)?.clip
-        val speed = clip?.let { previewSpeedForMediaPosition(it, p.currentPosition) } ?: 1f
-        setPreviewSpeed(speed)
-    }
-
-    /**
-     * Get the currently playing clip index in the playlist.
-     */
-    fun getCurrentClipIndex(): Int {
-        return player?.currentMediaItemIndex ?: 0
     }
 
     /**
@@ -2102,12 +1928,14 @@ class VideoEngine @Inject constructor(
 
     fun release() {
         removePlayerListener()
-        transitionListener?.let { player?.removeListener(it) }
-        transitionListener = null
         player?.release()
         player = null
-        videoClips = emptyList()
-        previewSegments = emptyList()
+        if (noisyReceiverRegistered) {
+            runCatching { context.unregisterReceiver(noisyReceiver) }
+            noisyReceiverRegistered = false
+        }
+        previewTracks = emptyList()
+        previewCompositionPlan = PreviewCompositionPlan.create(emptyList())
         clearThumbnailCache()
     }
 

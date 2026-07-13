@@ -82,7 +82,7 @@ internal fun previewClipForDisplay(
     totalDurationMs: Long
 ): Clip? {
     return clips.firstOrNull { positionMs in it.timelineStartMs until it.timelineEndMs }
-        ?: clips.lastOrNull()?.takeIf {
+        ?: clips.firstOrNull {
             totalDurationMs > 0L &&
                 positionMs == totalDurationMs &&
                 it.timelineEndMs == totalDurationMs
@@ -325,40 +325,32 @@ fun EditorScreen(
             }
         }
     }
-    val previewTrack by remember(state.tracks) {
+    val previewVisualClips by remember(state.tracks) {
         derivedStateOf {
             state.tracks
-                .sortedBy { it.index }
-                .firstOrNull {
+                .sortedByDescending { it.index }
+                .filter {
                     (it.type == TrackType.VIDEO || it.type == TrackType.OVERLAY) &&
                         it.isVisible &&
                         it.clips.isNotEmpty()
                 }
+                .flatMap { track -> track.clips.sortedBy { it.timelineStartMs } }
         }
     }
-    // previewTrackClips is keyed on previewTrack only — the sortedBy call above
-    // was running on every playhead tick via the downstream derive chain below,
-    // costing an O(n log n) sort 30x/sec during playback for a static clip list.
-    val previewTrackClips by remember(previewTrack) {
-        derivedStateOf { previewTrack?.clips?.sortedBy { it.timelineStartMs } ?: emptyList() }
-    }
-    // These two derives intentionally read `playheadMs` (the fast-path flow) so
-    // they recompute every playhead tick, but because the sorted list is cached
-    // above, each recompute is just a cheap linear scan over the sorted list.
-    val previewClipAtPlayhead by remember(previewTrackClips, state.totalDurationMs) {
+    val previewClipAtPlayhead by remember(previewVisualClips, state.totalDurationMs) {
         derivedStateOf {
-            previewClipForDisplay(previewTrackClips, playheadMs, state.totalDurationMs)
+            previewClipForDisplay(previewVisualClips, playheadMs, state.totalDurationMs)
         }
     }
-    val nextPreviewClip by remember(previewTrackClips) {
-        derivedStateOf { previewTrackClips.firstOrNull { it.timelineStartMs > playheadMs } }
+    val nextPreviewClip by remember(previewVisualClips) {
+        derivedStateOf { previewVisualClips.filter { it.timelineStartMs > playheadMs }.minByOrNull { it.timelineStartMs } }
     }
-    val previewRecoveryTargetMs by remember(previewClipAtPlayhead, nextPreviewClip, previewTrackClips) {
+    val previewRecoveryTargetMs by remember(previewClipAtPlayhead, nextPreviewClip, previewVisualClips) {
         derivedStateOf {
             when {
                 nextPreviewClip != null -> nextPreviewClip?.timelineStartMs
                 previewClipAtPlayhead != null -> previewClipAtPlayhead?.timelineStartMs
-                previewTrackClips.isNotEmpty() -> previewTrackClips.last().timelineStartMs
+                previewVisualClips.isNotEmpty() -> previewVisualClips.maxOf { it.timelineStartMs }
                 else -> null
             }
         }

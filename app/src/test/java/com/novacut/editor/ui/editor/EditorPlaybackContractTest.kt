@@ -8,7 +8,7 @@ import java.io.File
 class EditorPlaybackContractTest {
 
     @Test
-    fun `timeline rebuild selects the edit point atomically with the new playlist`() {
+    fun `timeline rebuild selects the edit point atomically with the new composition`() {
         val engine = locate("app/src/main/java/com/novacut/editor/engine/VideoEngine.kt").readText()
         val viewModel = locate(
             "app/src/main/java/com/novacut/editor/ui/editor/EditorViewModel.kt"
@@ -18,8 +18,8 @@ class EditorPlaybackContractTest {
             viewModel.indexOf("private fun preloadVisibleWaveforms")
         )
 
-        assertTrue(engine.contains("val startTarget = requireNotNull(resolvePreviewSeekTarget(startPositionMs))"))
-        assertTrue(engine.contains("startTarget.mediaItemIndex,\n            startTarget.mediaPositionMs"))
+        assertTrue(engine.contains("p.setComposition(composition, startPositionMs.coerceIn"))
+        assertTrue(engine.contains("MultipleInputVideoGraph.Factory()"))
         assertTrue(rebuildBlock.contains("startPositionMs = _state.value.playheadMs"))
         assertFalse(rebuildBlock.contains("videoEngine.seekTo"))
     }
@@ -37,7 +37,7 @@ class EditorPlaybackContractTest {
 
         assertTrue(engine.contains("fun playFromTimelinePosition(positionMs: Long, restartSession: Boolean = false)"))
         assertTrue(engine.contains("playerListener?.let(::addListener)"))
-        assertTrue(engine.contains("p.seekTo(it.mediaItemIndex, it.mediaPositionMs)"))
+        assertTrue(engine.contains("p.seekTo(positionMs.coerceIn(0L, previewCompositionPlan.durationMs))"))
         assertTrue(engine.contains("playbackSessionNeedsReset("))
         assertTrue(engine.contains("p.stop()"))
         assertTrue(playbackBlock.contains("videoEngine.playFromTimelinePosition(playhead, restartSession)"))
@@ -65,16 +65,26 @@ class EditorPlaybackContractTest {
     @Test
     fun `live preview excludes single input transition shaders`() {
         val engine = locate("app/src/main/java/com/novacut/editor/engine/VideoEngine.kt").readText()
-        val previewEffectsBlock = engine.substring(
-            engine.indexOf("private fun buildPreviewEffectsForClip("),
-            engine.indexOf("fun setPreviewVolume(")
-        )
-
-        assertFalse(previewEffectsBlock.contains("headTransition"))
-        assertFalse(previewEffectsBlock.contains("buildTransitionEffect"))
-        assertFalse(previewEffectsBlock.contains("buildTransitionOutEffect"))
-        assertTrue(engine.contains("Timeline transitions are intentionally excluded here"))
+        assertTrue(engine.contains("if (!previewMode) {\n                clip.headTransition"))
+        assertTrue(engine.contains("previewMode = true"))
         assertTrue(engine.contains("EffectBuilder.buildTransitionEffect(it)"))
+    }
+
+    @Test
+    fun `composition preview owns gaps images and processed audio`() {
+        val engine = locate("app/src/main/java/com/novacut/editor/engine/VideoEngine.kt").readText()
+        val viewModel = locate(
+            "app/src/main/java/com/novacut/editor/ui/editor/EditorViewModel.kt"
+        ).readText()
+        val previewPanel = locate(
+            "app/src/main/java/com/novacut/editor/ui/editor/PreviewPanel.kt"
+        ).readText()
+
+        assertTrue(engine.contains("allowAudioTransmux = false"))
+        assertTrue(engine.contains("addGap(durationMsToUs(compositionDurationMs))"))
+        assertTrue(engine.contains("applyClipSpeed(itemBuilder, clip)"))
+        assertFalse(viewModel.contains("startGapPlayback"))
+        assertFalse(previewPanel.contains("currentClipIsStillImage"))
     }
 
     private fun locate(relativePath: String): File {

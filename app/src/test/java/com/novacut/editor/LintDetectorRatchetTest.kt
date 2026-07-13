@@ -19,12 +19,12 @@ class LintDetectorRatchetTest {
                 "NullSafeMutableLiveData",
                 "FrequentlyChangingValue",
                 "FlowOperatorInvokedInComposition",
+                "RememberInComposition",
+                "AutoboxingStateCreation",
             ),
             QUOTED_VALUE.findAll(workaroundBlock).map { it.groupValues[1] }.toSet(),
         )
         listOf(
-            "RememberInComposition",
-            "AutoboxingStateCreation",
             "UnrememberedMutableState",
         ).forEach { detector ->
             assertFalse("Passing detector was globally disabled again: $detector", detector in workaroundBlock)

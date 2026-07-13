@@ -110,10 +110,6 @@ fun PreviewPanel(
     hasActiveEffects: Boolean = false
 ) {
     val semanticColors = LocalClearCutColors.current
-    val currentTimelineUri = currentTimelineClip?.let { it.proxyUri ?: it.sourceUri }
-    val currentClipIsStillImage = remember(currentTimelineUri) {
-        currentTimelineUri?.let(engine::isStillImage) == true
-    }
     val canTransformPreview = selectedClipId != null && currentTimelineClip?.id == selectedClipId
     val showGapState = totalDurationMs > 0L && currentTimelineClip == null && !isPlaying
     val showGapPlaybackFrame = totalDurationMs > 0L && currentTimelineClip == null && isPlaying
@@ -273,25 +269,6 @@ fun PreviewPanel(
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .background(semanticColors.onAccent)
-                                )
-                            }
-
-                            currentClipIsStillImage && currentTimelineUri != null -> {
-                                SubcomposeAsyncImage(
-                                    model = currentTimelineUri,
-                                    contentDescription = stringResource(R.string.cd_preview_still_image),
-                                    contentScale = ContentScale.Fit,
-                                    modifier = Modifier.fillMaxSize(),
-                                    loading = {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(36.dp),
-                                            color = ClearCutAccents.Mauve,
-                                            strokeWidth = 3.dp
-                                        )
-                                    },
-                                    error = {
-                                        PreviewUnavailableState()
-                                    }
                                 )
                             }
 

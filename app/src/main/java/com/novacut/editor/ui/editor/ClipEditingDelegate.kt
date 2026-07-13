@@ -33,7 +33,6 @@ class ClipEditingDelegate(
     private val showToast: (String) -> Unit,
     private val rebuildPlayerTimeline: () -> Unit,
     private val saveProject: () -> Unit,
-    private val updatePreview: () -> Unit,
     private val seekPreviewTo: (Long) -> Unit,
     private val currentPlayheadMs: () -> Long,
     private val updateLivePlayheadMs: (Long) -> Unit,
@@ -249,7 +248,6 @@ class ClipEditingDelegate(
             }
 
             rebuildPlayerTimeline()
-            updatePreview()
             saveProject()
             affectedClipIds.forEach { clipId ->
                 onClipAdded?.invoke(clipId, newUri)
@@ -292,7 +290,6 @@ class ClipEditingDelegate(
                 }
             } else updated
         }
-        updatePreview()
     }
 
     // --- Delete Clip ---

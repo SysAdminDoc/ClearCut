@@ -30,8 +30,8 @@ android {
         applicationId = "com.novacut.editor"
         minSdk = 26
         targetSdk = 36
-        versionCode = 268
-        versionName = "3.74.135"
+        versionCode = 269
+        versionName = "3.74.136"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // Passive, opt-in update check for sideload / GitHub-release installs.
@@ -137,7 +137,9 @@ android {
         val sourceDetectorCrashWorkarounds = listOf(
             "NullSafeMutableLiveData",
             "FrequentlyChangingValue",
-            "FlowOperatorInvokedInComposition"
+            "FlowOperatorInvokedInComposition",
+            "RememberInComposition",
+            "AutoboxingStateCreation"
         )
         val probeDetector = providers.gradleProperty("cleancutLintProbe").orNull
         require(probeDetector == null || probeDetector in sourceDetectorCrashWorkarounds) {

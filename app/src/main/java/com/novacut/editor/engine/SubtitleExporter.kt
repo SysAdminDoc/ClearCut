@@ -160,16 +160,16 @@ object SubtitleExporter {
 
     private fun sanitizeSrtText(raw: String): String {
         return raw
-            .replace("\r\n", "\r\n")
-            .replace('\r', '\r\n')
+            .replace("\r\n", "\n")
+            .replace('\r', '\n')
             .lines()
             .joinToString("\r\n") { line -> line.replace("-->", "->") }
     }
 
     private fun escapeVttText(raw: String): String {
         return raw
-            .replace("\r\n", "\r\n")
-            .replace('\r', '\r\n')
+            .replace("\r\n", "\n")
+            .replace('\r', '\n')
             .replace("-->", "->")
             .replace("&", "&amp;")
             .replace("<", "&lt;")
@@ -181,9 +181,9 @@ object SubtitleExporter {
             .replace("\\", "\\\\")
             .replace("{", "\\{")
             .replace("}", "\\}")
-            .replace("\r\n", "\r\n")
-            .replace('\r', '\r\n')
-            .replace("\r\n", "\\N")
+            .replace("\r\n", "\n")
+            .replace('\r', '\n')
+            .replace("\n", "\\N")
     }
 
     private fun formatSrtTime(ms: Long): String {

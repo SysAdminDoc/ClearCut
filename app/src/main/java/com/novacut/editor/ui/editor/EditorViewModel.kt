@@ -8,7 +8,6 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import com.novacut.editor.R
 import com.novacut.editor.ai.AiFeatures
@@ -641,7 +640,7 @@ class EditorViewModel @Inject constructor(
         scope = viewModelScope,
         saveUndoState = ::saveUndoState, showToast = ::showToast,
         pauseIfPlaying = ::pauseIfPlaying, dismissedPanelState = ::dismissedPanelState,
-        refreshPreview = ::updatePreview,
+        refreshPreview = ::rebuildPlayerTimeline,
         saveProject = ::saveProject
     )
 
@@ -698,7 +697,7 @@ class EditorViewModel @Inject constructor(
         appContext = appContext,
         scope = viewModelScope, saveUndoState = ::saveUndoState, showToast = ::showToast,
         rebuildPlayerTimeline = ::rebuildPlayerTimeline, saveProject = ::saveProject,
-        updatePreview = ::updatePreview, seekPreviewTo = ::seekTo,
+        seekPreviewTo = ::seekTo,
         currentPlayheadMs = { _playheadMs.value },
         updateLivePlayheadMs = { _playheadMs.value = it },
         recalculateDuration = ::recalculateDuration,
@@ -788,7 +787,6 @@ class EditorViewModel @Inject constructor(
     @Volatile
     private var timelineWidthPx: Float = 0f
     private val waveformLoadJobs = java.util.concurrent.ConcurrentHashMap<String, Job>()
-    private var gapPlaybackJob: Job? = null
     private var playbackStartRecoveryJob: Job? = null
 
     private fun visibleTimelineDurationMs(state: EditorState = _state.value): Long? {
@@ -916,13 +914,6 @@ class EditorViewModel @Inject constructor(
                 }
             }
 
-            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-                // A paused seek can cross a cut without entering the periodic
-                // playback loop. Refresh volume/speed immediately so the first
-                // decoded frame and audio sample use the destination clip state.
-                updatePreview()
-            }
-
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                 playbackStartRecoveryJob?.cancel()
                 val resumeAfterSurfaceRecovery = _state.value.isPlaybackRequested
@@ -982,13 +973,11 @@ class EditorViewModel @Inject constructor(
 
         // Periodic playhead sync (~30fps) with smooth auto-scroll + per-clip speed tracking
         viewModelScope.launch {
-            var lastClipIndex = -1
             var frameCount = 0
             while (isActive) {
                 delay(33)
                 val player = videoEngine.getPlayer() ?: continue
                 if (player.isPlaying) {
-                    videoEngine.syncPreviewSpeedForCurrentPosition()
                     val currentMs = videoEngine.getAbsolutePositionMs()
                     // Fast-path: update dedicated playhead flow every frame
                     _playheadMs.value = currentMs
@@ -1025,12 +1014,6 @@ class EditorViewModel @Inject constructor(
                         _state.update { st ->
                             st.copy(playheadMs = currentMs, scrollOffsetMs = newScroll)
                         }
-                    }
-                    // Track clip transitions during playback — update speed/effects for current clip
-                    val currentIndex = videoEngine.getCurrentClipIndex()
-                    if (currentIndex != lastClipIndex) {
-                        lastClipIndex = currentIndex
-                        updatePreview()
                     }
                 }
             }
@@ -1206,7 +1189,8 @@ class EditorViewModel @Inject constructor(
 
     /** Rebuild ExoPlayer timeline from current tracks. Call after any clip mutation. */
     private fun rebuildPlayerTimeline() {
-        cancelGapPlayback()
+        previewRebuildJob?.cancel()
+        previewRebuildJob = null
         val livePlayheadMs = _playheadMs.value
         _state.update { state ->
             normalizeTimelineState(state.copy(playheadMs = livePlayheadMs))
@@ -1218,9 +1202,10 @@ class EditorViewModel @Inject constructor(
         videoEngine.prepareTimeline(
             tracks = _state.value.tracks,
             missingClipIds = missingClipIds,
-            startPositionMs = _state.value.playheadMs
+            startPositionMs = _state.value.playheadMs,
+            config = _state.value.exportConfig.copy(aspectRatio = _state.value.project.aspectRatio),
+            trackedObjects = _state.value.trackedObjects,
         )
-        updatePreview()
         preloadVisibleWaveforms(_state.value)
     }
 
@@ -1295,18 +1280,15 @@ class EditorViewModel @Inject constructor(
         }
     }
 
-    /** Apply the current preview segment's effects and playback settings. */
+    private var previewRebuildJob: Job? = null
+
+    /** Debounce expensive composition graph replacement during slider and gesture updates. */
     private fun updatePreview() {
-        val clip = videoEngine.getPreviewClipAt(videoEngine.getCurrentClipIndex())
-        val track = clip?.let { previewTrackForClip(it.id) }
-        val trackVolume = if (track != null && !isTrackAudibleInPreview(track)) {
-            0f
-        } else {
-            safeEditorFloat(track?.volume ?: 1f, 1f, 0f, 2f)
+        previewRebuildJob?.cancel()
+        previewRebuildJob = viewModelScope.launch {
+            delay(100L)
+            rebuildPlayerTimeline()
         }
-        videoEngine.applyPreviewEffects(clip, _state.value.trackedObjects)
-        videoEngine.syncPreviewSpeedForCurrentPosition()
-        videoEngine.setPreviewVolume(safeEditorFloat((clip?.volume ?: 1f) * trackVolume, 1f, 0f, 1f))
     }
 
     /**
@@ -1601,11 +1583,7 @@ class EditorViewModel @Inject constructor(
     // Playback
     fun togglePlayPause() = togglePlayback()
     fun togglePlayback() {
-        if (gapPlaybackJob?.isActive == true) {
-            cancelGapPlayback()
-            playbackStartRecoveryJob?.cancel()
-            _state.update { it.copy(isPlaying = false, isPlaybackRequested = false) }
-        } else if (videoEngine.isPlaybackRequested() && !videoEngine.isPlaybackEnded()) {
+        if (videoEngine.isPlaybackRequested() && !videoEngine.isPlaybackEnded()) {
             playbackStartRecoveryJob?.cancel()
             videoEngine.pause()
             _state.update { it.copy(isPlaying = false, isPlaybackRequested = false) }
@@ -1629,17 +1607,11 @@ class EditorViewModel @Inject constructor(
                 _playheadMs.value = playhead
                 _state.update { it.copy(playheadMs = playhead) }
             }
-            val currentPreviewClip = previewClipAtPosition(playhead)
-            if (currentPreviewClip == null && _state.value.totalDurationMs > playhead) {
-                startGapPlayback(playhead)
-            } else {
-                // Show Pause as soon as playback is requested. Player.isPlaying
-                // remains false while buffering; using it for the transport icon
-                // made a visible Play tap cancel playWhenReady after a cut.
-                _state.update { it.copy(isPlaybackRequested = true) }
-                videoEngine.playFromTimelinePosition(playhead, restartSession)
-                armPlaybackStartRecovery()
-            }
+            // CompositionPlayer owns the whole absolute timeline, including gaps on
+            // one sequence while another visual or audio lane remains active.
+            _state.update { it.copy(isPlaybackRequested = true) }
+            videoEngine.playFromTimelinePosition(playhead, restartSession)
+            armPlaybackStartRecovery()
         }
     }
 
@@ -1684,7 +1656,6 @@ class EditorViewModel @Inject constructor(
     private var scrubSeekJob: kotlinx.coroutines.Job? = null
 
     fun seekTo(positionMs: Long) {
-        cancelGapPlayback()
         val clamped = positionMs.coerceIn(0L, _state.value.totalDurationMs.coerceAtLeast(0L))
         _playheadMs.value = clamped
         if (isScrubbing) {
@@ -1703,7 +1674,6 @@ class EditorViewModel @Inject constructor(
 
     /** Enable scrubbing mode during timeline drag for smoother seeking. */
     fun beginScrub() {
-        cancelGapPlayback()
         isScrubbing = true
         videoEngine.setScrubbingMode(true)
     }
@@ -4603,7 +4573,6 @@ class EditorViewModel @Inject constructor(
                 selectedTrackId = if (updated.size == 1) soleSelectedTrackId else null
             )
         }
-        updatePreview()
     }
 
     fun clearMultiSelect() {
@@ -4631,7 +4600,6 @@ class EditorViewModel @Inject constructor(
                 selectedTrackId = activeTrackId
             )
         }
-        updatePreview()
     }
 
     fun groupSelectedClips() {
@@ -4944,7 +4912,6 @@ class EditorViewModel @Inject constructor(
     fun setClipVolume(clipId: String, volume: Float) {
         val safeVolume = safeEditorFloat(volume, 1f, 0f, 2f)
         updateClipById(clipId) { it.copy(volume = safeVolume) }
-        videoEngine.setPreviewVolume(safeVolume)
         // saveProject() deferred to endVolumeChange() — slider fires this 60 Hz.
     }
 
@@ -4953,6 +4920,7 @@ class EditorViewModel @Inject constructor(
     }
 
     fun endVolumeChange() {
+        rebuildPlayerTimeline()
         saveProject()
     }
 
@@ -4961,6 +4929,7 @@ class EditorViewModel @Inject constructor(
     }
 
     fun endTransformChange() {
+        rebuildPlayerTimeline()
         saveProject()
     }
 
@@ -4992,6 +4961,7 @@ class EditorViewModel @Inject constructor(
     }
 
     fun endOpacityChange() {
+        rebuildPlayerTimeline()
         saveProject()
     }
 
@@ -5900,130 +5870,6 @@ class EditorViewModel @Inject constructor(
             playheadMs = clampedPlayheadMs,
             scrollOffsetMs = clampedScrollOffsetMs
         )
-    }
-
-    private fun previewTrackForClip(clipId: String): Track? {
-        return _state.value.tracks.firstOrNull { track -> track.clips.any { it.id == clipId } }
-    }
-
-    private fun primaryPreviewTrack(): Track? {
-        return _state.value.tracks
-            .sortedBy { it.index }
-            .firstOrNull {
-                (it.type == TrackType.VIDEO || it.type == TrackType.OVERLAY) &&
-                    it.isVisible &&
-                    it.clips.isNotEmpty()
-            }
-    }
-
-    private fun previewClipAtPosition(positionMs: Long): Clip? {
-        return primaryPreviewTrack()
-            ?.clips
-            ?.sortedBy { it.timelineStartMs }
-            ?.firstOrNull { positionMs in it.timelineStartMs until it.timelineEndMs }
-    }
-
-    private fun nextPreviewClipAfter(positionMs: Long): Clip? {
-        return primaryPreviewTrack()
-            ?.clips
-            ?.sortedBy { it.timelineStartMs }
-            ?.firstOrNull { it.timelineStartMs > positionMs }
-    }
-
-    private fun startGapPlayback(startMs: Long) {
-        val targetClip = nextPreviewClipAfter(startMs)
-        val gapEndMs = targetClip?.timelineStartMs ?: _state.value.totalDurationMs
-        if (gapEndMs <= startMs) {
-            if (targetClip != null) {
-                seekTo(targetClip.timelineStartMs)
-                videoEngine.play()
-                _state.update { it.copy(isPlaying = true, isPlaybackRequested = true) }
-            }
-            return
-        }
-
-        cancelGapPlayback()
-        videoEngine.pause()
-        _playheadMs.value = startMs
-        _state.update {
-            it.copy(isPlaying = true, isPlaybackRequested = true, playheadMs = startMs)
-        }
-
-        gapPlaybackJob = viewModelScope.launch {
-            val gapPlaybackStartRealtime = SystemClock.elapsedRealtime()
-            while (isActive) {
-                val elapsedMs = SystemClock.elapsedRealtime() - gapPlaybackStartRealtime
-                val positionMs = (startMs + elapsedMs).coerceAtMost(gapEndMs)
-                _playheadMs.value = positionMs
-                _state.update {
-                    it.copy(
-                        playheadMs = positionMs,
-                        isPlaying = true,
-                        isPlaybackRequested = true
-                    )
-                }
-                if (positionMs >= gapEndMs) {
-                    break
-                }
-                delay(33)
-            }
-
-            if (!isActive) {
-                return@launch
-            }
-            gapPlaybackJob = null
-            val resumeClip = nextPreviewClipAfter((gapEndMs - 1L).coerceAtLeast(0L))
-            if (resumeClip != null) {
-                val resumeAtMs = resumeClip.timelineStartMs
-                _playheadMs.value = resumeAtMs
-                _state.update {
-                    it.copy(
-                        playheadMs = resumeAtMs,
-                        isPlaying = true,
-                        isPlaybackRequested = true
-                    )
-                }
-                videoEngine.seekTo(resumeAtMs)
-                videoEngine.play()
-            } else {
-                val timelineEndMs = _state.value.totalDurationMs
-                if (_state.value.isLooping && timelineEndMs > 0L) {
-                    _playheadMs.value = 0L
-                    _state.update {
-                        it.copy(playheadMs = 0L, isPlaying = true, isPlaybackRequested = true)
-                    }
-                    videoEngine.seekTo(0L)
-                    if (previewClipAtPosition(0L) != null) {
-                        videoEngine.play()
-                    } else {
-                        startGapPlayback(0L)
-                    }
-                } else {
-                    _playheadMs.value = timelineEndMs
-                    _state.update {
-                        it.copy(
-                            playheadMs = timelineEndMs,
-                            isPlaying = false,
-                            isPlaybackRequested = false
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    private fun cancelGapPlayback() {
-        val wasPlayingGap = gapPlaybackJob?.isActive == true
-        gapPlaybackJob?.cancel()
-        gapPlaybackJob = null
-        if (wasPlayingGap) {
-            _state.update { it.copy(isPlaying = false, isPlaybackRequested = false) }
-        }
-    }
-
-    private fun isTrackAudibleInPreview(track: Track): Boolean {
-        val soloTrackIds = _state.value.tracks.filter { it.isSolo }.map { it.id }.toSet()
-        return track.isVisible && !track.isMuted && (soloTrackIds.isEmpty() || track.id in soloTrackIds)
     }
 
     private fun minimumSlideDurationMs(clip: Clip): Long {
