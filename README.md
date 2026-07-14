@@ -4,9 +4,13 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.146-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.147-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.147 No click on non-frame-aligned audio
+
+- Reverb, delay, chorus, and flanger now pass the trailing partial frame through dry instead of leaving it zeroed, so a PCM buffer whose length is not a multiple of the channel count no longer ends on a brief click.
 
 ### v3.74.146 Correct cross-orientation reframe pan
 

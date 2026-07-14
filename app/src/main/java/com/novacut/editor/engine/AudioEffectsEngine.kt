@@ -322,6 +322,21 @@ object AudioEffectsEngine {
         return output
     }
 
+    /**
+     * Frame-stepped effects iterate whole frames only, so a buffer whose length
+     * is not a multiple of [channels] leaves its trailing partial frame as zero
+     * in the freshly-allocated output — a brief click at the buffer end. Copy the
+     * residual samples through dry so no zero-gap is introduced.
+     */
+    private fun passthroughTrailingPartialFrame(source: FloatArray, dest: FloatArray, channels: Int) {
+        val safe = channels.coerceAtLeast(1)
+        var j = (source.size / safe) * safe
+        while (j < source.size && j < dest.size) {
+            dest[j] = source[j]
+            j++
+        }
+    }
+
     private fun applyReverb(buffer: FloatArray, sampleRate: Int, channels: Int, params: Map<String, Float>): FloatArray {
         val safeChannels = sanitizedChannels(channels)
         val safeSampleRate = sanitizedSampleRate(sampleRate)
@@ -372,6 +387,7 @@ object AudioEffectsEngine {
                 }
             }
         }
+        passthroughTrailingPartialFrame(buffer, output, safeChannels)
         return output
     }
 
@@ -410,6 +426,7 @@ object AudioEffectsEngine {
             }
             writePos = (writePos + 1) % delaySamples
         }
+        passthroughTrailingPartialFrame(buffer, output, safeChannels)
         return output
     }
 
@@ -469,6 +486,7 @@ object AudioEffectsEngine {
             }
             writeIdx = (writeIdx + 1) % maxDelay
         }
+        passthroughTrailingPartialFrame(buffer, output, safeChannels)
         return output
     }
 
@@ -501,6 +519,7 @@ object AudioEffectsEngine {
             }
             writeIdx = (writeIdx + 1) % maxDelay
         }
+        passthroughTrailingPartialFrame(buffer, output, safeChannels)
         return output
     }
 
