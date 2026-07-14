@@ -326,9 +326,12 @@ class AiFeatures @Inject constructor(
         val retriever = MediaMetadataRetriever()
         try {
             retriever.setDataSource(context, videoUri)
-            val durationMs = retriever.extractMetadata(
+            val rawDurationMs = retriever.extractMetadata(
                 MediaMetadataRetriever.METADATA_KEY_DURATION
             )?.toLongOrNull() ?: return@withContext ColorCorrection()
+            // Bound duration so `durationMs * (i*2+1)` cannot overflow Long.
+            val durationMs = com.novacut.editor.engine.MediaDurationPolicy.analyzableDurationMs(rawDurationMs)
+            if (durationMs <= 0L) return@withContext ColorCorrection()
 
             // Sample 5 frames evenly across the clip
             val sampleCount = 5
@@ -829,9 +832,12 @@ class AiFeatures @Inject constructor(
 
         try {
             retriever.setDataSource(context, videoUri)
-            val durationMs = retriever.extractMetadata(
+            val rawDurationMs = retriever.extractMetadata(
                 MediaMetadataRetriever.METADATA_KEY_DURATION
             )?.toLongOrNull() ?: return@withContext emptyList()
+            // Skip proportional scanning for non-positive/overflowed/> 24h metadata.
+            val durationMs = com.novacut.editor.engine.MediaDurationPolicy.analyzableDurationMs(rawDurationMs)
+            if (durationMs <= 0L) return@withContext emptyList()
 
             val intervalMs = 500L
             var previousFrame: Bitmap? = null
@@ -1493,9 +1499,12 @@ class AiFeatures @Inject constructor(
         val retriever = MediaMetadataRetriever()
         try {
             retriever.setDataSource(context, videoUri)
-            val durationMs = retriever.extractMetadata(
+            val rawDurationMs = retriever.extractMetadata(
                 MediaMetadataRetriever.METADATA_KEY_DURATION
             )?.toLongOrNull() ?: return@withContext emptyList()
+            // Skip proportional scanning for non-positive/overflowed/> 24h metadata.
+            val durationMs = com.novacut.editor.engine.MediaDurationPolicy.analyzableDurationMs(rawDurationMs)
+            if (durationMs <= 0L) return@withContext emptyList()
 
             val intervalMs = 500L
             val keyframes = mutableListOf<ReframeKeyframe>()

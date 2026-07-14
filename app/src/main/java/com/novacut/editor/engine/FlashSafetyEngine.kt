@@ -7,6 +7,7 @@ import android.net.Uri
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -38,11 +39,17 @@ class FlashSafetyEngine @Inject constructor(
         try {
             retriever.setDataSource(context, uri)
             val stepMs = 100L
-            val lum = FloatArray((durationMs / stepMs).toInt().coerceAtLeast(2))
+            // Bound the sample count so hostile/implausible duration metadata
+            // (negative, overflowed, or > 24h) cannot size a huge array or drive
+            // an hours-long scan. > 24h skips proportional flash analysis.
+            val sampleCount = MediaDurationPolicy.boundedSampleCount(durationMs, stepMs, MAX_FLASH_SAMPLES)
+            if (sampleCount < 2) return@withContext warnings
+            val lum = FloatArray(sampleCount)
             val red = FloatArray(lum.size)
             var t = 0L
             var i = 0
             while (i < lum.size) {
+                ensureActive()
                 val frame = retriever.getFrameAtTime(t * 1000L, MediaMetadataRetriever.OPTION_CLOSEST)
                 if (frame != null) {
                     val stats = avgLumAndRed(frame)
@@ -102,5 +109,10 @@ class FlashSafetyEngine @Inject constructor(
         return (lum / n).toFloat() to (red / n).toFloat().coerceIn(0f, 1f)
     }
 
-    companion object { private const val TAG = "FlashSafetyEngine" }
+    companion object {
+        private const val TAG = "FlashSafetyEngine"
+        // 24h at one sample per 100 ms. Durations beyond this are skipped by
+        // MediaDurationPolicy, so this is a belt-and-suspenders array ceiling.
+        private const val MAX_FLASH_SAMPLES = 864_000
+    }
 }

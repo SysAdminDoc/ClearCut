@@ -4,9 +4,14 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.143-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.144-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.144 Bounded duration analysis
+
+- Added `MediaDurationPolicy` so hostile or malformed duration metadata (negative, `Long.MAX_VALUE`, conversion-overflow, or over-24-hour) can no longer size an analysis array or drive an unbounded frame-sampling loop.
+- Flash-safety, scene detection, auto-color, and smart-reframe analysis now clamp their sample counts and skip proportional work for implausible durations, with cooperative cancellation added to the flash scan.
 
 ### v3.74.143 Honest caption translation
 
