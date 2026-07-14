@@ -31,6 +31,7 @@ object PrivacyDashboard {
         CRASH_RECORDS("Crash records (fatal exception breadcrumbs)"),
         PROCESS_EXIT_HISTORY("Process-death history (ANR, low-memory, native crash)"),
         CLOUD_GENERATIVE("Cloud generative video calls (consent-gated)"),
+        MEDIAPIPE_METRICS("MediaPipe on-device task metrics (Google, consent-gated)"),
         AI_USAGE_LEDGER("AI usage ledger (per-project disclosure history)"),
         OPT_IN_TELEMETRY("Opt-in usage telemetry (Sentry / Glean)"),
         UPDATE_CHECK("App update check (sideload / GitHub-release version lookup)"),
@@ -164,6 +165,18 @@ object PrivacyDashboard {
             controls = Controls(canExport = false, canDelete = true, hasOptOut = true),
             collectedBy = listOf("GenerativeVideoPolicy"),
             retentionPolicy = "Per the provider's policy; disclosed in the consent sheet before each call.",
+            collectedByDefault = false,
+        ),
+        DashboardEntry(
+            category = Category.MEDIAPIPE_METRICS,
+            location = StorageLocation.CLOUD_ON_DEMAND,
+            controls = Controls(canExport = false, canDelete = true, hasOptOut = true),
+            collectedBy = listOf("SegmentationEngine", "SmartReframeEngine", "MediaPipeUsageGate"),
+            retentionPolicy = "Off by default and gated by explicit versioned consent. When enabled, Google's " +
+                "MediaPipe Tasks SDK uploads anonymous performance metrics (app id/version, task/mode, " +
+                "invocation/drop counts, latency, initialization errors) to Google via Play Services " +
+                "DataTransport. Input media (frames/pixels) never leaves the device. Revoking consent in " +
+                "Settings closes any running task and blocks it from starting again.",
             collectedByDefault = false,
         ),
         DashboardEntry(

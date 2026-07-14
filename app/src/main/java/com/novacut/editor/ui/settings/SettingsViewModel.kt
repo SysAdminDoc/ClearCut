@@ -85,6 +85,7 @@ class SettingsViewModel @Inject constructor(
     private val repo: SettingsRepository,
     private val whisperEngine: WhisperEngine,
     private val segmentationEngine: SegmentationEngine,
+    private val mediaPipeGate: com.novacut.editor.engine.MediaPipeUsageGate,
     private val diagnosticExportEngine: DiagnosticExportEngine,
     private val projectDao: ProjectDao,
     private val autoSave: ProjectAutoSave,
@@ -140,6 +141,18 @@ class SettingsViewModel @Inject constructor(
     fun setIncludeDiagnosticTimelineShape(v: Boolean) =
         viewModelScope.launch { repo.updateIncludeDiagnosticTimelineShape(v) }
     fun setAppearanceMode(v: AppearanceMode) = viewModelScope.launch { repo.updateAppearanceMode(v) }
+
+    /**
+     * Grant or revoke consent for Google MediaPipe on-device Tasks (selfie
+     * segmentation, smart reframe). Revoking closes any live task and blocks
+     * recreation until re-consent. See [MediaPipeUsageGate].
+     */
+    fun setMediaPipeConsent(granted: Boolean) = viewModelScope.launch {
+        if (granted) mediaPipeGate.grantConsent() else mediaPipeGate.revokeConsent()
+    }
+
+    /** Disclosure surfaced by the MediaPipe consent row. */
+    val mediaPipeDisclosure get() = mediaPipeGate.disclosure
 
     fun setUpdateCheckEnabled(v: Boolean) = viewModelScope.launch {
         repo.updateUpdateCheckEnabled(v)

@@ -4,9 +4,15 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.140-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.141-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.141 Consent-gated MediaPipe
+
+- On-device MediaPipe tasks (selfie segmentation, Smart Reframe) are now gated by explicit, versioned consent. No `ImageSegmenter`/`FaceDetector` is constructed before the user opts in from Settings → AI Models.
+- Revoking consent closes any running task and blocks it from starting again until re-consent; all non-MediaPipe editing stays fully usable when denied.
+- The privacy dashboard, policy, and Play Data safety worksheet now disclose that the MediaPipe SDK sends anonymous performance metrics to Google via Play Services DataTransport while input media stays on-device. A source-scan test proves every Tasks constructor call site is gated.
 
 ### v3.74.140 Trustworthy saved-state tracking
 

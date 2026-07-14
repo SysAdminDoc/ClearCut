@@ -546,6 +546,8 @@
     <string name="settings_ai_models_description">Administre los modelos de IA descargados para su procesamiento en el dispositivo.</string>
     <string name="settings_ai_wifi_only">Descargas de modelos solo Wi-Fi</string>
     <string name="settings_ai_wifi_only_description">Bloquee grandes descargas de modelos de IA en redes medidas o no disponibles.</string>
+    <string name="settings_mediapipe_consent">IA en el dispositivo (segmentación, reencuadre inteligente)</string>
+    <string name="settings_mediapipe_consent_description">Permita las tareas de Google MediaPipe en el dispositivo. Su video nunca sale del dispositivo, pero el SDK envía métricas de rendimiento anónimas a Google. Desactivado de forma predeterminada; desactivarlo detiene cualquier tarea en curso.</string>
     <string name="settings_ai_storage_title">Almacenamiento local de IA</string>
     <string name="settings_ai_storage_description">Susurro: %1$s · Segmentación: %2$s</string>
     <string name="settings_whisper_model">Susurro (voz a texto)</string>

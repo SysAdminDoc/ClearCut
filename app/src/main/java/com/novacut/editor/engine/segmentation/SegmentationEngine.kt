@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import com.novacut.editor.engine.MediaPipeUsageGate
 import com.novacut.editor.engine.ModelDownloadManager
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.framework.image.ByteBufferExtractor
@@ -39,10 +40,23 @@ data class SegmentationResult(
 @Singleton
 class SegmentationEngine @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val modelDownloadManager: ModelDownloadManager
+    private val modelDownloadManager: ModelDownloadManager,
+    private val mediaPipeGate: MediaPipeUsageGate
 ) {
     private val modelDir = File(context.filesDir, "mediapipe")
     private val modelFile = File(modelDir, "selfie_segmenter.tflite")
+
+    init {
+        // Revoking MediaPipe consent must tear down any live segmenter so a
+        // revoked session cannot keep running the Google Tasks graph.
+        mediaPipeGate.registerRevocationHandler(::closeSegmenterOnRevoke)
+    }
+
+    @Synchronized
+    private fun closeSegmenterOnRevoke() {
+        segmenter?.close()
+        segmenter = null
+    }
 
     private val _modelState = MutableStateFlow(
         if (hasDownloadedModelFile())
@@ -258,6 +272,8 @@ class SegmentationEngine @Inject constructor(
     @Synchronized
     private fun getOrCreateSegmenter(): ImageSegmenter? {
         segmenter?.let { return it }
+        // P0: never construct a MediaPipe Tasks object before explicit consent.
+        if (!mediaPipeGate.isConsented()) return null
         if (!hasVerifiedModelFile()) {
             _modelState.value = SegmentationModelState.ERROR
             return null

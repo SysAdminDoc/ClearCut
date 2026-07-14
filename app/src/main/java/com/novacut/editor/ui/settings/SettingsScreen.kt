@@ -364,6 +364,15 @@ fun SettingsScreen(
                     checked = settings.aiModelWifiOnly,
                     onChanged = viewModel::setAiModelWifiOnly
                 )
+                SettingsSwitch(
+                    icon = Icons.Default.PrivacyTip,
+                    accent = Mocha.Green,
+                    label = stringResource(R.string.settings_mediapipe_consent),
+                    description = stringResource(R.string.settings_mediapipe_consent_description),
+                    checked = settings.mediaPipeConsentVersion >=
+                        com.novacut.editor.engine.MediaPipeUsageGate.CONSENT_VERSION,
+                    onChanged = viewModel::setMediaPipeConsent
+                )
                 SettingsStorageOverview(
                     totalBytes = aiModelStorage.totalBytes,
                     whisperBytes = aiModelStorage.whisperBytes,

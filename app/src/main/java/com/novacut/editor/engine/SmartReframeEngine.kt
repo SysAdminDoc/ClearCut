@@ -26,7 +26,8 @@ enum class ReframeModelState {
 @Singleton
 class SmartReframeEngine @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val modelDownloadManager: ModelDownloadManager
+    private val modelDownloadManager: ModelDownloadManager,
+    private val mediaPipeGate: MediaPipeUsageGate
 ) {
     enum class ReframeStrategy {
         STATIONARY,
@@ -66,6 +67,17 @@ class SmartReframeEngine @Inject constructor(
     val downloadProgress: StateFlow<Float> = _downloadProgress.asStateFlow()
 
     @Volatile private var faceDetector: FaceDetector? = null
+
+    init {
+        // Revoking MediaPipe consent must tear down any live face detector.
+        mediaPipeGate.registerRevocationHandler(::closeDetectorOnRevoke)
+    }
+
+    @Synchronized
+    private fun closeDetectorOnRevoke() {
+        faceDetector?.close()
+        faceDetector = null
+    }
 
     private fun hasDownloadedModelFile(): Boolean =
         faceModelFile.exists() && faceModelFile.length() >= MIN_MODEL_BYTES
@@ -135,6 +147,8 @@ class SmartReframeEngine @Inject constructor(
     @Synchronized
     private fun getOrCreateDetector(): FaceDetector? {
         faceDetector?.let { return it }
+        // P0: never construct a MediaPipe Tasks object before explicit consent.
+        if (!mediaPipeGate.isConsented()) return null
         if (!hasVerifiedModelFile()) return null
         return try {
             val modelBytes = faceModelFile.readBytes()

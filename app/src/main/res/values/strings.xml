@@ -569,6 +569,8 @@
     <string name="settings_ai_models_description">Manage downloaded AI models for on-device processing.</string>
     <string name="settings_ai_wifi_only">Wi-Fi-only model downloads</string>
     <string name="settings_ai_wifi_only_description">Block large AI model downloads on metered or unavailable networks.</string>
+    <string name="settings_mediapipe_consent">On-device AI (segmentation, smart reframe)</string>
+    <string name="settings_mediapipe_consent_description">Allow Google MediaPipe on-device tasks. Your video never leaves the device, but the SDK sends anonymous performance metrics to Google. Off by default; turning it off stops any running task.</string>
     <string name="settings_ai_storage_title">Local AI storage</string>
     <string name="settings_ai_storage_description">Whisper: %1$s · Segmentation: %2$s</string>
     <string name="settings_whisper_model">Whisper (Speech-to-Text)</string>

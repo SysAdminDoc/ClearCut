@@ -55,6 +55,14 @@ data class AppSettings(
     // Opt-in passive update check for sideload / GitHub-release installs. Off by
     // default so no network request is ever made without explicit consent.
     val updateCheckEnabled: Boolean = false,
+    // Versioned explicit consent for MediaPipe on-device Tasks (selfie
+    // segmentation, face detection). 0 = no consent. The MediaPipe Tasks SDK
+    // uploads anonymous performance metrics to Google via Play Services
+    // DataTransport, so no ImageSegmenter/FaceDetector may be constructed until
+    // the stored version is at least MediaPipeUsageGate.CONSENT_VERSION. Bumping
+    // the gate's CONSENT_VERSION forces re-consent after a material disclosure
+    // change. Off by default; all non-MediaPipe editing works without it.
+    val mediaPipeConsentVersion: Int = 0,
 )
 
 enum class DesktopOverride { AUTO, FORCE_ON, FORCE_OFF }
@@ -93,6 +101,7 @@ internal object SettingsPreferenceKeys {
     val INCLUDE_DIAGNOSTIC_TIMELINE_SHAPE = booleanPreferencesKey("include_diagnostic_timeline_shape")
     val APPEARANCE_MODE = stringPreferencesKey("appearance_mode")
     val UPDATE_CHECK_ENABLED = booleanPreferencesKey("update_check_enabled")
+    val MEDIA_PIPE_CONSENT_VERSION = intPreferencesKey("mediapipe_consent_version")
 }
 
 internal fun mapPreferencesToAppSettings(prefs: Preferences): AppSettings = AppSettings(
@@ -130,6 +139,7 @@ internal fun mapPreferencesToAppSettings(prefs: Preferences): AppSettings = AppS
     appearanceMode = prefs[SettingsPreferenceKeys.APPEARANCE_MODE]?.enumOrNull<AppearanceMode>()
         ?: AppearanceMode.SYSTEM,
     updateCheckEnabled = prefs[SettingsPreferenceKeys.UPDATE_CHECK_ENABLED] ?: false,
+    mediaPipeConsentVersion = prefs[SettingsPreferenceKeys.MEDIA_PIPE_CONSENT_VERSION]?.takeIf { it >= 0 } ?: 0,
 )
 
 internal fun createClearCutSettingsDataStore(
@@ -324,6 +334,10 @@ class SettingsRepository internal constructor(
 
     suspend fun updateUpdateCheckEnabled(value: Boolean) {
         dataStore.edit { it[SettingsPreferenceKeys.UPDATE_CHECK_ENABLED] = value }
+    }
+
+    suspend fun updateMediaPipeConsentVersion(value: Int) {
+        dataStore.edit { it[SettingsPreferenceKeys.MEDIA_PIPE_CONSENT_VERSION] = value.coerceAtLeast(0) }
     }
 
     suspend fun updateOneHandedMode(value: Boolean) {
