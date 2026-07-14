@@ -1894,7 +1894,12 @@ class EditorViewModel @Inject constructor(
             normalizedSelectedIds.size == 1 -> normalizedSelectedIds.first()
             else -> null
         }
+        // When a clip is selected, the track follows it. Otherwise preserve an
+        // existing track (header/empty-track) selection as long as that track
+        // still exists, so undo/redo restores a track-only selection instead of
+        // silently clearing it.
         val normalizedSelectedTrackId = normalizedSelectedClipId?.let { clipToTrackId[it] }
+            ?: state.selectedTrackId?.takeIf { trackId -> tracks.any { it.id == trackId } }
 
         return if (
             normalizedSelectedIds == state.selectedClipIds &&
