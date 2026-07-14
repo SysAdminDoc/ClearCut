@@ -4,9 +4,14 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.142-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.143-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.143 Honest caption translation
+
+- Caption translation no longer returns the source text labeled as a translation. With no translation model installed, the panel now shows an explicit "translation model required" state instead of untranslated rows.
+- `CaptionTranslationEngine.translate()` fails fast with `TranslationUnavailableException` while stubbed, and the editor guards both translate and per-row regenerate paths.
 
 ### v3.74.142 Smart Reframe model repair
 

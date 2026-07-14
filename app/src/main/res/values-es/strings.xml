@@ -110,6 +110,7 @@
     <string name="caption_translation_title">Traducción de subtítulos</string>
     <string name="caption_translation_subtitle">Traducir subtítulos a un idioma de destino. Edite cualquier fila en línea.</string>
     <string name="caption_translation_no_target">Elija un idioma de destino para comenzar.</string>
+    <string name="caption_translation_unavailable">Se requiere un modelo de traducción. Instale un modelo de traducción para traducir los subtítulos; los subtítulos nunca se muestran como traducidos hasta que haya uno activo.</string>
     <string name="caption_translation_quality_chip_format">Calidad · %1$s</string>
     <string name="caption_translation_regenerate">regenerar</string>
     <string name="caption_translation_status_translated">Traducido</string>

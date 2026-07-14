@@ -2,7 +2,11 @@ package com.novacut.editor.engine
 
 import com.novacut.editor.engine.CaptionTranslationEngine.LanguagePairQuality
 import com.novacut.editor.engine.CaptionTranslationEngine.ModelVariant
+import com.novacut.editor.engine.whisper.SherpaAsrEngine
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 /**
@@ -119,5 +123,27 @@ class CaptionTranslationEngineTest {
     fun madlad_languageCountIs419() {
         // R6.7 — MADLAD-400 is the canonical wide-coverage target.
         assertEquals(419, ModelVariant.MADLAD_400_3B.languageCount)
+    }
+
+    // --- Unavailable-model guard: the stub must never present identity output
+    //     as a translation. ---
+
+    @Test
+    fun modelIsNotReadyWhileStubbed() {
+        assertFalse(engine.isModelReady())
+    }
+
+    @Test
+    fun translateFailsFastWhenModelUnavailable() {
+        val segments = listOf(
+            SherpaAsrEngine.TranscriptionSegment(
+                text = "hello world",
+                startTimeMs = 0L,
+                endTimeMs = 1_000L,
+            )
+        )
+        assertThrows(CaptionTranslationEngine.TranslationUnavailableException::class.java) {
+            runBlocking { engine.translate(segments, sourceLang = "en", targetLang = "es") }
+        }
     }
 }

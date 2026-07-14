@@ -47,7 +47,11 @@ data class EditorCaptionState(
     val sourceLang: String = "en",
     val targetLang: String? = null,
     val quality: CaptionTranslationEngine.LanguagePairQuality? = null,
-    val variant: CaptionTranslationEngine.ModelVariant = CaptionTranslationEngine.ModelVariant.NLLB_600M
+    val variant: CaptionTranslationEngine.ModelVariant = CaptionTranslationEngine.ModelVariant.NLLB_600M,
+    // True when the user requested a translation but no translation model is
+    // installed, so the panel shows "model required" instead of untranslated
+    // rows presented as a translation.
+    val translationUnavailable: Boolean = false
 ) : EditorDomainState {
     override val kind: EditorDomainState.Kind = EditorDomainState.Kind.CAPTION
 }

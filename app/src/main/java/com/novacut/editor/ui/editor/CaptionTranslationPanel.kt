@@ -74,6 +74,7 @@ fun CaptionTranslationPanel(
     onUserEdit: (rowIndex: Int, newTargetText: String) -> Unit,
     onRegenerate: (rowIndex: Int) -> Unit,
     modifier: Modifier = Modifier,
+    unavailable: Boolean = false,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -87,7 +88,9 @@ fun CaptionTranslationPanel(
             currentQuality = currentQuality,
             onTargetSelected = onTargetSelected,
         )
-        if (rows.isEmpty() || targetLang.isNullOrBlank()) {
+        if (unavailable) {
+            UnavailableState()
+        } else if (rows.isEmpty() || targetLang.isNullOrBlank()) {
             EmptyState()
         } else {
             Column(
@@ -218,6 +221,26 @@ private fun EmptyState() {
     ) {
         Text(
             text = stringResource(R.string.caption_translation_no_target),
+            color = semanticColors.subtext,
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
+}
+
+@Composable
+private fun UnavailableState() {
+    val semanticColors = LocalClearCutColors.current
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .clip(RoundedCornerShape(Radius.md))
+            .background(semanticColors.panelHighest.copy(alpha = 0.42f))
+            .padding(horizontal = 14.dp, vertical = 18.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = stringResource(R.string.caption_translation_unavailable),
             color = semanticColors.subtext,
             style = MaterialTheme.typography.bodySmall,
         )

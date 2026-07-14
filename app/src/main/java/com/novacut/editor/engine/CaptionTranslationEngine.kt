@@ -142,9 +142,19 @@ class CaptionTranslationEngine @Inject constructor(
         false
     }
 
+    /** Raised when [translate] is called before a translation model is ready. */
+    class TranslationUnavailableException :
+        IllegalStateException("Caption translation model is not installed")
+
     /**
      * Translate a list of caption segments. Word timings are re-interpolated
      * based on target word count so downstream karaoke rendering keeps working.
+     *
+     * No translation model is integrated yet, so this fails fast with
+     * [TranslationUnavailableException] rather than returning the source text
+     * unchanged — returning identity output would silently label untranslated
+     * captions as translated. The real translation path lands behind
+     * [isModelReady] once a model is integrated.
      */
     suspend fun translate(
         segments: List<SherpaAsrEngine.TranscriptionSegment>,
@@ -152,7 +162,12 @@ class CaptionTranslationEngine @Inject constructor(
         targetLang: String,
         onProgress: (Float) -> Unit = {}
     ): List<TranslatedSegment> = withContext(Dispatchers.Default) {
-        Log.d(TAG, "translate: stub -- $sourceLang -> $targetLang (${segments.size} segments)")
+        if (!isModelReady()) {
+            Log.d(TAG, "translate: model unavailable -- $sourceLang -> $targetLang")
+            throw TranslationUnavailableException()
+        }
+        // Real translation backend goes here once a model is integrated. Until
+        // then isModelReady() is always false so this line is unreachable.
         segments.map { seg ->
             TranslatedSegment(
                 sourceText = seg.text,

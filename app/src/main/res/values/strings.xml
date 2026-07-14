@@ -119,6 +119,7 @@
     <string name="caption_translation_title">Caption Translation</string>
     <string name="caption_translation_subtitle">Translate captions to a target language. Edit any row inline.</string>
     <string name="caption_translation_no_target">Pick a target language to begin.</string>
+    <string name="caption_translation_unavailable">Translation model required. Install a translation model to translate captions; captions are never shown as translated until one is active.</string>
     <string name="caption_translation_quality_chip_format">Quality · %1$s</string>
     <string name="caption_translation_regenerate">Regenerate</string>
     <string name="caption_translation_status_translated">Translated</string>
