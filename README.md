@@ -4,9 +4,14 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.144-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.145-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.145 Cancellable, bounded audio decode
+
+- Audio decode loops (waveform, PCM, multi-cam sync, Whisper transcription) now check cooperative cancellation each iteration, so closing a project or cancelling a job stops the decoder promptly.
+- Added `AudioDecodeBudget` so a long or crafted track can no longer accumulate hundreds of MB of PCM; decode fails closed at the budget instead of OOMing.
 
 ### v3.74.144 Bounded duration analysis
 

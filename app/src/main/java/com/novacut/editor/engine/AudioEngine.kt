@@ -6,6 +6,7 @@ import android.net.Uri
 import android.util.LruCache
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -161,6 +162,7 @@ class AudioEngine @Inject constructor(
                 var isEOS = false
 
                 while (!isEOS) {
+                    ensureActive()
                     // Feed input
                     val inIndex = decoder.dequeueInputBuffer(10000)
                     if (inIndex >= 0) {
@@ -335,6 +337,7 @@ class AudioEngine @Inject constructor(
                 var eos = false
 
                 while (!eos) {
+                    ensureActive()
                     val inIdx = decoder.dequeueInputBuffer(10000)
                     if (inIdx >= 0) {
                         val buf = decoder.getInputBuffer(inIdx) ?: continue
@@ -354,8 +357,8 @@ class AudioEngine @Inject constructor(
                         if (outBuf != null && bufferInfo.size > 0) {
                             val arr = readPcmSamples(outBuf, bufferInfo)
                             if (arr.isNotEmpty()) {
-                                if (totalSamples > Int.MAX_VALUE - arr.size) {
-                                    Log.w(TAG, "Decoded PCM is too large to keep in memory")
+                                if (AudioDecodeBudget.exceedsBudget(totalSamples, arr.size)) {
+                                    Log.w(TAG, "Decoded PCM exceeds the in-memory budget; stopping decode")
                                     decoder.releaseOutputBuffer(outIdx, false)
                                     return@withContext ShortArray(0)
                                 }

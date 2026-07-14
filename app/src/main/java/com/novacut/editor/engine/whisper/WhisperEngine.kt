@@ -9,9 +9,12 @@ import android.net.Uri
 import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
+import com.novacut.editor.engine.AudioDecodeBudget
 import com.novacut.editor.engine.ModelDownloadManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -498,7 +501,7 @@ class WhisperEngine @Inject constructor(
      * Decode audio from URI to mono float32 PCM.
      * Returns (samples, sampleRate) or null on failure.
      */
-    private fun decodeAudioToPcm(uri: Uri): Pair<FloatArray, Int>? {
+    private suspend fun decodeAudioToPcm(uri: Uri): Pair<FloatArray, Int>? {
         val extractor = MediaExtractor()
         try {
             extractor.setDataSource(context, uri, null)
@@ -532,6 +535,7 @@ class WhisperEngine @Inject constructor(
                 var eos = false
 
                 while (!eos) {
+                    currentCoroutineContext().ensureActive()
                     val inIdx = decoder.dequeueInputBuffer(10000)
                     if (inIdx >= 0) {
                         val buf = decoder.getInputBuffer(inIdx) ?: continue
@@ -566,6 +570,12 @@ class WhisperEngine @Inject constructor(
                                     if (idx < samples.size) sum += samples[idx].toFloat()
                                 }
                                 mono[i] = sum / channels / 32768f
+                            }
+                            if (AudioDecodeBudget.exceedsBudget(totalSamples, mono.size)) {
+                                Log.w("WhisperEngine", "Decoded PCM exceeds the in-memory budget; stopping decode")
+                                decoder.releaseOutputBuffer(outIdx, false)
+                                eos = true
+                                break
                             }
                             chunks.add(mono)
                             totalSamples += mono.size

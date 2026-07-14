@@ -181,6 +181,11 @@ class MultiCamEngine @Inject constructor(
                     val decimation = max(1, sourceSampleRate / safeTargetRate)
 
                     while (!eos) {
+                        ensureActive()
+                        if (AudioDecodeBudget.exceedsBudget(samples.size, 1)) {
+                            android.util.Log.w("MultiCamEngine", "Mono PCM exceeds the in-memory budget; stopping decode")
+                            break
+                        }
                         val inIdx = decoder.dequeueInputBuffer(10000)
                         if (inIdx >= 0) {
                             val buf = decoder.getInputBuffer(inIdx) ?: continue
