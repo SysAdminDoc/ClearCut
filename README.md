@@ -4,9 +4,15 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.149-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.150-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.150 Deep audit hardening
+
+- **Security:** untrusted style-pack ids are sanitized before touching the filesystem (path-traversal fix); model downloads follow redirects manually and re-validate HTTPS on every hop; imported color values are masked to 32-bit ARGB.
+- **Privacy:** the metadata scrubber now strips a far wider set of GPS/device/timestamp EXIF tags and only claims to scrub JPEG/PNG (formats it can actually rewrite) instead of silently failing on WebP/TIFF.
+- **Correctness:** GIF export no longer recycles cached thumbnail bitmaps (a crash on the next thumbnail/export); adjacent clips only merge when their speed, reverse, volume, and speed-curve match; imported `.ncfx` LUT references that don't exist are dropped instead of colliding with another project's LUT.
 
 ### v3.74.149 Faster noise analysis
 

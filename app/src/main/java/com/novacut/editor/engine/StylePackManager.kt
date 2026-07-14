@@ -53,10 +53,29 @@ class StylePackManager @Inject constructor(
         private const val MAX_STYLE_PACK_BYTES = 1_000_000L
         private const val SCHEMA_VERSION = 1
         private const val MAX_STYLES_PER_PACK = 50
+        private const val MAX_PACK_ID_CHARS = 128
     }
 
     private val packsDir: File
         get() = File(context.filesDir, "style_packs").also { it.mkdirs() }
+
+    /**
+     * Resolve the on-disk file for a pack id, returning null for any id that is
+     * not strictly filename-safe. Untrusted `.stylepack` JSON supplies the id,
+     * so an unsanitized value like "../../databases/room-projects" would escape
+     * `style_packs/` and clobber app-private files.
+     */
+    private fun packFileForId(id: String): File? {
+        val sanitized = id.asSequence()
+            .filter { c -> c.isLetterOrDigit() || c == '_' || c == '-' }
+            .take(MAX_PACK_ID_CHARS)
+            .joinToString("")
+        if (sanitized.isEmpty() || sanitized != id) {
+            Log.w(TAG, "Rejected unsafe style pack id")
+            return null
+        }
+        return File(packsDir, "$sanitized.json")
+    }
 
     suspend fun importFromUri(uri: Uri): StylePackImportResult = withContext(Dispatchers.IO) {
         val json = try {
@@ -105,7 +124,7 @@ class StylePackManager @Inject constructor(
     }
 
     fun removePack(packId: String): Boolean {
-        val file = File(packsDir, "$packId.json")
+        val file = packFileForId(packId) ?: return false
         return if (file.exists()) {
             file.delete().also { ok ->
                 if (ok) Log.d(TAG, "Removed style pack: $packId")
@@ -115,7 +134,7 @@ class StylePackManager @Inject constructor(
     }
 
     fun isInstalled(packId: String): Boolean =
-        File(packsDir, "$packId.json").exists()
+        packFileForId(packId)?.exists() == true
 
     private fun validateAndInstall(root: JSONObject): StylePackImportResult {
         val pack = parsePack(root)
@@ -143,11 +162,13 @@ class StylePackManager @Inject constructor(
             return StylePackImportResult(failure = StylePackFailure.DUPLICATE_ID)
         }
 
-        if (isInstalled(pack.id)) {
+        val file = packFileForId(pack.id)
+            ?: return StylePackImportResult(failure = StylePackFailure.MISSING_REQUIRED_FIELDS)
+
+        if (file.exists()) {
             warnings.add("Replacing previously installed pack \"${pack.name}\".")
         }
 
-        val file = File(packsDir, "${pack.id}.json")
         return try {
             file.writeText(root.toString(2))
             Log.d(TAG, "Installed style pack: ${pack.id} (${pack.name}, ${pack.styles.size} styles)")
@@ -229,8 +250,12 @@ class StylePackManager @Inject constructor(
 
     private fun parseColorLong(hex: String, default: Long): Long {
         if (hex.isBlank()) return default
+        val digits = hex.removePrefix("#").removePrefix("0x")
+        // Reject anything wider than 8 hex digits so a hostile pack cannot smuggle
+        // 64-bit garbage that silently truncates to an unintended ARGB color.
+        if (digits.length > 8) return default
         return try {
-            java.lang.Long.parseUnsignedLong(hex.removePrefix("#").removePrefix("0x"), 16)
+            java.lang.Long.parseUnsignedLong(digits, 16) and 0xFFFFFFFFL
         } catch (_: Exception) {
             default
         }

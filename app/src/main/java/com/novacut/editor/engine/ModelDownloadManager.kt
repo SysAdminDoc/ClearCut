@@ -187,17 +187,18 @@ class ModelDownloadManager @Inject constructor(
         }
 
         val tempFile = File.createTempFile("${request.targetFile.name}.", ".tmp", targetDir)
-        val connection = URL(request.url).openConnection() as HttpURLConnection
-        connection.connectTimeout = connectTimeoutMs
-        connection.readTimeout = readTimeoutMs
-        connection.setRequestProperty("User-Agent", USER_AGENT)
+        // Follow redirects manually so every hop is re-validated as HTTPS. With
+        // the default auto-follow, a 3xx from the model host could transparently
+        // reach any other host and (for an un-checksummed model) its bytes would
+        // be accepted with only a length check.
+        val connection = openHttpsFollowingRedirects(
+            initialUrl = request.url,
+            connectTimeoutMs = connectTimeoutMs,
+            readTimeoutMs = readTimeoutMs,
+            displayName = request.displayName,
+        )
 
         try {
-            connection.connect()
-            if (connection.responseCode !in 200..299) {
-                throw IOException("HTTP ${connection.responseCode} for ${request.displayName}")
-            }
-
             val serverLength = connection.contentLengthLong
             validateDeclaredLength(serverLength, request.maxBytes, request.displayName)
             val progressLength = serverLength.takeIf { it > 0L } ?: request.maxBytes
@@ -240,10 +241,51 @@ class ModelDownloadManager @Inject constructor(
         }
     }
 
+    /**
+     * Open a connection to [initialUrl], following 3xx redirects manually and
+     * re-validating that every hop is HTTPS. Returns a connected connection whose
+     * response is 2xx. The caller owns disconnecting it.
+     */
+    private fun openHttpsFollowingRedirects(
+        initialUrl: String,
+        connectTimeoutMs: Int,
+        readTimeoutMs: Int,
+        displayName: String,
+    ): HttpURLConnection {
+        var currentUrl = initialUrl
+        var redirects = 0
+        while (true) {
+            if (!currentUrl.startsWith("https://")) {
+                throw IOException("Refusing non-HTTPS URL for $displayName")
+            }
+            val c = URL(currentUrl).openConnection() as HttpURLConnection
+            c.instanceFollowRedirects = false
+            c.connectTimeout = connectTimeoutMs
+            c.readTimeout = readTimeoutMs
+            c.setRequestProperty("User-Agent", USER_AGENT)
+            c.connect()
+            val code = c.responseCode
+            if (code in 300..399) {
+                val location = c.getHeaderField("Location")
+                c.disconnect()
+                if (location.isNullOrBlank()) throw IOException("Redirect without Location for $displayName")
+                if (++redirects > MAX_REDIRECTS) throw IOException("Too many redirects for $displayName")
+                currentUrl = URL(URL(currentUrl), location).toString()
+                continue
+            }
+            if (code !in 200..299) {
+                c.disconnect()
+                throw IOException("HTTP $code for $displayName")
+            }
+            return c
+        }
+    }
+
     private data class SingleDownloadResult(val actualBytes: Long)
 
     companion object {
         private const val BUFFER_SIZE = 8192
+        private const val MAX_REDIRECTS = 5
         private const val STORAGE_HEADROOM_BYTES = 16L * 1024L * 1024L
         private val USER_AGENT = "ClearCut/${com.novacut.editor.ClearCutApp.VERSION.removePrefix("v")}"
 
