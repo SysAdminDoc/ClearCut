@@ -61,19 +61,40 @@ class ModelRegistryDocumentationTest {
     fun activeModelEnginesRequireChecksumVerification() {
         val sourceDir = locateSourceDir()
             ?: error("Could not locate app/src/main/java from the test working directory")
-        val engineFiles = listOf(
-            "com/novacut/editor/engine/whisper/WhisperEngine.kt",
-            "com/novacut/editor/engine/segmentation/SegmentationEngine.kt",
-            "com/novacut/editor/engine/InpaintingEngine.kt",
+
+        // Discover every runtime ModelFile download spec by scanning source
+        // rather than hard-coding a fixed engine list, so a new engine that
+        // constructs a ModelFile without checksum verification fails this guard.
+        // ModelDownloadManager.kt defines the ModelFile type itself and is not
+        // a spec site.
+        val specFiles = sourceDir.walkTopDown()
+            .filter { it.isFile && it.extension == "kt" && it.name != MODEL_FILE_DEFINITION }
+            .filter { MODEL_FILE_CONSTRUCTOR in it.readText() }
+            .toList()
+
+        assertTrue("Expected to discover at least one runtime ModelFile spec", specFiles.isNotEmpty())
+
+        // Sanity: the known download engines must be among the discovered specs.
+        val discoveredNames = specFiles.map { it.name }.toSet()
+        assertTrue(
+            "Known model engines must be discovered as ModelFile specs: $discoveredNames",
+            discoveredNames.containsAll(
+                setOf(
+                    "WhisperEngine.kt",
+                    "SegmentationEngine.kt",
+                    "InpaintingEngine.kt",
+                    "SmartReframeEngine.kt",
+                )
+            )
         )
 
-        val missingGuards = engineFiles.mapNotNull { relative ->
-            val text = File(sourceDir, relative).readText()
-            if ("checksumRequired = true" in text && "sha256 =" in text) null else relative
+        val missingGuards = specFiles.mapNotNull { file ->
+            val text = file.readText()
+            if ("checksumRequired = true" in text && "sha256 =" in text) null else file.name
         }
 
         assertTrue(
-            "Active model download specs must require checksum verification: $missingGuards",
+            "Every runtime ModelFile spec must require checksum verification: $missingGuards",
             missingGuards.isEmpty()
         )
     }
@@ -161,5 +182,7 @@ class ModelRegistryDocumentationTest {
 
     private companion object {
         val SHA_256_REGEX = Regex("[0-9a-fA-F]{64}")
+        const val MODEL_FILE_CONSTRUCTOR = "ModelFile("
+        const val MODEL_FILE_DEFINITION = "ModelDownloadManager.kt"
     }
 }

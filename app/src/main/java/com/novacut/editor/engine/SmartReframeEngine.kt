@@ -350,11 +350,14 @@ class SmartReframeEngine @Inject constructor(
             return if (maxDrift < 0.02f) SmartReframeEngine.ReframeStrategy.STATIONARY
                 else SmartReframeEngine.ReframeStrategy.PAN
         }
+        // Generation-pinned so the artifact cannot silently change under the
+        // floating `latest` alias. Validated 2026-07-13: 229,746 bytes,
+        // SHA-256 b4578f35...0152f.
         private const val MODEL_URL =
-            "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/latest/blaze_face_short_range.tflite"
+            "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/latest/blaze_face_short_range.tflite?generation=1682480001393569"
         private const val MODEL_SHA256 =
-            "d1ac21e4a9430097e4c272c8e1af6e6b1ecbf997a49e26e52c18e77b0c5bd80f"
+            "b4578f35940bf5a1a655214a1cce5cab13eba73c1297cd78e1a04c2380b0152f"
         private const val MIN_MODEL_BYTES = 32L * 1024L
-        private const val MODEL_ESTIMATED_BYTES = 198_832L
+        private const val MODEL_ESTIMATED_BYTES = 229_746L
     }
 }

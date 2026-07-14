@@ -4,9 +4,14 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.141-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.142-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.142 Smart Reframe model repair
+
+- Repinned the BlazeFace face-detector model to its generation-locked URL, exact 229,746-byte ceiling, and correct SHA-256, so Smart Reframe can reach a verified ready state instead of failing the byte/checksum guard.
+- Added the model to the `docs/models.md` registry and changed the registry coverage test to discover every runtime `ModelFile` download spec, so any new engine that skips checksum verification fails the build.
 
 ### v3.74.141 Consent-gated MediaPipe
 
