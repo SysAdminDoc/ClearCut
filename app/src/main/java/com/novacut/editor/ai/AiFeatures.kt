@@ -1526,6 +1526,10 @@ class AiFeatures @Inject constructor(
             val totalFrames = ((durationMs + intervalMs - 1) / intervalMs).toInt()
             var frameIdx = 0
 
+            // Per-axis pan headroom: the crop fills one axis and can only pan on
+            // the other, so limits are asymmetric for cross-orientation reframes.
+            val (maxPanX, maxPanY) = reframePanLimits(srcRatio, tgtRatio)
+
             while (currentMs <= durationMs) {
                 ensureActive()
                 val frame = retriever.getFrameAtTime(
@@ -1542,10 +1546,6 @@ class AiFeatures @Inject constructor(
                     // 0.5 = center = no pan, 0 = full left, 1 = full right
                     val panX = (cx - 0.5f) * 2f
                     val panY = (cy - 0.5f) * 2f
-
-                    // Clamp pan so the reframed window stays within source bounds
-                    val maxPanX = if (baseZoom > 1f) 1f - (1f / baseZoom) else 0f
-                    val maxPanY = if (baseZoom > 1f) 1f - (1f / baseZoom) else 0f
 
                     keyframes.add(ReframeKeyframe(
                         timeMs = currentMs,
@@ -2257,6 +2257,29 @@ class AiFeatures @Inject constructor(
         v = v or (v shr 16)
         return v + 1
     }
+}
+
+/**
+ * Per-axis pan limits for a reframe from [srcRatio] to [tgtRatio].
+ *
+ * A cross-orientation reframe (e.g. 16:9 -> 9:16) zooms to fill one axis, so the
+ * crop window has headroom only on the other axis. A symmetric clamp both
+ * over-restricts the axis that should track the subject and permits motion on
+ * the axis that fills the frame. Returns (maxPanX, maxPanY) as fractions of the
+ * half pan range.
+ */
+internal fun reframePanLimits(srcRatio: Float, tgtRatio: Float): Pair<Float, Float> {
+    if (srcRatio <= 0f || tgtRatio <= 0f) return 0f to 0f
+    val baseZoom = when {
+        tgtRatio < srcRatio -> srcRatio / tgtRatio
+        tgtRatio > srcRatio -> tgtRatio / srcRatio
+        else -> 1f
+    }
+    val panRange = if (baseZoom > 1f) 1f - (1f / baseZoom) else 0f
+    // Taller target fills height -> pan horizontally; wider target fills width -> pan vertically.
+    val maxPanX = if (tgtRatio < srcRatio) panRange else 0f
+    val maxPanY = if (tgtRatio > srcRatio) panRange else 0f
+    return maxPanX to maxPanY
 }
 
 // Data classes for AI features

@@ -4,9 +4,13 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.145-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.146-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.146 Correct cross-orientation reframe pan
+
+- Smart Reframe now derives horizontal and vertical pan limits independently, so a 16:9→9:16 (or 9:16→16:9) reframe can track the subject on the axis with real headroom instead of applying a symmetric clamp that both over-restricted one axis and allowed motion on the axis that fills the frame.
 
 ### v3.74.145 Cancellable, bounded audio decode
 
