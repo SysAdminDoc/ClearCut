@@ -635,6 +635,23 @@ class TimelineEditingTest {
     }
 
     @Test
+    fun `slip on a short source keeps trimEnd within the source (no Clip init crash)`() {
+        // 80ms source with a 60ms window: the old coerceAtLeast(100) pushed the
+        // window past the source and crashed Clip.init's require(trimEnd <= source).
+        val short = clip("short", timelineStartMs = 0L, trimStartMs = 0L, trimEndMs = 60L, sourceDurationMs = 80L)
+        val track = Track(type = TrackType.VIDEO, index = 0, clips = listOf(short))
+
+        // timebase == null exercises the branch that previously crashed.
+        val result = slipLinkedClipsOnTimeline(listOf(track), setOf("short"), slipAmountMs = 30L, timebase = null)
+
+        val slipped = result.first().clips.first()
+        assertTrue("trimEnd must stay within the source", slipped.trimEndMs <= slipped.sourceDurationMs)
+        assertTrue("trimStart must be non-negative", slipped.trimStartMs >= 0L)
+        // The window duration is preserved (slip shifts, doesn't resize).
+        assertEquals(60L, slipped.trimEndMs - slipped.trimStartMs)
+    }
+
+    @Test
     fun `edit target expansion includes linked clips and every member of selected groups`() {
         val groupedVideo = clip("video", 0L, 0L, 500L, 500L).copy(
             linkedClipId = "audio",

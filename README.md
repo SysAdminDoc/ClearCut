@@ -4,9 +4,14 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.151-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.152-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.152 Slip crash and NTSC timecode fixes
+
+- Slipping a clip whose source is shorter than 100 ms no longer crashes; the slip window is clamped to the source and the trim end stays within it.
+- Timecode for fractional rates (29.97/59.94) now tracks wall-clock time instead of drifting ~3.6 s per hour from counting frames at a rounded 30 fps.
 
 ### v3.74.151 Gap-preserving reorder and synced duplicate
 

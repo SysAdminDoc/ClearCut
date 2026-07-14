@@ -38,6 +38,24 @@ class TimelineTimebaseTest {
     }
 
     @Test
+    fun `ntsc timecode tracks wall clock instead of drifting`() {
+        val timebase = TimelineTimebase.NTSC_29_97
+        // One real hour must read 01:00:00:xx, not the ~00:59:56 that
+        // non-drop-frame counting at a rounded 30fps produced.
+        assertEquals("01:00:00", timebase.formatTimecode(3_600_000L).substringBeforeLast(':'))
+        // Real seconds are exact.
+        assertEquals("00:00:30", timebase.formatTimecode(30_000L).substringBeforeLast(':'))
+        assertEquals("00:10:00", timebase.formatTimecode(600_000L).substringBeforeLast(':'))
+    }
+
+    @Test
+    fun `integer rate timecode counts frames exactly`() {
+        val timebase = TimelineTimebase(30, 1)
+        assertEquals("00:00:01:00", timebase.formatTimecode(1_000L))
+        assertEquals("00:00:00:15", timebase.formatTimecode(500L))
+    }
+
+    @Test
     fun `integer project rate keeps exact nominal frame labels`() {
         val project = Project(frameRate = 24)
 

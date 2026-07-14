@@ -48,13 +48,20 @@ data class TimelineTimebase(
         timeMsAt((frameIndexAt(timeMs) + deltaFrames).coerceAtLeast(0L))
 
     fun formatTimecode(timeMs: Long): String {
-        val totalFrames = frameIndexAt(timeMs)
+        // Derive HH:MM:SS from real elapsed time, not from frame-count / rounded
+        // nominal fps. For fractional rates (29.97 = 30000/1001) counting seconds
+        // as totalFrames/30 drifts from wall clock (~3.6s per hour). Using real
+        // time keeps the clock accurate; the frame field is the frame index
+        // within the current second. Integer rates are unaffected.
+        val safeMs = timeMs.coerceAtLeast(0L)
+        val totalFrames = frameIndexAt(safeMs)
         val fps = nominalFramesPerSecond.toLong()
-        val totalSeconds = totalFrames / fps
-        val frames = totalFrames % fps
+        val totalSeconds = safeMs / 1_000L
         val seconds = totalSeconds % 60L
         val minutes = (totalSeconds / 60L) % 60L
         val hours = totalSeconds / 3_600L
+        val framesAtSecondStart = frameIndexAt(totalSeconds * 1_000L)
+        val frames = (totalFrames - framesAtSecondStart).coerceIn(0L, fps - 1L)
         return String.format(Locale.US, "%02d:%02d:%02d:%02d", hours, minutes, seconds, frames)
     }
 

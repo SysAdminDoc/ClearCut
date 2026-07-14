@@ -758,7 +758,11 @@ internal fun slipLinkedClipsOnTimeline(
     val updatedTracks = tracks.map { track ->
         val updatedClips = track.clips.map clipMap@{ clip ->
             if (clip.id !in targetClipIds) return@clipMap clip
-            val sourceWindow = (clip.trimEndMs - clip.trimStartMs).coerceAtLeast(100L)
+            // Slip preserves the window duration; it must never exceed the source.
+            // Coercing a sub-100ms source's window up to 100 previously produced
+            // trimEnd > sourceDurationMs and crashed Clip.init's require().
+            val sourceWindow = (clip.trimEndMs - clip.trimStartMs)
+                .coerceIn(1L, clip.sourceDurationMs.coerceAtLeast(1L))
             val maxTrimStart = (clip.sourceDurationMs - sourceWindow).coerceAtLeast(0L)
             val newTrimStart: Long
             val newTrimEnd: Long
@@ -771,7 +775,7 @@ internal fun slipLinkedClipsOnTimeline(
                 newTrimEnd = timebase.timeMsAt(endFrame + appliedFrames)
             } else {
                 newTrimStart = (clip.trimStartMs + slipAmountMs).coerceIn(0L, maxTrimStart)
-                newTrimEnd = newTrimStart + sourceWindow
+                newTrimEnd = (newTrimStart + sourceWindow).coerceAtMost(clip.sourceDurationMs)
             }
             if (newTrimStart == clip.trimStartMs && newTrimEnd == clip.trimEndMs) {
                 return@clipMap clip
