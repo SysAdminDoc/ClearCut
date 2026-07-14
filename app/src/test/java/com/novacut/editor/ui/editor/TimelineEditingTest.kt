@@ -557,6 +557,21 @@ class TimelineEditingTest {
     }
 
     @Test
+    fun `merge predicate rejects retiming, reverse, volume, or speed-curve mismatches`() {
+        val first = clip("first", 0L, 0L, 500L, 1_000L)
+        val second = clip("second", 500L, 500L, 1_000L, 1_000L)
+        // Baseline: identical retiming merges.
+        assertTrue(canMergeAdjacentClips(first, second))
+        // Merging collapses into the first clip's timing model, so any of these
+        // differences would corrupt duration/playback and must block the merge.
+        assertFalse("speed mismatch", canMergeAdjacentClips(first, second.copy(speed = 2f)))
+        assertFalse("reverse mismatch", canMergeAdjacentClips(first, second.copy(isReversed = true)))
+        assertFalse("volume mismatch", canMergeAdjacentClips(first, second.copy(volume = 0.5f)))
+        assertFalse("first has speed curve", canMergeAdjacentClips(first.copy(speedCurve = SpeedCurve()), second))
+        assertFalse("second has speed curve", canMergeAdjacentClips(first, second.copy(speedCurve = SpeedCurve())))
+    }
+
+    @Test
     fun `merging adjacent clips preserves every following timeline position`() {
         val first = clip("first", 0L, 0L, 4_000L, 10_000L)
         val second = clip("second", 4_000L, 4_000L, 10_000L, 10_000L)

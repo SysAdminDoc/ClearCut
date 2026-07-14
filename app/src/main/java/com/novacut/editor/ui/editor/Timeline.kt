@@ -201,7 +201,8 @@ private fun parseTrimTime(text: String): Long? {
         if (parts.size != 2) return null
         val min = parts[0].toLongOrNull() ?: return null
         val sec = parts[1].toDoubleOrNull() ?: return null
-        if (sec < 0 || sec.isNaN() || sec.isInfinite()) return null
+        // Reject negatives on both fields; "-1:30" must not parse to a bogus time.
+        if (min < 0 || sec < 0 || sec.isNaN() || sec.isInfinite()) return null
         return ((min * 60 + sec) * 1000).toLong()
     }
     val sec = cleaned.toDoubleOrNull() ?: return null

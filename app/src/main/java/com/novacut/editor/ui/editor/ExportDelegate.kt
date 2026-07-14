@@ -824,19 +824,24 @@ class ExportDelegate(
                         val clipTimeUs = clip.timelineOffsetToSourceMs(timelineOffsetInClip) * 1000
                         val bitmap = videoEngine.extractThumbnail(clip.sourceUri, clipTimeUs)
                         if (bitmap != null && bitmap.width > 0 && bitmap.height > 0) {
-                            val scaled = if (bitmap.width > maxWidth) {
-                                val ratio = maxWidth.toFloat() / bitmap.width
-                                // Clamp height to >= 1 — createScaledBitmap throws IllegalArgumentException
-                                // on zero/negative dimensions, which would abort the entire GIF export
-                                // on any single-pixel-tall source frame.
-                                val h = (bitmap.height * ratio).toInt().coerceAtLeast(1)
-                                android.graphics.Bitmap.createScaledBitmap(bitmap, maxWidth, h, true).also {
-                                    if (it !== bitmap) bitmap.recycle()
-                                }
-                            } else bitmap
-                            frames.add(scaled)
-                        } else {
-                            bitmap?.recycle()
+                            // `bitmap` is owned by VideoEngine's thumbnail LruCache, so it must
+                            // never be recycled here — the frames list is recycled at the end of
+                            // the export, and freeing a cached instance would crash the next
+                            // timeline thumbnail / GIF export with "recycled bitmap". Always add a
+                            // frames-owned copy or a freshly-scaled bitmap, and leave the cached
+                            // original intact.
+                            val targetW = minOf(maxWidth, bitmap.width).coerceAtLeast(1)
+                            val ratio = targetW.toFloat() / bitmap.width
+                            // Clamp height to >= 1 — createScaledBitmap throws IllegalArgumentException
+                            // on zero/negative dimensions, which would abort the entire GIF export
+                            // on any single-pixel-tall source frame.
+                            val targetH = (bitmap.height * ratio).toInt().coerceAtLeast(1)
+                            val frameBitmap = if (targetW == bitmap.width && targetH == bitmap.height) {
+                                bitmap.copy(bitmap.config ?: android.graphics.Bitmap.Config.ARGB_8888, false)
+                            } else {
+                                android.graphics.Bitmap.createScaledBitmap(bitmap, targetW, targetH, true)
+                            }
+                            frames.add(frameBitmap)
                         }
                         updateExport { it.copy(progress = (i + 1).toFloat() / frameCount * 0.9f) }
                     }

@@ -576,7 +576,15 @@ internal fun preferredAudioTrackIndex(
 internal fun canMergeAdjacentClips(first: Clip, second: Clip): Boolean {
     return first.sourceUri.toString() == second.sourceUri.toString() &&
         first.timelineEndMs == second.timelineStartMs &&
-        first.trimEndMs == second.trimStartMs
+        first.trimEndMs == second.trimStartMs &&
+        // Merging collapses the two clips into the first's timing model, so they
+        // must share retiming/reverse/volume. A speed-ramped clip's curve is
+        // normalized over its own trim range and cannot be extended, so refuse
+        // to merge when either side carries a speed curve.
+        first.speed == second.speed &&
+        first.isReversed == second.isReversed &&
+        first.volume == second.volume &&
+        first.speedCurve == null && second.speedCurve == null
 }
 
 internal fun trimClipOnTrack(

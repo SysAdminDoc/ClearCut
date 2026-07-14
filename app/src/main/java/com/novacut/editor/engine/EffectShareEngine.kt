@@ -177,10 +177,15 @@ class EffectShareEngine @Inject constructor(
                     offsetR = safeFloat(cg.optDouble("offsetR", 0.0), default = 0f),
                     offsetG = safeFloat(cg.optDouble("offsetG", 0.0), default = 0f),
                     offsetB = safeFloat(cg.optDouble("offsetB", 0.0), default = 0f),
+                    // .ncfx carries only the LUT *filename*, not its bytes, so a
+                    // referenced LUT usually does not exist in luts/. Only keep the
+                    // path when the file is actually present — otherwise a filename
+                    // collision could apply an unrelated project's LUT.
                     lutPath = cg.optString("lutFileName", "")
                         .ifEmpty { cg.optString("lutPath", "") }
                         .ifEmpty { null }
                         ?.let(::normalizeImportedLutPath)
+                        ?.takeIf { it.isFile }
                         ?.absolutePath,
                     lutIntensity = safeFloat(cg.optDouble("lutIntensity", 1.0), default = 1f).coerceIn(0f, 1f)
                 )
