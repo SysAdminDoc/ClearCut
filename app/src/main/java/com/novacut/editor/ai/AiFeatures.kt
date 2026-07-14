@@ -1975,7 +1975,7 @@ class AiFeatures @Inject constructor(
     /**
      * Performs spectral analysis of audio noise characteristics.
      * Extracts PCM from the first 2 seconds of audio, computes a frequency-domain
-     * noise profile via DFT, and classifies the noise type (hiss, hum, broadband, clean).
+     * noise profile via a radix-2 FFT, and classifies the noise type (hiss, hum, broadband, clean).
      * Returns recommended DSP effect parameters for noise reduction.
      *
      * @param videoUri URI of the video/audio to analyze
@@ -2227,9 +2227,17 @@ class AiFeatures @Inject constructor(
      */
     private fun computeDft(input: FloatArray): Pair<FloatArray, FloatArray> {
         val n = input.size
+        // Power-of-two inputs (the caller sizes via findNextPowerOf2) use an
+        // O(n log n) radix-2 FFT instead of the previous O(n^2) DFT — ~4096^2
+        // trig ops collapse to ~4096*12. Non-power-of-two falls back to the DFT.
+        if (n >= 2 && (n and (n - 1)) == 0) {
+            val real = input.copyOf()
+            val imag = FloatArray(n)
+            radix2Fft(real, imag)
+            return real to imag
+        }
         val real = FloatArray(n)
         val imag = FloatArray(n)
-
         for (k in 0 until n / 2) {
             var sumR = 0f
             var sumI = 0f
@@ -2241,7 +2249,6 @@ class AiFeatures @Inject constructor(
             real[k] = sumR
             imag[k] = sumI
         }
-
         return real to imag
     }
 
@@ -2280,6 +2287,58 @@ internal fun reframePanLimits(srcRatio: Float, tgtRatio: Float): Pair<Float, Flo
     val maxPanX = if (tgtRatio < srcRatio) panRange else 0f
     val maxPanY = if (tgtRatio > srcRatio) panRange else 0f
     return maxPanX to maxPanY
+}
+
+/**
+ * In-place iterative radix-2 Cooley-Tukey FFT. [real] and [imag] must be the
+ * same power-of-two length. On return they hold the transform. Pure, so it is
+ * unit-testable against a reference DFT.
+ */
+internal fun radix2Fft(real: FloatArray, imag: FloatArray) {
+    val n = real.size
+    if (n < 2 || (n and (n - 1)) != 0) return
+    // Bit-reversal permutation.
+    var j = 0
+    for (i in 1 until n) {
+        var bit = n shr 1
+        while (j and bit != 0) {
+            j = j xor bit
+            bit = bit shr 1
+        }
+        j = j or bit
+        if (i < j) {
+            val tr = real[i]; real[i] = real[j]; real[j] = tr
+            val ti = imag[i]; imag[i] = imag[j]; imag[j] = ti
+        }
+    }
+    // Butterfly stages.
+    var len = 2
+    while (len <= n) {
+        val ang = -2.0 * kotlin.math.PI / len
+        val wr = kotlin.math.cos(ang).toFloat()
+        val wi = kotlin.math.sin(ang).toFloat()
+        var i = 0
+        while (i < n) {
+            var curR = 1f
+            var curI = 0f
+            val half = len / 2
+            for (k in 0 until half) {
+                val aR = real[i + k]
+                val aI = imag[i + k]
+                val bR = real[i + k + half] * curR - imag[i + k + half] * curI
+                val bI = real[i + k + half] * curI + imag[i + k + half] * curR
+                real[i + k] = aR + bR
+                imag[i + k] = aI + bI
+                real[i + k + half] = aR - bR
+                imag[i + k + half] = aI - bI
+                val nextR = curR * wr - curI * wi
+                curI = curR * wi + curI * wr
+                curR = nextR
+            }
+            i += len
+        }
+        len = len shl 1
+    }
 }
 
 // Data classes for AI features

@@ -4,9 +4,13 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.148-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.149-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.149 Faster noise analysis
+
+- AI noise-profile analysis now uses an O(n log n) radix-2 FFT instead of the previous O(n²) DFT, collapsing ~8.4M trig operations to a few tens of thousands so the analysis completes far faster and cancels promptly.
 
 ### v3.74.148 Resilient project deserialization
 
