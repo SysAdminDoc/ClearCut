@@ -25,8 +25,11 @@ class MetadataScrubEngineTest {
     }
 
     @Test
-    fun canScrub_webp_returnsTrue() {
-        assertTrue(engine.canScrub("image/webp"))
+    fun canScrub_webpAndTiff_returnFalse() {
+        // ExifInterface.saveAttributes() can only rewrite JPEG/PNG, so advertising
+        // WebP/TIFF would let callers believe a file was scrubbed when it was not.
+        assertFalse(engine.canScrub("image/webp"))
+        assertFalse(engine.canScrub("image/tiff"))
     }
 
     @Test
