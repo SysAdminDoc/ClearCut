@@ -4,9 +4,14 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.150-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.151-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.151 Gap-preserving reorder and synced duplicate
+
+- Reordering a clip within a track now preserves intentional gaps and the track's overall span instead of re-packing everything gaplessly.
+- Duplicating a linked video/audio pair shifts every affected track by one uniform ripple offset, so pairs with different durations no longer drift out of sync.
 
 ### v3.74.150 Deep audit hardening
 

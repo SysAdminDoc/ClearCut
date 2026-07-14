@@ -432,6 +432,14 @@ class ClipEditingDelegate(
         val newIdsByOldId = duplicateIds.associateWith { UUID.randomUUID().toString() }
         val selectedDuplicateId = newIdsByOldId[clipId] ?: return
 
+        // One ripple offset for the whole linked closure: every affected track
+        // shifts its trailing clips by the same amount, so a linked video/audio
+        // pair whose duplicates have different durations no longer drifts out of
+        // sync. Using the max duplicate duration also guarantees no overlap on
+        // the track with the shorter duplicate. For a single (unlinked) clip this
+        // equals that clip's duration, so common-case behavior is unchanged.
+        val rippleOffset = linkedClosureRippleOffset(stateFlow.value.tracks, duplicateIds)
+
         stateFlow.update { s ->
             val tracks = s.tracks.map { track ->
                 val clipIndex = track.clips.indexOfFirst { it.id in duplicateIds }
@@ -446,7 +454,7 @@ class ClipEditingDelegate(
                 val updatedClips = track.clips.toMutableList().apply { add(clipIndex + 1, newClip) }
                 val shifted = updatedClips.mapIndexed { i, candidate ->
                     if (i > clipIndex + 1) {
-                        candidate.copy(timelineStartMs = candidate.timelineStartMs + newClip.durationMs)
+                        candidate.copy(timelineStartMs = candidate.timelineStartMs + rippleOffset)
                     } else {
                         candidate
                     }
@@ -799,20 +807,15 @@ class ClipEditingDelegate(
         saveUndoState("Reorder clip")
         stateFlow.update { state ->
             val tracks = state.tracks.map { track ->
-                val clipIndex = track.clips.indexOfFirst { it.id == clipId }
-                if (clipIndex < 0) return@map track
-                val mutableClips = track.clips.toMutableList()
-                val clip = mutableClips.removeAt(clipIndex)
-                val insertAt = targetIndex.coerceIn(0, mutableClips.size)
-                mutableClips.add(insertAt, clip)
-                // Recalculate timeline positions sequentially
-                var currentStartMs = 0L
-                val repositioned = mutableClips.map { c ->
-                    val updated = c.copy(timelineStartMs = currentStartMs)
-                    currentStartMs += c.durationMs
-                    updated
+                if (track.clips.none { it.id == clipId }) {
+                    track
+                } else {
+                    // Preserve intentional gaps and the track span; only the
+                    // dragged clip's order changes. Consistent with
+                    // moveClipToTrack, linked partners on other tracks are not
+                    // auto-moved by a within-track reorder.
+                    track.copy(clips = reorderClipsPreservingGaps(track.clips, clipId, targetIndex))
                 }
-                track.copy(clips = repositioned)
             }
             recalculateDuration(state.copy(tracks = tracks))
         }

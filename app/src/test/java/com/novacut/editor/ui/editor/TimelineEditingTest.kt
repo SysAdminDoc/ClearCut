@@ -586,6 +586,55 @@ class TimelineEditingTest {
     }
 
     @Test
+    fun `reorder preserves intentional gaps and the track span`() {
+        // Layout: [a 0..1000] gap(500) [b 1500..3500] gap(1000) [c 4500..5000]
+        val a = clip("a", timelineStartMs = 0L, trimStartMs = 0L, trimEndMs = 1_000L, sourceDurationMs = 10_000L)
+        val b = clip("b", timelineStartMs = 1_500L, trimStartMs = 0L, trimEndMs = 2_000L, sourceDurationMs = 10_000L)
+        val c = clip("c", timelineStartMs = 4_500L, trimStartMs = 0L, trimEndMs = 500L, sourceDurationMs = 10_000L)
+
+        // Move c to the front.
+        val reordered = reorderClipsPreservingGaps(listOf(a, b, c), "c", targetIndex = 0)
+
+        assertEquals(listOf("c", "a", "b"), reordered.map { it.id })
+        // Leading offset preserved; gaps travel with position (500 then 1000).
+        assertEquals(0L, reordered[0].timelineStartMs)      // c: 0..500
+        assertEquals(1_000L, reordered[1].timelineStartMs)  // a after 500 gap: 1000..2000
+        assertEquals(3_000L, reordered[2].timelineStartMs)  // b after 1000 gap: 3000..5000
+        // Track span preserved (still ends at 5000) and no overlaps.
+        assertEquals(5_000L, reordered.last().timelineEndMs)
+        for (i in 0 until reordered.lastIndex) {
+            assertTrue(reordered[i].timelineEndMs <= reordered[i + 1].timelineStartMs)
+        }
+    }
+
+    @Test
+    fun `reorder leaves clips untouched when the id is absent`() {
+        val a = clip("a", 0L, 0L, 1_000L, 10_000L)
+        val original = listOf(a)
+        assertEquals(original, reorderClipsPreservingGaps(original, "missing", 0))
+    }
+
+    @Test
+    fun `duplicate ripple offset is the max duration across the linked closure`() {
+        // A linked video/audio pair with different durations on two tracks.
+        val video = clip("v", 0L, 0L, 3_000L, 10_000L)   // 3000ms
+        val audio = clip("a", 0L, 0L, 2_000L, 10_000L)   // 2000ms
+        val tracks = listOf(
+            Track(type = TrackType.VIDEO, index = 0, clips = listOf(video)),
+            Track(type = TrackType.AUDIO, index = 1, clips = listOf(audio)),
+        )
+        // A single uniform offset (the max) keeps both tracks shifted equally.
+        assertEquals(3_000L, linkedClosureRippleOffset(tracks, setOf("v", "a")))
+    }
+
+    @Test
+    fun `duplicate ripple offset for a single clip equals its own duration`() {
+        val only = clip("only", 0L, 0L, 1_500L, 10_000L)
+        val tracks = listOf(Track(type = TrackType.VIDEO, index = 0, clips = listOf(only)))
+        assertEquals(1_500L, linkedClosureRippleOffset(tracks, setOf("only")))
+    }
+
+    @Test
     fun `edit target expansion includes linked clips and every member of selected groups`() {
         val groupedVideo = clip("video", 0L, 0L, 500L, 500L).copy(
             linkedClipId = "audio",

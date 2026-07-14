@@ -132,6 +132,55 @@ internal fun mapSourceMarkersToTimeline(clip: Clip, sourceMarkersMs: List<Long>)
 }
 
 /** Resolve every clip that must participate in an identity-linked edit. */
+/**
+ * Reorder [clipId] to [targetIndex] within one track's clip list while
+ * preserving the leading offset and the gap that follows each layout slot.
+ *
+ * The previous implementation re-packed every clip gaplessly, destroying
+ * intentional gaps (e.g. from lift-delete). This keeps the same set of gaps by
+ * position, so a reorder changes only clip order, not the track's overall span
+ * or its gap structure, and never produces overlaps.
+ */
+internal fun reorderClipsPreservingGaps(clips: List<Clip>, clipId: String, targetIndex: Int): List<Clip> {
+    if (clips.isEmpty()) return clips
+    val order = clips.sortedBy { it.timelineStartMs }
+    val fromIndex = order.indexOfFirst { it.id == clipId }
+    if (fromIndex < 0) return clips
+
+    val leadingOffset = order.first().timelineStartMs.coerceAtLeast(0L)
+    // Gap that follows each position in the ORIGINAL layout; the last position
+    // has no trailing gap.
+    val gapAfterPosition = order.indices.map { i ->
+        if (i < order.lastIndex) {
+            (order[i + 1].timelineStartMs - order[i].timelineEndMs).coerceAtLeast(0L)
+        } else 0L
+    }
+
+    val reordered = order.toMutableList()
+    val moved = reordered.removeAt(fromIndex)
+    reordered.add(targetIndex.coerceIn(0, reordered.size), moved)
+
+    var cursor = leadingOffset
+    return reordered.mapIndexed { i, clip ->
+        val placed = clip.copy(timelineStartMs = cursor)
+        cursor = placed.timelineEndMs + gapAfterPosition.getOrElse(i) { 0L }
+        placed
+    }
+}
+
+/**
+ * The single ripple offset to apply across every track when duplicating a
+ * linked clip closure: the largest duration among the duplicated clips. Applying
+ * one offset to all affected tracks keeps a linked video/audio pair (whose
+ * duplicates may differ in duration) in sync, and using the max prevents the
+ * shorter duplicate's track from overlapping its next clip.
+ */
+internal fun linkedClosureRippleOffset(tracks: List<Track>, duplicateIds: Set<String>): Long =
+    tracks.asSequence()
+        .flatMap { it.clips.asSequence() }
+        .filter { it.id in duplicateIds }
+        .maxOfOrNull { it.durationMs } ?: 0L
+
 internal fun expandTimelineEditClipIds(tracks: List<Track>, seedIds: Set<String>): Set<String> {
     val allClips = tracks.flatMap { it.clips }
     val resolved = seedIds.filterTo(mutableSetOf()) { seed -> allClips.any { it.id == seed } }
