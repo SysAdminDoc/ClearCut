@@ -1840,6 +1840,11 @@ data class AutoSaveState(
                 inverted = json.optBoolean("inverted", false),
                 expansion = safeFloat(json.optDouble("expansion", 0.0), 0f),
                 trackToMotion = json.optBoolean("trackToMotion", false),
+                // Mask points form a polygon: a corrupt vertex is dropped as a
+                // whole-mask failure (via the outer deserializeMask catch) on
+                // purpose, because a partial polygon renders a wrong shape which
+                // is worse than losing the mask. Do NOT switch these to
+                // skip-individual like caption words / text-path points.
                 points = (0 until cappedArrayLength(pointsArr, MAX_MASK_POINTS, "mask points")).map { i ->
                     deserializeMaskPoint(pointsArr.getJSONObject(i))
                 },
@@ -1923,16 +1928,23 @@ data class AutoSaveState(
                     shadow = json.optBoolean("shadow", false)
                 ),
                 words = (0 until cappedArrayLength(wordsArr, MAX_CAPTION_WORDS, "caption words")).mapNotNull { i ->
-                    val w = wordsArr.getJSONObject(i)
-                    val wStart = w.optLong("startTimeMs", rawStart).coerceIn(rawStart, endTimeMs)
-                    val wEnd = w.optLong("endTimeMs", wStart).coerceAtLeast(wStart)
-                    if (wStart >= endTimeMs) return@mapNotNull null
-                    CaptionWord(
-                        text = boundedText(w.optString("text", ""), MAX_SHORT_TEXT_CHARS),
-                        startTimeMs = wStart,
-                        endTimeMs = wEnd.coerceAtMost(endTimeMs),
-                        confidence = safeFloat(w.optDouble("confidence", 1.0), 1f).coerceIn(0f, 1f)
-                    )
+                    // Skip a single corrupt word rather than dropping the whole
+                    // caption via the outer catch — a partial word list is valid.
+                    try {
+                        val w = wordsArr.getJSONObject(i)
+                        val wStart = w.optLong("startTimeMs", rawStart).coerceIn(rawStart, endTimeMs)
+                        val wEnd = w.optLong("endTimeMs", wStart).coerceAtLeast(wStart)
+                        if (wStart >= endTimeMs) return@mapNotNull null
+                        CaptionWord(
+                            text = boundedText(w.optString("text", ""), MAX_SHORT_TEXT_CHARS),
+                            startTimeMs = wStart,
+                            endTimeMs = wEnd.coerceAtMost(endTimeMs),
+                            confidence = safeFloat(w.optDouble("confidence", 1.0), 1f).coerceIn(0f, 1f)
+                        )
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Skipping corrupt caption word $i", e)
+                        null
+                    }
                 }.sortedBy { it.startTimeMs }
             )
         }
@@ -1996,8 +2008,15 @@ data class AutoSaveState(
                     val tpPointsArr = tp.optJSONArray("points") ?: JSONArray()
                     TextPath(
                         type = safeValueOf(tp.optString("type", "STRAIGHT"), TextPathType.STRAIGHT),
-                        points = (0 until cappedArrayLength(tpPointsArr, MAX_MASK_POINTS, "text-path points")).map { i ->
-                            deserializeMaskPoint(tpPointsArr.getJSONObject(i))
+                        points = (0 until cappedArrayLength(tpPointsArr, MAX_MASK_POINTS, "text-path points")).mapNotNull { i ->
+                            // Skip a corrupt point rather than dropping the whole
+                            // text overlay — a partial path is still usable.
+                            try {
+                                deserializeMaskPoint(tpPointsArr.getJSONObject(i))
+                            } catch (e: Exception) {
+                                Log.w(TAG, "Skipping corrupt text-path point $i", e)
+                                null
+                            }
                         },
                         progress = safeFloat(tp.optDouble("progress", 1.0), 1f).coerceIn(0f, 1f)
                     )

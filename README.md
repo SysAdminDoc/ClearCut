@@ -4,9 +4,13 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.147-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.148-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.148 Resilient project deserialization
+
+- A single corrupt caption word or text-path point in a saved project is now skipped individually instead of dropping the whole caption or text overlay. Mask polygons intentionally keep whole-mask drop, since a partial polygon renders a wrong shape.
 
 ### v3.74.147 No click on non-frame-aligned audio
 
