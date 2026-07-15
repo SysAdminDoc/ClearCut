@@ -35,56 +35,19 @@ def parse_gradle_version() -> tuple[int, str]:
     return int(code_match.group(1)), name_match.group(1)
 
 
-def require_contains(path: Path, expected: str) -> None:
-    text = read_text(path)
-    if expected not in text:
-        raise VerificationError(f"{path.relative_to(ROOT)} does not contain expected text: {expected}")
-
-
 def verify_repository_metadata(version_code: int, version_name: str) -> None:
-    display_version = f"v{version_name}"
-    require_contains(ROOT / "app" / "src" / "main" / "res" / "values" / "strings.xml", f">{display_version}<")
+    from release_identity import ReleaseIdentityError, verify_release_identity
 
-    for forbidden_tracker in (
-        "AUTONOMOUS-LOOP-STATE.md",
-        "COMPLETED.md",
-        "PROJECT_CONTEXT.md",
-        "TODO.md",
-    ):
-        if (ROOT / forbidden_tracker).exists():
-            raise VerificationError(f"{forbidden_tracker} must not exist; use ROADMAP.md as the only open-work tracker")
-
-    roadmap_path = ROOT / "ROADMAP.md"
-    if roadmap_path.exists():
-        require_contains(roadmap_path, f"Current version: **{display_version}** (`versionCode` {version_code})")
-
-    changelog_path = ROOT / "CHANGELOG.md"
-    if changelog_path.exists():
-        changelog = read_text(changelog_path)
-        first_heading = next((line.strip() for line in changelog.splitlines() if line.startswith("## ")), "")
-        if not first_heading.startswith(f"## {display_version} "):
-            raise VerificationError(
-                f"CHANGELOG.md first release heading is {first_heading!r}, expected {display_version}"
-            )
+    del version_code, version_name
+    try:
+        verify_release_identity(ROOT)
+    except ReleaseIdentityError as error:
+        raise VerificationError(str(error)) from error
 
     gitignore = read_text(ROOT / ".gitignore")
     for private_input in ("keystore.properties", "*.jks", "*.keystore"):
         if private_input not in gitignore:
             raise VerificationError(f".gitignore must keep {private_input} out of the repository")
-
-    workflow = read_text(ROOT / ".github" / "workflows" / "build.yml")
-    for expected in (
-        "id-token: write",
-        "attestations: write",
-        "artifact-metadata: write",
-        "actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26",
-        "scripts/write_apk_signing_fingerprints.py --self-test",
-        ".signing-cert-sha256",
-        "gh attestation verify",
-        "--source-ref \"${{ github.ref }}\"",
-    ):
-        if expected not in workflow:
-            raise VerificationError(f"release workflow is missing trust control: {expected}")
 
 
 def verify_github_tag(version_name: str) -> None:

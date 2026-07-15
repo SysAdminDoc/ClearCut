@@ -4,9 +4,14 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.155-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.156-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.156 Single-source release identity
+
+- Gradle version metadata is now the only runtime release-version source; Settings/About continues to derive its label from `BuildConfig.VERSION_NAME`.
+- Local release verification ignores gitignored planning Markdown and rejects any reintroduced `app_version` resource duplicate through a fixture-backed self-test.
 
 ### v3.74.155 Storage-safe project archives
 
