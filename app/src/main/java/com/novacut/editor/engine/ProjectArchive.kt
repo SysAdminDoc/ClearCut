@@ -2,6 +2,7 @@ package com.novacut.editor.engine
 
 import android.content.Context
 import android.net.Uri
+import android.os.StatFs
 import android.util.Log
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.ImageOverlay
@@ -13,6 +14,7 @@ import java.io.*
 import java.security.MessageDigest
 import java.util.LinkedHashMap
 import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 import org.json.JSONArray
@@ -25,9 +27,13 @@ object ProjectArchive {
 
     private const val PROJECT_JSON_ENTRY = "project.json"
     private const val MEDIA_MANIFEST_ENTRY = "media_manifest.json"
-    private const val MAX_ARCHIVE_ENTRY_COUNT = 4_096
-    private const val MAX_ARCHIVE_TEXT_ENTRY_BYTES = 5_000_000L
-    private const val MAX_ARCHIVE_TOTAL_BYTES = 4L * 1024L * 1024L * 1024L
+    internal const val MAX_ARCHIVE_ENTRY_COUNT = 4_096
+    internal const val MAX_ARCHIVE_TEXT_ENTRY_BYTES = 5_000_000L
+    internal const val MAX_ARCHIVE_TOTAL_BYTES = 4L * 1024L * 1024L * 1024L
+    internal const val MAX_ARCHIVE_COMPRESSION_RATIO = 200L
+    private const val MAX_ARCHIVE_ENTRY_NAME_CHARS = 512
+    private const val ARCHIVE_STORAGE_RESERVE_BYTES = 128L * 1024L * 1024L
+    private const val STORAGE_RECHECK_INTERVAL_BYTES = 8L * 1024L * 1024L
 
     /**
      * How to handle the situation where the archive's project ID already exists
@@ -80,6 +86,27 @@ object ProjectArchive {
         val state: AutoSaveState?,
         val report: ImportReport,
         val errorMessage: String? = null
+    )
+
+    /** Metadata-only validation result used by incoming-document preview. */
+    data class PreviewResult(
+        val report: ImportReport,
+        val packagedMedia: Int,
+        val errorMessage: String? = null
+    ) {
+        val valid: Boolean get() = errorMessage == null && report.canProceed
+    }
+
+    internal data class ArchiveEntryMetadata(
+        val name: String,
+        val isDirectory: Boolean,
+        val size: Long,
+        val compressedSize: Long
+    )
+
+    internal data class ArchiveImportPlan(
+        val expandedBytes: Long,
+        val extractableEntryCount: Int
     )
 
     internal data class ArchiveManifestEntry(
@@ -195,6 +222,135 @@ object ProjectArchive {
     }
 
     /**
+     * Validate only the bounded project/manifest metadata at the front of an
+     * archive. This path intentionally stops before the first payload entry:
+     * an incoming-document preview must never extract or copy project media.
+     */
+    suspend fun previewArchive(
+        context: Context,
+        archiveUri: Uri
+    ): PreviewResult = withContext(Dispatchers.IO) {
+        val warnings = mutableListOf<String>()
+        try {
+            val input = context.contentResolver.openInputStream(archiveUri)
+                ?: return@withContext PreviewResult(
+                    report = blankFailureReport(IdCollisionPolicy.REGENERATE),
+                    packagedMedia = 0,
+                    errorMessage = "Could not open archive"
+                )
+            var projectJson: String? = null
+            var mediaManifestJson: String? = null
+            val seenEntries = hashSetOf<String>()
+            var entryCount = 0
+
+            input.use { stream ->
+                ZipInputStream(BufferedInputStream(stream)).use { zip ->
+                    metadata@ while (true) {
+                        val entry = zip.nextEntry ?: break
+                        entryCount++
+                        if (entryCount > MAX_ARCHIVE_ENTRY_COUNT) {
+                            throw IOException("Archive contains too many entries")
+                        }
+                        validateArchiveEntryName(entry.name)
+                        if (!seenEntries.add(entry.name)) {
+                            throw IOException("Archive contains duplicate entry: ${entry.name}")
+                        }
+                        when {
+                            entry.isDirectory -> Unit
+                            entry.name == PROJECT_JSON_ENTRY -> {
+                                rejectKnownOversizedEntry(entry, MAX_ARCHIVE_TEXT_ENTRY_BYTES)
+                                projectJson = readCurrentEntryText(zip, MAX_ARCHIVE_TEXT_ENTRY_BYTES)
+                            }
+                            entry.name == MEDIA_MANIFEST_ENTRY -> {
+                                rejectKnownOversizedEntry(entry, MAX_ARCHIVE_TEXT_ENTRY_BYTES)
+                                mediaManifestJson = readCurrentEntryText(zip, MAX_ARCHIVE_TEXT_ENTRY_BYTES)
+                            }
+                            else -> {
+                                if (projectJson == null) {
+                                    throw IOException("Archive metadata must precede payload entries")
+                                }
+                                break@metadata
+                            }
+                        }
+                        zip.closeEntry()
+                        if (projectJson != null && mediaManifestJson != null) break@metadata
+                    }
+                }
+            }
+
+            val stateJson = projectJson ?: throw IOException("Archive missing $PROJECT_JSON_ENTRY")
+            val schemaVersion = parseSchemaVersion(stateJson)
+            val originalProjectId = parseProjectId(stateJson)
+            if (schemaVersion > AutoSaveState.FORMAT_VERSION) {
+                warnings += "Archive uses schema v$schemaVersion; this build supports up to v${AutoSaveState.FORMAT_VERSION}."
+                return@withContext PreviewResult(
+                    report = ImportReport(
+                        schemaVersion = schemaVersion,
+                        schemaTooNew = true,
+                        originalProjectId = originalProjectId,
+                        effectiveProjectId = null,
+                        projectIdCollided = false,
+                        idCollisionPolicy = IdCollisionPolicy.REGENERATE,
+                        mediaTotal = 0,
+                        mediaResolved = 0,
+                        unresolvedMediaUris = emptyList(),
+                        warnings = warnings,
+                        targetDirCreated = false
+                    ),
+                    packagedMedia = 0,
+                    errorMessage = "Archive schema is newer than this app supports"
+                )
+            }
+            if (schemaVersion < AutoSaveState.FORMAT_VERSION) {
+                warnings += "Archive used schema v$schemaVersion; import will migrate it to v${AutoSaveState.FORMAT_VERSION}."
+            }
+
+            val rawState = AutoSaveState.deserialize(stateJson)
+            val manifest = mediaManifestJson?.let(::parseMediaManifest)
+            if (manifest != null) validateManifestMetadata(manifest, warnings)
+            val mediaEntries = manifest?.entries.orEmpty()
+                .filter { it.kind == ProjectDependencyKind.MEDIA.name }
+            val mediaTotal = if (manifest != null) mediaEntries.size else collectLegacyMedia(rawState).size
+            val packagedMedia = if (manifest != null) {
+                mediaEntries.count {
+                    it.archivePolicy == ProjectDependencyArchivePolicy.INCLUDE.name && it.entryName != null
+                }
+            } else {
+                warnings += "Legacy archive payload inventory will be verified during intentional import."
+                0
+            }
+            warnings += "Payload bytes and checksums are verified only during intentional import."
+
+            PreviewResult(
+                report = ImportReport(
+                    schemaVersion = schemaVersion,
+                    schemaTooNew = false,
+                    originalProjectId = rawState.projectId,
+                    effectiveProjectId = rawState.projectId,
+                    projectIdCollided = false,
+                    idCollisionPolicy = IdCollisionPolicy.REGENERATE,
+                    mediaTotal = mediaTotal,
+                    mediaResolved = packagedMedia.coerceAtMost(mediaTotal),
+                    unresolvedMediaUris = emptyList(),
+                    warnings = warnings,
+                    targetDirCreated = false
+                ),
+                packagedMedia = packagedMedia,
+                errorMessage = null
+            )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("ProjectArchive", "Archive metadata preview failed", e)
+            PreviewResult(
+                report = blankFailureReport(IdCollisionPolicy.REGENERATE),
+                packagedMedia = 0,
+                errorMessage = e.message ?: e.javaClass.simpleName
+            )
+        }
+    }
+
+    /**
      * Backwards-compatible thin wrapper around [importArchiveWithReport] for
      * callers that only need the resulting state. New code should prefer the
      * report-returning variant so missing media and schema drift are surfaced.
@@ -230,210 +386,421 @@ object ProjectArchive {
         idCollisionPolicy: IdCollisionPolicy = IdCollisionPolicy.REGENERATE
     ): ImportResult = withContext(Dispatchers.IO) {
         val canonicalTargetDir = targetDir.canonicalFile
-        val targetDirAlreadyExisted = canonicalTargetDir.exists()
-        val extractedPaths = mutableListOf<File>()
         val warnings = mutableListOf<String>()
+        var stagedArchive: File? = null
+        var extractionStage: File? = null
+        var installedTarget = false
+        val newlyInstalledFonts = mutableListOf<File>()
 
         try {
-            if (!canonicalTargetDir.exists() && !canonicalTargetDir.mkdirs()) {
-                Log.e("ProjectArchive", "Failed to create import directory: ${canonicalTargetDir.path}")
-                return@withContext ImportResult(
-                    state = null,
-                    report = blankFailureReport(idCollisionPolicy),
-                    errorMessage = "Failed to create import directory"
-                )
+            if (canonicalTargetDir.exists()) {
+                throw IOException("Import destination already exists")
+            }
+            val destinationParent = canonicalTargetDir.parentFile
+                ?: throw IOException("Import destination has no parent directory")
+            if (!destinationParent.exists() && !destinationParent.mkdirs() && !destinationParent.exists()) {
+                throw IOException("Failed to create import parent directory")
             }
 
-            val inputStream = context.contentResolver.openInputStream(archiveUri)
-                ?: return@withContext ImportResult(
-                    state = null,
-                    report = blankFailureReport(idCollisionPolicy),
-                    errorMessage = "Could not open archive"
+            val staged = stageArchiveForImport(context, archiveUri)
+            stagedArchive = staged
+            ZipFile(staged).use { zip ->
+                val plan = planArchiveImport(zip.entries().asSequence().map { entry ->
+                    ArchiveEntryMetadata(
+                        name = entry.name,
+                        isDirectory = entry.isDirectory,
+                        size = entry.size,
+                        compressedSize = entry.compressedSize
+                    )
+                }.toList())
+                ensureStorageAvailable(
+                    directory = destinationParent,
+                    payloadBytes = plan.expandedBytes,
+                    purpose = "archive import destination"
                 )
+                extractionStage = createExtractionStagingDir(canonicalTargetDir)
+                val extracted = extractArchiveToStage(
+                    zip = zip,
+                    plan = plan,
+                    stagingDir = requireNotNull(extractionStage),
+                    warnings = warnings
+                )
+                val stateJson = extracted.projectJson
+                    ?: throw IOException("Archive missing $PROJECT_JSON_ENTRY")
 
-            var projectJson: String? = null
-            var mediaManifestJson: String? = null
-            val extractedFiles = mutableMapOf<String, Uri>()
-            val seenEntries = hashSetOf<String>()
-            val seenOutputPaths = hashSetOf<String>()
-            var entryCount = 0
-            var extractedBytes = 0L
+                val schemaVersion = parseSchemaVersion(stateJson)
+                val schemaTooNew = schemaVersion > AutoSaveState.FORMAT_VERSION
+                if (schemaTooNew) {
+                    Log.w(
+                        "ProjectArchive",
+                        "Archive schema v$schemaVersion is newer than supported v${AutoSaveState.FORMAT_VERSION}; refusing best-effort load"
+                    )
+                    warnings += "Archive uses schema v$schemaVersion; this build supports up to v${AutoSaveState.FORMAT_VERSION}."
+                    extractionStage?.deleteRecursively()
+                    extractionStage = null
+                    return@withContext ImportResult(
+                        state = null,
+                        report = ImportReport(
+                            schemaVersion = schemaVersion,
+                            schemaTooNew = true,
+                            originalProjectId = parseProjectId(stateJson),
+                            effectiveProjectId = null,
+                            projectIdCollided = false,
+                            idCollisionPolicy = idCollisionPolicy,
+                            mediaTotal = 0,
+                            mediaResolved = 0,
+                            unresolvedMediaUris = emptyList(),
+                            warnings = warnings,
+                            targetDirCreated = false
+                        ),
+                        errorMessage = "Archive schema is newer than this app supports"
+                    )
+                }
+                if (schemaVersion < AutoSaveState.FORMAT_VERSION) {
+                    warnings += "Archive used schema v$schemaVersion; migrated to v${AutoSaveState.FORMAT_VERSION}."
+                }
 
-            inputStream.use {
-                ZipInputStream(it).use { zipInput ->
-                    var entry = zipInput.nextEntry
-                    while (entry != null) {
-                        entryCount++
-                        if (entryCount > MAX_ARCHIVE_ENTRY_COUNT) {
-                            throw IOException("Archive contains too many entries")
-                        }
-                        if (!seenEntries.add(entry.name)) {
-                            throw IOException("Archive contains duplicate entry: ${entry.name}")
-                        }
-                        when {
-                            entry.isDirectory -> {
-                                // No-op. Files create parents as needed.
-                            }
-                            entry.name == PROJECT_JSON_ENTRY -> {
-                                projectJson = readCurrentEntryText(zipInput, MAX_ARCHIVE_TEXT_ENTRY_BYTES)
-                            }
-                            entry.name == MEDIA_MANIFEST_ENTRY -> {
-                                mediaManifestJson = readCurrentEntryText(zipInput, MAX_ARCHIVE_TEXT_ENTRY_BYTES)
-                            }
-                            else -> {
-                                if (!isSupportedMediaEntry(entry.name)) {
-                                    Log.w("ProjectArchive", "Skipping unsupported archive entry: ${entry.name}")
-                                    warnings += "Skipped unsupported entry: ${entry.name}"
-                                    zipInput.closeEntry()
-                                    entry = zipInput.nextEntry
-                                    continue
-                                }
-                                val outFile = File(canonicalTargetDir, entry.name).canonicalFile
-                                val targetPath = canonicalTargetDir.toPath()
-                                if (!outFile.toPath().startsWith(targetPath)) {
-                                    Log.w("ProjectArchive", "Skipping zip entry with path traversal: ${entry.name}")
-                                    warnings += "Skipped path-traversal entry: ${entry.name}"
-                                    zipInput.closeEntry()
-                                    entry = zipInput.nextEntry
-                                    continue
-                                }
-                                if (!seenOutputPaths.add(outFile.path)) {
-                                    throw IOException("Archive maps multiple entries to the same file: ${entry.name}")
-                                }
-                                outFile.parentFile?.mkdirs()
-                                outFile.outputStream().use { out ->
-                                    val remainingBytes = MAX_ARCHIVE_TOTAL_BYTES - extractedBytes
-                                    if (remainingBytes <= 0L) {
-                                        throw IOException("Archive exceeds size limit")
-                                    }
-                                    extractedBytes += copyWithLimit(zipInput, out, remainingBytes)
-                                }
-                                extractedPaths += outFile
-                                extractedFiles[entry.name] = Uri.fromFile(outFile)
-                            }
-                        }
-                        zipInput.closeEntry()
-                        entry = zipInput.nextEntry
+                val stagedUris = extracted.files.mapValues { Uri.fromFile(it.value) }.toMutableMap()
+                val parsedManifest = extracted.mediaManifestJson?.let(::parseMediaManifest)
+                    ?: ParsedArchiveManifest(version = 1, entries = emptyList())
+                val invalidOptionalEntries = verifyManifestEntries(parsedManifest, stagedUris, warnings)
+                invalidOptionalEntries.forEach { entryName ->
+                    stagedUris.remove(entryName)?.path?.let(::File)?.delete()
+                }
+                val trustedManifestEntries = parsedManifest.entries
+                    .filter { it.entryName !in invalidOptionalEntries }
+                val manifestMap = trustedManifestEntries
+                    .filter { it.kind == ProjectDependencyKind.MEDIA.name && it.entryName != null }
+                    .associate { it.logicalReference to requireNotNull(it.entryName) }
+                val rawState = AutoSaveState.deserialize(stateJson)
+                val originalProjectId = rawState.projectId
+                val collided = originalProjectId in existingProjectIds
+                val effectiveProjectId = when {
+                    collided && idCollisionPolicy == IdCollisionPolicy.REGENERATE ->
+                        java.util.UUID.randomUUID().toString()
+                    else -> originalProjectId
+                }
+                if (collided) {
+                    warnings += if (idCollisionPolicy == IdCollisionPolicy.REGENERATE) {
+                        "Project ID '$originalProjectId' already existed; assigned new ID '$effectiveProjectId'."
+                    } else {
+                        "Project ID '$originalProjectId' overwrites an existing project (kept by policy)."
                     }
                 }
-            }
 
-            val stateJson = projectJson
-            if (stateJson == null) {
-                Log.e("ProjectArchive", "No $PROJECT_JSON_ENTRY in archive")
-                cleanupPartialImport(canonicalTargetDir, extractedPaths, targetDirAlreadyExisted)
-                return@withContext ImportResult(
-                    state = null,
-                    report = blankFailureReport(idCollisionPolicy),
-                    errorMessage = "Archive missing $PROJECT_JSON_ENTRY"
+                moveFileReplacing(requireNotNull(extractionStage), canonicalTargetDir)
+                extractionStage = null
+                installedTarget = true
+                val finalFiles = stagedUris.keys.associateWith { entryName ->
+                    Uri.fromFile(File(canonicalTargetDir, entryName).canonicalFile)
+                }
+                val unresolved = mutableListOf<String>()
+                val seenSourceUris = LinkedHashSet<String>()
+                val rewritten = rewriteArchivedMediaUrisForImport(
+                    state = rawState.copy(projectId = effectiveProjectId),
+                    manifestEntryMap = manifestMap,
+                    extractedFiles = finalFiles,
+                    seenSourceUris = seenSourceUris,
+                    unresolvedSink = unresolved,
+                    allowFileNameFallback = parsedManifest.version <= 1
                 )
-            }
+                val dependencyRewrite = if (parsedManifest.version >= 2) {
+                    rewriteArchivedDependenciesForImport(
+                        context,
+                        rewritten,
+                        trustedManifestEntries,
+                        finalFiles
+                    )
+                } else {
+                    DependencyRewriteResult(rewritten, emptyList())
+                }
+                newlyInstalledFonts += dependencyRewrite.newlyInstalledFonts
 
-            val schemaVersion = parseSchemaVersion(stateJson)
-            val schemaTooNew = schemaVersion > AutoSaveState.FORMAT_VERSION
-            if (schemaTooNew) {
-                Log.w(
-                    "ProjectArchive",
-                    "Archive schema v$schemaVersion is newer than supported v${AutoSaveState.FORMAT_VERSION}; refusing best-effort load"
-                )
-                warnings += "Archive uses schema v$schemaVersion; this build supports up to v${AutoSaveState.FORMAT_VERSION}."
-                cleanupPartialImport(canonicalTargetDir, extractedPaths, targetDirAlreadyExisted)
+                val mediaTotal = seenSourceUris.size
+                val mediaResolved = mediaTotal - unresolved.size
                 return@withContext ImportResult(
-                    state = null,
+                    state = dependencyRewrite.state,
                     report = ImportReport(
                         schemaVersion = schemaVersion,
-                        schemaTooNew = true,
-                        originalProjectId = parseProjectId(stateJson),
-                        effectiveProjectId = null,
-                        projectIdCollided = false,
+                        schemaTooNew = false,
+                        originalProjectId = originalProjectId,
+                        effectiveProjectId = effectiveProjectId,
+                        projectIdCollided = collided,
                         idCollisionPolicy = idCollisionPolicy,
-                        mediaTotal = 0,
-                        mediaResolved = 0,
-                        unresolvedMediaUris = emptyList(),
+                        mediaTotal = mediaTotal,
+                        mediaResolved = mediaResolved,
+                        unresolvedMediaUris = unresolved,
                         warnings = warnings,
-                        targetDirCreated = !targetDirAlreadyExisted
+                        targetDirCreated = true
                     ),
-                    errorMessage = "Archive schema is newer than this app supports"
+                    errorMessage = null
                 )
             }
-            if (schemaVersion < AutoSaveState.FORMAT_VERSION) {
-                warnings += "Archive used schema v$schemaVersion; migrated to v${AutoSaveState.FORMAT_VERSION}."
-            }
-
-            val parsedManifest = mediaManifestJson?.let(::parseMediaManifest)
-                ?: ParsedArchiveManifest(version = 1, entries = emptyList())
-            val invalidOptionalEntries = verifyManifestEntries(parsedManifest, extractedFiles, warnings)
-            invalidOptionalEntries.forEach { entryName ->
-                extractedFiles.remove(entryName)?.path?.let(::File)?.delete()
-            }
-            val trustedManifestEntries = parsedManifest.entries.filter { it.entryName !in invalidOptionalEntries }
-            val manifestMap = trustedManifestEntries
-                .filter { it.kind == ProjectDependencyKind.MEDIA.name && it.entryName != null }
-                .associate { it.logicalReference to requireNotNull(it.entryName) }
-            val rawState = AutoSaveState.deserialize(stateJson)
-            val originalProjectId = rawState.projectId
-            val collided = originalProjectId in existingProjectIds
-            val effectiveProjectId = when {
-                collided && idCollisionPolicy == IdCollisionPolicy.REGENERATE ->
-                    java.util.UUID.randomUUID().toString()
-                else -> originalProjectId
-            }
-            if (collided) {
-                warnings += if (idCollisionPolicy == IdCollisionPolicy.REGENERATE) {
-                    "Project ID '$originalProjectId' already existed; assigned new ID '$effectiveProjectId'."
-                } else {
-                    "Project ID '$originalProjectId' overwrites an existing project (kept by policy)."
-                }
-            }
-
-            val unresolved = mutableListOf<String>()
-            val seenSourceUris = LinkedHashSet<String>()
-            val rewritten = rewriteArchivedMediaUrisForImport(
-                state = rawState.copy(projectId = effectiveProjectId),
-                manifestEntryMap = manifestMap,
-                extractedFiles = extractedFiles,
-                seenSourceUris = seenSourceUris,
-                unresolvedSink = unresolved,
-                allowFileNameFallback = parsedManifest.version <= 1
-            )
-            val dependencyRewritten = if (parsedManifest.version >= 2) {
-                rewriteArchivedDependenciesForImport(context, rewritten, trustedManifestEntries, extractedFiles)
-            } else {
-                rewritten
-            }
-
-            val mediaTotal = seenSourceUris.size
-            val mediaResolved = mediaTotal - unresolved.size
-
-            ImportResult(
-                state = dependencyRewritten,
-                report = ImportReport(
-                    schemaVersion = schemaVersion,
-                    schemaTooNew = false,
-                    originalProjectId = originalProjectId,
-                    effectiveProjectId = effectiveProjectId,
-                    projectIdCollided = collided,
-                    idCollisionPolicy = idCollisionPolicy,
-                    mediaTotal = mediaTotal,
-                    mediaResolved = mediaResolved,
-                    unresolvedMediaUris = unresolved,
-                    warnings = warnings,
-                    targetDirCreated = !targetDirAlreadyExisted
-                ),
-                errorMessage = null
-            )
         } catch (e: CancellationException) {
-            cleanupPartialImport(canonicalTargetDir, extractedPaths, targetDirAlreadyExisted)
+            extractionStage?.deleteRecursively()
+            if (installedTarget) canonicalTargetDir.deleteRecursively()
+            newlyInstalledFonts.forEach { it.delete() }
             throw e
         } catch (e: Exception) {
             Log.e("ProjectArchive", "Archive import failed", e)
-            cleanupPartialImport(canonicalTargetDir, extractedPaths, targetDirAlreadyExisted)
+            extractionStage?.deleteRecursively()
+            if (installedTarget) canonicalTargetDir.deleteRecursively()
+            newlyInstalledFonts.forEach { it.delete() }
             ImportResult(
                 state = null,
                 report = blankFailureReport(idCollisionPolicy),
                 errorMessage = e.message ?: e.javaClass.simpleName
             )
+        } finally {
+            stagedArchive?.delete()
         }
+    }
+
+    private data class ExtractedArchive(
+        val projectJson: String?,
+        val mediaManifestJson: String?,
+        val files: MutableMap<String, File>
+    )
+
+    internal fun planArchiveImport(entries: List<ArchiveEntryMetadata>): ArchiveImportPlan {
+        if (entries.size > MAX_ARCHIVE_ENTRY_COUNT) {
+            throw IOException("Archive contains too many entries")
+        }
+        val seenNames = hashSetOf<String>()
+        var expandedBytes = 0L
+        var extractableEntryCount = 0
+        var hasProjectJson = false
+
+        entries.forEach { entry ->
+            validateArchiveEntryName(entry.name)
+            if (!seenNames.add(entry.name)) {
+                throw IOException("Archive contains duplicate entry: ${entry.name}")
+            }
+            if (entry.isDirectory) return@forEach
+
+            val isTextEntry = entry.name == PROJECT_JSON_ENTRY || entry.name == MEDIA_MANIFEST_ENTRY
+            val isPayloadEntry = isSupportedMediaEntry(entry.name)
+            if (!isTextEntry && !isPayloadEntry) return@forEach
+            if (entry.size < 0L || entry.compressedSize < 0L) {
+                throw IOException("Archive entry has unknown size: ${entry.name}")
+            }
+            val entryLimit = if (isTextEntry) MAX_ARCHIVE_TEXT_ENTRY_BYTES else MAX_ARCHIVE_TOTAL_BYTES
+            if (entry.size > entryLimit) {
+                throw IOException("Archive entry exceeds size limit: ${entry.name}")
+            }
+            if (entry.size > 0L) {
+                if (entry.compressedSize <= 0L ||
+                    entry.size > saturatingMultiply(entry.compressedSize, MAX_ARCHIVE_COMPRESSION_RATIO)
+                ) {
+                    throw IOException("Archive entry exceeds compression-ratio limit: ${entry.name}")
+                }
+            }
+            expandedBytes = saturatingAdd(expandedBytes, entry.size)
+            if (expandedBytes > MAX_ARCHIVE_TOTAL_BYTES) {
+                throw IOException("Archive exceeds expanded-size limit")
+            }
+            extractableEntryCount++
+            if (entry.name == PROJECT_JSON_ENTRY) hasProjectJson = true
+        }
+        if (!hasProjectJson) throw IOException("Archive missing $PROJECT_JSON_ENTRY")
+        return ArchiveImportPlan(expandedBytes, extractableEntryCount)
+    }
+
+    private fun stageArchiveForImport(context: Context, archiveUri: Uri): File {
+        val stagingDir = File(context.cacheDir, "project-archive-staging")
+        if (!stagingDir.exists() && !stagingDir.mkdirs() && !stagingDir.exists()) {
+            throw IOException("Could not create archive staging directory")
+        }
+        val declaredSize = runCatching {
+            context.contentResolver.openAssetFileDescriptor(archiveUri, "r")?.use { descriptor ->
+                descriptor.length.takeIf { it >= 0L }
+            }
+        }.getOrNull()
+        if (declaredSize == 0L) throw IOException("Archive is empty")
+        if (declaredSize != null && declaredSize > MAX_ARCHIVE_TOTAL_BYTES) {
+            throw IOException("Archive exceeds compressed-size limit")
+        }
+        ensureStorageAvailable(
+            directory = stagingDir,
+            payloadBytes = declaredSize ?: 0L,
+            purpose = "archive staging"
+        )
+
+        val staged = File.createTempFile("project-import-", ".clearcut", stagingDir)
+        try {
+            val input = context.contentResolver.openInputStream(archiveUri)
+                ?: throw IOException("Could not open archive")
+            input.use { source ->
+                BufferedOutputStream(FileOutputStream(staged)).use { output ->
+                    copyArchiveWithStorageChecks(source, output, stagingDir)
+                }
+            }
+            if (staged.length() <= 0L) throw IOException("Archive is empty")
+            return staged
+        } catch (e: Exception) {
+            staged.delete()
+            throw e
+        }
+    }
+
+    private fun copyArchiveWithStorageChecks(
+        input: InputStream,
+        output: OutputStream,
+        stagingDir: File
+    ): Long {
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        var copied = 0L
+        var nextStorageCheck = STORAGE_RECHECK_INTERVAL_BYTES
+        while (true) {
+            val read = input.read(buffer)
+            if (read < 0) break
+            copied = saturatingAdd(copied, read.toLong())
+            if (copied > MAX_ARCHIVE_TOTAL_BYTES) {
+                throw IOException("Archive exceeds compressed-size limit")
+            }
+            output.write(buffer, 0, read)
+            if (copied >= nextStorageCheck) {
+                ensureStorageAvailable(stagingDir, 0L, "archive staging")
+                nextStorageCheck = saturatingAdd(copied, STORAGE_RECHECK_INTERVAL_BYTES)
+            }
+        }
+        return copied
+    }
+
+    private fun createExtractionStagingDir(targetDir: File): File {
+        val parent = targetDir.parentFile
+            ?: throw IOException("Import destination has no parent directory")
+        repeat(8) {
+            val candidate = File(parent, ".${targetDir.name}.import-${java.util.UUID.randomUUID()}")
+            if (candidate.mkdir()) return candidate.canonicalFile
+        }
+        throw IOException("Could not create import staging directory")
+    }
+
+    private fun extractArchiveToStage(
+        zip: ZipFile,
+        plan: ArchiveImportPlan,
+        stagingDir: File,
+        warnings: MutableList<String>
+    ): ExtractedArchive {
+        var projectJson: String? = null
+        var mediaManifestJson: String? = null
+        val files = mutableMapOf<String, File>()
+        var extractedEntryCount = 0
+
+        zip.entries().asSequence().forEach { entry ->
+            when {
+                entry.isDirectory -> Unit
+                entry.name == PROJECT_JSON_ENTRY -> {
+                    projectJson = zip.getInputStream(entry).use {
+                        readUtf8WithByteLimit(it, MAX_ARCHIVE_TEXT_ENTRY_BYTES)
+                    }
+                    extractedEntryCount++
+                }
+                entry.name == MEDIA_MANIFEST_ENTRY -> {
+                    mediaManifestJson = zip.getInputStream(entry).use {
+                        readUtf8WithByteLimit(it, MAX_ARCHIVE_TEXT_ENTRY_BYTES)
+                    }
+                    extractedEntryCount++
+                }
+                isSupportedMediaEntry(entry.name) -> {
+                    val outputFile = File(stagingDir, entry.name).canonicalFile
+                    if (!outputFile.toPath().startsWith(stagingDir.toPath())) {
+                        throw IOException("Unsafe archive output path: ${entry.name}")
+                    }
+                    val parent = outputFile.parentFile
+                    if (parent != null && !parent.exists() && !parent.mkdirs() && !parent.exists()) {
+                        throw IOException("Could not create archive output directory")
+                    }
+                    zip.getInputStream(entry).use { input ->
+                        BufferedOutputStream(FileOutputStream(outputFile)).use { output ->
+                            val copied = copyEntryWithStorageChecks(
+                                input = input,
+                                output = output,
+                                maxBytes = entry.size,
+                                stagingDir = stagingDir
+                            )
+                            if (copied != entry.size) {
+                                throw IOException("Archive entry size changed while extracting: ${entry.name}")
+                            }
+                        }
+                    }
+                    files[entry.name] = outputFile
+                    extractedEntryCount++
+                }
+                else -> {
+                    Log.w("ProjectArchive", "Skipping unsupported archive entry: ${entry.name}")
+                    warnings += "Skipped unsupported entry: ${entry.name}"
+                }
+            }
+        }
+        if (extractedEntryCount != plan.extractableEntryCount) {
+            throw IOException("Archive entry plan changed during extraction")
+        }
+        return ExtractedArchive(projectJson, mediaManifestJson, files)
+    }
+
+    private fun copyEntryWithStorageChecks(
+        input: InputStream,
+        output: OutputStream,
+        maxBytes: Long,
+        stagingDir: File
+    ): Long {
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        var copied = 0L
+        var nextStorageCheck = STORAGE_RECHECK_INTERVAL_BYTES
+        while (true) {
+            val read = input.read(buffer)
+            if (read < 0) break
+            copied = saturatingAdd(copied, read.toLong())
+            if (copied > maxBytes) throw IOException("Archive entry exceeded declared size")
+            output.write(buffer, 0, read)
+            if (copied >= nextStorageCheck) {
+                ensureStorageAvailable(stagingDir, 0L, "archive extraction")
+                nextStorageCheck = saturatingAdd(copied, STORAGE_RECHECK_INTERVAL_BYTES)
+            }
+        }
+        return copied
+    }
+
+    private fun ensureStorageAvailable(directory: File, payloadBytes: Long, purpose: String) {
+        require(payloadBytes >= 0L) { "payloadBytes must be non-negative" }
+        val available = StatFs(directory.absolutePath).availableBytes
+        val required = saturatingAdd(payloadBytes, ARCHIVE_STORAGE_RESERVE_BYTES)
+        if (available < required) {
+            throw IOException(
+                "Insufficient storage for $purpose: requires $required bytes including reserve; $available available"
+            )
+        }
+    }
+
+    private fun validateArchiveEntryName(name: String) {
+        if (name.isBlank() || name.length > MAX_ARCHIVE_ENTRY_NAME_CHARS) {
+            throw IOException("Archive contains an invalid entry name")
+        }
+        if (name.startsWith('/') || name.startsWith('\\') || '\\' in name ||
+            name.matches(Regex("^[A-Za-z]:.*")) || name.any { it.code < 0x20 } ||
+            name.split('/').any { it == "." || it == ".." }
+        ) {
+            throw IOException("Archive contains an unsafe entry path: $name")
+        }
+    }
+
+    private fun rejectKnownOversizedEntry(entry: ZipEntry, maxBytes: Long) {
+        if (entry.size > maxBytes) {
+            throw IOException("Archive entry exceeds size limit: ${entry.name}")
+        }
+    }
+
+    private fun saturatingAdd(left: Long, right: Long): Long {
+        if (right > 0L && left > Long.MAX_VALUE - right) return Long.MAX_VALUE
+        return left + right
+    }
+
+    private fun saturatingMultiply(left: Long, right: Long): Long {
+        if (left <= 0L || right <= 0L) return 0L
+        if (left > Long.MAX_VALUE / right) return Long.MAX_VALUE
+        return left * right
     }
 
     /**
@@ -771,6 +1138,59 @@ object ProjectArchive {
         return entryName.substringAfter('/').isNotBlank()
     }
 
+    private fun validateManifestMetadata(
+        manifest: ParsedArchiveManifest,
+        warnings: MutableList<String>
+    ) {
+        if (manifest.version <= 1) return
+        val knownKinds = setOf(
+            ProjectDependencyKind.MEDIA.name,
+            ProjectDependencyKind.LUT.name,
+            ProjectDependencyKind.CUSTOM_FONT.name,
+            ProjectDependencyKind.WATERMARK.name,
+            ProjectDependencyKind.MODEL.name
+        )
+        val expectedPrefixes = mapOf(
+            ProjectDependencyKind.MEDIA.name to "media/",
+            ProjectDependencyKind.LUT.name to "luts/",
+            ProjectDependencyKind.CUSTOM_FONT.name to "fonts/",
+            ProjectDependencyKind.WATERMARK.name to "watermarks/"
+        )
+        val seenLogical = hashSetOf<Pair<String, String>>()
+        manifest.entries.forEach { entry ->
+            if (!seenLogical.add(entry.kind to entry.logicalReference)) {
+                throw IOException("Manifest contains duplicate dependency: ${entry.logicalReference}")
+            }
+            if (entry.kind !in knownKinds) {
+                if (entry.required) throw IOException("Unknown required dependency kind: ${entry.kind}")
+                warnings += "Ignored optional dependency kind: ${entry.kind}"
+                return@forEach
+            }
+            if (entry.archivePolicy == ProjectDependencyArchivePolicy.REFERENCE_ONLY.name) return@forEach
+            if (entry.archivePolicy != ProjectDependencyArchivePolicy.INCLUDE.name) {
+                if (entry.required) throw IOException("Required dependency has unsupported archive policy")
+                warnings += "Ignored optional dependency with archive policy ${entry.archivePolicy}"
+                return@forEach
+            }
+            val archiveName = entry.entryName
+            val expectedPrefix = expectedPrefixes[entry.kind]
+            if (archiveName == null || expectedPrefix == null || !archiveName.startsWith(expectedPrefix) ||
+                !isSupportedMediaEntry(archiveName)
+            ) {
+                handleInvalidManifestEntry(entry, warnings, "unsafe or missing archive path")
+                return@forEach
+            }
+            validateArchiveEntryName(archiveName)
+            val expectedLength = entry.byteLength
+            val expectedSha = entry.sha256
+            if (expectedLength == null || expectedLength < 0L || expectedLength > MAX_ARCHIVE_TOTAL_BYTES ||
+                expectedSha?.matches(Regex("[0-9a-fA-F]{64}")) != true
+            ) {
+                handleInvalidManifestEntry(entry, warnings, "missing or invalid integrity metadata")
+            }
+        }
+    }
+
     private fun verifyManifestEntries(
         manifest: ParsedArchiveManifest,
         extractedFiles: Map<String, Uri>,
@@ -921,12 +1341,22 @@ object ProjectArchive {
         )
     }
 
-    internal fun rewriteArchivedDependenciesForImport(
+    private data class DependencyRewriteResult(
+        val state: AutoSaveState,
+        val newlyInstalledFonts: List<File>
+    )
+
+    private data class InstalledFontsResult(
+        val mappings: Map<String, String>,
+        val newlyInstalledFiles: List<File>
+    )
+
+    private fun rewriteArchivedDependenciesForImport(
         context: Context,
         state: AutoSaveState,
         manifestEntries: List<ArchiveManifestEntry>,
         extractedFiles: Map<String, Uri>
-    ): AutoSaveState {
+    ): DependencyRewriteResult {
         val lutPaths = manifestEntries
             .filter { it.kind == ProjectDependencyKind.LUT.name && it.entryName != null }
             .mapNotNull { entry ->
@@ -939,7 +1369,10 @@ object ProjectArchive {
             .mapNotNull { entry -> extractedFiles[entry.entryName]?.let { entry.logicalReference to it } }
             .toMap()
 
-        return rewriteDependencyReferences(state, lutPaths, installedFonts, watermarkUris)
+        return DependencyRewriteResult(
+            state = rewriteDependencyReferences(state, lutPaths, installedFonts.mappings, watermarkUris),
+            newlyInstalledFonts = installedFonts.newlyInstalledFiles
+        )
     }
 
     internal fun rewriteDependencyReferences(
@@ -976,9 +1409,11 @@ object ProjectArchive {
         context: Context,
         manifestEntries: List<ArchiveManifestEntry>,
         extractedFiles: Map<String, Uri>
-    ): Map<String, String> {
+    ): InstalledFontsResult {
         val fontsDir = File(context.filesDir, "fonts")
-        return buildMap {
+        val mappings = mutableMapOf<String, String>()
+        val newlyInstalled = mutableListOf<File>()
+        try {
             manifestEntries
                 .filter { it.kind == ProjectDependencyKind.CUSTOM_FONT.name && it.entryName != null }
                 .forEach { entry ->
@@ -998,18 +1433,33 @@ object ProjectArchive {
                         entry.byteLength == target.length() &&
                         entry.sha256?.equals(target.inputStream().use(::sha256), ignoreCase = true) == true
                     if (!targetMatches) {
-                        val partial = File(fontsDir, "$installedName.partial")
+                        val targetExisted = target.exists()
+                        val partial = File.createTempFile(".$installedName.", ".partial", fontsDir)
                         try {
                             source.inputStream().use { input ->
-                                partial.outputStream().use { output -> input.copyTo(output) }
+                                partial.outputStream().use { output ->
+                                    val copied = copyWithLimit(
+                                        input,
+                                        output,
+                                        entry.byteLength ?: MAX_ARCHIVE_TOTAL_BYTES
+                                    )
+                                    if (copied != entry.byteLength) {
+                                        throw IOException("Archived font size changed during install")
+                                    }
+                                }
                             }
                             moveFileReplacing(partial, target)
+                            if (!targetExisted) newlyInstalled += target
                         } finally {
                             partial.delete()
                         }
                     }
-                    put(entry.logicalReference, FontRegistry.CUSTOM_PREFIX + installedName)
+                    mappings[entry.logicalReference] = FontRegistry.CUSTOM_PREFIX + installedName
                 }
+            return InstalledFontsResult(mappings, newlyInstalled)
+        } catch (e: Exception) {
+            newlyInstalled.forEach { it.delete() }
+            throw e
         }
     }
 
@@ -1097,30 +1547,4 @@ object ProjectArchive {
         }
     }
 
-    private fun cleanupPartialImport(
-        canonicalTargetDir: File,
-        extractedPaths: List<File>,
-        targetDirAlreadyExisted: Boolean
-    ) {
-        extractedPaths
-            .sortedByDescending { it.absolutePath.length }
-            .forEach { extracted ->
-                runCatching { extracted.delete() }
-            }
-
-        if (!targetDirAlreadyExisted) {
-            canonicalTargetDir.deleteRecursively()
-            return
-        }
-
-        extractedPaths
-            .mapNotNull { it.parentFile }
-            .distinct()
-            .sortedByDescending { it.absolutePath.length }
-            .forEach { directory ->
-                if (directory != canonicalTargetDir && directory.exists() && directory.list().isNullOrEmpty()) {
-                    runCatching { directory.delete() }
-                }
-            }
-    }
 }

@@ -11,9 +11,12 @@ import com.novacut.editor.model.TrackType
 import com.novacut.editor.model.Watermark
 import com.novacut.editor.model.WatermarkPosition
 import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -21,13 +24,89 @@ import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.shadows.ShadowStatFs
 import java.io.File
+import java.io.FileOutputStream
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
 @RunWith(RobolectricTestRunner::class)
 class ProjectArchiveRoundTripTest {
 
     @get:Rule
     val temp = TemporaryFolder()
+
+    @After
+    fun resetStorageStats() {
+        ShadowStatFs.reset()
+    }
+
+    @Test
+    fun previewReadsBoundedMetadataWithoutExtractingPayloads() = runBlocking {
+        val context = RuntimeEnvironment.getApplication().applicationContext as Context
+        val media = temp.newFile("preview-source.mp4").apply { writeBytes("preview-media".toByteArray()) }
+        val state = AutoSaveState(
+            projectId = "preview-project",
+            tracks = listOf(
+                Track(
+                    type = TrackType.VIDEO,
+                    index = 0,
+                    clips = listOf(
+                        Clip(
+                            sourceUri = Uri.fromFile(media),
+                            sourceDurationMs = 1_000L,
+                            timelineStartMs = 0L
+                        )
+                    )
+                )
+            )
+        )
+        val archive = File(temp.root, "preview.clearcut")
+        assertTrue(ProjectArchive.exportArchive(context, state, archive))
+        val stagingDir = File(context.cacheDir, "project-archive-staging")
+        val filesBefore = stagingDir.listFiles().orEmpty().map { it.name }.sorted()
+
+        val preview = ProjectArchive.previewArchive(context, Uri.fromFile(archive))
+
+        assertTrue(preview.valid)
+        assertEquals(1, preview.packagedMedia)
+        assertEquals(1, preview.report.mediaTotal)
+        assertEquals(filesBefore, stagingDir.listFiles().orEmpty().map { it.name }.sorted())
+        assertFalse(File(temp.root, "preview-import").exists())
+    }
+
+    @Test
+    fun rejectedCompressionBombLeavesNoDestinationOrImportStage() = runBlocking {
+        val context = RuntimeEnvironment.getApplication().applicationContext as Context
+        val archive = File(temp.root, "compression-bomb.clearcut")
+        ZipOutputStream(FileOutputStream(archive)).use { zip ->
+            zip.putNextEntry(ZipEntry("project.json"))
+            zip.write(AutoSaveState(projectId = "bomb").serialize().toByteArray())
+            zip.closeEntry()
+            zip.putNextEntry(ZipEntry("media/repeated.bin"))
+            repeat(1_024) { zip.write(ByteArray(1_024)) }
+            zip.closeEntry()
+        }
+        val target = File(temp.root, "rejected-import")
+        registerStorageCapacity(context, temp.root)
+
+        val result = ProjectArchive.importArchiveWithReport(
+            context = context,
+            archiveUri = Uri.fromFile(archive),
+            targetDir = target
+        )
+
+        assertNull(result.state)
+        assertTrue(result.errorMessage, result.errorMessage.orEmpty().contains("compression-ratio"))
+        assertFalse(target.exists())
+        assertTrue(temp.root.listFiles().orEmpty().none { it.name.startsWith(".rejected-import.import-") })
+        assertTrue(
+            File(context.cacheDir, "project-archive-staging")
+                .listFiles()
+                .orEmpty()
+                .none { it.name.startsWith("project-import-") }
+        )
+    }
 
     @Test
     fun customFontLutAndWatermarkSurviveAfterOriginalAssetsAreRemoved() = runBlocking {
@@ -76,6 +155,7 @@ class ProjectArchiveRoundTripTest {
         assertTrue(lut.delete())
         assertTrue(watermark.delete())
         assertTrue(font.delete())
+        registerStorageCapacity(context, temp.root)
 
         val result = ProjectArchive.importArchiveWithReport(
             context = context,
@@ -83,7 +163,8 @@ class ProjectArchiveRoundTripTest {
             targetDir = File(temp.root, "clean-import")
         )
 
-        assertNotNull(result.state)
+        assertNotNull(result.errorMessage, result.state)
+        assertTrue(temp.root.listFiles().orEmpty().none { it.name.startsWith(".clean-import.import-") })
         val restored = requireNotNull(result.state)
         assertTrue(result.report.warnings.isEmpty())
         val restoredClip = restored.tracks.single().clips.single()
@@ -104,5 +185,17 @@ class ProjectArchiveRoundTripTest {
         assertEquals(WatermarkPosition.TOP_LEFT, restoredWatermark.position)
         assertEquals(0.65f, restoredWatermark.opacity)
         assertEquals(19, restoredWatermark.scalePercent)
+    }
+
+    private fun registerStorageCapacity(context: Context, destinationParent: File) {
+        val blockCount = 2_000_000
+        val freeBlocks = 1_800_000
+        ShadowStatFs.registerStats(destinationParent, blockCount, freeBlocks, freeBlocks)
+        ShadowStatFs.registerStats(
+            File(context.cacheDir, "project-archive-staging"),
+            blockCount,
+            freeBlocks,
+            freeBlocks
+        )
     }
 }

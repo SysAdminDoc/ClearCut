@@ -22,6 +22,58 @@ import java.security.MessageDigest
 class ProjectArchiveTest {
 
     @Test
+    fun archiveImportPlanCountsOnlySupportedEntries() {
+        val plan = ProjectArchive.planArchiveImport(
+            listOf(
+                archiveEntry("project.json", size = 1_000L, compressedSize = 500L),
+                archiveEntry("media_manifest.json", size = 600L, compressedSize = 300L),
+                archiveEntry("media/clip.mp4", size = 8_000L, compressedSize = 4_000L),
+                archiveEntry("notes.txt", size = 10_000L, compressedSize = 500L)
+            )
+        )
+
+        assertEquals(9_600L, plan.expandedBytes)
+        assertEquals(3, plan.extractableEntryCount)
+    }
+
+    @Test
+    fun archiveImportPlanRejectsCompressionBombsAndUnknownSizes() {
+        expectPlanFailure("compression-ratio") {
+            listOf(
+                archiveEntry("project.json", size = 1_000L, compressedSize = 500L),
+                archiveEntry(
+                    "media/repeated.bin",
+                    size = ProjectArchive.MAX_ARCHIVE_COMPRESSION_RATIO + 1L,
+                    compressedSize = 1L
+                )
+            )
+        }
+        expectPlanFailure("unknown size") {
+            listOf(archiveEntry("project.json", size = -1L, compressedSize = -1L))
+        }
+    }
+
+    @Test
+    fun archiveImportPlanRejectsCumulativeExpansionAndUnsafeNames() {
+        expectPlanFailure("expanded-size") {
+            listOf(
+                archiveEntry("project.json", size = 1L, compressedSize = 1L),
+                archiveEntry(
+                    "media/huge.bin",
+                    size = ProjectArchive.MAX_ARCHIVE_TOTAL_BYTES,
+                    compressedSize = ProjectArchive.MAX_ARCHIVE_TOTAL_BYTES / 2L
+                )
+            )
+        }
+        expectPlanFailure("unsafe entry path") {
+            listOf(
+                archiveEntry("project.json", size = 1L, compressedSize = 1L),
+                archiveEntry("../media/escape.mp4", size = 1L, compressedSize = 1L)
+            )
+        }
+    }
+
+    @Test
     fun mediaManifestV1StillParsesAsOptionalMedia() {
         val raw = """{"version":1,"entries":[{"originalUri":"content://clip","entryName":"media/0.mp4"}]}"""
 
@@ -397,5 +449,28 @@ class ProjectArchiveTest {
             schemeValue = raw.substringBefore(':'),
             segment = segment
         )
+    }
+
+    private fun archiveEntry(
+        name: String,
+        size: Long,
+        compressedSize: Long
+    ) = ProjectArchive.ArchiveEntryMetadata(
+        name = name,
+        isDirectory = false,
+        size = size,
+        compressedSize = compressedSize
+    )
+
+    private fun expectPlanFailure(
+        messageFragment: String,
+        entries: () -> List<ProjectArchive.ArchiveEntryMetadata>
+    ) {
+        try {
+            ProjectArchive.planArchiveImport(entries())
+            fail("Expected archive import plan to reject $messageFragment")
+        } catch (error: IOException) {
+            assertTrue(error.message.orEmpty().contains(messageFragment))
+        }
     }
 }

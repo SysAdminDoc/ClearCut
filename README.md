@@ -4,9 +4,14 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.154-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.155-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.155 Storage-safe project archives
+
+- Incoming `.clearcut` previews now read bounded project/manifest metadata without extracting media.
+- Intentional imports preflight compressed, expanded, per-entry, compression-ratio, and free-space limits, then install from a sibling staging directory so rejection or cancellation leaves no partial project.
 
 ### v3.74.152 Slip crash and NTSC timecode fixes
 

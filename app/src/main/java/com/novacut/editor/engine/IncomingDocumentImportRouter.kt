@@ -216,39 +216,30 @@ class IncomingDocumentImportRouter @Inject constructor(
     }
 
     private suspend fun previewProjectArchive(item: IncomingDocumentItem): IncomingDocumentImportPreview {
-        val previewDir = File(context.cacheDir, "document-import-preview/archive-${System.currentTimeMillis()}")
-        return try {
-            val result = ProjectArchive.importArchiveWithReport(
-                context = context,
-                archiveUri = item.uri,
-                targetDir = previewDir,
-                existingProjectIds = emptySet(),
-                idCollisionPolicy = ProjectArchive.IdCollisionPolicy.REGENERATE,
-            )
-            val report = result.report
-            if (result.state == null) {
-                return invalid(
-                    item = item,
-                    body = result.errorMessage ?: "This archive could not be validated.",
-                    warnings = report.warnings,
-                )
-            }
-            IncomingDocumentImportPreview(
+        val preview = ProjectArchive.previewArchive(context, item.uri)
+        val report = preview.report
+        if (!preview.valid) {
+            return invalid(
                 item = item,
-                status = IncomingDocumentImportStatus.READY,
-                title = "Project archive validated",
-                body = "Open an editor project and use Archive Transfer import to restore this archive intentionally.",
-                details = baseDetails(item) + listOf(
-                    "Archive report: ${report.summary}",
-                    "Media: ${report.mediaResolved}/${report.mediaTotal} resolved",
-                    "Schema version: ${report.schemaVersion}",
-                ),
-                warnings = report.warnings + listOf("Preview validation did not replace the current timeline."),
-                canImportNow = false,
+                body = preview.errorMessage ?: "This archive could not be validated.",
+                warnings = report.warnings,
             )
-        } finally {
-            previewDir.deleteRecursively()
         }
+        return IncomingDocumentImportPreview(
+            item = item,
+            status = IncomingDocumentImportStatus.READY,
+            title = "Project archive validated",
+            body = "Open an editor project and use Archive Transfer import to restore this archive intentionally.",
+            details = baseDetails(item) + listOf(
+                "Archive report: ${report.summary}",
+                "Packaged media declared: ${preview.packagedMedia}/${report.mediaTotal}",
+                "Schema version: ${report.schemaVersion}",
+            ),
+            warnings = report.warnings + listOf(
+                "Preview read bounded project metadata only; no archive media was extracted."
+            ),
+            canImportNow = false,
+        )
     }
 
     private suspend fun previewTimelineImport(item: IncomingDocumentItem): IncomingDocumentImportPreview {
