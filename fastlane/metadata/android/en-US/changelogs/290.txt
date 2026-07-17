@@ -1,0 +1,5 @@
+Deep audit release.
+Data safety: media cleanup no longer deletes live projects' clips; snapshots and backup imports keep all your edits.
+Export: timeline gaps no longer vanish, Android 14 exports no longer crash, reverse works on silent clips, and long exports aren't cancelled by mistake.
+Editor: curve, keyframe, and mask handles drag correctly again, and one drag no longer wipes undo history.
+Audio/AI: correct sample rates and captions; removing one AI model no longer breaks another.

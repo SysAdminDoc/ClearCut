@@ -4,9 +4,16 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.156-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.74.157-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.74.157 Deep audit — export integrity, gestures, and data safety
+
+- Managed-media garbage collection no longer deletes live projects' imported clips: the reference scan un-escapes on-device JSON URIs (Android escaped `/`), scans crash-window `.bak` recovery files, and sweeps stranded archive-import directories; trash purge now clears purged projects' recovery data.
+- Exports are honest again: timeline gaps no longer vanish from stream-copy/mixed-render output, Android 14 exports no longer crash at start, audio-less reverse clips render reversed instead of silently forward, and the export watchdog only cancels a genuine hang rather than any export over ten minutes.
+- Editor curve/keyframe/mask handles are draggable again (they died after one frame), speed-curve and color-grade drags capture a single undo entry and one save instead of thousands, and snapshots/backup imports restore global transitions and the AI ledger.
+- Audio analysis math corrected: beat detection and multicam sync read the real sample rate, AI decode loops are memory-bounded, and the recommended noise gate no longer chops speech.
 
 ### v3.74.156 Single-source release identity
 
