@@ -183,6 +183,44 @@ internal fun sweepUnreferencedManagedMedia(
     return ManagedMediaSweepResult(deleted, bytes)
 }
 
+/**
+ * Sweep `filesDir/imported_<timestamp>/` directories created by project
+ * archive imports. Nothing else deletes them: removing an imported project
+ * (or undoing an import) previously stranded the extracted media forever.
+ * A directory is kept if ANY file inside it is still referenced by a
+ * remaining project's auto-save, or if it is younger than [minAgeMs].
+ */
+internal fun sweepUnreferencedArchiveImports(
+    context: Context,
+    referencedUris: Set<Uri>,
+    minAgeMs: Long = 24L * 60L * 60L * 1000L
+): ManagedMediaSweepResult {
+    val referencedPaths = referencedUris
+        .mapNotNull { u -> if (u.scheme == "file") u.path else null }
+        .mapNotNull { runCatching { File(it).canonicalPath }.getOrNull() }
+        .toSet()
+    val ageCutoff = System.currentTimeMillis() - minAgeMs
+    var deleted = 0
+    var bytes = 0L
+    context.filesDir.listFiles { f ->
+        f.isDirectory && f.name.matches(Regex("imported_\\d+"))
+    }?.forEach { dir ->
+        val files = dir.walkTopDown().filter { it.isFile }.toList()
+        val newestModified = files.maxOfOrNull { it.lastModified() } ?: dir.lastModified()
+        if (newestModified > ageCutoff) return@forEach
+        val stillReferenced = files.any { f ->
+            runCatching { f.canonicalPath }.getOrNull() in referencedPaths
+        }
+        if (stillReferenced) return@forEach
+        val size = files.sumOf { it.length() }
+        if (dir.deleteRecursively()) {
+            deleted += files.size
+            bytes += size
+        }
+    }
+    return ManagedMediaSweepResult(deleted, bytes)
+}
+
 internal fun deleteManagedMediaUri(context: Context, uri: Uri): Boolean {
     if (uri.scheme != "file") return false
     val file = uri.path?.let(::File) ?: return false

@@ -35,6 +35,17 @@ internal fun writeUtf8TextAtomically(targetFile: File, contents: String) {
     }
 }
 
+/**
+ * Force the file's data to stable storage before a rename commits it.
+ * Rename atomicity does not imply data durability: on power loss the
+ * journal can commit the rename while the temp file's blocks were never
+ * flushed, yielding an empty/partial target. Android's own AtomicFile
+ * syncs before rename for exactly this reason.
+ */
+internal fun syncFileData(file: File) {
+    java.io.RandomAccessFile(file, "rw").use { it.fd.sync() }
+}
+
 internal fun writeFileAtomically(
     targetFile: File,
     requireNonEmpty: Boolean = false,
@@ -52,6 +63,7 @@ internal fun writeFileAtomically(
         if (requireNonEmpty && (!tempFile.isFile || tempFile.length() <= 0L)) {
             throw IOException("Atomic write produced an empty file for ${targetFile.absolutePath}")
         }
+        syncFileData(tempFile)
         moveFileReplacing(tempFile, targetFile)
     } catch (e: Exception) {
         tempFile.delete()

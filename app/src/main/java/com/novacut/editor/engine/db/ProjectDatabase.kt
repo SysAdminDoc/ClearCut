@@ -215,6 +215,9 @@ interface ProjectDao {
     @Query("UPDATE projects SET deletedAtEpochMs = NULL WHERE id = :id")
     suspend fun restoreProject(id: String)
 
+    @Query("SELECT id FROM projects WHERE deletedAtEpochMs IS NOT NULL AND deletedAtEpochMs < :cutoffEpochMs")
+    suspend fun getTrashedIdsOlderThan(cutoffEpochMs: Long): List<String>
+
     @Query("DELETE FROM projects WHERE deletedAtEpochMs IS NOT NULL AND deletedAtEpochMs < :cutoffEpochMs")
     suspend fun purgeTrashedOlderThan(cutoffEpochMs: Long): Int
 

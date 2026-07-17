@@ -2497,6 +2497,7 @@
     <string name="project_restore_failed">Restore failed</string>
     <string name="project_delete_forever_success">Permanently deleted "%1$s"</string>
     <string name="project_delete_forever_failed">Delete failed</string>
+    <string name="project_rename_failed">Rename failed</string>
     <plurals name="trash_empty_success">
         <item quantity="one">Emptied trash (%1$d project)</item>
         <item quantity="other">Emptied trash (%1$d projects)</item>

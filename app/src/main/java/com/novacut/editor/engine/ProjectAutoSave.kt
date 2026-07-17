@@ -70,16 +70,65 @@ private fun sha256(contents: String): String {
 }
 
 internal fun collectMediaReferenceUrisFromAutoSaveJson(raw: String): Set<String> {
-    val mediaUriKeys = listOf("sourceUri", "managedUri")
+    // "mediaUri" covers StoryboardCard.mediaUri — serialized but not yet
+    // user-settable; keep it in the GC keep-set so it can never strand media.
+    val mediaUriKeys = listOf("sourceUri", "managedUri", "mediaUri")
     return mediaUriKeys
         .flatMap { key ->
             Regex("\"$key\"\\s*:\\s*\"([^\"]+)\"")
                 .findAll(raw)
-                .map { it.groupValues[1] }
+                .map { unescapeJsonStringValue(it.groupValues[1]) }
                 .toList()
         }
         .filter { it.isNotBlank() }
         .toSet()
+}
+
+/**
+ * Undo JSON string escaping in a regex-captured value. CRITICAL: Android's
+ * org.json escapes `/` as `\/` when serializing, so every on-device autosave
+ * stores URIs as `file:\/\/\/...`. Skipping this step made the raw-regex GC
+ * keep-set capture escaped strings whose Uri.parse() path is null — the
+ * sweeper then saw ALL managed media as unreferenced and deleted other
+ * projects' imports whenever any project was removed. (Unit tests missed it
+ * because json.org, unlike AOSP org.json, does not escape `/`.)
+ */
+internal fun unescapeJsonStringValue(raw: String): String {
+    if ('\\' !in raw) return raw
+    val sb = StringBuilder(raw.length)
+    var i = 0
+    while (i < raw.length) {
+        val c = raw[i]
+        if (c != '\\' || i + 1 >= raw.length) {
+            sb.append(c)
+            i++
+            continue
+        }
+        when (val next = raw[i + 1]) {
+            '"', '\\', '/' -> { sb.append(next); i += 2 }
+            'n' -> { sb.append('\n'); i += 2 }
+            't' -> { sb.append('\t'); i += 2 }
+            'r' -> { sb.append('\r'); i += 2 }
+            'b' -> { sb.append('\b'); i += 2 }
+            'f' -> { sb.append(''); i += 2 }
+            'u' -> {
+                val code = if (i + 6 <= raw.length) {
+                    raw.substring(i + 2, i + 6).toIntOrNull(16)
+                } else {
+                    null
+                }
+                if (code != null) {
+                    sb.append(code.toChar())
+                    i += 6
+                } else {
+                    sb.append(c)
+                    i++
+                }
+            }
+            else -> { sb.append(c); i++ }
+        }
+    }
+    return sb.toString()
 }
 
 @Singleton
@@ -293,7 +342,13 @@ class ProjectAutoSave @Inject constructor(
     suspend fun collectReferencedSourceUris(): Set<String> = withContext(Dispatchers.IO) {
         saveMutex.withLock {
             val uris = mutableSetOf<String>()
-            autoSaveDir.listFiles { f -> f.isFile && f.name.endsWith(".json") }
+            // Include .bak files: a crash between the two renames in
+            // writeAutoSaveFileLocked can leave a project's only recovery
+            // artifact as <stem>.bak (self-healed on next open). Skipping it
+            // here would let the GC delete that project's managed media.
+            autoSaveDir.listFiles { f ->
+                f.isFile && (f.name.endsWith(".json") || f.name.endsWith(".bak"))
+            }
                 ?.forEach { file ->
                     try {
                         uris += collectMediaReferenceUrisFromAutoSaveJson(readAutoSaveText(file))
@@ -371,6 +426,7 @@ class ProjectAutoSave @Inject constructor(
         val backupFile = getBackupFile(projectId)
         try {
             tempFile.writeText(contents, Charsets.UTF_8)
+            syncFileData(tempFile)
             // Keep a backup of the previous save so a failed rename/copy doesn't lose data
             if (file.exists()) {
                 backupFile.delete()

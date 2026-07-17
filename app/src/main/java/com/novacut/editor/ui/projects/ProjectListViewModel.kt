@@ -33,6 +33,7 @@ import com.novacut.editor.engine.deleteManagedMediaUri
 import com.novacut.editor.engine.importUriToManagedMedia
 import com.novacut.editor.engine.resolveMediaDisplayName
 import com.novacut.editor.engine.sanitizeFileName
+import com.novacut.editor.engine.sweepUnreferencedArchiveImports
 import com.novacut.editor.engine.sweepUnreferencedManagedMedia
 import com.novacut.editor.engine.db.ProjectDao
 import com.novacut.editor.engine.db.toProjectMediaAssetEntities
@@ -158,7 +159,7 @@ class ProjectListViewModel @Inject constructor(
         refreshUserTemplates()
         viewModelScope.launch(Dispatchers.IO) {
             val cutoffMs = System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000
-            val purged = projectDao.purgeTrashedOlderThan(cutoffMs)
+            val purged = purgeTrashedProjects(cutoffMs)
             if (purged > 0) {
                 Log.d("ProjectListVM", "Auto-purged $purged trashed projects older than 30 days")
                 sweepManagedMediaAfterDeletion()
@@ -331,7 +332,7 @@ class ProjectListViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val count = withContext(Dispatchers.IO) {
-                    projectDao.purgeTrashedOlderThan(Long.MAX_VALUE)
+                    purgeTrashedProjects(Long.MAX_VALUE)
                 }
                 if (count > 0) sweepManagedMediaAfterDeletion()
                 showToast(
@@ -351,7 +352,19 @@ class ProjectListViewModel @Inject constructor(
     fun renameProject(project: Project, newName: String) {
         val normalizedName = normalizeProjectName(newName)
         viewModelScope.launch {
-            projectDao.updateProject(project.copy(name = normalizedName, updatedAt = System.currentTimeMillis()))
+            try {
+                withContext(Dispatchers.IO) {
+                    // Re-read the row so a rename never clobbers columns another
+                    // writer updated after this list item was rendered.
+                    val current = projectDao.getProject(project.id) ?: project
+                    projectDao.updateProject(
+                        current.copy(name = normalizedName, updatedAt = System.currentTimeMillis())
+                    )
+                }
+            } catch (e: Exception) {
+                Log.w("ProjectListVM", "Failed to rename project ${project.id}", e)
+                showToast(appContext.getString(R.string.project_rename_failed))
+            }
         }
     }
 
@@ -869,6 +882,24 @@ class ProjectListViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Hard-delete trashed projects older than [cutoffEpochMs] AND their
+     * recovery JSON. The managed-media sweep builds its keep-set from every
+     * autosave file on disk, so leaving a purged project's autosave behind
+     * would pin its imported media forever.
+     */
+    private suspend fun purgeTrashedProjects(cutoffEpochMs: Long): Int {
+        val purgedIds = projectDao.getTrashedIdsOlderThan(cutoffEpochMs)
+        val count = projectDao.purgeTrashedOlderThan(cutoffEpochMs)
+        for (id in purgedIds) {
+            runCatching { autoSave.clearRecoveryData(id) }
+                .onFailure { error ->
+                    Log.w("ProjectListVM", "Purged project $id, but recovery cleanup failed", error)
+                }
+        }
+        return count
+    }
+
     private suspend fun deleteProjectAndCleanup(project: Project): Boolean {
         return try {
             projectDao.deleteProject(project)
@@ -897,6 +928,14 @@ class ProjectListViewModel @Inject constructor(
                 Log.d(
                     "ProjectListVM",
                     "Swept ${result.filesDeleted} orphan imports (${result.bytesFreed / 1024} KB)"
+                )
+            }
+            val archiveResult = sweepUnreferencedArchiveImports(appContext, referenced)
+            if (archiveResult.filesDeleted > 0) {
+                Log.d(
+                    "ProjectListVM",
+                    "Swept ${archiveResult.filesDeleted} orphan archive-import files " +
+                        "(${archiveResult.bytesFreed / 1024} KB)"
                 )
             }
         } catch (e: Exception) {
