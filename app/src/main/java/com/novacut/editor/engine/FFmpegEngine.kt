@@ -185,6 +185,11 @@ class FFmpegEngine @Inject constructor(
         outputFile: File,
         trimStartMs: Long = 0L,
         trimEndMs: Long = Long.MAX_VALUE,
+        // Sources with no audio stream (screen recordings, timelapses,
+        // GIF-derived MP4s) have no [0:a] to map — mapping it unconditionally
+        // aborts the whole session, so the caller must pass whether audio
+        // exists and we branch the filter graph accordingly.
+        hasAudio: Boolean = true,
         onProgress: (Float) -> Unit = {}
     ): Boolean = withContext(Dispatchers.IO) {
         val v = NativeProcessingPolicy.validateVideoUri(context, inputUri, "reverseClipToFile")
@@ -198,14 +203,21 @@ class FFmpegEngine @Inject constructor(
                 add("-to"); add(String.format(java.util.Locale.US, "%.3f", trimEndMs / 1000.0))
             }
             add("-i"); add(ffmpegInput(inputUri))
-            add("-filter_complex"); add("[0:v]reverse[v];[0:a]areverse[a]")
-            add("-map"); add("[v]")
-            add("-map"); add("[a]")
+            if (hasAudio) {
+                add("-filter_complex"); add("[0:v]reverse[v];[0:a]areverse[a]")
+                add("-map"); add("[v]")
+                add("-map"); add("[a]")
+            } else {
+                add("-filter_complex"); add("[0:v]reverse[v]")
+                add("-map"); add("[v]")
+            }
             add("-c:v"); add("libx264")
             add("-preset"); add("fast")
             add("-crf"); add("18")
-            add("-c:a"); add("aac")
-            add("-b:a"); add("192k")
+            if (hasAudio) {
+                add("-c:a"); add("aac")
+                add("-b:a"); add("192k")
+            }
             add(outputFile.absolutePath)
         }
         executeArguments(args, onProgress = onProgress) == 0

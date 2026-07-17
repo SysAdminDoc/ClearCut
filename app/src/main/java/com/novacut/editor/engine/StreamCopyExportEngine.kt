@@ -66,6 +66,20 @@ class StreamCopyExportEngine @Inject constructor(
         if (clips.any { it.sourceUri.toString() != firstSourceStr }) {
             return Eligibility(false, "multiple source files")
         }
+        // Timeline gaps render as black in the Transformer/preview path, but
+        // concat butts the keeper ranges together and silently drops the gap
+        // duration — every clip after a gap plays earlier than authored. A
+        // leading gap (first clip not at 0) and any inter-clip gap disqualify
+        // so the export falls back to the full renderer. GAP_TOLERANCE_MS
+        // absorbs sub-frame rounding on frame-quantized boundaries.
+        if (clips[0].timelineStartMs > GAP_TOLERANCE_MS) {
+            return Eligibility(false, "leading timeline gap")
+        }
+        for (i in 1 until clips.size) {
+            if (clips[i].timelineStartMs - clips[i - 1].timelineEndMs > GAP_TOLERANCE_MS) {
+                return Eligibility(false, "timeline gap between clips")
+            }
+        }
         for (c in clips) {
             val reason = c.firstDisqualifier()
             if (reason != null) return Eligibility(false, reason)
@@ -119,5 +133,9 @@ class StreamCopyExportEngine @Inject constructor(
         else -> null
     }
 
-    companion object { private const val TAG = "StreamCopyExport" }
+    companion object {
+        private const val TAG = "StreamCopyExport"
+        // Sub-frame rounding tolerance for gap detection (~half a frame at 60fps).
+        private const val GAP_TOLERANCE_MS = 8L
+    }
 }

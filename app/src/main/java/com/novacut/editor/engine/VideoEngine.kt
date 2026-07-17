@@ -575,6 +575,9 @@ class VideoEngine @Inject constructor(
                 outputFile = tempFile,
                 trimStartMs = clip.trimStartMs,
                 trimEndMs = clip.trimEndMs,
+                // Audio-less sources have no [0:a] to areverse — mapping it
+                // aborted the render and silently fell back to forward video.
+                hasAudio = hasAudioTrack(clip.sourceUri),
                 onProgress = { p ->
                     val base = index.toFloat() / reversedClips.size
                     val weight = 1f / reversedClips.size
@@ -1750,26 +1753,42 @@ class VideoEngine @Inject constructor(
             transformer.start(composition, outputFile.absolutePath)
 
             val holder = ProgressHolder()
-            var pollCount = 0
-            val maxPolls = 2400 // 10 minutes at 250ms intervals
-            while (_exportState.value == ExportState.EXPORTING && !terminalReached && pollCount++ < maxPolls) {
+            // Hang detector, NOT a wall-clock ceiling: a healthy long export
+            // (4K, software AV1/VP9, thermal throttling — which this app itself
+            // induces) can legitimately run well past 10 minutes while making
+            // steady progress. Only cancel after STALL_TIMEOUT_POLLS with no
+            // progress advance; reset the stall counter whenever progress moves.
+            val stallTimeoutPolls = 2400 // 10 minutes of NO progress at 250ms
+            var stallPolls = 0
+            var lastProgress = -1
+            while (_exportState.value == ExportState.EXPORTING && !terminalReached && stallPolls < stallTimeoutPolls) {
                 val state = transformer.getProgress(holder)
                 if (state == Transformer.PROGRESS_STATE_AVAILABLE) {
+                    if (holder.progress > lastProgress) {
+                        lastProgress = holder.progress
+                        stallPolls = 0
+                    } else {
+                        stallPolls++
+                    }
                     _exportProgress.value = holder.progress / 100f
                     onProgress(holder.progress / 100f)
+                } else {
+                    // Progress unavailable (still initializing) counts as a
+                    // stall tick so a transformer that never starts is caught.
+                    stallPolls++
                 }
                 delay(250)
             }
-            if (pollCount >= maxPolls && _exportState.value == ExportState.EXPORTING && !terminalReached) {
-                Log.w(TAG, "Export progress polling timeout after 10 minutes")
+            if (stallPolls >= stallTimeoutPolls && _exportState.value == ExportState.EXPORTING && !terminalReached) {
+                Log.w(TAG, "Export made no progress for 10 minutes — treating as a hang")
                 transformer.cancel()
-                _exportErrorMessage.value = "Export timed out after 10 minutes"
+                _exportErrorMessage.value = "Export stalled — no progress for 10 minutes"
                 _exportState.value = ExportState.ERROR
                 _exportProgress.value = 0f
                 activeExportOutputFile = null
                 outputFile.delete()
                 terminalReached = true
-                onError(Exception("Export timed out"))
+                onError(Exception("Export stalled"))
             }
             if (_exportState.value == ExportState.ERROR && !terminalReached) {
                 val message = _exportErrorMessage.value ?: "Export failed"

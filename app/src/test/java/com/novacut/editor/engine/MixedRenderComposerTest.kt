@@ -96,6 +96,22 @@ class MixedRenderComposerTest {
     }
 
     @Test
+    fun gapBetweenRuns_fallsBackToFullRenderer() {
+        // run[0] ends at 2000, run[1] begins at 3000 — concat would drop the
+        // 1s gap, so the mixed plan must decline and let the caller use the
+        // whole-timeline Transformer (which renders gaps as black).
+        val runs = listOf(
+            RenderRun(0L, 2_000L, needsReEncode = false, clipIds = listOf("a")),
+            RenderRun(3_000L, 5_000L, needsReEncode = true, clipIds = listOf("b")),
+        )
+        val plan = MixedRenderComposer.plan(runs, "gapped", "gapped.mp4")
+        assertEquals(Benefit.NoBenefit, plan.benefit)
+        assertTrue(plan.runs.isEmpty())
+        assertNull(plan.concat)
+        assertTrue(plan.issues.any { it.message.contains("gap", ignoreCase = true) })
+    }
+
+    @Test
     fun runOutputNames_encodeIndexAndEngineTag() {
         val runs = listOf(
             RenderRun(0L, 2_000L, needsReEncode = false, clipIds = listOf("a")),

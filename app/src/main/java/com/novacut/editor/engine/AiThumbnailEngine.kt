@@ -84,6 +84,10 @@ class AiThumbnailEngine @Inject constructor(
                     t += stepMs
                 }
             }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // Don't swallow cancellation into a partial result — let the
+            // cancelled job propagate.
+            throw e
         } catch (e: Exception) {
             Log.w(TAG, "thumbnail scoring failed", e)
         } finally {

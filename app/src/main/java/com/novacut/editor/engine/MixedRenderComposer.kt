@@ -135,6 +135,23 @@ object MixedRenderComposer {
             return CompositionPlan(Benefit.NoBenefit, emptyList(), null, issues)
         }
 
+        // Concat butts run outputs together with no black filler, so a gap
+        // between consecutive runs (lift delete, reordered clips) would vanish
+        // and shift everything after it earlier. The composer can't bridge a
+        // gap, so a gapped run list has no safe mixed plan — fall back to the
+        // whole-timeline Transformer, which renders gaps as black.
+        val sortedRuns = runs.sortedBy { it.startMs }
+        for (i in 1 until sortedRuns.size) {
+            if (sortedRuns[i].startMs - sortedRuns[i - 1].endMs > GAP_TOLERANCE_MS) {
+                issues += ValidationIssue(
+                    IssueSeverity.WARNING,
+                    "Timeline has a gap between runs — stream-copy concat cannot " +
+                        "preserve it. Falling back to the full renderer.",
+                )
+                return CompositionPlan(Benefit.NoBenefit, emptyList(), null, issues)
+            }
+        }
+
         val sanitisedStem = sanitiseStem(projectStem)
         val ext = if (finalExtension.startsWith('.')) finalExtension else ".$finalExtension"
 
@@ -211,4 +228,6 @@ object MixedRenderComposer {
 
     private const val MAX_STEM_CHARS = 48
     private val ALLOWED_STEM_CHARS = setOf('-', '_', '.', ' ').map { it }
+    // Sub-frame rounding tolerance for gap detection (~half a frame at 60fps).
+    private const val GAP_TOLERANCE_MS = 8L
 }

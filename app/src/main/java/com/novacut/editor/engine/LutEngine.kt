@@ -92,9 +92,20 @@ object LutEngine {
             val lines = file.readLines().filter { it.isNotBlank() && !it.startsWith("#") }
             if (lines.isEmpty()) return null
 
-            // First line may be mesh points
+            // A standard Autodesk/Lustre .3dl opens with a mesh header: N
+            // monotonically increasing integers (N = LUT size, commonly 17 or
+            // 33), e.g. "0 64 128 ... 1023". Data rows are then exactly three
+            // numbers each. Detect the header by token count > 3 (a data row
+            // has exactly 3) rather than the old heuristic, which misread both
+            // shapes: a real header (>3 tokens) was parsed as data, and a
+            // headerless first data row ("0 0 0") was skipped as a header.
             val firstParts = lines[0].trim().split("\\s+".toRegex())
-            val startIdx = if (firstParts.size <= 3 && firstParts.all { it.toIntOrNull() != null }) 1 else 0
+            val headerSize: Int? = if (firstParts.size > 3 && firstParts.all { it.toIntOrNull() != null }) {
+                firstParts.size
+            } else {
+                null
+            }
+            val startIdx = if (headerSize != null) 1 else 0
 
             // Determine scale from global max across all data lines
             var globalMax = 0f
@@ -123,13 +134,18 @@ object LutEngine {
             }
 
             val entryCount = data.size / 3
-            val size = Math.round(Math.cbrt(entryCount.toDouble())).toInt()
+            // Trust the header size when present; otherwise infer from the
+            // row count. Both must satisfy size^3 == entryCount.
+            val size = headerSize ?: Math.round(Math.cbrt(entryCount.toDouble())).toInt()
             if (size !in 2..256) {
                 Log.w("LutEngine", "3DL inferred size $size outside supported range [2..256]")
                 null
             } else if (size * size * size == entryCount) {
                 Lut3D(size, data.toFloatArray())
-            } else null
+            } else {
+                Log.w("LutEngine", "3DL size $size does not match $entryCount entries")
+                null
+            }
         } catch (e: Exception) {
             Log.w("LutEngine", "LUT parse failed", e)
             null

@@ -204,14 +204,36 @@ class StreamCopyExportEngineTest {
     @Test
     fun analyze_clipsAreSortedByTimeline() {
         // Intentionally reversed input — analyze should still produce ranges
-        // in timeline order so concat runs them in monotonic time.
-        val c1 = baseClip().copy(trimStartMs = 0L, trimEndMs = 1_000L, timelineStartMs = 2_000L)
+        // in timeline order so concat runs them in monotonic time. Clips abut
+        // (c2 ends at 1000 where c1 begins) so there is no gap to disqualify.
+        val c1 = baseClip().copy(trimStartMs = 0L, trimEndMs = 1_000L, timelineStartMs = 1_000L)
         val c2 = baseClip().copy(trimStartMs = 2_000L, trimEndMs = 3_000L, timelineStartMs = 0L)
         val result = engine.analyze(listOf(videoTrack(c1, c2)), false)
-        assertTrue(result.eligible)
+        assertTrue("abutting reversed clips should be eligible: ${result.reason}", result.eligible)
         // c2 comes first because its timelineStartMs is earlier.
         assertEquals(2_000L, result.ranges[0].startMs)
         assertEquals(0L, result.ranges[1].startMs)
+    }
+
+    @Test
+    fun analyze_gapBetweenClipsDisqualifies() {
+        // c1 ends at 2000, c2 begins at 3000 — concat would drop the 1s gap
+        // and shift c2 earlier, so stream-copy must fall back to the renderer.
+        val c1 = baseClip().copy(trimStartMs = 0L, trimEndMs = 2_000L, timelineStartMs = 0L)
+        val c2 = baseClip().copy(trimStartMs = 3_000L, trimEndMs = 5_000L, timelineStartMs = 3_000L)
+        val result = engine.analyze(listOf(videoTrack(c1, c2)), false)
+        assertFalse(result.eligible)
+        assertEquals("timeline gap between clips", result.reason)
+    }
+
+    @Test
+    fun analyze_leadingGapDisqualifies() {
+        // Single clip that starts at 1s (black lead-in) — concat/trim would
+        // drop the lead-in and start the output at 0.
+        val clip = baseClip().copy(trimStartMs = 0L, trimEndMs = 2_000L, timelineStartMs = 1_000L)
+        val result = engine.analyze(listOf(videoTrack(clip)), false)
+        assertFalse(result.eligible)
+        assertEquals("leading timeline gap", result.reason)
     }
 
     // --- fixtures ---

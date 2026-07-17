@@ -2,6 +2,8 @@ package com.novacut.editor.engine
 
 import android.content.Context
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -175,11 +177,24 @@ class ProxyEngine @Inject constructor(
                 )
 
                 cont.invokeOnCancellation {
-                    transformer.cancel()
-                    outFile.delete()
-                    proxyMap.remove(key)
+                    // invokeOnCancellation runs on whichever thread triggers
+                    // cancellation (e.g. WorkManager's executor when a
+                    // CoroutineWorker is stopped mid-transcode). Media3
+                    // Transformer.cancel() must run on its application thread
+                    // (main) or it throws IllegalStateException — and an
+                    // exception inside a cancellation handler crashes the
+                    // process. Post it to the main looper.
+                    Handler(Looper.getMainLooper()).post {
+                        runCatching { transformer.cancel() }
+                        outFile.delete()
+                        proxyMap.remove(key)
+                    }
                 }
             }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // Preserve structured cancellation — don't mask it as a null result.
+            proxyMap.remove(key)
+            throw e
         } catch (e: Exception) {
             Log.e("ProxyEngine", "Proxy generation error", e)
             proxyMap.remove(key)
