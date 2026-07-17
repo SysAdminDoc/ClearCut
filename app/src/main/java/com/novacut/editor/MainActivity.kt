@@ -67,7 +67,14 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             window.isNavigationBarContrastEnforced = false
         }
-        handleIncomingIntent(intent)
+        // Only parse the launch intent on a genuinely fresh start. Without
+        // this, sharing media into ClearCut, then returning via Recents after
+        // the process was killed, re-delivers the original SEND intent and
+        // re-imports it into a DUPLICATE project (and duplicate managed-media
+        // copies). onNewIntent still handles live re-delivery.
+        if (shouldProcessLaunchIntent(savedInstanceState, intent)) {
+            handleIncomingIntent(intent)
+        }
 
         setContent {
             val settings by settingsRepository.settings.collectAsStateWithLifecycle(initialValue = AppSettings())
@@ -172,6 +179,9 @@ class MainActivity : ComponentActivity() {
         handleIncomingIntent(intent)
     }
 
+    private fun shouldProcessLaunchIntent(savedInstanceState: Bundle?, intent: Intent?): Boolean =
+        shouldProcessLaunchIntent(savedInstanceState != null, intent?.flags ?: 0)
+
     private fun handleIncomingIntent(intent: Intent?) {
         if (intent == null) return
         when (intent.action) {
@@ -275,3 +285,14 @@ private data class PendingEditorOpen(
     val projectId: String,
     val expectRecovery: Boolean,
 )
+
+/**
+ * The launch intent should be parsed only on a genuinely fresh start:
+ * not after an Activity recreation (state was already handled) and not when
+ * relaunched from Recents (`FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY`), where the
+ * original SEND intent is re-delivered and would re-import a duplicate.
+ */
+internal fun shouldProcessLaunchIntent(isRecreation: Boolean, intentFlags: Int): Boolean {
+    if (isRecreation) return false
+    return (intentFlags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) == 0
+}
