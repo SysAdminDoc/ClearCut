@@ -11,7 +11,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 FASTLANE = ROOT / "fastlane" / "metadata" / "android" / "en-US"
-WORKFLOW = ROOT / ".github" / "workflows" / "build.yml"
 
 
 class DistributionError(RuntimeError):
@@ -119,23 +118,10 @@ def verify_latest_changelog(root: Path = ROOT) -> None:
         raise DistributionError(f"{rel(changelog)} is {len(text)} characters, expected <= 500")
 
 
-def verify_workflow(root: Path = ROOT) -> None:
-    workflow = read_text(root / WORKFLOW.relative_to(ROOT))
-    for required in (
-        "scripts/validate_distribution_readiness.py --self-test",
-        "scripts/validate_distribution_readiness.py",
-        "scripts/write_release_checksums.py --check",
-        "app/build/outputs/apk/release/*.sha256",
-    ):
-        if required not in workflow:
-            raise DistributionError(f"{rel(root / WORKFLOW.relative_to(ROOT))} is missing {required}")
-
-
 def validate(root: Path = ROOT) -> None:
     verify_readme(root)
     verify_fastlane(root)
     verify_latest_changelog(root)
-    verify_workflow(root)
 
 
 def write_fixture(root: Path, relative: str, text: str) -> None:
@@ -144,7 +130,7 @@ def write_fixture(root: Path, relative: str, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
-def write_minimal_repo(root: Path, readme: str, full_description: str, workflow: str) -> None:
+def write_minimal_repo(root: Path, readme: str, full_description: str) -> None:
     write_fixture(
         root,
         "app/build.gradle.kts",
@@ -159,7 +145,6 @@ def write_minimal_repo(root: Path, readme: str, full_description: str, workflow:
     )
     write_fixture(root, "fastlane/metadata/android/en-US/full_description.txt", full_description)
     write_fixture(root, "fastlane/metadata/android/en-US/changelogs/200.txt", "- Distribution readiness gate\n")
-    write_fixture(root, ".github/workflows/build.yml", workflow)
 
 
 def run_self_tests() -> None:
@@ -173,21 +158,14 @@ def run_self_tests() -> None:
         "Distribution status: GitHub Releases carry direct APK builds. Google Play metadata is ready. "
         "F-Droid metadata is present, but verified-developer registration is not complete."
     )
-    valid_workflow = (
-        "python3 scripts/validate_distribution_readiness.py --self-test\n"
-        "python3 scripts/validate_distribution_readiness.py\n"
-        "python3 scripts/write_release_checksums.py --check\n"
-        "app/build/outputs/apk/release/*.sha256\n"
-    )
-
     with tempfile.TemporaryDirectory() as temp:
         root = Path(temp)
-        write_minimal_repo(root, valid_readme, valid_full, valid_workflow)
+        write_minimal_repo(root, valid_readme, valid_full)
         validate(root)
 
     with tempfile.TemporaryDirectory() as temp:
         root = Path(temp)
-        write_minimal_repo(root, "F-Droid release is live.", valid_full, valid_workflow)
+        write_minimal_repo(root, "F-Droid release is live.", valid_full)
         try:
             validate(root)
         except DistributionError:
@@ -197,13 +175,13 @@ def run_self_tests() -> None:
 
     with tempfile.TemporaryDirectory() as temp:
         root = Path(temp)
-        write_minimal_repo(root, valid_readme, valid_full, "python3 scripts/write_release_checksums.py --check\n")
+        write_minimal_repo(root, "GitHub Releases are the direct APK channel.", valid_full)
         try:
             validate(root)
         except DistributionError:
             pass
         else:
-            raise DistributionError("self-test expected missing workflow gate to fail")
+            raise DistributionError("self-test expected incomplete README distribution copy to fail")
 
 
 def main() -> int:

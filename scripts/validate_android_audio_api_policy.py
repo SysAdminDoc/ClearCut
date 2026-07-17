@@ -11,7 +11,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "app" / "src" / "main" / "AndroidManifest.xml"
-WORKFLOW = ROOT / ".github" / "workflows" / "build.yml"
 
 
 class AudioPolicyError(RuntimeError):
@@ -108,22 +107,11 @@ def verify_documented_smoke(root: Path = ROOT) -> None:
         raise AudioPolicyError(f"README.md is missing Android 17 audio hardening smoke term(s): {', '.join(missing)}")
 
 
-def verify_workflow(root: Path = ROOT) -> None:
-    workflow = read_text(root / WORKFLOW.relative_to(ROOT))
-    for required in (
-        "scripts/validate_android_audio_api_policy.py --self-test",
-        "scripts/validate_android_audio_api_policy.py",
-    ):
-        if required not in workflow:
-            raise AudioPolicyError(f"{rel(root / WORKFLOW.relative_to(ROOT))} is missing {required}")
-
-
 def validate(root: Path = ROOT) -> None:
     verify_export_service_has_no_background_audio(root)
     verify_manifest_foreground_service_type(root)
     verify_visible_audio_paths_request_focus(root)
     verify_documented_smoke(root)
-    verify_workflow(root)
 
 
 def write_fixture(root: Path, relative: str, text: str) -> None:
@@ -166,12 +154,6 @@ def write_valid_fixture(root: Path, export_service: str = "class ExportService {
         "README.md",
         "Android 17 audio hardening: run `adb shell cmd audio set-enable-hardening throw`, "
         "then exercise TTS preview, voiceover, and export while watching AudioHardening logs.\n",
-    )
-    write_fixture(
-        root,
-        ".github/workflows/build.yml",
-        "python3 scripts/validate_android_audio_api_policy.py --self-test\n"
-        "python3 scripts/validate_android_audio_api_policy.py\n",
     )
 
 

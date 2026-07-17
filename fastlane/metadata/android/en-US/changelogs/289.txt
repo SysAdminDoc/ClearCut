@@ -1,0 +1,3 @@
+App version labels now come from a single Gradle source, so the About screen, exports, and APK metadata can never disagree.
+Release verification runs entirely locally: APK checksums, signing fingerprints, 16 KB native alignment, size budget, and store listing checks.
+Project archive imports are storage safe, rejecting oversized or malformed archives before extraction.

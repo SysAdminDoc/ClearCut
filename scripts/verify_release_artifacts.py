@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
-"""
-Validate ClearCut release inputs and generated APK metadata.
-
-This script intentionally uses only repository files plus AGP output metadata
-so CI does not rely on local-only signing files or workstation state.
-"""
+"""Validate ClearCut release inputs, generated APKs, and local trust sidecars."""
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import re
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
-
 
 ROOT = Path(__file__).resolve().parents[1]
 APK_ROOT = ROOT / "app" / "build" / "outputs" / "apk"
@@ -104,8 +101,164 @@ def verify_android_test_apk() -> Path:
     return apk_path
 
 
+def run_python_script(*args: str) -> None:
+    command = [sys.executable, str(ROOT / "scripts" / args[0]), *args[1:]]
+    result = subprocess.run(
+        command,
+        cwd=ROOT,
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    if result.returncode != 0:
+        output = result.stdout.strip()
+        detail = f": {output}" if output else ""
+        raise VerificationError(f"{' '.join(command)} failed{detail}")
+    output = result.stdout.strip()
+    if output:
+        print(output)
+
+
+def verify_local_trust_controls(apks: list[Path]) -> None:
+    run_python_script("write_release_checksums.py", "--root", str(APK_ROOT), "--check")
+    run_python_script("write_apk_signing_fingerprints.py", "--root", str(APK_ROOT), "--check")
+    run_python_script("check_apk_size.py")
+    run_python_script("validate_play_listing_assets.py", "--quiet")
+    run_python_script("validate_distribution_readiness.py")
+    for apk in apks:
+        run_python_script("check_16kb_alignment.py", str(apk))
+
+
+def write_fixture(root: Path, relative: str, content: str | bytes) -> Path:
+    path = root / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if isinstance(content, bytes):
+        path.write_bytes(content)
+    else:
+        path.write_text(content, encoding="utf-8")
+    return path
+
+
+def write_output_metadata(root: Path, variant: str, apk_name: str, version_code: int, version_name: str) -> Path:
+    write_fixture(root, f"app/build/outputs/apk/{variant}/{apk_name}", b"placeholder-apk")
+    write_fixture(
+        root,
+        f"app/build/outputs/apk/{variant}/output-metadata.json",
+        json.dumps(
+            {
+                "elements": [
+                    {
+                        "versionCode": version_code,
+                        "versionName": version_name,
+                        "outputFile": apk_name,
+                    }
+                ]
+            }
+        ),
+    )
+    return root / "app" / "build" / "outputs" / "apk" / variant / apk_name
+
+
+def run_self_tests() -> None:
+    original_root = ROOT
+    original_apk_root = APK_ROOT
+    original_runner = run_python_script
+
+    with tempfile.TemporaryDirectory() as temp:
+        root = Path(temp)
+        try:
+            globals()["ROOT"] = root
+            globals()["APK_ROOT"] = root / "app" / "build" / "outputs" / "apk"
+
+            version_code = 242
+            version_name = "3.74.109"
+            write_fixture(root, "app/build.gradle.kts", f'versionCode = {version_code}\nversionName = "{version_name}"\n')
+            version_strings = write_fixture(
+                root,
+                "app/src/main/res/values/strings.xml",
+                '<resources><string name="app_name">ClearCut</string></resources>\n',
+            )
+            write_fixture(
+                root,
+                "ROADMAP.md",
+                f"Current version: **v{version_name}** (`versionCode` {version_code})\n",
+            )
+            write_fixture(
+                root,
+                "CHANGELOG.md",
+                f"# Changelog\n\n## Unreleased\n\n## v{version_name} - 2026-06-30\n",
+            )
+            write_fixture(root, ".gitignore", "keystore.properties\n*.jks\n*.keystore\n")
+
+            debug_apk = write_output_metadata(root, "debug", "app-debug.apk", version_code, version_name)
+            release_apk = write_output_metadata(root, "release", "app-release.apk", version_code, version_name)
+            test_apk = write_output_metadata(
+                root,
+                "androidTest/debug",
+                "app-debug-androidTest.apk",
+                version_code,
+                version_name,
+            )
+
+            parsed_code, parsed_name = parse_gradle_version()
+            if (parsed_code, parsed_name) != (version_code, version_name):
+                raise VerificationError("self-test version parsing mismatch")
+            verify_repository_metadata(parsed_code, parsed_name)
+            outputs = [
+                verify_variant_apk("debug", version_code, version_name),
+                verify_variant_apk("release", version_code, version_name),
+                verify_android_test_apk(),
+            ]
+            if outputs != [debug_apk, release_apk, test_apk]:
+                raise VerificationError("self-test APK output discovery mismatch")
+
+            version_strings.write_text(
+                '<resources><string name="app_version">v3.74.108</string></resources>\n',
+                encoding="utf-8",
+            )
+            try:
+                verify_repository_metadata(version_code, version_name)
+            except VerificationError:
+                pass
+            else:
+                raise VerificationError("self-test expected stale duplicate runtime version to fail")
+            version_strings.write_text('<resources/>\n', encoding="utf-8")
+
+            calls: list[tuple[str, ...]] = []
+
+            def capture_runner(*args: str) -> None:
+                calls.append(args)
+
+            globals()["run_python_script"] = capture_runner
+            verify_local_trust_controls([debug_apk, release_apk, test_apk])
+            expected = [
+                ("write_release_checksums.py", "--root", str(APK_ROOT), "--check"),
+                ("write_apk_signing_fingerprints.py", "--root", str(APK_ROOT), "--check"),
+                ("check_apk_size.py",),
+                ("validate_play_listing_assets.py", "--quiet"),
+                ("validate_distribution_readiness.py",),
+                ("check_16kb_alignment.py", str(debug_apk)),
+                ("check_16kb_alignment.py", str(release_apk)),
+                ("check_16kb_alignment.py", str(test_apk)),
+            ]
+            if calls != expected:
+                raise VerificationError(f"self-test local trust command mismatch: {calls!r}")
+        finally:
+            globals()["ROOT"] = original_root
+            globals()["APK_ROOT"] = original_apk_root
+            globals()["run_python_script"] = original_runner
+
+
 def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--self-test", action="store_true", help="run built-in fixture checks")
+    args = parser.parse_args()
     try:
+        if args.self_test:
+            run_self_tests()
+            print("release artifact verifier self-tests passed.")
+            return 0
         version_code, version_name = parse_gradle_version()
         verify_repository_metadata(version_code, version_name)
         verify_github_tag(version_name)
@@ -114,11 +267,12 @@ def main() -> int:
             verify_variant_apk("release", version_code, version_name),
             verify_android_test_apk(),
         ]
+        verify_local_trust_controls(outputs)
     except VerificationError as error:
         print(f"release verification failed: {error}", file=sys.stderr)
         return 1
 
-    print(f"ClearCut v{version_name} (versionCode {version_code}) release metadata verified.")
+    print(f"ClearCut v{version_name} (versionCode {version_code}) local release trust verified.")
     for apk in outputs:
         print(f"  - {apk.relative_to(ROOT)} ({apk.stat().st_size} bytes)")
     return 0

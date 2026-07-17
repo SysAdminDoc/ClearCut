@@ -33,6 +33,7 @@ from __future__ import annotations
 import os
 import struct
 import sys
+import tempfile
 import zipfile
 from pathlib import Path
 from typing import Iterable, Iterator, NamedTuple
@@ -194,7 +195,52 @@ def check(target: Path) -> int:
     return 0
 
 
+def _minimal_elf64(load_alignment: int) -> bytes:
+    header = bytearray(64)
+    header[0:4] = b"\x7fELF"
+    header[4] = 2
+    header[5] = 1
+    struct.pack_into("<H", header, 18, 62)
+    struct.pack_into("<Q", header, 32, 64)
+    struct.pack_into("<H", header, 52, 64)
+    struct.pack_into("<H", header, 54, 56)
+    struct.pack_into("<H", header, 56, 1)
+
+    program_header = bytearray(56)
+    struct.pack_into("<I", program_header, 0, PT_LOAD)
+    struct.pack_into("<I", program_header, 4, 5)
+    struct.pack_into("<Q", program_header, 8, 0)
+    struct.pack_into("<Q", program_header, 16, 0)
+    struct.pack_into("<Q", program_header, 32, 1)
+    struct.pack_into("<Q", program_header, 40, 1)
+    struct.pack_into("<Q", program_header, 48, load_alignment)
+    return bytes(header + program_header + b"\0")
+
+
+def run_self_tests() -> None:
+    aligned = list(_read_elf_load_segments(_minimal_elf64(REQUIRED_ALIGNMENT)))
+    if len(aligned) != 1 or aligned[0].align != REQUIRED_ALIGNMENT:
+        raise AssertionError("self-test failed to parse aligned ELF segment")
+
+    with tempfile.TemporaryDirectory() as temp:
+        root = Path(temp)
+        ok_apk = root / "ok.apk"
+        bad_apk = root / "bad.apk"
+        with zipfile.ZipFile(ok_apk, "w") as zf:
+            zf.writestr("lib/arm64-v8a/libok.so", _minimal_elf64(REQUIRED_ALIGNMENT))
+        with zipfile.ZipFile(bad_apk, "w") as zf:
+            zf.writestr("lib/arm64-v8a/libbad.so", _minimal_elf64(0x1000))
+        if check(ok_apk) != 0:
+            raise AssertionError("self-test expected aligned APK to pass")
+        if check(bad_apk) == 0:
+            raise AssertionError("self-test expected misaligned APK to fail")
+
+
 def main(argv: list[str]) -> int:
+    if len(argv) == 2 and argv[1] == "--self-test":
+        run_self_tests()
+        print("16 KB alignment self-tests passed.")
+        return 0
     if len(argv) != 2:
         print(__doc__)
         return 2
