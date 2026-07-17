@@ -2071,6 +2071,7 @@ class EditorViewModel @Inject constructor(
     fun showColorGrading() = colorGradingDelegate.showColorGrading()
     fun hideColorGrading() = colorGradingDelegate.hideColorGrading()
     fun beginColorGradeAdjust() = colorGradingDelegate.beginColorGradeAdjust()
+    fun endColorGradeAdjust() = colorGradingDelegate.endColorGradeAdjust()
     fun updateClipColorGrade(colorGrade: ColorGrade) = colorGradingDelegate.updateClipColorGrade(colorGrade)
     // showLutPicker exposed via getter above (line 333)
     fun importLut() = colorGradingDelegate.importLut()
@@ -2106,7 +2107,28 @@ class EditorViewModel @Inject constructor(
     }
 
     fun updateClipKeyframes(keyframes: List<Keyframe>) {
+        if (_state.value.selectedClipId == null) return
+        // One-shot commit path (preset gallery): a Ken Burns/Shake/Spin apply
+        // is a real timeline mutation and must be individually undoable.
+        saveUndoState("Edit keyframes")
         updateSelectedClip { it.copy(keyframes = keyframes) }
+        saveProject()
+    }
+
+    // Gesture-scoped keyframe editing: one undo entry per drag, one save at
+    // release. Per-pointer-frame undo pushes were evicting the entire
+    // 50-entry undo stack in a single handle drag.
+    fun beginKeyframeAdjust() {
+        if (_state.value.selectedClipId == null) return
+        saveUndoState("Move keyframe")
+    }
+
+    fun updateClipKeyframesDuringGesture(keyframes: List<Keyframe>) {
+        if (_state.value.selectedClipId == null) return
+        updateSelectedClip { it.copy(keyframes = keyframes) }
+    }
+
+    fun endKeyframeAdjust() {
         saveProject()
     }
 
@@ -2137,6 +2159,25 @@ class EditorViewModel @Inject constructor(
         if (_state.value.selectedClipId == null) return
         saveUndoState("Speed curve")
         updateSelectedClip { it.copy(speedCurve = speedCurve) }
+        rebuildPlayerTimeline()
+        saveProject()
+    }
+
+    // Gesture-scoped speed-curve editing. The canvas drag previously routed
+    // every pointer frame through setClipSpeedCurve — an undo push, a full
+    // Media3 composition rebuild, and a Room save per frame, violating the
+    // "rebuild at gesture end" contract the speed slider already follows.
+    fun beginSpeedCurveAdjust() {
+        if (_state.value.selectedClipId == null) return
+        saveUndoState("Speed curve")
+    }
+
+    fun updateClipSpeedCurveDuringGesture(speedCurve: SpeedCurve?) {
+        if (_state.value.selectedClipId == null) return
+        updateSelectedClip { it.copy(speedCurve = speedCurve) }
+    }
+
+    fun endSpeedCurveAdjust() {
         rebuildPlayerTimeline()
         saveProject()
     }

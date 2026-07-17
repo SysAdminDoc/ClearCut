@@ -99,6 +99,7 @@ fun BoxScope.EditorClipAdjustmentPanelHost(
                 colorGrade = clip?.colorGrade ?: ColorGrade(),
                 onColorGradeChanged = viewModel::updateClipColorGrade,
                 onDragStarted = viewModel::beginColorGradeAdjust,
+                onDragEnded = viewModel::endColorGradeAdjust,
                 onLutImport = viewModel::importLut,
                 onClose = viewModel::hideColorGrading
             )
@@ -148,6 +149,9 @@ fun BoxScope.EditorClipAdjustmentPanelHost(
                 playheadMs = (playheadMs - clip.timelineStartMs).coerceAtLeast(0L),
                 activeProperties = state.activeKeyframeProperties,
                 onKeyframesChanged = viewModel::updateClipKeyframes,
+                onKeyframeDragStarted = viewModel::beginKeyframeAdjust,
+                onKeyframesDragged = viewModel::updateClipKeyframesDuringGesture,
+                onKeyframeDragEnded = viewModel::endKeyframeAdjust,
                 onPropertyToggled = viewModel::toggleKeyframeProperty,
                 onAddKeyframe = viewModel::addKeyframe,
                 onDeleteKeyframe = viewModel::deleteKeyframe,
@@ -175,6 +179,9 @@ fun BoxScope.EditorClipAdjustmentPanelHost(
                     constantSpeed = clip.speed,
                     clipDurationMs = clip.durationMs,
                     onSpeedCurveChanged = viewModel::setClipSpeedCurve,
+                    onCurveDragStarted = viewModel::beginSpeedCurveAdjust,
+                    onCurveDragChanged = viewModel::updateClipSpeedCurveDuringGesture,
+                    onCurveDragEnded = viewModel::endSpeedCurveAdjust,
                     onConstantSpeedChanged = { speed ->
                         state.selectedClipId?.let { viewModel.setClipSpeed(it, speed) }
                     },

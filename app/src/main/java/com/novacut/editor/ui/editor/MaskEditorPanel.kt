@@ -51,6 +51,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -709,15 +710,21 @@ fun MaskPreviewOverlay(
 ) {
     val drawingPoints = remember { mutableStateListOf<Offset>() }
     var draggedPointIndex by remember { mutableIntStateOf(-1) }
+    // The gesture coroutine launches once per selection; `masks` captured at
+    // launch would be a stale snapshot — after the first handle move, every
+    // later onDragStart hit-tested against the point's ORIGINAL position, so
+    // grabbing a handle where it is drawn silently failed.
+    val currentMasks by rememberUpdatedState(masks)
 
     Canvas(
         modifier = modifier
             .fillMaxSize()
             .pointerInput(selectedMaskId) {
                 if (selectedMaskId == null) return@pointerInput
-                val mask = masks.find { it.id == selectedMaskId } ?: return@pointerInput
+                val maskType = currentMasks.find { it.id == selectedMaskId }?.type
+                    ?: return@pointerInput
 
-                if (mask.type == MaskType.FREEHAND) {
+                if (maskType == MaskType.FREEHAND) {
                     detectDragGestures(
                         onDragStart = { drawingPoints.clear() },
                         onDrag = { change, _ ->
@@ -734,6 +741,8 @@ fun MaskPreviewOverlay(
                 } else {
                     detectDragGestures(
                         onDragStart = { startOffset ->
+                            val mask = currentMasks.find { it.id == selectedMaskId }
+                                ?: return@detectDragGestures
                             val hitRadius = 30f
                             var bestIdx = -1
                             var bestDist = Float.MAX_VALUE
@@ -752,7 +761,8 @@ fun MaskPreviewOverlay(
                         }
                     ) { change, _ ->
                         val idx = draggedPointIndex
-                        if (idx >= 0 && idx < mask.points.size) {
+                        val mask = currentMasks.find { it.id == selectedMaskId }
+                        if (mask != null && idx >= 0 && idx < mask.points.size) {
                             onMaskPointMoved(
                                 selectedMaskId,
                                 idx,

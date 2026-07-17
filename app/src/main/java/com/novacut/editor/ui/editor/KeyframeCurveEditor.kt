@@ -34,6 +34,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -89,7 +90,13 @@ fun KeyframeCurveEditor(
     onAddKeyframe: (KeyframeProperty, Long, Float) -> Unit,
     onDeleteKeyframe: (Keyframe) -> Unit,
     onClose: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // Gesture-scoped drag commit: started captures one undo entry, dragged
+    // updates state only, ended persists once. Defaults preserve the
+    // one-shot behavior for callers that don't wire them.
+    onKeyframeDragStarted: () -> Unit = {},
+    onKeyframesDragged: (List<Keyframe>) -> Unit = onKeyframesChanged,
+    onKeyframeDragEnded: () -> Unit = {}
 ) {
     val semanticColors = LocalClearCutColors.current
     var selectedKeyframe by remember { mutableStateOf<Keyframe?>(null) }
@@ -326,13 +333,21 @@ fun KeyframeCurveEditor(
                         val updated = keyframes.toMutableList()
                         val index = updated.indexOf(keyframe)
                         if (index >= 0) {
-                            updated[index] = keyframe.copy(
+                            val moved = keyframe.copy(
                                 timeOffsetMs = newTime.coerceIn(0L, clipDurationMs),
                                 value = newValue
                             )
-                            onKeyframesChanged(updated)
+                            updated[index] = moved
+                            // Keep selection tracking the moved keyframe —
+                            // Keyframe has no id, so the stale pre-move value
+                            // would otherwise be pruned on the next list emit
+                            // and the drag would deselect itself.
+                            selectedKeyframe = moved
+                            onKeyframesDragged(updated)
                         }
                     },
+                    onDragStarted = onKeyframeDragStarted,
+                    onDragEnded = onKeyframeDragEnded,
                     onAddKeyframe = onAddKeyframe,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -551,53 +566,91 @@ private fun CurveCanvas(
     onKeyframeSelected: (Keyframe?) -> Unit,
     onKeyframeMoved: (Keyframe, Long, Float) -> Unit,
     onAddKeyframe: (KeyframeProperty, Long, Float) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onDragStarted: () -> Unit = {},
+    onDragEnded: () -> Unit = {}
 ) {
     val semanticColors = LocalClearCutColors.current
     if (clipDurationMs <= 0L) return
 
+    // pointerInput must NOT key on the state the gesture mutates: every move
+    // recomposes with a new keyframes list, which would cancel and relaunch
+    // the gesture coroutine mid-drag (the relaunched detector then waits for
+    // a new press that never comes). Same idiom as SpeedCurveCanvas.
+    val currentKeyframes by rememberUpdatedState(keyframes)
+    val currentActiveProperties by rememberUpdatedState(activeProperties)
+    val currentSelectedKeyframe by rememberUpdatedState(selectedKeyframe)
+    val currentOnKeyframeSelected by rememberUpdatedState(onKeyframeSelected)
+    val currentOnKeyframeMoved by rememberUpdatedState(onKeyframeMoved)
+    val currentOnAddKeyframe by rememberUpdatedState(onAddKeyframe)
+    val currentOnDragStarted by rememberUpdatedState(onDragStarted)
+    val currentOnDragEnded by rememberUpdatedState(onDragEnded)
+
+    fun androidx.compose.ui.input.pointer.PointerInputScope.hitTestKeyframe(
+        offset: Offset
+    ): Keyframe? {
+        val hitRadius = 20f
+        var nearest: Keyframe? = null
+        var nearestDistance = Float.MAX_VALUE
+        for (keyframe in currentKeyframes) {
+            if (keyframe.property !in currentActiveProperties) continue
+            val x = (keyframe.timeOffsetMs.toFloat() / clipDurationMs) * size.width
+            val range = getPropertyRange(keyframe.property)
+            val y = (1f - (keyframe.value - range.first) / (range.second - range.first)) * size.height
+            val distance = kotlin.math.sqrt(
+                (offset.x - x) * (offset.x - x) + (offset.y - y) * (offset.y - y)
+            )
+            if (distance < hitRadius && distance < nearestDistance) {
+                nearest = keyframe
+                nearestDistance = distance
+            }
+        }
+        return nearest
+    }
+
     androidx.compose.foundation.Canvas(
         modifier = modifier
-            .pointerInput(keyframes, activeProperties) {
+            .pointerInput(Unit) {
                 detectTapGestures(
                     onTap = { offset ->
-                        val hitRadius = 20f
-                        var nearest: Keyframe? = null
-                        var nearestDistance = Float.MAX_VALUE
-
-                        for (keyframe in keyframes) {
-                            if (keyframe.property !in activeProperties) continue
-                            val x = (keyframe.timeOffsetMs.toFloat() / clipDurationMs) * size.width
-                            val range = getPropertyRange(keyframe.property)
-                            val y = (1f - (keyframe.value - range.first) / (range.second - range.first)) * size.height
-                            val distance = kotlin.math.sqrt(
-                                (offset.x - x) * (offset.x - x) + (offset.y - y) * (offset.y - y)
-                            )
-                            if (distance < hitRadius && distance < nearestDistance) {
-                                nearest = keyframe
-                                nearestDistance = distance
-                            }
-                        }
-
-                        onKeyframeSelected(nearest)
+                        currentOnKeyframeSelected(hitTestKeyframe(offset))
                     },
                     onDoubleTap = { offset ->
-                        val firstActive = activeProperties.firstOrNull() ?: return@detectTapGestures
+                        val firstActive = currentActiveProperties.firstOrNull() ?: return@detectTapGestures
                         val time = (offset.x / size.width * clipDurationMs).toLong()
                         val range = getPropertyRange(firstActive)
                         val value = range.first + (1f - offset.y / size.height) * (range.second - range.first)
-                        onAddKeyframe(firstActive, time, value)
+                        currentOnAddKeyframe(firstActive, time, value)
                     }
                 )
             }
-            .pointerInput(keyframes, activeProperties, selectedKeyframe) {
-                detectDragGestures { change, _ ->
-                    val keyframe = selectedKeyframe ?: return@detectDragGestures
-                    val time = (change.position.x / size.width * clipDurationMs).toLong()
-                    val range = getPropertyRange(keyframe.property)
-                    val value = range.first + (1f - change.position.y / size.height) * (range.second - range.first)
-                    onKeyframeMoved(keyframe, time, value.coerceIn(range.first, range.second))
-                }
+            .pointerInput(Unit) {
+                var dragging = false
+                detectDragGestures(
+                    onDragStart = { offset ->
+                        // Allow grabbing a handle directly without a prior tap.
+                        hitTestKeyframe(offset)?.let { currentOnKeyframeSelected(it) }
+                        dragging = hitTestKeyframe(offset) != null || currentSelectedKeyframe != null
+                        if (dragging) currentOnDragStarted()
+                    },
+                    onDrag = { change, _ ->
+                        val keyframe = currentSelectedKeyframe ?: return@detectDragGestures
+                        val time = (change.position.x / size.width * clipDurationMs).toLong()
+                        val range = getPropertyRange(keyframe.property)
+                        val value = range.first + (1f - change.position.y / size.height) * (range.second - range.first)
+                        currentOnKeyframeMoved(keyframe, time, value.coerceIn(range.first, range.second))
+                    },
+                    onDragEnd = {
+                        if (dragging) currentOnDragEnded()
+                        dragging = false
+                    },
+                    onDragCancel = {
+                        // Commit what was applied — state already reflects the
+                        // partial drag and the undo entry restores pre-drag.
+                        if (dragging) currentOnDragEnded()
+                        dragging = false
+                    }
+                )
             }
     ) {
         val width = size.width

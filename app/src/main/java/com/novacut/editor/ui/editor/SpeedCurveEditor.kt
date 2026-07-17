@@ -79,7 +79,13 @@ fun SpeedCurveEditor(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
     onSpeedDragStarted: () -> Unit = {},
-    onSpeedDragEnded: () -> Unit = {}
+    onSpeedDragEnded: () -> Unit = {},
+    // Gesture-scoped canvas drag: started captures one undo entry, changed
+    // updates state only, ended rebuilds the preview and saves once.
+    // Defaults preserve one-shot behavior for callers that don't wire them.
+    onCurveDragStarted: () -> Unit = {},
+    onCurveDragChanged: (SpeedCurve) -> Unit = { onSpeedCurveChanged(it) },
+    onCurveDragEnded: () -> Unit = {}
 ) {
     val semanticColors = LocalClearCutColors.current
     var curveMode by remember { mutableStateOf(speedCurve != null) }
@@ -268,6 +274,9 @@ fun SpeedCurveEditor(
                 SpeedCurveCanvas(
                     curve = activeCurve,
                     onCurveChanged = { onSpeedCurveChanged(it) },
+                    onDragStarted = onCurveDragStarted,
+                    onDragChanged = onCurveDragChanged,
+                    onDragEnded = onCurveDragEnded,
                     selectedIndex = selectedCurvePointIndex,
                     onPointSelected = { selectedCurvePointIndex = it },
                     modifier = Modifier
@@ -550,7 +559,10 @@ private fun SpeedCurveCanvas(
     onCurveChanged: (SpeedCurve) -> Unit,
     selectedIndex: Int = -1,
     onPointSelected: (Int) -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onDragStarted: () -> Unit = {},
+    onDragChanged: (SpeedCurve) -> Unit = onCurveChanged,
+    onDragEnded: () -> Unit = {}
 ) {
     var dragPointIndex by remember { mutableIntStateOf(-1) }
     val maxSpeed = 8f
@@ -558,6 +570,9 @@ private fun SpeedCurveCanvas(
     val currentCurve by rememberUpdatedState(curve)
     val currentOnCurveChanged by rememberUpdatedState(onCurveChanged)
     val currentOnPointSelected by rememberUpdatedState(onPointSelected)
+    val currentOnDragStarted by rememberUpdatedState(onDragStarted)
+    val currentOnDragChanged by rememberUpdatedState(onDragChanged)
+    val currentOnDragEnded by rememberUpdatedState(onDragEnded)
 
     val canvasDescription = stringResource(R.string.speed_curve_canvas_cd)
     androidx.compose.foundation.Canvas(
@@ -611,6 +626,7 @@ private fun SpeedCurveCanvas(
                             }
                         }
                         dragPointIndex = bestIdx
+                        if (bestIdx >= 0) currentOnDragStarted()
                     },
                     onDrag = { change, _ ->
                         if (dragPointIndex in currentCurve.points.indices) {
@@ -620,10 +636,19 @@ private fun SpeedCurveCanvas(
                                 .coerceIn(minSpeed, maxSpeed)
                             val newPoints = currentCurve.points.toMutableList()
                             newPoints[dragPointIndex] = newPoints[dragPointIndex].copy(position = position, speed = speed)
-                            currentOnCurveChanged(SpeedCurve(newPoints))
+                            currentOnDragChanged(SpeedCurve(newPoints))
                         }
                     },
-                    onDragEnd = { dragPointIndex = -1 }
+                    onDragEnd = {
+                        if (dragPointIndex >= 0) currentOnDragEnded()
+                        dragPointIndex = -1
+                    },
+                    onDragCancel = {
+                        // State already reflects the partial drag; commit so
+                        // the rebuild/save runs, and undo restores pre-drag.
+                        if (dragPointIndex >= 0) currentOnDragEnded()
+                        dragPointIndex = -1
+                    }
                 )
             }
     ) {
