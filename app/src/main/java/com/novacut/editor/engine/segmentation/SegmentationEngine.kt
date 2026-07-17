@@ -12,6 +12,7 @@ import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.vision.imagesegmenter.ImageSegmenter
 import com.google.mediapipe.tasks.vision.imagesegmenter.ImageSegmenterResult
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -160,7 +161,19 @@ class SegmentationEngine @Inject constructor(
             }
             _downloadProgress.value = 0f
             throw e
+        } catch (e: CancellationException) {
+            // User cancel is not a model failure — the generic catch below would
+            // otherwise swallow it and surface a bogus ERROR state. Restore a
+            // consistent state and propagate.
+            _modelState.value = if (hasVerifiedModelFile()) {
+                SegmentationModelState.READY
+            } else {
+                SegmentationModelState.NOT_DOWNLOADED
+            }
+            _downloadProgress.value = 0f
+            throw e
         } catch (e: Exception) {
+            android.util.Log.w("SegmentationEngine", "Model download failed", e)
             _modelState.value = if (hasVerifiedModelFile()) {
                 SegmentationModelState.READY
             } else {
@@ -302,15 +315,17 @@ class SegmentationEngine @Inject constructor(
     fun deleteModel() {
         segmenter?.close()
         segmenter = null
-        modelDir.deleteRecursively()
+        // Delete only this engine's model file: the "mediapipe" dir is shared with
+        // SmartReframeEngine's blaze_face_short_range.tflite, which a recursive
+        // delete of modelDir would silently take down too.
+        modelFile.delete()
         _modelState.value = SegmentationModelState.NOT_DOWNLOADED
         _downloadProgress.value = 0f
     }
 
     fun getModelSizeBytes(): Long {
-        return if (modelDir.exists()) {
-            modelDir.listFiles()?.filter { it.isFile }?.sumOf { it.length() } ?: 0L
-        } else 0L
+        // Count only this engine's model file (modelDir is shared, see deleteModel).
+        return if (modelFile.exists()) modelFile.length() else 0L
     }
 
     fun release() {

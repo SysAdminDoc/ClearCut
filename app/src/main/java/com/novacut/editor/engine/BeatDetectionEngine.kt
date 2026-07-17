@@ -66,11 +66,13 @@ class BeatDetectionEngine @Inject constructor(
 
         if (pcm.isEmpty()) return@withContext BeatAnalysis(emptyList(), 0f)
 
-        // Downmix to mono float normalized to [-1, 1].
-        // MediaCodec typically decodes to 44100 Hz stereo; we keep the native
-        // rate and adjust hopSize/timestampMs accordingly.
-        val sampleRate = 44100
-        val channels = 2
+        // Downmix to mono float normalized to [-1, 1]. decodeToPCM returns the
+        // source-native rate/channel layout, so probe the real format instead of
+        // assuming 44100 Hz stereo — a 48 kHz mono voice memo would otherwise get
+        // ~8.8% slow timestamps and a matching BPM skew.
+        val format = audioEngine.probeAudioFormat(uri)
+        val sampleRate = (format?.sampleRate ?: 44100).coerceAtLeast(1)
+        val channels = (format?.channelCount ?: 2).coerceAtLeast(1)
         val frameCount = pcm.size / channels
         val waveform = FloatArray(frameCount) { i ->
             var sum = 0f
@@ -105,7 +107,7 @@ class BeatDetectionEngine @Inject constructor(
                 val isPeak = (i == 0 || flux[i] >= flux[i - 1]) &&
                              (i == flux.size - 1 || flux[i] >= flux[i + 1])
                 if (isPeak) {
-                    val timestampMs = (i.toLong() * hopSize * 1000L) / sampleRate
+                    val timestampMs = beatFrameTimestampMs(i, hopSize, sampleRate)
                     onsets.add(BeatInfo(timestampMs, flux[i].coerceIn(0f, 1f)))
                 }
             }
@@ -257,4 +259,15 @@ class BeatDetectionEngine @Inject constructor(
         if (bestInterval <= 0) return 0f
         return (60000f / bestInterval).coerceIn(30f, 300f)
     }
+}
+
+/**
+ * Timestamp of spectral-flux frame [frameIndex] in milliseconds at the source
+ * [sampleRate]. Pure so the hop→ms conversion is contract-testable — beat
+ * timestamps (and the BPM derived from them) must track the real decode rate,
+ * not an assumed 44100 Hz.
+ */
+internal fun beatFrameTimestampMs(frameIndex: Int, hopSize: Int, sampleRate: Int): Long {
+    if (sampleRate <= 0) return 0L
+    return (frameIndex.toLong() * hopSize * 1000L) / sampleRate
 }

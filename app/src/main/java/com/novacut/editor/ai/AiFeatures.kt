@@ -9,6 +9,7 @@ import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.util.Log
+import com.novacut.editor.engine.AudioDecodeBudget
 import com.novacut.editor.engine.AudioEffectsEngine
 import com.novacut.editor.engine.segmentation.SegmentationEngine
 import com.novacut.editor.engine.whisper.WhisperEngine
@@ -162,6 +163,11 @@ class AiFeatures @Inject constructor(
                                     if (idx < samples.size) sum += abs(samples[idx].toFloat())
                                 }
                                 mono[i] = sum / channels / 32768f
+                            }
+                            if (AudioDecodeBudget.exceedsBudget(totalSamples, mono.size)) {
+                                Log.w(TAG, "Caption PCM exceeds the in-memory budget; stopping decode")
+                                decoder.releaseOutputBuffer(outIdx, false)
+                                return@withContext emptyList()
                             }
                             amplitudeChunks.add(mono)
                             totalSamples += mono.size
@@ -609,10 +615,19 @@ class AiFeatures @Inject constructor(
             if (channels <= 0) return@withContext NoiseProfile()
             val mime = format.getString(MediaFormat.KEY_MIME) ?: return@withContext NoiseProfile()
 
-            // Decode full audio
+            // Bounded decode: the analysis below only reads the first 10s (signal RMS)
+            // plus the first/last 500ms (noise floor), so keep a bounded head buffer and
+            // a 500ms tail ring instead of accumulating the whole track — a long input
+            // previously buffered every decoded sample and could OOM.
             val decoder = MediaCodec.createDecoderByType(mime)
-            val chunks = mutableListOf<ShortArray>()
-            var totalSamples = 0
+            val budgetCap = AudioDecodeBudget.MAX_PCM_SAMPLES.toLong()
+            val headCapShorts = (sampleRate.toLong() * 10L * channels).coerceIn(1L, budgetCap).toInt()
+            val tailCapShorts = ((sampleRate.toLong() / 2L) * channels).coerceIn(1L, budgetCap).toInt()
+            val headChunks = mutableListOf<ShortArray>()
+            var headShorts = 0
+            val tailChunks = ArrayDeque<ShortArray>()
+            var tailShorts = 0
+            var totalShorts = 0L
 
             try {
                 decoder.configure(format, null, null, 0)
@@ -641,8 +656,27 @@ class AiFeatures @Inject constructor(
                             val shortBuf = outBuf.order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
                             val arr = ShortArray(shortBuf.remaining())
                             shortBuf.get(arr)
-                            chunks.add(arr)
-                            totalSamples += arr.size
+                            if (arr.isNotEmpty()) {
+                                // Head: first 10s only (overshoots by at most one chunk).
+                                if (headShorts < headCapShorts &&
+                                    !AudioDecodeBudget.exceedsBudget(headShorts, arr.size)
+                                ) {
+                                    headChunks.add(arr)
+                                    headShorts += arr.size
+                                }
+                                // Tail ring: drop whole chunks from the front while the
+                                // remainder still covers the last 500ms.
+                                if (!AudioDecodeBudget.exceedsBudget(tailShorts, arr.size)) {
+                                    tailChunks.addLast(arr)
+                                    tailShorts += arr.size
+                                    while (tailChunks.size > 1 &&
+                                        tailShorts - tailChunks.first().size >= tailCapShorts
+                                    ) {
+                                        tailShorts -= tailChunks.removeFirst().size
+                                    }
+                                }
+                                totalShorts += arr.size
+                            }
                         }
                         decoder.releaseOutputBuffer(outIdx, false)
                         if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
@@ -656,35 +690,48 @@ class AiFeatures @Inject constructor(
                 decoder.release()
             }
 
-            if (totalSamples == 0) return@withContext NoiseProfile()
+            if (totalShorts == 0L) return@withContext NoiseProfile()
 
-            // Flatten
-            val allSamples = ShortArray(totalSamples)
+            // Flatten the bounded buffers
+            val head = ShortArray(headShorts)
             var off = 0
-            for (chunk in chunks) {
-                System.arraycopy(chunk, 0, allSamples, off, chunk.size)
+            for (chunk in headChunks) {
+                System.arraycopy(chunk, 0, head, off, chunk.size)
                 off += chunk.size
             }
+            val tail = ShortArray(tailShorts)
+            off = 0
+            for (chunk in tailChunks) {
+                System.arraycopy(chunk, 0, tail, off, chunk.size)
+                off += chunk.size
+            }
+            // Global short index of the first sample retained in `tail` — indexing
+            // through it keeps frame/channel alignment without assuming chunk sizes
+            // are channel-aligned.
+            val tailStartShorts = totalShorts - tailShorts
 
-            val monoSamples = totalSamples / channels
+            val monoSamples = totalShorts / channels
 
             // Analyze first and last 500ms for noise floor
-            val noiseSampleCount = min(sampleRate / 2, monoSamples / 4) // 500ms or 25% of clip
+            val noiseSampleCount = min(sampleRate / 2L, monoSamples / 4L) // 500ms or 25% of clip
             var noiseRmsSum = 0.0
             var noiseCount = 0
 
-            // First 500ms
+            // First 500ms (always within the 10s head buffer)
             for (i in 0 until min(noiseSampleCount, monoSamples)) {
-                val v = allSamples[i * channels].toFloat() / 32768f
-                noiseRmsSum += v * v
-                noiseCount++
-            }
-            // Last 500ms
-            val lastStart = max(0, monoSamples - noiseSampleCount)
-            for (i in lastStart until monoSamples) {
                 val idx = i * channels
-                if (idx < allSamples.size) {
-                    val v = allSamples[idx].toFloat() / 32768f
+                if (idx < head.size) {
+                    val v = head[idx.toInt()].toFloat() / 32768f
+                    noiseRmsSum += v * v
+                    noiseCount++
+                }
+            }
+            // Last 500ms (from the tail ring)
+            val lastStart = max(0L, monoSamples - noiseSampleCount)
+            for (i in lastStart until monoSamples) {
+                val local = i * channels - tailStartShorts
+                if (local in 0 until tail.size.toLong()) {
+                    val v = tail[local.toInt()].toFloat() / 32768f
                     noiseRmsSum += v * v
                     noiseCount++
                 }
@@ -692,16 +739,16 @@ class AiFeatures @Inject constructor(
 
             val noiseFloorRms = if (noiseCount > 0) sqrt(noiseRmsSum / noiseCount).toFloat() else 0f
 
-            // Calculate overall signal RMS
+            // Calculate overall signal RMS from the head (up to 10s)
             var signalRmsSum = 0.0
-            for (i in 0 until min(monoSamples, sampleRate * 10)) { // Sample up to 10s
+            for (i in 0 until min(monoSamples, sampleRate * 10L)) {
                 val idx = i * channels
-                if (idx < allSamples.size) {
-                    val v = allSamples[idx].toFloat() / 32768f
+                if (idx < head.size) {
+                    val v = head[idx.toInt()].toFloat() / 32768f
                     signalRmsSum += v * v
                 }
             }
-            val signalSampleCount = min(monoSamples, sampleRate * 10).coerceAtLeast(1)
+            val signalSampleCount = min(monoSamples, sampleRate * 10L).coerceAtLeast(1L)
             val signalRms = sqrt(signalRmsSum / signalSampleCount).toFloat()
 
             val snrDb = if (noiseFloorRms > 0.0001f) {
@@ -1398,6 +1445,11 @@ class AiFeatures @Inject constructor(
                             val shortBuf = outBuf.order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
                             val arr = ShortArray(shortBuf.remaining())
                             shortBuf.get(arr)
+                            if (AudioDecodeBudget.exceedsBudget(totalSamples, arr.size)) {
+                                Log.w(TAG, "Beat-sync PCM exceeds the in-memory budget; stopping decode")
+                                decoder.releaseOutputBuffer(outIdx, false)
+                                return@withContext emptyList()
+                            }
                             chunks.add(arr)
                             totalSamples += arr.size
                         }
@@ -1827,6 +1879,16 @@ class AiFeatures @Inject constructor(
                                             val shortBuf = outBuf.order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
                                             val arr = ShortArray(shortBuf.remaining())
                                             shortBuf.get(arr)
+                                            if (AudioDecodeBudget.exceedsBudget(totalPcm, arr.size)) {
+                                                // Fail closed: drop the partial PCM and proceed
+                                                // without beats (mirrors the catch below).
+                                                Log.w(TAG, "Auto-edit beat PCM exceeds the in-memory budget; proceeding without beats")
+                                                pcmChunks.clear()
+                                                totalPcm = 0
+                                                eos = true
+                                                decoder.releaseOutputBuffer(outIdx, false)
+                                                break
+                                            }
                                             pcmChunks.add(arr)
                                             totalPcm += arr.size
                                         }
@@ -2091,17 +2153,28 @@ class AiFeatures @Inject constructor(
 
             onProgress(0.7f)
 
-            // Compute magnitude spectrum in dB
+            // Compute magnitude spectrum normalized to sine dBFS: a full-scale sine
+            // reads ~0 dBFS after dividing by (fftSize/2 · Hann coherent gain 0.5).
+            // Raw |X[k]| previously inflated every absolute threshold by the window's
+            // power sum (~+32 dB at N=4096), which pushed the recommended NOISE_GATE
+            // threshold — interpreted by AudioEffectsEngine as dBFS amplitude — far
+            // above speech level and over-gated it badly.
             val halfSize = fftSize / 2
+            val sineNorm = fftSize * 0.25f // (fftSize / 2) * 0.5 Hann coherent gain
             val magnitudeDb = FloatArray(halfSize) { i ->
-                val mag = sqrt(real[i] * real[i] + imag[i] * imag[i])
-                val db = 20f * log10(max(mag, 1e-10f))
-                db
+                val mag = sqrt(real[i] * real[i] + imag[i] * imag[i]) / sineNorm
+                20f * log10(max(mag, 1e-10f))
             }
 
-            // Compute noise floor (average of lowest 25% of bins)
+            // Per-bin floor (average of lowest 25% of bins) — for *relative* spectral
+            // comparisons only (hum peak height above the surrounding floor).
             val sorted = magnitudeDb.sorted()
-            val noiseFloorDb = sorted.take(max(1, halfSize / 4)).average().toFloat()
+            val perBinFloorDb = sorted.take(max(1, halfSize / 4)).average().toFloat()
+            // Broadband-equivalent floor in time-domain dBFS: white noise of RMS σ puts
+            // E|X[k]|² = σ²·Σw² = σ²·N·(3/8) in each bin, i.e. per-bin ≈ σdB − 10·log10(N/6)
+            // on the sine-calibrated scale. Re-integrate so noiseFloorDb approximates the
+            // RMS dBFS a time-domain gate threshold is compared against.
+            val noiseFloorDb = perBinFloorDb + 10f * log10(fftSize / 6f)
 
             // Classify noise type by spectral shape
             val lowBand = magnitudeDb.slice(1..min(halfSize - 1, halfSize / 8)) // DC to ~550Hz
@@ -2117,12 +2190,16 @@ class AiFeatures @Inject constructor(
             val humBin50 = (50f / humBinWidth).roundToInt().coerceIn(1, halfSize - 1)
             val humBin60 = (60f / humBinWidth).roundToInt().coerceIn(1, halfSize - 1)
             val humPeak = max(magnitudeDb[humBin50], magnitudeDb[humBin60])
-            val humAboveFloor = humPeak - noiseFloorDb
+            // Per-bin vs per-bin: constant calibration offsets cancel here.
+            val humAboveFloor = humPeak - perBinFloorDb
 
             val noiseType = when {
                 humAboveFloor > 20f -> NoiseType.HUM
                 highAvg - lowAvg > 10f -> NoiseType.HISS
-                noiseFloorDb > -30f -> NoiseType.BROADBAND
+                // noiseFloorDb is now genuine dBFS: a floor louder than -45 dBFS is
+                // audibly noisy, while a clean -60 dBFS floor must stay CLEAN. (The
+                // old -30f was calibrated against the un-normalized scale.)
+                noiseFloorDb > -45f -> NoiseType.BROADBAND
                 else -> NoiseType.CLEAN
             }
 

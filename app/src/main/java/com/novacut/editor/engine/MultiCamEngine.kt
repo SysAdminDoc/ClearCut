@@ -15,6 +15,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 private const val TAG = "MultiCamEngine"
@@ -35,6 +36,22 @@ class MultiCamEngine @Inject constructor(
     )
 
     /**
+     * Decimated mono PCM plus the rate it actually landed on. Integer decimation
+     * (max(1, source/target)) rarely hits the requested target exactly — 44100 Hz
+     * decimated by 5 yields 8820 Hz — so offset math must use this rate, never the
+     * requested one.
+     */
+    data class MonoPcm(
+        val samples: FloatArray,
+        val effectiveSampleRate: Int
+    ) {
+        override fun equals(other: Any?): Boolean =
+            other is MonoPcm && effectiveSampleRate == other.effectiveSampleRate &&
+                samples.contentEquals(other.samples)
+        override fun hashCode(): Int = 31 * samples.contentHashCode() + effectiveSampleRate
+    }
+
+    /**
      * Find the sync offset between two clips by audio cross-correlation.
      * Returns the offset in ms that clipB should be shifted relative to clipA.
      * Positive = clipB starts after clipA, negative = clipB starts before.
@@ -48,19 +65,28 @@ class MultiCamEngine @Inject constructor(
         onProgress(0.1f)
 
         // Extract audio fingerprints (downsampled mono PCM)
-        val sampleRate = 8000 // Low rate for faster correlation
-        val pcmA = extractMonoPcm(clipAUri, sampleRate)
+        val targetSampleRate = 8000 // Low rate for faster correlation
+        val pcmA = extractMonoPcm(clipAUri, targetSampleRate)
         onProgress(0.3f)
-        val pcmB = extractMonoPcm(clipBUri, sampleRate)
+        val pcmB = extractMonoPcm(clipBUri, targetSampleRate)
         onProgress(0.5f)
 
-        if (pcmA.isEmpty() || pcmB.isEmpty()) {
+        if (pcmA.samples.isEmpty() || pcmB.samples.isEmpty()) {
             return@withContext SyncResult(0L, 0f, clipAUri, clipBUri)
         }
 
-        // Cross-correlate to find best offset
-        val maxOffsetSamples = (maxOffsetMs * sampleRate / 1000).toInt()
-        val searchRange = min(maxOffsetSamples, min(pcmA.size, pcmB.size) / 2)
+        // Mixed source rates decimate to different effective rates (e.g. 44100→8820
+        // vs 48000→8000); correlating those directly compares time-stretched signals.
+        // Resample the higher-rate signal down to the common (smaller) rate first.
+        val commonRate = min(pcmA.effectiveSampleRate, pcmB.effectiveSampleRate)
+        ensureActive()
+        val samplesA = resampleLinear(pcmA.samples, pcmA.effectiveSampleRate, commonRate)
+        ensureActive()
+        val samplesB = resampleLinear(pcmB.samples, pcmB.effectiveSampleRate, commonRate)
+
+        // Cross-correlate to find best offset (all sample math at the common rate)
+        val maxOffsetSamples = (maxOffsetMs * commonRate / 1000).toInt()
+        val searchRange = min(maxOffsetSamples, min(samplesA.size, samplesB.size) / 2)
 
         var bestOffset = 0
         var bestCorrelation = -1f
@@ -68,8 +94,8 @@ class MultiCamEngine @Inject constructor(
         val totalToCheck = searchRange * 2 + 1
 
         // Normalize signals
-        val normA = normalize(pcmA)
-        val normB = normalize(pcmB)
+        val normA = normalize(samplesA)
+        val normB = normalize(samplesB)
 
         for (offset in -searchRange..searchRange) {
             ensureActive()
@@ -88,7 +114,7 @@ class MultiCamEngine @Inject constructor(
 
         onProgress(1f)
 
-        val offsetMs = bestOffset.toLong() * 1000 / sampleRate
+        val offsetMs = syncOffsetMs(bestOffset, commonRate)
         Log.d(TAG, "Sync result: offset=${offsetMs}ms, confidence=$bestCorrelation")
 
         SyncResult(offsetMs, bestCorrelation, clipAUri, clipBUri)
@@ -139,8 +165,9 @@ class MultiCamEngine @Inject constructor(
         return if (rms > 1e-6f) FloatArray(centered.size) { centered[it] / rms } else centered
     }
 
-    private suspend fun extractMonoPcm(uri: Uri, targetSampleRate: Int): FloatArray =
+    private suspend fun extractMonoPcm(uri: Uri, targetSampleRate: Int): MonoPcm =
         withContext(Dispatchers.IO) {
+            val empty = MonoPcm(FloatArray(0), targetSampleRate.coerceAtLeast(1))
             val extractor = MediaExtractor()
             try {
                 extractor.setDataSource(context, uri, null)
@@ -156,15 +183,24 @@ class MultiCamEngine @Inject constructor(
                     }
                 }
 
-                if (audioIndex < 0 || format == null) return@withContext FloatArray(0)
+                if (audioIndex < 0 || format == null) return@withContext empty
 
                 extractor.selectTrack(audioIndex)
                 val mime = format.getString(MediaFormat.KEY_MIME)
-                    ?: return@withContext FloatArray(0)
+                    ?: return@withContext empty
                 val sourceSampleRate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
                 // Malformed or synthetic MediaFormats can report 0 channels; coerce
                 // so the mono-mix divide below never produces Float.Inf / NaN.
                 val channels = format.getInteger(MediaFormat.KEY_CHANNEL_COUNT).coerceAtLeast(1)
+
+                // Guard against a caller passing 0 as targetSampleRate (would produce
+                // ArithmeticException on integer division before max() runs).
+                val safeTargetRate = targetSampleRate.coerceAtLeast(1)
+                val decimation = max(1, sourceSampleRate / safeTargetRate)
+                // Integer decimation lands on source/decimation, not the requested
+                // target (44100/5 = 8820 Hz) — report it so callers convert
+                // sample offsets to ms with the rate the samples are actually at.
+                val effectiveRate = effectiveDecimatedRate(sourceSampleRate, safeTargetRate)
 
                 val decoder = MediaCodec.createDecoderByType(mime)
                 val samples = mutableListOf<Float>()
@@ -175,10 +211,6 @@ class MultiCamEngine @Inject constructor(
 
                     val bufferInfo = MediaCodec.BufferInfo()
                     var eos = false
-                    // Guard against a caller passing 0 as targetSampleRate (would produce
-                    // ArithmeticException on integer division before max() runs).
-                    val safeTargetRate = targetSampleRate.coerceAtLeast(1)
-                    val decimation = max(1, sourceSampleRate / safeTargetRate)
 
                     while (!eos) {
                         ensureActive()
@@ -242,12 +274,57 @@ class MultiCamEngine @Inject constructor(
                     decoder.release()
                 }
 
-                samples.toFloatArray()
+                MonoPcm(samples.toFloatArray(), effectiveRate)
             } catch (e: Exception) {
                 Log.e(TAG, "PCM extraction failed for $uri", e)
-                FloatArray(0)
+                empty
             } finally {
                 extractor.release()
             }
         }
+}
+
+/**
+ * Rate the mono fingerprint actually lands on after integer decimation of
+ * [sourceRate] toward [targetRate]: source / max(1, source/target). Pure so the
+ * decimation contract (44100→8000 request yields 8820 Hz) is unit-testable.
+ */
+internal fun effectiveDecimatedRate(sourceRate: Int, targetRate: Int): Int {
+    val safeSource = sourceRate.coerceAtLeast(1)
+    val safeTarget = targetRate.coerceAtLeast(1)
+    return safeSource / max(1, safeSource / safeTarget)
+}
+
+/**
+ * Convert a best-correlation sample offset to milliseconds at the effective rate
+ * the correlated signals share. Dividing by the *requested* target rate instead
+ * (the old behaviour) skewed a 44100 Hz pair's offset by ~10% (8820 vs 8000).
+ */
+internal fun syncOffsetMs(offsetSamples: Int, effectiveSampleRate: Int): Long {
+    if (effectiveSampleRate <= 0) return 0L
+    return offsetSamples.toLong() * 1000 / effectiveSampleRate
+}
+
+/**
+ * Linear-interpolation resample of [input] from [srcRate] to [dstRate]. Identity
+ * when the rates match or are non-positive. Pure and allocation-bounded: the
+ * output is at most `input.size` samples because callers only downsample to the
+ * common (smaller) effective rate.
+ */
+internal fun resampleLinear(input: FloatArray, srcRate: Int, dstRate: Int): FloatArray {
+    if (srcRate == dstRate || srcRate <= 0 || dstRate <= 0) return input
+    val ratio = dstRate.toDouble() / srcRate.toDouble()
+    // roundToInt (not toInt) so e.g. 8820 * (8000/8820) can't truncate to 7999.
+    val outLen = (input.size * ratio).roundToInt()
+    if (outLen <= 0) return FloatArray(0)
+    val output = FloatArray(outLen)
+    for (i in 0 until outLen) {
+        val srcPos = i / ratio
+        val srcIdx = srcPos.toInt()
+        val frac = (srcPos - srcIdx).toFloat()
+        val s0 = input.getOrElse(srcIdx) { 0f }
+        val s1 = input.getOrElse(srcIdx + 1) { s0 }
+        output[i] = s0 + frac * (s1 - s0)
+    }
+    return output
 }

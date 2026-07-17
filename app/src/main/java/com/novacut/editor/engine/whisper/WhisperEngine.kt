@@ -12,6 +12,7 @@ import ai.onnxruntime.OrtSession
 import com.novacut.editor.engine.AudioDecodeBudget
 import com.novacut.editor.engine.ModelDownloadManager
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -211,7 +212,19 @@ class WhisperEngine @Inject constructor(
             }
             _downloadProgress.value = 0f
             throw e
+        } catch (e: CancellationException) {
+            // User cancel is not a model failure — the generic catch below would
+            // otherwise swallow it and surface a bogus ERROR state. Restore a
+            // consistent state and propagate.
+            _modelState.value = if (hasVerifiedModelFiles()) {
+                WhisperModelState.READY
+            } else {
+                WhisperModelState.NOT_DOWNLOADED
+            }
+            _downloadProgress.value = 0f
+            throw e
         } catch (e: Exception) {
+            Log.w("WhisperEngine", "Model download failed", e)
             _modelState.value = if (hasVerifiedModelFiles()) {
                 WhisperModelState.READY
             } else {
@@ -278,6 +291,8 @@ class WhisperEngine @Inject constructor(
             sessionOpts.close()
 
             for (chunk in 0 until numChunks) {
+                // Long inputs mean many 30s chunks — honor cancellation per chunk.
+                ensureActive()
                 val chunkStart = chunk * chunkSamples
                 val chunkAudio = FloatArray(chunkSamples)
                 val copyLen = minOf(chunkSamples, audio16k.size - chunkStart)
@@ -342,7 +357,9 @@ class WhisperEngine @Inject constructor(
         }
     }
 
-    private fun runDecoder(
+    // Suspend so each greedy step can honor cancellation (mirrors decodeAudioToPcm:
+    // no CoroutineScope receiver here, so use currentCoroutineContext()).
+    private suspend fun runDecoder(
         env: OrtEnvironment,
         session: OrtSession,
         encoderOutput: OnnxTensor,
@@ -355,6 +372,7 @@ class WhisperEngine @Inject constructor(
         var lastTimestampMs = 0L
 
         for (step in 0 until MAX_DECODE_TOKENS) {
+            currentCoroutineContext().ensureActive()
             val inputIds = LongBuffer.wrap(tokens.toLongArray())
             val inputShape = longArrayOf(1, tokens.size.toLong())
             var idTensor: OnnxTensor? = OnnxTensor.createTensor(env, inputIds, inputShape)
@@ -459,27 +477,7 @@ class WhisperEngine @Inject constructor(
             // Whisper GPT-2 vocab uses Unicode byte encoding (e.g. "Ġ" = space prefix)
             sb.append(text)
         }
-        return decodeGpt2Bytes(sb.toString())
-    }
-
-    /**
-     * Decode GPT-2 byte-level BPE text back to UTF-8.
-     * GPT-2 maps bytes 0-255 to Unicode chars to avoid whitespace issues.
-     * "Ġ" (U+0120) represents a space prefix.
-     */
-    private fun decodeGpt2Bytes(text: String): String {
-        val sb = StringBuilder()
-        for (ch in text) {
-            val code = ch.code
-            when {
-                code == 0x0120 -> sb.append(' ') // Ġ = space
-                code in 0x0100..0x0200 -> sb.append((code - 0x0100).toChar()) // Mapped bytes
-                code == 0x010A -> sb.append('\n') // Ċ = newline
-                code == 0x0109 -> sb.append('\t') // ĉ = tab
-                else -> sb.append(ch)
-            }
-        }
-        return sb.toString()
+        return Gpt2ByteDecoder.decode(sb.toString())
     }
 
     private fun loadVocab() {
@@ -665,5 +663,48 @@ class WhisperEngine @Inject constructor(
         return if (modelDir.exists()) {
             modelDir.listFiles()?.filter { it.isFile }?.sumOf { it.length() } ?: 0L
         } else 0L
+    }
+}
+
+/**
+ * Reverse of GPT-2's `bytes_to_unicode`: maps the vocab's Unicode chars back to
+ * raw bytes, then decodes the byte stream as UTF-8 (with replacement).
+ *
+ * `bytes_to_unicode` keeps the printable ranges 0x21–0x7E, 0xA1–0xAC and
+ * 0xAE–0xFF as themselves and remaps the remaining 68 bytes (0x00–0x20,
+ * 0x7F–0xA0, 0xAD) to U+0100+n in order of appearance — so "Ġ" (U+0120) is byte
+ * 0x20 (space) and "Ċ" (U+010A) is 0x0A. The previous char-by-char arithmetic
+ * assumed code−0x100 for the whole U+0100..U+0200 range (wrong for
+ * U+0121–U+0143, which are bytes 0x7F–0xA0 and 0xAD) and appended the mapped
+ * bytes as chars instead of UTF-8-decoding them, corrupting curly quotes and
+ * every non-ASCII transcription. Pure object so the contract is JVM-testable.
+ */
+internal object Gpt2ByteDecoder {
+    private val charToByte: Map<Char, Byte> = buildMap {
+        val selfMapped = (0x21..0x7E) + (0xA1..0xAC) + (0xAE..0xFF)
+        for (b in selfMapped) put(b.toChar(), b.toByte())
+        var n = 0
+        for (b in 0..0xFF) {
+            if (b !in selfMapped) {
+                put((0x100 + n).toChar(), b.toByte())
+                n++
+            }
+        }
+    }
+
+    fun decode(text: String): String {
+        val bytes = java.io.ByteArrayOutputStream(text.length)
+        for (ch in text) {
+            val mapped = charToByte[ch]
+            if (mapped != null) {
+                bytes.write(mapped.toInt())
+            } else {
+                // Not a byte-encoder char (should not occur in a valid GPT-2 vocab):
+                // pass it through as its own UTF-8 bytes rather than dropping it.
+                bytes.write(ch.toString().toByteArray(Charsets.UTF_8))
+            }
+        }
+        // String(bytes, UTF_8) substitutes U+FFFD for malformed sequences.
+        return String(bytes.toByteArray(), Charsets.UTF_8)
     }
 }
