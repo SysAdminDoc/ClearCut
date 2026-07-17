@@ -149,7 +149,16 @@ def check(target: Path) -> int:
             continue
         segments = list(_read_elf_load_segments(blob))
         if not segments:
-            skipped.append(f"{display} (no ELF LOAD segments — skipped)")
+            # Fail closed: a shared library that is not parseable ELF (or has
+            # no PT_LOAD at all) is a corrupt artifact, not an exemption. This
+            # gate exists precisely to catch bad artifacts.
+            misaligned.append(
+                AlignmentFailure(
+                    display,
+                    LoadSegment(0, 0, 0),
+                    "not parseable ELF / no PT_LOAD segments — corrupt native library",
+                )
+            )
             continue
         for seg in segments:
             if seg.align < REQUIRED_ALIGNMENT:
@@ -234,6 +243,12 @@ def run_self_tests() -> None:
             raise AssertionError("self-test expected aligned APK to pass")
         if check(bad_apk) == 0:
             raise AssertionError("self-test expected misaligned APK to fail")
+
+        corrupt_apk = root / "corrupt.apk"
+        with zipfile.ZipFile(corrupt_apk, "w") as zf:
+            zf.writestr("lib/arm64-v8a/libcorrupt.so", b"not an elf at all")
+        if check(corrupt_apk) == 0:
+            raise AssertionError("self-test expected unparseable .so to fail closed")
 
 
 def main(argv: list[str]) -> int:

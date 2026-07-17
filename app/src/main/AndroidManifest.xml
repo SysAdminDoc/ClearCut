@@ -5,6 +5,12 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROCESSING" />
+    <!-- mediaProcessing is API 35+; Android 14 (API 34) requires a type it
+         recognizes at startForeground or it throws. dataSync is the
+         documented fallback type for media-processing services on API 34. -->
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"
+        android:maxSdkVersion="34" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -149,7 +155,7 @@
 
         <service
             android:name=".engine.ExportService"
-            android:foregroundServiceType="mediaProcessing"
+            android:foregroundServiceType="mediaProcessing|dataSync"
             android:exported="false" />
 
         <!-- Disable default WorkManager initializer (using Hilt HiltWorkerFactory) -->

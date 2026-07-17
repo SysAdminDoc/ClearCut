@@ -64,20 +64,40 @@ data class ExportConfig(
         // A zero or negative duration means there's no renderable timeline
         // yet. Falling back to the default quality-based bitrate would blow
         // past the user's declared target the moment a clip is added. Pin to
-        // the 500 kbps floor so the resolved bitrate always respects the
+        // the video floor so the resolved bitrate always respects the
         // target-size promise; the export is expected to re-resolve once a
         // real duration is known.
-        if (totalDurationMs <= 0L) return copy(bitrateOverride = 500_000)
+        if (totalDurationMs <= 0L) return copy(bitrateOverride = MIN_TARGET_VIDEO_BITRATE)
         // Reserve 2% for container overhead (mp4 atoms, moov box) then subtract audio.
         val usableBytes = (target * 0.98).toLong()
-        val videoBytes = usableBytes - (audioBitrate.toLong() * totalDurationMs / 8000L)
-        if (videoBytes <= 0L) return copy(bitrateOverride = 500_000)
-        val bitsPerSec = (videoBytes * 8L * 1000L) / totalDurationMs
-        val clamped = bitsPerSec.coerceIn(500_000L, 150_000_000L).toInt()
-        return copy(bitrateOverride = clamped)
+        // Long timelines against small targets (Discord 8 MB, minutes of
+        // video) can need less video bitrate than the floor, or less total
+        // than the audio track alone. Step the audio down toward its floor
+        // before flooring the video bitrate — otherwise the floor silently
+        // more-than-doubles the promised file size.
+        var resolvedAudio = audioBitrate
+        fun videoBudgetBits(): Long {
+            val videoBytes = usableBytes - (resolvedAudio.toLong() * totalDurationMs / 8000L)
+            return if (videoBytes <= 0L) 0L else (videoBytes * 8L * 1000L) / totalDurationMs
+        }
+        while (videoBudgetBits() < MIN_TARGET_VIDEO_BITRATE && resolvedAudio > MIN_TARGET_AUDIO_BITRATE) {
+            resolvedAudio = (resolvedAudio / 2).coerceAtLeast(MIN_TARGET_AUDIO_BITRATE)
+        }
+        val bitsPerSec = videoBudgetBits()
+        // If even minimum audio leaves no video budget the target is
+        // unattainable at this duration; the floor is then a best-effort
+        // minimum, not a promise.
+        val clamped = bitsPerSec.coerceIn(MIN_TARGET_VIDEO_BITRATE.toLong(), 150_000_000L).toInt()
+        return copy(audioBitrate = resolvedAudio, bitrateOverride = clamped)
     }
 
     companion object {
+        // Floors for target-size resolution. 250 kbps video is intentionally
+        // low: a hard size cap (Discord upload limits) is the user's explicit
+        // priority over picture quality for long timelines.
+        const val MIN_TARGET_VIDEO_BITRATE = 250_000
+        const val MIN_TARGET_AUDIO_BITRATE = 64_000
+
         fun youtube1080() = ExportConfig(
             resolution = Resolution.FHD_1080P, frameRate = 30, quality = ExportQuality.HIGH,
             aspectRatio = AspectRatio.RATIO_16_9, codec = VideoCodec.H264,

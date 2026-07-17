@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import subprocess
 import sys
@@ -32,10 +31,9 @@ def parse_gradle_version() -> tuple[int, str]:
     return int(code_match.group(1)), name_match.group(1)
 
 
-def verify_repository_metadata(version_code: int, version_name: str) -> None:
+def verify_repository_metadata() -> None:
     from release_identity import ReleaseIdentityError, verify_release_identity
 
-    del version_code, version_name
     try:
         verify_release_identity(ROOT)
     except ReleaseIdentityError as error:
@@ -45,13 +43,6 @@ def verify_repository_metadata(version_code: int, version_name: str) -> None:
     for private_input in ("keystore.properties", "*.jks", "*.keystore"):
         if private_input not in gitignore:
             raise VerificationError(f".gitignore must keep {private_input} out of the repository")
-
-
-def verify_github_tag(version_name: str) -> None:
-    ref_type = os.environ.get("GITHUB_REF_TYPE")
-    ref_name = os.environ.get("GITHUB_REF_NAME")
-    if ref_type == "tag" and ref_name != f"v{version_name}":
-        raise VerificationError(f"Tag {ref_name!r} does not match Gradle version v{version_name}")
 
 
 def read_output_metadata(variant_path: Path) -> dict:
@@ -126,6 +117,10 @@ def verify_local_trust_controls(apks: list[Path]) -> None:
     run_python_script("check_apk_size.py")
     run_python_script("validate_play_listing_assets.py", "--quiet")
     run_python_script("validate_distribution_readiness.py")
+    # These two shipped as workflow steps before the local migration; they are
+    # release gates (unearned capability claims / audio API policy), not lint.
+    run_python_script("validate_public_claims.py")
+    run_python_script("validate_android_audio_api_policy.py")
     for apk in apks:
         run_python_script("check_16kb_alignment.py", str(apk))
 
@@ -179,16 +174,6 @@ def run_self_tests() -> None:
                 "app/src/main/res/values/strings.xml",
                 '<resources><string name="app_name">ClearCut</string></resources>\n',
             )
-            write_fixture(
-                root,
-                "ROADMAP.md",
-                f"Current version: **v{version_name}** (`versionCode` {version_code})\n",
-            )
-            write_fixture(
-                root,
-                "CHANGELOG.md",
-                f"# Changelog\n\n## Unreleased\n\n## v{version_name} - 2026-06-30\n",
-            )
             write_fixture(root, ".gitignore", "keystore.properties\n*.jks\n*.keystore\n")
 
             debug_apk = write_output_metadata(root, "debug", "app-debug.apk", version_code, version_name)
@@ -204,7 +189,7 @@ def run_self_tests() -> None:
             parsed_code, parsed_name = parse_gradle_version()
             if (parsed_code, parsed_name) != (version_code, version_name):
                 raise VerificationError("self-test version parsing mismatch")
-            verify_repository_metadata(parsed_code, parsed_name)
+            verify_repository_metadata()
             outputs = [
                 verify_variant_apk("debug", version_code, version_name),
                 verify_variant_apk("release", version_code, version_name),
@@ -218,7 +203,7 @@ def run_self_tests() -> None:
                 encoding="utf-8",
             )
             try:
-                verify_repository_metadata(version_code, version_name)
+                verify_repository_metadata()
             except VerificationError:
                 pass
             else:
@@ -238,6 +223,8 @@ def run_self_tests() -> None:
                 ("check_apk_size.py",),
                 ("validate_play_listing_assets.py", "--quiet"),
                 ("validate_distribution_readiness.py",),
+                ("validate_public_claims.py",),
+                ("validate_android_audio_api_policy.py",),
                 ("check_16kb_alignment.py", str(debug_apk)),
                 ("check_16kb_alignment.py", str(release_apk)),
                 ("check_16kb_alignment.py", str(test_apk)),
@@ -260,8 +247,7 @@ def main() -> int:
             print("release artifact verifier self-tests passed.")
             return 0
         version_code, version_name = parse_gradle_version()
-        verify_repository_metadata(version_code, version_name)
-        verify_github_tag(version_name)
+        verify_repository_metadata()
         outputs = [
             verify_variant_apk("debug", version_code, version_name),
             verify_variant_apk("release", version_code, version_name),

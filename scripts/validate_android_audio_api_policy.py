@@ -69,8 +69,17 @@ def verify_manifest_foreground_service_type(root: Path = ROOT) -> None:
     manifest_path = root / MANIFEST.relative_to(ROOT)
     manifest = read_text(manifest_path)
     block = service_block(manifest, ".engine.ExportService")
-    if 'android:foregroundServiceType="mediaProcessing"' not in block:
-        raise AudioPolicyError("ExportService must declare foregroundServiceType=\"mediaProcessing\"")
+    allowed_types = (
+        'android:foregroundServiceType="mediaProcessing"',
+        # dataSync is the API <= 34 fallback: mediaProcessing is an API 35+
+        # type, and Android 14 refuses an untyped startForeground.
+        'android:foregroundServiceType="mediaProcessing|dataSync"',
+    )
+    if not any(declaration in block for declaration in allowed_types):
+        raise AudioPolicyError(
+            "ExportService must declare foregroundServiceType=\"mediaProcessing\" "
+            "(optionally with the dataSync API<=34 fallback)"
+        )
     if 'android:exported="false"' not in block:
         raise AudioPolicyError("ExportService must remain non-exported")
     if "FOREGROUND_SERVICE_MEDIA_PROCESSING" not in manifest:
@@ -131,7 +140,7 @@ def write_valid_fixture(root: Path, export_service: str = "class ExportService {
           <application>
             <service
               android:name=".engine.ExportService"
-              android:foregroundServiceType="mediaProcessing"
+              android:foregroundServiceType="mediaProcessing|dataSync"
               android:exported="false" />
           </application>
         </manifest>

@@ -52,6 +52,24 @@ class ClipTimingTest {
         assertWithin(500L, clip.timelineOffsetToSourceMs(timelineMidpoint), toleranceMs = 3L)
     }
 
+    @Test
+    fun `long recordings keep millisecond precision at constant speed`() {
+        // Long / Float division loses ms precision past ~2^24 ms (~4.66 h);
+        // a 12 h dashcam clip must not drift against the Double-based
+        // offset mappers.
+        val twelveHoursMs = 12L * 60L * 60L * 1000L
+        val clip = Clip(
+            sourceUri = FakeUri,
+            sourceDurationMs = twelveHoursMs,
+            timelineStartMs = 0L,
+            trimStartMs = 0L,
+            trimEndMs = twelveHoursMs,
+            speed = 1f
+        )
+
+        assertEquals(twelveHoursMs, clip.durationMs)
+    }
+
     private fun assertWithin(expected: Long, actual: Long, toleranceMs: Long) {
         assertTrue(
             "expected $actual to be within ${toleranceMs}ms of $expected",

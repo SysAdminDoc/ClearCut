@@ -16,6 +16,12 @@ APK_ROOT = ROOT / "app" / "build" / "outputs" / "apk"
 FINGERPRINT_RE = re.compile(
     r"(?:Signer #\d+\s+|V\d+ Signer:\s*)certificate SHA-256 digest:\s*([0-9A-Fa-f:]+)"
 )
+# The signer every shipped GitHub Release APK carries (verified against
+# v3.74.117's asset). Sidecar freshness alone cannot catch a wrong key —
+# it compares the APK against a sidecar derived from the same APK — so
+# release APKs are additionally pinned to this identity. If the key ever
+# legitimately rotates, update this constant deliberately.
+EXPECTED_RELEASE_FINGERPRINT = "76cf4c647590f1dc17b37175b9dd65cac6d0a1e7ffff6a86f8ea8a29f67f75f6"
 
 
 class FingerprintError(RuntimeError):
@@ -92,8 +98,23 @@ def apksigner_fingerprints(apk: Path, apksigner: Path) -> list[str]:
     return parse_fingerprints(result.stdout)
 
 
+def is_release_apk(apk: Path) -> bool:
+    return "release" in {part.lower() for part in apk.parts}
+
+
+def enforce_release_identity(apk: Path, fingerprints: list[str]) -> None:
+    if not is_release_apk(apk):
+        return
+    if EXPECTED_RELEASE_FINGERPRINT not in fingerprints:
+        raise FingerprintError(
+            f"{apk.name} is not signed by the pinned release key "
+            f"(expected {EXPECTED_RELEASE_FINGERPRINT}, got {fingerprints})"
+        )
+
+
 def fingerprint_line(apk: Path, apksigner: Path) -> str:
     fingerprints = apksigner_fingerprints(apk, apksigner)
+    enforce_release_identity(apk, fingerprints)
     return "\n".join(f"signer{index}={fingerprint}  {apk.name}" for index, fingerprint in enumerate(fingerprints, 1)) + "\n"
 
 
@@ -142,6 +163,16 @@ V2 Signer: certificate SHA-256 digest: 00112233445566778899aabbccddeeff001122334
         apk.write_bytes(b"placeholder")
         if apk_paths(root) != [apk]:
             raise FingerprintError("self-test APK discovery failed")
+
+    release_apk_path = Path("app/build/outputs/apk/release/app-release.apk")
+    enforce_release_identity(release_apk_path, [EXPECTED_RELEASE_FINGERPRINT])
+    try:
+        enforce_release_identity(release_apk_path, ["0" * 64])
+    except FingerprintError:
+        pass
+    else:
+        raise FingerprintError("self-test expected wrong release signer to fail")
+    enforce_release_identity(Path("app/build/outputs/apk/debug/app-debug.apk"), ["0" * 64])
 
     try:
         parse_fingerprints("Signer #1 certificate SHA-256 digest: bad")

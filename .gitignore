@@ -51,3 +51,5 @@ AGENTS.md
 .ai/
 PROJECT_CONTEXT.md
 CONTINUATION_PROMPT.md
+__pycache__/
+*.bak

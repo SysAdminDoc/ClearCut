@@ -60,9 +60,9 @@
 - Added `MediaDurationPolicy` so hostile or malformed duration metadata (negative, `Long.MAX_VALUE`, conversion-overflow, or over-24-hour) can no longer size an analysis array or drive an unbounded frame-sampling loop.
 - Flash-safety, scene detection, auto-color, and smart-reframe analysis now clamp their sample counts and skip proportional work for implausible durations, with cooperative cancellation added to the flash scan.
 
-### v3.74.143 Honest caption translation
+### v3.74.143 Model-gated caption translation
 
-- Caption translation no longer returns the source text labeled as a translation. With no translation model installed, the panel now shows an explicit "translation model required" state instead of untranslated rows.
+- Caption translation now requires an installed translation model and no longer returns the source text labeled as a translation; without one, the panel shows an explicit "translation model required" state instead of untranslated rows.
 - `CaptionTranslationEngine.translate()` fails fast with `TranslationUnavailableException` while stubbed, and the editor guards both translate and per-row regenerate paths.
 
 ### v3.74.142 Smart Reframe model repair
@@ -195,7 +195,7 @@
 - Ended or stalled preview sessions reset their media period and decoder at the active timeline position, with an automatic one-shot recovery when playback does not begin promptly.
 - Saved transitions remain active for export, while the live preview uses stable cuts instead of unsafe single-input transition shaders that could leave Media3 on a black frame after rewind.
 - Effect safety now includes true alpha opacity, wired chroma spill, tail-aware nonlinear transition timing, corrected gamma/highlight/shadow/posterize math, and guarded GPU edge cases; unsupported generic Speed/Reverse/BG Removal entries are no longer offered as no-op effects.
-- Easy mode now maps to the current editor tabs, the More workbench exposes rendered motion tools, clip-only captions are no longer offered without a clip, and the command palette routes background replacement, face tracking, and frame interpolation correctly.
+- Easy mode now maps to the current editor tabs, the More workbench exposes rendered motion tools, clip-only captions are no longer offered without a clip, and the command palette routes background replacement, face tracking, and model-gated frame interpolation correctly.
 - Incomplete mask/blend compositing and unrendered audio pan/FX controls are withheld from the editor instead of accepting edits that preview or export cannot honor.
 - The preview PlayerView remains mounted across timeline gaps, still images, and error overlays, preventing Samsung/Qualcomm surface-detach timeouts from being mislabeled as clip decoder failures.
 - Playback recovery now verifies actual timeline movement instead of trusting Media3's `isPlaying` flag; a stuck-player signal at the timeline end is handled as normal completion rather than a decode error.

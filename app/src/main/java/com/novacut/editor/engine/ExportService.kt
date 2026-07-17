@@ -70,6 +70,16 @@ class ExportService : Service() {
                 notification,
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROCESSING
             )
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // API 34 rejects an untyped startForeground when the manifest
+            // declares no type the platform recognizes — mediaProcessing is
+            // API 35+, so exports crashed at start on Android 14. dataSync
+            // is the documented fallback type for API <= 34.
+            startForeground(
+                NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            )
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }

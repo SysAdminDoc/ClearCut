@@ -233,10 +233,13 @@ data class Clip(
             return if (timelineDurationMs.isFinite() && timelineDurationMs > 0.0) {
                 timelineDurationMs.toLong()
             } else {
-                (trimRange / finitePositiveSpeed(speed)).toLong()
+                // Divide in Double: Long / Float promotes to Float, whose
+                // 24-bit mantissa loses millisecond precision past ~4.6 h and
+                // drifts against the Double-based offset mappers below.
+                (trimRange / finitePositiveSpeed(speed).toDouble()).toLong()
             }
         }
-        return (trimRange / finitePositiveSpeed(speed)).toLong()
+        return (trimRange / finitePositiveSpeed(speed).toDouble()).toLong()
     }
     val timelineEndMs: Long get() = timelineStartMs + durationMs
 
