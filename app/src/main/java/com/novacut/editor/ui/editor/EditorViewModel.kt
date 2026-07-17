@@ -2325,6 +2325,7 @@ class EditorViewModel @Inject constructor(
                     textOverlays = recovery.textOverlays,
                     imageOverlays = recovery.imageOverlays,
                     timelineMarkers = recovery.timelineMarkers,
+                    globalTransitions = recovery.globalTransitions,
                     drawingPaths = recovery.drawingPaths,
                     playheadMs = recovery.playheadMs,
                     chapterMarkers = recovery.chapterMarkers,
@@ -2534,13 +2535,15 @@ class EditorViewModel @Inject constructor(
                         dismissedPanelState(
                             recalculateDuration(
                                 s.copy(
-                                    tracks = state.tracks,
+                                    tracks = ensureEditorTracks(state.tracks),
                                     textOverlays = state.textOverlays,
                                     imageOverlays = state.imageOverlays,
                                     timelineMarkers = state.timelineMarkers,
+                                    globalTransitions = state.globalTransitions,
                                     chapterMarkers = state.chapterMarkers,
                                     drawingPaths = state.drawingPaths,
                                     beatMarkers = state.beatMarkers,
+                                    ai = s.ai.copy(usageLedger = state.aiUsageLedger),
                                     v369 = s.v369.copy(
                                         transcript = state.transcript,
                                         selectedWordIndices = emptySet()
