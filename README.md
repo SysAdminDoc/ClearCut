@@ -4,9 +4,13 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.74.157-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.75.0-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.75.0 Track-verified audio-only and stem exports
+
+- Audio-only and stem exports now produce real standalone `.m4a` (`audio/mp4`) files with no video track, instead of silently emitting a video file or failing on a picture-less timeline. Audio-only mixes every audible track (including video-embedded audio) into one AAC file; stems write one deterministic `.m4a` per audible timeline track. Standalone audio saves through `MediaStore.Audio`, and the output verifier now confirms an audio track is present and that no video track leaked. Opus/FLAC fail before any encoder work starts rather than falling back to video.
 
 ### v3.74.157 Deep audit — export integrity, gestures, and data safety
 

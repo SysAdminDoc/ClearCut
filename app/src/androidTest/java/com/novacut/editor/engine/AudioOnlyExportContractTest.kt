@@ -8,6 +8,7 @@ import android.media.MediaMuxer
 import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.novacut.editor.engine.segmentation.SegmentationEngine
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.ExportConfig
 import com.novacut.editor.model.Track

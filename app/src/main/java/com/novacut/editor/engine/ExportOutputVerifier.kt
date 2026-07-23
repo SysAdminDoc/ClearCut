@@ -83,25 +83,26 @@ object ExportOutputVerifier {
                 )
             }
 
-            if (expectAudio && !hasAudio) {
-                return ExportVerificationResult(
-                    false,
-                    reason = "Expected audio track but output has none",
-                    hasVideo = hasVideo, hasAudio = false,
-                    durationMs = durationMs, width = width, height = height,
-                    trackCount = trackCount
-                )
-            }
-
             // An audio-only export that still carries a video track is a broken
             // artifact (the timeline's picture leaked into an "audio only" file).
-            // Fail closed so the caller deletes it instead of publishing a video
-            // mislabelled as audio.
+            // Checked before the missing-audio guard so a mislabelled video is
+            // reported as the video leak it is. Fail closed so the caller deletes
+            // it instead of publishing a video mislabelled as audio.
             if (!expectVideo && hasVideo) {
                 return ExportVerificationResult(
                     false,
                     reason = "Audio-only export unexpectedly contains a video track",
                     hasVideo = true, hasAudio = hasAudio,
+                    durationMs = durationMs, width = width, height = height,
+                    trackCount = trackCount
+                )
+            }
+
+            if (expectAudio && !hasAudio) {
+                return ExportVerificationResult(
+                    false,
+                    reason = "Expected audio track but output has none",
+                    hasVideo = hasVideo, hasAudio = false,
                     durationMs = durationMs, width = width, height = height,
                     trackCount = trackCount
                 )
