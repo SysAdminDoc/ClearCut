@@ -542,6 +542,194 @@ class VideoEngine @Inject constructor(
         }
     }
 
+    /**
+     * Export a single mixed-down audio artifact (`.m4a`, `audio/mp4`) containing
+     * no video track. Every audible timeline audio source — dedicated audio
+     * tracks plus the embedded audio of visual tracks — is composited through
+     * the same per-clip volume / fade / keyframe / track-gain processors used by
+     * the full export, then encoded as AAC.
+     *
+     * Only AAC is offered: Opus and FLAC standalone-audio muxing has not been
+     * probe-verified across the device matrix, so requesting them fails here
+     * before any encoder work starts rather than silently producing a fallback
+     * video file.
+     */
+    @androidx.annotation.OptIn(UnstableApi::class)
+    suspend fun exportAudio(
+        tracks: List<Track>,
+        config: ExportConfig,
+        outputFile: File,
+        onProgress: (Float) -> Unit = {},
+        onComplete: () -> Unit = {},
+        onError: (Exception) -> Unit = {}
+    ) {
+        if (config.audioCodec != AudioCodec.AAC) {
+            onError(UnsupportedAudioExportException(config.audioCodec))
+            return
+        }
+        val totalDurationMs = tracks.flatMap { it.clips }
+            .maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L
+        if (!beginExportSession(outputFile)) return
+        val reversedTempFiles = mutableListOf<File>()
+        try {
+            val processedTracks = preRenderReversedClips(tracks, reversedTempFiles, onProgress)
+            ensureExportActive("reversed-clip pre-render")
+            val composition = buildAudioOnlyComposition(processedTracks, totalDurationMs)
+            startTransformerWithPolling(
+                composition = composition,
+                // Ignored: the composition carries no video sequence, so the
+                // muxer emits an audio-only track set regardless of this hint.
+                mimeType = MimeTypes.VIDEO_H264,
+                config = config,
+                outputFile = outputFile,
+                storageRequest = ExportStoragePolicy.request(
+                    durationMs = totalDurationMs,
+                    config = config,
+                    tracks = processedTracks,
+                    sourceSizeBytes = { clip -> querySourceSize(context, clip.sourceUri).takeIf { it > 0L } },
+                ),
+                onProgress = onProgress,
+                onComplete = { reversedTempFiles.forEach { it.delete() }; onComplete() },
+                onError = { e -> reversedTempFiles.forEach { it.delete() }; onError(e) },
+            )
+        } catch (e: CancellationException) {
+            failExportSession(outputFile, reversedTempFiles, cancelled = true)
+            throw e
+        } catch (e: Exception) {
+            Log.e(TAG, "Audio export setup failed", e)
+            failExportSession(outputFile, reversedTempFiles, cancelled = false, message = e.message)
+            onError(e)
+        }
+    }
+
+    /**
+     * Export one deterministic `.m4a` per audible timeline audio track (a "stem"
+     * set). Tracks are emitted in timeline index order; each stem carries that
+     * track's own gain / fade / keyframe automation. Visual tracks contribute a
+     * stem only when they carry embedded audio. Returns nothing directly —
+     * [onComplete] receives the ordered list of written files so the caller can
+     * record the full output set. A failure on any stem aborts the set and never
+     * falls back to a video artifact.
+     */
+    @androidx.annotation.OptIn(UnstableApi::class)
+    suspend fun exportAudioStems(
+        tracks: List<Track>,
+        config: ExportConfig,
+        outputFileFor: (index: Int, trackName: String) -> File,
+        onProgress: (Float) -> Unit = {},
+        onComplete: (List<File>) -> Unit = {},
+        onError: (Exception) -> Unit = {}
+    ) {
+        if (config.audioCodec != AudioCodec.AAC) {
+            onError(UnsupportedAudioExportException(config.audioCodec))
+            return
+        }
+        val totalDurationMs = tracks.flatMap { it.clips }
+            .maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L
+        val stemTracks = buildAudioMixdownTracks(tracks)
+            .filter { isTrackAudibleForMix(it, tracks.filter { t -> t.isSolo }.map { t -> t.id }.toSet()) }
+            .sortedBy { it.index }
+        if (stemTracks.isEmpty()) {
+            onError(IllegalStateException("No audible audio tracks to export as stems"))
+            return
+        }
+        // Reserve the primary output up front so cancellation deletes it.
+        val firstFile = outputFileFor(0, stemTrackName(stemTracks[0], 0))
+        if (!beginExportSession(firstFile)) return
+        val reversedTempFiles = mutableListOf<File>()
+        val written = mutableListOf<File>()
+        try {
+            val processedTracks = preRenderReversedClips(tracks, reversedTempFiles, onProgress)
+            ensureExportActive("reversed-clip pre-render")
+            val processedStems = buildAudioMixdownTracks(processedTracks)
+                .filter { it.id in stemTracks.map { s -> s.id }.toSet() }
+                .sortedBy { it.index }
+            processedStems.forEachIndexed { index, stem ->
+                ensureExportActive("stem ${index + 1}")
+                val outFile = if (index == 0) firstFile
+                    else outputFileFor(index, stemTrackName(stem, index))
+                activeExportOutputFile = outFile
+                val composition = buildSingleTrackAudioComposition(stem, totalDurationMs)
+                var stemError: Exception? = null
+                startTransformerWithPolling(
+                    composition = composition,
+                    mimeType = MimeTypes.VIDEO_H264,
+                    config = config,
+                    outputFile = outFile,
+                    storageRequest = ExportStoragePolicy.request(
+                        durationMs = totalDurationMs,
+                        config = config,
+                        tracks = listOf(stem),
+                        sourceSizeBytes = { clip -> querySourceSize(context, clip.sourceUri).takeIf { it > 0L } },
+                    ),
+                    onProgress = { p ->
+                        val base = index.toFloat() / processedStems.size
+                        onProgress(base + p / processedStems.size)
+                    },
+                    onComplete = { written.add(outFile) },
+                    onError = { e -> stemError = e },
+                    // Keep the session EXPORTING between stems; only the final
+                    // COMPLETE is published after the whole set succeeds.
+                    markCompleteOnFinish = false,
+                )
+                stemError?.let { throw it }
+            }
+            reversedTempFiles.forEach { it.delete() }
+            _exportState.value = ExportState.COMPLETE
+            _exportProgress.value = 1f
+            activeExportOutputFile = null
+            onComplete(written.toList())
+        } catch (e: CancellationException) {
+            written.forEach { runCatching { it.delete() } }
+            failExportSession(firstFile, reversedTempFiles, cancelled = true)
+            throw e
+        } catch (e: Exception) {
+            Log.e(TAG, "Stem export failed", e)
+            written.forEach { runCatching { it.delete() } }
+            failExportSession(firstFile, reversedTempFiles, cancelled = false, message = e.message)
+            onError(e)
+        }
+    }
+
+    private fun stemTrackName(track: Track, index: Int): String =
+        "${track.type.name.lowercase()}${track.index + 1}"
+
+    /** Atomic check-and-set of the export state machine shared by audio exports. */
+    private fun beginExportSession(outputFile: File): Boolean {
+        synchronized(this) {
+            if (_exportState.value == ExportState.EXPORTING) {
+                Log.w(TAG, "Export already in progress")
+                return false
+            }
+            _exportState.value = ExportState.EXPORTING
+            activeExportOutputFile = outputFile
+        }
+        _exportProgress.value = 0f
+        _exportErrorMessage.value = null
+        return true
+    }
+
+    private fun failExportSession(
+        outputFile: File,
+        reversedTempFiles: List<File>,
+        cancelled: Boolean,
+        message: String? = null,
+    ) {
+        reversedTempFiles.forEach { it.delete() }
+        if (cancelled) {
+            if (_exportState.value == ExportState.EXPORTING) {
+                _exportState.value = ExportState.CANCELLED
+            }
+        } else {
+            _exportErrorMessage.value = message ?: "Audio export failed"
+            _exportState.value = ExportState.ERROR
+        }
+        _exportProgress.value = 0f
+        activeTransformer = null
+        activeExportOutputFile = null
+        runCatching { outputFile.delete() }
+    }
+
     private suspend fun preRenderReversedClips(
         tracks: List<Track>,
         tempFiles: MutableList<File>,
@@ -964,6 +1152,68 @@ class VideoEngine @Inject constructor(
         }
 
         return TransformerExportPlan(composition, mimeType)
+    }
+
+    /**
+     * Normalise the timeline into audio-only tracks for a standalone audio
+     * mixdown / stem export. Dedicated audio tracks pass through unchanged;
+     * visual tracks are re-typed as audio and reduced to just the clips whose
+     * source actually carries an audio track (silent visual clips become gaps),
+     * so the shared [buildAudioSequences] path can apply the same gain / fade /
+     * keyframe automation without pulling in a video sequence.
+     */
+    private fun buildAudioMixdownTracks(tracks: List<Track>): List<Track> {
+        return tracks.mapNotNull { track ->
+            when (track.type) {
+                TrackType.AUDIO -> track.takeIf { it.clips.isNotEmpty() }
+                else -> {
+                    val audible = track.clips.filter { hasAudioTrack(it.sourceUri) }
+                    if (audible.isEmpty()) null
+                    else track.copy(type = TrackType.AUDIO, clips = audible)
+                }
+            }
+        }
+    }
+
+    @androidx.annotation.OptIn(UnstableApi::class)
+    private fun buildAudioOnlyComposition(
+        tracks: List<Track>,
+        totalTimelineDurationMs: Long,
+    ): Composition {
+        val mixdownTracks = buildAudioMixdownTracks(tracks)
+        val soloTrackIds = mixdownTracks.filter { it.isSolo }.map { it.id }.toSet()
+        val audioSequences = buildAudioSequences(mixdownTracks, soloTrackIds, totalTimelineDurationMs)
+        if (audioSequences.isEmpty()) {
+            throw IllegalStateException("No audible audio to export")
+        }
+        return buildComposition(
+            sequences = audioSequences,
+            hasAudioTracks = true,
+            hasEmbeddedVisualAudio = false,
+            targetWidth = 0,
+            targetHeight = 0,
+            allowAudioTransmux = false,
+        )
+    }
+
+    @androidx.annotation.OptIn(UnstableApi::class)
+    private fun buildSingleTrackAudioComposition(
+        track: Track,
+        totalTimelineDurationMs: Long,
+    ): Composition {
+        // A single-track stem is never soloed against itself.
+        val audioSequences = buildAudioSequences(listOf(track), emptySet(), totalTimelineDurationMs)
+        if (audioSequences.isEmpty()) {
+            throw IllegalStateException("Stem track ${track.index} produced no audible audio")
+        }
+        return buildComposition(
+            sequences = audioSequences,
+            hasAudioTracks = true,
+            hasEmbeddedVisualAudio = false,
+            targetWidth = 0,
+            targetHeight = 0,
+            allowAudioTransmux = false,
+        )
     }
 
     @androidx.annotation.OptIn(UnstableApi::class)
@@ -1709,7 +1959,8 @@ class VideoEngine @Inject constructor(
                     }
                     val verification = ExportOutputVerifier.verify(
                         outputFile = outputFile,
-                        expectVideo = !config.exportAudioOnly && !config.exportStemsOnly
+                        expectVideo = !config.exportAudioOnly && !config.exportStemsOnly,
+                        expectAudio = config.exportAudioOnly || config.exportStemsOnly
                     )
                     if (!verification.valid) {
                         Log.e(TAG, "Post-export verification failed: ${verification.reason}")

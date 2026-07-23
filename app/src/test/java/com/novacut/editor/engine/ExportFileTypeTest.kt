@@ -29,4 +29,25 @@ class ExportFileTypeTest {
         assertFalse(exportUsesImageCollection("master.mp4"))
         assertFalse(exportUsesImageCollection("alpha.webm"))
     }
+
+    @Test
+    fun `exportMimeTypeFor detects standalone audio outputs`() {
+        assertEquals("audio/mp4", exportMimeTypeFor("mixdown.m4a"))
+        assertEquals("audio/mp4", exportMimeTypeFor("MIXDOWN.M4A"))
+        assertEquals("audio/aac", exportMimeTypeFor("voice.aac"))
+    }
+
+    @Test
+    fun `exportUsesAudioCollection routes m4a and aac to the audio collection`() {
+        assertTrue(exportUsesAudioCollection("mixdown.m4a"))
+        assertTrue(exportUsesAudioCollection("voice.aac"))
+        assertFalse(exportUsesAudioCollection("master.mp4"))
+        assertFalse(exportUsesAudioCollection("frame.png"))
+    }
+
+    @Test
+    fun `audio outputs are neither image nor video collections`() {
+        assertFalse(exportUsesImageCollection("mixdown.m4a"))
+        assertFalse(exportUsesImageCollection("voice.aac"))
+    }
 }

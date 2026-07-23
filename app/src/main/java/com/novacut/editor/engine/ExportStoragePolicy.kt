@@ -311,3 +311,13 @@ class ExportStorageException(
     val failure: ExportStoragePolicy.Failure,
     message: String,
 ) : IllegalStateException(message)
+
+/**
+ * Thrown when a standalone audio (audio-only / stems) export is requested with
+ * an audio codec that has not been probe-verified for standalone muxing. Only
+ * AAC is currently offered; requesting Opus or FLAC fails before any encoder
+ * work starts so the export never silently falls back to a video artifact.
+ */
+class UnsupportedAudioExportException(
+    val codec: com.novacut.editor.model.AudioCodec,
+) : IllegalStateException("Standalone audio export supports AAC only (requested ${codec.label})")

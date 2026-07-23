@@ -30,6 +30,7 @@ import com.novacut.editor.engine.StreamCopyExportEngine
 import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.engine.buildExportHistoryEntry
 import com.novacut.editor.engine.exportMimeTypeFor
+import com.novacut.editor.engine.exportUsesAudioCollection
 import com.novacut.editor.engine.exportUsesImageCollection
 import com.novacut.editor.engine.exportStorageFailureMessage
 import com.novacut.editor.engine.querySourceSize
@@ -949,6 +950,103 @@ class ExportDelegate(
             return
         }
 
+        // Audio-only / stems export path — produces standalone `.m4a`
+        // (`audio/mp4`) artifacts with no video track. It drives the shared
+        // Transformer state machine (so the foreground service and cancel path
+        // behave exactly like a video export) but builds an audio-only
+        // composition, and never falls back to a video file.
+        if (configWithChapters.exportAudioOnly || configWithChapters.exportStemsOnly) {
+            val startedAtMs = markExportStarted()
+            appContext.startForegroundService(Intent(appContext, ExportService::class.java))
+            val baseName = preferredOutputName ?: currentState.project.name
+            nonVideoExportJob = scope.launch {
+                try {
+                    withContext(Dispatchers.IO) { outputDir.mkdirs() }
+                    if (configWithChapters.exportStemsOnly) {
+                        videoEngine.exportAudioStems(
+                            tracks = tracks,
+                            config = configWithChapters,
+                            outputFileFor = { index, trackName ->
+                                createOutputFile(
+                                    outputDir = outputDir,
+                                    extension = "m4a",
+                                    preferredOutputName = "${baseName}_stem${index + 1}_$trackName"
+                                )
+                            },
+                            onProgress = { p -> sampleProgress(p); updateExport { it.copy(progress = p) } },
+                            onComplete = { files ->
+                                val primary = files.firstOrNull()
+                                updateExport {
+                                    it.copy(
+                                        state = ExportState.COMPLETE,
+                                        progress = 1f,
+                                        lastExportedFilePath = primary?.absolutePath
+                                    )
+                                }
+                                recordExportHistory(
+                                    sourceState = currentState,
+                                    status = ExportHistoryStatus.COMPLETE,
+                                    startedAtMs = startedAtMs,
+                                    outputFile = primary,
+                                    config = configWithChapters,
+                                    timelineDurationMs = totalDurationMs,
+                                    diagnosticSummary = "Stem export wrote ${files.size} audio track file(s): " +
+                                        files.joinToString { it.name },
+                                    healthReport = healthReport
+                                )
+                                primary?.let {
+                                    showToast(appContext.getString(R.string.export_complete_toast, it.name))
+                                }
+                            },
+                            onError = { e ->
+                                recordAudioExportFailure(e, currentState, configWithChapters, totalDurationMs, startedAtMs, healthReport)
+                            }
+                        )
+                    } else {
+                        val outputFile = createOutputFile(outputDir, "m4a", baseName)
+                        videoEngine.exportAudio(
+                            tracks = tracks,
+                            config = configWithChapters,
+                            outputFile = outputFile,
+                            onProgress = { p -> sampleProgress(p); updateExport { it.copy(progress = p) } },
+                            onComplete = {
+                                val finalized = finalizeFilenameSize(outputFile)
+                                writeAiDisclosureSidecarIfRequested(finalized, configWithChapters, currentState)
+                                updateExport {
+                                    it.copy(
+                                        state = ExportState.COMPLETE,
+                                        progress = 1f,
+                                        lastExportedFilePath = finalized.absolutePath
+                                    )
+                                }
+                                recordExportHistory(
+                                    sourceState = currentState,
+                                    status = ExportHistoryStatus.COMPLETE,
+                                    startedAtMs = startedAtMs,
+                                    outputFile = finalized,
+                                    config = configWithChapters,
+                                    timelineDurationMs = totalDurationMs,
+                                    diagnosticSummary = "Audio-only export completed.",
+                                    healthReport = healthReport
+                                )
+                                showToast(appContext.getString(R.string.export_complete_toast, finalized.name))
+                            },
+                            onError = { e ->
+                                recordAudioExportFailure(e, currentState, configWithChapters, totalDurationMs, startedAtMs, healthReport)
+                            }
+                        )
+                    }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    recordAudioExportFailure(e, currentState, configWithChapters, totalDurationMs, startedAtMs, healthReport)
+                } finally {
+                    nonVideoExportJob = null
+                }
+            }
+            return
+        }
+
         val startedAtMs = markExportStarted()
 
         scope.launch {
@@ -1559,6 +1657,50 @@ class ExportDelegate(
         }
     }
 
+    private fun recordAudioExportFailure(
+        e: Exception,
+        currentState: EditorState,
+        config: ExportConfig,
+        totalDurationMs: Long,
+        startedAtMs: Long,
+        healthReport: MediaHealthReport?,
+    ) {
+        val message = when (e) {
+            is ExportStorageException -> appContext.exportStorageFailureMessage(e.failure)
+            else -> text(R.string.export_failed)
+        }
+        val technicalMessage = e.message ?: e::class.java.simpleName
+        android.util.Log.w("ExportDelegate", "Audio export failed", e)
+        updateExport {
+            it.copy(
+                state = ExportState.ERROR,
+                errorMessage = message,
+                lastExportedFilePath = null,
+            )
+        }
+        recordExportHistory(
+            sourceState = currentState,
+            status = ExportHistoryStatus.FAILED,
+            startedAtMs = startedAtMs,
+            outputFile = null,
+            config = config,
+            timelineDurationMs = totalDurationMs,
+            errorMessage = technicalMessage,
+            diagnosticSummary = "Audio export failed in the encoder pipeline.",
+            healthReport = healthReport,
+        )
+        recordExportIncident(
+            sourceState = currentState,
+            failedPhase = "audio-encoder",
+            error = e,
+            errorMessage = technicalMessage,
+            config = config,
+            timelineDurationMs = totalDurationMs,
+            startedAtMs = startedAtMs,
+            healthReport = healthReport,
+        )
+    }
+
     private fun createOutputFile(
         outputDir: File,
         extension: String,
@@ -1594,7 +1736,12 @@ class ExportDelegate(
 
     private suspend fun saveExportedFile(file: File): String {
         val usesImageCollection = exportUsesImageCollection(file.name)
-        val relativeDirectory = if (usesImageCollection) Environment.DIRECTORY_PICTURES else Environment.DIRECTORY_MOVIES
+        val usesAudioCollection = exportUsesAudioCollection(file.name)
+        val relativeDirectory = when {
+            usesImageCollection -> Environment.DIRECTORY_PICTURES
+            usesAudioCollection -> Environment.DIRECTORY_MUSIC
+            else -> Environment.DIRECTORY_MOVIES
+        }
         val mimeType = exportMimeTypeFor(file.name)
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -1605,10 +1752,10 @@ class ExportDelegate(
                 put(MediaStore.MediaColumns.RELATIVE_PATH, "$relativeDirectory/ClearCut")
                 put(MediaStore.MediaColumns.IS_PENDING, 1)
             }
-            val collection = if (usesImageCollection) {
-                MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-            } else {
-                MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+            val collection = when {
+                usesImageCollection -> MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                usesAudioCollection -> MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+                else -> MediaStore.Video.Media.EXTERNAL_CONTENT_URI
             }
             val contentUri = resolver.insert(collection, values)
                 ?: throw IllegalStateException("Failed to create media destination")
