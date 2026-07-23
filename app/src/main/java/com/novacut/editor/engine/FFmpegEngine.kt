@@ -72,7 +72,7 @@ import kotlin.coroutines.resume
  * would require a complete rewrite of FFmpegEngine from command-string
  * dispatch to raw libav* API calls — a fundamentally different abstraction
  * level. Every typed entry point (extractAudioToWav, reverseClipToFile,
- * concat, changeSpeed, burnSubtitles, normalizeLoudness, streamCopyTrim)
+ * concat, burnSubtitles, normalizeLoudness, streamCopyTrim)
  * constructs FFmpeg CLI argument lists, which ffmpeg-kt cannot consume.
  *
  * ### 16KB page-size compliance
@@ -429,34 +429,6 @@ class FFmpegEngine @Inject constructor(
         }
     }
 
-    /**
-     * Change video speed with audio pitch correction.
-     */
-    suspend fun changeSpeed(
-        inputFile: File,
-        outputFile: File,
-        speedFactor: Float,
-        onProgress: (Float) -> Unit = {}
-    ): Boolean = withContext(Dispatchers.IO) {
-        if (speedFactor <= 0f) return@withContext false
-        val v = NativeProcessingPolicy.validateVideoFile(inputFile, "changeSpeed")
-        if (v != null) return@withContext NativeProcessingPolicy.logAndReject(v)
-        val setPts = String.format(Locale.US, "%.6f", 1f / speedFactor)
-        val filter = "[0:v]setpts=${setPts}*PTS[v];[0:a]${buildAtempoChain(speedFactor)}[a]"
-        executeArguments(
-            listOf(
-                "-y",
-                "-i", inputFile.absolutePath,
-                "-filter_complex", filter,
-                "-map", "[v]",
-                "-map", "[a]",
-                outputFile.absolutePath
-            ),
-            progressDurationMs = mediaDurationMs(inputFile),
-            onProgress = onProgress
-        ) == 0
-    }
-
     private suspend fun executeCommand(
         command: String,
         progressDurationMs: Long? = null,
@@ -567,7 +539,6 @@ class FFmpegEngine @Inject constructor(
     internal fun escapeFilterPath(path: String): String = Companion.escapeFilterPath(path)
     internal fun escapeConcatPath(path: String): String = Companion.escapeConcatPath(path)
     internal fun msToSeconds(ms: Long): String = Companion.msToSeconds(ms)
-    internal fun buildAtempoChain(speed: Float): String = Companion.buildAtempoChain(speed)
 
     companion object {
         private const val TAG = "FFmpegEngine"
