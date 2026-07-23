@@ -40,30 +40,40 @@ class FontRegistry @Inject constructor(
     }
 
     fun importFont(uri: Uri): ImportedFont? {
-        fontsDir.mkdirs()
-        val inputStream = try {
-            context.contentResolver.openInputStream(uri)
-        } catch (e: Exception) {
-            Log.w(TAG, "Cannot open font URI", e)
+        // Reject anything that isn't a validated .ttf/.otf name up front, before
+        // any bytes are copied.
+        val fileName = resolveFileName(uri) ?: run {
+            Log.w(TAG, "Rejected font import: unsupported or unnamed file type")
             return null
-        } ?: return null
-
-        val fileName = resolveFileName(uri)
+        }
         val targetFile = File(fontsDir, fileName)
-        val partialFile = File(fontsDir, "$fileName.partial")
 
         return try {
-            inputStream.use { input ->
-                partialFile.outputStream().use { output ->
-                    input.copyTo(output)
+            // Bounded, atomic install: copy under a byte ceiling to a temp file,
+            // validate it is a real typeface, fsync, then atomically move it into
+            // place. writeFileAtomically throws on an empty result or a failed
+            // move, so a partial/failed import can never land as a usable font.
+            writeFileAtomically(targetFile, requireNonEmpty = true) { tempFile ->
+                val input = context.contentResolver.openInputStream(uri)
+                    ?: throw java.io.IOException("Cannot open font URI")
+                input.use { source ->
+                    tempFile.outputStream().use { output ->
+                        copyWithLimit(source, output, MAX_FONT_BYTES)
+                    }
+                }
+                if (loadTypeface(tempFile) == null) {
+                    throw java.io.IOException("Not a valid typeface: $fileName")
                 }
             }
-            if (loadTypeface(partialFile) == null) {
-                partialFile.delete()
-                Log.w(TAG, "Font file is not a valid typeface: $fileName")
+            // The move committed; confirm the installed file actually reloads
+            // before reporting success (a success with an unreadable file would
+            // leave a broken entry in the picker).
+            if (loadTypeface(targetFile) == null) {
+                targetFile.delete()
+                Log.w(TAG, "Imported font is not reloadable: $fileName")
                 return null
             }
-            partialFile.renameTo(targetFile)
+            typefaceCache.remove(targetFile.name)
             ImportedFont(
                 fileName = targetFile.name,
                 displayName = targetFile.nameWithoutExtension.replace(Regex("[_-]"), " "),
@@ -71,7 +81,6 @@ class FontRegistry @Inject constructor(
             )
         } catch (e: Exception) {
             Log.w(TAG, "Failed to import font", e)
-            partialFile.delete()
             null
         }
     }
@@ -145,7 +154,12 @@ class FontRegistry @Inject constructor(
         null
     }
 
-    private fun resolveFileName(uri: Uri): String {
+    /**
+     * Resolve a sanitized `<stem>.<ext>` file name, or null when the source is
+     * not a `.ttf`/`.otf` font. Extension is taken from the source name (never
+     * defaulted) so arbitrary file types cannot slip in under a font extension.
+     */
+    private fun resolveFileName(uri: Uri): String? {
         val cursor = context.contentResolver.query(uri, null, null, null, null)
         val nameFromCursor = cursor?.use {
             if (it.moveToFirst()) {
@@ -153,16 +167,35 @@ class FontRegistry @Inject constructor(
                 if (idx >= 0) it.getString(idx) else null
             } else null
         }
-        val baseName = nameFromCursor ?: uri.lastPathSegment ?: "font_${System.currentTimeMillis()}"
-        val ext = baseName.substringAfterLast('.', "ttf").lowercase()
-        val stem = baseName.substringBeforeLast('.')
-            .replace(Regex("[^a-zA-Z0-9._-]"), "_")
-            .take(60)
-        return "$stem.$ext"
+        return sanitizedFontFileName(nameFromCursor ?: uri.lastPathSegment)
     }
 
     companion object {
         private const val TAG = "FontRegistry"
         const val CUSTOM_PREFIX = "custom:"
+        private val ALLOWED_FONT_EXTENSIONS = setOf("ttf", "otf")
+        // Byte ceiling for a custom font import. Comfortably covers large CJK
+        // faces (typically 10-30 MB) while rejecting pathological/malicious
+        // inputs that would otherwise copy without bound into app storage.
+        private const val MAX_FONT_BYTES = 48L * 1024 * 1024
+
+        /**
+         * Sanitize a source display/path name into a `<stem>.<ext>` font file
+         * name, or null when it is not a validated `.ttf`/`.otf` font. The
+         * extension is read from the source name and never defaulted, so an
+         * arbitrary file type (e.g. `.exe`, no extension) cannot install under a
+         * font name. Pure — no Android dependency, unit-tested directly.
+         */
+        internal fun sanitizedFontFileName(rawName: String?): String? {
+            val baseName = rawName?.trim().orEmpty()
+            if (baseName.isEmpty()) return null
+            val ext = baseName.substringAfterLast('.', "").lowercase()
+            if (ext !in ALLOWED_FONT_EXTENSIONS) return null
+            val stem = baseName.substringBeforeLast('.')
+                .replace(Regex("[^a-zA-Z0-9._-]"), "_")
+                .take(60)
+                .ifBlank { "font" }
+            return "$stem.$ext"
+        }
     }
 }
