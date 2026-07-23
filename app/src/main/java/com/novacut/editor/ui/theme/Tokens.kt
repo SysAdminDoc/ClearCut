@@ -41,26 +41,32 @@ object Spacing {
     val xxxl = 32.dp
 }
 
+// Corner radii for the no-pill radius system: allowed values are 0/4/6/8/10/12dp
+// only. Each KDoc states the actual dp of the constant — never "restore" a
+// larger value from a doc comment, and never introduce a capsule/999/50%
+// radius. `xxl` is intentionally capped equal to `xl` (12dp) so nothing rounds
+// beyond the 12dp ceiling.
 object Radius {
-    /** 6dp — tags, status labels, single-letter badges. */
+    /** 4dp — tags, status labels, single-letter badges. */
     val xs = 4.dp
 
-    /** 10dp — tight buttons and slim rectangular chips. */
+    /** 6dp — tight buttons and slim rectangular chips. */
     val sm = 6.dp
 
-    /** 12dp — text fields, default control surfaces. */
+    /** 8dp — text fields, default control surfaces. */
     val md = 8.dp
 
-    /** 16dp — primary buttons, prominent chips. */
+    /** 10dp — primary buttons, prominent chips. */
     val lg = 10.dp
 
-    /** 20dp — cards inside panels. */
+    /** 12dp — cards inside panels. */
     val xl = 12.dp
 
-    /** 24dp — top-level panel/sheet corners. */
+    /** 12dp — top-level panel/sheet corners; intentionally capped equal to `xl`
+     * (the 12dp ceiling of the no-pill radius system), not 24dp. */
     val xxl = 12.dp
 
-    /** 10dp — legacy alias retained for older call sites; do not use for capsule shapes. */
+    /** 6dp — legacy alias retained for older call sites; do not use for capsule shapes. */
     @Deprecated("Use Radius.sm for compact rectangular badges.")
     val pill = sm
 }
