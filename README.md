@@ -4,9 +4,14 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.75.0-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.75.1-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.75.1 Export truthfulness and safer font import
+
+- Export preflight now warns when a project carries mixer pan or per-track/clip audio effects that the current render path doesn't apply, so those saved edits are no longer silently dropped (the pan/DSP mixer controls remain withheld until rendering lands).
+- Custom font import is bounded and atomic: only validated `.ttf`/`.otf` files install, the copy is capped at 48 MB, and the file is verified as a real typeface and fsync'd before an atomic move — a failed or partial import can no longer land as a broken font.
 
 ### v3.75.0 Track-verified audio-only and stem exports
 
