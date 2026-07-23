@@ -141,6 +141,34 @@ class ExportMediaPreflightTest {
         assertTrue(result.message.contains("Brand font → sans-serif"))
     }
 
+    @Test
+    fun evaluateWarnsAboutUnrenderedMixerEdits() {
+        val result = ExportMediaPreflight.evaluate(
+            healthReport = report(),
+            relinkReports = emptyMap(),
+            unrenderedMixerEditCount = 2,
+        )
+
+        assertTrue(result.canExport)
+        assertEquals(0, result.blockingCount)
+        assertEquals(2, result.warningCount)
+        assertTrue(result.message.contains("pan or audio effects"))
+        assertTrue(result.message.contains("2 tracks"))
+    }
+
+    @Test
+    fun evaluateDoesNotWarnWhenNoUnrenderedMixerEdits() {
+        val result = ExportMediaPreflight.evaluate(
+            healthReport = report(),
+            relinkReports = emptyMap(),
+            unrenderedMixerEditCount = 0,
+        )
+
+        assertTrue(result.canExport)
+        assertEquals(0, result.warningCount)
+        assertEquals("Media ready for export.", result.message)
+    }
+
     private fun report(vararg issues: MediaHealthIssue): MediaHealthReport {
         return MediaHealthReport(
             totalReferences = 1,

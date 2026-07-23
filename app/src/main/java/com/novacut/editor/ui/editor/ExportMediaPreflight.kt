@@ -23,6 +23,13 @@ object ExportMediaPreflight {
         relinkReports: Map<String, MediaRelinkProbe.ClipRelinkReport>,
         audioConformance: AudioConformanceReport? = null,
         dependencies: ProjectDependencyManifest = ProjectDependencyManifest(emptyList()),
+        // Number of tracks carrying mixer pan or audio-effect edits that the
+        // current render path does not yet apply. The pan/DSP mixer controls are
+        // withheld from the UI (they are not rendered in preview or export), but
+        // a project imported or created before they were withheld can still carry
+        // saved values. Surfacing them here keeps those edits from being silently
+        // dropped on export.
+        unrenderedMixerEditCount: Int = 0,
     ): ExportMediaPreflightResult {
         val healthBlockers = healthReport?.issues
             ?.count { it.severity == MediaHealthSeverity.BLOCKING }
@@ -43,8 +50,11 @@ object ExportMediaPreflight {
             it.status != ProjectDependencyStatus.AVAILABLE && !it.blocksRequestedOperation
         }
 
+        val mixerEditWarnings = unrenderedMixerEditCount.coerceAtLeast(0)
+
         val blockers = healthBlockers + missingSources + audioBlockers + dependencyBlockers.size
-        val warnings = healthWarnings + unknownSources + audioWarnings + dependencyWarnings.size
+        val warnings = healthWarnings + unknownSources + audioWarnings +
+            dependencyWarnings.size + mixerEditWarnings
         return when {
             blockers > 0 -> ExportMediaPreflightResult(
                 canExport = false,
@@ -76,14 +86,18 @@ object ExportMediaPreflight {
                     }
                     " Fallbacks: $fallbacks."
                 } else ""
+                val mixerNote = if (mixerEditWarnings > 0) {
+                    " $mixerEditWarnings track${if (mixerEditWarnings == 1) "" else "s"} " +
+                        "use pan or audio effects that are not rendered yet and are ignored in this export."
+                } else ""
                 ExportMediaPreflightResult(
                     canExport = true,
                     blockingCount = 0,
                     warningCount = warnings,
                     message = if (warnings == 1) {
-                        "Export can continue with 1 warning.$audioNote$dependencyNote"
+                        "Export can continue with 1 warning.$audioNote$dependencyNote$mixerNote"
                     } else {
-                        "Export can continue with $warnings warnings.$audioNote$dependencyNote"
+                        "Export can continue with $warnings warnings.$audioNote$dependencyNote$mixerNote"
                     },
                     audioConformance = audioConformance,
                     dependencies = dependencies,

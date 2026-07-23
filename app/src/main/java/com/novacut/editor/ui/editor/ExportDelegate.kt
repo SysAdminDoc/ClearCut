@@ -530,11 +530,22 @@ class ExportDelegate(
     private suspend fun startExportAsync(outputDir: File, preferredOutputName: String?, currentState: EditorState) {
         val healthReport = mediaHealthPreflight(currentState)
         val audioConformance = buildAudioConformance(currentState)
+        // Pan and per-track/clip audio effects are modeled and persisted but the
+        // mixer controls that set them are withheld (not rendered in preview or
+        // export). A project imported/created before they were withheld can still
+        // carry saved values; surface them as a warning so they are not silently
+        // dropped at export time.
+        val unrenderedMixerEditCount = currentState.tracks.count { track ->
+            track.pan != 0f ||
+                track.audioEffects.isNotEmpty() ||
+                track.clips.any { it.audioEffects.isNotEmpty() }
+        }
         val mediaPreflight = ExportMediaPreflight.evaluate(
             healthReport = healthReport,
             relinkReports = currentState.media.relinkReports,
             audioConformance = audioConformance,
             dependencies = projectDependencyManifest(currentState),
+            unrenderedMixerEditCount = unrenderedMixerEditCount,
         )
         stateFlow.update { state ->
             state.copyMedia { media -> media.copy(healthReport = healthReport) }
