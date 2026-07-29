@@ -4,9 +4,21 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.76.0-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.77.0-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.77.0 Truthful exports, per-ABI downloads, and redacted diagnostics
+
+- **Downloads are about a quarter of the size.** Per-ABI APKs are now published alongside the universal build: the arm64-v8a release is 92 MB instead of 349 MB, and the app bundle produces 46.5–55.0 MB compressed per-device sets. Every ABI is checksum- and certificate-verified, 16 KB-aligned, and install-tested.
+- **Exports stop before they lie.** Preflight warnings are itemized and shown before any work starts, and the export waits for you to accept them; accepting is recorded in export history. A reversed clip whose backend is unavailable or which exceeds the reverse limit is disclosed up front instead of quietly exporting forward, and an unexpected reverse failure now stops the export naming the clip and stage. Audio that will be resampled is disclosed too.
+- **Noise reduction reports what actually happened.** Analysis measures the audio instead of assuming 20 dB SNR, and results distinguish applied, no-op, unavailable, and failed. A run that cannot improve the audio no longer replaces your clip with a copy and claims an SNR gain, and the spectral-gate backend is now actually wired up.
+- **Previewing a style pack no longer installs it.** Validation and installation are separate; confirming dispatches by document kind instead of routing everything through the template importer.
+- **Project saves are atomic.** The project row and its media manifest are written in one transaction, closing a window where a crash could leave a project with an erased media list.
+- **Trash stays reachable.** Deleting your last project no longer hides Restore behind an empty state, and the confirmation says what deleting actually does — it is a 30-day restorable soft delete.
+- **Android's system backup fits again.** ClearCut's share of Android Auto Backup is bounded to project documents, because that quota is 25 MB and all-or-nothing — one big render was silently failing the entire backup. Generated media travels by device-to-device transfer or an Archive Transfer you export.
+- **Logs no longer print your file names.** Every log site that names an asset now emits a stable digest, and export failures produce a copyable report naming stage, codec, device, clip, and what to try.
+- Privacy dashboard rows only offer actions that run, and say where the control lives otherwise. Published privacy policy and Data safety worksheet are live and tracked. Transitive protobuf constrained above GHSA-735f-pc8j-v9w8, Gradle wrapper checksum pinned, and the release gate now reads the resolved dependency graph.
 
 ### v3.76.0 One UI 8.5 interface hardening and first-run tutorial restored
 

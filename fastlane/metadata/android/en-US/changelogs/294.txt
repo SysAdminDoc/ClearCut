@@ -1,0 +1,5 @@
+Smaller downloads and more honest exports.
+Per-ABI builds mean a device downloads about 92 MB instead of 349 MB.
+Export now shows every warning before it starts and waits for you to accept it; a reversed clip that can't be rendered is disclosed instead of quietly exported forward.
+Noise reduction measures your audio and says when it changed nothing, instead of replacing the clip and claiming an improvement.
+Deleting your last project no longer hides Restore.
