@@ -174,7 +174,23 @@ fun ProjectListScreen(
                 }
             }
 
-            if (projects.isEmpty()) {
+            // Trash state is hoisted above the empty/non-empty branch on purpose.
+            // Deleting the last active project used to switch the screen to a
+            // bare empty state that never rendered the trash section — hiding
+            // Restore, the only way back, at exactly the moment it is needed.
+            val trashed by viewModel.trashedProjects.collectAsStateWithLifecycle()
+            var showTrash by remember { mutableStateOf(false) }
+            var confirmEmptyTrash by remember { mutableStateOf(false) }
+            var pendingDeleteForever by remember { mutableStateOf<Project?>(null) }
+            LaunchedEffect(projects.isEmpty(), trashed.isEmpty()) {
+                // With nothing active, the trash is the whole screen's content:
+                // expand it so Restore is reachable without a second tap.
+                if (ProjectListTrashVisibilityPolicy.autoExpandsTrash(projects.size, trashed.size)) {
+                    showTrash = true
+                }
+            }
+
+            if (ProjectListTrashVisibilityPolicy.showsFullScreenEmptyState(projects.size, trashed.size)) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -200,7 +216,7 @@ fun ProjectListScreen(
                 val hasActiveFilter = filterMode != ProjectFilterMode.ALL
                 val sortLabel = sortMode.localizedLabel()
                 val filterLabel = filterMode.localizedLabel()
-                ClearCutSectionHeader(
+                if (projects.isNotEmpty()) ClearCutSectionHeader(
                     title = if (hasActiveSearch) {
                         if (projects.size == 1) {
                             stringResource(R.string.projects_results_count_one)
@@ -241,11 +257,6 @@ fun ProjectListScreen(
                     }
                 )
 
-                val trashed by viewModel.trashedProjects.collectAsStateWithLifecycle()
-                var showTrash by remember { mutableStateOf(false) }
-                var confirmEmptyTrash by remember { mutableStateOf(false) }
-                var pendingDeleteForever by remember { mutableStateOf<Project?>(null) }
-
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -253,6 +264,23 @@ fun ProjectListScreen(
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 28.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    if (ProjectListTrashVisibilityPolicy.showsInlineEmptyState(projects.size, trashed.size)) {
+                        item(key = "__empty_state") {
+                            ProjectEmptyState(
+                                projectTotalCount = projectTotalCount,
+                                searchQuery = searchQuery,
+                                filterMode = filterMode,
+                                onCreateProject = { showTemplateSheet = true },
+                                onImportTemplate = importTemplate,
+                                onShowAllProjects = {
+                                    viewModel.setSearchQuery("")
+                                    viewModel.setFilterMode(ProjectFilterMode.ALL)
+                                },
+                                actionsEnabled = actionsEnabled
+                            )
+                        }
+                    }
+
                     items(projects, key = { it.id }) { project ->
                         ProjectCard(
                             project = project,
