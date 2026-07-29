@@ -3412,8 +3412,16 @@ class EditorViewModel @Inject constructor(
         }
         viewModelScope.launch {
             try {
-                // Step 1: Analyze noise profile using NoiseReductionEngine
+                // Step 1: measure the source. A null profile means the audio could
+                // not be measured — report that instead of guessing an SNR.
                 val noiseProfile = noiseReductionEngine.analyzeNoise(clip.sourceUri)
+                if (noiseProfile == null) {
+                    _state.update {
+                        it.copyAi { ai -> ai.copy(isAnalyzingNoise = false, noiseAnalysisResult = null) }
+                    }
+                    showToast(text(R.string.vm_noise_analysis_failed_toast))
+                    return@launch
+                }
                 val analysisText = "Detected ${noiseProfile.type} noise, SNR: ${noiseProfile.estimatedSnrDb.toInt()} dB" +
                     (noiseProfile.dominantFreqHz?.let { " @ ${it.toInt()} Hz" } ?: "")
                 _state.update { it.copyAi { ai -> ai.copy(noiseAnalysisResult = analysisText) } }
@@ -3427,32 +3435,50 @@ class EditorViewModel @Inject constructor(
                     else -> NoiseReductionEngine.NoiseReductionMode.OFF
                 }
 
-                if (mode != NoiseReductionEngine.NoiseReductionMode.OFF) {
-                    saveUndoState("Noise reduction")
-                    val result = noiseReductionEngine.processAudio(clip.sourceUri, mode)
-                    val processedUri = android.net.Uri.fromFile(result.outputFile)
-
-                    _state.update { s ->
-                        s.copy(
-                            ai = s.ai.copy(
-                                isAnalyzingNoise = false,
-                                noiseAnalysisResult = "$analysisText — applied ${mode.displayName} (SNR improved to ${result.processedSnrDb.toInt()} dB)"
-                            ),
-                            tracks = s.tracks.map { track ->
-                                track.copy(clips = track.clips.map { c ->
-                                    if (c.id == clip.id) {
-                                        c.copy(sourceUri = processedUri)
-                                    } else c
-                                })
-                            }
-                        )
-                    }
-                    saveProject()
-                    showToast(text(R.string.vm_noise_reduction_applied_toast, mode.displayName))
-                } else {
+                if (mode == NoiseReductionEngine.NoiseReductionMode.OFF) {
                     _state.update { it.copyAi { ai -> ai.copy(isAnalyzingNoise = false) } }
                     showToast(text(R.string.vm_audio_clean_toast))
+                    return@launch
                 }
+
+                val result = noiseReductionEngine.processAudio(clip.sourceUri, mode)
+                val appliedFile = result.outputFile
+                    .takeIf { result.outcome == NoiseReductionEngine.NoiseReductionOutcome.APPLIED }
+                if (appliedFile == null) {
+                    // NO_OP, UNAVAILABLE, or FAILED. The clip keeps its original
+                    // source, no undo entry is pushed, and the reported text is
+                    // the engine's own account of what happened.
+                    _state.update {
+                        it.copyAi { ai ->
+                            ai.copy(
+                                isAnalyzingNoise = false,
+                                noiseAnalysisResult = "$analysisText — ${result.detail}"
+                            )
+                        }
+                    }
+                    showToast(result.detail)
+                    return@launch
+                }
+
+                saveUndoState("Noise reduction")
+                val processedUri = android.net.Uri.fromFile(appliedFile)
+                _state.update { s ->
+                    s.copy(
+                        ai = s.ai.copy(
+                            isAnalyzingNoise = false,
+                            noiseAnalysisResult = "$analysisText — applied ${mode.displayName} (${result.detail})"
+                        ),
+                        tracks = s.tracks.map { track ->
+                            track.copy(clips = track.clips.map { c ->
+                                if (c.id == clip.id) {
+                                    c.copy(sourceUri = processedUri)
+                                } else c
+                            })
+                        }
+                    )
+                }
+                saveProject()
+                showToast(text(R.string.vm_noise_reduction_applied_toast, mode.displayName))
             } catch (e: Exception) {
                 _state.update {
                     it.copyAi { ai ->
