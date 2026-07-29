@@ -1221,9 +1221,8 @@ class EditorViewModel @Inject constructor(
                             if (succeeded && request != null && attempt != null) {
                                 try {
                                     if (currentFingerprint == request.documentFingerprint) {
-                                        projectDao.insertProject(request.project)
-                                        projectDao.replaceProjectMediaAssets(
-                                            request.project.id,
+                                        projectDao.saveProjectWithMediaAssets(
+                                            request.project,
                                             request.state.mediaAssets.toProjectMediaAssetEntities(request.project.id),
                                         )
                                         applySavedProjectMetadata(request.project)
@@ -5577,9 +5576,8 @@ class EditorViewModel @Inject constructor(
         viewModelScope.launch {
             projectSaveMutex.withLock {
                 try {
-                    projectDao.insertProject(project)
-                    projectDao.replaceProjectMediaAssets(
-                        project.id,
+                    projectDao.saveProjectWithMediaAssets(
+                        project,
                         autoSaveState.mediaAssets.toProjectMediaAssetEntities(project.id),
                     )
                     applySavedProjectMetadata(project)

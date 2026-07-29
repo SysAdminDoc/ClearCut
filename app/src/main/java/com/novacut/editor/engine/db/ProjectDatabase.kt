@@ -237,6 +237,25 @@ interface ProjectDao {
             insertProjectMediaAssets(assets)
         }
     }
+
+    /**
+     * Canonical project save. [insertProject] uses SQLite `INSERT OR REPLACE`, which
+     * deletes the parent row and therefore cascades away every `project_media_assets`
+     * child before re-inserting the parent. Writing the parent and the media manifest
+     * as two separate suspend calls leaves a process-death window in which the project
+     * survives with an empty or stale manifest.
+     *
+     * Both writes happen inside one Room transaction here, so a kill at any internal
+     * point rolls back to the previous consistent (project, manifest) pair.
+     */
+    @Transaction
+    suspend fun saveProjectWithMediaAssets(project: Project, assets: List<ProjectMediaAssetEntity>) {
+        insertProject(project)
+        deleteProjectMediaAssets(project.id)
+        if (assets.isNotEmpty()) {
+            insertProjectMediaAssets(assets)
+        }
+    }
 }
 
 class Converters {

@@ -624,9 +624,8 @@ class ProjectListViewModel @Inject constructor(
                             createdAt = System.currentTimeMillis(),
                             updatedAt = System.currentTimeMillis()
                         )
-                        projectDao.insertProject(newProject)
-                        projectDao.replaceProjectMediaAssets(
-                            newId,
+                        projectDao.saveProjectWithMediaAssets(
+                            newProject,
                             projectDao.getProjectMediaAssetEntities(project.id).map { it.copy(projectId = newId) }
                         )
                         if (autoSave.copyAutoSave(project.id, newId)) {
@@ -864,9 +863,8 @@ class ProjectListViewModel @Inject constructor(
                 tracks = attachMediaAssetIdsToTracks(initialState.tracks, mediaAssets),
                 mediaAssets = mediaAssets
             )
-            projectDao.insertProject(project)
-            projectDao.replaceProjectMediaAssets(
-                project.id,
+            projectDao.saveProjectWithMediaAssets(
+                project,
                 stateWithAssets.mediaAssets.toProjectMediaAssetEntities(project.id)
             )
             if (autoSave.saveNow(project.id, stateWithAssets)) {
