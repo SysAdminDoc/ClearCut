@@ -914,6 +914,16 @@ class EditorViewModel @Inject constructor(
             }
         }
 
+        // First-run tutorial: show on first launch. This auto-show was lost in
+        // the menu-chrome refactor, which left the tutorial (and the Settings
+        // "Reset tutorial" row that clears the flag) unreachable dead code.
+        viewModelScope.launch {
+            if (!settingsRepo.isTutorialShown()) {
+                delay(500)
+                showTutorial()
+            }
+        }
+
         // Player.Listener for play state sync — tracked for cleanup
         videoEngine.setPlayerListener(object : Player.Listener {
             override fun onIsPlayingChanged(playing: Boolean) {

@@ -34,7 +34,7 @@ class DependencyFreshnessTest {
         "room" to "2.8.4",
         "coroutines" to "1.11.0",
         "lifecycle" to "2.10.0",
-        "navigation" to "2.8.5",
+        "navigation" to "2.9.8",
         "coil" to "3.3.0",
         "okhttp" to "5.4.0",
         "lottieCompose" to "6.7.1",

@@ -4,9 +4,15 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.75.1-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.76.0-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.76.0 One UI 8.5 interface hardening and first-run tutorial restored
+
+- The first-run tips wizard auto-shows again on a fresh install: the auto-show call was lost in an earlier menu-chrome refactor, which also made Settings > Reset tutorial a no-op. (#49)
+- The tutorial overlay's touch scrim no longer competes with its own Next/Skip/Back buttons for pointer events; the consume-everything handler moved from the shared root container to a back-most sibling layer, so the buttons now have exclusive claim to their touches on every input pipeline. (#49)
+- AndroidX input/navigation stack refreshed (activity 1.10.1, core-ktx 1.16.0, navigation 2.9.8) for Android 16 / One UI compatibility fixes.
 
 ### v3.75.1 Export truthfulness and safer font import
 

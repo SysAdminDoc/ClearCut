@@ -87,23 +87,33 @@ fun FirstRunTutorial(
         modifier = modifier
             .fillMaxSize()
             .testTag(ClearCutTestTags.TUTORIAL_SCREEN)
-            .pointerInput(Unit) {
-                awaitPointerEventScope {
-                    while (true) {
-                        awaitPointerEvent().changes.forEach { it.consume() }
+    ) {
+        // Scrim as a SIBLING behind the interactive content, not a pointer
+        // handler on the shared parent (issue #49: Next/Skip reported dead on
+        // One UI 8.5). With the consume-all loop on the root Box, the overlay
+        // itself competed with its own buttons in pointer dispatch; as a
+        // back-most sibling it only ever sees touches that miss the buttons,
+        // while still blocking the editor underneath.
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            awaitPointerEvent().changes.forEach { it.consume() }
+                        }
                     }
                 }
-            }
-            .background(
-                Brush.verticalGradient(
-                    colorStops = arrayOf(
-                        0f to semanticColors.onAccent.copy(alpha = 0.96f),
-                        0.48f to semanticColors.background.copy(alpha = 0.96f),
-                        1f to semanticColors.onAccent.copy(alpha = 0.94f)
+                .background(
+                    Brush.verticalGradient(
+                        colorStops = arrayOf(
+                            0f to semanticColors.onAccent.copy(alpha = 0.96f),
+                            0.48f to semanticColors.background.copy(alpha = 0.96f),
+                            1f to semanticColors.onAccent.copy(alpha = 0.94f)
+                        )
                     )
                 )
-            )
-    ) {
+        )
         // Skip — quiet pill button. Bare text on a translucent backdrop is hard to discover
         // and easy to misclick; a subtle pill treatment gives it a clear affordance without
         // competing with the primary "Next" CTA.
