@@ -121,6 +121,10 @@ def verify_local_trust_controls(apks: list[Path]) -> None:
     # release gates (unearned capability claims / audio API policy), not lint.
     run_python_script("validate_public_claims.py")
     run_python_script("validate_android_audio_api_policy.py")
+    # Local sidecars prove nothing about what was actually uploaded. v3.76.0
+    # shipped a lone APK with no checksum and no certificate fingerprint while
+    # every local gate was green.
+    run_python_script("verify_published_release_sidecars.py")
     for apk in apks:
         run_python_script("check_16kb_alignment.py", str(apk))
 
@@ -225,6 +229,7 @@ def run_self_tests() -> None:
                 ("validate_distribution_readiness.py",),
                 ("validate_public_claims.py",),
                 ("validate_android_audio_api_policy.py",),
+                ("verify_published_release_sidecars.py",),
                 ("check_16kb_alignment.py", str(debug_apk)),
                 ("check_16kb_alignment.py", str(release_apk)),
                 ("check_16kb_alignment.py", str(test_apk)),

@@ -1,0 +1,3 @@
+Export truthfulness and safer font import.
+Export preflight now warns when a project carries mixer pan or per-track audio effects the current render path doesn't apply, so those saved edits are no longer dropped without a word.
+Custom font import is bounded and atomic: only validated .ttf/.otf files install, the copy is capped at 48 MB, and the file is verified as a real typeface before an atomic move, so a partial import can't land as a broken font.

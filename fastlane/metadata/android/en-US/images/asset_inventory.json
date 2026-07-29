@@ -6,6 +6,7 @@
       "height": 512,
       "path": "icon.png",
       "source": "_source/icon.svg",
+      "sourceSha256": "dc7f4a927479090525e3041e13ee826165a16e1f108371aa76a85fb074a06e3c",
       "width": 512
     },
     {
@@ -14,6 +15,7 @@
       "height": 500,
       "path": "featureGraphic.png",
       "source": "_source/featureGraphic.svg",
+      "sourceSha256": "9b2ff16acec0fa49a400e7ba4ac95020e567779f51d1a7563c038989ecbdb76c",
       "width": 1024
     },
     {
@@ -22,6 +24,7 @@
       "height": 1920,
       "path": "phoneScreenshots/01_project_gallery.png",
       "source": "_source/phoneScreenshots_01_project_gallery.svg",
+      "sourceSha256": "0c4d821ff1787812b76846de7dfdd1481ec4127e440e475db84208182093bbc5",
       "width": 1080
     },
     {
@@ -30,6 +33,7 @@
       "height": 1920,
       "path": "phoneScreenshots/02_editor_timeline.png",
       "source": "_source/phoneScreenshots_02_editor_timeline.svg",
+      "sourceSha256": "cb1f036ce6f512484360035464c066d1f810ed45239b3ebe2a60a18ea2b70106",
       "width": 1080
     },
     {
@@ -38,6 +42,7 @@
       "height": 1920,
       "path": "phoneScreenshots/03_export_confidence.png",
       "source": "_source/phoneScreenshots_03_export_confidence.svg",
+      "sourceSha256": "02330b581152caa768f555987f2d3384fbeff97dc0ee68e008cf75f1eaf6d3cf",
       "width": 1080
     },
     {
@@ -46,6 +51,7 @@
       "height": 1920,
       "path": "phoneScreenshots/04_privacy_models.png",
       "source": "_source/phoneScreenshots_04_privacy_models.svg",
+      "sourceSha256": "c45fcaef5f02d78abb1e7e6a769d6f240dbe137c3572d29648d615ae0e7a96ff",
       "width": 1080
     },
     {
@@ -54,6 +60,7 @@
       "height": 1080,
       "path": "tenInchScreenshots/01_tablet_editor.png",
       "source": "_source/tenInchScreenshots_01_tablet_editor.svg",
+      "sourceSha256": "888d88d2756e82d7b8d780b9c9540e3c7de7f7e402aa6da0de0b37d4b48ba24c",
       "width": 1920
     },
     {
@@ -62,6 +69,7 @@
       "height": 1080,
       "path": "tenInchScreenshots/02_media_manager.png",
       "source": "_source/tenInchScreenshots_02_media_manager.svg",
+      "sourceSha256": "6c692196dcbf0f654aabe6ade242271d22966d083b5b9753a99650b902ec62a1",
       "width": 1920
     },
     {
@@ -70,6 +78,7 @@
       "height": 1080,
       "path": "tenInchScreenshots/03_captions_ai.png",
       "source": "_source/tenInchScreenshots_03_captions_ai.svg",
+      "sourceSha256": "6fb41651aeefcbca43389630fe74ad958ec74ae01d329e0e06509b6aab47b4c5",
       "width": 1920
     },
     {
@@ -78,9 +87,10 @@
       "height": 1080,
       "path": "tenInchScreenshots/04_export_review.png",
       "source": "_source/tenInchScreenshots_04_export_review.svg",
+      "sourceSha256": "42b679f59ccadf57ce3bb1a04cd96e428e392df74c88a1600f2899f68bb31de2",
       "width": 1920
     }
   ],
   "schema": "com.clearcut.play-listing-assets.v1",
-  "updated": "2026-06-04"
+  "updated": "2026-07-29"
 }

@@ -1,0 +1,4 @@
+Audio-only and stem exports.
+Exporting audio only now produces a real standalone .m4a with no video track, instead of quietly emitting a video file or failing on a timeline without pictures.
+Audio-only mixes every audible track, including audio embedded in video clips. Stem export writes one .m4a per audible track.
+Standalone audio saves through the system audio library, and Opus/FLAC now fail up front rather than falling back to video.

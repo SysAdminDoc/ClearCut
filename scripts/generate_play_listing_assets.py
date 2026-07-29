@@ -8,6 +8,7 @@ only the Python standard library.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
 import subprocess
@@ -428,6 +429,10 @@ ASSETS = [
 ]
 
 
+def sha256_of(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 def render(source: Path, target: Path, png_type: str) -> None:
     magick = shutil.which("magick")
     if not magick:
@@ -441,14 +446,16 @@ def main() -> int:
     SOURCE.mkdir(parents=True, exist_ok=True)
     inventory = {
         "schema": "com.clearcut.play-listing-assets.v1",
-        "updated": "2026-06-04",
+        "updated": "2026-07-29",
         "assets": [],
     }
 
     for relative, dimensions, svg_factory, png_type, alt, caption in ASSETS:
         svg_path = SOURCE / (relative.replace("/", "_").removesuffix(".png") + ".svg")
         png_path = IMAGES / relative
-        svg_path.write_text(svg_factory(), encoding="utf-8")
+        # An explicit LF newline keeps generation byte-identical on Windows,
+        # which the sourceSha256 freshness gate depends on.
+        svg_path.write_text(svg_factory(), encoding="utf-8", newline="\n")
         render(svg_path, png_path, png_type)
         inventory["assets"].append(
             {
@@ -458,12 +465,17 @@ def main() -> int:
                 "altText": alt,
                 "caption": caption,
                 "source": str(svg_path.relative_to(IMAGES)).replace("\\", "/"),
+                # Recorded so the release gate can tell a stale committed PNG
+                # from a regenerated one: editing a source SVG without re-running
+                # this generator leaves the hash pointing at the old source.
+                "sourceSha256": sha256_of(svg_path),
             }
         )
 
     (IMAGES / "asset_inventory.json").write_text(
         json.dumps(inventory, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
+        newline="\n",
     )
     print(f"generated {len(ASSETS)} Play listing PNG assets")
     return 0

@@ -1,0 +1,4 @@
+One UI 8.5 interface hardening, and the first-run tutorial is back.
+The first-run tips wizard auto-shows again on a fresh install. The auto-show call had been lost in an earlier refactor, which also made Settings > Reset tutorial do nothing.
+The tutorial's touch scrim no longer competes with its own Next/Skip/Back buttons for taps.
+AndroidX input and navigation libraries refreshed for Android 16 compatibility.

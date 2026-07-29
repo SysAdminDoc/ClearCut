@@ -39,10 +39,15 @@ qa/
 HostShield-Research-Report.md
 research/
 
-# Markdown files local-only (except README)
+# Markdown files local-only (except README and the published policy documents).
+# docs/privacy-policy.md is the URL Google Play serves as the app's privacy
+# policy, so it must be tracked and reachable on GitHub; docs/play-data-safety.md
+# is the worksheet the Data safety form is filled in from.
 *.md
 !README.md
 !docs/models.md
+!docs/privacy-policy.md
+!docs/play-data-safety.md
 
 # AI config
 CODEX_CHANGELOG.md

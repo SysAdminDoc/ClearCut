@@ -75,7 +75,15 @@ class TrackedFilesAuditTest {
             return
         }
 
-        val releaseContractMarkdown = setOf("README.md", "docs/models.md")
+        // The privacy policy and Data safety worksheet are part of the public
+        // release contract: the Play listing's privacy URL points at the tracked
+        // GitHub blob, so they must not be swept up by the local-only *.md rule.
+        val releaseContractMarkdown = setOf(
+            "README.md",
+            "docs/models.md",
+            "docs/privacy-policy.md",
+            "docs/play-data-safety.md",
+        )
         val trackedPrivateMarkdown = tracked.filter { path ->
             path.endsWith(".md") && path !in releaseContractMarkdown
         }
@@ -175,6 +183,8 @@ class TrackedFilesAuditTest {
         private val REQUIRED_TRACKED = listOf(
             "README.md",
             "LICENSE",
+            "docs/privacy-policy.md",
+            "docs/play-data-safety.md",
             "app/build.gradle.kts",
             "app/src/main/AndroidManifest.xml",
             "gradle/libs.versions.toml",

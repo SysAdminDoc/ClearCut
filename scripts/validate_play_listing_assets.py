@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import struct
@@ -107,6 +108,47 @@ def require_inventory(image_paths: list[Path]) -> None:
         if not source.is_file():
             raise ListingError(f"{relative_path} source SVG is missing: {entry['source']}")
 
+        # Freshness: the inventory records the hash of the source the committed
+        # PNG was rendered from. Editing a source without re-running
+        # scripts/generate_play_listing_assets.py leaves a stale raster behind,
+        # which is how retired branding survived past a rename before.
+        recorded = entry.get("sourceSha256")
+        if not isinstance(recorded, str) or not recorded:
+            raise ListingError(f"{relative_path} inventory entry must record sourceSha256")
+        actual = hashlib.sha256(source.read_bytes()).hexdigest()
+        if actual != recorded:
+            raise ListingError(
+                f"{entry['source']} has changed since {relative_path} was rendered "
+                f"(sha256 {actual[:12]}… != recorded {recorded[:12]}…); "
+                "re-run scripts/generate_play_listing_assets.py"
+            )
+
+        require_current_branding(source)
+        require_current_branding(IMAGES / relative_path)
+
+
+RETIRED_BRAND_NAMES = (b"NovaCut", b"novacut", b"NOVACUT")
+
+
+def require_current_branding(path: Path) -> None:
+    """Reject retired product branding in anything user-visible.
+
+    The application ID is still `com.novacut.editor` (changing it is a separate,
+    migration-bearing decision), but no listing image, listing copy, or policy
+    document may carry the old product name.
+    """
+    data = path.read_bytes()
+    for name in RETIRED_BRAND_NAMES:
+        if name in data:
+            raise ListingError(f"{rel(path)} contains retired branding {name.decode()!r}")
+
+
+def require_listing_copy_branding() -> None:
+    for name in ("title.txt", "short_description.txt", "full_description.txt"):
+        require_current_branding(LOCALE / name)
+    require_current_branding(ROOT / "docs" / "privacy-policy.md")
+    require_current_branding(ROOT / "docs" / "play-data-safety.md")
+
 
 def require_privacy_docs() -> None:
     privacy_url = read_text(LOCALE / "privacy_policy_url.txt").strip()
@@ -160,6 +202,7 @@ def validate() -> None:
     screenshots.extend(require_screenshots("phoneScreenshots", (1080, 1920)))
     screenshots.extend(require_screenshots("tenInchScreenshots", (1920, 1080)))
     require_inventory([icon, feature, *screenshots])
+    require_listing_copy_branding()
     require_privacy_docs()
 
 
