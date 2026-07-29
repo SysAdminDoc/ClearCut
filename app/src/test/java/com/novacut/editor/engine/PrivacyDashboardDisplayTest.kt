@@ -99,6 +99,7 @@ class PrivacyDashboardDisplayTest {
             collectedBy = listOf("test"),
             retentionPolicy = "test",
             collectedByDefault = false,
+            controlLocation = "Settings → Storage → Reset preferences",
         )
         assertEquals("Export · Delete · Opt out", PrivacyDashboard.controlSummary(full))
 

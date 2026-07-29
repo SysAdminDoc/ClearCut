@@ -45,15 +45,16 @@ import com.novacut.editor.ui.theme.Radius
  * categories show. Risk-ordered: cloud + telemetry first, then on-device
  * collected by default, then on-device opt-in.
  *
- * Tap-to-act callbacks let the host wire in the actions the underlying
- * controls allow (`canExport` / `canDelete` / `hasOptOut`). The composable
- * itself is read-only; the host owns the wiring to the existing
- * `ModelDownloadManager` / `ProjectAutoSave.clearRecoveryData` / etc.
+ * A row advertises Export / Delete / Opt out, so it must not present an
+ * affordance that does nothing. [actionsFor] lets the host supply the actions
+ * it can genuinely perform from here; any row the host cannot act on renders
+ * non-interactive and states where its control actually lives
+ * ([DashboardEntry.controlLocation]) instead.
  */
 @Composable
 fun PrivacyDashboardPanel(
     modifier: Modifier = Modifier,
-    onEntryClicked: (DashboardEntry) -> Unit = {},
+    actionsFor: (DashboardEntry) -> List<PrivacyDashboardAction> = { emptyList() },
 ) {
     val grouped = PrivacyDashboard.groupForDisplay()
     Column(
@@ -66,11 +67,17 @@ fun PrivacyDashboardPanel(
         for ((section, entries) in grouped) {
             SectionHeader(section)
             for (entry in entries) {
-                EntryCard(entry = entry, onClick = { onEntryClicked(entry) })
+                EntryCard(entry = entry, actions = actionsFor(entry))
             }
         }
     }
 }
+
+/** An action the dashboard can actually run for a row. */
+data class PrivacyDashboardAction(
+    val label: String,
+    val onClick: () -> Unit,
+)
 
 @Composable
 private fun Header() {
@@ -128,7 +135,7 @@ private fun SectionHeader(section: Section) {
 }
 
 @Composable
-private fun EntryCard(entry: DashboardEntry, onClick: () -> Unit) {
+private fun EntryCard(entry: DashboardEntry, actions: List<PrivacyDashboardAction>) {
     val sectionAccent = sectionAccent(PrivacyDashboard.sectionFor(entry))
     Column(
         modifier = Modifier
@@ -136,7 +143,6 @@ private fun EntryCard(entry: DashboardEntry, onClick: () -> Unit) {
             .clip(RoundedCornerShape(Radius.lg))
             .border(BorderStroke(1.dp, Mocha.CardStrokeStrong.copy(alpha = 0.55f)), RoundedCornerShape(Radius.lg))
             .background(Mocha.PanelHighest.copy(alpha = 0.55f))
-            .clickable(onClick = onClick)
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
@@ -164,6 +170,32 @@ private fun EntryCard(entry: DashboardEntry, onClick: () -> Unit) {
             value = PrivacyDashboard.controlSummary(entry),
             accent = Mocha.Mauve,
         )
+        if (actions.isEmpty()) {
+            // No affordance is rendered here, so say where the control is.
+            MetaLine(
+                label = stringResource(R.string.privacy_dashboard_managed_in_label),
+                value = entry.controlLocation,
+                accent = Mocha.Peach,
+            )
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                actions.forEach { action ->
+                    Text(
+                        text = action.label,
+                        color = Mocha.Sky,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(Radius.md))
+                            .clickable(onClick = action.onClick)
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                    )
+                }
+            }
+        }
     }
 }
 

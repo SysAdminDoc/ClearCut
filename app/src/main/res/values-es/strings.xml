@@ -91,6 +91,11 @@
     <string name="privacy_dashboard_retention_label">Retención</string>
     <string name="privacy_dashboard_collected_by_label">Recogido por</string>
     <string name="privacy_dashboard_controls_label">tu puedes</string>
+    <string name="privacy_dashboard_managed_in_label">Gestionado en</string>
+    <string name="privacy_dashboard_action_export_diagnostics">Exportar paquete de diagnóstico</string>
+    <string name="privacy_dashboard_action_remove_whisper">Eliminar modelo Whisper</string>
+    <string name="privacy_dashboard_action_remove_segmentation">Eliminar modelo de segmentación</string>
+    <string name="privacy_dashboard_action_turn_off">Desactivar</string>
     <string name="settings_open_source_licenses_section_title">Avisos de terceros</string>
     <string name="settings_open_source_licenses_section_description">Revise las licencias de dependencia empaquetadas y las obligaciones de oferta de origen.</string>
     <string name="settings_open_source_licenses">Licencias de código abierto</string>

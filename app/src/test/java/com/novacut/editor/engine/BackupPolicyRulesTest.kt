@@ -10,26 +10,52 @@ import javax.xml.parsers.DocumentBuilderFactory
 
 class BackupPolicyRulesTest {
 
+    /**
+     * Android Auto Backup allows 25 MB per app and fails the whole backup when
+     * that is exceeded. Generated media is unbounded, so it must stay out of
+     * both cloud scopes — otherwise a user with a few renders silently gets no
+     * backup at all instead of a small working one.
+     */
     @Test
-    fun legacyFullBackupKeepsManagedImportsOutOfCloudQuota() {
+    fun legacyFullBackupIsBoundedToProjectDocuments() {
         val rules = readRules("backup_rules.xml")
 
+        assertTrue(
+            "the Room database must stay in the cloud scope",
+            rules.any { it.kind == "include" && it.domain == "database" && it.path == "." }
+        )
+        assertTrue(rules.includes("file", "autosave/project-1.json"))
+        assertFalse(rules.includes("file", "autosave/project-1.json.tmp"))
         assertFalse(rules.includes("file", "media/imports/local_clip.mp4"))
-        assertFalse(rules.includes("file", "media/imports/local_clip.mp4.partial"))
-        assertGeneratedMediaPolicy(rules, expectedIncluded = true)
+        assertGeneratedMediaPolicy(rules, expectedIncluded = false)
     }
 
     @Test
-    fun cloudBackupExcludesManagedImportsAndRequiresEncryptionCapability() {
+    fun cloudBackupIsBoundedToProjectDocumentsAndRequiresEncryptionCapability() {
         val document = readDocument("data_extraction_rules.xml")
         val cloud = document.documentElement.firstChildElement("cloud-backup")
 
         assertEquals("true", cloud.getAttribute("disableIfNoEncryptionCapabilities"))
 
         val rules = cloud.readRules()
+        assertTrue(
+            "the Room database must stay in the cloud scope",
+            rules.any { it.kind == "include" && it.domain == "database" && it.path == "." }
+        )
+        assertTrue(rules.includes("file", "autosave/project-1.json"))
         assertFalse(rules.includes("file", "media/imports/local_clip.mp4"))
-        assertFalse(rules.includes("file", "media/imports/local_clip.mp4.partial"))
-        assertGeneratedMediaPolicy(rules, expectedIncluded = true)
+        assertGeneratedMediaPolicy(rules, expectedIncluded = false)
+    }
+
+    /** The two cloud scopes must not drift apart across the Android 12 boundary. */
+    @Test
+    fun legacyAndModernCloudScopesAgree() {
+        val legacy = readRules("backup_rules.xml").map { it.kind to (it.domain to it.path) }.toSet()
+        val modern = readDocument("data_extraction_rules.xml")
+            .documentElement.firstChildElement("cloud-backup")
+            .readRules().map { it.kind to (it.domain to it.path) }.toSet()
+
+        assertEquals(legacy, modern)
     }
 
     @Test

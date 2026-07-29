@@ -1,24 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Legacy (Android 11 and below) cloud backup scope.
+
+  Android Auto Backup is capped at 25 MB per app and is all-or-nothing: a single
+  oversized payload makes the whole backup fail, silently, leaving the user with
+  nothing instead of with their projects. Generated timeline media (freeze
+  frames, voiceovers, TTS, noise-reduced audio, stabilized clips) is unbounded
+  in size, so it is deliberately NOT in the cloud scope. Only the project
+  documents — the Room database and the autosave JSON — are backed up; they are
+  small and are the part that cannot be recreated.
+
+  Bulky media rides device-to-device transfer (data_extraction_rules.xml
+  <device-transfer>, which has no such quota) or a user-initiated project
+  archive export. A restored cloud backup therefore returns projects intact with
+  generated media missing; that is disclosed rather than traded for a backup
+  that fails outright.
+-->
 <full-backup-content>
     <include domain="database" path="." />
     <include domain="file" path="autosave" />
-    <include domain="file" path="freeze_frames" />
-    <include domain="file" path="voiceovers" />
-    <!-- Preserve generated timeline media so projects round-trip cleanly across
-         device transfers. Without these, a restored project's clips that reference these
-         files would resolve to dangling URIs and disappear from the timeline. -->
-    <include domain="file" path="tts_output" />
-    <include domain="file" path="tts" />
-    <include domain="file" path="noise_reduced" />
-    <include domain="file" path="stabilized" />
-    <!-- Legacy full-backup-content cannot separate archive-transfer imports
-         from device transfer, so managed imports stay out here. Android 12+
-         data_extraction_rules includes them for device transfer only. -->
     <exclude domain="file" path="autosave/*.tmp" />
-    <exclude domain="file" path="freeze_frames/*.partial.jpg" />
-    <exclude domain="file" path="voiceovers/*.partial.m4a" />
-    <exclude domain="file" path="tts_output/*.partial.wav" />
-    <exclude domain="file" path="tts/*.partial.wav" />
-    <exclude domain="file" path="noise_reduced/*.partial.m4a" />
-    <exclude domain="file" path="stabilized/*.partial.mp4" />
 </full-backup-content>

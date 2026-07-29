@@ -1,22 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
+    <!--
+      Cloud backup is bounded to the project documents only. Android Auto Backup
+      allows 25 MB per app and fails the whole backup when that is exceeded, so
+      including unbounded generated media would trade a working small backup for
+      no backup at all. Generated media rides <device-transfer> (no quota) or a
+      user-initiated project archive export instead.
+    -->
     <cloud-backup disableIfNoEncryptionCapabilities="true">
         <include domain="database" path="." />
         <include domain="file" path="autosave" />
-        <include domain="file" path="freeze_frames" />
-        <include domain="file" path="voiceovers" />
-        <include domain="file" path="tts_output" />
-        <include domain="file" path="tts" />
-        <include domain="file" path="noise_reduced" />
-        <include domain="file" path="stabilized" />
         <exclude domain="file" path="autosave/*.tmp" />
-        <exclude domain="file" path="freeze_frames/*.partial.jpg" />
-        <exclude domain="file" path="voiceovers/*.partial.m4a" />
-        <exclude domain="file" path="tts_output/*.partial.wav" />
-        <exclude domain="file" path="tts/*.partial.wav" />
-        <exclude domain="file" path="noise_reduced/*.partial.m4a" />
-        <exclude domain="file" path="stabilized/*.partial.mp4" />
     </cloud-backup>
+    <!-- Device-to-device transfer has no size quota: carry everything. -->
     <device-transfer>
         <include domain="database" path="." />
         <include domain="file" path="autosave" />

@@ -80,6 +80,15 @@ object PrivacyDashboard {
          * paths must be `false` — they require explicit consent.
          */
         val collectedByDefault: Boolean,
+        /**
+         * Where the controls in [controls] actually live, in the user's words.
+         *
+         * The dashboard advertises Export/Delete/Opt out per row. When the
+         * dashboard itself cannot perform an action it must say where the
+         * action is instead of rendering a control that does nothing, so every
+         * entry names a reachable destination.
+         */
+        val controlLocation: String,
     )
 
     /**
@@ -92,8 +101,14 @@ object PrivacyDashboard {
             location = StorageLocation.DEVICE_INTERNAL,
             controls = Controls(canExport = true, canDelete = true, hasOptOut = false),
             collectedBy = listOf("ProjectAutoSave", "ProjectDatabase", "ProjectArchive", "OverlayAssetStore"),
-            retentionPolicy = "Kept until the project/media copy is deleted or app storage is cleared.",
+            retentionPolicy = "Kept on this device until the project/media copy is deleted or app storage " +
+                "is cleared. Android cloud backup carries the project documents only (the database and " +
+                "autosave JSON) because Auto Backup is capped at 25 MB per app and fails entirely when that " +
+                "is exceeded; generated timeline media (freeze frames, voiceovers, TTS, noise-reduced audio, " +
+                "stabilized clips) travels only via device-to-device transfer or a project archive you export " +
+                "yourself, so a cloud restore returns projects with that media missing.",
             collectedByDefault = true,
+            controlLocation = "Projects screen — project menu → Export archive, or Move to trash",
         ),
         DashboardEntry(
             category = Category.MEDIA_METADATA,
@@ -102,6 +117,7 @@ object PrivacyDashboard {
             collectedBy = listOf("MediaImportEngine", "MediaPickerSheet"),
             retentionPolicy = "Discarded when the source clip is removed from any project.",
             collectedByDefault = true,
+            controlLocation = "Editor → Media Manager → remove the clip from the project",
         ),
         DashboardEntry(
             category = Category.ML_MODELS,
@@ -110,6 +126,7 @@ object PrivacyDashboard {
             collectedBy = listOf("ModelDownloadManager"),
             retentionPolicy = "Kept until the user removes the model from Settings → AI Models.",
             collectedByDefault = false,
+            controlLocation = "Settings → AI Models → Remove model",
         ),
         DashboardEntry(
             category = Category.APP_PREFERENCES,
@@ -118,6 +135,7 @@ object PrivacyDashboard {
             collectedBy = listOf("SettingsRepository", "DataStore"),
             retentionPolicy = "Kept until the app is uninstalled or storage is cleared.",
             collectedByDefault = true,
+            controlLocation = "Settings → Storage → Reset preferences, or Android app-info → Clear storage",
         ),
         DashboardEntry(
             category = Category.TEMPLATE_LIBRARY,
@@ -126,6 +144,7 @@ object PrivacyDashboard {
             collectedBy = listOf("TemplateManager"),
             retentionPolicy = "Kept until the template is removed from the Templates panel.",
             collectedByDefault = true,
+            controlLocation = "Projects screen → Templates → long-press a template → Delete",
         ),
         DashboardEntry(
             category = Category.SETTINGS_RESET_REPORTS,
@@ -134,6 +153,7 @@ object PrivacyDashboard {
             collectedBy = listOf("SettingsRepository", "SettingsResetReportStore", "DiagnosticExportEngine"),
             retentionPolicy = "Preferences corruption-recovery reports are stored locally under filesDir/diagnostics/settings-reset-report.jsonl, capped to the 16 most recent resets, and included only in user-triggered diagnostic ZIP exports.",
             collectedByDefault = true,
+            controlLocation = "Settings → Diagnostics → Export diagnostic bundle",
         ),
         DashboardEntry(
             category = Category.DIAGNOSTIC_LOGS,
@@ -142,6 +162,7 @@ object PrivacyDashboard {
             collectedBy = listOf("DiagnosticExportEngine", "ExportIncidentStore"),
             retentionPolicy = "Private export incidents are capped to 10 records under filesDir/diagnostics/export-incidents. User-triggered diagnostic ZIPs include only bundle-pseudonymized structured summaries and are capped to the 3 most recent ZIPs.",
             collectedByDefault = false,
+            controlLocation = "Settings → Diagnostics → Export diagnostic bundle",
         ),
         DashboardEntry(
             category = Category.CRASH_RECORDS,
@@ -150,6 +171,7 @@ object PrivacyDashboard {
             collectedBy = listOf("CrashRecordStore", "DiagnosticExportEngine"),
             retentionPolicy = "Fatal-crash breadcrumbs are stored locally under filesDir/diagnostics/crashes, capped to the 8 most recent records, and included only in user-triggered diagnostic ZIP exports.",
             collectedByDefault = true,
+            controlLocation = "Settings → Diagnostics → Export diagnostic bundle",
         ),
         DashboardEntry(
             category = Category.PROCESS_EXIT_HISTORY,
@@ -158,6 +180,7 @@ object PrivacyDashboard {
             collectedBy = listOf("ProcessExitRecorder", "DiagnosticExportEngine"),
             retentionPolicy = "Android 11+ process-death summaries are stored locally under filesDir/diagnostics/process-exit-history.json, capped to the 16 most recent unique records, and included only in user-triggered diagnostic ZIP exports.",
             collectedByDefault = true,
+            controlLocation = "Settings → Diagnostics → Export diagnostic bundle",
         ),
         DashboardEntry(
             category = Category.CLOUD_GENERATIVE,
@@ -166,6 +189,7 @@ object PrivacyDashboard {
             collectedBy = listOf("GenerativeVideoPolicy"),
             retentionPolicy = "Per the provider's policy; disclosed in the consent sheet before each call.",
             collectedByDefault = false,
+            controlLocation = "Editor → AI Tools → the consent sheet shown before each call",
         ),
         DashboardEntry(
             category = Category.MEDIAPIPE_METRICS,
@@ -178,6 +202,7 @@ object PrivacyDashboard {
                 "DataTransport. Input media (frames/pixels) never leaves the device. Revoking consent in " +
                 "Settings closes any running task and blocks it from starting again.",
             collectedByDefault = false,
+            controlLocation = "Settings → Privacy → MediaPipe metrics consent",
         ),
         DashboardEntry(
             category = Category.AI_USAGE_LEDGER,
@@ -189,6 +214,7 @@ object PrivacyDashboard {
                 ".c2pa-draft-manifest.json sidecars; remote C2PA signing requires explicit per-export " +
                 "consent before any media or hashes leave the device.",
             collectedByDefault = false,
+            controlLocation = "Editor → Export → AI disclosure review",
         ),
         DashboardEntry(
             category = Category.OPT_IN_TELEMETRY,
@@ -197,6 +223,7 @@ object PrivacyDashboard {
             collectedBy = listOf("(future) SentryAndroid", "(future) Mozilla Glean"),
             retentionPolicy = "Provider retention; disabled by default; toggle in Settings → Privacy.",
             collectedByDefault = false,
+            controlLocation = "Settings → Privacy (no telemetry provider is integrated yet)",
         ),
         DashboardEntry(
             category = Category.UPDATE_CHECK,
@@ -207,6 +234,7 @@ object PrivacyDashboard {
                 "public GitHub releases API to compare the latest tag with the installed version; it never " +
                 "downloads or installs an APK. Off by default; turn it off in Settings → Updates to stop all checks.",
             collectedByDefault = false,
+            controlLocation = "Settings → Updates → Check for updates toggle",
         ),
     )
 

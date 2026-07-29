@@ -56,6 +56,7 @@ import com.novacut.editor.ClearCutApp
 import com.novacut.editor.R
 import com.novacut.editor.engine.AppearanceMode
 import com.novacut.editor.engine.AppSettings
+import com.novacut.editor.engine.PrivacyDashboard
 import com.novacut.editor.engine.ProjectColorPolicy
 import com.novacut.editor.engine.segmentation.SegmentationModelState
 import com.novacut.editor.engine.whisper.WhisperModelState
@@ -763,7 +764,34 @@ fun SettingsScreen(
                         .testTag(ClearCutTestTags.SETTINGS_PRIVACY_DASHBOARD)
                 ) {
                     Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                        PrivacyDashboardPanel()
+                        val privacyActionLabels = privacyDashboardActionLabels()
+                        PrivacyDashboardPanel(
+                            actionsFor = { entry ->
+                                privacyDashboardActions(
+                                    entry = entry,
+                                    canRemoveWhisperModel = canRemoveWhisperModel,
+                                    canRemoveSegmentationModel = canRemoveSegmentationModel,
+                                    mediaPipeConsentGranted = settings.mediaPipeConsentVersion >=
+                                        com.novacut.editor.engine.MediaPipeUsageGate.CONSENT_VERSION,
+                                    updateCheckEnabled = settings.updateCheckEnabled,
+                                    onExportDiagnostics = {
+                                        showPrivacyDashboard = false
+                                        viewModel.exportDiagnosticBundle()
+                                    },
+                                    onRemoveWhisperModel = {
+                                        showPrivacyDashboard = false
+                                        pendingAiModelRemoval = SettingsAiModelRemovalTarget.WHISPER
+                                    },
+                                    onRemoveSegmentationModel = {
+                                        showPrivacyDashboard = false
+                                        pendingAiModelRemoval = SettingsAiModelRemovalTarget.SEGMENTATION
+                                    },
+                                    onRevokeMediaPipeConsent = { viewModel.setMediaPipeConsent(false) },
+                                    onDisableUpdateCheck = { viewModel.setUpdateCheckEnabled(false) },
+                                    labels = privacyActionLabels,
+                                )
+                            }
+                        )
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -1919,4 +1947,71 @@ private fun SettingsTileIcon(
                 .size(18.dp)
         )
     }
+}
+
+/** Labels for the privacy-dashboard row actions, resolved once per composition. */
+@Composable
+private fun privacyDashboardActionLabels(): PrivacyDashboardActionLabels =
+    PrivacyDashboardActionLabels(
+        exportDiagnostics = stringResource(R.string.privacy_dashboard_action_export_diagnostics),
+        removeWhisperModel = stringResource(R.string.privacy_dashboard_action_remove_whisper),
+        removeSegmentationModel = stringResource(R.string.privacy_dashboard_action_remove_segmentation),
+        turnOff = stringResource(R.string.privacy_dashboard_action_turn_off),
+    )
+
+private data class PrivacyDashboardActionLabels(
+    val exportDiagnostics: String,
+    val removeWhisperModel: String,
+    val removeSegmentationModel: String,
+    val turnOff: String,
+)
+
+/**
+ * The actions the Settings privacy dashboard can genuinely run. A category
+ * absent from this mapping renders no button at all — the row states where its
+ * control lives instead of offering one that does nothing.
+ */
+private fun privacyDashboardActions(
+    entry: PrivacyDashboard.DashboardEntry,
+    canRemoveWhisperModel: Boolean,
+    canRemoveSegmentationModel: Boolean,
+    mediaPipeConsentGranted: Boolean,
+    updateCheckEnabled: Boolean,
+    onExportDiagnostics: () -> Unit,
+    onRemoveWhisperModel: () -> Unit,
+    onRemoveSegmentationModel: () -> Unit,
+    onRevokeMediaPipeConsent: () -> Unit,
+    onDisableUpdateCheck: () -> Unit,
+    labels: PrivacyDashboardActionLabels,
+): List<PrivacyDashboardAction> = when (entry.category) {
+    PrivacyDashboard.Category.SETTINGS_RESET_REPORTS,
+    PrivacyDashboard.Category.DIAGNOSTIC_LOGS,
+    PrivacyDashboard.Category.CRASH_RECORDS,
+    PrivacyDashboard.Category.PROCESS_EXIT_HISTORY ->
+        listOf(PrivacyDashboardAction(labels.exportDiagnostics, onExportDiagnostics))
+
+    PrivacyDashboard.Category.ML_MODELS -> buildList {
+        if (canRemoveWhisperModel) {
+            add(PrivacyDashboardAction(labels.removeWhisperModel, onRemoveWhisperModel))
+        }
+        if (canRemoveSegmentationModel) {
+            add(PrivacyDashboardAction(labels.removeSegmentationModel, onRemoveSegmentationModel))
+        }
+    }
+
+    PrivacyDashboard.Category.MEDIAPIPE_METRICS ->
+        if (mediaPipeConsentGranted) {
+            listOf(PrivacyDashboardAction(labels.turnOff, onRevokeMediaPipeConsent))
+        } else {
+            emptyList()
+        }
+
+    PrivacyDashboard.Category.UPDATE_CHECK ->
+        if (updateCheckEnabled) {
+            listOf(PrivacyDashboardAction(labels.turnOff, onDisableUpdateCheck))
+        } else {
+            emptyList()
+        }
+
+    else -> emptyList()
 }

@@ -98,6 +98,11 @@
     <string name="privacy_dashboard_retention_label">Retention</string>
     <string name="privacy_dashboard_collected_by_label">Collected by</string>
     <string name="privacy_dashboard_controls_label">You can</string>
+    <string name="privacy_dashboard_managed_in_label">Managed in</string>
+    <string name="privacy_dashboard_action_export_diagnostics">Export diagnostic bundle</string>
+    <string name="privacy_dashboard_action_remove_whisper">Delete Whisper model</string>
+    <string name="privacy_dashboard_action_remove_segmentation">Delete segmentation model</string>
+    <string name="privacy_dashboard_action_turn_off">Turn off</string>
     <string name="settings_open_source_licenses_section_title">Third-party notices</string>
     <string name="settings_open_source_licenses_section_description">Review bundled dependency licenses and source-offer obligations.</string>
     <string name="settings_open_source_licenses">Open source licenses</string>
