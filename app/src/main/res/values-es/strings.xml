@@ -906,7 +906,7 @@
     <string name="projects_rename_required">El nombre del proyecto es obligatorio.</string>
     <string name="projects_delete">Eliminar</string>
     <string name="projects_delete_title">Eliminar proyecto</string>
-    <string name="projects_delete_message">¿Eliminar \"%1$s\"? Esto no se puede deshacer.</string>
+    <string name="projects_delete_message">¿Mover \"%1$s\" a la papelera? Podrás restaurarlo desde la Papelera durante 30 días.</string>
     <string name="projects_delete_cd">Eliminar</string>
     <string name="projects_thumbnail_cd">Miniatura del proyecto</string>
     <string name="projects_more_cd">Más</string>

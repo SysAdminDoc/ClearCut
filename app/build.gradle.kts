@@ -100,6 +100,21 @@ android {
         }
     }
 
+    // The bundled FFmpeg, ONNX Runtime, MediaPipe, and DeepFilterNet native
+    // libraries dominate the package: a single universal APK carries every ABI's
+    // copy of all four, which is why the published artifact is ~350 MB while a
+    // device only ever loads one ABI. Per-ABI APKs cut what a user downloads by
+    // roughly three quarters; the universal APK is still produced for anyone who
+    // cannot determine their ABI or who sideloads across devices.
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+            isUniversalApk = true
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

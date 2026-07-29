@@ -34,6 +34,14 @@ def output_path(relative: str, apk_root: Path = APK_ROOT) -> Path:
     return apk_root / relative
 
 
+# Google Play refuses an install artifact above 200 MB. A universal APK carrying
+# four ABIs' worth of FFmpeg, ONNX Runtime, MediaPipe, and DeepFilterNet blows
+# straight through it; what a device actually downloads is one per-ABI APK, and
+# that is the number this ceiling applies to.
+PER_DEVICE_CEILING_BYTES = 200 * 1024 * 1024
+PER_DEVICE_EXEMPT_SUFFIXES = ("universal-debug.apk", "universal-release.apk", "androidTest.apk")
+
+
 def check_sizes(baseline_path: Path = BASELINE, apk_root: Path = APK_ROOT) -> list[str]:
     baseline = read_baseline(baseline_path)
     max_growth = int(baseline.get("maxGrowthBytes", 0))
@@ -55,6 +63,11 @@ def check_sizes(baseline_path: Path = BASELINE, apk_root: Path = APK_ROOT) -> li
             raise SizeBudgetError(
                 f"{relative} is {actual} bytes, above budget {max_allowed} "
                 f"(baseline {baseline_bytes}, allowed growth {max_growth})"
+            )
+        if not relative.endswith(PER_DEVICE_EXEMPT_SUFFIXES) and actual > PER_DEVICE_CEILING_BYTES:
+            raise SizeBudgetError(
+                f"{relative} is {actual} bytes, above the {PER_DEVICE_CEILING_BYTES}-byte "
+                "per-device install ceiling"
             )
     return report
 

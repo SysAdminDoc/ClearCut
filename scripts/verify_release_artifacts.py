@@ -52,29 +52,62 @@ def read_output_metadata(variant_path: Path) -> dict:
     return json.loads(read_text(metadata_path))
 
 
-def verify_variant_apk(variant: str, version_code: int, version_name: str) -> Path:
+# ABI splits are enabled, so a variant produces one universal APK plus one per
+# supported ABI. Every one of them is a publishable artifact and every one has to
+# carry the same release identity.
+EXPECTED_ABIS = ("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+
+
+def verify_variant_apk(variant: str, version_code: int, version_name: str) -> list[Path]:
     variant_path = APK_ROOT / variant
     metadata = read_output_metadata(variant_path)
     elements = metadata.get("elements")
-    if not isinstance(elements, list) or len(elements) != 1:
-        raise VerificationError(f"{variant} metadata must contain exactly one APK element")
+    if not isinstance(elements, list) or not elements:
+        raise VerificationError(f"{variant} metadata must contain at least one APK element")
 
-    element = elements[0]
-    if element.get("versionCode") != version_code:
-        raise VerificationError(f"{variant} versionCode mismatch: {element.get('versionCode')} != {version_code}")
-    if element.get("versionName") != version_name:
-        raise VerificationError(f"{variant} versionName mismatch: {element.get('versionName')!r} != {version_name!r}")
+    apk_paths: list[Path] = []
+    seen_abis: set[str] = set()
+    universal_count = 0
+    for element in elements:
+        if element.get("versionCode") != version_code:
+            raise VerificationError(
+                f"{variant} versionCode mismatch: {element.get('versionCode')} != {version_code}"
+            )
+        if element.get("versionName") != version_name:
+            raise VerificationError(
+                f"{variant} versionName mismatch: {element.get('versionName')!r} != {version_name!r}"
+            )
 
-    apk_name = element.get("outputFile")
-    if not isinstance(apk_name, str) or not apk_name.endswith(".apk"):
-        raise VerificationError(f"{variant} metadata does not point at an APK output")
+        apk_name = element.get("outputFile")
+        if not isinstance(apk_name, str) or not apk_name.endswith(".apk"):
+            raise VerificationError(f"{variant} metadata does not point at an APK output")
 
-    apk_path = variant_path / apk_name
-    if not apk_path.is_file():
-        raise VerificationError(f"Missing {variant} APK: {apk_path.relative_to(ROOT)}")
-    if apk_path.stat().st_size <= 0:
-        raise VerificationError(f"{variant} APK is empty: {apk_path.relative_to(ROOT)}")
-    return apk_path
+        apk_path = variant_path / apk_name
+        if not apk_path.is_file():
+            raise VerificationError(f"Missing {variant} APK: {apk_path.relative_to(ROOT)}")
+        if apk_path.stat().st_size <= 0:
+            raise VerificationError(f"{variant} APK is empty: {apk_path.relative_to(ROOT)}")
+        apk_paths.append(apk_path)
+
+        abis = [
+            entry.get("value")
+            for entry in element.get("filters", [])
+            if isinstance(entry, dict) and entry.get("filterType") == "ABI"
+        ]
+        if abis:
+            seen_abis.update(abi for abi in abis if isinstance(abi, str))
+        else:
+            universal_count += 1
+
+    if universal_count != 1:
+        raise VerificationError(
+            f"{variant} must produce exactly one universal APK, found {universal_count}"
+        )
+    missing_abis = [abi for abi in EXPECTED_ABIS if abi not in seen_abis]
+    if missing_abis:
+        raise VerificationError(f"{variant} is missing per-ABI APKs for: {', '.join(missing_abis)}")
+
+    return apk_paths
 
 
 def verify_android_test_apk() -> Path:
@@ -159,6 +192,38 @@ def write_output_metadata(root: Path, variant: str, apk_name: str, version_code:
     return root / "app" / "build" / "outputs" / "apk" / variant / apk_name
 
 
+def write_split_output_metadata(
+    root: Path, variant: str, version_code: int, version_name: str
+) -> list[Path]:
+    """Mirror the real ABI-split layout: one universal APK plus one per ABI."""
+    elements = [
+        {
+            "versionCode": version_code,
+            "versionName": version_name,
+            "outputFile": f"app-universal-{variant}.apk",
+            "filters": [],
+        }
+    ]
+    paths = [write_fixture(root, f"app/build/outputs/apk/{variant}/app-universal-{variant}.apk", b"placeholder-apk")]
+    for abi in EXPECTED_ABIS:
+        name = f"app-{abi}-{variant}.apk"
+        elements.append(
+            {
+                "versionCode": version_code,
+                "versionName": version_name,
+                "outputFile": name,
+                "filters": [{"filterType": "ABI", "value": abi}],
+            }
+        )
+        paths.append(write_fixture(root, f"app/build/outputs/apk/{variant}/{name}", b"placeholder-apk"))
+    write_fixture(
+        root,
+        f"app/build/outputs/apk/{variant}/output-metadata.json",
+        json.dumps({"elements": elements}),
+    )
+    return paths
+
+
 def run_self_tests() -> None:
     original_root = ROOT
     original_apk_root = APK_ROOT
@@ -180,8 +245,8 @@ def run_self_tests() -> None:
             )
             write_fixture(root, ".gitignore", "keystore.properties\n*.jks\n*.keystore\n")
 
-            debug_apk = write_output_metadata(root, "debug", "app-debug.apk", version_code, version_name)
-            release_apk = write_output_metadata(root, "release", "app-release.apk", version_code, version_name)
+            debug_apks = write_split_output_metadata(root, "debug", version_code, version_name)
+            release_apks = write_split_output_metadata(root, "release", version_code, version_name)
             test_apk = write_output_metadata(
                 root,
                 "androidTest/debug",
@@ -195,11 +260,11 @@ def run_self_tests() -> None:
                 raise VerificationError("self-test version parsing mismatch")
             verify_repository_metadata()
             outputs = [
-                verify_variant_apk("debug", version_code, version_name),
-                verify_variant_apk("release", version_code, version_name),
+                *verify_variant_apk("debug", version_code, version_name),
+                *verify_variant_apk("release", version_code, version_name),
                 verify_android_test_apk(),
             ]
-            if outputs != [debug_apk, release_apk, test_apk]:
+            if sorted(outputs) != sorted([*debug_apks, *release_apks, test_apk]):
                 raise VerificationError("self-test APK output discovery mismatch")
 
             version_strings.write_text(
@@ -220,7 +285,7 @@ def run_self_tests() -> None:
                 calls.append(args)
 
             globals()["run_python_script"] = capture_runner
-            verify_local_trust_controls([debug_apk, release_apk, test_apk])
+            verify_local_trust_controls([*debug_apks, *release_apks, test_apk])
             expected = [
                 ("write_release_checksums.py", "--root", str(APK_ROOT), "--check"),
                 ("write_apk_signing_fingerprints.py", "--root", str(APK_ROOT), "--check"),
@@ -230,8 +295,8 @@ def run_self_tests() -> None:
                 ("validate_public_claims.py",),
                 ("validate_android_audio_api_policy.py",),
                 ("verify_published_release_sidecars.py",),
-                ("check_16kb_alignment.py", str(debug_apk)),
-                ("check_16kb_alignment.py", str(release_apk)),
+                *[("check_16kb_alignment.py", str(apk)) for apk in debug_apks],
+                *[("check_16kb_alignment.py", str(apk)) for apk in release_apks],
                 ("check_16kb_alignment.py", str(test_apk)),
             ]
             if calls != expected:
@@ -254,8 +319,8 @@ def main() -> int:
         version_code, version_name = parse_gradle_version()
         verify_repository_metadata()
         outputs = [
-            verify_variant_apk("debug", version_code, version_name),
-            verify_variant_apk("release", version_code, version_name),
+            *verify_variant_apk("debug", version_code, version_name),
+            *verify_variant_apk("release", version_code, version_name),
             verify_android_test_apk(),
         ]
         verify_local_trust_controls(outputs)

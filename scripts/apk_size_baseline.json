@@ -2,13 +2,37 @@
   "maxGrowthBytes": 2097152,
   "outputs": {
     "androidTest/debug/app-debug-androidTest.apk": {
-      "baselineBytes": 2928297
+      "baselineBytes": 3049513
     },
-    "debug/app-debug.apk": {
-      "baselineBytes": 439621480
+    "debug/app-arm64-v8a-debug.apk": {
+      "baselineBytes": 119469804
     },
-    "release/app-release.apk": {
-      "baselineBytes": 417960729
+    "debug/app-armeabi-v7a-debug.apk": {
+      "baselineBytes": 122449678
+    },
+    "debug/app-universal-debug.apk": {
+      "baselineBytes": 389053203
+    },
+    "debug/app-x86-debug.apk": {
+      "baselineBytes": 135826376
+    },
+    "debug/app-x86_64-debug.apk": {
+      "baselineBytes": 136981044
+    },
+    "release/app-arm64-v8a-release.apk": {
+      "baselineBytes": 96549763
+    },
+    "release/app-armeabi-v7a-release.apk": {
+      "baselineBytes": 99529637
+    },
+    "release/app-universal-release.apk": {
+      "baselineBytes": 366133162
+    },
+    "release/app-x86-release.apk": {
+      "baselineBytes": 112906335
+    },
+    "release/app-x86_64-release.apk": {
+      "baselineBytes": 114061003
     }
   },
   "schema": "com.clearcut.apk-size-budget.v1"

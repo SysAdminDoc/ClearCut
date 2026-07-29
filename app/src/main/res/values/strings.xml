@@ -949,7 +949,7 @@
     <string name="projects_rename_required">Project name is required.</string>
     <string name="projects_delete">Delete</string>
     <string name="projects_delete_title">Delete Project</string>
-    <string name="projects_delete_message">Delete \"%1$s\"? This cannot be undone.</string>
+    <string name="projects_delete_message">Move \"%1$s\" to trash? You can restore it from Trash for 30 days.</string>
     <string name="projects_delete_cd">Delete</string>
     <string name="projects_thumbnail_cd">Project thumbnail</string>
     <string name="projects_more_cd">More</string>
