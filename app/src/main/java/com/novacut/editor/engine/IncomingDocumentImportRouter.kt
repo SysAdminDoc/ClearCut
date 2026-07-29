@@ -52,6 +52,33 @@ class IncomingDocumentImportRouter @Inject constructor(
         }
     }
 
+    /**
+     * Commit a previewed document. [preview] is read-only, so this is the only
+     * entry point that writes anything, and it dispatches on the document's own
+     * kind instead of assuming every confirmation is a template.
+     *
+     * Kinds whose preview reports `canImportNow = false` have no commit path and
+     * are rejected here rather than silently routed to the wrong importer.
+     */
+    suspend fun commit(item: IncomingDocumentItem): IncomingDocumentImportPreview {
+        return when (item.kind) {
+            IncomingDocumentKind.TEMPLATE -> importTemplate(item)
+            IncomingDocumentKind.STYLE_PACK -> importStylePack(item)
+            IncomingDocumentKind.EFFECT_PACK,
+            IncomingDocumentKind.LUT_CUBE,
+            IncomingDocumentKind.LUT_3DL,
+            IncomingDocumentKind.OPENFX_DESCRIPTOR,
+            IncomingDocumentKind.PROJECT_ARCHIVE,
+            IncomingDocumentKind.TIMELINE_OTIO,
+            IncomingDocumentKind.TIMELINE_FCPXML,
+            IncomingDocumentKind.TIMELINE_EDL -> invalid(
+                item = item,
+                body = "${item.kind.displayName} files cannot be installed from the Projects screen. " +
+                    "${item.kind.targetAction}.",
+            )
+        }
+    }
+
     suspend fun importTemplate(item: IncomingDocumentItem): IncomingDocumentImportPreview = withContext(Dispatchers.IO) {
         if (item.kind != IncomingDocumentKind.TEMPLATE) {
             return@withContext invalid(item, "Only ClearCut template files can be imported from this preview.")
@@ -119,7 +146,8 @@ class IncomingDocumentImportRouter @Inject constructor(
 
     private fun previewStylePack(item: IncomingDocumentItem): IncomingDocumentImportPreview {
         val json = readText(item) ?: return invalid(item, "ClearCut could not read this style-pack file.")
-        val result = stylePackManager.importFromJson(json)
+        // Validation only: preview must not install. Installing happens in commit().
+        val result = stylePackManager.validateFromJson(json)
         val pack = result.pack
         if (pack == null) {
             return invalid(item, stylePackFailureMessage(result.failure), result.warnings)
@@ -135,7 +163,7 @@ class IncomingDocumentImportRouter @Inject constructor(
                 "License: ${pack.license.ifBlank { "Not specified" }}",
                 "Styles: ${pack.styles.size}",
             ),
-            warnings = result.warnings.ifEmpty { listOf("No project data was changed during preview.") },
+            warnings = result.warnings + "Nothing was installed during preview; choose Import to install.",
             canImportNow = true,
         )
     }

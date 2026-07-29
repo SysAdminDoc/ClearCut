@@ -464,7 +464,7 @@ class ProjectListViewModel @Inject constructor(
             )
             try {
                 val imported = withContext(Dispatchers.IO) {
-                    incomingDocumentImportRouter.importTemplate(preview.item)
+                    incomingDocumentImportRouter.commit(preview.item)
                 }
                 _documentImportPreview.value = imported
                 loadUserTemplates()

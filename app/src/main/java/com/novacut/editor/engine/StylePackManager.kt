@@ -78,28 +78,50 @@ class StylePackManager @Inject constructor(
     }
 
     suspend fun importFromUri(uri: Uri): StylePackImportResult = withContext(Dispatchers.IO) {
+        val json = readPackJson(uri) ?: return@withContext StylePackImportResult(failure = StylePackFailure.UNREADABLE)
+        importFromJson(json)
+    }
+
+    /**
+     * Read-only validation of a style pack document. Nothing is written to disk,
+     * so this is safe to call from a preview surface and is idempotent.
+     */
+    suspend fun validateFromUri(uri: Uri): StylePackImportResult = withContext(Dispatchers.IO) {
+        val json = readPackJson(uri) ?: return@withContext StylePackImportResult(failure = StylePackFailure.UNREADABLE)
+        validateFromJson(json)
+    }
+
+    fun validateFromJson(json: String): StylePackImportResult {
+        val root = parseRoot(json) ?: return StylePackImportResult(failure = StylePackFailure.INVALID_JSON)
+        return validate(root).result
+    }
+
+    fun importFromJson(json: String): StylePackImportResult {
+        val root = parseRoot(json) ?: return StylePackImportResult(failure = StylePackFailure.INVALID_JSON)
+        val validation = validate(root)
+        val validated = validation.validated ?: return validation.result
+        return install(validated)
+    }
+
+    private fun readPackJson(uri: Uri): String? {
         val json = try {
             context.contentResolver.openInputStream(uri)?.use { stream ->
                 readUtf8WithByteLimit(stream, MAX_STYLE_PACK_BYTES)
             }
         } catch (e: Exception) {
             Log.w(TAG, "Failed to read style pack", e)
-            return@withContext StylePackImportResult(failure = StylePackFailure.UNREADABLE)
+            return null
         }
-        if (json.isNullOrBlank()) {
-            return@withContext StylePackImportResult(failure = StylePackFailure.UNREADABLE)
-        }
-        importFromJson(json)
+        return json?.takeIf { it.isNotBlank() }
     }
 
-    fun importFromJson(json: String): StylePackImportResult {
-        val root = try {
+    private fun parseRoot(json: String): JSONObject? {
+        return try {
             JSONObject(json)
         } catch (e: Exception) {
             Log.w(TAG, "Style pack is not valid JSON", e)
-            return StylePackImportResult(failure = StylePackFailure.INVALID_JSON)
+            null
         }
-        return validateAndInstall(root)
     }
 
     fun listInstalledPacks(): List<StylePack> {
@@ -136,43 +158,71 @@ class StylePackManager @Inject constructor(
     fun isInstalled(packId: String): Boolean =
         packFileForId(packId)?.exists() == true
 
-    private fun validateAndInstall(root: JSONObject): StylePackImportResult {
+    /** A pack that passed every validation rule and is ready for [install]. */
+    private data class ValidatedPack(
+        val pack: StylePack,
+        val root: JSONObject,
+        val targetFile: File,
+        val warnings: List<String>,
+    )
+
+    private data class Validation(
+        val result: StylePackImportResult,
+        val validated: ValidatedPack? = null,
+    )
+
+    private fun validate(root: JSONObject): Validation {
         val pack = parsePack(root)
-            ?: return StylePackImportResult(failure = StylePackFailure.MISSING_REQUIRED_FIELDS)
+            ?: return Validation(StylePackImportResult(failure = StylePackFailure.MISSING_REQUIRED_FIELDS))
 
         val schemaVersion = root.optInt("schemaVersion", 0)
         if (schemaVersion > SCHEMA_VERSION) {
-            return StylePackImportResult(
-                failure = StylePackFailure.INCOMPATIBLE_VERSION,
-                warnings = listOf("Pack requires schema version $schemaVersion, this app supports up to $SCHEMA_VERSION.")
+            return Validation(
+                StylePackImportResult(
+                    failure = StylePackFailure.INCOMPATIBLE_VERSION,
+                    warnings = listOf("Pack requires schema version $schemaVersion, this app supports up to $SCHEMA_VERSION.")
+                )
             )
         }
 
         if (pack.styles.isEmpty()) {
-            return StylePackImportResult(failure = StylePackFailure.EMPTY_STYLES)
+            return Validation(StylePackImportResult(failure = StylePackFailure.EMPTY_STYLES))
         }
 
         val warnings = mutableListOf<String>()
         if (pack.styles.size > MAX_STYLES_PER_PACK) {
-            warnings.add("Pack contains ${pack.styles.size} styles; only the first $MAX_STYLES_PER_PACK were imported.")
+            warnings.add("Pack contains ${pack.styles.size} styles; only the first $MAX_STYLES_PER_PACK will be imported.")
         }
 
         val styleIds = pack.styles.map { it.id }
         if (styleIds.size != styleIds.toSet().size) {
-            return StylePackImportResult(failure = StylePackFailure.DUPLICATE_ID)
+            return Validation(StylePackImportResult(failure = StylePackFailure.DUPLICATE_ID))
         }
 
         val file = packFileForId(pack.id)
-            ?: return StylePackImportResult(failure = StylePackFailure.MISSING_REQUIRED_FIELDS)
+            ?: return Validation(StylePackImportResult(failure = StylePackFailure.MISSING_REQUIRED_FIELDS))
 
         if (file.exists()) {
-            warnings.add("Replacing previously installed pack \"${pack.name}\".")
+            warnings.add("Installing will replace the previously installed pack \"${pack.name}\".")
         }
 
+        return Validation(
+            result = StylePackImportResult(pack = pack, warnings = warnings),
+            validated = ValidatedPack(pack = pack, root = root, targetFile = file, warnings = warnings)
+        )
+    }
+
+    private fun install(validated: ValidatedPack): StylePackImportResult {
         return try {
-            file.writeText(root.toString(2))
-            Log.d(TAG, "Installed style pack: ${pack.id} (${pack.name}, ${pack.styles.size} styles)")
-            StylePackImportResult(pack = pack, warnings = warnings)
+            // Atomic: a crash mid-write leaves the previously installed pack (or no
+            // pack at all) rather than a truncated file the gallery would fail to load.
+            writeUtf8TextAtomically(validated.targetFile, validated.root.toString(2))
+            Log.d(
+                TAG,
+                "Installed style pack: ${validated.pack.id} " +
+                    "(${validated.pack.name}, ${validated.pack.styles.size} styles)"
+            )
+            StylePackImportResult(pack = validated.pack, warnings = validated.warnings)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to write style pack", e)
             StylePackImportResult(failure = StylePackFailure.WRITE_FAILED)
