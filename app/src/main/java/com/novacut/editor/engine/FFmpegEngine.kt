@@ -211,9 +211,12 @@ class FFmpegEngine @Inject constructor(
                 add("-filter_complex"); add("[0:v]reverse[v]")
                 add("-map"); add("[v]")
             }
-            add("-c:v"); add("libx264")
-            add("-preset"); add("fast")
-            add("-crf"); add("18")
+            // Explicit, probed encoder. This intermediate is consumed by the
+            // Media3 composition and re-encoded there, so it only has to be
+            // high-quality and MediaCodec-decodable — not any particular codec.
+            val encoder = preferredIntermediateEncoder()
+            add("-c:v"); add(encoder.ffmpegName)
+            addAll(intermediateQualityArgs(encoder))
             if (hasAudio) {
                 add("-c:a"); add("aac")
                 add("-b:a"); add("192k")
@@ -292,14 +295,17 @@ class FFmpegEngine @Inject constructor(
         val vs = NativeProcessingPolicy.validateSubtitleFile(subtitleFile, "burnSubtitles")
         if (vs != null) return@withContext NativeProcessingPolicy.logAndReject(vs)
         val filter = subtitleFilter(subtitleFile.absolutePath)
+        // No -c:v here previously meant FFmpeg picked the container default,
+        // which resolves to libx264 on a GPL build. This pass writes the file
+        // the user receives, so the encoder is named explicitly.
+        val encoder = preferredIntermediateEncoder()
         executeArguments(
-            listOf(
-                "-y",
-                "-i", inputFile.absolutePath,
-                "-vf", filter,
-                "-c:a", "copy",
-                outputFile.absolutePath
-            ),
+            buildList {
+                addAll(listOf("-y", "-i", inputFile.absolutePath, "-vf", filter))
+                add("-c:v"); add(encoder.ffmpegName)
+                addAll(intermediateQualityArgs(encoder))
+                addAll(listOf("-c:a", "copy", outputFile.absolutePath))
+            },
             progressDurationMs = mediaDurationMs(inputFile),
             onProgress = onProgress
         ) == 0
@@ -364,6 +370,74 @@ class FFmpegEngine @Inject constructor(
     }
 
     @Volatile private var cachedAvailability: Boolean? = null
+
+    /**
+     * H.264 encoders an FFmpeg build may expose, best first.
+     *
+     * The final export is encoded by Media3 Transformer through Android
+     * MediaCodec and never touches FFmpeg, so ClearCut's headline H.264 support
+     * does not depend on any of these. These cover the FFmpeg-side passes —
+     * reverse pre-render, subtitle burn-in, inpainted frame assembly — which
+     * previously either hard-coded `libx264` or, worse, passed no `-c:v` at all
+     * and silently inherited whatever the build's default happened to be.
+     *
+     * [MEDIACODEC] wraps the device's hardware encoder and is licence-neutral.
+     * [X264] is GPL: usable, but it is the reason the shipped artifact is
+     * GPL-encumbered, so it is never preferred. [MPEG4] is FFmpeg's own
+     * LGPL encoder and is the always-present floor — MPEG-4 Part 2 in MP4 is
+     * decodable by Android MediaCodec, so an intermediate written with it still
+     * feeds back into the Media3 composition.
+     */
+    enum class H264Encoder(val ffmpegName: String, val isGpl: Boolean) {
+        MEDIACODEC("h264_mediacodec", isGpl = false),
+        X264("libx264", isGpl = true),
+        MPEG4("mpeg4", isGpl = false),
+    }
+
+    /**
+     * The encoder FFmpeg passes should use for an Android-decodable
+     * intermediate, chosen from what the linked build actually provides.
+     *
+     * Probed once against `-encoders` rather than assumed, because the answer
+     * changes with the vendored AAR: the current GPL build reports `libx264`
+     * and has MediaCodec disabled, while an LGPL rebuild reports
+     * `h264_mediacodec` instead. Selecting explicitly means swapping the AAR
+     * does not silently change (or break) what these passes encode.
+     */
+    suspend fun preferredIntermediateEncoder(): H264Encoder {
+        cachedEncoder?.let { return it }
+        val available = availableEncoderNames()
+        val chosen = H264Encoder.entries.firstOrNull { it.ffmpegName in available }
+            ?: H264Encoder.MPEG4
+        cachedEncoder = chosen
+        if (chosen.isGpl) {
+            Log.i(
+                TAG,
+                "Intermediate encoder is ${chosen.ffmpegName}: this build exposes no " +
+                    "licence-neutral H.264 encoder. Rebuilding FFmpeg with --enable-mediacodec " +
+                    "provides h264_mediacodec and drops the GPL dependency."
+            )
+        } else {
+            Log.d(TAG, "Intermediate encoder: ${chosen.ffmpegName}")
+        }
+        return chosen
+    }
+
+    private suspend fun availableEncoderNames(): Set<String> {
+        if (!isAvailable()) return emptySet()
+        val output = runCatching { encoderListOutput() }.getOrNull() ?: return emptySet()
+        // `-encoders` prints " V....D h264_mediacodec  <description>"; take the
+        // second whitespace-separated token of each entry line.
+        return output.lineSequence()
+            .mapNotNull { line ->
+                val trimmed = line.trim()
+                if (!trimmed.startsWith("V")) return@mapNotNull null
+                trimmed.split(Regex("\\s+")).getOrNull(1)
+            }
+            .toSet()
+    }
+
+    @Volatile private var cachedEncoder: H264Encoder? = null
 
     /**
      * Stream-copy trim (LosslessCut-style). When the timeline is a single
@@ -453,6 +527,37 @@ class FFmpegEngine @Inject constructor(
                 { stats ->
                     progressFromStats(stats.time, progressDurationMs)?.let { notifyProgress(onProgress, it) }
                 }
+            )
+            continuation.invokeOnCancellation { session.cancel() }
+        }
+    }
+
+    /**
+     * Quality settings for an intermediate, per encoder family.
+     *
+     * `-crf` is an x264/x265 rate-control knob; the MediaCodec wrapper and the
+     * native MPEG-4 encoder ignore it and need an explicit bitrate instead, so
+     * passing one set of flags to all three would silently produce a low-bitrate
+     * intermediate on a non-GPL build.
+     */
+    internal fun intermediateQualityArgs(encoder: H264Encoder): List<String> = when (encoder) {
+        H264Encoder.X264 -> listOf("-preset", "fast", "-crf", "18")
+        // High constant bitrate stands in for near-visually-lossless CRF 18.
+        H264Encoder.MEDIACODEC -> listOf("-b:v", "20M")
+        H264Encoder.MPEG4 -> listOf("-b:v", "24M")
+    }
+
+    /** Run `-encoders` and return its combined log output for capability probing. */
+    private suspend fun encoderListOutput(): String {
+        return suspendCancellableCoroutine { continuation ->
+            val builder = StringBuilder()
+            val session = FFmpegKit.executeWithArgumentsAsync(
+                arrayOf("-hide_banner", "-encoders"),
+                { _ ->
+                    if (continuation.isActive) continuation.resume(builder.toString())
+                },
+                { log -> builder.append(log.message.orEmpty()) },
+                { }
             )
             continuation.invokeOnCancellation { session.cancel() }
         }

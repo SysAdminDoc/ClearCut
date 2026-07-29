@@ -378,10 +378,15 @@ class InpaintingEngine @Inject constructor(
                 val outputFile = outputUri.path?.let(::File) ?: return@withContext null
                 val pattern = File(tempDir, "frame_%05d.png").absolutePath
                 val encodeOk = if (!ffmpegEngine.isAvailable()) false else {
+                    // Explicit, probed encoder rather than a hard-coded GPL one;
+                    // this frame sequence only has to come back as something
+                    // MediaCodec can decode.
+                    val encoder = ffmpegEngine.preferredIntermediateEncoder()
+                    val quality = ffmpegEngine.intermediateQualityArgs(encoder).joinToString(" ")
                     ffmpegEngine.execute(
                         "-y -framerate ${fps.toInt().coerceIn(1, 120)} " +
                             "-i \"$pattern\" " +
-                            "-c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p " +
+                            "-c:v ${encoder.ffmpegName} $quality -pix_fmt yuv420p " +
                             "\"${outputFile.absolutePath}\""
                     ) == 0
                 }
