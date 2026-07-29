@@ -4261,6 +4261,8 @@ class EditorViewModel @Inject constructor(
 
     // --- Export ---
     fun cancelExport() = exportDelegate.cancelExport()
+    fun confirmPendingExport() = exportDelegate.confirmPendingExport()
+    fun dismissPendingExport() = exportDelegate.dismissPendingExport()
 
     // --- Media Manager ---
     fun showMediaManager() {

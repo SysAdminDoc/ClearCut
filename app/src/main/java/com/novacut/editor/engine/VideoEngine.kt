@@ -41,6 +41,24 @@ private const val TAG = "VideoEngine"
 private const val DEFAULT_STILL_IMAGE_DURATION_MS = 3_000L
 private const val SPEED_CURVE_PREVIEW_STEP_US = 10_000L
 
+/**
+ * Longest clip the reverse pre-render will attempt. Anything above this is
+ * refused up front rather than started and abandoned; export preflight reads the
+ * same constant so the user learns about it before work begins.
+ */
+const val MAX_REVERSE_CLIP_DURATION_MS = 5L * 60 * 1000
+
+/**
+ * Raised when a render stage cannot honour the timeline's intent and no
+ * consented fallback exists. Carries the stage and subject so the failure names
+ * the clip instead of a generic "export failed".
+ */
+class ExportStageException(
+    val stage: String,
+    val subjectId: String?,
+    override val message: String,
+) : Exception(message)
+
 internal fun nextSampledSpeedChangeTimeUs(
     timeUs: Long,
     durationUs: Long,
@@ -730,19 +748,30 @@ class VideoEngine @Inject constructor(
         runCatching { outputFile.delete() }
     }
 
+    /**
+     * Whether the reverse pre-render backend is usable on this device. Export
+     * preflight probes this so an unavailable backend is disclosed before work
+     * starts instead of degrading to forward video mid-render.
+     */
+    fun isReverseRenderAvailable(): Boolean = ffmpegEngine.isAvailable()
+
     private suspend fun preRenderReversedClips(
         tracks: List<Track>,
         tempFiles: MutableList<File>,
         onProgress: (Float) -> Unit
     ): List<Track> {
-        if (!ffmpegEngine.isAvailable()) return tracks
-
         val reversedClips = tracks.flatMap { track ->
             track.clips.filter { it.isReversed }.map { track to it }
         }
         if (reversedClips.isEmpty()) return tracks
 
-        val maxReverseDurationMs = 5L * 60 * 1000
+        // Both remaining fallbacks below are visible to export preflight, which
+        // requires the user to accept them before this runs. Anything the
+        // preflight could not predict fails the export instead of quietly
+        // shipping forward video.
+        if (!ffmpegEngine.isAvailable()) return tracks
+
+        val maxReverseDurationMs = MAX_REVERSE_CLIP_DURATION_MS
         val clipReplacements = mutableMapOf<String, Clip>()
 
         for ((index, pair) in reversedClips.withIndex()) {
@@ -787,7 +816,15 @@ class VideoEngine @Inject constructor(
                 Log.d(TAG, "Pre-rendered reversed clip ${clip.id} → ${tempFile.name}")
             } else {
                 tempFile.delete()
-                Log.w(TAG, "Failed to pre-render reversed clip ${clip.id}, exporting forward")
+                // Fail closed. Continuing here would export forward video for a
+                // clip the timeline shows reversed, with nothing but a log line
+                // to say so.
+                throw ExportStageException(
+                    stage = "reverse-render",
+                    subjectId = clip.id,
+                    message = "Reverse rendering failed for clip ${clip.id}. " +
+                        "Export stopped so it cannot ship forward video in place of the reversed clip."
+                )
             }
         }
 

@@ -77,7 +77,13 @@ data class EditorExportDomainState(
     val renderSummary: SmartRenderEngine.SmartRenderSummary? = null,
     val batchQueue: List<BatchExportItem> = emptyList(),
     val savedConfig: ExportConfig? = null,
-    val history: List<ExportHistoryEntry> = emptyList()
+    val history: List<ExportHistoryEntry> = emptyList(),
+    /**
+     * Set when preflight found warnings the user has not accepted yet. No export
+     * work runs while this is non-null: the user either confirms (which records
+     * the accepted fallbacks) or cancels.
+     */
+    val pendingConfirmation: ExportConfirmationRequest? = null
 ) : EditorDomainState {
     override val kind: EditorDomainState.Kind = EditorDomainState.Kind.EXPORT
 }

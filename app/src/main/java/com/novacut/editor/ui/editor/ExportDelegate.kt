@@ -20,8 +20,10 @@ import com.novacut.editor.engine.ExportIncidentBuilder
 import com.novacut.editor.engine.ExportIncidentStore
 import com.novacut.editor.engine.ExportService
 import com.novacut.editor.engine.ExportStoragePolicy
+import com.novacut.editor.engine.ExportStageException
 import com.novacut.editor.engine.ExportStorageException
 import com.novacut.editor.engine.ExportState
+import com.novacut.editor.engine.MAX_REVERSE_CLIP_DURATION_MS
 import com.novacut.editor.engine.MediaHealthReport
 import com.novacut.editor.engine.MixedRenderExportPlanner
 import com.novacut.editor.engine.ProjectDependencyManifest
@@ -90,6 +92,9 @@ class ExportDelegate(
     // (GIF encode, contact-sheet render) + any future CPU-only export paths
     // all need the same cancel/teardown plumbing.
     @Volatile private var nonVideoExportJob: kotlinx.coroutines.Job? = null
+    // Set for the lifetime of an export the user allowed through preflight
+    // warnings; appended to every history row that run produces.
+    @Volatile private var acceptedFallbackNote: String? = null
     private val exportHistoryStore = ExportHistoryStore.forContext(appContext)
 
     private inline fun updateExport(transform: (EditorExportDomainState) -> EditorExportDomainState) {
@@ -270,6 +275,12 @@ class ExportDelegate(
         healthReport: MediaHealthReport? = sourceState.media.healthReport
     ) {
         val finishedAtMs = System.currentTimeMillis()
+        // An export the user let through despite preflight warnings produced a
+        // file that differs from the timeline. Every history row for that run
+        // carries the accepted list so the difference stays attributable.
+        val summaryWithConsent = listOfNotNull(diagnosticSummary, acceptedFallbackNote)
+            .takeIf { it.isNotEmpty() }
+            ?.joinToString(" ")
         val entry = buildExportHistoryEntry(
             projectId = sourceState.project.id,
             projectName = sourceState.project.name,
@@ -280,7 +291,7 @@ class ExportDelegate(
             config = config,
             timelineDurationMs = timelineDurationMs,
             errorMessage = errorMessage,
-            diagnosticSummary = diagnosticSummary,
+            diagnosticSummary = summaryWithConsent,
             mediaWarningCount = healthReport?.warningCount ?: 0,
             mediaBlockingCount = healthReport?.blockingCount ?: 0
         )
@@ -527,7 +538,79 @@ class ExportDelegate(
         scope.launch { startExportAsync(outputDir, preferredOutputName, currentState) }
     }
 
-    private suspend fun startExportAsync(outputDir: File, preferredOutputName: String?, currentState: EditorState) {
+    /**
+     * Proceed with an export whose preflight warnings the user just accepted.
+     * The accepted set is recorded so the produced file's history says which
+     * render intents were traded away.
+     */
+    fun confirmPendingExport() {
+        val request = stateFlow.value.export.pendingConfirmation ?: return
+        updateExport { it.copy(pendingConfirmation = null) }
+        val currentState = stateFlow.value
+        scope.launch {
+            startExportAsync(
+                outputDir = File(request.outputDirPath),
+                preferredOutputName = request.preferredOutputName,
+                currentState = currentState,
+                acceptedConfirmation = request,
+            )
+        }
+    }
+
+    /** Abandon a held-back export. Nothing was rendered, so nothing is cleaned up. */
+    fun dismissPendingExport() {
+        val request = stateFlow.value.export.pendingConfirmation ?: return
+        updateExport { it.copy(pendingConfirmation = null) }
+        recordExportHistory(
+            sourceState = stateFlow.value,
+            status = ExportHistoryStatus.CANCELLED,
+            startedAtMs = System.currentTimeMillis(),
+            outputFile = null,
+            config = stateFlow.value.exportConfig,
+            timelineDurationMs = stateFlow.value.totalDurationMs,
+            diagnosticSummary = "User declined ${request.warnings.size} export warning(s) before work started.",
+        )
+    }
+
+    /**
+     * Render-intent fallbacks this export already knows about. Reversed clips are
+     * the current case: an unavailable backend or an over-length clip exports
+     * forward video, which is a different result than the timeline shows.
+     */
+    private fun reverseIntentFallbacks(state: EditorState): List<ExportIntentFallback> {
+        val reversedClips = state.tracks.flatMap { track -> track.clips.filter { it.isReversed } }
+        if (reversedClips.isEmpty()) return emptyList()
+
+        if (!videoEngine.isReverseRenderAvailable()) {
+            return reversedClips.map { clip ->
+                ExportIntentFallback(
+                    stage = "reverse-render",
+                    subjectId = clip.id,
+                    message = "Clip ${clip.id} is reversed, but reverse rendering is unavailable on " +
+                        "this device. It would be exported playing forward.",
+                )
+            }
+        }
+
+        return reversedClips.mapNotNull { clip ->
+            val clipDurationMs = clip.trimEndMs - clip.trimStartMs
+            if (clipDurationMs <= MAX_REVERSE_CLIP_DURATION_MS) return@mapNotNull null
+            ExportIntentFallback(
+                stage = "reverse-render",
+                subjectId = clip.id,
+                message = "Clip ${clip.id} is reversed and ${clipDurationMs / 1000}s long, over the " +
+                    "${MAX_REVERSE_CLIP_DURATION_MS / 1000}s reverse limit. It would be exported playing forward.",
+            )
+        }
+    }
+
+    private suspend fun startExportAsync(
+        outputDir: File,
+        preferredOutputName: String?,
+        currentState: EditorState,
+        acceptedConfirmation: ExportConfirmationRequest? = null,
+    ) {
+        acceptedFallbackNote = acceptedConfirmation?.acceptedFallbackSummary()
         val healthReport = mediaHealthPreflight(currentState)
         val audioConformance = buildAudioConformance(currentState)
         // Pan and per-track/clip audio effects are modeled and persisted but the
@@ -546,6 +629,7 @@ class ExportDelegate(
             audioConformance = audioConformance,
             dependencies = projectDependencyManifest(currentState),
             unrenderedMixerEditCount = unrenderedMixerEditCount,
+            intentFallbacks = reverseIntentFallbacks(currentState),
         )
         stateFlow.update { state ->
             state.copyMedia { media -> media.copy(healthReport = healthReport) }
@@ -577,6 +661,25 @@ class ExportDelegate(
                 healthReport = healthReport
             )
             showToast(mediaPreflight.message)
+            return
+        }
+
+        // Fail closed on warnings: work only starts once the user has seen every
+        // warning and accepted it. Without this the preflight result was computed
+        // and then discarded, and reversed clips that could not be rendered were
+        // exported forward with nothing but a log line.
+        if (mediaPreflight.requiresConsent && acceptedConfirmation == null) {
+            updateExport { export ->
+                export.copy(
+                    pendingConfirmation = ExportConfirmationRequest(
+                        outputDirPath = outputDir.absolutePath,
+                        preferredOutputName = preferredOutputName,
+                        summary = mediaPreflight.message,
+                        warnings = mediaPreflight.warnings,
+                        intentFallbacks = mediaPreflight.intentFallbacks,
+                    )
+                )
+            }
             return
         }
 
@@ -1230,10 +1333,13 @@ class ExportDelegate(
 
             fun handleVideoExportError(e: Exception) {
                 outputFile.delete()
-                val message = if (e is ExportStorageException) {
-                    appContext.exportStorageFailureMessage(e.failure)
-                } else {
-                    text(R.string.export_video_failed_message)
+                val message = when (e) {
+                    is ExportStorageException -> appContext.exportStorageFailureMessage(e.failure)
+                    // A stage that refused to change render intent already knows
+                    // which clip and stage failed — say so instead of collapsing
+                    // it into the generic "export failed" copy.
+                    is ExportStageException -> e.message
+                    else -> text(R.string.export_video_failed_message)
                 }
                 val technicalMessage = e.message ?: e::class.java.simpleName
                 updateExport {
@@ -1251,12 +1357,15 @@ class ExportDelegate(
                     config = configWithChapters,
                     timelineDurationMs = totalDurationMs,
                     errorMessage = message,
-                    diagnosticSummary = "Video export failed in the encoder pipeline.",
+                    diagnosticSummary = (e as? ExportStageException)?.let { staged ->
+                        "Video export failed in the ${staged.stage} stage" +
+                            (staged.subjectId?.let { " on clip $it" } ?: "") + "."
+                    } ?: "Video export failed in the encoder pipeline.",
                     healthReport = healthReport
                 )
                 recordExportIncident(
                     sourceState = currentState,
-                    failedPhase = "encoder",
+                    failedPhase = (e as? ExportStageException)?.stage ?: "encoder",
                     error = e,
                     errorMessage = technicalMessage,
                     config = configWithChapters,

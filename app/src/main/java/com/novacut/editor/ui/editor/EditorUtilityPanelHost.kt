@@ -167,6 +167,14 @@ fun BoxScope.EditorUtilityPanelHost(
         )
     }
 
+    state.export.pendingConfirmation?.let { request ->
+        ExportConfirmationDialog(
+            request = request,
+            onConfirm = viewModel::confirmPendingExport,
+            onDismiss = viewModel::dismissPendingExport
+        )
+    }
+
     state.backupImportFeedback?.let { feedback ->
         BackupImportReportDialog(
             feedback = feedback,

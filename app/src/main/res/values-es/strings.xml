@@ -2315,6 +2315,13 @@
     <!-- ColorGradingDelegate toast messages -->
     <string name="color_lut_applied_toast">LUT aplicado: %1$s</string>
 
+    <!-- Export preflight confirmation -->
+    <string name="export_confirm_title">Revisa antes de exportar</string>
+    <string name="export_confirm_intent_heading">Estas ediciones no se pueden renderizar y cambiarían el resultado:</string>
+    <string name="export_confirm_warnings_heading">Advertencias</string>
+    <string name="export_confirm_accept">Exportar de todos modos</string>
+    <string name="export_confirm_cancel">Volver</string>
+
     <!-- ExportDelegate toast messages -->
     <string name="export_stream_copy_complete_toast">Exportación por copia directa completa: %1$s</string>
     <string name="export_already_in_progress_toast">La exportación ya está en curso</string>

@@ -169,6 +169,86 @@ class ExportMediaPreflightTest {
         assertEquals("Media ready for export.", result.message)
     }
 
+    @Test
+    fun everyBlockerAndWarningIsItemizedNotJustCounted() {
+        val result = ExportMediaPreflight.evaluate(
+            healthReport = report(
+                MediaHealthIssue(
+                    type = MediaHealthIssueType.MISSING_LOCAL_FILE,
+                    severity = MediaHealthSeverity.BLOCKING,
+                    subjectId = "clip",
+                    message = "clip source is gone"
+                ),
+                MediaHealthIssue(
+                    type = MediaHealthIssueType.EXTERNAL_SOURCE,
+                    severity = MediaHealthSeverity.WARNING,
+                    subjectId = "clip2",
+                    message = "clip2 lives outside the app"
+                )
+            ),
+            relinkReports = emptyMap(),
+        )
+
+        assertEquals(listOf("clip source is gone"), result.blockers)
+        assertEquals(listOf("clip2 lives outside the app"), result.warnings)
+        assertEquals(result.blockers.size, result.blockingCount)
+        assertEquals(result.warnings.size, result.warningCount)
+    }
+
+    @Test
+    fun renderIntentFallbacksBecomeWarningsThatNeedConsent() {
+        val fallback = ExportIntentFallback(
+            stage = "reverse-render",
+            subjectId = "clip-7",
+            message = "Clip clip-7 is reversed, but reverse rendering is unavailable on this device."
+        )
+        val result = ExportMediaPreflight.evaluate(
+            healthReport = report(),
+            relinkReports = emptyMap(),
+            intentFallbacks = listOf(fallback),
+        )
+
+        assertTrue(result.canExport)
+        assertTrue("A fallback that changes the output must require consent", result.requiresConsent)
+        assertEquals(1, result.warningCount)
+        assertEquals(listOf(fallback.message), result.warnings)
+        assertEquals(listOf(fallback), result.intentFallbacks)
+        assertTrue(result.message.contains("cannot be rendered as edited"))
+    }
+
+    @Test
+    fun cleanProjectNeedsNoConsent() {
+        val result = ExportMediaPreflight.evaluate(
+            healthReport = report(),
+            relinkReports = emptyMap(),
+        )
+
+        assertFalse(result.requiresConsent)
+        assertTrue(result.warnings.isEmpty())
+    }
+
+    @Test
+    fun blockedProjectStillItemizesWarningsForTheReport() {
+        val result = ExportMediaPreflight.evaluate(
+            healthReport = report(
+                MediaHealthIssue(
+                    type = MediaHealthIssueType.MISSING_LOCAL_FILE,
+                    severity = MediaHealthSeverity.BLOCKING,
+                    subjectId = "clip",
+                    message = "missing"
+                )
+            ),
+            relinkReports = emptyMap(),
+            unrenderedMixerEditCount = 1,
+        )
+
+        assertFalse(result.canExport)
+        // Blocked exports never reach the consent dialog, so requiresConsent is false
+        // even though warnings exist — they still ride along in the report.
+        assertFalse(result.requiresConsent)
+        assertEquals(1, result.warnings.size)
+    }
+
     private fun report(vararg issues: MediaHealthIssue): MediaHealthReport {
         return MediaHealthReport(
             totalReferences = 1,
