@@ -207,8 +207,54 @@ val generateNativeSbom by tasks.registering(Exec::class) {
     )
 }
 
+/**
+ * Minimum resolved versions for coordinates with a known applicable advisory.
+ * Declared-version pins (the version catalog) do not cover transitives, which is
+ * how GHSA-735f-pc8j-v9w8 reached the release graph below MediaPipe. This gate
+ * reads the *resolved* graph instead.
+ */
+val advisoryFloors = mapOf(
+    // GHSA-735f-pc8j-v9w8 — malformed-input denial of service.
+    "com.google.protobuf:protobuf-javalite" to "4.27.5",
+    "com.google.protobuf:protobuf-java" to "4.27.5",
+)
+
+fun compareVersions(a: String, b: String): Int {
+    val left = a.split('.', '-').mapNotNull { it.toIntOrNull() }
+    val right = b.split('.', '-').mapNotNull { it.toIntOrNull() }
+    for (i in 0 until maxOf(left.size, right.size)) {
+        val diff = (left.getOrElse(i) { 0 }).compareTo(right.getOrElse(i) { 0 })
+        if (diff != 0) return diff
+    }
+    return 0
+}
+
+val verifyResolvedAdvisoryFloors by tasks.registering {
+    group = "verification"
+    description = "Fails when the resolved release runtime graph contains a coordinate below its advisory floor."
+    doLast {
+        val resolved = configurations.getByName("releaseRuntimeClasspath")
+            .incoming.resolutionResult.allComponents
+            .mapNotNull { it.moduleVersion }
+        val violations = resolved.mapNotNull { module ->
+            val floor = advisoryFloors["${module.group}:${module.name}"] ?: return@mapNotNull null
+            if (compareVersions(module.version, floor) < 0) {
+                "${module.group}:${module.name}:${module.version} is below the advisory floor $floor"
+            } else {
+                null
+            }
+        }
+        require(violations.isEmpty()) {
+            "Resolved release graph violates advisory floors:\n" + violations.joinToString("\n")
+        }
+    }
+}
+
 tasks.configureEach {
-    if (name == "preReleaseBuild") dependsOn(generateNativeSbom)
+    if (name == "preReleaseBuild") {
+        dependsOn(generateNativeSbom)
+        dependsOn(verifyResolvedAdvisoryFloors)
+    }
 }
 
 // Workaround: VMware HGFS cannot delete files whose names contain '$' via standard
@@ -226,6 +272,16 @@ tasks.configureEach {
 }
 
 dependencies {
+    constraints {
+        // MediaPipe tasks-core 0.10.35 still resolves protobuf-javalite 4.26.1, which
+        // carries GHSA-735f-pc8j-v9w8 (unbounded recursion on malformed input -> DoS).
+        // 4.27.5 is the first fixed release on the 4.27 line and stays gencode-compatible
+        // with MediaPipe's 4.26 generated classes (runtime may lead gencode within v4).
+        implementation(libs.protobuf.javalite) {
+            because("GHSA-735f-pc8j-v9w8: protobuf-javalite < 4.27.5 is vulnerable to a malformed-input DoS")
+        }
+    }
+
     // Room 2.8.4's migration bundle serializers are generated against 1.8.1.
     // Lifecycle otherwise constrains Android tests to 1.7.3, which crashes
     // MigrationTestHelper before migrations can run (AbstractMethodError).

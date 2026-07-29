@@ -40,6 +40,7 @@ class DependencyFreshnessTest {
         "lottieCompose" to "6.7.1",
         "onnxruntime" to "1.26.0",
         "mediapipe" to "0.10.35",
+        "protobufJavalite" to "4.27.5",
         "robolectric" to "4.14.1",
     )
 
@@ -82,6 +83,13 @@ class DependencyFreshnessTest {
             "6.7.1",
             "Lottie 7.x state-machine API blocked on Compose compatibility validation.",
             "Upgrade when Lottie 7.x stable passes local integration tests."
+        ),
+        "protobufJavalite" to Hold(
+            "4.27.5",
+            "Security constraint over MediaPipe's transitive 4.26.1 (GHSA-735f-pc8j-v9w8). " +
+                "Held on the 4.27 line: 4.28+ gencode/runtime version enforcement is not " +
+                "validated against MediaPipe 0.10.35's 4.26 generated classes.",
+            "Raise when MediaPipe ships a build whose own protobuf floor is >= 4.28."
         ),
     )
 

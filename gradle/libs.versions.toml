@@ -20,6 +20,9 @@ datastore = "1.2.1"
 work = "2.11.2"
 onnxruntime = "1.26.0"
 mediapipe = "0.10.35"
+# Transitive of MediaPipe tasks-core; MediaPipe still pulls 4.26.1, which carries
+# GHSA-735f-pc8j-v9w8 (malformed-input DoS). Constrained upward in app/build.gradle.kts.
+protobufJavalite = "4.27.5"
 okhttp = "5.4.0"
 lottieCompose = "6.7.1"
 deepfilternet = "0.0.8"
@@ -76,6 +79,7 @@ coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref 
 coil-video = { group = "io.coil-kt.coil3", name = "coil-video", version.ref = "coil" }
 onnxruntime-android = { group = "com.microsoft.onnxruntime", name = "onnxruntime-android", version.ref = "onnxruntime" }
 mediapipe-tasks-vision = { group = "com.google.mediapipe", name = "tasks-vision", version.ref = "mediapipe" }
+protobuf-javalite = { group = "com.google.protobuf", name = "protobuf-javalite", version.ref = "protobufJavalite" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 lottie-compose = { group = "com.airbnb.android", name = "lottie-compose", version.ref = "lottieCompose" }
 android-deepfilternet = { group = "io.github.kaleyravideo", name = "android-deepfilternet", version.ref = "deepfilternet" }
