@@ -209,7 +209,7 @@ class TemplateManager @Inject constructor(
     private fun loadTemplate(file: File): UserTemplate? {
         return try {
             if (file.length() > maxTemplateBytes) {
-                Log.w("TemplateManager", "Skipping oversized template ${file.name}")
+                Log.w("TemplateManager", "Skipping oversized template ${file.redacted()}")
                 return null
             }
             val json = JSONObject(file.inputStream().use { input ->
@@ -224,7 +224,7 @@ class TemplateManager @Inject constructor(
                 is TemplateParseResult.Failure -> null
             }
         } catch (e: Exception) {
-            Log.e("TemplateManager", "Failed to load template ${file.name}", e)
+            Log.e("TemplateManager", "Failed to load template ${file.redacted()}", e)
             null
         }
     }

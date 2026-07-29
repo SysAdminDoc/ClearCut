@@ -55,6 +55,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.math.roundToInt
+import com.novacut.editor.engine.RedactedLog
 
 /**
  * Delegate handling export, batch export, render preview, share, and save-to-gallery.
@@ -226,7 +227,8 @@ class ExportDelegate(
         timelineDurationMs: Long,
         startedAtMs: Long,
         streamCopyAttempted: Boolean = false,
-        healthReport: MediaHealthReport? = sourceState.media.healthReport
+        healthReport: MediaHealthReport? = sourceState.media.healthReport,
+        subjectClipId: String? = null,
     ) {
         val store = exportIncidentStore ?: return
         val samples = synchronized(progressSamples) { progressSamples.toList() }
@@ -256,7 +258,10 @@ class ExportDelegate(
                     mediaBlockingCount = healthReport?.blockingCount ?: 0,
                     mediaHealthSummary = healthReport?.let {
                         "${it.totalReferences} refs, ${it.warningCount} warnings, ${it.blockingCount} blocking"
-                    }
+                    },
+                    // Redacted before it is stored: the report must be able to say
+                    // "this same clip again" without ever naming the file.
+                    subjectAssetId = subjectClipId?.let { RedactedLog.assetId(it) },
                 )
                 store.save(bundle)
             }
@@ -1366,6 +1371,7 @@ class ExportDelegate(
                 recordExportIncident(
                     sourceState = currentState,
                     failedPhase = (e as? ExportStageException)?.stage ?: "encoder",
+                    subjectClipId = (e as? ExportStageException)?.subjectId,
                     error = e,
                     errorMessage = technicalMessage,
                     config = configWithChapters,
@@ -1574,7 +1580,7 @@ class ExportDelegate(
         val uri = runCatching {
             FileProvider.getUriForFile(appContext, "${appContext.packageName}.fileprovider", file)
         }.getOrElse { error ->
-            Log.w("ExportDelegate", "Export share FileProvider handoff failed for $filePath", error)
+            Log.w("ExportDelegate", "Export share FileProvider handoff failed for ${RedactedLog.path(filePath)}", error)
             showToast(appContext.getString(com.novacut.editor.R.string.editor_share_location_failed))
             return null
         }

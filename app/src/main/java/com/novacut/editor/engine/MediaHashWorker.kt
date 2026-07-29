@@ -108,7 +108,7 @@ class MediaHashWorker @AssistedInject constructor(
             }
             digest.digest().joinToString("") { "%02x".format(it) }
         } catch (e: Exception) {
-            Log.w(TAG, "SHA-256 computation failed for ${file.name}", e)
+            Log.w(TAG, "SHA-256 computation failed for ${file.redacted()}", e)
             null
         }
     }

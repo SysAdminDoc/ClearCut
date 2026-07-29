@@ -410,7 +410,7 @@ class VideoEngine @Inject constructor(
             val scaled = try {
                 Bitmap.createScaledBitmap(original, width, height, true)
             } catch (t: Throwable) {
-                Log.w(TAG, "Thumbnail scale failed at ${timeUs}us for $uri", t)
+                Log.w(TAG, "Thumbnail scale failed at ${timeUs}us for ${uri.redacted()}", t)
                 null
             }
             if (scaled == null) {
@@ -430,7 +430,7 @@ class VideoEngine @Inject constructor(
             // IO / setDataSource failure must still recycle the partial frame
             // before we return so we don't accumulate native bitmaps.
             frame?.recycle()
-            Log.w(TAG, "Thumbnail extract failed at ${timeUs}us for $uri", e)
+            Log.w(TAG, "Thumbnail extract failed at ${timeUs}us for ${uri.redacted()}", e)
             null
         } finally {
             retriever.release()
@@ -1714,7 +1714,7 @@ class VideoEngine @Inject constructor(
                 hasAudio = hasAudio || fallbackHasAudio
             )
         } catch (e: Exception) {
-            Log.w(TAG, "Unable to probe media characteristics for $uri", e)
+            Log.w(TAG, "Unable to probe media characteristics for ${uri.redacted()}", e)
             MediaCharacteristics(
                 isStillImage = false,
                 hasVisual = fallbackHasVisual,
@@ -1985,7 +1985,7 @@ class VideoEngine @Inject constructor(
                     // Reporting COMPLETE for a 0-byte file would let the user share / save an
                     // unplayable artifact and trust that it succeeded. Surface as ERROR instead.
                     if (!outputFile.exists() || outputFile.length() <= 0L) {
-                        Log.e(TAG, "Transformer reported COMPLETE but output file is empty: ${outputFile.absolutePath}")
+                        Log.e(TAG, "Transformer reported COMPLETE but output file is empty: ${outputFile.redacted()}")
                         _exportErrorMessage.value = "Export produced an empty file"
                         _exportState.value = ExportState.ERROR
                         _exportProgress.value = 0f

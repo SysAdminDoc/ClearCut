@@ -79,12 +79,12 @@ internal class ExportAnimatedImageOverlay private constructor(
             return try {
                 val inputStream = context.contentResolver.openInputStream(overlay.sourceUri)
                     ?: run {
-                        Log.w(TAG, "Cannot open animated overlay ${overlay.sourceUri}")
+                        Log.w(TAG, "Cannot open animated overlay ${overlay.sourceUri.redacted()}")
                         return null
                     }
                 val movie = inputStream.use { android.graphics.Movie.decodeStream(it) }
                     ?: run {
-                        Log.w(TAG, "Movie.decodeStream returned null for ${overlay.sourceUri}")
+                        Log.w(TAG, "Movie.decodeStream returned null for ${overlay.sourceUri.redacted()}")
                         return null
                     }
                 val movieW = movie.width().coerceAtLeast(1)
@@ -117,7 +117,7 @@ internal class ExportAnimatedImageOverlay private constructor(
                     visibleSettings = settings,
                 )
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to decode animated overlay ${overlay.sourceUri}", e)
+                Log.w(TAG, "Failed to decode animated overlay ${overlay.sourceUri.redacted()}", e)
                 null
             }
         }

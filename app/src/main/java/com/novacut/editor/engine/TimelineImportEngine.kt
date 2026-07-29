@@ -74,7 +74,7 @@ class TimelineImportEngine @Inject constructor(
             droppedEffects = 0,
             unresolvedMediaUris = emptyList()
         )
-        Log.d(TAG, "import: stub -- ${detected.displayName} parser not implemented")
+        Log.d(TAG, "import: stub -- ${detected.name} parser not implemented")
         ImportResult(
             project = null,
             warnings = listOf("${detected.displayName} import is not yet implemented."),

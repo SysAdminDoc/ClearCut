@@ -67,7 +67,7 @@ class MediaImportEngine @Inject constructor(
                 inspectedAtMs = System.currentTimeMillis()
             )
         } catch (e: Exception) {
-            Log.w(MEDIA_IMPORT_ENGINE_TAG, "Unable to inspect source color metadata for $uri", e)
+            Log.w(MEDIA_IMPORT_ENGINE_TAG, "Unable to inspect source color metadata for ${uri.redacted()}", e)
             SourceColorMetadata(
                 mimeType = fallbackMimeType,
                 inspectedAtMs = System.currentTimeMillis()
@@ -103,7 +103,7 @@ class MediaImportEngine @Inject constructor(
                 bitmap.recycle()
             }
         } catch (t: Throwable) {
-            Log.w(MEDIA_IMPORT_ENGINE_TAG, "Unable to inspect Ultra HDR gain map for $uri", t)
+            Log.w(MEDIA_IMPORT_ENGINE_TAG, "Unable to inspect Ultra HDR gain map for ${uri.redacted()}", t)
             null
         }
     }

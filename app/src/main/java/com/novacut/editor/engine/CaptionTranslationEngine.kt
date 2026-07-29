@@ -138,7 +138,7 @@ class CaptionTranslationEngine @Inject constructor(
         variant: ModelVariant = ModelVariant.NLLB_600M,
         onProgress: (Float) -> Unit = {}
     ): Boolean = withContext(Dispatchers.IO) {
-        Log.d(TAG, "downloadModel: stub -- requires ${variant.displayName}")
+        Log.d(TAG, "downloadModel: stub -- requires ${variant.name}")
         false
     }
 

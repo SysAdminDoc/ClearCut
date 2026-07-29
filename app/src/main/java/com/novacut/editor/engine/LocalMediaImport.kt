@@ -46,7 +46,7 @@ internal fun importUriToManagedMedia(
 
     val destinationDir = managedMediaDir(context)
     if (!destinationDir.exists() && !destinationDir.mkdirs() && !destinationDir.exists()) {
-        Log.w(LOCAL_MEDIA_IMPORT_TAG, "Failed to create managed media directory: ${destinationDir.path}")
+        Log.w(LOCAL_MEDIA_IMPORT_TAG, "Failed to create managed media directory: ${destinationDir.redacted()}")
         return null
     }
 
@@ -71,13 +71,13 @@ internal fun importUriToManagedMedia(
             partialFile.outputStream().use { output -> input.copyTo(output) }
         } ?: run {
             partialFile.delete()
-            Log.w(LOCAL_MEDIA_IMPORT_TAG, "Cannot open input stream for $uri")
+            Log.w(LOCAL_MEDIA_IMPORT_TAG, "Cannot open input stream for ${uri.redacted()}")
             return null
         }
 
         if (partialFile.length() <= 0L) {
             partialFile.delete()
-            Log.w(LOCAL_MEDIA_IMPORT_TAG, "Imported file was empty for $uri")
+            Log.w(LOCAL_MEDIA_IMPORT_TAG, "Imported file was empty for ${uri.redacted()}")
             return null
         }
 
@@ -95,7 +95,7 @@ internal fun importUriToManagedMedia(
             } catch (copyErr: Exception) {
                 partialFile.delete()
                 destinationFile.delete()
-                Log.w(LOCAL_MEDIA_IMPORT_TAG, "Rename + fallback copy both failed for $uri", copyErr)
+                Log.w(LOCAL_MEDIA_IMPORT_TAG, "Rename + fallback copy both failed for ${uri.redacted()}", copyErr)
                 return null
             }
         }
@@ -105,7 +105,7 @@ internal fun importUriToManagedMedia(
     } catch (e: Exception) {
         partialFile.delete()
         destinationFile.delete()
-        Log.w(LOCAL_MEDIA_IMPORT_TAG, "Failed to import media URI $uri", e)
+        Log.w(LOCAL_MEDIA_IMPORT_TAG, "Failed to import media URI ${uri.redacted()}", e)
         null
     }
 }
@@ -238,19 +238,19 @@ internal fun finalizePendingCameraCapture(
 ): Uri? {
     val pendingCanonical = runCatching { pendingFile.canonicalFile }.getOrNull()
     if (pendingCanonical == null || !isInsideDirectory(pendingCanonical, pendingCameraCaptureDir(context))) {
-        Log.w(LOCAL_MEDIA_IMPORT_TAG, "Rejected pending camera capture outside capture directory: ${pendingFile.path}")
+        Log.w(LOCAL_MEDIA_IMPORT_TAG, "Rejected pending camera capture outside capture directory: ${pendingFile.redacted()}")
         return null
     }
 
     if (!pendingCanonical.isFile || pendingCanonical.length() <= 0L) {
         runCatching { pendingCanonical.delete() }
-        Log.w(LOCAL_MEDIA_IMPORT_TAG, "Pending camera capture missing or empty: ${pendingCanonical.path}")
+        Log.w(LOCAL_MEDIA_IMPORT_TAG, "Pending camera capture missing or empty: ${pendingCanonical.redacted()}")
         return null
     }
 
     val destinationDir = managedMediaDir(context)
     if (!destinationDir.exists() && !destinationDir.mkdirs() && !destinationDir.exists()) {
-        Log.w(LOCAL_MEDIA_IMPORT_TAG, "Failed to create managed media directory: ${destinationDir.path}")
+        Log.w(LOCAL_MEDIA_IMPORT_TAG, "Failed to create managed media directory: ${destinationDir.redacted()}")
         return null
     }
 
@@ -279,7 +279,7 @@ internal fun finalizePendingCameraCapture(
             }
         } catch (copyError: Exception) {
             destinationFile.delete()
-            Log.w(LOCAL_MEDIA_IMPORT_TAG, "Failed to finalize camera capture ${pendingCanonical.path}", copyError)
+            Log.w(LOCAL_MEDIA_IMPORT_TAG, "Failed to finalize camera capture ${pendingCanonical.redacted()}", copyError)
             null
         }
     }

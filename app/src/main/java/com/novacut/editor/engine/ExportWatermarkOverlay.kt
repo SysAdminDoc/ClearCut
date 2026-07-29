@@ -75,7 +75,7 @@ internal object ExportWatermarkOverlay {
                 BitmapFactory.decodeStream(stream)
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to decode watermark $uri", e)
+            Log.w(TAG, "Failed to decode watermark ${uri.redacted()}", e)
             null
         }
     }

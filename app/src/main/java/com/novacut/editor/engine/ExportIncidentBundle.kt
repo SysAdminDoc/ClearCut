@@ -39,8 +39,65 @@ data class ExportIncidentBundle(
     val mediaWarningCount: Int,
     val mediaBlockingCount: Int,
     val mediaHealthSummary: String?,
-    val timestampEpochMs: Long
-)
+    val timestampEpochMs: Long,
+    /**
+     * Stable redacted id of the clip the failure was attributed to, when a stage
+     * knew which one it was. Lets a user say "it is always this clip" without
+     * ever naming the file.
+     */
+    val subjectAssetId: String? = null,
+    /** What the user can actually do about it. Never blank. */
+    val remediation: String = ExportRemediation.UNKNOWN,
+) {
+    /**
+     * The report a user can copy out of the app verbatim. Names the stage, the
+     * codec, the device, the asset (redacted), and the next step — the five
+     * things a failure report is useless without.
+     */
+    fun toCopyableReport(): String = buildString {
+        appendLine("ClearCut export failure report")
+        appendLine("incident: ${id.take(8)}")
+        appendLine("app: $appVersion (Android SDK $androidSdk)")
+        appendLine("device: $deviceModel")
+        appendLine("stage: $failedPhase")
+        appendLine("error: $errorClass — $errorMessage")
+        appendLine("codec: $codecLabel via $encoderPath")
+        appendLine("output: $resolutionLabel @ ${frameRate}fps" + if (hdrRequested) " (HDR requested)" else "")
+        appendLine("audio-only: $exportAudioOnly, stream-copy attempted: $streamCopyAttempted")
+        appendLine("timeline: ${timelineDurationMs}ms, failed after ${elapsedMs}ms")
+        appendLine("media: $mediaWarningCount warning(s), $mediaBlockingCount blocker(s)")
+        if (subjectAssetId != null) appendLine("clip: $subjectAssetId")
+        appendLine("what to try: $remediation")
+    }
+}
+
+/**
+ * Failure-stage guidance. An error class alone tells a user nothing they can act
+ * on; every stage the export can fail in maps to a concrete next step.
+ */
+object ExportRemediation {
+    const val UNKNOWN = "Retry the export. If it fails again, share this report."
+
+    fun forPhase(failedPhase: String, hdrRequested: Boolean, streamCopyAttempted: Boolean): String = when {
+        failedPhase.equals("reverse-render", ignoreCase = true) ->
+            "Shorten the reversed clip or turn reverse off for it, then export again."
+        failedPhase.equals("storage", ignoreCase = true) ->
+            "Free up device storage, or export at a lower resolution, then try again."
+        failedPhase.equals("subtitle-burn", ignoreCase = true) ->
+            "Export without burned-in subtitles to confirm, then re-add them one caption track at a time."
+        failedPhase.equals("audio-encoder", ignoreCase = true) ->
+            "Try a different audio codec in Export settings; AAC is supported on every device."
+        failedPhase.equals("encoder", ignoreCase = true) && hdrRequested ->
+            "Turn off HDR metadata in Export settings — this device's encoder rejected the HDR profile."
+        failedPhase.equals("encoder", ignoreCase = true) && streamCopyAttempted ->
+            "Turn off fast stream-copy in Export settings so the timeline is fully re-encoded."
+        failedPhase.equals("encoder", ignoreCase = true) ->
+            "Try a lower resolution or the H.264 codec; this device's encoder rejected the current settings."
+        failedPhase.equals("setup", ignoreCase = true) ->
+            "Open Media Manager and relink any missing clips, then export again."
+        else -> UNKNOWN
+    }
+}
 
 @Singleton
 class ExportIncidentStore internal constructor(private val incidentDir: File) {
@@ -129,6 +186,8 @@ class ExportIncidentStore internal constructor(private val incidentDir: File) {
             put("mediaBlockingCount", bundle.mediaBlockingCount)
             put("mediaHealthSummary", bundle.mediaHealthSummary ?: JSONObject.NULL)
             put("timestampEpochMs", bundle.timestampEpochMs)
+            put("subjectAssetId", bundle.subjectAssetId ?: JSONObject.NULL)
+            put("remediation", bundle.remediation)
         }
 
         /**
@@ -166,6 +225,9 @@ class ExportIncidentStore internal constructor(private val incidentDir: File) {
             put("mediaWarningCount", bundle.mediaWarningCount)
             put("mediaBlockingCount", bundle.mediaBlockingCount)
             put("timestampEpochMs", bundle.timestampEpochMs)
+            // Already a digest, never a path — safe to share.
+            put("subjectAssetId", bundle.subjectAssetId ?: JSONObject.NULL)
+            put("remediation", bundle.remediation)
         }
 
         fun fromJson(json: JSONObject): ExportIncidentBundle? {
@@ -198,7 +260,11 @@ class ExportIncidentStore internal constructor(private val incidentDir: File) {
                 mediaBlockingCount = json.optInt("mediaBlockingCount", 0),
                 mediaHealthSummary = if (json.isNull("mediaHealthSummary")) null
                     else json.optString("mediaHealthSummary").takeIf { it.isNotBlank() },
-                timestampEpochMs = json.optLong("timestampEpochMs", 0L)
+                timestampEpochMs = json.optLong("timestampEpochMs", 0L),
+                subjectAssetId = if (json.isNull("subjectAssetId")) null
+                    else json.optString("subjectAssetId").takeIf { it.isNotBlank() },
+                remediation = json.optString("remediation")
+                    .takeIf { it.isNotBlank() } ?: ExportRemediation.UNKNOWN,
             )
         }
     }
@@ -225,7 +291,8 @@ object ExportIncidentBuilder {
         progressSamples: List<Float> = emptyList(),
         mediaWarningCount: Int = 0,
         mediaBlockingCount: Int = 0,
-        mediaHealthSummary: String? = null
+        mediaHealthSummary: String? = null,
+        subjectAssetId: String? = null,
     ): ExportIncidentBundle {
         val encoderPath = detectEncoderPath(codecLabel)
         val errorClassName = error?.javaClass?.simpleName ?: "Unknown"
@@ -263,7 +330,9 @@ object ExportIncidentBuilder {
             mediaWarningCount = mediaWarningCount.coerceAtLeast(0),
             mediaBlockingCount = mediaBlockingCount.coerceAtLeast(0),
             mediaHealthSummary = mediaHealthSummary?.takeIf { it.isNotBlank() },
-            timestampEpochMs = finishedAtMs
+            timestampEpochMs = finishedAtMs,
+            subjectAssetId = subjectAssetId?.takeIf { it.isNotBlank() },
+            remediation = ExportRemediation.forPhase(failedPhase, hdrRequested, streamCopyAttempted),
         )
     }
 

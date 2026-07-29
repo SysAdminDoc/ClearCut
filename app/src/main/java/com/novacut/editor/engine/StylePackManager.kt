@@ -133,7 +133,7 @@ class StylePackManager @Inject constructor(
                     val root = JSONObject(file.readText())
                     parsePack(root)
                 } catch (e: Exception) {
-                    Log.w(TAG, "Failed to read installed pack: ${file.name}", e)
+                    Log.w(TAG, "Failed to read installed pack: ${file.redacted()}", e)
                     null
                 }
             }

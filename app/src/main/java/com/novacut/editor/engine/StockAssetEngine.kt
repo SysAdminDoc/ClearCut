@@ -125,7 +125,7 @@ class StockAssetEngine @Inject constructor() {
         destination: Uri,
         onProgress: (Float) -> Unit = {}
     ): Boolean {
-        Log.d(TAG, "download: stub -- ${asset.provider.displayName} not configured")
+        Log.d(TAG, "download: stub -- ${asset.provider.name} not configured")
         return false
     }
 

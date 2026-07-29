@@ -99,7 +99,7 @@ class StreamCopyMuxer @Inject constructor(
                 if (size > maxSampleSize) maxSampleSize = size
             }
             if (trackMap.isEmpty()) {
-                Log.w(TAG, "no audio/video tracks in $inputUri")
+                Log.w(TAG, "no audio/video tracks in ${inputUri.redacted()}")
                 return@withContext false
             }
             if (maxSampleSize <= 0) maxSampleSize = 1_048_576
@@ -172,7 +172,7 @@ class StreamCopyMuxer @Inject constructor(
             runCatching { outputFile.delete() }
             throw e
         } catch (e: Exception) {
-            Log.e(TAG, "stream-copy failed for $inputUri", e)
+            Log.e(TAG, "stream-copy failed for ${inputUri.redacted()}", e)
             runCatching { outputFile.delete() }
             false
         } finally {

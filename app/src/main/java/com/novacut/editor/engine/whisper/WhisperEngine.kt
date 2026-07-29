@@ -30,6 +30,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import com.novacut.editor.engine.redacted
 
 data class WhisperSegment(
     val startMs: Long,
@@ -600,7 +601,7 @@ class WhisperEngine @Inject constructor(
             }
             return allSamples to sampleRate
         } catch (e: Exception) {
-            Log.w("WhisperEngine", "PCM decode failed for $uri", e)
+            Log.w("WhisperEngine", "PCM decode failed for ${uri.redacted()}", e)
             return null
         } finally {
             extractor.release()

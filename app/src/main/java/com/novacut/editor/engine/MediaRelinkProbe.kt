@@ -198,7 +198,7 @@ class MediaRelinkProbe @Inject constructor(
 
     private fun androidOpener(): UriOpener = UriOpener { uri ->
         val parsed = try { Uri.parse(uri) } catch (e: Exception) {
-            Log.w(TAG, "Cannot parse URI for relink probe: $uri", e)
+            Log.w(TAG, "Cannot parse URI for relink probe: ${RedactedLog.path(uri)}", e)
             return@UriOpener null
         }
         val descriptor: AssetFileDescriptor? = try {

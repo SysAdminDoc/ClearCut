@@ -150,7 +150,7 @@ class FontRegistry @Inject constructor(
     private fun loadTypeface(file: File): Typeface? = try {
         if (file.exists() && file.length() > 0) Typeface.createFromFile(file) else null
     } catch (e: Exception) {
-        Log.w(TAG, "Invalid font file: ${file.name}", e)
+        Log.w(TAG, "Invalid font file: ${file.redacted()}", e)
         null
     }
 

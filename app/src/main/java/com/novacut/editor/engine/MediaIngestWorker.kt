@@ -38,7 +38,7 @@ class MediaIngestWorker @AssistedInject constructor(
 
         return when (result) {
             is IngestResult.Success -> {
-                Log.d(TAG, "Ingest complete: ${result.managedUri}")
+                Log.d(TAG, "Ingest complete: ${result.managedUri.redacted()}")
                 Result.success(
                     workDataOf(
                         KEY_MANAGED_URI to result.managedUri.toString(),

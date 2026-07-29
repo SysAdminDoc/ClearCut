@@ -188,7 +188,7 @@ class ExportService : Service() {
                     file
                 )
             }.getOrElse { error ->
-                Log.w(TAG, "Export notification FileProvider handoff failed for ${file.path}", error)
+                Log.w(TAG, "Export notification FileProvider handoff failed for ${file.redacted()}", error)
                 return Intent(Intent.ACTION_MAIN, null, this, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 }

@@ -353,7 +353,7 @@ class ProjectAutoSave @Inject constructor(
                     try {
                         uris += collectMediaReferenceUrisFromAutoSaveJson(readAutoSaveText(file))
                     } catch (e: Exception) {
-                        Log.w(TAG, "Failed to scan ${file.name} for source URIs", e)
+                        Log.w(TAG, "Failed to scan ${file.redacted()} for source URIs", e)
                     }
                 }
             uris

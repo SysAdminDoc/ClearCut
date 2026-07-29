@@ -103,7 +103,7 @@ class EdlExporter @Inject constructor(
             val sanitized = sanitizeFileName(projectName, fallback = "ClearCut", maxLength = 50)
             val file = File(outputDir, "${sanitized}.edl")
             writeUtf8TextAtomically(file, sb.toString())
-            Log.d(TAG, "EDL exported: ${file.absolutePath}")
+            Log.d(TAG, "EDL exported: ${file.redacted()}")
             file
         } catch (e: Exception) {
             Log.e(TAG, "EDL export failed", e)

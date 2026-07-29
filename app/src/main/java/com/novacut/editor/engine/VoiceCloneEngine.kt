@@ -56,7 +56,7 @@ class VoiceCloneEngine @Inject constructor(
         displayName: String,
         language: String
     ): VoiceProfile? = withContext(Dispatchers.IO) {
-        Log.d(TAG, "enrollVoice: stub -- requires XTTS v2 ($displayName, $language)")
+        Log.d(TAG, "enrollVoice: stub -- requires XTTS v2 (${RedactedLog.assetId(displayName)}, $language)")
         null
     }
 

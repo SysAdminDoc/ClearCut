@@ -38,7 +38,7 @@ object ColorMatchEngine {
             bitmap = retriever.getFrameAtTime(timeMs * 1000L, MediaMetadataRetriever.OPTION_CLOSEST)
             bitmap?.let { analyzeBitmap(it) }
         } catch (e: Exception) {
-            Log.w("ColorMatchEngine", "Frame analysis failed for $uri @${timeMs}ms", e)
+            Log.w("ColorMatchEngine", "Frame analysis failed for ${uri.redacted()} @${timeMs}ms", e)
             null
         } finally {
             try { bitmap?.recycle() } catch (_: Exception) { /* already recycled */ }

@@ -122,7 +122,7 @@ class OverlayAssetStore @Inject constructor(
                 userMessage = "Sticker image is too large. Import an image under ${MAX_OVERLAY_BYTES / (1024 * 1024)} MB.",
             )
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to import overlay asset $sourceUri", e)
+            Log.w(TAG, "Failed to import overlay asset ${sourceUri.redacted()}", e)
             OverlayAssetImportResult.Rejected(
                 reason = OverlayAssetRejectionReason.UNREADABLE_SOURCE,
                 userMessage = "Could not import that sticker image.",

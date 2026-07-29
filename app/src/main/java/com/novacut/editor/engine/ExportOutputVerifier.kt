@@ -135,7 +135,7 @@ object ExportOutputVerifier {
                 trackCount = trackCount
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Verification failed for ${outputFile.name}", e)
+            Log.e(TAG, "Verification failed for ${outputFile.redacted()}", e)
             return ExportVerificationResult(
                 false,
                 reason = "Cannot read output: ${e.javaClass.simpleName}: ${e.message}"

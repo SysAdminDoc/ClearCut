@@ -92,7 +92,7 @@ class DirectPublishEngine @Inject constructor(
         val uri = try {
             FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
         } catch (e: Exception) {
-            Log.w(TAG, "FileProvider failed for $filePath", e)
+            Log.w(TAG, "FileProvider failed for ${RedactedLog.path(filePath)}", e)
             return@withContext Result(null, Method.NONE, "Export is not in a shareable ClearCut location")
         }
         val intent = buildShareIntent(uri, target, meta)

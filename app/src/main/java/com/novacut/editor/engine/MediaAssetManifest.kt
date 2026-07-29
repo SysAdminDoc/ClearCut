@@ -108,7 +108,7 @@ internal fun writeManagedMediaAssetSidecar(
         )
         true
     }.getOrElse { err ->
-        android.util.Log.w(MEDIA_ASSET_TAG, "Failed to write media asset sidecar for $managedUri", err)
+        android.util.Log.w(MEDIA_ASSET_TAG, "Failed to write media asset sidecar for ${managedUri.redacted()}", err)
         false
     }
 }

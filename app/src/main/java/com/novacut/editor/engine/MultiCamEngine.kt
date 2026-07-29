@@ -276,7 +276,7 @@ class MultiCamEngine @Inject constructor(
 
                 MonoPcm(samples.toFloatArray(), effectiveRate)
             } catch (e: Exception) {
-                Log.e(TAG, "PCM extraction failed for $uri", e)
+                Log.e(TAG, "PCM extraction failed for ${uri.redacted()}", e)
                 empty
             } finally {
                 extractor.release()

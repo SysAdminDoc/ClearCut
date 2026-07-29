@@ -102,7 +102,7 @@ internal class ExportImageOverlay private constructor(
                     BitmapFactory.decodeStream(stream)
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to decode image overlay $uri", e)
+                Log.w(TAG, "Failed to decode image overlay ${uri.redacted()}", e)
                 null
             }
         }

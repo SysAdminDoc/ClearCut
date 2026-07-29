@@ -111,7 +111,7 @@ class MetadataScrubEngine @Inject constructor() {
                 hadGpsData = hadGps
             )
         } catch (e: Exception) {
-            Log.w(TAG, "EXIF scrub failed for ${inputFile.name}", e)
+            Log.w(TAG, "EXIF scrub failed for ${inputFile.redacted()}", e)
             null
         }
     }

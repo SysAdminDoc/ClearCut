@@ -109,6 +109,7 @@ import java.security.MessageDigest
 import java.util.UUID
 import javax.inject.Inject
 import kotlin.math.roundToLong
+import com.novacut.editor.engine.redacted
 
 private const val TIMELINE_BASE_SCALE = 0.15f
 // Min zoom lowered from 0.1 → 0.01 so a ~10-minute video fits the phone viewport
@@ -3504,7 +3505,7 @@ class EditorViewModel @Inject constructor(
         // Refuse degenerate inputs that would otherwise violate Clip's `trimEndMs <= sourceDurationMs`
         // invariant the moment the user touched the new clip (e.g., a TTS file reporting 0 ms).
         if (durationMs <= 0L) {
-            android.util.Log.w("EditorViewModel", "addClipToTrack ignored: non-positive durationMs=$durationMs for $uri")
+            android.util.Log.w("EditorViewModel", "addClipToTrack ignored: non-positive durationMs=$durationMs for ${uri.redacted()}")
             return
         }
         val currentTracks = _state.value.tracks
