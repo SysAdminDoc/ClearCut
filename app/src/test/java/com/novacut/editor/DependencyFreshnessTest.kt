@@ -84,6 +84,16 @@ class DependencyFreshnessTest {
             "Lottie 7.x state-machine API blocked on Compose compatibility validation.",
             "Upgrade when Lottie 7.x stable passes local integration tests."
         ),
+        "onnxruntime" to Hold(
+            "1.26.0",
+            "1.28.0 was evaluated 2026-07-29: it resolves, compiles, and passes the 16 KB " +
+                "alignment check, but its native payload grows ~5 MB uncompressed across the " +
+                "four shipped ABIs and pushes the APK past the size budget. The release APK is " +
+                "already ~350 MB, and the on-device Whisper/upscale/inpaint output comparisons " +
+                "an ORT line bump needs have not been run.",
+            "Upgrade once per-ABI splits ship (so the per-device payload absorbs the growth) and " +
+                "the model output fixtures have been re-measured on device."
+        ),
         "protobufJavalite" to Hold(
             "4.27.5",
             "Security constraint over MediaPipe's transitive 4.26.1 (GHSA-735f-pc8j-v9w8). " +

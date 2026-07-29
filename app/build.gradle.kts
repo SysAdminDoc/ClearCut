@@ -229,24 +229,96 @@ fun compareVersions(a: String, b: String): Int {
     return 0
 }
 
+/**
+ * Modules whose *resolved* version is policy, not incidental. Declared-version
+ * pins in the version catalog say nothing about what conflict resolution
+ * actually picked — the Kotlin stdlib resolves well past the Kotlin plugin
+ * version, and that drift has to be a deliberate, recorded decision.
+ */
+val resolvedVersionPolicy = mapOf(
+    "org.jetbrains.kotlin:kotlin-stdlib" to "2.2.21",
+)
+
 val verifyResolvedAdvisoryFloors by tasks.registering {
     group = "verification"
-    description = "Fails when the resolved release runtime graph contains a coordinate below its advisory floor."
+    description = "Fails on advisory-floor violations, resolved-version drift, or a missing Gradle wrapper checksum."
+    val wrapperProperties = rootProject.file("gradle/wrapper/gradle-wrapper.properties")
+    val sbomFile = layout.buildDirectory.file("reports/resolved-sbom/cyclonedx.json")
+    inputs.file(wrapperProperties)
+    outputs.file(sbomFile)
     doLast {
         val resolved = configurations.getByName("releaseRuntimeClasspath")
             .incoming.resolutionResult.allComponents
             .mapNotNull { it.moduleVersion }
-        val violations = resolved.mapNotNull { module ->
-            val floor = advisoryFloors["${module.group}:${module.name}"] ?: return@mapNotNull null
-            if (compareVersions(module.version, floor) < 0) {
-                "${module.group}:${module.name}:${module.version} is below the advisory floor $floor"
-            } else {
-                null
+            .sortedWith(compareBy({ it.group }, { it.name }, { it.version }))
+
+        val problems = mutableListOf<String>()
+
+        resolved.forEach { module ->
+            val coordinate = "${module.group}:${module.name}"
+            advisoryFloors[coordinate]?.let { floor ->
+                if (compareVersions(module.version, floor) < 0) {
+                    problems += "$coordinate:${module.version} is below the advisory floor $floor"
+                }
+            }
+            resolvedVersionPolicy[coordinate]?.let { expected ->
+                if (module.version != expected) {
+                    problems += "$coordinate resolved to ${module.version} but policy pins $expected; " +
+                        "update resolvedVersionPolicy deliberately or fix the drift"
+                }
             }
         }
-        require(violations.isEmpty()) {
-            "Resolved release graph violates advisory floors:\n" + violations.joinToString("\n")
+
+        resolvedVersionPolicy.keys.forEach { coordinate ->
+            val present = resolved.any { "${it.group}:${it.name}" == coordinate }
+            if (!present) {
+                problems += "$coordinate is pinned by resolvedVersionPolicy but is absent from the release graph"
+            }
         }
+
+        // The wrapper download is the first supply-chain step of any build, and
+        // it runs before every other gate here.
+        val wrapperText = if (wrapperProperties.isFile) wrapperProperties.readText() else ""
+        val wrapperSha = Regex("""distributionSha256Sum=([0-9a-fA-F]{64})""").find(wrapperText)
+        if (wrapperSha == null) {
+            problems += "gradle/wrapper/gradle-wrapper.properties is missing a 64-hex distributionSha256Sum"
+        }
+
+        // Deterministic resolved SBOM: sorted, no timestamps, so two clean
+        // builds of the same commit produce byte-identical output.
+        val components = resolved.joinToString(",\n") { module ->
+            """    {
+      "type": "library",
+      "group": "${module.group}",
+      "name": "${module.name}",
+      "version": "${module.version}",
+      "purl": "pkg:maven/${module.group}/${module.name}@${module.version}"
+    }"""
+        }
+        val output = sbomFile.get().asFile
+        output.parentFile.mkdirs()
+        output.writeText(
+            """{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "metadata": {
+    "component": {
+      "type": "application",
+      "name": "clearcut",
+      "version": "${android.defaultConfig.versionName}"
+    }
+  },
+  "components": [
+$components
+  ]
+}
+"""
+        )
+
+        require(problems.isEmpty()) {
+            "Resolved dependency graph failed the supply-chain gate:\n" + problems.joinToString("\n")
+        }
+        logger.lifecycle("Resolved SBOM written to ${output.relativeTo(rootProject.projectDir)} (${resolved.size} components)")
     }
 }
 
