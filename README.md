@@ -344,7 +344,7 @@ Planning files are local-only in the development checkout:
 - True-peak limiting to prevent clipping
 - Voiceover recording with automatic timeline placement
 - **Fade overlap protection** — fade in + fade out constrained to clip duration
-- **Noise reduction** — Spectral gate heuristic (5 modes: off/light/moderate/aggressive/spectral gate). DeepFilterNet ML path planned
+- **Noise reduction** — DeepFilterNet 3 (bundled AAR, checksum-pinned) with a spectral-gate fallback; 5 modes (off/light/moderate/aggressive/spectral gate). Reports applied / no-op / unavailable / failed rather than assuming success
 
 ### AI Tools
 | Tool | Engine | On-Device? |
@@ -352,7 +352,7 @@ Planning files are local-only in the development checkout:
 | **Auto Captions** | ONNX Runtime Whisper tiny.en (English; multilingual Sherpa/Whisper path gated) | Yes |
 | **Background Removal** | MediaPipe Selfie Segmentation (~1-7MB, ~30fps) | Yes |
 | **AI Green Screen** | Planned -- RobustVideoMatting (requires model integration) | Planned |
-| **Object Removal** | LaMa-Dilated inpainting; per-frame + full-video pipeline via FFmpeg encode | Yes |
+| **Object Removal** | LaMa-Dilated inpainting engine is implemented but not wired to the UI -- the tool reports it is unavailable | Not wired |
 | **Video Upscaling** | Planned -- Real-ESRGAN (requires model integration) | Planned |
 | **Frame Interpolation** | Planned -- RIFE v4.6 (requires NCNN dependency) | Planned |
 | **Style Transfer** | Planned -- AnimeGANv2 + Fast NST (requires model integration) | Planned |
@@ -362,7 +362,7 @@ Planning files are local-only in the development checkout:
 | **Scene Detection** | Content-aware frame difference analysis with auto-split | Yes |
 | **Auto Color** | Histogram-based brightness/contrast/saturation/temperature | Yes |
 | **Motion Tracking** | Template matching with position keyframe generation | Yes |
-| **Audio Denoise** | Spectral gate heuristic (DeepFilterNet ML planned) | Yes |
+| **Audio Denoise** | DeepFilterNet 3 with spectral-gate fallback | Yes |
 
 ### Text & Titles
 - Rich text overlays with 10+ animation styles
@@ -376,10 +376,7 @@ Planning files are local-only in the development checkout:
 
 ### Text-to-Speech
 - **System TTS** — Android built-in voices with mutex-protected synthesis
-- **Piper TTS** (planned) — near-human quality VITS voices via Sherpa-ONNX (stub, requires dependency integration)
-  - 10 voice profiles defined: Amy (US), Ryan (US), Alba (UK), Thorsten (DE), Dave (ES), Siwis (FR), Takumi (JP), Huayan (CN), Sunhi (KR), Faber (BR)
-  - Currently falls back to Android System TTS
-- System/Piper engine toggle in TTS panel
+- **Piper TTS** (planned) — near-human quality VITS voices via Sherpa-ONNX. Not implemented: no engine, voice profiles, or engine toggle ship today; all synthesis uses Android System TTS.
 
 ### Export
 - **GIF export** — Self-contained GIF89a encoder with LZW compression, configurable frame rate (10/15/20fps) and max width (320/480/640px)
@@ -433,18 +430,18 @@ Planning files are local-only in the development checkout:
 
 | Component | Technology |
 |-----------|-----------|
-| Language | Kotlin 2.1.0 |
+| Language | Kotlin 2.1.21 |
 | UI | Jetpack Compose + Material 3 (Catppuccin Mocha theme) |
 | Video | Media3 1.10.1 (Transformer + ExoPlayer) |
 | Effects | OpenGL ES 3.0 (37 GLSL transitions, 40+ effect shaders) |
 | Audio DSP | Custom engine (EQ, compressor, chorus, delay, pitch shift) |
 | Speech-to-Text | ONNX Runtime 1.26.0 (Whisper) |
-| Noise Reduction | Spectral gate fallback (DeepFilterNet planned) |
+| Noise Reduction | DeepFilterNet 3 (android-deepfilternet 0.0.8) + spectral-gate fallback |
 | Beat Detection | Spectral flux onset detection (aubio NDK ready) |
 | Loudness | EBU R128 / ITU-R BS.1770 measurement |
 | Segmentation | MediaPipe Tasks Vision 0.10.35 |
 | Video Matting | Planned (RobustVideoMatting, ONNX Runtime) |
-| Object Removal | LaMa-Dilated (ONNX Runtime, neighbor-fill fallback) |
+| Object Removal | LaMa-Dilated (ONNX Runtime) -- engine implemented, not reachable from the UI |
 | Upscaling | Planned (Real-ESRGAN) |
 | Frame Interpolation | Planned (NCNN + Vulkan) |
 | Style Transfer | Planned (AnimeGANv2 + Fast NST) |
@@ -453,9 +450,9 @@ Planning files are local-only in the development checkout:
 | ASR acceleration target | Sherpa-ONNX v1.13.2 AAR + Moonshine v2 Tiny EN policy (native backend still gated) |
 | Animated Titles | Lottie Compose 6.7.1 and Media3 Lottie overlay support |
 | Startup performance | AndroidX Baseline Profile / Macrobenchmark 1.4.1 |
-| Timeline Exchange | Planned (OpenTimelineIO) |
+| Timeline Exchange | OpenTimelineIO / FCPXML / EDL export (import not implemented) |
 | DI | Hilt / Dagger |
-| Database | Room (v4 with migration chain 1→4) |
+| Database | Room 2.8.4 (schema v9, migration chain 1→9) |
 | Settings | DataStore Preferences |
 | Architecture | MVVM, single-activity Compose navigation, StateFlow |
 
@@ -464,7 +461,7 @@ Planning files are local-only in the development checkout:
 ```
 com.novacut.editor/
 ├── ai/                     # AI features (captions, scene detect, stabilize, auto-edit)
-├── engine/                 # Core engines (29 injectable singletons)
+├── engine/                 # Core engines (85 injectable singletons across 172 files)
 │   ├── VideoEngine          # Media3 playback + export
 │   ├── AudioEngine          # Waveform extraction + PCM processing
 │   ├── AudioEffectsEngine   # DSP chain (EQ, compressor, chorus, etc.)
@@ -474,19 +471,19 @@ com.novacut.editor/
 │   ├── ExportService        # Foreground service for background export
 │   ├── BeatDetectionEngine  # Spectral flux onset + BPM estimation
 │   ├── LoudnessEngine       # EBU R128 measurement + normalization
-│   ├── NoiseReductionEngine # Spectral gate (DeepFilterNet stub)
+│   ├── NoiseReductionEngine # DeepFilterNet 3 + spectral-gate fallback
 │   ├── FrameInterpolationEngine  # RIFE v4.6 slow-motion (stub)
-│   ├── InpaintingEngine     # LaMa object removal (ONNX Runtime + NNAPI)
+│   ├── InpaintingEngine     # LaMa object removal (ONNX Runtime + NNAPI; not wired)
 │   ├── UpscaleEngine        # Real-ESRGAN video upscaling (stub)
 │   ├── VideoMattingEngine   # RVM AI green screen (stub)
 │   ├── StabilizationEngine  # OpenCV optical flow (stub)
 │   ├── StyleTransferEngine  # AnimeGAN + Fast NST (stub)
 │   ├── SmartReframeEngine   # Subject-tracking auto-crop
 │   ├── TapSegmentEngine     # SAM 2.1 / MobileSAM target metadata (stub)
-│   ├── PiperTtsEngine       # Piper VITS TTS (stub, system TTS fallback)
+│   ├── TtsEngine            # Android System TTS voiceover synthesis
 │   ├── LottieTemplateEngine # Animated title rendering
 │   ├── FFmpegEngine         # FFmpegKitNext fallback processing engine
-│   ├── SubtitleRenderEngine # Canvas + ASS subtitle rendering
+│   ├── SubtitleExporter     # SRT/VTT/ASS subtitle export
 │   ├── GenerativeVideoPolicy # Cloud-only trust gates for large video generators
 │   ├── TimelineExchangeEngine  # OTIO/FCPXML interchange
 │   ├── ProxyWorkflowEngine  # 3-tier media management
@@ -599,7 +596,7 @@ Key external dependencies currently in `build.gradle.kts`:
 | MediaPipe | 0.10.35 | Selfie segmentation |
 | Lottie Compose | 6.7.1 | Animated title templates |
 | AndroidX Benchmark/ProfileInstaller | 1.4.1 / 1.4.1 | Baseline Profile generation and release profile install |
-| OkHttp | 5.3.2 | Model downloads and future opt-in provider calls |
+| OkHttp | 5.4.0 | Model downloads and future opt-in provider calls |
 | FFmpegKitNext / FFmpeg | 8.1.0 / 8.1.2 | Source-pinned GPL build for FFmpeg-backed paths not covered by Media3 Transformer |
 | Android DeepFilterNet | 0.0.8 | On-device voiceover noise reduction |
 
