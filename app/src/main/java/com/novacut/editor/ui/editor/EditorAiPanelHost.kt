@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.novacut.editor.engine.InpaintingModelState
 import com.novacut.editor.engine.segmentation.SegmentationModelState
 import com.novacut.editor.engine.whisper.WhisperModelState
 
@@ -14,7 +15,9 @@ fun BoxScope.EditorAiPanelHost(
     whisperModelState: WhisperModelState,
     whisperDownloadProgress: Float,
     segmentationModelState: SegmentationModelState,
-    segmentationDownloadProgress: Float
+    segmentationDownloadProgress: Float,
+    inpaintingModelState: InpaintingModelState,
+    inpaintingDownloadProgress: Float
 ) {
     BottomSheetSlot(
         visible = state.panels.isOpen(PanelId.AI_TOOLS),
@@ -40,7 +43,11 @@ fun BoxScope.EditorAiPanelHost(
             segmentationModelState = segmentationModelState,
             segmentationDownloadProgress = segmentationDownloadProgress,
             onDownloadSegmentation = viewModel::downloadSegmentationModel,
-            onDeleteSegmentation = viewModel::deleteSegmentationModel
+            onDeleteSegmentation = viewModel::deleteSegmentationModel,
+            inpaintingModelState = inpaintingModelState,
+            inpaintingDownloadProgress = inpaintingDownloadProgress,
+            onDownloadInpainting = viewModel::downloadInpaintingModel,
+            onDeleteInpainting = viewModel::deleteInpaintingModel
         )
     }
 

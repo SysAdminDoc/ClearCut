@@ -762,7 +762,15 @@ class EditorViewModel @Inject constructor(
         stabilizationEngine = stabilizationEngine, styleTransferEngine = styleTransferEngine,
         appContext = appContext, scope = viewModelScope,
         saveUndoState = ::saveUndoState, showToast = ::showToast,
-        getSelectedClip = ::getSelectedClip, setClipTransform = { id, px, py, sx, sy, rot ->
+        getSelectedClip = ::getSelectedClip,
+        getSelectedMask = {
+            val selectedMaskId = _state.value.selectedMaskId
+            getSelectedClip()?.let { clip ->
+                clip.masks.firstOrNull { it.id == selectedMaskId }
+                    ?: clip.masks.singleOrNull()
+            }
+        },
+        setClipTransform = { id, px, py, sx, sy, rot ->
             setClipTransform(id, positionX = px, positionY = py, scaleX = sx, scaleY = sy, rotation = rot)
         },
         rebuildPlayerTimeline = ::rebuildPlayerTimeline, saveProject = ::saveProject,
@@ -838,6 +846,8 @@ class EditorViewModel @Inject constructor(
     val whisperDownloadProgress get() = aiToolsDelegate.whisperDownloadProgress
     val segmentationModelState get() = aiToolsDelegate.segmentationModelState
     val segmentationDownloadProgress get() = aiToolsDelegate.segmentationDownloadProgress
+    val inpaintingModelState get() = aiToolsDelegate.inpaintingModelState
+    val inpaintingDownloadProgress get() = aiToolsDelegate.inpaintingDownloadProgress
 
     // LUT picker state (exposed via delegate)
     val showLutPicker get() = colorGradingDelegate.showLutPicker
@@ -6057,6 +6067,8 @@ class EditorViewModel @Inject constructor(
 
     fun downloadSegmentationModel() = aiToolsDelegate.downloadSegmentationModel()
     fun deleteSegmentationModel() = aiToolsDelegate.deleteSegmentationModel()
+    fun downloadInpaintingModel() = aiToolsDelegate.downloadInpaintingModel()
+    fun deleteInpaintingModel() = aiToolsDelegate.deleteInpaintingModel()
 
     fun runAiTool(toolId: String) = aiToolsDelegate.runAiTool(toolId)
     fun runAiToolAfterRequirement(toolId: String) = aiToolsDelegate.runAiToolAfterRequirement(toolId)

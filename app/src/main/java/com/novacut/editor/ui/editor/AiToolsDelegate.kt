@@ -1,6 +1,7 @@
 package com.novacut.editor.ui.editor
 
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
 import com.novacut.editor.R
@@ -42,6 +43,7 @@ class AiToolsDelegate(
     private val saveUndoState: (String) -> Unit,
     private val showToast: (String) -> Unit,
     private val getSelectedClip: () -> Clip?,
+    private val getSelectedMask: () -> Mask?,
     private val setClipTransform: (String, Float?, Float?, Float?, Float?, Float?) -> Unit,
     private val rebuildPlayerTimeline: () -> Unit,
     private val saveProject: () -> Unit,
@@ -51,6 +53,11 @@ class AiToolsDelegate(
     private val recordAiUsage: (AiUsageLedger.Entry) -> Unit
 ) {
     private var aiJob: Job? = null
+
+    private data class ObjectRemovalOutput(
+        val outputUri: Uri,
+        val framesProcessed: Int
+    )
 
     private fun text(resId: Int, vararg args: Any): String =
         appContext.getString(resId, *args)
@@ -101,6 +108,8 @@ class AiToolsDelegate(
     val whisperDownloadProgress get() = aiFeatures.whisperEngine.downloadProgress
     val segmentationModelState get() = aiFeatures.segmentationEngine.modelState
     val segmentationDownloadProgress get() = aiFeatures.segmentationEngine.downloadProgress
+    val inpaintingModelState get() = inpaintingEngine.modelState
+    val inpaintingDownloadProgress get() = inpaintingEngine.downloadProgress
 
     fun downloadWhisperModel() {
         scope.launch {
@@ -176,6 +185,45 @@ class AiToolsDelegate(
                 appContext.getString(
                     if (success) {
                         R.string.ai_segmentation_removed_toast
+                    } else {
+                        R.string.ai_model_remove_failed_toast
+                    }
+                )
+            )
+        }
+    }
+
+    fun downloadInpaintingModel() {
+        scope.launch {
+            showToast(text(R.string.ai_inpainting_downloading_toast))
+            try {
+                val success = inpaintingEngine.downloadModel(
+                    wifiOnly = settingsRepo.settings.first().aiModelWifiOnly
+                )
+                showToast(
+                    text(
+                        if (success) {
+                            R.string.ai_inpainting_ready_toast
+                        } else {
+                            R.string.ai_model_download_failed_toast
+                        }
+                    )
+                )
+            } catch (_: ModelDownloadManager.MeteredNetworkException) {
+                showToast(text(R.string.settings_model_wifi_only_feedback))
+            }
+        }
+    }
+
+    fun deleteInpaintingModel() {
+        scope.launch {
+            val success = withContext(Dispatchers.IO) {
+                runCatching { inpaintingEngine.deleteModel() }.isSuccess
+            }
+            showToast(
+                appContext.getString(
+                    if (success) {
+                        R.string.ai_inpainting_removed_toast
                     } else {
                         R.string.ai_model_remove_failed_toast
                     }
@@ -996,7 +1044,116 @@ class AiToolsDelegate(
             showAiRequirementPrompt(toolId = "object_remove")
             return
         }
-        showToast(text(R.string.ai_object_removal_unavailable_toast))
+
+        val mask = getSelectedMask()
+        if (mask == null) {
+            showToast(text(R.string.ai_object_removal_mask_required_toast))
+            return
+        }
+        if (!InpaintingMaskRenderer.supports(mask)) {
+            showToast(text(R.string.ai_object_removal_unsupported_mask_toast))
+            return
+        }
+
+        showToast(text(R.string.ai_object_removal_processing_toast))
+        val output = processObjectRemoval(clip, mask)
+        if (output == null) {
+            showToast(text(R.string.ai_object_removal_failed_toast))
+            return
+        }
+
+        saveUndoState("AI object removal")
+        stateFlow.update { state ->
+            state.copy(
+                selectedMaskId = null,
+                tracks = state.tracks.map { track ->
+                    track.copy(clips = track.clips.map { current ->
+                        if (current.id == clip.id) {
+                            current.copy(
+                                sourceUri = output.outputUri,
+                                proxyUri = null,
+                                // The selected geometry has been baked into the
+                                // new source. Keeping it would apply a second
+                                // mask during preview/export.
+                                masks = current.masks.filterNot { it.id == mask.id }
+                            )
+                        } else {
+                            current
+                        }
+                    })
+                }
+            )
+        }
+        rebuildPlayerTimeline()
+        saveProject()
+        recordAiUsageForClip(
+            clip = clip,
+            effectKind = AiUsageLedger.EffectKind.INPAINTING_LOCAL_LARGE,
+            modelName = "LaMa-Dilated"
+        )
+        showToast(text(R.string.ai_object_removal_applied_toast, output.framesProcessed))
+    }
+
+    private suspend fun processObjectRemoval(clip: Clip, mask: Mask): ObjectRemovalOutput? =
+        withContext(Dispatchers.IO) {
+            val outputDir = managedMediaDir(appContext).also { it.mkdirs() }
+            if (videoEngine.isMotionVideo(clip.sourceUri)) {
+                val outputFile = File.createTempFile("clearcut-object-removal-", ".mp4", outputDir)
+                val outputUri = Uri.fromFile(outputFile)
+                val result = inpaintingEngine.inpaintVideo(
+                    uri = clip.sourceUri,
+                    mask = mask,
+                    outputUri = outputUri
+                )
+                if (result == null) {
+                    outputFile.delete()
+                    null
+                } else {
+                    ObjectRemovalOutput(result.outputUri, result.framesProcessed)
+                }
+            } else {
+                val source = decodeBitmap(clip.sourceUri) ?: return@withContext null
+                val maskBitmap = InpaintingMaskRenderer.render(
+                    mask = mask,
+                    timeOffsetMs = 0L,
+                    width = source.width,
+                    height = source.height
+                ) ?: run {
+                    source.recycle()
+                    return@withContext null
+                }
+                val outputFile = File.createTempFile("clearcut-object-removal-", ".png", outputDir)
+                var outputBitmap: android.graphics.Bitmap? = null
+                try {
+                    val result = inpaintingEngine.inpaintFrame(source, maskBitmap)
+                    if (result == null) {
+                        outputFile.delete()
+                        return@withContext null
+                    }
+                    val renderedBitmap = result.outputBitmap
+                    outputBitmap = renderedBitmap
+                    val written = outputFile.outputStream().use { stream ->
+                        renderedBitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, stream)
+                    }
+                    if (!written || outputFile.length() <= 0L) {
+                        outputFile.delete()
+                        return@withContext null
+                    }
+                    ObjectRemovalOutput(Uri.fromFile(outputFile), 1)
+                } finally {
+                    outputBitmap?.recycle()
+                    maskBitmap.recycle()
+                    source.recycle()
+                }
+            }
+        }
+
+    private fun decodeBitmap(uri: Uri): android.graphics.Bitmap? {
+        return runCatching {
+            appContext.contentResolver.openInputStream(uri)?.use { input ->
+                BitmapFactory.decodeStream(input)
+            }
+        }.getOrNull() ?: uri.path?.let(BitmapFactory::decodeFile)
     }
 
     private suspend fun applyVideoUpscale(clip: Clip) {

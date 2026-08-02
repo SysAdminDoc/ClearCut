@@ -366,7 +366,7 @@ Planning files are local-only in the development checkout:
 | **Auto Captions** | ONNX Runtime Whisper tiny.en (English; multilingual Sherpa/Whisper path gated) | Yes |
 | **Background Removal** | MediaPipe Selfie Segmentation (~1-7MB, ~30fps) | Yes |
 | **AI Green Screen** | Planned -- RobustVideoMatting (requires model integration) | Planned |
-| **Object Removal** | LaMa-Dilated inpainting engine is implemented but not wired to the UI -- the tool reports it is unavailable | Not wired |
+| **Object Removal** | LaMa-Dilated inpainting with rectangle, ellipse, and freehand mask rendering for stills and motion clips | Yes (explicit ~174 MB model download) |
 | **Video Upscaling** | Planned -- Real-ESRGAN (requires model integration) | Planned |
 | **Frame Interpolation** | Planned -- RIFE v4.6 (requires NCNN dependency) | Planned |
 | **Style Transfer** | Planned -- AnimeGANv2 + Fast NST (requires model integration) | Planned |
@@ -456,7 +456,7 @@ Planning files are local-only in the development checkout:
 | Loudness | EBU R128 / ITU-R BS.1770 measurement |
 | Segmentation | MediaPipe Tasks Vision 0.10.35 |
 | Video Matting | Planned (RobustVideoMatting, ONNX Runtime) |
-| Object Removal | LaMa-Dilated (ONNX Runtime) -- engine implemented, not reachable from the UI |
+| Object Removal | LaMa-Dilated (ONNX Runtime) -- selected rectangle, ellipse, or freehand masks are rendered into still/video outputs |
 | Upscaling | Planned (Real-ESRGAN) |
 | Frame Interpolation | Planned (NCNN + Vulkan) |
 | Style Transfer | Planned (AnimeGANv2 + Fast NST) |
@@ -476,7 +476,7 @@ Planning files are local-only in the development checkout:
 ```
 com.novacut.editor/
 ├── ai/                     # AI features (captions, scene detect, stabilize, auto-edit)
-├── engine/                 # Core engines (85 injectable singletons across 178 files)
+├── engine/                 # Core engines (85 injectable singletons across 179 files)
 │   ├── VideoEngine          # Media3 playback + export
 │   ├── AudioEngine          # Waveform extraction + PCM processing
 │   ├── AudioEffectsEngine   # DSP chain (EQ, compressor, chorus, etc.)
@@ -488,7 +488,7 @@ com.novacut.editor/
 │   ├── LoudnessEngine       # EBU R128 measurement + normalization
 │   ├── NoiseReductionEngine # DeepFilterNet 3 + spectral-gate fallback
 │   ├── FrameInterpolationEngine  # RIFE v4.6 slow-motion (stub)
-│   ├── InpaintingEngine     # LaMa object removal (ONNX Runtime + NNAPI; not wired)
+│   ├── InpaintingEngine     # LaMa object removal (ONNX Runtime; frame/video output with audio retention)
 │   ├── UpscaleEngine        # Real-ESRGAN video upscaling (stub)
 │   ├── VideoMattingEngine   # RVM AI green screen (stub)
 │   ├── StabilizationEngine  # OpenCV optical flow (stub)

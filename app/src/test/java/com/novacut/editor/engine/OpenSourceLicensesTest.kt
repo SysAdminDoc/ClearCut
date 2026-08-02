@@ -40,8 +40,8 @@ class OpenSourceLicensesTest {
     fun capabilityRegistrySeparatesReachabilityFromPublicStatus() {
         val objectRemoval = requireNotNull(CapabilityRegistry.capabilityFor("object_removal"))
 
-        assertEquals("not_wired", objectRemoval.status)
-        assertEquals("not_reachable", objectRemoval.reachability)
+        assertEquals("available", objectRemoval.status)
+        assertEquals("model_gated", objectRemoval.reachability)
         assertEquals("available", requireNotNull(CapabilityRegistry.capabilityFor("audio_denoise")).status)
     }
 

@@ -30,10 +30,10 @@ internal object CapabilityRegistryGenerated {
         CapabilityRecord(
             id = "object_removal",
             name = "Object Removal",
-            engine = "LaMa-Dilated inpainting engine is implemented but not wired to the UI -- the tool reports it is unavailable",
-            onDevice = "Not wired",
-            status = "not_wired",
-            reachability = "not_reachable",
+            engine = "LaMa-Dilated inpainting with rectangle, ellipse, and freehand mask rendering for stills and motion clips",
+            onDevice = "Yes (explicit ~174 MB model download)",
+            status = "available",
+            reachability = "model_gated",
         ),
         CapabilityRecord(
             id = "video_upscaling",

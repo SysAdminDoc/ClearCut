@@ -108,6 +108,8 @@ fun EditorScreen(
     val whisperProgress by viewModel.whisperDownloadProgress.collectAsStateWithLifecycle()
     val segmentationState by viewModel.segmentationModelState.collectAsStateWithLifecycle()
     val segmentationProgress by viewModel.segmentationDownloadProgress.collectAsStateWithLifecycle()
+    val inpaintingState by viewModel.inpaintingModelState.collectAsStateWithLifecycle()
+    val inpaintingProgress by viewModel.inpaintingDownloadProgress.collectAsStateWithLifecycle()
     val scopeFrame by viewModel.scopeFrame.collectAsStateWithLifecycle()
     val showLutPicker by viewModel.showLutPicker.collectAsStateWithLifecycle()
     val autoSaveTopPadding by animateDpAsState(
@@ -1211,7 +1213,9 @@ fun EditorScreen(
             whisperModelState = whisperState,
             whisperDownloadProgress = whisperProgress,
             segmentationModelState = segmentationState,
-            segmentationDownloadProgress = segmentationProgress
+            segmentationDownloadProgress = segmentationProgress,
+            inpaintingModelState = inpaintingState,
+            inpaintingDownloadProgress = inpaintingProgress
         )
 
         EditorClipAdjustmentPanelHost(

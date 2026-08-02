@@ -211,6 +211,9 @@
     <string name="ai_segmentation_ready">Eliminación de BG (segmentación de IA)</string>
     <string name="ai_segmentation_size">Segmentador de selfies (~256 KB)</string>
     <string name="ai_segmentation_description">Eliminación de fondo con precisión de píxeles</string>
+    <string name="ai_inpainting_ready">Eliminación de objetos LaMa</string>
+    <string name="ai_inpainting_size">Modelo de relleno LaMa (~174 MB)</string>
+    <string name="ai_inpainting_description">Eliminación local para máscaras rectangulares, elípticas o a mano alzada.</string>
     <string name="ai_model_download_progress">Descargar progreso</string>
     <string name="ai_model_download_percent">%1$d%%</string>
     <string name="ai_model_remove_action">Quitar modelo</string>
@@ -226,6 +229,11 @@
     <string name="ai_whisper_ready_toast">Modelo Whisper listo.</string>
     <string name="ai_segmentation_downloading_toast">Descargando modelo de segmentación…</string>
     <string name="ai_segmentation_ready_toast">Modelo de segmentación listo.</string>
+    <string name="ai_inpainting_downloading_toast">Descargando el modelo LaMa para eliminar objetos…</string>
+    <string name="ai_inpainting_ready_toast">Modelo LaMa para eliminar objetos listo.</string>
+    <string name="ai_inpainting_removed_toast">Se eliminó el modelo LaMa. Puedes descargarlo nuevamente en cualquier momento.</string>
+    <string name="ai_remove_inpainting_title">¿Quitar el modelo LaMa?</string>
+    <string name="ai_remove_inpainting_message">Esto libera aproximadamente 174 MB y desactiva la eliminación de objetos hasta que descargues LaMa nuevamente. Las ediciones existentes permanecen intactas.</string>
     <string name="ai_model_download_failed_toast">No se pudo descargar el modelo. Revise su conexión e inténtelo de nuevo.</string>
     <string name="ai_template_saved_toast">Plantilla guardada: %1$s</string>
     <string name="ai_template_save_failed_toast">No se pudo guardar la plantilla. Inténtelo de nuevo desde Herramientas de IA.</string>
@@ -288,7 +296,11 @@
     <string name="ai_upscale_analyzing_toast">Analizando resolución de origen…</string>
     <string name="ai_upscale_max_resolution_toast">Ya está en la resolución máxima (%1$dx%2$d).</string>
     <string name="ai_upscale_applied_toast">Escalado a %1$s con nitidez aplicada.</string>
-    <string name="ai_object_removal_unavailable_toast">La pintura para eliminación de objetos no está lista en esta compilación.</string>
+    <string name="ai_object_removal_mask_required_toast">Seleccione o dibuje una máscara rectangular, elíptica o a mano alzada antes de eliminar un objeto.</string>
+    <string name="ai_object_removal_unsupported_mask_toast">La eliminación de objetos admite máscaras rectangulares, elípticas y a mano alzada.</string>
+    <string name="ai_object_removal_processing_toast">Eliminando el objeto seleccionado…</string>
+    <string name="ai_object_removal_applied_toast">Eliminación de objetos aplicada a %1$d cuadro(s).</string>
+    <string name="ai_object_removal_failed_toast">No se pudo aplicar la eliminación. Se conservó el clip original.</string>
     <string name="ai_stabilize_fallback_toast">La estabilización avanzada no está disponible en este dispositivo. Se usará estabilización básica.</string>
     <string name="ai_shake_crop_applied_toast">Se recortó la imagen para ocultar el temblor en los bordes (%1$.0f%% medido). Es un recorte, no una estabilización: el encuadre no se contramueve.</string>
     <string name="ai_motion_analysis_failed_fallback_toast">El análisis de movimiento falló. La estabilización básica sigue disponible.</string>

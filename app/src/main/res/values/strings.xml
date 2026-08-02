@@ -226,6 +226,9 @@
     <string name="ai_segmentation_ready">BG Removal (AI segmentation)</string>
     <string name="ai_segmentation_size">Selfie segmenter (~256 KB)</string>
     <string name="ai_segmentation_description">Pixel-accurate background removal</string>
+    <string name="ai_inpainting_ready">LaMa object removal</string>
+    <string name="ai_inpainting_size">LaMa inpainting model (~174 MB)</string>
+    <string name="ai_inpainting_description">On-device removal for selected rectangle, ellipse, or freehand masks.</string>
     <string name="ai_model_download_progress">Download progress</string>
     <string name="ai_model_download_percent">%1$d%%</string>
     <string name="ai_model_remove_action">Remove model</string>
@@ -241,6 +244,11 @@
     <string name="ai_whisper_ready_toast">Whisper model ready.</string>
     <string name="ai_segmentation_downloading_toast">Downloading segmentation model…</string>
     <string name="ai_segmentation_ready_toast">Segmentation model ready.</string>
+    <string name="ai_inpainting_downloading_toast">Downloading the LaMa object-removal model…</string>
+    <string name="ai_inpainting_ready_toast">LaMa object-removal model ready.</string>
+    <string name="ai_inpainting_removed_toast">LaMa object-removal model removed. You can download it again any time.</string>
+    <string name="ai_remove_inpainting_title">Remove the LaMa model?</string>
+    <string name="ai_remove_inpainting_message">This frees about 174 MB and disables object removal until you download LaMa again. Existing edits stay intact.</string>
     <string name="ai_model_download_failed_toast">Model download failed. Check your connection and try again.</string>
     <string name="ai_template_saved_toast">Saved template: %1$s</string>
     <string name="ai_template_save_failed_toast">Template could not be saved. Try again from AI Tools.</string>
@@ -303,7 +311,11 @@
     <string name="ai_upscale_analyzing_toast">Analyzing source resolution…</string>
     <string name="ai_upscale_max_resolution_toast">Already at maximum resolution (%1$dx%2$d).</string>
     <string name="ai_upscale_applied_toast">Upscaled to %1$s with sharpening applied.</string>
-    <string name="ai_object_removal_unavailable_toast">Object removal painting is not ready in this build.</string>
+    <string name="ai_object_removal_mask_required_toast">Select or draw a rectangle, ellipse, or freehand mask before removing an object.</string>
+    <string name="ai_object_removal_unsupported_mask_toast">Object removal supports rectangle, ellipse, and freehand masks.</string>
+    <string name="ai_object_removal_processing_toast">Removing the selected object…</string>
+    <string name="ai_object_removal_applied_toast">Object removal applied to %1$d frame(s).</string>
+    <string name="ai_object_removal_failed_toast">Object removal could not be applied. The original clip was kept.</string>
     <string name="ai_stabilize_fallback_toast">Advanced stabilization is unavailable on this device. Using basic stabilization.</string>
     <string name="ai_shake_crop_applied_toast">Cropped in to hide edge shake (%1$.0f%% measured). This is a crop, not stabilization — the frame is not counter-moved.</string>
     <string name="ai_motion_analysis_failed_fallback_toast">Motion analysis failed. Basic stabilization remains available.</string>

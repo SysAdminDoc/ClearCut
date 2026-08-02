@@ -8,9 +8,14 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.net.Uri
 import android.util.Log
+import com.novacut.editor.model.Mask
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.nio.FloatBuffer
@@ -62,12 +67,29 @@ import javax.inject.Singleton
  *
  * See ROADMAP.md R6.2 (LiteRT migration / NNAPI deprecation surface).
  */
+enum class InpaintingModelState {
+    NOT_DOWNLOADED,
+    DOWNLOADING,
+    READY,
+    ERROR
+}
+
 @Singleton
 class InpaintingEngine @Inject constructor(
     @ApplicationContext private val context: Context,
     private val modelDownloadManager: ModelDownloadManager,
     private val ffmpegEngine: FFmpegEngine
 ) {
+    private val modelDir = File(context.filesDir, "models/inpainting")
+    private val modelFile = File(modelDir, MODEL_FILENAME)
+    private val _modelState = MutableStateFlow(
+        if (isModelReady()) InpaintingModelState.READY else InpaintingModelState.NOT_DOWNLOADED
+    )
+    val modelState: StateFlow<InpaintingModelState> = _modelState.asStateFlow()
+
+    private val _downloadProgress = MutableStateFlow(0f)
+    val downloadProgress: StateFlow<Float> = _downloadProgress.asStateFlow()
+
     companion object {
         private const val TAG = "InpaintingEngine"
         private const val MODEL_FILENAME = "lama_dilated.onnx"
@@ -111,12 +133,10 @@ class InpaintingEngine @Inject constructor(
 
     /** Whether the LaMa model is downloaded and ready for inference. */
     fun isModelReady(): Boolean {
-        val modelFile = File(context.filesDir, "models/inpainting/$MODEL_FILENAME")
         return modelFile.exists() && modelFile.length() > MODEL_SIZE_BYTES / 2
     }
 
     private fun isVerifiedModelReady(): Boolean {
-        val modelFile = File(context.filesDir, "models/inpainting/$MODEL_FILENAME")
         return ModelDownloadManager.verifyChecksumOrDelete(
             file = modelFile,
             minimumBytes = MODEL_SIZE_BYTES / 2,
@@ -131,17 +151,25 @@ class InpaintingEngine @Inject constructor(
      * @param onProgress Progress callback in [0.0, 1.0]
      */
     suspend fun downloadModel(
+        wifiOnly: Boolean = false,
         onProgress: (Float) -> Unit = {}
     ): Boolean = withContext(Dispatchers.IO) {
-        val modelDir = File(context.filesDir, "models/inpainting").also { it.mkdirs() }
-        val outputFile = File(modelDir, MODEL_FILENAME)
         try {
+            _modelState.value = InpaintingModelState.DOWNLOADING
+            _downloadProgress.value = 0f
+            modelDir.mkdirs()
+            if (isVerifiedModelReady()) {
+                _modelState.value = InpaintingModelState.READY
+                _downloadProgress.value = 1f
+                onProgress(1f)
+                return@withContext true
+            }
             Log.d(TAG, "Downloading LaMa-Dilated model from $MODEL_URL")
             modelDownloadManager.downloadFiles(
                 files = listOf(
                     ModelDownloadManager.ModelFile(
                         url = MODEL_URL,
-                        targetFile = outputFile,
+                        targetFile = modelFile,
                         minimumBytes = MODEL_SIZE_BYTES / 2,
                         estimatedBytes = MODEL_SIZE_BYTES,
                         maxBytes = MODEL_SIZE_BYTES,
@@ -153,21 +181,55 @@ class InpaintingEngine @Inject constructor(
                 totalEstimateBytes = MODEL_SIZE_BYTES,
                 connectTimeoutMs = 30_000,
                 readTimeoutMs = 30_000,
-                onProgress = onProgress
+                wifiOnly = wifiOnly,
+                onProgress = { progress ->
+                    _downloadProgress.value = progress.coerceIn(0f, 0.99f)
+                    onProgress(_downloadProgress.value)
+                }
             )
-            Log.d(TAG, "LaMa model downloaded: ${outputFile.length()} bytes")
+            Log.d(TAG, "LaMa model downloaded: ${modelFile.length()} bytes")
+            _downloadProgress.value = 1f
             onProgress(1f)
-            isVerifiedModelReady()
+            if (isVerifiedModelReady()) {
+                _modelState.value = InpaintingModelState.READY
+                true
+            } else {
+                _modelState.value = InpaintingModelState.ERROR
+                false
+            }
+        } catch (e: ModelDownloadManager.MeteredNetworkException) {
+            _modelState.value = if (isModelReady()) {
+                InpaintingModelState.READY
+            } else {
+                InpaintingModelState.NOT_DOWNLOADED
+            }
+            _downloadProgress.value = 0f
+            throw e
+        } catch (e: CancellationException) {
+            _modelState.value = if (isModelReady()) {
+                InpaintingModelState.READY
+            } else {
+                InpaintingModelState.NOT_DOWNLOADED
+            }
+            _downloadProgress.value = 0f
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "Failed to download LaMa model", e)
+            _modelState.value = if (isModelReady()) {
+                InpaintingModelState.READY
+            } else {
+                InpaintingModelState.ERROR
+            }
+            _downloadProgress.value = 0f
             false
         }
     }
 
     /** Delete the downloaded model to free storage (~174MB). */
     fun deleteModel() {
-        val modelDir = File(context.filesDir, "models/inpainting")
         modelDir.deleteRecursively()
+        _modelState.value = InpaintingModelState.NOT_DOWNLOADED
+        _downloadProgress.value = 0f
     }
 
     /** Get the size of the downloaded model in bytes, or 0 if not downloaded. */
@@ -194,9 +256,6 @@ class InpaintingEngine @Inject constructor(
         mask: Bitmap,
         onProgress: (Float) -> Unit = {}
     ): InpaintingResult? = withContext(Dispatchers.IO) {
-        val startTime = System.currentTimeMillis()
-        Log.d(TAG, "Inpainting frame: ${bitmap.width}x${bitmap.height}")
-
         val pixelBytes = bitmap.byteCount.toLong()
         if (pixelBytes > NativeProcessingPolicy.MAX_IMAGE_INPUT_BYTES) {
             Log.w(TAG, "inpaintFrame: bitmap $pixelBytes bytes exceeds limit ${NativeProcessingPolicy.MAX_IMAGE_INPUT_BYTES}")
@@ -208,7 +267,22 @@ class InpaintingEngine @Inject constructor(
             return@withContext null
         }
 
-        try {
+        runInpainting(bitmap, mask, onProgress)
+    }
+
+    /**
+     * Perform one inference after the caller has verified the model. Video
+     * processing uses this private path so a 174 MB checksum is not recomputed
+     * for every decoded frame.
+     */
+    private fun runInpainting(
+        bitmap: Bitmap,
+        mask: Bitmap,
+        onProgress: (Float) -> Unit
+    ): InpaintingResult? {
+        val startTime = System.currentTimeMillis()
+        Log.d(TAG, "Inpainting frame: ${bitmap.width}x${bitmap.height}")
+        return try {
             // ONNX Runtime inference for LaMa-Dilated
             val env = OrtEnvironment.getEnvironment()
             val sessionOptions = OrtSession.SessionOptions().apply {
@@ -252,7 +326,7 @@ class InpaintingEngine @Inject constructor(
 
                     onProgress(1f)
                     Log.d(TAG, "LaMa inference completed in ${System.currentTimeMillis() - startTime}ms")
-                    return@withContext InpaintingResult(
+                    return InpaintingResult(
                         outputBitmap = outputBitmap,
                         processingTimeMs = System.currentTimeMillis() - startTime,
                         inputResolution = bitmap.width to bitmap.height,
@@ -270,51 +344,66 @@ class InpaintingEngine @Inject constructor(
                 if (maskBitmap != null && maskBitmap !== mask) maskBitmap.recycle()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "ONNX inference failed, falling back to pixel-averaging", e)
-            // Fallback: simple pixel-averaging inpainting
-            try {
-                val fallbackBitmap = fallbackInpaint(bitmap, mask)
-                onProgress(1f)
-                return@withContext InpaintingResult(
-                    outputBitmap = fallbackBitmap,
-                    processingTimeMs = System.currentTimeMillis() - startTime,
-                    inputResolution = bitmap.width to bitmap.height,
-                    processedResolution = bitmap.width to bitmap.height
-                )
-            } catch (fallbackError: Exception) {
-                Log.e(TAG, "Fallback inpainting also failed", fallbackError)
-                null
-            }
+            Log.e(TAG, "ONNX inference failed", e)
+            null
         }
     }
 
-    /**
-     * Inpaint a video by processing each frame with the provided per-frame masks.
-     *
-     * For object removal across a video, the caller should provide masks for each frame
-     * (e.g., from object tracking or manual painting on keyframes with interpolation).
-     *
-     * @param uri Source video URI
-     * @param maskFrames Map of frame index to mask bitmap. Frames without masks are passed through unchanged.
-     * @param outputUri Destination URI for the inpainted video
-     * @param onProgress Progress callback in [0.0, 1.0]
-     * @return VideoInpaintingResult, or null on failure
-     */
+    /** Inpaint a video using caller-provided masks for individual frame indices. */
     suspend fun inpaintVideo(
         uri: Uri,
         maskFrames: Map<Int, Bitmap>,
         outputUri: Uri,
         onProgress: (Float) -> Unit = {}
+    ): VideoInpaintingResult? = inpaintVideoInternal(
+        uri = uri,
+        outputUri = outputUri,
+        maskProvider = { frameIndex, _, _, _ -> maskFrames[frameIndex] },
+        recycleProvidedMasks = false,
+        onProgress = onProgress
+    )
+
+    /**
+     * Inpaint a video from one editor mask. The mask is rendered at every
+     * decoded frame, so keyframed/tracked geometry follows the clip without
+     * allocating a full video's masks up front.
+     */
+    suspend fun inpaintVideo(
+        uri: Uri,
+        mask: Mask,
+        outputUri: Uri,
+        onProgress: (Float) -> Unit = {}
+    ): VideoInpaintingResult? {
+        if (!InpaintingMaskRenderer.supports(mask)) {
+            Log.w(TAG, "Unsupported mask geometry for video inpainting: ${mask.type}")
+            return null
+        }
+        return inpaintVideoInternal(
+            uri = uri,
+            outputUri = outputUri,
+            maskProvider = { _, timeMs, width, height ->
+                InpaintingMaskRenderer.render(mask, timeMs, width, height)
+            },
+            recycleProvidedMasks = true,
+            onProgress = onProgress
+        )
+    }
+
+    private suspend fun inpaintVideoInternal(
+        uri: Uri,
+        outputUri: Uri,
+        maskProvider: (frameIndex: Int, timeMs: Long, width: Int, height: Int) -> Bitmap?,
+        recycleProvidedMasks: Boolean,
+        onProgress: (Float) -> Unit
     ): VideoInpaintingResult? = withContext(Dispatchers.IO) {
         val startTime = System.currentTimeMillis()
-        Log.d(TAG, "Inpainting video: ${maskFrames.size} masked frames")
-
         val v = NativeProcessingPolicy.validateVideoUri(context, uri, "inpaintVideo")
         if (v != null) {
             NativeProcessingPolicy.logAndReject(v)
             return@withContext null
         }
-
+        // Verify once per export. Calling the public frame method here would
+        // hash the whole model for every frame.
         if (!isVerifiedModelReady()) {
             Log.w(TAG, "LaMa model not downloaded")
             return@withContext null
@@ -332,14 +421,17 @@ class InpaintingEngine @Inject constructor(
             val videoHeight = retriever.extractMetadata(
                 android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT
             )?.toIntOrNull() ?: return@withContext null
-            val fps = retriever.extractMetadata(
+            val parsedFps = retriever.extractMetadata(
                 android.media.MediaMetadataRetriever.METADATA_KEY_CAPTURE_FRAMERATE
-            )?.toFloatOrNull() ?: 30f
+            )?.toFloatOrNull()
+            val fps = parsedFps?.takeIf { it.isFinite() && it > 0f } ?: 30f
 
             if (durationMs <= 0 || videoWidth <= 0 || videoHeight <= 0) return@withContext null
 
             val frameIntervalMs = (1000f / fps.coerceIn(1f, 120f)).toLong().coerceAtLeast(16L)
             val totalFrames = ((durationMs / frameIntervalMs) + 1).toInt().coerceIn(1, 9000)
+            val outputFile = outputUri.path?.let(::File) ?: return@withContext null
+            outputFile.parentFile?.mkdirs()
 
             val tempDir = File(context.cacheDir, "inpaint-frames-${System.currentTimeMillis()}")
             tempDir.mkdirs()
@@ -352,44 +444,41 @@ class InpaintingEngine @Inject constructor(
                     val frame = retriever.getFrameAtTime(
                         timeMs * 1000L,
                         android.media.MediaMetadataRetriever.OPTION_CLOSEST
-                    ) ?: continue
-
-                    val mask = maskFrames[frameIndex]
-                    val outputFrame = if (mask != null) {
-                        val result = inpaintFrame(frame, mask)
-                        if (result != null) {
+                    ) ?: return@withContext null
+                    val mask = maskProvider(frameIndex, timeMs, videoWidth, videoHeight)
+                    var outputFrame: Bitmap = frame
+                    try {
+                        if (mask != null) {
+                            val result = runInpainting(frame, mask) { progress ->
+                                onProgress((frameIndex + progress) / totalFrames.toFloat())
+                            } ?: return@withContext null
+                            outputFrame = result.outputBitmap
                             inpaintedCount++
-                            result.outputBitmap
-                        } else frame
-                    } else frame
+                        }
 
-                    val frameFile = File(tempDir, "frame_%05d.png".format(frameIndex))
-                    frameFile.outputStream().use { out ->
-                        outputFrame.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out)
+                        val frameFile = File(tempDir, "frame_%05d.png".format(frameIndex))
+                        frameFile.outputStream().use { out ->
+                            check(outputFrame.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out)) {
+                                "Could not encode frame $frameIndex"
+                            }
+                        }
+                    } finally {
+                        if (outputFrame !== frame) outputFrame.recycle()
+                        frame.recycle()
+                        if (recycleProvidedMasks) mask?.recycle()
                     }
-                    if (outputFrame !== frame) outputFrame.recycle()
-                    frame.recycle()
-
-                    onProgress(frameIndex.toFloat() / totalFrames)
+                    onProgress((frameIndex + 1).toFloat() / totalFrames)
                 }
 
                 onProgress(0.95f)
-
-                val outputFile = outputUri.path?.let(::File) ?: return@withContext null
                 val pattern = File(tempDir, "frame_%05d.png").absolutePath
-                val encodeOk = if (!ffmpegEngine.isAvailable()) false else {
-                    // Explicit, probed encoder rather than a hard-coded GPL one;
-                    // this frame sequence only has to come back as something
-                    // MediaCodec can decode.
-                    val encoder = ffmpegEngine.preferredIntermediateEncoder()
-                    val quality = ffmpegEngine.intermediateQualityArgs(encoder).joinToString(" ")
-                    ffmpegEngine.execute(
-                        "-y -framerate ${fps.toInt().coerceIn(1, 120)} " +
-                            "-i \"$pattern\" " +
-                            "-c:v ${encoder.ffmpegName} $quality -pix_fmt yuv420p " +
-                            "\"${outputFile.absolutePath}\""
-                    ) == 0
-                }
+                val encodeOk = ffmpegEngine.encodeImageSequenceWithAudio(
+                    inputUri = uri,
+                    framePattern = pattern,
+                    fps = fps.toInt().coerceIn(1, 120),
+                    outputFile = outputFile,
+                    onProgress = { progress -> onProgress(0.95f + progress * 0.05f) }
+                )
 
                 if (!encodeOk || !outputFile.isFile || outputFile.length() <= 0L) {
                     Log.w(TAG, "FFmpeg encode of inpainted frames failed")
@@ -401,7 +490,11 @@ class InpaintingEngine @Inject constructor(
                     outputUri = outputUri,
                     framesProcessed = inpaintedCount,
                     totalProcessingTimeMs = System.currentTimeMillis() - startTime,
-                    averageFrameTimeMs = if (inpaintedCount > 0) (System.currentTimeMillis() - startTime) / inpaintedCount else 0L
+                    averageFrameTimeMs = if (inpaintedCount > 0) {
+                        (System.currentTimeMillis() - startTime) / inpaintedCount
+                    } else {
+                        0L
+                    }
                 )
             } finally {
                 tempDir.deleteRecursively()
@@ -409,6 +502,8 @@ class InpaintingEngine @Inject constructor(
         } catch (e: Exception) {
             Log.e(TAG, "Video inpainting failed", e)
             null
+        } finally {
+            retriever.release()
         }
     }
 
@@ -505,65 +600,4 @@ class InpaintingEngine @Inject constructor(
         }
     }
 
-    /**
-     * Fallback inpainting using simple pixel-averaging when ONNX inference is unavailable.
-     * For each masked pixel, averages the nearest unmasked neighbor pixels.
-     */
-    private fun fallbackInpaint(bitmap: Bitmap, mask: Bitmap): Bitmap {
-        val width = bitmap.width
-        val height = bitmap.height
-        val scaledMask = if (mask.width != width || mask.height != height) {
-            Bitmap.createScaledBitmap(mask, width, height, false)
-        } else {
-            mask
-        }
-
-        try {
-            val srcPixels = IntArray(width * height)
-            val maskPixels = IntArray(width * height)
-            bitmap.getPixels(srcPixels, 0, width, 0, 0, width, height)
-            scaledMask.getPixels(maskPixels, 0, width, 0, 0, width, height)
-
-            val outPixels = srcPixels.copyOf()
-            val isMasked = BooleanArray(width * height) { Color.red(maskPixels[it]) > 127 }
-
-            val maxPasses = maxOf(width, height)
-            val tempPixels = outPixels.copyOf()
-            for (pass in 0 until minOf(maxPasses, 50)) {
-                var changed = false
-                for (y in 0 until height) {
-                    for (x in 0 until width) {
-                        val idx = y * width + x
-                        if (!isMasked[idx]) continue
-
-                        var rSum = 0; var gSum = 0; var bSum = 0; var count = 0
-                        for ((dx, dy) in arrayOf(-1 to 0, 1 to 0, 0 to -1, 0 to 1)) {
-                            val nx = x + dx; val ny = y + dy
-                            if (nx in 0 until width && ny in 0 until height) {
-                                val nIdx = ny * width + nx
-                                if (!isMasked[nIdx] || pass > 0) {
-                                    rSum += Color.red(outPixels[nIdx])
-                                    gSum += Color.green(outPixels[nIdx])
-                                    bSum += Color.blue(outPixels[nIdx])
-                                    count++
-                                }
-                            }
-                        }
-                        if (count > 0) {
-                            tempPixels[idx] = Color.argb(255, rSum / count, gSum / count, bSum / count)
-                            changed = true
-                        }
-                    }
-                }
-                System.arraycopy(tempPixels, 0, outPixels, 0, outPixels.size)
-                if (!changed) break
-            }
-
-            val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-            result.setPixels(outPixels, 0, width, 0, 0, width, height)
-            return result
-        } finally {
-            if (scaledMask !== mask) scaledMask.recycle()
-        }
-    }
 }

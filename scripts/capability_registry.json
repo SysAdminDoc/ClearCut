@@ -207,13 +207,14 @@
     {
       "id": "object_removal",
       "name": "Object Removal",
-      "engine": "LaMa-Dilated inpainting engine is implemented but not wired to the UI -- the tool reports it is unavailable",
-      "onDevice": "Not wired",
-      "status": "not_wired",
-      "reachability": "not_reachable",
+      "engine": "LaMa-Dilated inpainting with rectangle, ellipse, and freehand mask rendering for stills and motion clips",
+      "onDevice": "Yes (explicit ~174 MB model download)",
+      "status": "available",
+      "reachability": "model_gated",
       "evidence": [
         {"path": "app/src/main/java/com/novacut/editor/engine/AiToolRequirements.kt", "terms": ["Tool.OBJECT_REMOVE", "Availability.MODEL_DOWNLOAD_REQUIRED"]},
-        {"path": "app/src/main/java/com/novacut/editor/engine/InpaintingEngine.kt", "terms": ["fun inpaintFrame", "fun inpaintVideo"]}
+        {"path": "app/src/main/java/com/novacut/editor/engine/InpaintingEngine.kt", "terms": ["fun inpaintFrame", "fun inpaintVideo", "encodeImageSequenceWithAudio"]},
+        {"path": "app/src/main/java/com/novacut/editor/ui/editor/AiToolsDelegate.kt", "terms": ["getSelectedMask", "inpaintingEngine.inpaintVideo", "inpaintingEngine.inpaintFrame"]}
       ]
     },
     {

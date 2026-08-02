@@ -56,6 +56,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
+import com.novacut.editor.engine.InpaintingModelState
 import com.novacut.editor.engine.segmentation.SegmentationModelState
 import com.novacut.editor.engine.whisper.WhisperModelState
 import com.novacut.editor.ui.theme.ClearCutDialogIcon
@@ -221,7 +222,8 @@ val aiTools = listOf(
 
 private enum class AiModelRemovalTarget {
     WHISPER,
-    SEGMENTATION
+    SEGMENTATION,
+    INPAINTING
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -241,7 +243,11 @@ fun AiToolsPanel(
     segmentationModelState: SegmentationModelState = SegmentationModelState.NOT_DOWNLOADED,
     segmentationDownloadProgress: Float = 0f,
     onDownloadSegmentation: () -> Unit = {},
-    onDeleteSegmentation: () -> Unit = {}
+    onDeleteSegmentation: () -> Unit = {},
+    inpaintingModelState: InpaintingModelState = InpaintingModelState.NOT_DOWNLOADED,
+    inpaintingDownloadProgress: Float = 0f,
+    onDownloadInpainting: () -> Unit = {},
+    onDeleteInpainting: () -> Unit = {}
 ) {
     val semanticColors = LocalClearCutColors.current
     val readyTools = aiTools.filter { !it.requiresClip || hasSelectedClip }
@@ -383,6 +389,48 @@ fun AiToolsPanel(
             }
         )
 
+        Spacer(modifier = Modifier.height(12.dp))
+
+        ModelStatusCard(
+            accent = inpaintingAccent(inpaintingModelState),
+            icon = Icons.Default.AutoAwesome,
+            title = when (inpaintingModelState) {
+                InpaintingModelState.READY -> stringResource(R.string.ai_inpainting_ready)
+                InpaintingModelState.DOWNLOADING -> stringResource(R.string.ai_downloading_model)
+                InpaintingModelState.ERROR -> stringResource(R.string.ai_download_failed)
+                InpaintingModelState.NOT_DOWNLOADED -> stringResource(R.string.ai_inpainting_size)
+            },
+            description = when (inpaintingModelState) {
+                InpaintingModelState.READY -> stringResource(R.string.ai_inpainting_description)
+                InpaintingModelState.NOT_DOWNLOADED -> stringResource(R.string.ai_inpainting_description)
+                InpaintingModelState.ERROR -> stringResource(R.string.ai_model_download_failed_toast)
+                InpaintingModelState.DOWNLOADING -> stringResource(R.string.ai_inpainting_description)
+            },
+            progress = if (inpaintingModelState == InpaintingModelState.DOWNLOADING) {
+                inpaintingDownloadProgress
+            } else {
+                null
+            },
+            primaryActionLabel = when (inpaintingModelState) {
+                InpaintingModelState.NOT_DOWNLOADED, InpaintingModelState.ERROR -> stringResource(R.string.get)
+                else -> null
+            },
+            onPrimaryAction = when (inpaintingModelState) {
+                InpaintingModelState.NOT_DOWNLOADED, InpaintingModelState.ERROR -> onDownloadInpainting
+                else -> null
+            },
+            secondaryActionLabel = if (inpaintingModelState == InpaintingModelState.READY) {
+                stringResource(R.string.ai_model_remove_action)
+            } else {
+                null
+            },
+            onSecondaryAction = if (inpaintingModelState == InpaintingModelState.READY) {
+                { pendingModelRemoval = AiModelRemovalTarget.INPAINTING }
+            } else {
+                null
+            }
+        )
+
         if (processingTool != null) {
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -465,6 +513,7 @@ fun AiToolsPanel(
                 when (target) {
                     AiModelRemovalTarget.WHISPER -> onDeleteWhisper()
                     AiModelRemovalTarget.SEGMENTATION -> onDeleteSegmentation()
+                    AiModelRemovalTarget.INPAINTING -> onDeleteInpainting()
                 }
                 pendingModelRemoval = null
             }
@@ -530,10 +579,12 @@ private fun AiModelRemovalConfirmDialog(
     val title = when (target) {
         AiModelRemovalTarget.WHISPER -> stringResource(R.string.ai_remove_whisper_title)
         AiModelRemovalTarget.SEGMENTATION -> stringResource(R.string.ai_remove_segmentation_title)
+        AiModelRemovalTarget.INPAINTING -> stringResource(R.string.ai_remove_inpainting_title)
     }
     val body = when (target) {
         AiModelRemovalTarget.WHISPER -> stringResource(R.string.ai_remove_whisper_message)
         AiModelRemovalTarget.SEGMENTATION -> stringResource(R.string.ai_remove_segmentation_message)
+        AiModelRemovalTarget.INPAINTING -> stringResource(R.string.ai_remove_inpainting_message)
     }
 
     AlertDialog(
@@ -836,5 +887,16 @@ private fun segmentationAccent(state: SegmentationModelState): Color {
         SegmentationModelState.DOWNLOADING -> ClearCutAccents.Yellow
         SegmentationModelState.ERROR -> ClearCutAccents.Red
         SegmentationModelState.NOT_DOWNLOADED -> semanticColors.surfaceHigh
+    }
+}
+
+@Composable
+private fun inpaintingAccent(state: InpaintingModelState): Color {
+    val semanticColors = LocalClearCutColors.current
+    return when (state) {
+        InpaintingModelState.READY -> ClearCutAccents.Mauve
+        InpaintingModelState.DOWNLOADING -> ClearCutAccents.Yellow
+        InpaintingModelState.ERROR -> ClearCutAccents.Red
+        InpaintingModelState.NOT_DOWNLOADED -> semanticColors.surfaceHigh
     }
 }

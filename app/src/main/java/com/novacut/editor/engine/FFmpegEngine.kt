@@ -133,6 +133,40 @@ class FFmpegEngine @Inject constructor(
     }
 
     /**
+     * Encode a rendered image sequence while retaining the source audio.
+     *
+     * Frame-based effects generate a new video stream, but they must not turn
+     * a normal editor clip into a silent clip. The optional audio map keeps
+     * screen recordings and other video-only sources valid as well.
+     */
+    suspend fun encodeImageSequenceWithAudio(
+        inputUri: Uri,
+        framePattern: String,
+        fps: Int,
+        outputFile: File,
+        onProgress: (Float) -> Unit = {}
+    ): Boolean = withContext(Dispatchers.IO) {
+        val v = NativeProcessingPolicy.validateVideoUri(context, inputUri, "encodeImageSequenceWithAudio")
+        if (v != null) return@withContext NativeProcessingPolicy.logAndReject(v)
+        if (framePattern.isBlank()) return@withContext false
+        outputFile.parentFile?.mkdirs()
+        val encoder = preferredIntermediateEncoder()
+        executeArguments(
+            buildList {
+                addAll(listOf("-y", "-framerate", fps.coerceIn(1, 120).toString()))
+                addAll(listOf("-i", framePattern))
+                addAll(listOf("-i", ffmpegInput(inputUri)))
+                addAll(listOf("-map", "0:v:0", "-map", "1:a:0?"))
+                addAll(listOf("-c:v", encoder.ffmpegName))
+                addAll(intermediateQualityArgs(encoder))
+                addAll(listOf("-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k"))
+                addAll(listOf("-shortest", outputFile.absolutePath))
+            },
+            onProgress = onProgress
+        ) == 0
+    }
+
+    /**
      * Extract audio from video to PCM WAV for processing.
      */
     suspend fun extractAudioToWav(
