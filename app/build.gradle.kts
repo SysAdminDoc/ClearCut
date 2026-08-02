@@ -337,6 +337,28 @@ $components
     }
 }
 
+// The public-claim and repository-contract tests read files that live outside any
+// compiled source set: the README, the version catalog, the Fastlane listing copy,
+// the wrapper pin. Gradle cannot infer those as task inputs, so editing one left the
+// test task UP-TO-DATE and the assertion silently never ran -- a claim validator that
+// cannot fail. Declare them so a change to public copy re-runs the checks that police it.
+tasks.withType<Test>().configureEach {
+    listOf(
+        "README.md",
+        "LICENSE",
+        "gradle/libs.versions.toml",
+        "gradle/wrapper/gradle-wrapper.properties",
+        "fastlane/metadata/android/en-US/full_description.txt",
+    ).forEach { relative ->
+        val declared = rootProject.file(relative)
+        if (declared.isFile) {
+            inputs.file(declared)
+                .withPropertyName("publicSurface_" + relative.replace('/', '_').replace('.', '_'))
+                .withPathSensitivity(PathSensitivity.RELATIVE)
+        }
+    }
+}
+
 tasks.configureEach {
     if (name == "preReleaseBuild") {
         dependsOn(generateNativeSbom)
