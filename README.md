@@ -18,6 +18,7 @@
 - **AI tools stop reporting failures as good news.** A crashed transcription reported "No speech detected"; a failed motion analysis reported "Video is already stable"; a static zoom with no counter-motion reported "Basic stabilization applied". Each now separates *analysed and found nothing* from *could not analyse*, and the zoom is called what it is: a crop. A disclosure sidecar that fails to write is no longer silent.
 - **Deleting is recoverable again.** Snapshot deletion has an explicit restore offer separate from timeline undo, the AI usage ledger remains undoable, and user templates go to a trash you can restore from.
 - **Every project store now shares one document boundary.** Autosave, archives, templates, new-project creation, recovery, snapshots and timeline interchange use a versioned project envelope that preserves metadata, reports unknown fields, rejects future schemas and keeps metadata-only saves from being skipped.
+- **Mixer edits now survive the whole render path.** Track pan, clip/track DSP chains, volume envelopes and normalization run through the same PCM processors in preview, video export, audio mixdown and stems; mono sources are expanded to honor a saved pan instead of dropping it.
 - **The dashboard stops flashing "No projects yet"** before your projects load, opening a project that no longer exists reports it instead of creating a blank one in its place, and batch media import counts files off as it goes.
 - The AI requirement sheet's Run button no longer re-opens itself. The release signing certificate is pinned and the build refuses to fall back to the debug key.
 
@@ -41,7 +42,6 @@
 
 ### v3.75.1 Export truthfulness and safer font import
 
-- Export preflight now warns when a project carries mixer pan or per-track/clip audio effects that the current render path doesn't apply, so those saved edits are no longer silently dropped (the pan/DSP mixer controls remain withheld until rendering lands).
 - Custom font import is bounded and atomic: only validated `.ttf`/`.otf` files install, the copy is capped at 48 MB, and the file is verified as a real typeface and fsync'd before an atomic move — a failed or partial import can no longer land as a broken font.
 
 ### v3.75.0 Track-verified audio-only and stem exports
@@ -243,7 +243,7 @@
 - Saved transitions remain active for export, while the live preview uses stable cuts instead of unsafe single-input transition shaders that could leave Media3 on a black frame after rewind.
 - Effect safety now includes true alpha opacity, wired chroma spill, tail-aware nonlinear transition timing, corrected gamma/highlight/shadow/posterize math, and guarded GPU edge cases; unsupported generic Speed/Reverse/BG Removal entries are no longer offered as no-op effects.
 - Easy mode now maps to the current editor tabs, the More workbench exposes rendered motion tools, clip-only captions are no longer offered without a clip, and the command palette routes background replacement, face tracking, and model-gated frame interpolation correctly.
-- Incomplete mask/blend compositing and unrendered audio pan/FX controls are withheld from the editor instead of accepting edits that preview or export cannot honor.
+- Incomplete mask/blend compositing remains withheld from the editor instead of accepting edits that preview or export cannot honor.
 - The preview PlayerView remains mounted across timeline gaps, still images, and error overlays, preventing Samsung/Qualcomm surface-detach timeouts from being mislabeled as clip decoder failures.
 - Playback recovery now verifies actual timeline movement instead of trusting Media3's `isPlaying` flag; a stuck-player signal at the timeline end is handled as normal completion rather than a decode error.
 - Adjacent plain cuts from the same source are coalesced only in the Media3 preview playlist, preventing a hardware-decoder restart at the cut while keeping the timeline clips independently editable.
@@ -474,7 +474,7 @@ Planning files are local-only in the development checkout:
 ```
 com.novacut.editor/
 ├── ai/                     # AI features (captions, scene detect, stabilize, auto-edit)
-├── engine/                 # Core engines (85 injectable singletons across 173 files)
+├── engine/                 # Core engines (85 injectable singletons across 175 files)
 │   ├── VideoEngine          # Media3 playback + export
 │   ├── AudioEngine          # Waveform extraction + PCM processing
 │   ├── AudioEffectsEngine   # DSP chain (EQ, compressor, chorus, etc.)

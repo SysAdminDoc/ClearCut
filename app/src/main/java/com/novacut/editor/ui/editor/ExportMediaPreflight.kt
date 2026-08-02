@@ -44,13 +44,6 @@ object ExportMediaPreflight {
         relinkReports: Map<String, MediaRelinkProbe.ClipRelinkReport>,
         audioConformance: AudioConformanceReport? = null,
         dependencies: ProjectDependencyManifest = ProjectDependencyManifest(emptyList()),
-        // Number of tracks carrying mixer pan or audio-effect edits that the
-        // current render path does not yet apply. The pan/DSP mixer controls are
-        // withheld from the UI (they are not rendered in preview or export), but
-        // a project imported or created before they were withheld can still carry
-        // saved values. Surfacing them here keeps those edits from being silently
-        // dropped on export.
-        unrenderedMixerEditCount: Int = 0,
         // Render intents the export pipeline already knows it cannot honour —
         // currently reversed clips whose backend is unavailable or that exceed
         // the reverse pre-render limit. They would export forward, which is a
@@ -103,12 +96,6 @@ object ExportMediaPreflight {
             warnings += "${dependency.request.label} → ${dependency.request.fallbackName ?: "explicit fallback"}"
         }
 
-        val mixerEditWarnings = unrenderedMixerEditCount.coerceAtLeast(0)
-        repeat(mixerEditWarnings) { index ->
-            warnings += "Track ${index + 1} uses pan or audio effects that are not rendered yet; " +
-                "they are ignored in this export."
-        }
-
         intentFallbacks.forEach { fallback -> warnings += fallback.message }
 
         val blockingCount = blockers.size
@@ -137,10 +124,6 @@ object ExportMediaPreflight {
                     }
                     " Fallbacks: $fallbacks."
                 } else ""
-                val mixerNote = if (mixerEditWarnings > 0) {
-                    " $mixerEditWarnings track${if (mixerEditWarnings == 1) "" else "s"} " +
-                        "use pan or audio effects that are not rendered yet and are ignored in this export."
-                } else ""
                 val fallbackNote = if (intentFallbacks.isNotEmpty()) {
                     " ${intentFallbacks.size} clip${if (intentFallbacks.size == 1) "" else "s"} " +
                         "cannot be rendered as edited and would be exported unchanged."
@@ -150,10 +133,10 @@ object ExportMediaPreflight {
                     blockingCount = 0,
                     warningCount = warningCount,
                     message = if (warningCount == 1) {
-                        "Export can continue with 1 warning.$audioNote$dependencyNote$mixerNote$fallbackNote"
+                        "Export can continue with 1 warning.$audioNote$dependencyNote$fallbackNote"
                     } else {
                         "Export can continue with $warningCount warnings." +
-                            "$audioNote$dependencyNote$mixerNote$fallbackNote"
+                            "$audioNote$dependencyNote$fallbackNote"
                     },
                     audioConformance = audioConformance,
                     dependencies = dependencies,

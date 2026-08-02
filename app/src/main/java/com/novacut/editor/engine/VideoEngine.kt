@@ -1355,6 +1355,7 @@ class VideoEngine @Inject constructor(
             VisualTrackSequence(
                 sequence = buildVideoSequence(
                     clips = track.clips,
+                    audioTrack = track,
                     totalTimelineDurationMs = totalTimelineDurationMs,
                     videoMuted = !hasEmbeddedAudio,
                     trackAudioGain = trackAudioGain,
@@ -1384,6 +1385,7 @@ class VideoEngine @Inject constructor(
     @androidx.annotation.OptIn(UnstableApi::class)
     private fun buildVideoSequence(
         clips: List<Clip>,
+        audioTrack: Track,
         totalTimelineDurationMs: Long,
         videoMuted: Boolean,
         trackAudioGain: Float,
@@ -1422,6 +1424,7 @@ class VideoEngine @Inject constructor(
                     builder.addItem(
                         buildEditedMediaItem(
                             clip = clip,
+                            audioTrack = audioTrack,
                             videoMuted = videoMuted,
                             trackAudioGain = trackAudioGain,
                             tracks = tracks,
@@ -1448,6 +1451,7 @@ class VideoEngine @Inject constructor(
     @androidx.annotation.OptIn(UnstableApi::class)
     private fun buildEditedMediaItem(
         clip: Clip,
+        audioTrack: Track,
         videoMuted: Boolean,
         trackAudioGain: Float,
         tracks: List<Track>,
@@ -1645,27 +1649,12 @@ class VideoEngine @Inject constructor(
             add(Presentation.createForWidthAndHeight(targetW, targetH, Presentation.LAYOUT_SCALE_TO_FIT))
         }
 
-        val audioProcessors = buildList<AudioProcessor> {
-            if (videoMuted || linkedAudioTrackPresent) {
-                add(VolumeAudioProcessor(
-                    volume = 0f, fadeInMs = 0L, fadeOutMs = 0L,
-                    clipDurationMs = clip.durationMs, keyframes = emptyList()
-                ))
-            } else {
-                val hasKfVolume = clip.keyframes.any { it.property == KeyframeProperty.VOLUME }
-                val needsVolume = clip.volume != 1.0f
-                val needsFade = clip.fadeInMs > 0L || clip.fadeOutMs > 0L
-                val needsTrackGain = trackAudioGain != 1.0f
-                if (hasKfVolume || needsVolume || needsFade || needsTrackGain) {
-                    add(VolumeAudioProcessor(
-                        volume = clip.volume, fadeInMs = clip.fadeInMs, fadeOutMs = clip.fadeOutMs,
-                        clipDurationMs = clip.durationMs,
-                        keyframes = if (hasKfVolume) clip.keyframes else emptyList(),
-                        postGain = trackAudioGain
-                    ))
-                }
-            }
-        }
+        val audioProcessors = buildAudioProcessors(
+            clip = clip,
+            track = audioTrack,
+            muted = videoMuted || linkedAudioTrackPresent,
+            trackAudioGain = trackAudioGain,
+        )
 
         val itemBuilder = EditedMediaItem.Builder(mediaItem)
             .setEffects(Effects(audioProcessors, videoEffects))
@@ -1900,22 +1889,12 @@ class VideoEngine @Inject constructor(
                                     .build()
                             )
                             .build()
-                        val processors = buildList<AudioProcessor> {
-                            val hasKfVol = clip.keyframes.any { it.property == KeyframeProperty.VOLUME }
-                            val needsVolume = clip.volume != 1.0f
-                            val needsFade = clip.fadeInMs > 0L || clip.fadeOutMs > 0L
-                            val needsTrackGain = at.volume != 1.0f
-                            if (hasKfVol || needsVolume || needsFade || needsTrackGain) {
-                                add(VolumeAudioProcessor(
-                                    volume = clip.volume,
-                                    fadeInMs = clip.fadeInMs,
-                                    fadeOutMs = clip.fadeOutMs,
-                                    clipDurationMs = clip.durationMs,
-                                    keyframes = if (hasKfVol) clip.keyframes else emptyList(),
-                                    postGain = at.volume.coerceIn(0f, 2f)
-                                ))
-                            }
-                        }
+                        val processors = buildAudioProcessors(
+                            clip = clip,
+                            track = at,
+                            muted = false,
+                            trackAudioGain = at.volume.coerceIn(0f, 2f),
+                        )
                         val itemBuilder = EditedMediaItem.Builder(mediaItem)
                                 .setEffects(Effects(processors, emptyList()))
                                 .setRemoveVideo(true)
@@ -1927,6 +1906,49 @@ class VideoEngine @Inject constructor(
             }
             builder.build()
         }
+    }
+
+    @androidx.annotation.OptIn(UnstableApi::class)
+    private fun buildAudioProcessors(
+        clip: Clip,
+        track: Track,
+        muted: Boolean,
+        trackAudioGain: Float,
+    ): List<AudioProcessor> = buildList {
+        if (muted) {
+            add(
+                VolumeAudioProcessor(
+                    volume = 0f,
+                    fadeInMs = 0L,
+                    fadeOutMs = 0L,
+                    clipDurationMs = clip.durationMs,
+                    keyframes = emptyList(),
+                )
+            )
+            return@buildList
+        }
+
+        val hasKeyframedVolume = clip.keyframes.any { it.property == KeyframeProperty.VOLUME }
+        val needsVolume = clip.volume != 1.0f
+        val needsFade = clip.fadeInMs > 0L || clip.fadeOutMs > 0L
+        val needsTrackGain = trackAudioGain != 1.0f
+        if (hasKeyframedVolume || needsVolume || needsFade || needsTrackGain) {
+            add(
+                VolumeAudioProcessor(
+                    volume = clip.volume,
+                    fadeInMs = clip.fadeInMs,
+                    fadeOutMs = clip.fadeOutMs,
+                    clipDurationMs = clip.durationMs,
+                    keyframes = if (hasKeyframedVolume) clip.keyframes else emptyList(),
+                    postGain = trackAudioGain,
+                )
+            )
+        }
+
+        if (track.pan != 0f) add(PanAudioProcessor(track.pan))
+
+        val effects = clip.audioEffects + track.audioEffects
+        if (effects.any { it.enabled }) add(AudioEffectsAudioProcessor(effects))
     }
 
     private fun collectPreviewClips(tracks: List<Track>): List<Clip> {

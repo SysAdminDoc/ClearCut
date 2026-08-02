@@ -13,7 +13,10 @@ class ExportConfirmationRequestTest {
     @Test
     fun acceptedFallbackSummaryNamesEveryStageAndSubject() {
         val request = request(
-            warnings = listOf("Clip clip-7 would export forward.", "Track 1 pan is not rendered."),
+            warnings = listOf(
+                "Clip clip-7 would export forward.",
+                "Track 1 pan is rendered through the shared audio chain.",
+            ),
             fallbacks = listOf(
                 ExportIntentFallback("reverse-render", "clip-7", "Clip clip-7 would export forward.")
             )

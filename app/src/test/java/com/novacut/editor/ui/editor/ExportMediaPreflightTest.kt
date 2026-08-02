@@ -142,26 +142,10 @@ class ExportMediaPreflightTest {
     }
 
     @Test
-    fun evaluateWarnsAboutUnrenderedMixerEdits() {
+    fun evaluateDoesNotWarnForRenderedMixerEdits() {
         val result = ExportMediaPreflight.evaluate(
             healthReport = report(),
             relinkReports = emptyMap(),
-            unrenderedMixerEditCount = 2,
-        )
-
-        assertTrue(result.canExport)
-        assertEquals(0, result.blockingCount)
-        assertEquals(2, result.warningCount)
-        assertTrue(result.message.contains("pan or audio effects"))
-        assertTrue(result.message.contains("2 tracks"))
-    }
-
-    @Test
-    fun evaluateDoesNotWarnWhenNoUnrenderedMixerEdits() {
-        val result = ExportMediaPreflight.evaluate(
-            healthReport = report(),
-            relinkReports = emptyMap(),
-            unrenderedMixerEditCount = 0,
         )
 
         assertTrue(result.canExport)
@@ -239,14 +223,12 @@ class ExportMediaPreflightTest {
                 )
             ),
             relinkReports = emptyMap(),
-            unrenderedMixerEditCount = 1,
         )
 
         assertFalse(result.canExport)
-        // Blocked exports never reach the consent dialog, so requiresConsent is false
-        // even though warnings exist — they still ride along in the report.
+        // Blocked exports never reach the consent dialog, so requiresConsent is false.
         assertFalse(result.requiresConsent)
-        assertEquals(1, result.warnings.size)
+        assertTrue(result.warnings.isEmpty())
     }
 
     private fun report(vararg issues: MediaHealthIssue): MediaHealthReport {
