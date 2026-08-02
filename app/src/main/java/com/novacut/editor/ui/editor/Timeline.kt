@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
 import com.novacut.editor.R
+import com.novacut.editor.engine.ThumbnailStripPolicy
 import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.model.*
 import com.novacut.editor.ui.theme.Radius
@@ -539,33 +540,62 @@ fun Timeline(
     val thumbnailVisibleStartMs = (scrollOffsetMs - thumbnailPreloadPaddingMs).coerceAtLeast(0L)
     val thumbnailVisibleEndMs = scrollOffsetMs + visibleDurationMs + thumbnailPreloadPaddingMs
 
-    // Load thumbnails for visible clips — evict stale zoom levels to prevent OOM
+    // Load thumbnails for visible clips. The timeline owns the returned lists,
+    // so the VideoEngine LRU cannot reclaim those bitmaps until this map drops
+    // them. Keep only the visible viewport and enforce a second strong-reference
+    // budget below the engine's automatic heap/8 cache ceiling.
     LaunchedEffect(tracks, quantizedZoom, thumbnailVisibleStartMs, thumbnailVisibleEndMs) {
-        thumbnails.keys.filter { !it.endsWith("_$quantizedZoom") }
+        val visibleKeys = tracks
+            .filter { it.type == TrackType.VIDEO || it.type == TrackType.OVERLAY }
+            .flatMap { track ->
+                track.clips
+                    .filter { clip ->
+                        clip.timelineEndMs >= thumbnailVisibleStartMs &&
+                            clip.timelineStartMs <= thumbnailVisibleEndMs
+                    }
+                    .map { clip -> "${clip.id}_$quantizedZoom" }
+            }
+        thumbnails.keys
+            .filter { it !in visibleKeys }
             .forEach { thumbnails.remove(it) }
         tracks
             .filter { it.type == TrackType.VIDEO || it.type == TrackType.OVERLAY }
             .forEach { track ->
-            track.clips
-                .filter { clip ->
-                    clip.timelineEndMs >= thumbnailVisibleStartMs && clip.timelineStartMs <= thumbnailVisibleEndMs
-                }
-                .forEach { clip ->
-                val key = "${clip.id}_${quantizedZoom}"
-                if (!thumbnails.containsKey(key)) {
-                    launch {
-                        thumbnailSemaphore.acquire()
-                        try {
-                            val count = ((clip.durationMs * pixelsPerMs) / 80f).toInt().coerceIn(1, 20)
-                            val strip = engine.extractThumbnailStrip(clip.sourceUri, count)
-                            thumbnails[key] = strip
-                        } finally {
-                            thumbnailSemaphore.release()
+                track.clips
+                    .filter { clip ->
+                        clip.timelineEndMs >= thumbnailVisibleStartMs &&
+                            clip.timelineStartMs <= thumbnailVisibleEndMs
+                    }
+                    .forEach { clip ->
+                        val key = "${clip.id}_${quantizedZoom}"
+                        if (!thumbnails.containsKey(key)) {
+                            launch {
+                                thumbnailSemaphore.acquire()
+                                try {
+                                    val count = ((clip.durationMs * pixelsPerMs) / 80f).toInt().coerceIn(1, 20)
+                                    val strip = engine.extractThumbnailStrip(clip.sourceUri, count)
+                                    thumbnails[key] = strip
+                                    val retainedKeys = ThumbnailStripPolicy.retainedKeys(
+                                        entriesInInsertionOrder = thumbnails.entries.map { (entryKey, bitmaps) ->
+                                            ThumbnailStripPolicy.StripEntry(
+                                                key = entryKey,
+                                                bytes = bitmaps.sumOf { bitmap ->
+                                                    bitmap.byteCount.toLong().coerceAtLeast(0L)
+                                                },
+                                            )
+                                        },
+                                        budgetBytes = ThumbnailStripPolicy.budgetBytes(Runtime.getRuntime().maxMemory()),
+                                    )
+                                    thumbnails.keys
+                                        .filter { it !in retainedKeys }
+                                        .forEach { thumbnails.remove(it) }
+                                } finally {
+                                    thumbnailSemaphore.release()
+                                }
+                            }
                         }
                     }
-                }
             }
-        }
     }
 
     Surface(

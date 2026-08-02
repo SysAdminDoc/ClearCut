@@ -37,4 +37,22 @@ class ThumbnailCachePolicyTest {
         assertTrue(options.contains(32))
         assertFalse(options.any { it > 32 })
     }
+
+    @Test
+    fun denseCutTimelineStripsStayBelowTheLowRamStrongReferenceBudget() {
+        val maxMemoryBytes = 128 * mb
+        val stripBytes = 20L * 80L * 45L * 4L
+        val entries = (0..50).map { index ->
+            ThumbnailStripPolicy.StripEntry("clip-$index", stripBytes)
+        }
+
+        val retained = ThumbnailStripPolicy.retainedKeys(
+            entriesInInsertionOrder = entries,
+            budgetBytes = ThumbnailStripPolicy.budgetBytes(maxMemoryBytes),
+        )
+
+        assertTrue(retained.isNotEmpty())
+        assertTrue(retained.size < entries.size)
+        assertTrue(retained.size * stripBytes <= ThumbnailStripPolicy.budgetBytes(maxMemoryBytes))
+    }
 }

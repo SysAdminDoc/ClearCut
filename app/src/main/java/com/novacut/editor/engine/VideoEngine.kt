@@ -203,9 +203,10 @@ class VideoEngine @Inject constructor(
     }
 
     /**
-     * Apply the user's thumbnail cache budget. Bounded above by half the heap so a
-     * generous setting on a small device cannot turn a cache into an OOM. Shrinking
-     * evicts immediately, which is the observable effect the control promises.
+     * Apply the user's thumbnail cache budget. Explicit settings are bounded by
+     * [ThumbnailCachePolicy], while automatic mode retains the historical heap/8
+     * ceiling. Shrinking evicts immediately, which is the observable effect the
+     * control promises.
      */
     fun setThumbnailCacheSizeMb(sizeMb: Int?) {
         val bytes = ThumbnailCachePolicy.resolveBytes(sizeMb, maxHeapBytes, isLowRamDevice)
