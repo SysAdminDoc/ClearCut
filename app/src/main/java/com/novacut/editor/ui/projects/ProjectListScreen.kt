@@ -427,7 +427,6 @@ fun ProjectListScreen(
         // Template picker
         if (showTemplateSheet) {
             val untitledProjectName = stringResource(R.string.project_untitled)
-            val genericRestoreName = stringResource(R.string.project_template_delete_success_generic)
             ProjectTemplateSheet(
                 onTemplateSelected = { template, templateName ->
                     showTemplateSheet = false
@@ -448,11 +447,6 @@ fun ProjectListScreen(
                 onImportTemplate = importTemplate,
                 onDeleteUserTemplate = viewModel::deleteUserTemplate,
                 userTemplates = userTemplates,
-                restorableTemplateName = restorableTemplate?.let { pending ->
-                    pending.name ?: genericRestoreName
-                },
-                onRestoreDeletedTemplate = viewModel::restoreDeletedTemplate,
-                onDismissTemplateRestore = viewModel::dismissTemplateRestore,
                 onDismiss = { showTemplateSheet = false },
                 modifier = Modifier.align(Alignment.BottomCenter)
             )
@@ -469,6 +463,16 @@ fun ProjectListScreen(
         PremiumSnackbarHost(
             message = toastMessage,
             severity = toastMessage?.let(::inferSeverity) ?: ToastSeverity.Info,
+            actionLabel = if (restorableTemplate != null) {
+                stringResource(R.string.project_template_restore_action)
+            } else {
+                null
+            },
+            onAction = if (restorableTemplate != null) {
+                viewModel::restoreDeletedTemplate
+            } else {
+                null
+            },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(start = 16.dp, end = 16.dp, bottom = 20.dp)

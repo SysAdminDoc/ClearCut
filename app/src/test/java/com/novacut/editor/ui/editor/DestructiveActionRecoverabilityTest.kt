@@ -80,13 +80,17 @@ class DestructiveActionRecoverabilityTest {
     }
 
     @Test
-    fun theTemplateSheetOffersTheWayBack() {
+    fun templateDeletionUsesARealSnackbarUndoAction() {
         val viewModel = locate("app/src/main/java/com/novacut/editor/ui/projects/ProjectListViewModel.kt").readText()
         val sheet = locate("app/src/main/java/com/novacut/editor/ui/projects/ProjectTemplateSheet.kt").readText()
+        val screen = locate("app/src/main/java/com/novacut/editor/ui/projects/ProjectListScreen.kt").readText()
+        val snackbar = locate("app/src/main/java/com/novacut/editor/ui/editor/PremiumSnackbar.kt").readText()
 
         assertTrue(viewModel.contains("fun restoreDeletedTemplate()"))
-        assertTrue(viewModel.contains("_restorableTemplate.value = RestorableTemplate("))
-        assertTrue("the sheet must surface the restore", sheet.contains("onRestoreDeletedTemplate"))
+        assertTrue(viewModel.contains("RestorableTemplate(id = id"))
+        assertFalse("the sheet must not open a second restore dialog", sheet.contains("RestoreUserTemplateBanner"))
+        assertTrue("the project screen must put restore on the snackbar", screen.contains("project_template_restore_action"))
+        assertTrue("the shared snackbar must support an action", snackbar.contains("actionLabel: String?"))
     }
 
     @Test

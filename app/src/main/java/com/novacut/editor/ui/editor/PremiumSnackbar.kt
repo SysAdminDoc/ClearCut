@@ -41,6 +41,8 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.TextButton
 import com.novacut.editor.ui.theme.Elevation
 import com.novacut.editor.ui.theme.LocalClearCutColors
 import com.novacut.editor.ui.theme.Motion
@@ -53,7 +55,9 @@ enum class ToastSeverity { Info, Success, Warning, Error }
 fun PremiumSnackbar(
     message: String,
     severity: ToastSeverity = ToastSeverity.Info,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    actionLabel: String? = null,
+    onAction: (() -> Unit)? = null
 ) {
     val colors = LocalClearCutColors.current
     val accent = when (severity) {
@@ -117,7 +121,16 @@ fun PremiumSnackbar(
                     .weight(1f)
                     .padding(vertical = 14.dp, horizontal = Spacing.xs)
             )
-            Spacer(Modifier.width(Spacing.lg))
+            if (actionLabel != null && onAction != null) {
+                TextButton(
+                    onClick = onAction,
+                    colors = ButtonDefaults.textButtonColors(contentColor = accent)
+                ) {
+                    Text(actionLabel)
+                }
+            } else {
+                Spacer(Modifier.width(Spacing.lg))
+            }
         }
     }
 }
@@ -126,7 +139,9 @@ fun PremiumSnackbar(
 fun PremiumSnackbarHost(
     message: String?,
     severity: ToastSeverity = ToastSeverity.Info,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    actionLabel: String? = null,
+    onAction: (() -> Unit)? = null
 ) {
     AnimatedVisibility(
         visible = message != null,
@@ -141,7 +156,12 @@ fun PremiumSnackbarHost(
             ),
         modifier = modifier
     ) {
-        PremiumSnackbar(message = message ?: "", severity = severity)
+        PremiumSnackbar(
+            message = message ?: "",
+            severity = severity,
+            actionLabel = actionLabel,
+            onAction = onAction
+        )
     }
 }
 

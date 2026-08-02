@@ -402,12 +402,13 @@ class ProjectListViewModel @Inject constructor(
                     template?.name to templateManager.deleteTemplate(id)
                 }
                 loadUserTemplates()
-                if (deleteResult.second) {
-                    // The template went to the trash, not to nothing. Hold on to its id
-                    // so the sheet can offer a restore -- a user template is authored
-                    // work, and the confirm dialog was previously the only thing between
-                    // a mis-tap and permanent loss.
-                    _restorableTemplate.value = RestorableTemplate(id = id, name = deleteResult.first)
+                val restoreOffer = if (deleteResult.second) {
+                    // The template went to the trash, not to nothing. Keep its id with
+                    // the snackbar action so authored work can be restored without
+                    // opening a second modal after the confirmation dialog.
+                    RestorableTemplate(id = id, name = deleteResult.first)
+                } else {
+                    null
                 }
                 showToast(
                     if (deleteResult.second) {
@@ -416,7 +417,8 @@ class ProjectListViewModel @Inject constructor(
                         } ?: appContext.getString(R.string.project_template_delete_success_generic)
                     } else {
                         appContext.getString(R.string.project_template_delete_failed)
-                    }
+                    },
+                    restoreTemplate = restoreOffer
                 )
             } catch (e: Exception) {
                 Log.w("ProjectListVM", "Template delete failed", e)
@@ -436,9 +438,9 @@ class ProjectListViewModel @Inject constructor(
     /** Put the most recently deleted template back where it was. */
     fun restoreDeletedTemplate() {
         val pending = _restorableTemplate.value ?: return
+        _restorableTemplate.value = null
         viewModelScope.launch {
             val restored = withContext(Dispatchers.IO) { templateManager.restoreTemplate(pending.id) }
-            _restorableTemplate.value = null
             loadUserTemplates()
             showToast(
                 if (restored) {
@@ -449,11 +451,6 @@ class ProjectListViewModel @Inject constructor(
                 }
             )
         }
-    }
-
-    /** Drop the restore offer once the user has moved on. */
-    fun dismissTemplateRestore() {
-        _restorableTemplate.value = null
     }
 
     fun importTemplate(uri: Uri) {
@@ -1010,13 +1007,17 @@ class ProjectListViewModel @Inject constructor(
         }
     }
 
-    private fun showToast(message: String) {
+    private fun showToast(message: String, restoreTemplate: RestorableTemplate? = null) {
         toastDismissJob?.cancel()
+        _restorableTemplate.value = restoreTemplate
         _toastMessage.value = message
         toastDismissJob = viewModelScope.launch {
             delay(2800L)
             if (_toastMessage.value == message) {
                 _toastMessage.value = null
+                if (_restorableTemplate.value == restoreTemplate) {
+                    _restorableTemplate.value = null
+                }
             }
         }
     }
@@ -1024,5 +1025,6 @@ class ProjectListViewModel @Inject constructor(
     fun dismissToast() {
         toastDismissJob?.cancel()
         _toastMessage.value = null
+        _restorableTemplate.value = null
     }
 }

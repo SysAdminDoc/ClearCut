@@ -126,10 +126,6 @@ fun ProjectTemplateSheet(
     onShareTemplate: (String) -> Unit = {},
     onImportTemplate: () -> Unit = {},
     userTemplates: List<UserTemplate> = emptyList(),
-    /** Name of the template just moved to the trash, or null when there is none to restore. */
-    restorableTemplateName: String? = null,
-    onRestoreDeletedTemplate: () -> Unit = {},
-    onDismissTemplateRestore: () -> Unit = {}
 ) {
     var pendingDeleteTemplate by remember { mutableStateOf<UserTemplate?>(null) }
 
@@ -319,16 +315,6 @@ fun ProjectTemplateSheet(
             )
             EmptyTemplateStateCard()
         }
-    }
-
-    // A deleted template is authored work sitting in the trash, not gone. Say so, and
-    // give the way back -- deletion previously had no undo and no restore at all.
-    restorableTemplateName?.let { name ->
-        RestoreUserTemplateBanner(
-            templateName = name,
-            onRestore = onRestoreDeletedTemplate,
-            onDismiss = onDismissTemplateRestore
-        )
     }
 
     pendingDeleteTemplate?.let { template ->
@@ -599,41 +585,6 @@ private fun EmptyTemplateStateCard() {
             )
         }
     }
-}
-
-@Composable
-private fun RestoreUserTemplateBanner(
-    templateName: String,
-    onRestore: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = {
-            ClearCutDialogIcon(
-                icon = Icons.Default.Delete,
-                accent = Mocha.Peach
-            )
-        },
-        title = {
-            Text(
-                text = stringResource(R.string.project_template_delete_success, templateName),
-                color = Mocha.Text,
-                style = MaterialTheme.typography.titleMedium
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = onRestore) {
-                Text(stringResource(R.string.project_template_restore_action))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.editor_cancel))
-            }
-        },
-        containerColor = Mocha.PanelHighest
-    )
 }
 
 @Composable
