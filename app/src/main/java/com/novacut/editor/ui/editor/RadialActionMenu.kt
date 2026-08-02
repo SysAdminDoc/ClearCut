@@ -20,6 +20,8 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import kotlin.math.cos
@@ -120,6 +122,7 @@ fun RadialActionMenu(
                     .scale(scale)
                     .clip(CircleShape)
                     .background(semanticColors.surfaceLow)
+                    .semantics { contentDescription = action.label }
                     .clickable { onAction(action.id) },
                 contentAlignment = Alignment.Center
             ) {

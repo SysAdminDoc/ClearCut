@@ -53,7 +53,7 @@ import com.novacut.editor.model.AudioEffectType
 import com.novacut.editor.model.Track
 import com.novacut.editor.model.TrackType
 
-private const val AUDIO_ROUTING_RENDERER_AVAILABLE = false
+private const val AUDIO_ROUTING_RENDERER_AVAILABLE = true
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -82,7 +82,7 @@ fun AudioMixerPanel(
 
     PremiumEditorPanel(
         title = androidx.compose.ui.res.stringResource(R.string.panel_audio_mixer_title),
-        subtitle = "Balance channels, shape stereo placement, and stack live FX from one stage.",
+        subtitle = androidx.compose.ui.res.stringResource(R.string.panel_audio_mixer_subtitle),
         icon = Icons.Default.Tune,
         accent = ClearCutAccents.Sapphire,
         onClose = onClose,
@@ -98,16 +98,20 @@ fun AudioMixerPanel(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Session overview",
+                        text = androidx.compose.ui.res.stringResource(R.string.mixer_session_overview),
                         style = MaterialTheme.typography.titleMedium,
                         color = semanticColors.text
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = if (selectedTrack != null) {
-                            "Fine-tune ${selectedTrack.type.displayLabel()} ${selectedTrack.index + 1} with live metering and effect edits below."
+                            androidx.compose.ui.res.stringResource(
+                                R.string.mixer_selected_track_description,
+                                androidx.compose.ui.res.stringResource(selectedTrack.type.displayNameRes()),
+                                selectedTrack.index + 1,
+                            )
                         } else {
-                            "Scroll the strips to stage levels, then open FX on any track to dial in the chain."
+                            androidx.compose.ui.res.stringResource(R.string.mixer_empty_selection_description)
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = semanticColors.subtext
@@ -122,17 +126,28 @@ fun AudioMixerPanel(
                 ) {
                     selectedTrack?.let { track ->
                         PremiumPanelPill(
-                            text = "${track.trackLabel()} selected",
+                            text = androidx.compose.ui.res.stringResource(
+                                R.string.mixer_track_selected,
+                                track.trackLabel(),
+                            ),
                             accent = track.type.mixerAccent()
                         )
                     }
                     PremiumPanelPill(
-                        text = "${tracks.size} tracks live",
+                        text = androidx.compose.ui.res.pluralStringResource(
+                            R.plurals.mixer_tracks_live,
+                            tracks.size,
+                            tracks.size,
+                        ),
                         accent = ClearCutAccents.Sapphire
                     )
                     if (AUDIO_ROUTING_RENDERER_AVAILABLE) {
                         PremiumPanelPill(
-                            text = "$activeEffects FX staged",
+                            text = androidx.compose.ui.res.pluralStringResource(
+                                R.plurals.mixer_fx_staged,
+                                activeEffects,
+                                activeEffects,
+                            ),
                             accent = if (activeEffects > 0) ClearCutAccents.Mauve else semanticColors.overlayStrong
                         )
                     }
@@ -146,12 +161,12 @@ fun AudioMixerPanel(
             accent = ClearCutAccents.Blue
         ) {
             Text(
-                text = "Channel strips",
+                text = androidx.compose.ui.res.stringResource(R.string.mixer_channel_strips),
                 style = MaterialTheme.typography.titleMedium,
                 color = semanticColors.text
             )
             Text(
-                text = "Each strip exposes rendered volume, mute, and solo controls.",
+                text = androidx.compose.ui.res.stringResource(R.string.mixer_channel_strips_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = semanticColors.subtext
             )
@@ -208,7 +223,7 @@ fun AudioMixerPanel(
                             Text(
                                 text = androidx.compose.ui.res.stringResource(
                                     R.string.mixer_effects_track,
-                                    track.type.displayLabel(),
+                                    androidx.compose.ui.res.stringResource(track.type.displayNameRes()),
                                     tracks.indexOf(track) + 1
                                 ),
                                 style = MaterialTheme.typography.titleMedium,
@@ -217,9 +232,9 @@ fun AudioMixerPanel(
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = if (track.audioEffects.isEmpty()) {
-                                    "Build a chain for cleanup, tone shaping, and loudness control."
+                                    androidx.compose.ui.res.stringResource(R.string.mixer_build_chain_description)
                                 } else {
-                                    "Tap a processor to tweak its parameters or remove it from the chain."
+                                    androidx.compose.ui.res.stringResource(R.string.mixer_edit_chain_description)
                                 },
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = semanticColors.subtext
@@ -304,7 +319,7 @@ private fun AddEffectButton(
                     modifier = Modifier.size(18.dp)
                 )
                 Text(
-                    text = "Add FX",
+                    text = androidx.compose.ui.res.stringResource(R.string.mixer_add_fx),
                     style = MaterialTheme.typography.labelLarge,
                     color = ClearCutAccents.Green
                 )
@@ -392,7 +407,7 @@ private fun ChannelStrip(
                         accent = accent
                     )
                     Text(
-                        text = track.type.displayLabel(),
+                        text = androidx.compose.ui.res.stringResource(track.type.displayNameRes()),
                         style = MaterialTheme.typography.labelMedium,
                         color = semanticColors.subtext
                     )
@@ -427,7 +442,7 @@ private fun ChannelStrip(
                     // every onValueChange event.
                     var volumeDragging by remember { mutableStateOf(false) }
                     MixerControlBlock(
-                        label = "Level",
+                        label = androidx.compose.ui.res.stringResource(R.string.mixer_level),
                         valueLabel = formatVolume(track.volume),
                         accent = accent
                     ) {
@@ -456,7 +471,7 @@ private fun ChannelStrip(
                     if (AUDIO_ROUTING_RENDERER_AVAILABLE) {
                         var panDragging by remember { mutableStateOf(false) }
                         MixerControlBlock(
-                            label = "Pan",
+                            label = androidx.compose.ui.res.stringResource(R.string.mixer_pan),
                             valueLabel = formatPan(track.pan),
                             accent = accent
                         ) {
@@ -695,13 +710,13 @@ private fun MasterBusStrip() {
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "Master bus",
+                    text = androidx.compose.ui.res.stringResource(R.string.mixer_master_bus),
                     style = MaterialTheme.typography.titleSmall,
                     color = semanticColors.text
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Reference output",
+                    text = androidx.compose.ui.res.stringResource(R.string.mixer_reference_output),
                     style = MaterialTheme.typography.bodySmall,
                     color = semanticColors.subtext
                 )
@@ -781,7 +796,7 @@ private fun AudioEffectParams(
                 color = semanticColors.text
             )
             Text(
-                text = "Adjust the selected processor in real time while the preview keeps playing above.",
+                text = androidx.compose.ui.res.stringResource(R.string.mixer_adjust_processor_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = semanticColors.subtext
             )
@@ -877,12 +892,12 @@ private fun Track.trackLabel(): String = when (type) {
     TrackType.ADJUSTMENT -> "ADJ"
 }
 
-private fun TrackType.displayLabel(): String = when (this) {
-    TrackType.VIDEO -> "Video"
-    TrackType.AUDIO -> "Audio"
-    TrackType.OVERLAY -> "Overlay"
-    TrackType.TEXT -> "Text"
-    TrackType.ADJUSTMENT -> "Adjust"
+private fun TrackType.displayNameRes(): Int = when (this) {
+    TrackType.VIDEO -> R.string.mixer_track_type_video
+    TrackType.AUDIO -> R.string.mixer_track_type_audio
+    TrackType.OVERLAY -> R.string.mixer_track_type_overlay
+    TrackType.TEXT -> R.string.mixer_track_type_text
+    TrackType.ADJUSTMENT -> R.string.mixer_track_type_adjustment
 }
 
 private fun TrackType.mixerAccent(): Color = when (this) {

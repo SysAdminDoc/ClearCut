@@ -18,6 +18,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -148,6 +150,7 @@ private fun SmartReframeCard(
     modifier: Modifier = Modifier
 ) {
     val semanticColors = LocalClearCutColors.current
+    val platformLabel = stringResource(option.platformResId)
     val accent = if (isSelected) ClearCutAccents.Mauve else ClearCutAccents.Blue
     val previewRatio = option.ratio.toFloat()
     val (previewWidth, previewHeight) = computePreviewDimensions(previewRatio, previewMaxSize)
@@ -164,6 +167,7 @@ private fun SmartReframeCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .semantics { contentDescription = platformLabel }
                 .clickable(enabled = !isProcessing, onClick = onClick)
                 .padding(14.dp),
             horizontalAlignment = Alignment.CenterHorizontally,

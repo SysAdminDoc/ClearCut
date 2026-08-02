@@ -49,6 +49,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -705,11 +706,13 @@ private fun AiToolCard(
     onClick: () -> Unit
 ) {
     val semanticColors = LocalClearCutColors.current
+    val toolLabel = stringResource(tool.nameResId)
     Surface(
         modifier = Modifier
             .width(176.dp)
             .height(196.dp)
             .alpha(if (isEnabled) 1f else 0.92f)
+            .semantics { contentDescription = toolLabel }
             .clickable(enabled = !isProcessing, onClick = onClick),
         color = if (isEnabled) semanticColors.panelHighest else semanticColors.panelRaised.copy(alpha = 0.85f),
         shape = RoundedCornerShape(24.dp),

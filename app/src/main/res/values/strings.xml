@@ -1661,6 +1661,34 @@
     <string name="panel_audio_mixer_mute">M</string>
     <string name="panel_audio_mixer_solo">S</string>
     <string name="panel_audio_mixer_fx">FX</string>
+    <string name="panel_audio_mixer_subtitle">Balance channels, shape stereo placement, and stack live FX from one stage.</string>
+    <string name="mixer_session_overview">Session overview</string>
+    <string name="mixer_selected_track_description">Fine-tune %1$s %2$d with live metering and effect edits below.</string>
+    <string name="mixer_empty_selection_description">Scroll the strips to stage levels, then open FX on any track to dial in the chain.</string>
+    <string name="mixer_track_selected">%1$s selected</string>
+    <plurals name="mixer_tracks_live">
+        <item quantity="one">%1$d track live</item>
+        <item quantity="other">%1$d tracks live</item>
+    </plurals>
+    <plurals name="mixer_fx_staged">
+        <item quantity="one">%1$d FX staged</item>
+        <item quantity="other">%1$d FX staged</item>
+    </plurals>
+    <string name="mixer_channel_strips">Channel strips</string>
+    <string name="mixer_channel_strips_description">Each strip exposes rendered volume, mute, and solo controls.</string>
+    <string name="mixer_build_chain_description">Build a chain for cleanup, tone shaping, and loudness control.</string>
+    <string name="mixer_edit_chain_description">Tap a processor to tweak its parameters or remove it from the chain.</string>
+    <string name="mixer_add_fx">Add FX</string>
+    <string name="mixer_level">Level</string>
+    <string name="mixer_pan">Pan</string>
+    <string name="mixer_master_bus">Master bus</string>
+    <string name="mixer_reference_output">Reference output</string>
+    <string name="mixer_adjust_processor_description">Adjust the selected processor in real time while the preview keeps playing above.</string>
+    <string name="mixer_track_type_video">Video</string>
+    <string name="mixer_track_type_audio">Audio</string>
+    <string name="mixer_track_type_overlay">Overlay</string>
+    <string name="mixer_track_type_text">Text</string>
+    <string name="mixer_track_type_adjustment">Adjust</string>
 
     <!-- CloudBackupPanel -->
     <string name="panel_cloud_backup_title">Archive Transfer</string>
@@ -2759,6 +2787,33 @@
     <string name="partial_restore_message">This project opened, but parts of it could not be read:\n\n%1$s\n\nSaving is paused so the missing pieces are not written over. Keep the project as recovered, or try the previous autosave, which may still contain them.</string>
     <string name="partial_restore_keep">Keep as recovered</string>
     <string name="partial_restore_use_backup">Try previous autosave</string>
+    <string name="vm_recovery_partial_toast">Some project data could not be restored (%1$s). Saving is paused so the loss is not written back — choose what to do.</string>
+    <string name="vm_recovery_future_schema_toast">Autosave was made by a newer ClearCut version. It was left untouched to avoid losing edits.</string>
+    <string name="vm_recovery_corrupt_toast">Autosave could not be read. The file was left untouched so you can retry recovery later.</string>
+    <string name="vm_recovery_not_found_toast">No autosaved recovery data was found. Opening the saved project instead.</string>
+    <string name="vm_partial_restore_keep_toast">Keeping the recovered project. Saving resumed; %1$s stayed lost.</string>
+    <string name="vm_partial_restore_backup_incomplete">The previous autosave is also incomplete (%1$s). Saving is still paused.</string>
+    <string name="vm_partial_restore_backup_success">Restored the previous autosave in full. Saving resumed.</string>
+    <string name="vm_partial_restore_backup_missing">No usable previous autosave was found. The recovered project is unchanged and saving stays paused.</string>
+    <plurals name="vm_media_missing_sources">
+        <item quantity="one">%1$d missing source</item>
+        <item quantity="other">%1$d missing sources</item>
+    </plurals>
+    <plurals name="vm_media_unverified_sources">
+        <item quantity="one">%1$d unverified source</item>
+        <item quantity="other">%1$d unverified sources</item>
+    </plurals>
+    <plurals name="vm_media_repair_items">
+        <item quantity="one">%1$d repair item</item>
+        <item quantity="other">%1$d repair items</item>
+    </plurals>
+    <plurals name="vm_media_warnings">
+        <item quantity="one">%1$d warning</item>
+        <item quantity="other">%1$d warnings</item>
+    </plurals>
+    <string name="vm_media_list_and">%1$s and %2$s</string>
+    <string name="vm_media_list_comma">%1$s, %2$s</string>
+    <string name="vm_media_check_toast">Media check found %1$s. Opened Media Manager to relink or repair before editing or export.</string>
     <string name="export_failure_setup">The export could not be set up.</string>
     <string name="export_failure_setup_fix">Reopen the project and try again; if it repeats, remove the most recently added clip or effect.</string>
     <string name="export_failure_encoder">The video encoder failed part-way through.</string>
@@ -2784,6 +2839,7 @@
     <string name="export_failure_unknown_fix">Try again, then use Copy report in the export error card if it repeats.</string>
     <string name="vm_snapshot_deleted_toast">Snapshot “%1$s” deleted. Restore is available now.</string>
     <string name="vm_snapshot_restored_toast">Snapshot “%1$s” restored.</string>
+    <string name="vm_snapshot_future_schema_toast">Snapshot was created by a newer ClearCut version and was not applied.</string>
     <string name="vm_ai_ledger_cleared_toast">AI usage ledger cleared. Undo to bring it back.</string>
     <string name="project_template_restore_success">Restored “%1$s”.</string>
     <string name="project_template_restore_success_generic">Template restored.</string>

@@ -19,6 +19,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.novacut.editor.R
@@ -306,6 +308,11 @@ fun VoiceoverRecorder(
     modifier: Modifier = Modifier
 ) {
     val semanticColors = LocalClearCutColors.current
+    val recordingControlDescription = if (isRecording) {
+        stringResource(R.string.audio_tap_to_stop)
+    } else {
+        stringResource(R.string.audio_tap_to_record)
+    }
     PremiumEditorPanel(
         title = stringResource(R.string.audio_voiceover),
         subtitle = stringResource(R.string.panel_voiceover_subtitle),
@@ -349,6 +356,9 @@ fun VoiceoverRecorder(
                             color = if (isRecording) ClearCutAccents.Red.copy(alpha = 0.7f) else semanticColors.cardStrokeStrong,
                             shape = CircleShape
                         )
+                        .semantics {
+                            contentDescription = recordingControlDescription
+                        }
                         .clickable {
                             if (isRecording) onStopRecording() else onStartRecording()
                         },

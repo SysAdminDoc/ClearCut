@@ -135,8 +135,14 @@ internal fun shouldShowEditingSuggestion(
     snoozedUntilMs: Map<String, Long>
 ): Boolean = nowMs >= snoozedUntilMs.getOrDefault(suggestionId, 0L)
 internal data class RecoveryOpenFeedback(
-    val message: String,
+    val messageResId: Int,
+    val messageArgs: List<Any> = emptyList(),
     val severity: ToastSeverity,
+)
+
+internal data class MediaRelinkOpenToastPart(
+    val count: Int,
+    val quantityResId: Int,
 )
 
 internal fun recoveryOpenFeedbackFor(
@@ -145,24 +151,24 @@ internal fun recoveryOpenFeedbackFor(
 ): RecoveryOpenFeedback? = when (outcome) {
     is ProjectAutoSave.LoadOutcome.Loaded -> if (outcome.report.isPartial) {
         RecoveryOpenFeedback(
-            message = "Some project data could not be restored (${outcome.report.summary()}). " +
-                "Saving is paused so the loss is not written back — choose what to do.",
+            messageResId = R.string.vm_recovery_partial_toast,
+            messageArgs = listOf(outcome.report.summary()),
             severity = ToastSeverity.Error,
         )
     } else {
         null
     }
     is ProjectAutoSave.LoadOutcome.FutureSchema -> RecoveryOpenFeedback(
-        message = "Autosave was made by a newer ClearCut version. It was left untouched to avoid losing edits.",
+        messageResId = R.string.vm_recovery_future_schema_toast,
         severity = ToastSeverity.Error,
     )
     is ProjectAutoSave.LoadOutcome.Corrupt -> RecoveryOpenFeedback(
-        message = "Autosave could not be read. The file was left untouched so you can retry recovery later.",
+        messageResId = R.string.vm_recovery_corrupt_toast,
         severity = ToastSeverity.Error,
     )
     ProjectAutoSave.LoadOutcome.NotFound -> if (expectedRecovery) {
         RecoveryOpenFeedback(
-            message = "No autosaved recovery data was found. Opening the saved project instead.",
+            messageResId = R.string.vm_recovery_not_found_toast,
             severity = ToastSeverity.Warning,
         )
     } else {
@@ -192,16 +198,16 @@ internal fun mediaRelinkOpenToast(
     unknownCount: Int,
     healthBlockingCount: Int = 0,
     healthWarningCount: Int = 0
-): String? {
+): List<MediaRelinkOpenToastPart> {
     val total = missingCount + unknownCount + healthBlockingCount + healthWarningCount
-    if (total <= 0) return null
+    if (total <= 0) return emptyList()
     val parts = buildList {
-        if (missingCount > 0) add("$missingCount missing ${if (missingCount == 1) "source" else "sources"}")
-        if (unknownCount > 0) add("$unknownCount unverified ${if (unknownCount == 1) "source" else "sources"}")
-        if (healthBlockingCount > 0) add("$healthBlockingCount repair ${if (healthBlockingCount == 1) "item" else "items"}")
-        if (healthWarningCount > 0) add("$healthWarningCount ${if (healthWarningCount == 1) "warning" else "warnings"}")
+        if (missingCount > 0) add(MediaRelinkOpenToastPart(missingCount, R.plurals.vm_media_missing_sources))
+        if (unknownCount > 0) add(MediaRelinkOpenToastPart(unknownCount, R.plurals.vm_media_unverified_sources))
+        if (healthBlockingCount > 0) add(MediaRelinkOpenToastPart(healthBlockingCount, R.plurals.vm_media_repair_items))
+        if (healthWarningCount > 0) add(MediaRelinkOpenToastPart(healthWarningCount, R.plurals.vm_media_warnings))
     }
-    return "Media check found ${parts.joinToString(" and ")}. Opened Media Manager to relink or repair before editing or export."
+    return parts
 }
 
 enum class PanelId {
@@ -1219,7 +1225,7 @@ class EditorViewModel @Inject constructor(
             applySavedStateStatus(savedStateTracker.establishBaseline(currentProjectFingerprint()))
         }
         recoveryOpenFeedbackFor(outcome, expectRecovery)?.let { feedback ->
-            showToast(feedback.message, feedback.severity)
+            showToast(text(feedback.messageResId, *feedback.messageArgs.toTypedArray()), feedback.severity)
         }
         applyAutoSaveSettings()
         if (outcome is ProjectAutoSave.LoadOutcome.Loaded) {
@@ -1240,7 +1246,7 @@ class EditorViewModel @Inject constructor(
         applySavedStateStatus(savedStateTracker.establishBaseline(currentProjectFingerprint()))
         applyAutoSaveSettings()
         saveProject()
-        showToast("Keeping the recovered project. Saving resumed; $lost stayed lost.", ToastSeverity.Warning)
+        showToast(text(R.string.vm_partial_restore_keep_toast, lost), ToastSeverity.Warning)
     }
 
     /**
@@ -1258,8 +1264,7 @@ class EditorViewModel @Inject constructor(
                     if (outcome.report.isPartial) {
                         _state.update { it.copy(partialRestore = outcome.report) }
                         showToast(
-                            "The previous autosave is also incomplete (${outcome.report.summary()}). " +
-                                "Saving is still paused.",
+                            text(R.string.vm_partial_restore_backup_incomplete, outcome.report.summary()),
                             ToastSeverity.Error,
                         )
                     } else {
@@ -1268,12 +1273,11 @@ class EditorViewModel @Inject constructor(
                         applySavedStateStatus(savedStateTracker.establishBaseline(currentProjectFingerprint()))
                         applyAutoSaveSettings()
                         saveProject()
-                        showToast("Restored the previous autosave in full. Saving resumed.", ToastSeverity.Info)
+                        showToast(text(R.string.vm_partial_restore_backup_success), ToastSeverity.Info)
                     }
                 }
                 else -> showToast(
-                    "No usable previous autosave was found. The recovered project is unchanged " +
-                        "and saving stays paused.",
+                    text(R.string.vm_partial_restore_backup_missing),
                     ToastSeverity.Error,
                 )
             }
@@ -2524,7 +2528,7 @@ class EditorViewModel @Inject constructor(
                     decoded.document.state
                 }
                 is ProjectDocumentReadResult.FutureSchema -> {
-                    showToast("Snapshot was created by a newer ClearCut version and was not applied.", ToastSeverity.Error)
+                    showToast(text(R.string.vm_snapshot_future_schema_toast), ToastSeverity.Error)
                     return
                 }
                 is ProjectDocumentReadResult.Corrupt -> {
@@ -4499,13 +4503,29 @@ class EditorViewModel @Inject constructor(
                 rebuildPlayerTimeline()
             }
             if (openPanelOnProblems) {
-                mediaRelinkOpenToast(
+                val toastParts = mediaRelinkOpenToast(
                     missingCount = missingCount,
                     unknownCount = unknownCount,
                     healthBlockingCount = healthBlockingCount,
                     healthWarningCount = healthWarningCount
-                )?.let { message ->
-                    showToast(message, ToastSeverity.Warning)
+                )
+                if (toastParts.isNotEmpty()) {
+                    val renderedParts = toastParts.map { part ->
+                        appContext.resources.getQuantityString(part.quantityResId, part.count, part.count)
+                    }
+                    val joined = renderedParts.drop(1).withIndex().fold(renderedParts.first()) { current, indexedNext ->
+                        val next = indexedNext.value
+                        text(
+                            if (indexedNext.index == renderedParts.lastIndex - 1) {
+                                R.string.vm_media_list_and
+                            } else {
+                                R.string.vm_media_list_comma
+                            },
+                            current,
+                            next,
+                        )
+                    }
+                    showToast(text(R.string.vm_media_check_toast, joined), ToastSeverity.Warning)
                 }
             }
         }

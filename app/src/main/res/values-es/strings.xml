@@ -1549,7 +1549,35 @@
     <string name="panel_audio_mixer_master">MST</string>
     <string name="panel_audio_mixer_mute">m</string>
     <string name="panel_audio_mixer_solo">S</string>
-    <string name="panel_audio_mixer_fx">divisas</string>
+    <string name="panel_audio_mixer_fx">FX</string>
+    <string name="panel_audio_mixer_subtitle">Equilibra los canales, ajusta la posición estéreo y apila efectos en directo desde un solo lugar.</string>
+    <string name="mixer_session_overview">Resumen de la sesión</string>
+    <string name="mixer_selected_track_description">Ajusta %1$s %2$d con medidores en directo y ediciones de efectos debajo.</string>
+    <string name="mixer_empty_selection_description">Desplázate por las tiras para ajustar niveles y abre FX en cualquier pista para configurar la cadena.</string>
+    <string name="mixer_track_selected">%1$s seleccionado</string>
+    <plurals name="mixer_tracks_live">
+        <item quantity="one">%1$d pista activa</item>
+        <item quantity="other">%1$d pistas activas</item>
+    </plurals>
+    <plurals name="mixer_fx_staged">
+        <item quantity="one">%1$d FX preparados</item>
+        <item quantity="other">%1$d FX preparados</item>
+    </plurals>
+    <string name="mixer_channel_strips">Tiras de canal</string>
+    <string name="mixer_channel_strips_description">Cada tira ofrece controles de volumen, silencio y solo renderizados.</string>
+    <string name="mixer_build_chain_description">Crea una cadena para limpiar, ajustar el tono y controlar la intensidad.</string>
+    <string name="mixer_edit_chain_description">Toca un procesador para ajustar sus parámetros o quitarlo de la cadena.</string>
+    <string name="mixer_add_fx">Agregar FX</string>
+    <string name="mixer_level">Nivel</string>
+    <string name="mixer_pan">Panorámica</string>
+    <string name="mixer_master_bus">Bus maestro</string>
+    <string name="mixer_reference_output">Salida de referencia</string>
+    <string name="mixer_adjust_processor_description">Ajusta el procesador seleccionado en tiempo real mientras la vista previa sigue reproduciéndose arriba.</string>
+    <string name="mixer_track_type_video">Vídeo</string>
+    <string name="mixer_track_type_audio">Audio</string>
+    <string name="mixer_track_type_overlay">Superposición</string>
+    <string name="mixer_track_type_text">Texto</string>
+    <string name="mixer_track_type_adjustment">Ajuste</string>
     <string name="panel_cloud_backup_title">Transferencia de archivo</string>
     <string name="panel_cloud_backup_description">Exporte un archivo portátil del proyecto a Descargas/ClearCut/. Impórtelo después para restaurar esta edición en un dispositivo que controle.</string>
     <string name="panel_cloud_backup_estimated_size">Tamaño estimado</string>
@@ -2486,6 +2514,33 @@
     <string name="partial_restore_message">Este proyecto se abrió, pero no se pudieron leer algunas partes:\n\n%1$s\n\nSe pausó el guardado para no sobrescribir lo que falta. Conserva el proyecto tal como se recuperó o prueba el guardado automático anterior, que quizá aún las contenga.</string>
     <string name="partial_restore_keep">Conservar lo recuperado</string>
     <string name="partial_restore_use_backup">Probar el guardado anterior</string>
+    <string name="vm_recovery_partial_toast">No se pudieron restaurar algunos datos del proyecto (%1$s). El guardado está pausado para no sobrescribir la pérdida; elige qué hacer.</string>
+    <string name="vm_recovery_future_schema_toast">El autoguardado fue creado por una versión más reciente de ClearCut. Se dejó intacto para no perder ediciones.</string>
+    <string name="vm_recovery_corrupt_toast">No se pudo leer el autoguardado. Se dejó intacto para que puedas volver a intentar la recuperación.</string>
+    <string name="vm_recovery_not_found_toast">No se encontraron datos de recuperación autoguardados. Se abrirá el proyecto guardado.</string>
+    <string name="vm_partial_restore_keep_toast">Se conservará el proyecto recuperado. Se reanudó el guardado; se perdió %1$s.</string>
+    <string name="vm_partial_restore_backup_incomplete">El autoguardado anterior también está incompleto (%1$s). El guardado sigue pausado.</string>
+    <string name="vm_partial_restore_backup_success">Se restauró por completo el autoguardado anterior. Se reanudó el guardado.</string>
+    <string name="vm_partial_restore_backup_missing">No se encontró ningún autoguardado anterior utilizable. El proyecto recuperado no cambia y el guardado sigue pausado.</string>
+    <plurals name="vm_media_missing_sources">
+        <item quantity="one">%1$d fuente ausente</item>
+        <item quantity="other">%1$d fuentes ausentes</item>
+    </plurals>
+    <plurals name="vm_media_unverified_sources">
+        <item quantity="one">%1$d fuente sin verificar</item>
+        <item quantity="other">%1$d fuentes sin verificar</item>
+    </plurals>
+    <plurals name="vm_media_repair_items">
+        <item quantity="one">%1$d elemento que reparar</item>
+        <item quantity="other">%1$d elementos que reparar</item>
+    </plurals>
+    <plurals name="vm_media_warnings">
+        <item quantity="one">%1$d advertencia</item>
+        <item quantity="other">%1$d advertencias</item>
+    </plurals>
+    <string name="vm_media_list_and">%1$s y %2$s</string>
+    <string name="vm_media_list_comma">%1$s, %2$s</string>
+    <string name="vm_media_check_toast">La comprobación de medios encontró %1$s. Se abrió el Administrador de medios para volver a vincular o reparar antes de editar o exportar.</string>
     <string name="export_failure_setup">No se pudo preparar la exportación.</string>
     <string name="export_failure_setup_fix">Vuelve a abrir el proyecto e inténtalo de nuevo; si se repite, quita el último clip o efecto que añadiste.</string>
     <string name="export_failure_encoder">El codificador de vídeo falló a mitad del proceso.</string>
@@ -2511,6 +2566,7 @@
     <string name="export_failure_unknown_fix">Inténtalo de nuevo y, si se repite, usa «Copiar informe» en la tarjeta de error de exportación.</string>
     <string name="vm_snapshot_deleted_toast">Se eliminó la instantánea «%1$s». Ahora puedes restaurarla.</string>
     <string name="vm_snapshot_restored_toast">Se restauró la instantánea «%1$s».</string>
+    <string name="vm_snapshot_future_schema_toast">La instantánea fue creada por una versión más reciente de ClearCut y no se aplicó.</string>
     <string name="vm_ai_ledger_cleared_toast">Se borró el registro de uso de IA. Deshaz para recuperarlo.</string>
     <string name="project_template_restore_success">Se restauró «%1$s».</string>
     <string name="project_template_restore_success_generic">Plantilla restaurada.</string>
