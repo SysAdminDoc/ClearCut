@@ -30,7 +30,23 @@ abstract class ProjectDatabase : RoomDatabase() {
         }
 
         val MIGRATION_3_4 = object : Migration(3, 4) {
-            override fun migrate(db: SupportSQLiteDatabase) {}
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Version 3's entity already declared thumbnailUri, but the original
+                // 1->3 upgrade path never added it. Fresh v3 databases therefore have
+                // the column while legacy databases upgraded from v1 do not.
+                var hasThumbnailUri = false
+                db.query("PRAGMA table_info(`projects`)").use { cursor ->
+                    while (cursor.moveToNext()) {
+                        if (cursor.getString(1) == "thumbnailUri") {
+                            hasThumbnailUri = true
+                            break
+                        }
+                    }
+                }
+                if (!hasThumbnailUri) {
+                    db.execSQL("ALTER TABLE projects ADD COLUMN thumbnailUri TEXT DEFAULT NULL")
+                }
+            }
         }
 
         val MIGRATION_4_5 = object : Migration(4, 5) {

@@ -143,7 +143,7 @@ class ClearCutSmokeTest {
             compose.assertAccessibilityChecksPass()
             assertTrue(compose.onRoot().captureToImage().width > 0)
         } finally {
-            updateAppearance(AppearanceMode.SYSTEM, DesktopOverride.AUTO)
+            updateAppearance(AppearanceMode.DARK, DesktopOverride.AUTO)
         }
     }
 

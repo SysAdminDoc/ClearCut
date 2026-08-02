@@ -16,9 +16,9 @@ import org.junit.runner.RunWith
 /**
  * Locks ClearCut's committed Room schema chain.
  *
- * Historical schemas are only present from version 4 onward, so versions 1-3
- * cannot be validated by MigrationTestHelper until those JSON snapshots are
- * recovered or recreated from a tagged build.
+ * Versions 1-3 are reconstructed from the original entity and migration DDL.
+ * Every hop is validated separately so a legacy row is checked immediately
+ * after each migration rather than only after the final upgrade.
  */
 @RunWith(AndroidJUnit4::class)
 class ProjectDatabaseMigrationTest {
@@ -33,36 +33,23 @@ class ProjectDatabaseMigrationTest {
 
     @Test
     fun committedSchemaVersionsMigrateToCurrentWithoutProjectLoss() {
-        for (startVersion in COMMITTED_SCHEMA_START_VERSION until CURRENT_SCHEMA_VERSION) {
+        for (startVersion in FIRST_SCHEMA_VERSION until CURRENT_SCHEMA_VERSION) {
             val dbName = "clearcut-migration-$startVersion"
             helper.createDatabase(dbName, startVersion).use { db ->
                 insertProject(db, startVersion)
+                assertProjectRowAtVersion(db, startVersion, startVersion)
             }
 
-            helper.runMigrationsAndValidate(
-                dbName,
-                CURRENT_SCHEMA_VERSION,
-                true,
-                *ProjectDatabase.ALL_MIGRATIONS
-            ).use { db ->
-                db.query(
-                    "SELECT name, notes, deletedAtEpochMs, frameRateNumerator, frameRateDenominator FROM projects WHERE id = ?",
-                    arrayOf(projectId(startVersion))
-                ).use { cursor ->
-                    assertTrue("Project row from v$startVersion should survive", cursor.moveToFirst())
-                    assertEquals("Migrated v$startVersion", cursor.getString(0))
-                    assertEquals(expectedNotes(startVersion), cursor.getString(1))
-                    if (startVersion >= 7) {
-                        assertEquals(DELETED_AT, cursor.getLong(2))
-                    } else {
-                        assertTrue(cursor.isNull(2))
-                    }
-                    assertEquals(24, cursor.getInt(3))
-                    assertEquals(1, cursor.getInt(4))
-                    assertFalse(cursor.moveToNext())
+            for (targetVersion in (startVersion + 1)..CURRENT_SCHEMA_VERSION) {
+                val sourceVersion = targetVersion - 1
+                helper.runMigrationsAndValidate(
+                    dbName,
+                    targetVersion,
+                    true,
+                    ProjectDatabase.ALL_MIGRATIONS[sourceVersion - FIRST_SCHEMA_VERSION]
+                ).use { db ->
+                    assertProjectRowAtVersion(db, startVersion, targetVersion)
                 }
-
-                assertProjectMediaAssetsTableReady(db)
             }
         }
     }
@@ -76,11 +63,7 @@ class ProjectDatabaseMigrationTest {
             "resolution",
             "createdAt",
             "updatedAt",
-            "durationMs",
-            "thumbnailUri",
-            "templateId",
-            "proxyEnabled",
-            "version"
+            "durationMs"
         )
         val values = mutableListOf<Any?>(
             projectId(version),
@@ -90,12 +73,22 @@ class ProjectDatabaseMigrationTest {
             "FHD_1080P",
             1_000L,
             2_000L,
-            3_000L,
-            null,
-            null,
-            1,
-            1
+            3_000L
         )
+        if (version >= 2) {
+            columns += "templateId"
+            values += null
+            columns += "proxyEnabled"
+            values += 1
+        }
+        if (version >= 3) {
+            columns += "version"
+            values += 1
+        }
+        if (version >= 4) {
+            columns += "thumbnailUri"
+            values += null
+        }
         if (version >= 6) {
             columns += "notes"
             values += expectedNotes(version)
@@ -110,6 +103,101 @@ class ProjectDatabaseMigrationTest {
                 "VALUES (${values.joinToString(", ") { "?" }})",
             values.toTypedArray()
         )
+    }
+
+    private fun assertProjectRowAtVersion(
+        db: SupportSQLiteDatabase,
+        sourceVersion: Int,
+        schemaVersion: Int
+    ) {
+        db.query(
+            "SELECT name, frameRate FROM projects WHERE id = ?",
+            arrayOf(projectId(sourceVersion))
+        ).use { cursor ->
+            assertTrue("Project row from v$sourceVersion should survive v$schemaVersion", cursor.moveToFirst())
+            assertEquals("Migrated v$sourceVersion", cursor.getString(0))
+            assertEquals(24, cursor.getInt(1))
+            assertFalse(cursor.moveToNext())
+        }
+
+        if (schemaVersion >= 2) {
+            db.query(
+                "SELECT templateId, proxyEnabled FROM projects WHERE id = ?",
+                arrayOf(projectId(sourceVersion))
+            ).use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertTrue(cursor.isNull(0))
+                assertEquals(if (sourceVersion >= 2) 1 else 0, cursor.getInt(1))
+            }
+        }
+
+        if (schemaVersion >= 3) {
+            db.query(
+                "SELECT version FROM projects WHERE id = ?",
+                arrayOf(projectId(sourceVersion))
+            ).use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals(1, cursor.getInt(0))
+            }
+        }
+
+        if (schemaVersion >= 4) {
+            db.query(
+                "SELECT thumbnailUri FROM projects WHERE id = ?",
+                arrayOf(projectId(sourceVersion))
+            ).use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertTrue(cursor.isNull(0))
+            }
+        }
+
+        if (schemaVersion >= 5) {
+            db.query(
+                "SELECT name FROM sqlite_master WHERE type = 'index' AND name = ?",
+                arrayOf("index_projects_updatedAt")
+            ).use { cursor ->
+                assertTrue("updatedAt index should exist after v5", cursor.moveToFirst())
+            }
+        }
+
+        if (schemaVersion >= 6) {
+            db.query(
+                "SELECT notes FROM projects WHERE id = ?",
+                arrayOf(projectId(sourceVersion))
+            ).use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals(expectedNotes(sourceVersion), cursor.getString(0))
+            }
+        }
+
+        if (schemaVersion >= 7) {
+            db.query(
+                "SELECT deletedAtEpochMs FROM projects WHERE id = ?",
+                arrayOf(projectId(sourceVersion))
+            ).use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                if (sourceVersion >= 7) {
+                    assertEquals(DELETED_AT, cursor.getLong(0))
+                } else {
+                    assertTrue(cursor.isNull(0))
+                }
+            }
+        }
+
+        if (schemaVersion >= 8) {
+            assertProjectMediaAssetsTableReady(db)
+        }
+
+        if (schemaVersion >= 9) {
+            db.query(
+                "SELECT frameRateNumerator, frameRateDenominator FROM projects WHERE id = ?",
+                arrayOf(projectId(sourceVersion))
+            ).use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals(24, cursor.getInt(0))
+                assertEquals(1, cursor.getInt(1))
+            }
+        }
     }
 
     private fun assertProjectMediaAssetsTableReady(db: SupportSQLiteDatabase) {
@@ -135,7 +223,7 @@ class ProjectDatabaseMigrationTest {
     private fun expectedNotes(version: Int) = if (version >= 6) "notes-v$version" else ""
 
     companion object {
-        private const val COMMITTED_SCHEMA_START_VERSION = 4
+        private const val FIRST_SCHEMA_VERSION = 1
         private const val CURRENT_SCHEMA_VERSION = 9
         private const val DELETED_AT = 12_345L
     }
