@@ -2511,6 +2511,18 @@
 
     <!-- Timeline controls -->
     <string name="cd_add_marker">Add Marker</string>
+    <string name="radial_action_add_media">Add Media</string>
+    <string name="radial_action_add_text">Add Text</string>
+    <string name="radial_action_add_audio">Add Audio</string>
+    <string name="radial_action_record">Record</string>
+    <string name="radial_action_snapshot">Snapshot</string>
+    <string name="radial_action_open">Open</string>
+    <string name="radial_action_split">Split</string>
+    <string name="radial_action_duplicate">Duplicate</string>
+    <string name="radial_action_effects">Effects</string>
+    <string name="radial_action_speed">Speed</string>
+    <string name="radial_action_transform">Transform</string>
+    <string name="radial_action_delete">Delete</string>
     <string name="cd_zoom_out">Zoom Out</string>
     <string name="cd_fit_timeline">Fit</string>
     <string name="cd_zoom_in">Zoom In</string>

@@ -20,10 +20,12 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.novacut.editor.R
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -31,27 +33,27 @@ import kotlin.math.sin
 data class RadialAction(
     val id: String,
     val icon: ImageVector,
-    val label: String
+    val labelResId: Int
 )
 
 private val noClipActions = listOf(
-    RadialAction("add_media", Icons.Default.Add, "Add Media"),
-    RadialAction("add_text", Icons.Default.TextFields, "Add Text"),
-    RadialAction("add_audio", Icons.Default.MusicNote, "Add Audio"),
-    RadialAction("record", Icons.Default.FiberManualRecord, "Record"),
-    RadialAction("snapshot", Icons.Default.CameraAlt, "Snapshot")
+    RadialAction("add_media", Icons.Default.Add, R.string.radial_action_add_media),
+    RadialAction("add_text", Icons.Default.TextFields, R.string.radial_action_add_text),
+    RadialAction("add_audio", Icons.Default.MusicNote, R.string.radial_action_add_audio),
+    RadialAction("record", Icons.Default.FiberManualRecord, R.string.radial_action_record),
+    RadialAction("snapshot", Icons.Default.CameraAlt, R.string.radial_action_snapshot)
 )
 
 private fun clipActions(includeOpenCompound: Boolean): List<RadialAction> = buildList {
     if (includeOpenCompound) {
-        add(RadialAction("open_compound", Icons.Default.FileOpen, "Open"))
+        add(RadialAction("open_compound", Icons.Default.FileOpen, R.string.radial_action_open))
     }
-    add(RadialAction("split", Icons.Default.ContentCut, "Split"))
-    add(RadialAction("duplicate", Icons.Default.ContentCopy, "Duplicate"))
-    add(RadialAction("effects", Icons.Default.AutoFixHigh, "Effects"))
-    add(RadialAction("speed", Icons.Default.Speed, "Speed"))
-    add(RadialAction("transform", Icons.Default.Transform, "Transform"))
-    add(RadialAction("delete", Icons.Default.Delete, "Delete"))
+    add(RadialAction("split", Icons.Default.ContentCut, R.string.radial_action_split))
+    add(RadialAction("duplicate", Icons.Default.ContentCopy, R.string.radial_action_duplicate))
+    add(RadialAction("effects", Icons.Default.AutoFixHigh, R.string.radial_action_effects))
+    add(RadialAction("speed", Icons.Default.Speed, R.string.radial_action_speed))
+    add(RadialAction("transform", Icons.Default.Transform, R.string.radial_action_transform))
+    add(RadialAction("delete", Icons.Default.Delete, R.string.radial_action_delete))
 }
 
 @Composable
@@ -105,6 +107,7 @@ fun RadialActionMenu(
         )
 
         actions.forEachIndexed { index, action ->
+            val actionLabel = stringResource(action.labelResId)
             val angleDeg = 360.0 / actions.size * index - 90.0
             val angleRad = Math.toRadians(angleDeg)
             val offsetX = (cos(angleRad) * radiusPx).toFloat()
@@ -122,13 +125,13 @@ fun RadialActionMenu(
                     .scale(scale)
                     .clip(CircleShape)
                     .background(semanticColors.surfaceLow)
-                    .semantics { contentDescription = action.label }
+                    .semantics { contentDescription = actionLabel }
                     .clickable { onAction(action.id) },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     action.icon,
-                    contentDescription = action.label,
+                    contentDescription = actionLabel,
                     tint = semanticColors.subtextStrong,
                     modifier = Modifier.size(20.dp)
                 )
