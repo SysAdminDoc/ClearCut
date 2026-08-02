@@ -4,9 +4,21 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.77.0-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.78.0-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.78.0 Nothing reports work that did not happen
+
+- **Auto Captions stop inventing words.** Without a transcription model the fallback measured *when* speech happened and filled the gap with "[Speech segment N]" — text that was saved to your project, drawn in the preview, burned into the exported video and written to the SRT, under a toast saying captions had been added. The timing is real, so it is now marked on the timeline; the missing transcript is stated outright.
+- **The copyright check stops clearing audio it never checked.** The content-ID pre-check does not contact AcoustID, and reported "No copyright match detected" anyway. It now distinguishes *looked up and found nothing* from *never looked up*, and says which.
+- **A partial project restore no longer overwrites itself.** Deserialization dropped malformed clips, tracks, effects, keyframes, masks, overlays, markers and media assets to the log; the project opened looking whole and the next autosave wrote the truncation back over the only file that still had them. Every drop is now reported with its kind and reason, saving is paused, and you choose between keeping what was recovered and falling back to the previous autosave.
+- **Export failures say what failed.** Seven distinct terminal causes — encoder error, zero-byte output, failed verification, ten-minute stall, service timeout, storage refusal, audio and subtitle failures — collapsed into one "export failed" sentence. Each now has its own message and a remediation line, and the error card offers Copy report.
+- **Every Settings control changes something.** Nine settings persisted, rendered their saved value back, and were read by nothing: haptics, thumbnail cache size, default track height, default aspect ratio and codec, proxy resolution, and the AcoustID key. Appearance "System" is gone — only dark schemes exist, so it read the platform preference and resolved to Dark either way.
+- **AI tools stop reporting failures as good news.** A crashed transcription reported "No speech detected"; a failed motion analysis reported "Video is already stable"; a static zoom with no counter-motion reported "Basic stabilization applied". Each now separates *analysed and found nothing* from *could not analyse*, and the zoom is called what it is: a crop. A disclosure sidecar that fails to write is no longer silent.
+- **Deleting is recoverable again.** Snapshots and the AI usage ledger are undoable, user templates go to a trash you can restore from, and each says what it did.
+- **The dashboard stops flashing "No projects yet"** before your projects load, opening a project that no longer exists reports it instead of creating a blank one in its place, and batch media import counts files off as it goes.
+- The AI requirement sheet's Run button no longer re-opens itself. The release signing certificate is pinned and the build refuses to fall back to the debug key.
 
 ### v3.77.0 Truthful exports, per-ABI downloads, and redacted diagnostics
 
