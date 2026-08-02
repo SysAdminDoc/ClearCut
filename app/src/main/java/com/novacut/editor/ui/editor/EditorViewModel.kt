@@ -532,7 +532,9 @@ data class UndoAction(
     val selectedClipId: String? = null,
     val selectedTrackId: String? = null,
     val selectedClipIds: Set<String> = emptySet(),
-    val aiUsageLedger: List<AiUsageLedger.Entry> = emptyList()
+    val aiUsageLedger: List<AiUsageLedger.Entry> = emptyList(),
+    /** User-created checkpoints. Deleting one used to be permanent and silent. */
+    val projectSnapshots: List<ProjectSnapshot> = emptyList()
 )
 
 /**
@@ -3061,9 +3063,16 @@ class EditorViewModel @Inject constructor(
         saveProject()
     }
 
+    /**
+     * Clear the per-project AI usage ledger. UndoAction already carried the ledger, so
+     * this was permanent only because the snapshot was never taken.
+     */
     fun clearAiUsageLedger() {
+        if (_state.value.aiUsageLedger.isEmpty()) return
+        saveUndoState("Clear AI usage ledger")
         _state.update { it.copyAi { ai -> ai.copy(usageLedger = emptyList()) } }
         saveProject()
+        showToast(text(R.string.vm_ai_ledger_cleared_toast))
     }
 
     private fun generateAiSuggestion(clipId: String?) {
@@ -4906,8 +4915,17 @@ class EditorViewModel @Inject constructor(
     fun showSnapshotHistory() = showPanel(PanelId.SNAPSHOT_HISTORY)
     fun hideSnapshotHistory() = hidePanel(PanelId.SNAPSHOT_HISTORY)
 
+    /**
+     * Delete a user-created checkpoint. This used to destroy the snapshot with no undo,
+     * no confirmation and no feedback -- the one destructive editor action that left no
+     * trace at all. It is now an ordinary undoable edit and says so.
+     */
     fun deleteSnapshot(snapshotId: String) {
+        val snapshot = _state.value.projectSnapshots.firstOrNull { it.id == snapshotId } ?: return
+        saveUndoState("Delete snapshot")
         _state.update { it.copy(projectSnapshots = it.projectSnapshots.filter { s -> s.id != snapshotId }) }
+        saveProject()
+        showToast(text(R.string.vm_snapshot_deleted_toast, snapshot.label))
     }
 
     // --- Multi-select ---
@@ -5387,7 +5405,8 @@ class EditorViewModel @Inject constructor(
             selectedClipId = _state.value.selectedClipId,
             selectedTrackId = _state.value.selectedTrackId,
             selectedClipIds = _state.value.selectedClipIds,
-            aiUsageLedger = _state.value.aiUsageLedger
+            aiUsageLedger = _state.value.aiUsageLedger,
+            projectSnapshots = _state.value.projectSnapshots.toList()
         )
 
         _state.update {
@@ -5407,6 +5426,7 @@ class EditorViewModel @Inject constructor(
                 selectedTrackId = action.selectedTrackId,
                 selectedClipIds = action.selectedClipIds,
                 ai = it.ai.copy(usageLedger = action.aiUsageLedger),
+                projectSnapshots = action.projectSnapshots,
                 undoStack = undoStack.dropLast(1),
                 redoStack = (it.redoStack + currentAction).takeLast(50)
             ))
@@ -5447,7 +5467,8 @@ class EditorViewModel @Inject constructor(
             selectedClipId = _state.value.selectedClipId,
             selectedTrackId = _state.value.selectedTrackId,
             selectedClipIds = _state.value.selectedClipIds,
-            aiUsageLedger = _state.value.aiUsageLedger
+            aiUsageLedger = _state.value.aiUsageLedger,
+            projectSnapshots = _state.value.projectSnapshots.toList()
         )
 
         _state.update {
@@ -5467,6 +5488,7 @@ class EditorViewModel @Inject constructor(
                 selectedTrackId = action.selectedTrackId,
                 selectedClipIds = action.selectedClipIds,
                 ai = it.ai.copy(usageLedger = action.aiUsageLedger),
+                projectSnapshots = action.projectSnapshots,
                 redoStack = redoStack.dropLast(1),
                 undoStack = (it.undoStack + currentAction).takeLast(50)
             ))
@@ -5856,6 +5878,7 @@ class EditorViewModel @Inject constructor(
             selectedTrackId = state.selectedTrackId,
             selectedClipIds = state.selectedClipIds,
             aiUsageLedger = state.aiUsageLedger,
+            projectSnapshots = state.projectSnapshots.toList(),
         )
     }
 

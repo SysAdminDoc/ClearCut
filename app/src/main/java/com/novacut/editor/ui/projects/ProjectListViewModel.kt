@@ -390,6 +390,13 @@ class ProjectListViewModel @Inject constructor(
                     template?.name to templateManager.deleteTemplate(id)
                 }
                 loadUserTemplates()
+                if (deleteResult.second) {
+                    // The template went to the trash, not to nothing. Hold on to its id
+                    // so the sheet can offer a restore -- a user template is authored
+                    // work, and the confirm dialog was previously the only thing between
+                    // a mis-tap and permanent loss.
+                    _restorableTemplate.value = RestorableTemplate(id = id, name = deleteResult.first)
+                }
                 showToast(
                     if (deleteResult.second) {
                         deleteResult.first?.let { templateName ->
@@ -406,6 +413,35 @@ class ProjectListViewModel @Inject constructor(
                 endOperation(operation)
             }
         }
+    }
+
+    /** A template sitting in the trash, still restorable from the templates sheet. */
+    data class RestorableTemplate(val id: String, val name: String?)
+
+    private val _restorableTemplate = MutableStateFlow<RestorableTemplate?>(null)
+    val restorableTemplate: StateFlow<RestorableTemplate?> = _restorableTemplate.asStateFlow()
+
+    /** Put the most recently deleted template back where it was. */
+    fun restoreDeletedTemplate() {
+        val pending = _restorableTemplate.value ?: return
+        viewModelScope.launch {
+            val restored = withContext(Dispatchers.IO) { templateManager.restoreTemplate(pending.id) }
+            _restorableTemplate.value = null
+            loadUserTemplates()
+            showToast(
+                if (restored) {
+                    pending.name?.let { appContext.getString(R.string.project_template_restore_success, it) }
+                        ?: appContext.getString(R.string.project_template_restore_success_generic)
+                } else {
+                    appContext.getString(R.string.project_template_restore_failed)
+                }
+            )
+        }
+    }
+
+    /** Drop the restore offer once the user has moved on. */
+    fun dismissTemplateRestore() {
+        _restorableTemplate.value = null
     }
 
     fun importTemplate(uri: Uri) {

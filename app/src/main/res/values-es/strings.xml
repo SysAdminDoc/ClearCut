@@ -2507,4 +2507,10 @@
     <string name="export_failure_stage_refused">Una etapa del renderizado se negó a continuar.</string>
     <string name="export_failure_stage_refused_fix">Abre los detalles del clip indicado arriba y deshaz la edición que no se pudo renderizar.</string>
     <string name="export_failure_unknown_fix">Inténtalo de nuevo y, si se repite, usa «Copiar informe» en la tarjeta de error de exportación.</string>
+    <string name="vm_snapshot_deleted_toast">Se eliminó la instantánea «%1$s». Deshaz para recuperarla.</string>
+    <string name="vm_ai_ledger_cleared_toast">Se borró el registro de uso de IA. Deshaz para recuperarlo.</string>
+    <string name="project_template_restore_success">Se restauró «%1$s».</string>
+    <string name="project_template_restore_success_generic">Plantilla restaurada.</string>
+    <string name="project_template_restore_failed">No se pudo restaurar esa plantilla.</string>
+    <string name="project_template_restore_action">Deshacer eliminación</string>
 </resources>

@@ -2780,4 +2780,10 @@
     <string name="export_failure_stage_refused">A render stage refused to continue.</string>
     <string name="export_failure_stage_refused_fix">Open the details for the clip named above and undo the edit it could not render.</string>
     <string name="export_failure_unknown_fix">Try again, then use Copy report in the export error card if it repeats.</string>
+    <string name="vm_snapshot_deleted_toast">Snapshot “%1$s” deleted. Undo to bring it back.</string>
+    <string name="vm_ai_ledger_cleared_toast">AI usage ledger cleared. Undo to bring it back.</string>
+    <string name="project_template_restore_success">Restored “%1$s”.</string>
+    <string name="project_template_restore_success_generic">Template restored.</string>
+    <string name="project_template_restore_failed">That template could not be restored.</string>
+    <string name="project_template_restore_action">Undo delete</string>
 </resources>

@@ -125,8 +125,41 @@ class TemplateManager @Inject constructor(
         template
     }
 
+    /**
+     * Move a template to the trash instead of destroying it.
+     *
+     * A user template is work the user authored, and deletion had no undo, no restore
+     * and no second copy — the confirm dialog was the only thing standing between a
+     * mis-tap and permanent loss. The file is now moved aside so [restoreTemplate] can
+     * put it back; [listTemplates] never looks in the trash, so it disappears from the
+     * UI exactly as before.
+     */
     fun deleteTemplate(id: String): Boolean {
-        return templateFileForId(id)?.delete() == true
+        val templateFile = templateFileForId(id) ?: return false
+        if (!templateFile.exists()) return false
+        val trashFile = trashFileForId(id) ?: return templateFile.delete()
+        trashFile.parentFile?.mkdirs()
+        if (trashFile.exists()) trashFile.delete()
+        // A failed rename must not silently leave the template in place while the UI
+        // reports it gone, so fall back to the destructive delete rather than lying.
+        return templateFile.renameTo(trashFile) || templateFile.delete()
+    }
+
+    /** Put a trashed template back. Returns false when nothing is there to restore. */
+    fun restoreTemplate(id: String): Boolean {
+        val trashFile = trashFileForId(id) ?: return false
+        if (!trashFile.exists()) return false
+        val templateFile = templateFileForId(id) ?: return false
+        templateFile.parentFile?.mkdirs()
+        return trashFile.renameTo(templateFile)
+    }
+
+    /** True when [id] is sitting in the trash and can still be restored. */
+    fun isTemplateRestorable(id: String): Boolean = trashFileForId(id)?.exists() == true
+
+    private fun trashFileForId(id: String): File? {
+        val templateFile = templateFileForId(id) ?: return null
+        return File(File(templateDir, "trash"), templateFile.name)
     }
 
     fun loadTemplateState(template: UserTemplate): Pair<List<Track>, List<TextOverlay>>? {

@@ -90,6 +90,7 @@ fun ProjectListScreen(
     val sortMode by viewModel.sortMode.collectAsStateWithLifecycle()
     val filterMode by viewModel.filterMode.collectAsStateWithLifecycle()
     val userTemplates by viewModel.userTemplates.collectAsStateWithLifecycle()
+    val restorableTemplate by viewModel.restorableTemplate.collectAsStateWithLifecycle()
     val toastMessage by viewModel.toastMessage.collectAsStateWithLifecycle()
     val operationState by viewModel.operationState.collectAsStateWithLifecycle()
     val documentImportPreview by viewModel.documentImportPreview.collectAsStateWithLifecycle()
@@ -430,6 +431,11 @@ fun ProjectListScreen(
                 onImportTemplate = importTemplate,
                 onDeleteUserTemplate = viewModel::deleteUserTemplate,
                 userTemplates = userTemplates,
+                restorableTemplateName = restorableTemplate?.let { pending ->
+                    pending.name ?: ctx.getString(R.string.project_template_delete_success_generic)
+                },
+                onRestoreDeletedTemplate = viewModel::restoreDeletedTemplate,
+                onDismissTemplateRestore = viewModel::dismissTemplateRestore,
                 onDismiss = { showTemplateSheet = false },
                 modifier = Modifier.align(Alignment.BottomCenter)
             )
