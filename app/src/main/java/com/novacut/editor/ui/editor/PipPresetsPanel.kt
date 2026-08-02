@@ -35,6 +35,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -43,8 +44,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.novacut.editor.R
 
+enum class PipPresetId {
+    TOP_LEFT,
+    TOP_RIGHT,
+    BOTTOM_LEFT,
+    BOTTOM_RIGHT,
+    CENTER_SMALL,
+    LEFT_HALF,
+    RIGHT_HALF,
+    TOP_HALF,
+    BOTTOM_HALF,
+    FULL_SCREEN,
+    LOWER_THIRD,
+    CIRCLE_CAM
+}
+
 data class PipPreset(
-    val name: String,
+    val id: PipPresetId,
     val posX: Float,
     val posY: Float,
     val scaleX: Float,
@@ -52,18 +68,18 @@ data class PipPreset(
 )
 
 val pipPresets = listOf(
-    PipPreset("Top Left", -0.55f, -0.55f, 0.35f, 0.35f),
-    PipPreset("Top Right", 0.55f, -0.55f, 0.35f, 0.35f),
-    PipPreset("Bottom Left", -0.55f, 0.55f, 0.35f, 0.35f),
-    PipPreset("Bottom Right", 0.55f, 0.55f, 0.35f, 0.35f),
-    PipPreset("Center Small", 0f, 0f, 0.4f, 0.4f),
-    PipPreset("Left Half", -0.5f, 0f, 0.5f, 1f),
-    PipPreset("Right Half", 0.5f, 0f, 0.5f, 1f),
-    PipPreset("Top Half", 0f, -0.5f, 1f, 0.5f),
-    PipPreset("Bottom Half", 0f, 0.5f, 1f, 0.5f),
-    PipPreset("Full Screen", 0f, 0f, 1f, 1f),
-    PipPreset("Lower Third", 0f, 0.6f, 0.8f, 0.25f),
-    PipPreset("Circle Cam", 0.6f, -0.6f, 0.25f, 0.25f)
+    PipPreset(PipPresetId.TOP_LEFT, -0.55f, -0.55f, 0.35f, 0.35f),
+    PipPreset(PipPresetId.TOP_RIGHT, 0.55f, -0.55f, 0.35f, 0.35f),
+    PipPreset(PipPresetId.BOTTOM_LEFT, -0.55f, 0.55f, 0.35f, 0.35f),
+    PipPreset(PipPresetId.BOTTOM_RIGHT, 0.55f, 0.55f, 0.35f, 0.35f),
+    PipPreset(PipPresetId.CENTER_SMALL, 0f, 0f, 0.4f, 0.4f),
+    PipPreset(PipPresetId.LEFT_HALF, -0.5f, 0f, 0.5f, 1f),
+    PipPreset(PipPresetId.RIGHT_HALF, 0.5f, 0f, 0.5f, 1f),
+    PipPreset(PipPresetId.TOP_HALF, 0f, -0.5f, 1f, 0.5f),
+    PipPreset(PipPresetId.BOTTOM_HALF, 0f, 0.5f, 1f, 0.5f),
+    PipPreset(PipPresetId.FULL_SCREEN, 0f, 0f, 1f, 1f),
+    PipPreset(PipPresetId.LOWER_THIRD, 0f, 0.6f, 0.8f, 0.25f),
+    PipPreset(PipPresetId.CIRCLE_CAM, 0.6f, -0.6f, 0.25f, 0.25f)
 )
 
 @Composable
@@ -77,7 +93,7 @@ fun PipPresetsPanel(
 
     PremiumEditorPanel(
         title = stringResource(R.string.pip_title),
-        subtitle = "Stage facecam, commentary, and split-screen layouts without manually repositioning every shot.",
+        subtitle = stringResource(R.string.pip_panel_subtitle),
         icon = Icons.Default.PictureInPicture,
         accent = ClearCutAccents.Sapphire,
         onClose = onClose,
@@ -90,22 +106,26 @@ fun PipPresetsPanel(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 PremiumPanelPill(
-                    text = "${pipPresets.size} layouts",
+                    text = pluralStringResource(
+                        R.plurals.pip_layout_count,
+                        pipPresets.size,
+                        pipPresets.size,
+                    ),
                     accent = ClearCutAccents.Sapphire
                 )
                 PremiumPanelPill(
-                    text = "Corners, splits, hero",
+                    text = stringResource(R.string.pip_layout_categories),
                     accent = ClearCutAccents.Teal
                 )
             }
 
             Text(
-                text = "Layout presets",
+                text = stringResource(R.string.pip_layout_presets),
                 color = ClearCutAccents.Rosewater,
                 style = MaterialTheme.typography.labelLarge
             )
             Text(
-                text = "Choose a starting composition, then fine-tune transform and crop only if the shot needs something custom.",
+                text = stringResource(R.string.pip_layout_presets_description),
                 color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -118,13 +138,13 @@ fun PipPresetsPanel(
 
             PremiumPanelCard(accent = section.accent) {
                 Text(
-                    text = section.title,
+                    text = stringResource(section.titleRes),
                     color = section.accent,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = section.subtitle,
+                    text = stringResource(section.subtitleRes),
                     color = semanticColors.subtext,
                     style = MaterialTheme.typography.bodySmall
                 )
@@ -171,7 +191,7 @@ fun ChromaKeyPanel(
 
     PremiumEditorPanel(
         title = stringResource(R.string.panel_chroma_key_title),
-        subtitle = "Cleanly isolate keyed footage, reduce spill, and refine the matte before you composite it over the timeline.",
+        subtitle = stringResource(R.string.panel_chroma_key_subtitle),
         icon = Icons.Default.Visibility,
         accent = ClearCutAccents.Green,
         onClose = onClose,
@@ -192,21 +212,21 @@ fun ChromaKeyPanel(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 PremiumPanelPill(
-                    text = "Similarity ${formatUnit(similarity)}",
+                    text = stringResource(R.string.chroma_similarity_format, formatUnit(similarity)),
                     accent = ClearCutAccents.Green
                 )
                 PremiumPanelPill(
-                    text = "Smoothness ${formatUnit(smoothness)}",
+                    text = stringResource(R.string.chroma_smoothness_format, formatUnit(smoothness)),
                     accent = ClearCutAccents.Sapphire
                 )
                 PremiumPanelPill(
-                    text = "Spill ${formatUnit(spillSuppression)}",
+                    text = stringResource(R.string.chroma_spill_format, formatUnit(spillSuppression)),
                     accent = ClearCutAccents.Yellow
                 )
             }
 
             Text(
-                text = "Key source",
+                text = stringResource(R.string.chroma_key_source_title),
                 color = ClearCutAccents.Rosewater,
                 style = MaterialTheme.typography.labelLarge
             )
@@ -227,7 +247,7 @@ fun ChromaKeyPanel(
                     )
                 }
                 Text(
-                    text = "Use a clean screen color first, then open the matte view if edges or spill need more attention.",
+                    text = stringResource(R.string.chroma_key_source_description),
                     color = semanticColors.subtext,
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -245,19 +265,19 @@ fun ChromaKeyPanel(
 
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 KeyColorSwatch(
-                    label = "Green",
+                    label = stringResource(R.string.chroma_green),
                     color = Color(0xFF00FF00),
                     selected = keyColorG > 0.8f && keyColorR < 0.3f && keyColorB < 0.3f,
                     onClick = { onKeyColorChanged(0f, 1f, 0f) }
                 )
                 KeyColorSwatch(
-                    label = "Blue",
+                    label = stringResource(R.string.chroma_blue),
                     color = Color(0xFF0044FF),
                     selected = keyColorB > 0.8f && keyColorR < 0.3f && keyColorG < 0.3f,
                     onClick = { onKeyColorChanged(0f, 0f, 1f) }
                 )
                 KeyColorSwatch(
-                    label = "Red",
+                    label = stringResource(R.string.chroma_red),
                     color = Color(0xFFFF0000),
                     selected = keyColorR > 0.8f && keyColorG < 0.3f && keyColorB < 0.3f,
                     onClick = { onKeyColorChanged(1f, 0f, 0f) }
@@ -293,7 +313,7 @@ fun ChromaKeyPanel(
                 style = MaterialTheme.typography.labelLarge
             )
             Text(
-                text = "Raise similarity to catch more of the screen, add smoothness to soften harsh edges, and suppress spill once the matte feels stable.",
+                text = stringResource(R.string.chroma_refinement_description),
                 color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -376,7 +396,7 @@ private fun PipPresetCard(
             }
 
             Text(
-                text = preset.name,
+                text = stringResource(preset.id.nameRes()),
                 color = semanticColors.text,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
@@ -384,7 +404,7 @@ private fun PipPresetCard(
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = pipPresetDescription(preset.name),
+                text = stringResource(preset.id.descriptionRes()),
                 color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodySmall,
                 minLines = 2
@@ -469,8 +489,8 @@ private fun ChromaSlider(
 }
 
 private data class PipPresetSection(
-    val title: String,
-    val subtitle: String,
+    val titleRes: Int,
+    val subtitleRes: Int,
     val accent: Color,
     val presets: List<PipPreset>
 )
@@ -478,39 +498,69 @@ private data class PipPresetSection(
 @Composable
 private fun rememberPipSections(): List<PipPresetSection> = listOf(
     PipPresetSection(
-        title = "Corners and cams",
-        subtitle = "Use these for facecam reactions, webcam inserts, and creator commentary.",
+        titleRes = R.string.pip_section_corners_title,
+        subtitleRes = R.string.pip_section_corners_description,
         accent = ClearCutAccents.Sapphire,
-        presets = pipPresets.filter { it.name in setOf("Top Left", "Top Right", "Bottom Left", "Bottom Right", "Circle Cam", "Center Small") }
+        presets = pipPresets.filter {
+            it.id in setOf(
+                PipPresetId.TOP_LEFT,
+                PipPresetId.TOP_RIGHT,
+                PipPresetId.BOTTOM_LEFT,
+                PipPresetId.BOTTOM_RIGHT,
+                PipPresetId.CIRCLE_CAM,
+                PipPresetId.CENTER_SMALL,
+            )
+        }
     ),
     PipPresetSection(
-        title = "Split layouts",
-        subtitle = "Balanced side-by-side and stacked frames for interviews, explainers, and comparisons.",
+        titleRes = R.string.pip_section_split_title,
+        subtitleRes = R.string.pip_section_split_description,
         accent = ClearCutAccents.Green,
-        presets = pipPresets.filter { it.name in setOf("Left Half", "Right Half", "Top Half", "Bottom Half") }
+        presets = pipPresets.filter {
+            it.id in setOf(
+                PipPresetId.LEFT_HALF,
+                PipPresetId.RIGHT_HALF,
+                PipPresetId.TOP_HALF,
+                PipPresetId.BOTTOM_HALF,
+            )
+        }
     ),
     PipPresetSection(
-        title = "Hero treatments",
-        subtitle = "Larger overlays for lower-thirds, focus windows, and full takeover layouts.",
+        titleRes = R.string.pip_section_hero_title,
+        subtitleRes = R.string.pip_section_hero_description,
         accent = ClearCutAccents.Peach,
-        presets = pipPresets.filter { it.name in setOf("Lower Third", "Full Screen") }
+        presets = pipPresets.filter { it.id in setOf(PipPresetId.LOWER_THIRD, PipPresetId.FULL_SCREEN) }
     )
 )
 
-private fun pipPresetDescription(name: String): String = when (name) {
-    "Top Left" -> "Classic reaction-cam position with the frame out of the subtitle lane."
-    "Top Right" -> "Great when lower-third graphics or captions sit on the left."
-    "Bottom Left" -> "Keeps the inset near the presenter while leaving the top clean."
-    "Bottom Right" -> "A familiar commentary layout for tutorials and gaming edits."
-    "Center Small" -> "Floating inset for quick comparisons or cutaway emphasis."
-    "Left Half" -> "Balanced split for side-by-side demos or dual interviews."
-    "Right Half" -> "Use when the main subject should remain left-weighted."
-    "Top Half" -> "Stacked layout for narration over reference footage."
-    "Bottom Half" -> "Ideal for screen records with presenter footage beneath."
-    "Full Screen" -> "Take over the frame and reset the clip to a neutral full-size layout."
-    "Lower Third" -> "Wide overlay band for presenter boxes and callout plates."
-    "Circle Cam" -> "Compact round-cam style framing for creator and stream looks."
-    else -> "Start with this layout, then refine scale and transform if needed."
+private fun PipPresetId.nameRes(): Int = when (this) {
+    PipPresetId.TOP_LEFT -> R.string.pip_preset_top_left_name
+    PipPresetId.TOP_RIGHT -> R.string.pip_preset_top_right_name
+    PipPresetId.BOTTOM_LEFT -> R.string.pip_preset_bottom_left_name
+    PipPresetId.BOTTOM_RIGHT -> R.string.pip_preset_bottom_right_name
+    PipPresetId.CENTER_SMALL -> R.string.pip_preset_center_small_name
+    PipPresetId.LEFT_HALF -> R.string.pip_preset_left_half_name
+    PipPresetId.RIGHT_HALF -> R.string.pip_preset_right_half_name
+    PipPresetId.TOP_HALF -> R.string.pip_preset_top_half_name
+    PipPresetId.BOTTOM_HALF -> R.string.pip_preset_bottom_half_name
+    PipPresetId.FULL_SCREEN -> R.string.pip_preset_full_screen_name
+    PipPresetId.LOWER_THIRD -> R.string.pip_preset_lower_third_name
+    PipPresetId.CIRCLE_CAM -> R.string.pip_preset_circle_cam_name
+}
+
+private fun PipPresetId.descriptionRes(): Int = when (this) {
+    PipPresetId.TOP_LEFT -> R.string.pip_preset_top_left_description
+    PipPresetId.TOP_RIGHT -> R.string.pip_preset_top_right_description
+    PipPresetId.BOTTOM_LEFT -> R.string.pip_preset_bottom_left_description
+    PipPresetId.BOTTOM_RIGHT -> R.string.pip_preset_bottom_right_description
+    PipPresetId.CENTER_SMALL -> R.string.pip_preset_center_small_description
+    PipPresetId.LEFT_HALF -> R.string.pip_preset_left_half_description
+    PipPresetId.RIGHT_HALF -> R.string.pip_preset_right_half_description
+    PipPresetId.TOP_HALF -> R.string.pip_preset_top_half_description
+    PipPresetId.BOTTOM_HALF -> R.string.pip_preset_bottom_half_description
+    PipPresetId.FULL_SCREEN -> R.string.pip_preset_full_screen_description
+    PipPresetId.LOWER_THIRD -> R.string.pip_preset_lower_third_description
+    PipPresetId.CIRCLE_CAM -> R.string.pip_preset_circle_cam_description
 }
 
 private fun formatUnit(value: Float): String = "%.2f".format(value)

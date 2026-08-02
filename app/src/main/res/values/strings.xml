@@ -1505,6 +1505,44 @@
     <string name="pip_title">Picture-in-Picture</string>
     <string name="pip_layout">Layout</string>
     <string name="pip_close_cd">Close PiP panel</string>
+    <string name="pip_panel_subtitle">Stage facecam, commentary, and split-screen layouts without manually repositioning every shot.</string>
+    <plurals name="pip_layout_count">
+        <item quantity="one">%1$d layout</item>
+        <item quantity="other">%1$d layouts</item>
+    </plurals>
+    <string name="pip_layout_categories">Corners, splits, hero</string>
+    <string name="pip_layout_presets">Layout presets</string>
+    <string name="pip_layout_presets_description">Choose a starting composition, then fine-tune transform and crop only if the shot needs something custom.</string>
+    <string name="pip_section_corners_title">Corners and cams</string>
+    <string name="pip_section_corners_description">Use these for facecam reactions, webcam inserts, and creator commentary.</string>
+    <string name="pip_section_split_title">Split layouts</string>
+    <string name="pip_section_split_description">Balanced side-by-side and stacked frames for interviews, explainers, and comparisons.</string>
+    <string name="pip_section_hero_title">Hero treatments</string>
+    <string name="pip_section_hero_description">Larger overlays for lower-thirds, focus windows, and full takeover layouts.</string>
+    <string name="pip_preset_top_left_name">Top Left</string>
+    <string name="pip_preset_top_left_description">Classic reaction-cam position with the frame out of the subtitle lane.</string>
+    <string name="pip_preset_top_right_name">Top Right</string>
+    <string name="pip_preset_top_right_description">Great when lower-third graphics or captions sit on the left.</string>
+    <string name="pip_preset_bottom_left_name">Bottom Left</string>
+    <string name="pip_preset_bottom_left_description">Keeps the inset near the presenter while leaving the top clean.</string>
+    <string name="pip_preset_bottom_right_name">Bottom Right</string>
+    <string name="pip_preset_bottom_right_description">A familiar commentary layout for tutorials and gaming edits.</string>
+    <string name="pip_preset_center_small_name">Center Small</string>
+    <string name="pip_preset_center_small_description">Floating inset for quick comparisons or cutaway emphasis.</string>
+    <string name="pip_preset_left_half_name">Left Half</string>
+    <string name="pip_preset_left_half_description">Balanced split for side-by-side demos or dual interviews.</string>
+    <string name="pip_preset_right_half_name">Right Half</string>
+    <string name="pip_preset_right_half_description">Use when the main subject should remain left-weighted.</string>
+    <string name="pip_preset_top_half_name">Top Half</string>
+    <string name="pip_preset_top_half_description">Stacked layout for narration over reference footage.</string>
+    <string name="pip_preset_bottom_half_name">Bottom Half</string>
+    <string name="pip_preset_bottom_half_description">Ideal for screen records with presenter footage beneath.</string>
+    <string name="pip_preset_full_screen_name">Full Screen</string>
+    <string name="pip_preset_full_screen_description">Take over the frame and reset the clip to a neutral full-size layout.</string>
+    <string name="pip_preset_lower_third_name">Lower Third</string>
+    <string name="pip_preset_lower_third_description">Wide overlay band for presenter boxes and callout plates.</string>
+    <string name="pip_preset_circle_cam_name">Circle Cam</string>
+    <string name="pip_preset_circle_cam_description">Compact round-cam style framing for creator and stream looks.</string>
 
     <!-- ChapterMarkerPanel -->
     <string name="chapter_title">Chapters</string>
@@ -1827,6 +1865,7 @@
     <string name="panel_chroma_key_alpha_matte">Alpha Matte</string>
     <string name="panel_chroma_key_color">Key Color</string>
     <string name="panel_chroma_key_refinement">Refinement</string>
+    <string name="panel_chroma_key_subtitle">Cleanly isolate keyed footage, reduce spill, and refine the matte before you composite it over the timeline.</string>
 
     <!-- AutoEditPanel -->
     <string name="panel_auto_edit_generating">Generating highlight reel\u2026</string>
@@ -2249,6 +2288,12 @@
     <string name="chroma_similarity">Similarity</string>
     <string name="chroma_smoothness">Smoothness</string>
     <string name="chroma_spill_suppress">Spill Suppress</string>
+    <string name="chroma_similarity_format">Similarity %1$s</string>
+    <string name="chroma_smoothness_format">Smoothness %1$s</string>
+    <string name="chroma_spill_format">Spill %1$s</string>
+    <string name="chroma_key_source_title">Key source</string>
+    <string name="chroma_key_source_description">Use a clean screen color first, then open the matte view if edges or spill need more attention.</string>
+    <string name="chroma_refinement_description">Raise similarity to catch more of the screen, add smoothness to soften harsh edges, and suppress spill once the matte feels stable.</string>
 
     <!-- RenderPreviewSheet -->
     <string name="render_re_encode_duration">Re-encode: %1$s</string>
