@@ -29,6 +29,23 @@ class OpenSourceLicensesTest {
     }
 
     @Test
+    fun noticeVersionsComeFromTheCapabilityRegistry() {
+        assertEquals(CapabilityRegistry.notices, OpenSourceLicenses.notices)
+        assertEquals("5.4.0", OpenSourceLicenses.noticeForArtifact("com.squareup.okhttp3:okhttp")?.version)
+        assertEquals("3.3.0", OpenSourceLicenses.noticeForArtifact("io.coil-kt.coil3:coil-compose")?.version)
+        assertEquals("2.60.1", OpenSourceLicenses.noticeForArtifact("com.google.dagger:hilt-android")?.version)
+    }
+
+    @Test
+    fun capabilityRegistrySeparatesReachabilityFromPublicStatus() {
+        val objectRemoval = requireNotNull(CapabilityRegistry.capabilityFor("object_removal"))
+
+        assertEquals("not_wired", objectRemoval.status)
+        assertEquals("not_reachable", objectRemoval.reachability)
+        assertEquals("available", requireNotNull(CapabilityRegistry.capabilityFor("audio_denoise")).status)
+    }
+
+    @Test
     fun ffmpegKitNoticePreservesSourceOfferAndGplWarning() {
         val notice = OpenSourceLicenses.ffmpegKitNotice()
 

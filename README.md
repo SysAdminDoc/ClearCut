@@ -360,6 +360,7 @@ Planning files are local-only in the development checkout:
 - **Noise reduction** — DeepFilterNet 3 (bundled AAR, checksum-pinned) with a spectral-gate fallback; 5 modes (off/light/moderate/aggressive/spectral gate). Reports applied / no-op / unavailable / failed rather than assuming success
 
 ### AI Tools
+<!-- capability-registry:ai-tools:begin -->
 | Tool | Engine | On-Device? |
 |------|--------|------------|
 | **Auto Captions** | ONNX Runtime Whisper tiny.en (English; multilingual Sherpa/Whisper path gated) | Yes |
@@ -376,6 +377,7 @@ Planning files are local-only in the development checkout:
 | **Auto Color** | Histogram-based brightness/contrast/saturation/temperature | Yes |
 | **Motion Tracking** | Template matching with position keyframe generation | Yes |
 | **Audio Denoise** | DeepFilterNet 3 with spectral-gate fallback | Yes |
+<!-- capability-registry:ai-tools:end -->
 
 ### Text & Titles
 - Rich text overlays with 10+ animation styles
@@ -474,7 +476,7 @@ Planning files are local-only in the development checkout:
 ```
 com.novacut.editor/
 ├── ai/                     # AI features (captions, scene detect, stabilize, auto-edit)
-├── engine/                 # Core engines (85 injectable singletons across 176 files)
+├── engine/                 # Core engines (85 injectable singletons across 178 files)
 │   ├── VideoEngine          # Media3 playback + export
 │   ├── AudioEngine          # Waveform extraction + PCM processing
 │   ├── AudioEffectsEngine   # DSP chain (EQ, compressor, chorus, etc.)
@@ -612,17 +614,22 @@ Android developer verification is not complete. Starting in September 2026, Goog
 ### Dependencies
 Key external dependencies currently in `build.gradle.kts`:
 
+<!-- capability-registry:dependencies:begin -->
 | Dependency | Version | Purpose |
 |-----------|---------|---------|
-| ONNX Runtime | 1.26.0 | Whisper ASR + LaMa inpainting |
-| Sherpa-ONNX | 1.13.2 target | Future native Moonshine v2 ASR path; official AAR is a GitHub release asset, not a Maven dependency |
-| SAM 2.1 ONNX | Targeted | Future tracked-mask path via explicit model download; MobileSAM remains the small-device fallback |
-| MediaPipe | 0.10.35 | Selfie segmentation |
+| ONNX Runtime | 1.26.0 | Whisper ASR and LaMa inpainting |
+| MediaPipe | 0.10.35 | Selfie segmentation and smart reframe |
 | Lottie Compose | 6.7.1 | Animated title templates |
-| AndroidX Benchmark/ProfileInstaller | 1.5.0-beta01 / 1.4.1 | Baseline Profile generation and release profile install |
 | OkHttp | 5.4.0 | Model downloads and future opt-in provider calls |
-| FFmpegKitNext / FFmpeg | 8.1.0 / 8.1.2 | Source-pinned GPL build for FFmpeg-backed paths not covered by Media3 Transformer |
+| Media3 | 1.10.1 | Transformer, ExoPlayer, effects, and muxing |
+| Coil Compose | 3.3.0 | Image and video thumbnails |
+| Hilt / Dagger | 2.60.1 | Dependency injection |
 | Android DeepFilterNet | 0.0.8 | On-device voiceover noise reduction |
+| FFmpegKitNext / FFmpeg | 8.1.0 (FFmpeg 8.1.2) | GPL FFmpeg paths not covered by Media3 Transformer |
+| AndroidX Benchmark/ProfileInstaller | 1.5.0-beta01 / 1.4.1 | Baseline profile generation and installation |
+| Sherpa-ONNX | 1.13.2 target | Future native Moonshine v2 ASR path (target) |
+| SAM 2.1 ONNX | Targeted | Future tracked-mask path; MobileSAM fallback (target) |
+<!-- capability-registry:dependencies:end -->
 
 ### Distribution and Third-party Notices
 

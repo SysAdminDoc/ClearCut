@@ -9,6 +9,8 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
+from generate_capability_registry import RegistryError, check_or_write, load_registry
+
 
 ROOT = Path(__file__).resolve().parents[1]
 AI_REQUIREMENTS = ROOT / "app" / "src" / "main" / "java" / "com" / "novacut" / "editor" / "engine" / "AiToolRequirements.kt"
@@ -206,6 +208,13 @@ def direct_api_upload_ready(source: str) -> bool:
 
 
 def validate(root: Path = ROOT) -> list[ClaimViolation]:
+    registry_path = root / "scripts" / "capability_registry.json"
+    if registry_path.is_file():
+        try:
+            registry = load_registry(root)
+            check_or_write(registry, root, check=True)
+        except RegistryError as error:
+            raise ClaimError(f"capability registry is stale or inconsistent: {error}") from error
     ai_source = read_text(root / AI_REQUIREMENTS.relative_to(ROOT))
     c2pa_source = read_text(root / C2PA_ENGINE.relative_to(ROOT))
     direct_publish_source = read_text(root / DIRECT_PUBLISH_ENGINE.relative_to(ROOT))

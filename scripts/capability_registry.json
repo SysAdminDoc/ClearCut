@@ -1,0 +1,310 @@
+{
+  "schemaVersion": 1,
+  "dependencies": [
+    {
+      "id": "onnxruntime",
+      "label": "ONNX Runtime",
+      "version": "1.26.0",
+      "coordinate": "com.microsoft.onnxruntime:onnxruntime-android",
+      "catalogKeys": ["onnxruntime"],
+      "purpose": "Whisper ASR and LaMa inpainting",
+      "publicStatus": "bundled",
+      "notice": {
+        "name": "ONNX Runtime Android",
+        "licenseName": "MIT License",
+        "licenseText": "MIT License. Redistribution must keep the copyright notice and permission notice, and the software is provided without warranties.",
+        "licenseUrl": "https://opensource.org/licenses/MIT",
+        "projectUrl": "https://microsoft.github.io/onnxruntime/"
+      }
+    },
+    {
+      "id": "mediapipe",
+      "label": "MediaPipe",
+      "version": "0.10.35",
+      "coordinate": "com.google.mediapipe:tasks-vision",
+      "catalogKeys": ["mediapipe"],
+      "purpose": "Selfie segmentation and smart reframe",
+      "publicStatus": "bundled",
+      "notice": {
+        "name": "MediaPipe Tasks Vision",
+        "licenseName": "The Apache Software License, Version 2.0",
+        "licenseText": "Apache License 2.0. Redistribution must keep the license and required notices, and the software is provided without warranties under the Apache terms.",
+        "licenseUrl": "https://www.apache.org/licenses/LICENSE-2.0.txt",
+        "projectUrl": "https://mediapipe.dev/"
+      }
+    },
+    {
+      "id": "lottie",
+      "label": "Lottie Compose",
+      "version": "6.7.1",
+      "coordinate": "com.airbnb.android:lottie-compose",
+      "catalogKeys": ["lottieCompose"],
+      "purpose": "Animated title templates",
+      "publicStatus": "bundled",
+      "notice": {
+        "name": "Lottie Compose",
+        "licenseName": "Apache-2.0",
+        "licenseText": "Apache License 2.0. Redistribution must keep the license and required notices, and the software is provided without warranties under the Apache terms.",
+        "licenseUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+        "projectUrl": "https://github.com/airbnb/lottie-android"
+      }
+    },
+    {
+      "id": "okhttp",
+      "label": "OkHttp",
+      "version": "5.4.0",
+      "coordinate": "com.squareup.okhttp3:okhttp",
+      "catalogKeys": ["okhttp"],
+      "purpose": "Model downloads and future opt-in provider calls",
+      "publicStatus": "bundled",
+      "notice": {
+        "name": "OkHttp",
+        "licenseName": "The Apache Software License, Version 2.0",
+        "licenseText": "Apache License 2.0. Redistribution must keep the license and required notices, and the software is provided without warranties under the Apache terms.",
+        "licenseUrl": "https://www.apache.org/licenses/LICENSE-2.0.txt",
+        "projectUrl": "https://github.com/square/okhttp"
+      }
+    },
+    {
+      "id": "media3",
+      "label": "Media3",
+      "version": "1.10.1",
+      "coordinate": "androidx.media3",
+      "catalogKeys": ["media3"],
+      "purpose": "Transformer, ExoPlayer, effects, and muxing",
+      "publicStatus": "bundled",
+      "notice": {
+        "name": "Media3",
+        "licenseName": "The Apache Software License, Version 2.0",
+        "licenseText": "Apache License 2.0. Redistribution must keep the license and required notices, and the software is provided without warranties under the Apache terms.",
+        "licenseUrl": "https://www.apache.org/licenses/LICENSE-2.0.txt",
+        "projectUrl": "https://github.com/androidx/media"
+      }
+    },
+    {
+      "id": "coil",
+      "label": "Coil Compose",
+      "version": "3.3.0",
+      "coordinate": "io.coil-kt.coil3:coil-compose",
+      "catalogKeys": ["coil"],
+      "purpose": "Image and video thumbnails",
+      "publicStatus": "bundled",
+      "notice": {
+        "name": "Coil Compose",
+        "licenseName": "The Apache License, Version 2.0",
+        "licenseText": "Apache License 2.0. Redistribution must keep the license and required notices, and the software is provided without warranties under the Apache terms.",
+        "licenseUrl": "https://www.apache.org/licenses/LICENSE-2.0.txt",
+        "projectUrl": "https://github.com/coil-kt/coil"
+      }
+    },
+    {
+      "id": "hilt",
+      "label": "Hilt / Dagger",
+      "version": "2.60.1",
+      "coordinate": "com.google.dagger:hilt-android",
+      "catalogKeys": ["hilt"],
+      "purpose": "Dependency injection",
+      "publicStatus": "bundled",
+      "notice": {
+        "name": "Hilt / Dagger",
+        "licenseName": "Apache 2.0",
+        "licenseText": "Apache License 2.0. Redistribution must keep the license and required notices, and the software is provided without warranties under the Apache terms.",
+        "licenseUrl": "https://www.apache.org/licenses/LICENSE-2.0.txt",
+        "projectUrl": "https://github.com/google/dagger"
+      }
+    },
+    {
+      "id": "deepfilternet",
+      "label": "Android DeepFilterNet",
+      "version": "0.0.8",
+      "coordinate": "io.github.kaleyravideo:android-deepfilternet",
+      "catalogKeys": ["deepfilternet"],
+      "purpose": "On-device voiceover noise reduction",
+      "publicStatus": "bundled",
+      "notice": {
+        "name": "Android DeepFilterNet",
+        "licenseName": "The Apache License, Version 2.0",
+        "licenseText": "Apache License 2.0. Redistribution must keep the license and required notices, and the software is provided without warranties under the Apache terms.",
+        "licenseUrl": "https://www.apache.org/licenses/LICENSE-2.0.txt",
+        "projectUrl": "https://github.com/KaleyraVideo/AndroidDeepFilterNet",
+        "complianceNote": "Bundled model variant derived from DeepFilterNet. Keep the relevant Apache/MIT notices with redistributed builds that include the native library and bundled model."
+      }
+    },
+    {
+      "id": "ffmpeg",
+      "label": "FFmpegKitNext / FFmpeg",
+      "version": "8.1.0 (FFmpeg 8.1.2)",
+      "coordinate": "third_party/ffmpeg-kit-next/ffmpeg-kit-next-8.1.0.aar",
+      "catalogKeys": [],
+      "purpose": "GPL FFmpeg paths not covered by Media3 Transformer",
+      "publicStatus": "bundled",
+      "notice": {
+        "name": "FFmpegKitNext / FFmpeg",
+        "licenseName": "GNU General Public License Version 3",
+        "licenseText": "This source-pinned build enables GPL components including x264. Redistribution must preserve the packaged licenses and corresponding-source offer.",
+        "licenseUrl": "https://www.gnu.org/licenses/gpl-3.0.txt",
+        "projectUrl": "https://github.com/arthenica/ffmpeg-kit-next",
+        "sourceOfferText": "Exact corresponding-source recipe for this GPL v3.0 build:\nhttps://github.com/arthenica/ffmpeg-kit-next/tree/3e223118e6e8fb6208693ecf3952e77cd096f587\nCommand: ./nix-android.sh -p android-r27d --enable-gpl --enable-x264 --enable-libass --jobs=8\nThe complete recipe, checksums, enabled components, and source revisions are recorded in third_party/ffmpeg-kit-next/native-lock.json and the installed application resource res/raw/ffmpeg_kit_next_source_offer.txt.",
+        "complianceNote": "The AAR packages res/raw/license.txt, res/raw/license_*.txt, and res/raw/source.txt; ClearCut additionally packages res/raw/ffmpeg_kit_next_source_offer.txt with its exact source recipe."
+      }
+    },
+    {
+      "id": "benchmark_profile",
+      "label": "AndroidX Benchmark/ProfileInstaller",
+      "version": "1.5.0-beta01 / 1.4.1",
+      "coordinate": "androidx.benchmark:benchmark-macro-junit4 / androidx.profileinstaller:profileinstaller",
+      "catalogKeys": ["androidxBenchmark", "androidxProfileInstaller"],
+      "purpose": "Baseline profile generation and installation",
+      "publicStatus": "bundled"
+    },
+    {
+      "id": "sherpa_target",
+      "label": "Sherpa-ONNX",
+      "version": "1.13.2 target",
+      "coordinate": "official GitHub release AAR",
+      "catalogKeys": [],
+      "purpose": "Future native Moonshine v2 ASR path",
+      "publicStatus": "target"
+    },
+    {
+      "id": "sam_target",
+      "label": "SAM 2.1 ONNX",
+      "version": "Targeted",
+      "coordinate": "explicit model download",
+      "catalogKeys": [],
+      "purpose": "Future tracked-mask path; MobileSAM fallback",
+      "publicStatus": "target"
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "auto_captions",
+      "name": "Auto Captions",
+      "engine": "ONNX Runtime Whisper tiny.en (English; multilingual Sherpa/Whisper path gated)",
+      "onDevice": "Yes",
+      "status": "available",
+      "reachability": "model_gated",
+      "evidence": [{"path": "app/src/main/java/com/novacut/editor/engine/AiToolRequirements.kt", "terms": ["Tool.AUTO_CAPTIONS", "Availability.MODEL_DOWNLOAD_REQUIRED"]}]
+    },
+    {
+      "id": "background_removal",
+      "name": "Background Removal",
+      "engine": "MediaPipe Selfie Segmentation (~1-7MB, ~30fps)",
+      "onDevice": "Yes",
+      "status": "available",
+      "reachability": "model_gated",
+      "evidence": [{"path": "app/src/main/java/com/novacut/editor/engine/AiToolRequirements.kt", "terms": ["Tool.REMOVE_BACKGROUND", "Availability.MODEL_DOWNLOAD_REQUIRED"]}]
+    },
+    {
+      "id": "ai_green_screen",
+      "name": "AI Green Screen",
+      "engine": "Planned -- RobustVideoMatting (requires model integration)",
+      "onDevice": "Planned",
+      "status": "planned",
+      "reachability": "dependency_missing",
+      "evidence": [{"path": "app/src/main/java/com/novacut/editor/engine/AiToolRequirements.kt", "terms": ["Tool.AI_BACKGROUND", "Availability.DEPENDENCY_MISSING"]}]
+    },
+    {
+      "id": "object_removal",
+      "name": "Object Removal",
+      "engine": "LaMa-Dilated inpainting engine is implemented but not wired to the UI -- the tool reports it is unavailable",
+      "onDevice": "Not wired",
+      "status": "not_wired",
+      "reachability": "not_reachable",
+      "evidence": [
+        {"path": "app/src/main/java/com/novacut/editor/engine/AiToolRequirements.kt", "terms": ["Tool.OBJECT_REMOVE", "Availability.MODEL_DOWNLOAD_REQUIRED"]},
+        {"path": "app/src/main/java/com/novacut/editor/engine/InpaintingEngine.kt", "terms": ["fun inpaintFrame", "fun inpaintVideo"]}
+      ]
+    },
+    {
+      "id": "video_upscaling",
+      "name": "Video Upscaling",
+      "engine": "Planned -- Real-ESRGAN (requires model integration)",
+      "onDevice": "Planned",
+      "status": "planned",
+      "reachability": "dependency_missing",
+      "evidence": [{"path": "app/src/main/java/com/novacut/editor/engine/AiToolRequirements.kt", "terms": ["Tool.AI_UPSCALE", "Availability.DEPENDENCY_MISSING"]}]
+    },
+    {
+      "id": "frame_interpolation",
+      "name": "Frame Interpolation",
+      "engine": "Planned -- RIFE v4.6 (requires NCNN dependency)",
+      "onDevice": "Planned",
+      "status": "planned",
+      "reachability": "dependency_missing",
+      "evidence": [{"path": "app/src/main/java/com/novacut/editor/engine/AiToolRequirements.kt", "terms": ["Tool.FRAME_INTERP", "Availability.DEPENDENCY_MISSING"]}]
+    },
+    {
+      "id": "style_transfer",
+      "name": "Style Transfer",
+      "engine": "Planned -- AnimeGANv2 + Fast NST (requires model integration)",
+      "onDevice": "Planned",
+      "status": "planned",
+      "reachability": "dependency_missing",
+      "evidence": [{"path": "app/src/main/java/com/novacut/editor/engine/AiToolRequirements.kt", "terms": ["Tool.AI_STYLE", "Availability.DEPENDENCY_MISSING"]}]
+    },
+    {
+      "id": "stabilization",
+      "name": "Stabilization",
+      "engine": "Planned -- OpenCV (requires dependency)",
+      "onDevice": "Planned",
+      "status": "planned",
+      "reachability": "dependency_missing",
+      "evidence": [{"path": "app/src/main/java/com/novacut/editor/engine/AiToolRequirements.kt", "terms": ["Tool.AI_STABILIZE", "Availability.DEPENDENCY_MISSING"]}]
+    },
+    {
+      "id": "smart_reframe",
+      "name": "Smart Reframe",
+      "engine": "MediaPipe BlazeFace detection, EMA-smoothed crop trajectory, 3 strategies (stationary/pan/track)",
+      "onDevice": "Yes",
+      "status": "available",
+      "reachability": "reachable",
+      "evidence": [{"path": "app/src/main/java/com/novacut/editor/ui/editor/EditorViewModel.kt", "terms": ["smartReframeEngine.analyzeForReframe"]}]
+    },
+    {
+      "id": "tap_to_segment",
+      "name": "Tap-to-Segment",
+      "engine": "Planned -- SAM 2.1 Hiera Tiny target with MobileSAM fallback",
+      "onDevice": "Planned",
+      "status": "planned",
+      "reachability": "dependency_missing",
+      "evidence": [{"path": "app/src/main/java/com/novacut/editor/engine/AiToolRequirements.kt", "terms": ["Tool.TAP_SEGMENT", "Availability.DEPENDENCY_MISSING"]}]
+    },
+    {
+      "id": "scene_detection",
+      "name": "Scene Detection",
+      "engine": "Content-aware frame difference analysis with auto-split",
+      "onDevice": "Yes",
+      "status": "available",
+      "reachability": "reachable",
+      "evidence": [{"path": "app/src/main/java/com/novacut/editor/ai/AiFeatures.kt", "terms": ["suspend fun detectScenes"]}]
+    },
+    {
+      "id": "auto_color",
+      "name": "Auto Color",
+      "engine": "Histogram-based brightness/contrast/saturation/temperature",
+      "onDevice": "Yes",
+      "status": "available",
+      "reachability": "reachable",
+      "evidence": [{"path": "app/src/main/java/com/novacut/editor/ui/editor/AiToolsDelegate.kt", "terms": ["aiFeatures.autoColorCorrect"]}]
+    },
+    {
+      "id": "motion_tracking",
+      "name": "Motion Tracking",
+      "engine": "Template matching with position keyframe generation",
+      "onDevice": "Yes",
+      "status": "available",
+      "reachability": "reachable",
+      "evidence": [{"path": "app/src/main/java/com/novacut/editor/ui/editor/TimelineEditing.kt", "terms": ["splitMotionTracking"]}]
+    },
+    {
+      "id": "audio_denoise",
+      "name": "Audio Denoise",
+      "engine": "DeepFilterNet 3 with spectral-gate fallback",
+      "onDevice": "Yes",
+      "status": "available",
+      "reachability": "reachable",
+      "evidence": [{"path": "app/src/main/java/com/novacut/editor/engine/NoiseReductionEngine.kt", "terms": ["class NoiseReductionEngine", "DeepFilterNet 3"]}]
+    }
+  ]
+}

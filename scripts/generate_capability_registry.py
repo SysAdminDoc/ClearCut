@@ -1,0 +1,227 @@
+#!/usr/bin/env python3
+"""Generate the checked-in capability/notice surfaces from one JSON registry."""
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from pathlib import Path
+from typing import Any
+
+
+ROOT = Path(__file__).resolve().parents[1]
+REGISTRY = ROOT / "scripts" / "capability_registry.json"
+GENERATED_KOTLIN = ROOT / "app" / "src" / "main" / "java" / "com" / "novacut" / "editor" / "engine" / "CapabilityRegistryGenerated.kt"
+README = ROOT / "README.md"
+
+
+class RegistryError(RuntimeError):
+    pass
+
+
+def load_registry(root: Path = ROOT) -> dict[str, Any]:
+    path = root / "scripts" / "capability_registry.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise RegistryError(f"could not read capability registry: {error}") from error
+    validate_data(data, root)
+    return data
+
+
+def validate_data(data: dict[str, Any], root: Path = ROOT) -> None:
+    if data.get("schemaVersion") != 1:
+        raise RegistryError("capability registry schemaVersion must be 1")
+    dependencies = data.get("dependencies")
+    capabilities = data.get("capabilities")
+    if not isinstance(dependencies, list) or not dependencies:
+        raise RegistryError("capability registry must contain dependencies")
+    if not isinstance(capabilities, list) or not capabilities:
+        raise RegistryError("capability registry must contain capabilities")
+
+    for collection_name, collection in (("dependency", dependencies), ("capability", capabilities)):
+        ids = [entry.get("id") for entry in collection]
+        if any(not isinstance(identifier, str) or not identifier for identifier in ids):
+            raise RegistryError(f"every {collection_name} needs a non-empty id")
+        if len(ids) != len(set(ids)):
+            raise RegistryError(f"{collection_name} ids must be unique")
+
+    catalog_text = (root / "gradle" / "libs.versions.toml").read_text(encoding="utf-8")
+    catalog_versions = dict(re.findall(r"(?m)^([A-Za-z0-9]+)\s*=\s*\"([^\"]+)\"\s*$", catalog_text))
+    for dependency in dependencies:
+        for key in dependency.get("catalogKeys", []):
+            if key not in catalog_versions:
+                raise RegistryError(f"{dependency['id']} references missing catalog version {key}")
+        keys = dependency.get("catalogKeys", [])
+        if len(keys) == 1 and catalog_versions[keys[0]] != dependency["version"]:
+            raise RegistryError(
+                f"{dependency['id']} registry version {dependency['version']} disagrees with "
+                f"catalog {keys[0]}={catalog_versions[keys[0]]}"
+            )
+        if len(keys) > 1:
+            expected = " / ".join(catalog_versions[key] for key in keys)
+            if expected != dependency["version"]:
+                raise RegistryError(f"{dependency['id']} combined catalog version is {expected}, not {dependency['version']}")
+        notice = dependency.get("notice")
+        if notice is not None:
+            for field in ("name", "licenseName", "licenseText", "licenseUrl", "projectUrl"):
+                if not isinstance(notice.get(field), str) or not notice[field].strip():
+                    raise RegistryError(f"{dependency['id']} notice is missing {field}")
+        if dependency["id"] == "ffmpeg":
+            artifact = root / "third_party" / "ffmpeg-kit-next" / "ffmpeg-kit-next-8.1.0.aar"
+            if not artifact.is_file():
+                raise RegistryError(f"FFmpeg registry artifact is missing: {artifact}")
+
+    for capability in capabilities:
+        if capability.get("status") not in {"available", "planned", "not_wired"}:
+            raise RegistryError(f"{capability['id']} has an unknown status")
+        if capability.get("reachability") not in {"reachable", "model_gated", "dependency_missing", "not_reachable"}:
+            raise RegistryError(f"{capability['id']} has an unknown reachability state")
+        for evidence in capability.get("evidence", []):
+            evidence_path = root / evidence["path"]
+            if not evidence_path.is_file():
+                raise RegistryError(f"{capability['id']} evidence file is missing: {evidence['path']}")
+            evidence_text = evidence_path.read_text(encoding="utf-8")
+            missing = [term for term in evidence.get("terms", []) if term not in evidence_text]
+            if missing:
+                raise RegistryError(f"{capability['id']} evidence drift in {evidence['path']}: {', '.join(missing)}")
+
+
+def kotlin_string(value: str) -> str:
+    return json.dumps(value, ensure_ascii=False)
+
+
+def kotlin_list(values: list[str]) -> str:
+    return "emptyList()" if not values else "listOf(" + ", ".join(kotlin_string(value) for value in values) + ")"
+
+
+def render_kotlin(data: dict[str, Any]) -> str:
+    lines = [
+        "package com.novacut.editor.engine",
+        "",
+        "// Generated by scripts/generate_capability_registry.py; edit the JSON registry instead.",
+        "internal object CapabilityRegistryGenerated {",
+        "    val capabilities: List<CapabilityRecord> = listOf(",
+    ]
+    for capability in data["capabilities"]:
+        lines.extend(
+            [
+                "        CapabilityRecord(",
+                f"            id = {kotlin_string(capability['id'])},",
+                f"            name = {kotlin_string(capability['name'])},",
+                f"            engine = {kotlin_string(capability['engine'])},",
+                f"            onDevice = {kotlin_string(capability['onDevice'])},",
+                f"            status = {kotlin_string(capability['status'])},",
+                f"            reachability = {kotlin_string(capability['reachability'])},",
+                "        ),",
+            ]
+        )
+    lines.extend(["    )", "", "    val dependencies: List<PublicDependencyRecord> = listOf("])
+    for dependency in data["dependencies"]:
+        lines.extend(
+            [
+                "        PublicDependencyRecord(",
+                f"            id = {kotlin_string(dependency['id'])},",
+                f"            label = {kotlin_string(dependency['label'])},",
+                f"            version = {kotlin_string(dependency['version'])},",
+                f"            coordinate = {kotlin_string(dependency['coordinate'])},",
+                f"            catalogKeys = {kotlin_list(dependency.get('catalogKeys', []))},",
+                f"            purpose = {kotlin_string(dependency['purpose'])},",
+                f"            publicStatus = {kotlin_string(dependency['publicStatus'])},",
+                "        ),",
+            ]
+        )
+    lines.extend(["    )", "", "    val notices: List<OpenSourceLicenseNotice> = listOf("])
+    for dependency in data["dependencies"]:
+        notice = dependency.get("notice")
+        if notice is None:
+            continue
+        lines.extend(
+            [
+                "        OpenSourceLicenseNotice(",
+                f"            name = {kotlin_string(notice['name'])},",
+                f"            version = {kotlin_string(dependency['version'])},",
+                f"            artifact = {kotlin_string(dependency['coordinate'])},",
+                f"            licenseName = {kotlin_string(notice['licenseName'])},",
+                f"            licenseText = {kotlin_string(notice['licenseText'])},",
+                f"            licenseUrl = {kotlin_string(notice['licenseUrl'])},",
+                f"            projectUrl = {kotlin_string(notice['projectUrl'])},",
+                f"            sourceOfferText = {kotlin_string(notice['sourceOfferText']) if notice.get('sourceOfferText') is not None else 'null'},",
+                f"            complianceNote = {kotlin_string(notice['complianceNote']) if notice.get('complianceNote') is not None else 'null'},",
+                "        ),",
+            ]
+        )
+    lines.extend(["    )", "}", ""])
+    return "\n".join(lines)
+
+
+def render_block(data: dict[str, Any], key: str) -> str:
+    begin = f"<!-- capability-registry:{key}:begin -->"
+    end = f"<!-- capability-registry:{key}:end -->"
+    if key == "ai-tools":
+        body = ["| Tool | Engine | On-Device? |", "|------|--------|------------|"]
+        body.extend(
+            f"| **{entry['name']}** | {entry['engine']} | {entry['onDevice']} |"
+            for entry in data["capabilities"]
+        )
+    elif key == "dependencies":
+        body = ["| Dependency | Version | Purpose |", "|-----------|---------|---------|"]
+        for entry in data["dependencies"]:
+            purpose = entry["purpose"]
+            if entry["publicStatus"] != "bundled":
+                purpose += f" ({entry['publicStatus']})"
+            body.append(f"| {entry['label']} | {entry['version']} | {purpose} |")
+    else:
+        raise RegistryError(f"unknown README registry block {key}")
+    return "\n".join([begin, *body, end])
+
+
+def replace_block(text: str, data: dict[str, Any], key: str) -> str:
+    begin = re.escape(f"<!-- capability-registry:{key}:begin -->")
+    end = re.escape(f"<!-- capability-registry:{key}:end -->")
+    pattern = re.compile(begin + r".*?" + end, re.DOTALL)
+    if not pattern.search(text):
+        raise RegistryError(f"README is missing capability registry markers for {key}")
+    return pattern.sub(render_block(data, key), text, count=1)
+
+
+def expected_readme(data: dict[str, Any], root: Path = ROOT) -> str:
+    text = (root / "README.md").read_text(encoding="utf-8")
+    text = replace_block(text, data, "ai-tools")
+    return replace_block(text, data, "dependencies")
+
+
+def check_or_write(data: dict[str, Any], root: Path, check: bool) -> None:
+    expected_kotlin = render_kotlin(data)
+    kotlin_path = root / GENERATED_KOTLIN.relative_to(ROOT)
+    expected_readme_text = expected_readme(data, root)
+    current_kotlin = kotlin_path.read_text(encoding="utf-8") if kotlin_path.is_file() else None
+    current_readme = (root / "README.md").read_text(encoding="utf-8")
+    if check:
+        if current_kotlin != expected_kotlin:
+            raise RegistryError(f"generated Kotlin is stale: {kotlin_path}")
+        if current_readme != expected_readme_text:
+            raise RegistryError("README capability registry blocks are stale")
+        return
+    kotlin_path.parent.mkdir(parents=True, exist_ok=True)
+    kotlin_path.write_text(expected_kotlin, encoding="utf-8")
+    (root / "README.md").write_text(expected_readme_text, encoding="utf-8")
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--check", action="store_true", help="fail when generated surfaces are stale")
+    args = parser.parse_args()
+    try:
+        data = load_registry()
+        check_or_write(data, ROOT, check=args.check)
+    except RegistryError as error:
+        print(f"capability registry failed: {error}", file=sys.stderr)
+        return 1
+    print("capability registry surfaces are up to date." if args.check else "capability registry surfaces generated.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
