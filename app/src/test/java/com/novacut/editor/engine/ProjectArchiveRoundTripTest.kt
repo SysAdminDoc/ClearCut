@@ -6,6 +6,7 @@ import com.novacut.editor.model.Caption
 import com.novacut.editor.model.CaptionStyle
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.ColorGrade
+import com.novacut.editor.model.Project
 import com.novacut.editor.model.Track
 import com.novacut.editor.model.TrackType
 import com.novacut.editor.model.Watermark
@@ -73,6 +74,37 @@ class ProjectArchiveRoundTripTest {
         assertEquals(1, preview.report.mediaTotal)
         assertEquals(filesBefore, stagingDir.listFiles().orEmpty().map { it.name }.sorted())
         assertFalse(File(temp.root, "preview-import").exists())
+    }
+
+    @Test
+    fun canonicalProjectMetadataSurvivesArchiveRoundTrip() = runBlocking {
+        val context = RuntimeEnvironment.getApplication().applicationContext as Context
+        val document = ProjectDocumentApplicator.capture(
+            project = Project(
+                id = "archive-project",
+                name = "Archive title",
+                notes = "Keep metadata",
+                createdAt = 11L,
+                updatedAt = 12L,
+            ),
+            state = AutoSaveState(projectId = "archive-project", playheadMs = 600L),
+        )
+        val archive = File(temp.root, "canonical.clearcut")
+        assertTrue(ProjectArchive.exportArchive(context, document, archive))
+        registerStorageCapacity(context, temp.root)
+
+        val result = ProjectArchive.importArchiveWithReport(
+            context = context,
+            archiveUri = Uri.fromFile(archive),
+            targetDir = File(temp.root, "canonical-import"),
+        )
+
+        assertTrue(result.errorMessage, result.errorMessage == null)
+        val restored = requireNotNull(result.document)
+        assertEquals("archive-project", restored.project.id)
+        assertEquals("Archive title", restored.project.name)
+        assertEquals("Keep metadata", restored.project.notes)
+        assertEquals(600L, restored.state.playheadMs)
     }
 
     @Test

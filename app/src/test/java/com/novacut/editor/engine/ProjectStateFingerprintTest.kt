@@ -99,6 +99,30 @@ class ProjectStateFingerprintTest {
         )
     }
 
+    @Test
+    fun documentPersistenceFingerprintTracksMetadataWithoutTimestampChurn() {
+        val document = ProjectDocumentApplicator.capture(project(), state())
+        val fingerprint = projectDocumentPersistenceFingerprint(document)
+
+        assertEquals(
+            fingerprint,
+            projectDocumentPersistenceFingerprint(
+                document.copy(
+                    project = document.project.copy(updatedAt = 900L),
+                    state = document.state.copy(timestamp = 901L),
+                )
+            )
+        )
+        assertNotEquals(
+            fingerprint,
+            projectDocumentPersistenceFingerprint(document.copy(project = document.project.copy(name = "Renamed")))
+        )
+        assertNotEquals(
+            fingerprint,
+            projectDocumentPersistenceFingerprint(document.copy(project = document.project.copy(notes = "Review cut")))
+        )
+    }
+
     private fun project() = Project(
         id = "project",
         name = "Cut",

@@ -21,6 +21,7 @@ import com.novacut.editor.engine.IncomingDocumentItem
 import com.novacut.editor.engine.IncomingMediaItem
 import com.novacut.editor.engine.IncomingMediaKind
 import com.novacut.editor.engine.ProjectAutoSave
+import com.novacut.editor.engine.ProjectDocumentApplicator
 import com.novacut.editor.engine.SettingsRepository
 import com.novacut.editor.engine.TemplateImportFailure
 import com.novacut.editor.engine.TemplateImportResult
@@ -918,16 +919,17 @@ class ProjectListViewModel @Inject constructor(
         initialState: AutoSaveState
     ): Boolean {
         return try {
-            val mediaAssets = buildProjectMediaAssets(appContext, initialState)
-            val stateWithAssets = initialState.copy(
-                tracks = attachMediaAssetIdsToTracks(initialState.tracks, mediaAssets),
+            val document = ProjectDocumentApplicator.capture(project, initialState)
+            val mediaAssets = buildProjectMediaAssets(appContext, document.state)
+            val stateWithAssets = document.state.copy(
+                tracks = attachMediaAssetIdsToTracks(document.state.tracks, mediaAssets),
                 mediaAssets = mediaAssets
             )
             projectDao.saveProjectWithMediaAssets(
                 project,
                 stateWithAssets.mediaAssets.toProjectMediaAssetEntities(project.id)
             )
-            if (autoSave.saveNow(project.id, stateWithAssets)) {
+            if (autoSave.saveNow(ProjectDocumentApplicator.capture(project, stateWithAssets))) {
                 true
             } else {
                 projectDao.deleteById(project.id)

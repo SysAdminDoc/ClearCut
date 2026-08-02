@@ -85,6 +85,7 @@ object ProjectArchive {
     data class ImportResult(
         val state: AutoSaveState?,
         val report: ImportReport,
+        val document: ProjectDocument? = null,
         val errorMessage: String? = null
     )
 
@@ -136,7 +137,21 @@ object ProjectArchive {
         state: AutoSaveState,
         outputFile: File,
         onProgress: (Float) -> Unit = {}
+    ): Boolean = exportArchive(
+        context = context,
+        document = ProjectDocumentApplicator.fromState(state),
+        outputFile = outputFile,
+        onProgress = onProgress,
+    )
+
+    /** Export the canonical project envelope while retaining the legacy overload above. */
+    suspend fun exportArchive(
+        context: Context,
+        document: ProjectDocument,
+        outputFile: File,
+        onProgress: (Float) -> Unit = {}
     ): Boolean = withContext(Dispatchers.IO) {
+        val state = document.state
         val targetFile = outputFile.absoluteFile
         val parentDir = targetFile.parentFile
         val tempFile = try {
@@ -150,7 +165,7 @@ object ProjectArchive {
         }
 
         try {
-            val projectJson = state.serialize()
+            val projectJson = ProjectDocumentApplicator.encode(document)
             val archivedDependencies = collectArchivedDependencies(context, state).map { source ->
                 if (source.manifest.archivePolicy != ProjectDependencyArchivePolicy.INCLUDE.name) return@map source
                 try {
@@ -305,7 +320,17 @@ object ProjectArchive {
                 warnings += "Archive used schema v$schemaVersion; import will migrate it to v${AutoSaveState.FORMAT_VERSION}."
             }
 
-            val rawState = AutoSaveState.deserialize(stateJson)
+            val rawDocument = when (val decoded = ProjectDocumentApplicator.read(stateJson)) {
+                is ProjectDocumentReadResult.Loaded -> {
+                    warnings += decoded.warnings
+                    decoded.document
+                }
+                is ProjectDocumentReadResult.FutureSchema -> throw IOException(
+                    "Archive project document schema ${decoded.documentVersion} is newer than supported"
+                )
+                is ProjectDocumentReadResult.Corrupt -> throw decoded.cause
+            }
+            val rawState = rawDocument.state
             val manifest = mediaManifestJson?.let(::parseMediaManifest)
             if (manifest != null) validateManifestMetadata(manifest, warnings)
             val mediaEntries = manifest?.entries.orEmpty()
@@ -472,7 +497,17 @@ object ProjectArchive {
                 val manifestMap = trustedManifestEntries
                     .filter { it.kind == ProjectDependencyKind.MEDIA.name && it.entryName != null }
                     .associate { it.logicalReference to requireNotNull(it.entryName) }
-                val rawState = AutoSaveState.deserialize(stateJson)
+                val rawDocument = when (val decoded = ProjectDocumentApplicator.read(stateJson)) {
+                    is ProjectDocumentReadResult.Loaded -> {
+                        warnings += decoded.warnings
+                        decoded.document
+                    }
+                    is ProjectDocumentReadResult.FutureSchema -> throw IOException(
+                        "Archive project document schema ${decoded.documentVersion} is newer than supported"
+                    )
+                    is ProjectDocumentReadResult.Corrupt -> throw decoded.cause
+                }
+                val rawState = rawDocument.state
                 val originalProjectId = rawState.projectId
                 val collided = originalProjectId in existingProjectIds
                 val effectiveProjectId = when {
@@ -518,8 +553,12 @@ object ProjectArchive {
 
                 val mediaTotal = seenSourceUris.size
                 val mediaResolved = mediaTotal - unresolved.size
-                return@withContext ImportResult(
+                val effectiveDocument = ProjectDocumentApplicator.capture(
+                    project = rawDocument.project.copy(id = effectiveProjectId),
                     state = dependencyRewrite.state,
+                )
+                return@withContext ImportResult(
+                    state = effectiveDocument.state,
                     report = ImportReport(
                         schemaVersion = schemaVersion,
                         schemaTooNew = false,
@@ -533,6 +572,7 @@ object ProjectArchive {
                         warnings = warnings,
                         targetDirCreated = true
                     ),
+                    document = effectiveDocument,
                     errorMessage = null
                 )
             }
@@ -1094,19 +1134,25 @@ object ProjectArchive {
     }
 
     private fun parseSchemaVersion(raw: String): Int {
-        // Prefer the canonical `schemaVersion` key (matching peekSchemaVersion),
-        // falling back to the legacy `version`. Reading only `version` would make
-        // a future build that keeps only `schemaVersion` see version 0 here and
-        // treat a genuinely newer archive as older — bypassing the schema-too-new
-        // guard and doing a lossy best-effort import instead of refusing it.
         return runCatching {
             val json = JSONObject(raw)
-            json.optInt("schemaVersion", json.optInt("version", 0))
+            val state = json.optJSONObject("state")
+            maxOf(
+                json.optInt("documentVersion", 0),
+                json.optInt("schemaVersion", json.optInt("version", 0)),
+                state?.optInt("schemaVersion", state.optInt("version", 0)) ?: 0,
+            )
         }.getOrDefault(0)
     }
 
     private fun parseProjectId(raw: String): String? {
-        return runCatching { JSONObject(raw).optString("projectId", "") }
+        return runCatching {
+            val json = JSONObject(raw)
+            json.optJSONObject("project")?.optString("id", "")
+                ?.takeIf { it.isNotBlank() }
+                ?: json.optJSONObject("state")?.optString("projectId", "")
+                ?: json.optString("projectId", "")
+        }
             .getOrNull()
             ?.takeIf { it.isNotBlank() }
     }

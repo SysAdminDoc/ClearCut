@@ -86,12 +86,17 @@ class TemplateManager @Inject constructor(
         textOverlays: List<TextOverlay>
     ): UserTemplate = withContext(Dispatchers.IO) {
         templateDir.mkdirs()
-        val autoState = AutoSaveState(
-            projectId = "template",
-            tracks = tracks,
-            textOverlays = textOverlays
+        val templateId = UUID.randomUUID().toString()
+        val document = ProjectDocumentApplicator.capture(
+            project = project.copy(id = templateId),
+            state = AutoSaveState(
+                projectId = templateId,
+                tracks = tracks,
+                textOverlays = textOverlays
+            )
         )
-        val stateJson = autoState.serialize()
+        val stateJson = ProjectDocumentApplicator.encode(document)
+        val autoState = document.state
         val compatibility = TemplateCompatibilityEngine.createMetadata(
             state = autoState,
             minVersionCode = BuildConfig.VERSION_CODE,
@@ -105,6 +110,7 @@ class TemplateManager @Inject constructor(
             else effectTypes.joinToString(", ")
 
         val template = UserTemplate(
+            id = templateId,
             name = normalizeTemplateName(name),
             description = normalizeTemplateDescription(description),
             aspectRatio = project.aspectRatio,
@@ -169,8 +175,15 @@ class TemplateManager @Inject constructor(
                 Log.w("TemplateManager", "Template '${template.name}' is not compatible: ${report.issues.joinToString { it.code }}")
                 return null
             }
-            val state = AutoSaveState.deserialize(template.stateJson)
-            state.tracks to state.textOverlays
+            when (val decoded = ProjectDocumentApplicator.read(template.stateJson)) {
+                is ProjectDocumentReadResult.Loaded -> {
+                    decoded.warnings.forEach { warning ->
+                        Log.w("TemplateManager", "Template '${template.name}': $warning")
+                    }
+                    decoded.document.state
+                }
+                else -> return null
+            }.let { state -> state.tracks to state.textOverlays }
         } catch (e: Exception) {
             Log.e("TemplateManager", "Failed to deserialize template '${template.name}'", e)
             null
@@ -287,11 +300,21 @@ class TemplateManager @Inject constructor(
             return TemplateParseResult.Failure(TemplateImportFailure.INVALID_STATE)
         }
 
-        val state = try {
-            AutoSaveState.deserialize(stateJson)
-        } catch (e: Exception) {
-            Log.e("TemplateManager", "Template stateJson is invalid", e)
-            return TemplateParseResult.Failure(TemplateImportFailure.INVALID_STATE)
+        val state = when (val decoded = ProjectDocumentApplicator.read(stateJson)) {
+            is ProjectDocumentReadResult.Loaded -> {
+                decoded.warnings.forEach { warning ->
+                    Log.w("TemplateManager", "Imported template document: $warning")
+                }
+                decoded.document.state
+            }
+            is ProjectDocumentReadResult.FutureSchema -> {
+                Log.w("TemplateManager", "Template state uses a newer project document schema")
+                return TemplateParseResult.Failure(TemplateImportFailure.INCOMPATIBLE)
+            }
+            is ProjectDocumentReadResult.Corrupt -> {
+                Log.e("TemplateManager", "Template stateJson is invalid", decoded.cause)
+                return TemplateParseResult.Failure(TemplateImportFailure.INVALID_STATE)
+            }
         }
 
         val inferredCompatibility = TemplateCompatibilityEngine.createMetadata(

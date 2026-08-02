@@ -28,6 +28,9 @@ import com.novacut.editor.engine.exportStorageFailureMessage
 import com.novacut.editor.engine.FontRegistry
 import com.novacut.editor.engine.ProjectAutoSave
 import com.novacut.editor.engine.ProjectArchive
+import com.novacut.editor.engine.ProjectDocument
+import com.novacut.editor.engine.ProjectDocumentApplicator
+import com.novacut.editor.engine.ProjectDocumentReadResult
 import com.novacut.editor.engine.AndroidProjectDependencyProbe
 import com.novacut.editor.engine.ProjectDependencyEditorInputs
 import com.novacut.editor.engine.ProjectDependencyManifest
@@ -1205,7 +1208,7 @@ class EditorViewModel @Inject constructor(
 
     private fun handleRecoveryOpenOutcome(outcome: ProjectAutoSave.LoadOutcome) {
         if (outcome is ProjectAutoSave.LoadOutcome.Loaded) {
-            restoreLoadedRecovery(outcome.state)
+            restoreLoadedRecovery(outcome.state, outcome.document?.project)
             _state.update { it.copy(partialRestore = outcome.report.takeIf { r -> r.isPartial }) }
         }
         autoSaveBlockedByRecovery = shouldBlockAutoSaveForRecoveryOutcome(outcome)
@@ -1251,7 +1254,7 @@ class EditorViewModel @Inject constructor(
         viewModelScope.launch {
             when (val outcome = autoSave.loadBackupWithOutcome(id)) {
                 is ProjectAutoSave.LoadOutcome.Loaded -> {
-                    restoreLoadedRecovery(outcome.state)
+                    restoreLoadedRecovery(outcome.state, outcome.document?.project)
                     if (outcome.report.isPartial) {
                         _state.update { it.copy(partialRestore = outcome.report) }
                         showToast(
@@ -1277,10 +1280,11 @@ class EditorViewModel @Inject constructor(
         }
     }
 
-    private fun restoreLoadedRecovery(recovery: AutoSaveState) {
+    private fun restoreLoadedRecovery(recovery: AutoSaveState, recoveredProject: Project? = null) {
         val mediaHealthReport = analyzeMediaHealthForRecovery(recovery)
         _state.update { current ->
             current.copy(
+                project = recoveredProject?.takeIf { it.id == current.project.id } ?: current.project,
                 tracks = ensureEditorTracks(recovery.tracks.ifEmpty { current.tracks }),
                 textOverlays = recovery.textOverlays,
                 imageOverlays = recovery.imageOverlays,
@@ -2494,8 +2498,7 @@ class EditorViewModel @Inject constructor(
     // --- Project Snapshots ---
     fun createSnapshot(label: String = "") {
         val s = _state.value
-        val autoSaveState = buildAutoSaveState(s)
-        val json = autoSaveState.serialize()
+        val json = ProjectDocumentApplicator.encode(buildProjectDocument(s))
         val snapshot = ProjectSnapshot(
             projectId = s.project.id,
             timestamp = System.currentTimeMillis(),
@@ -2509,7 +2512,25 @@ class EditorViewModel @Inject constructor(
     fun restoreSnapshot(snapshotId: String) {
         val snapshot = _state.value.projectSnapshots.find { it.id == snapshotId } ?: return
         try {
-            val recovery = AutoSaveState.deserialize(snapshot.stateJson)
+            val recovery = when (val decoded = ProjectDocumentApplicator.read(snapshot.stateJson)) {
+                is ProjectDocumentReadResult.Loaded -> {
+                    if (decoded.report.isPartial) {
+                        showToast(
+                            "Snapshot is incomplete (${decoded.report.summary()}) and was not applied.",
+                            ToastSeverity.Error,
+                        )
+                        return
+                    }
+                    decoded.document.state
+                }
+                is ProjectDocumentReadResult.FutureSchema -> {
+                    showToast("Snapshot was created by a newer ClearCut version and was not applied.", ToastSeverity.Error)
+                    return
+                }
+                is ProjectDocumentReadResult.Corrupt -> {
+                    throw decoded.cause
+                }
+            }
             saveUndoState("Restore snapshot")
             _state.update {
                 it.copy(
@@ -2677,7 +2698,7 @@ class EditorViewModel @Inject constructor(
                     try {
                         val success = com.novacut.editor.engine.ProjectArchive.exportArchive(
                             context = appContext,
-                            state = buildAutoSaveState(s),
+                            document = buildProjectDocument(s),
                             outputFile = tempFile
                         )
                         if (!success) return@withContext null
@@ -2720,7 +2741,7 @@ class EditorViewModel @Inject constructor(
                     targetDir,
                     existingProjectIds = existingProjectIds
                 )
-                val state = result.state
+                val state = result.document?.state ?: result.state
                 if (state != null) {
                     saveUndoState("Import backup")
                     _state.update { s ->
@@ -4671,7 +4692,7 @@ class EditorViewModel @Inject constructor(
                 val file = java.io.File(dir, "${sanitizedProjectFileStem(s.project.name)}.clearcut")
                 val success = com.novacut.editor.engine.ProjectArchive.exportArchive(
                     context = appContext,
-                    state = buildAutoSaveState(s),
+                    document = buildProjectDocument(s),
                     outputFile = file
                 )
                 showToast(
@@ -5627,31 +5648,42 @@ class EditorViewModel @Inject constructor(
     }
 
     // Project persistence
+    private fun buildProjectDocument(
+        state: EditorState = _state.value,
+        project: Project = state.project,
+    ): ProjectDocument {
+        val mediaAssets = projectMediaAssetsFor(state)
+        val tracks = attachMediaAssetIdsToTracks(state.tracks, mediaAssets)
+        return ProjectDocumentApplicator.capture(
+            project = project,
+            state = AutoSaveState(
+                projectId = project.id,
+                tracks = tracks,
+                textOverlays = state.textOverlays,
+                imageOverlays = state.imageOverlays,
+                timelineMarkers = state.timelineMarkers,
+                playheadMs = state.playheadMs,
+                chapterMarkers = state.chapterMarkers,
+                drawingPaths = state.drawingPaths,
+                beatMarkers = state.beatMarkers,
+                transcript = state.v369.transcript,
+                trackedObjects = state.trackedObjects,
+                aiUsageLedger = state.aiUsageLedger,
+                mediaAssets = mediaAssets,
+                storyboardCards = state.storyboardCards,
+                globalTransitions = state.globalTransitions,
+                exportWatermark = state.exportConfig.watermark
+            )
+        )
+    }
+
     private fun buildAutoSaveState(
         state: EditorState = _state.value,
         projectId: String = state.project.id
-    ): AutoSaveState {
-        val mediaAssets = projectMediaAssetsFor(state)
-        val tracks = attachMediaAssetIdsToTracks(state.tracks, mediaAssets)
-        return AutoSaveState(
-            projectId = projectId,
-            tracks = tracks,
-            textOverlays = state.textOverlays,
-            imageOverlays = state.imageOverlays,
-            timelineMarkers = state.timelineMarkers,
-            playheadMs = state.playheadMs,
-            chapterMarkers = state.chapterMarkers,
-            drawingPaths = state.drawingPaths,
-            beatMarkers = state.beatMarkers,
-            transcript = state.v369.transcript,
-            trackedObjects = state.trackedObjects,
-            aiUsageLedger = state.aiUsageLedger,
-            mediaAssets = mediaAssets,
-            storyboardCards = state.storyboardCards,
-            globalTransitions = state.globalTransitions,
-            exportWatermark = state.exportConfig.watermark
-        )
-    }
+    ): AutoSaveState = buildProjectDocument(
+        state = state,
+        project = state.project.copy(id = projectId),
+    ).state
 
     private fun dirtyTrackingKey(state: EditorState): AutoSaveState = AutoSaveState(
         projectId = state.project.id,
@@ -5721,8 +5753,8 @@ class EditorViewModel @Inject constructor(
     fun saveProject() {
         val snapshot = _state.value
         val project = projectForSave(snapshot)
-        val autoSaveState = buildAutoSaveState(snapshot, project.id)
-        val fingerprint = projectStateFingerprint(project, autoSaveState)
+        val document = buildProjectDocument(snapshot, project)
+        val fingerprint = projectStateFingerprint(project, document.state)
         val (attempt, status) = savedStateTracker.beginSave(fingerprint)
         applySavedStateStatus(status)
 
@@ -5731,14 +5763,14 @@ class EditorViewModel @Inject constructor(
                 try {
                     projectDao.saveProjectWithMediaAssets(
                         project,
-                        autoSaveState.mediaAssets.toProjectMediaAssetEntities(project.id),
+                        document.state.mediaAssets.toProjectMediaAssetEntities(project.id),
                     )
                     applySavedProjectMetadata(project)
 
                     // Persist the exact snapshot fingerprinted above. Capturing inside
                     // the coroutine allowed a newer edit to be mislabeled as saved.
                     if (recoveryOpenComplete && !autoSaveBlockedByRecovery &&
-                        autoSave.saveNow(project.id, autoSaveState)
+                        autoSave.saveNow(document)
                     ) {
                         applySavedStateStatus(
                             savedStateTracker.saveSucceeded(attempt, currentProjectFingerprint())

@@ -31,6 +31,19 @@ internal fun autoSavePersistenceFingerprint(state: AutoSaveState): String {
     return sha256(canonical)
 }
 
+/**
+ * Fingerprint the complete persisted envelope while ignoring fields that change
+ * on every save. This keeps metadata-only edits from being skipped when the
+ * autosave already contains the same edit document.
+ */
+internal fun projectDocumentPersistenceFingerprint(document: ProjectDocument): String {
+    val canonical = ProjectDocumentApplicator.capture(
+        project = document.project.copy(updatedAt = 0L),
+        state = document.state.copy(timestamp = 0L),
+    )
+    return sha256(ProjectDocumentApplicator.encode(canonical))
+}
+
 internal fun projectStateFingerprint(project: Project, state: AutoSaveState): String {
     val canonicalTracks = state.tracks.map { track ->
         track.copy(clips = track.clips.map(Clip::canonicalDocumentClip))
@@ -157,8 +170,9 @@ class ProjectAutoSave @Inject constructor(
                 var request: AutoSaveRequest? = null
                 try {
                     request = getRequest()
-                    val fingerprint = autoSavePersistenceFingerprint(request.state)
-                    saveState(projectId, request.state, fingerprint)
+                    val document = ProjectDocumentApplicator.capture(request.project, request.state)
+                    val fingerprint = projectDocumentPersistenceFingerprint(document)
+                    saveDocument(document, fingerprint)
                     consecutiveFailures = 0
                     onSaveResult(true, request)
                 } catch (e: Exception) {
@@ -176,11 +190,26 @@ class ProjectAutoSave @Inject constructor(
 
     suspend fun saveNow(projectId: String, state: AutoSaveState): Boolean = withContext(Dispatchers.IO) {
         try {
-            saveState(projectId, state, autoSavePersistenceFingerprint(state))
+            val document = ProjectDocumentApplicator.fromState(state).let { legacy ->
+                ProjectDocumentApplicator.rekey(legacy, Project(id = projectId))
+            }
+            saveDocument(document, projectDocumentPersistenceFingerprint(document))
             true
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e(TAG, "Manual save failed for $projectId", e)
+            false
+        }
+    }
+
+    /** Save the canonical project envelope, including database metadata. */
+    suspend fun saveNow(document: ProjectDocument): Boolean = withContext(Dispatchers.IO) {
+        try {
+            saveDocument(document, projectDocumentPersistenceFingerprint(document))
+            true
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.e(TAG, "Manual document save failed for ${document.project.id}", e)
             false
         }
     }
@@ -208,6 +237,7 @@ class ProjectAutoSave @Inject constructor(
         data class Loaded(
             val state: AutoSaveState,
             val report: ProjectRestoreReport = ProjectRestoreReport.EMPTY,
+            val document: ProjectDocument? = null,
         ) : LoadOutcome()
         data class FutureSchema(val fileVersion: Int, val supportedVersion: Int) : LoadOutcome()
         data class Corrupt(val cause: Throwable) : LoadOutcome()
@@ -241,44 +271,46 @@ class ProjectAutoSave @Inject constructor(
                 Log.e(TAG, "Failed to read auto-save for $projectId", e)
                 return@withLock LoadOutcome.Corrupt(e)
             }
-            val peek = AutoSaveState.peekSchemaVersion(raw)
-            if (peek != null && peek > AutoSaveState.FORMAT_VERSION) {
-                Log.w(
-                    TAG,
-                    "Auto-save for $projectId was written by a newer ClearCut " +
-                        "(schema $peek > supported ${AutoSaveState.FORMAT_VERSION}); " +
-                        "refusing to load to avoid data loss"
-                )
-                return@withLock LoadOutcome.FutureSchema(peek, AutoSaveState.FORMAT_VERSION)
-            }
-            try {
-                val restored = AutoSaveState.deserializeWithReport(raw)
+            when (val primary = decodeLoadOutcome(raw)) {
+                is LoadOutcome.FutureSchema -> {
+                    Log.w(
+                        TAG,
+                        "Auto-save for $projectId was written by a newer ClearCut " +
+                            "(schema ${primary.fileVersion} > supported ${primary.supportedVersion}); " +
+                            "refusing to load to avoid data loss"
+                    )
+                    return@withLock primary
+                }
+                is LoadOutcome.Loaded -> {
                 // A partial restore keeps the backup: it is the only remaining copy of
                 // whatever was dropped, and the user may choose to fall back to it.
-                if (!restored.report.isPartial) backupFile.delete()
-                LoadOutcome.Loaded(restored.state, restored.report)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to load recovery data for $projectId", e)
-                if (!backupFile.exists()) return@withLock LoadOutcome.Corrupt(e)
-                val backupRaw = try {
-                    readAutoSaveText(backupFile)
-                } catch (readErr: Exception) {
-                    Log.e(TAG, "Backup auto-save read failed for $projectId", readErr)
-                    return@withLock LoadOutcome.Corrupt(readErr)
+                    if (!primary.report.isPartial) backupFile.delete()
+                    return@withLock primary
                 }
-                val backupPeek = AutoSaveState.peekSchemaVersion(backupRaw)
-                if (backupPeek != null && backupPeek > AutoSaveState.FORMAT_VERSION) {
-                    return@withLock LoadOutcome.FutureSchema(backupPeek, AutoSaveState.FORMAT_VERSION)
+                is LoadOutcome.Corrupt -> {
+                    Log.e(TAG, "Failed to load recovery data for $projectId", primary.cause)
+                    if (!backupFile.exists()) return@withLock primary
+                    val backupRaw = try {
+                        readAutoSaveText(backupFile)
+                    } catch (readErr: Exception) {
+                        Log.e(TAG, "Backup auto-save read failed for $projectId", readErr)
+                        return@withLock LoadOutcome.Corrupt(readErr)
+                    }
+                    when (val backup = decodeLoadOutcome(backupRaw)) {
+                        is LoadOutcome.Loaded -> {
+                            Log.w(TAG, "Primary auto-save is corrupt; attempting backup restore for $projectId")
+                            moveFileReplacing(backupFile, file)
+                            backup
+                        }
+                        is LoadOutcome.FutureSchema -> backup
+                        is LoadOutcome.Corrupt -> {
+                            Log.e(TAG, "Backup auto-save restore failed for $projectId", backup.cause)
+                            backup
+                        }
+                        LoadOutcome.NotFound -> primary
+                    }
                 }
-                try {
-                    Log.w(TAG, "Primary auto-save is corrupt; attempting backup restore for $projectId")
-                    val restored = AutoSaveState.deserializeWithReport(backupRaw)
-                    moveFileReplacing(backupFile, file)
-                    LoadOutcome.Loaded(restored.state, restored.report)
-                } catch (backupError: Exception) {
-                    Log.e(TAG, "Backup auto-save restore failed for $projectId", backupError)
-                    LoadOutcome.Corrupt(backupError)
-                }
+                LoadOutcome.NotFound -> primary
             }
         }
     }
@@ -301,23 +333,31 @@ class ProjectAutoSave @Inject constructor(
                 Log.e(TAG, "Backup auto-save read failed for $projectId", e)
                 return@withLock LoadOutcome.Corrupt(e)
             }
-            val peek = AutoSaveState.peekSchemaVersion(raw)
-            if (peek != null && peek > AutoSaveState.FORMAT_VERSION) {
-                return@withLock LoadOutcome.FutureSchema(peek, AutoSaveState.FORMAT_VERSION)
-            }
-            try {
-                val restored = AutoSaveState.deserializeWithReport(raw)
-                LoadOutcome.Loaded(restored.state, restored.report)
-            } catch (e: Exception) {
-                Log.e(TAG, "Backup auto-save restore failed for $projectId", e)
-                LoadOutcome.Corrupt(e)
-            }
+            decodeLoadOutcome(raw)
         }
+    }
+
+    private fun decodeLoadOutcome(raw: String): LoadOutcome = when (
+        val decoded = ProjectDocumentApplicator.read(raw)
+    ) {
+        is ProjectDocumentReadResult.Loaded -> {
+            decoded.warnings.forEach { warning -> Log.w(TAG, "Project document: $warning") }
+            LoadOutcome.Loaded(
+                state = decoded.document.state,
+                report = decoded.report,
+                document = decoded.document.takeUnless { decoded.migratedFromLegacyState },
+            )
+        }
+        is ProjectDocumentReadResult.FutureSchema -> LoadOutcome.FutureSchema(
+            fileVersion = decoded.stateVersion ?: decoded.documentVersion,
+            supportedVersion = decoded.supportedStateVersion,
+        )
+        is ProjectDocumentReadResult.Corrupt -> LoadOutcome.Corrupt(decoded.cause)
     }
 
     suspend fun loadRecoveryData(projectId: String): AutoSaveState? = withContext(Dispatchers.IO) {
         // Serialize load against in-flight writes. Without the mutex a load that
-        // races a `saveState()` (temp-write → rename) could see the rename
+        // races a `saveDocument()` (temp-write → rename) could see the rename
         // midway and read either no file (null) or a half-renamed file whose
         // JSON parse throws — the second branch would fall into the backup
         // recovery path unnecessarily and clear the backup even though the
@@ -337,8 +377,14 @@ class ProjectAutoSave @Inject constructor(
             }
             if (!file.exists()) return@withLock null
             try {
-                AutoSaveState.deserialize(readAutoSaveText(file)).also {
-                    backupFile.delete()
+                when (val outcome = decodeLoadOutcome(readAutoSaveText(file))) {
+                    is LoadOutcome.Loaded -> {
+                        backupFile.delete()
+                        outcome.state
+                    }
+                    is LoadOutcome.FutureSchema -> null
+                    is LoadOutcome.Corrupt -> throw outcome.cause
+                    LoadOutcome.NotFound -> null
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load recovery data for $projectId", e)
@@ -347,8 +393,14 @@ class ProjectAutoSave @Inject constructor(
                 }
                 try {
                     Log.w(TAG, "Primary auto-save is corrupt; attempting backup restore for $projectId")
-                    AutoSaveState.deserialize(readAutoSaveText(backupFile)).also {
-                        moveFileReplacing(backupFile, file)
+                    when (val outcome = decodeLoadOutcome(readAutoSaveText(backupFile))) {
+                        is LoadOutcome.Loaded -> {
+                            moveFileReplacing(backupFile, file)
+                            outcome.state
+                        }
+                        is LoadOutcome.FutureSchema -> null
+                        is LoadOutcome.Corrupt -> throw outcome.cause
+                        LoadOutcome.NotFound -> null
                     }
                 } catch (backupError: Exception) {
                     Log.e(TAG, "Backup auto-save restore failed for $projectId", backupError)
@@ -406,7 +458,7 @@ class ProjectAutoSave @Inject constructor(
         return try {
             // Hold the mutex for the entire exists-check → read → mutate → write sequence.
             // Checking exists() outside the lock created a window where a concurrent
-            // clearRecoveryData() or saveState() could delete or overwrite the source file
+            // clearRecoveryData() or saveDocument() could delete or overwrite the source file
             // between the check and the read, producing a FileNotFoundException or stale data.
             saveMutex.withLock {
                 val fromFile = getAutoSaveFile(fromProjectId)
@@ -414,10 +466,25 @@ class ProjectAutoSave @Inject constructor(
                     Log.w(TAG, "No auto-save found to copy for $fromProjectId")
                     return@withLock false
                 }
-                val json = JSONObject(readAutoSaveText(fromFile))
-                json.put("projectId", toProjectId)
-                json.put("timestamp", System.currentTimeMillis())
-                writeAutoSaveFileLocked(toProjectId, json.toString(2))
+                val decoded = ProjectDocumentApplicator.read(readAutoSaveText(fromFile))
+                val document = when (decoded) {
+                    is ProjectDocumentReadResult.Loaded -> decoded.document
+                    is ProjectDocumentReadResult.FutureSchema -> {
+                        Log.w(TAG, "Refusing to copy a newer auto-save schema")
+                        return@withLock false
+                    }
+                    is ProjectDocumentReadResult.Corrupt -> throw decoded.cause
+                }
+                val copiedProject = document.project.copy(
+                    id = toProjectId,
+                    createdAt = System.currentTimeMillis(),
+                    updatedAt = System.currentTimeMillis(),
+                )
+                val copiedDocument = ProjectDocumentApplicator.capture(
+                    project = copiedProject,
+                    state = document.state.copy(timestamp = System.currentTimeMillis()),
+                )
+                writeAutoSaveFileLocked(toProjectId, ProjectDocumentApplicator.encode(copiedDocument))
                 true
             }
         } catch (e: Exception) {
@@ -435,7 +502,7 @@ class ProjectAutoSave @Inject constructor(
         autoSaveJob?.cancel()
         autoSaveJob = null
         // Cancel the entire scope which also cancels any in-flight save.
-        // This is safe because saveState() is idempotent — an incomplete write
+        // This is safe because saveDocument() is idempotent — an incomplete write
         // leaves only a .tmp file which loadRecoveryData() cleans up on next launch.
         scope.cancel()
         // Sweep any leftover .tmp files from interrupted saves so the autosave directory
@@ -445,12 +512,12 @@ class ProjectAutoSave @Inject constructor(
         }.onFailure { e -> Log.w(TAG, "Failed to sweep orphan .tmp files on release()", e) }
     }
 
-    private suspend fun saveState(
-        projectId: String,
-        state: AutoSaveState,
+    private suspend fun saveDocument(
+        document: ProjectDocument,
         fingerprint: String,
     ) = saveMutex.withLock {
-        val contents = state.serialize()
+        val projectId = document.project.id
+        val contents = ProjectDocumentApplicator.encode(document)
         // Skip the temp-write + double-rename + backup churn when nothing
         // changed since the last save — the periodic loop fires every 30s
         // regardless of activity, which otherwise grinds flash storage all

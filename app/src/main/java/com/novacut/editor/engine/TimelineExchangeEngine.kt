@@ -54,7 +54,16 @@ class TimelineExchangeEngine @Inject constructor(
         val tracks: List<Track>,
         val textOverlays: List<TextOverlay>,
         val warnings: List<String>
-    )
+    ) {
+        /** Convert the parsed interchange result into the canonical save boundary. */
+        fun toProjectDocument(project: Project, playheadMs: Long = 0L): ProjectDocument =
+            ProjectDocumentApplicator.fromTimelineExchange(
+                project = project,
+                tracks = tracks,
+                textOverlays = textOverlays,
+                playheadMs = playheadMs,
+            )
+    }
 
     /**
      * Get all formats and their import/export support status.

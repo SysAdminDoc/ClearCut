@@ -17,6 +17,7 @@
 - **Every Settings control changes something.** Nine settings persisted, rendered their saved value back, and were read by nothing: haptics, thumbnail cache size, default track height, default aspect ratio and codec, proxy resolution, and the AcoustID key. Appearance "System" is gone — only dark schemes exist, so it read the platform preference and resolved to Dark either way.
 - **AI tools stop reporting failures as good news.** A crashed transcription reported "No speech detected"; a failed motion analysis reported "Video is already stable"; a static zoom with no counter-motion reported "Basic stabilization applied". Each now separates *analysed and found nothing* from *could not analyse*, and the zoom is called what it is: a crop. A disclosure sidecar that fails to write is no longer silent.
 - **Deleting is recoverable again.** Snapshot deletion has an explicit restore offer separate from timeline undo, the AI usage ledger remains undoable, and user templates go to a trash you can restore from.
+- **Every project store now shares one document boundary.** Autosave, archives, templates, new-project creation, recovery, snapshots and timeline interchange use a versioned project envelope that preserves metadata, reports unknown fields, rejects future schemas and keeps metadata-only saves from being skipped.
 - **The dashboard stops flashing "No projects yet"** before your projects load, opening a project that no longer exists reports it instead of creating a blank one in its place, and batch media import counts files off as it goes.
 - The AI requirement sheet's Run button no longer re-opens itself. The release signing certificate is pinned and the build refuses to fall back to the debug key.
 
@@ -473,7 +474,7 @@ Planning files are local-only in the development checkout:
 ```
 com.novacut.editor/
 ├── ai/                     # AI features (captions, scene detect, stabilize, auto-edit)
-├── engine/                 # Core engines (85 injectable singletons across 172 files)
+├── engine/                 # Core engines (85 injectable singletons across 173 files)
 │   ├── VideoEngine          # Media3 playback + export
 │   ├── AudioEngine          # Waveform extraction + PCM processing
 │   ├── AudioEffectsEngine   # DSP chain (EQ, compressor, chorus, etc.)
