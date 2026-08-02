@@ -35,6 +35,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -85,10 +86,11 @@ fun CaptionEditorPanel(
     val activeCaptionCount = captions.count { playheadMs in it.startTimeMs..it.endTimeMs }
     val isCompactLayout = LocalConfiguration.current.screenWidthDp < 430
     val captionStylesSectionDescription = stringResource(R.string.cd_caption_styles_section)
+    val newCaptionText = stringResource(R.string.caption_new_default)
 
     fun createCaption() {
         val newCaption = Caption(
-            text = "New Caption",
+            text = newCaptionText,
             startTimeMs = playheadMs,
             endTimeMs = (playheadMs + 2_000L).coerceAtMost(clipDurationMs),
             style = CaptionStyle(type = selectedStyleType)
@@ -99,7 +101,7 @@ fun CaptionEditorPanel(
 
     PremiumEditorPanel(
         title = stringResource(R.string.caption_title),
-        subtitle = "Write, time, and style captions that feel polished instead of bolted onto the cut.",
+        subtitle = stringResource(R.string.caption_panel_subtitle),
         icon = Icons.Default.ClosedCaption,
         accent = ClearCutAccents.Yellow,
         onClose = onClose,
@@ -129,13 +131,13 @@ fun CaptionEditorPanel(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Caption system",
+                        text = stringResource(R.string.caption_system_title),
                         style = MaterialTheme.typography.titleMedium,
                         color = semanticColors.text
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "Manage timing, coverage, and default styling for every subtitle block on the selected clip.",
+                        text = stringResource(R.string.caption_system_description),
                         style = MaterialTheme.typography.bodyMedium,
                         color = semanticColors.subtext
                     )
@@ -147,9 +149,20 @@ fun CaptionEditorPanel(
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    PremiumPanelPill(text = "${captions.size} total", accent = ClearCutAccents.Blue)
                     PremiumPanelPill(
-                        text = if (activeCaptionCount > 0) "$activeCaptionCount live" else "Ready",
+                        text = pluralStringResource(
+                            R.plurals.caption_total_count,
+                            captions.size,
+                            captions.size,
+                        ),
+                        accent = ClearCutAccents.Blue
+                    )
+                    PremiumPanelPill(
+                        text = if (activeCaptionCount > 0) {
+                            stringResource(R.string.caption_active_count, activeCaptionCount)
+                        } else {
+                            stringResource(R.string.caption_ready)
+                        },
                         accent = if (activeCaptionCount > 0) ClearCutAccents.Green else ClearCutAccents.Yellow
                     )
                 }
@@ -161,14 +174,14 @@ fun CaptionEditorPanel(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 CaptionMetric(
-                    title = "Playhead",
+                    title = stringResource(R.string.caption_playhead),
                     value = formatSeconds(playheadMs),
                     accent = ClearCutAccents.Peach,
                     modifier = Modifier.widthIn(min = 132.dp)
                 )
                 CaptionMetric(
-                    title = "Default Style",
-                    value = selectedStyleType.displayName,
+                    title = stringResource(R.string.caption_default_style),
+                    value = stringResource(selectedStyleType.displayNameRes()),
                     accent = ClearCutAccents.Mauve,
                     modifier = Modifier.widthIn(min = 132.dp)
                 )
@@ -179,12 +192,12 @@ fun CaptionEditorPanel(
 
         PremiumPanelCard(accent = ClearCutAccents.Mauve) {
             Text(
-                text = "Default style for new captions",
+                text = stringResource(R.string.caption_default_style_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = semanticColors.text
             )
             Text(
-                text = "Pick the starting treatment here, then fine-tune any individual caption below.",
+                text = stringResource(R.string.caption_default_style_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = semanticColors.subtext
             )
@@ -202,7 +215,7 @@ fun CaptionEditorPanel(
                         onClick = { selectedStyleType = styleType },
                         label = {
                             Text(
-                                text = styleType.displayName,
+                                text = stringResource(styleType.displayNameRes()),
                                 style = MaterialTheme.typography.labelMedium
                             )
                         },
@@ -237,15 +250,15 @@ fun CaptionEditorPanel(
 
         PremiumPanelCard(accent = ClearCutAccents.Blue) {
             Text(
-                text = "Caption list",
+                text = stringResource(R.string.caption_list_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = semanticColors.text
             )
             Text(
                 text = if (captions.isEmpty()) {
-                    "Generate a pass automatically or write your first caption by hand."
+                    stringResource(R.string.caption_list_empty_description)
                 } else {
-                    "Tap a caption to refine its text, timing, and placement."
+                    stringResource(R.string.caption_list_description)
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = semanticColors.subtext
@@ -269,7 +282,7 @@ fun CaptionEditorPanel(
                             color = semanticColors.text
                         )
                         Text(
-                            text = "Auto-captions are best for a quick first pass. Manual captions are great for hero text and exact pacing.",
+                            text = stringResource(R.string.caption_empty_description),
                             style = MaterialTheme.typography.bodySmall,
                             color = semanticColors.subtext
                         )
@@ -367,12 +380,12 @@ fun CaptionEditorPanel(
 
             PremiumPanelCard(accent = ClearCutAccents.Yellow) {
                 Text(
-                    text = "Edit caption",
+                    text = stringResource(R.string.caption_edit_title),
                     style = MaterialTheme.typography.titleMedium,
                     color = semanticColors.text
                 )
                 Text(
-                    text = "Refine the line, tighten the timing, and place it exactly where it belongs.",
+                    text = stringResource(R.string.caption_edit_description),
                     style = MaterialTheme.typography.bodyMedium,
                     color = semanticColors.subtext
                 )
@@ -473,7 +486,11 @@ private fun CaptionListCard(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "${formatSeconds(caption.startTimeMs)} - ${formatSeconds(caption.endTimeMs)}",
+                        text = stringResource(
+                            R.string.caption_time_range_format,
+                            formatSeconds(caption.startTimeMs),
+                            formatSeconds(caption.endTimeMs),
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = semanticColors.subtext
                     )
@@ -483,9 +500,9 @@ private fun CaptionListCard(
 
                 PremiumPanelPill(
                     text = when {
-                        isEditing -> "Editing"
-                        isActive -> "Live"
-                        else -> caption.style.type.displayName
+                        isEditing -> stringResource(R.string.caption_status_editing)
+                        isActive -> stringResource(R.string.caption_status_live)
+                        else -> stringResource(caption.style.type.displayNameRes())
                     },
                     accent = accent
                 )
@@ -500,7 +517,7 @@ private fun CaptionListCard(
                     text = if (caption.words.isNotEmpty()) {
                         stringResource(R.string.caption_word_count, caption.words.size)
                     } else {
-                        "Manual caption"
+                        stringResource(R.string.caption_manual)
                     },
                     style = MaterialTheme.typography.labelMedium,
                     color = if (caption.words.isNotEmpty()) ClearCutAccents.Peach else semanticColors.subtext
@@ -571,13 +588,13 @@ private fun CaptionEditForm(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             CaptionMetric(
-                title = "Start",
+                title = stringResource(R.string.caption_start_metric),
                 value = formatSeconds((startTime * 1000f).toLong()),
                 accent = ClearCutAccents.Blue,
                 modifier = Modifier.widthIn(min = 132.dp)
             )
             CaptionMetric(
-                title = "End",
+                title = stringResource(R.string.caption_end_metric),
                 value = formatSeconds((endTime * 1000f).toLong()),
                 accent = ClearCutAccents.Green,
                 modifier = Modifier.widthIn(min = 132.dp)
@@ -616,7 +633,7 @@ private fun CaptionEditForm(
                     FilterChip(
                         selected = type == styleType,
                         onClick = { styleType = type },
-                        label = { Text(type.displayName) },
+                        label = { Text(stringResource(type.displayNameRes())) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = ClearCutAccents.Mauve.copy(alpha = 0.18f),
                             selectedLabelColor = ClearCutAccents.Mauve,
@@ -772,4 +789,13 @@ private fun formatSeconds(ms: Long): String {
     } else {
         String.format(Locale.getDefault(), "%.1fs", totalSeconds)
     }
+}
+
+private fun CaptionStyleType.displayNameRes(): Int = when (this) {
+    CaptionStyleType.SUBTITLE_BAR -> R.string.caption_style_type_subtitle_bar
+    CaptionStyleType.WORD_BY_WORD -> R.string.caption_style_type_word_by_word
+    CaptionStyleType.KARAOKE -> R.string.caption_style_type_karaoke
+    CaptionStyleType.BOUNCE -> R.string.caption_style_type_bounce
+    CaptionStyleType.TYPEWRITER -> R.string.caption_style_type_typewriter
+    CaptionStyleType.MINIMAL -> R.string.caption_style_type_minimal
 }

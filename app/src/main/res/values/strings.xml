@@ -1428,6 +1428,38 @@
     <string name="caption_font_size">Font Size</string>
     <string name="caption_text_hint">Caption text</string>
     <string name="caption_delete_cd">Delete caption</string>
+    <string name="caption_new_default">New Caption</string>
+    <string name="caption_panel_subtitle">Write, time, and style captions that feel polished instead of bolted onto the cut.</string>
+    <string name="caption_system_title">Caption system</string>
+    <string name="caption_system_description">Manage timing, coverage, and default styling for every subtitle block on the selected clip.</string>
+    <plurals name="caption_total_count">
+        <item quantity="one">%1$d total</item>
+        <item quantity="other">%1$d total</item>
+    </plurals>
+    <string name="caption_active_count">%1$d live</string>
+    <string name="caption_ready">Ready</string>
+    <string name="caption_playhead">Playhead</string>
+    <string name="caption_default_style">Default Style</string>
+    <string name="caption_default_style_title">Default style for new captions</string>
+    <string name="caption_default_style_description">Pick the starting treatment here, then fine-tune any individual caption below.</string>
+    <string name="caption_list_title">Caption list</string>
+    <string name="caption_list_empty_description">Generate a pass automatically or write your first caption by hand.</string>
+    <string name="caption_list_description">Tap a caption to refine its text, timing, and placement.</string>
+    <string name="caption_empty_description">Auto-captions are best for a quick first pass. Manual captions are great for hero text and exact pacing.</string>
+    <string name="caption_edit_title">Edit caption</string>
+    <string name="caption_edit_description">Refine the line, tighten the timing, and place it exactly where it belongs.</string>
+    <string name="caption_time_range_format">%1$s – %2$s</string>
+    <string name="caption_status_editing">Editing</string>
+    <string name="caption_status_live">Live</string>
+    <string name="caption_manual">Manual caption</string>
+    <string name="caption_start_metric">Start</string>
+    <string name="caption_end_metric">End</string>
+    <string name="caption_style_type_subtitle_bar">Subtitle Bar</string>
+    <string name="caption_style_type_word_by_word">Word Pop</string>
+    <string name="caption_style_type_karaoke">Karaoke Highlight</string>
+    <string name="caption_style_type_bounce">Bounce</string>
+    <string name="caption_style_type_typewriter">Typewriter</string>
+    <string name="caption_style_type_minimal">Minimal</string>
 
     <!-- CloudBackupPanel -->
     <string name="cloud_backup_title">Project Archive</string>

@@ -15,7 +15,7 @@ class UiHardcodedLiteralRatchetTest {
     fun reachableUiLiteralCountsDoNotGrow() {
         val root = locateRepoRoot()
         val budgets = mapOf(
-            "CaptionEditorPanel.kt" to 15,
+            "CaptionEditorPanel.kt" to 0,
             "AudioMixerPanel.kt" to 2,
             "MultiCamPanel.kt" to 0,
             "PipPresetsPanel.kt" to 21,

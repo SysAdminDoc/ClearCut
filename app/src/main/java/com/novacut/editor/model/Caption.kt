@@ -39,13 +39,13 @@ data class CaptionStyle(
     val shadow: Boolean = true
 )
 
-enum class CaptionStyleType(val displayName: String) {
-    SUBTITLE_BAR("Subtitle Bar"),
-    WORD_BY_WORD("Word Pop"),
-    KARAOKE("Karaoke Highlight"),
-    BOUNCE("Bounce"),
-    TYPEWRITER("Typewriter"),
-    MINIMAL("Minimal")
+enum class CaptionStyleType {
+    SUBTITLE_BAR,
+    WORD_BY_WORD,
+    KARAOKE,
+    BOUNCE,
+    TYPEWRITER,
+    MINIMAL
 }
 
 enum class CaptionTemplateType(val displayName: String) {
