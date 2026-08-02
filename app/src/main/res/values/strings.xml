@@ -824,6 +824,23 @@
     <string name="sticker_close_picker">Close sticker picker</string>
     <string name="sticker_import_from_gallery">Import from Gallery</string>
     <string name="sticker_add_own_images">Add your own images as stickers</string>
+    <string name="sticker_subtitle">Drop in reactions, arrows, social callouts, or branded art without interrupting the cut.</string>
+    <string name="sticker_custom_import">Custom import</string>
+    <plurals name="sticker_ready_count">
+        <item quantity="one">%1$d ready</item>
+        <item quantity="other">%1$d ready</item>
+    </plurals>
+    <string name="sticker_shelf">Sticker shelf</string>
+    <string name="sticker_shelf_description">Keep overlays fast and expressive with curated bundles for humor, emphasis, direction, and social prompts.</string>
+    <string name="sticker_bring_own_art">Bring in your own art</string>
+    <string name="sticker_bundled_collection">Bundled collection</string>
+    <string name="sticker_bundled_collection_description">Tap any sticker to place it immediately as an image overlay on the timeline.</string>
+    <string name="sticker_tap_to_place">Tap to place</string>
+    <string name="sticker_category_emoji">Emoji</string>
+    <string name="sticker_category_shapes">Shapes</string>
+    <string name="sticker_category_arrows">Arrows</string>
+    <string name="sticker_category_social">Social</string>
+    <string name="sticker_category_custom">Custom</string>
 
     <!-- BatchExportPanel -->
     <string name="batch_export_title">Batch Export</string>
@@ -1800,6 +1817,25 @@
     <string name="panel_multi_cam_title">Multi-Cam</string>
     <string name="panel_multi_cam_sync">Sync Clips</string>
     <string name="panel_multi_cam_no_clips">No video clips available</string>
+    <string name="panel_multi_cam_subtitle">Sync angles, compare coverage, and switch the active shot without leaving the edit context.</string>
+    <string name="panel_multi_cam_angle_overview">Angle overview</string>
+    <string name="panel_multi_cam_empty_description">Add at least two motion clips to start a multi-cam review pass.</string>
+    <string name="panel_multi_cam_angle_overview_description">Choose an angle to make it active, then sync clips if the cameras need alignment. Still photos stay hidden here so the angle grid remains camera-focused.</string>
+    <plurals name="panel_multi_cam_angle_count">
+        <item quantity="one">%1$d angle</item>
+        <item quantity="other">%1$d angles</item>
+    </plurals>
+    <string name="panel_multi_cam_angle_live">%1$s live</string>
+    <string name="panel_multi_cam_selection_off_grid">Selection off-grid</string>
+    <string name="panel_multi_cam_no_angle_selected">No angle selected</string>
+    <string name="panel_multi_cam_sync_title">Sync cameras</string>
+    <string name="panel_multi_cam_sync_description">Run a sync pass before switching angles if the camera starts or audio reference drifted across tracks.</string>
+    <string name="panel_multi_cam_available_angles">Available angles</string>
+    <string name="panel_multi_cam_available_angles_description">The first four motion clips appear here as switchable camera angles.</string>
+    <string name="panel_multi_cam_clip_fallback">Clip</string>
+    <string name="panel_multi_cam_camera_label">Cam %1$s</string>
+    <string name="panel_multi_cam_active_angle">Active angle</string>
+    <string name="panel_multi_cam_tap_to_switch">Tap to switch</string>
 
     <!-- RenderPreviewSheet -->
     <string name="panel_render_pass_through">Pass-through</string>

@@ -47,13 +47,14 @@ fun MultiCamPanel(
     val videoClips = allVideoClips
         .take(4)
     val hiddenAngleCount = (allVideoClips.size - videoClips.size).coerceAtLeast(0)
-    val activeAngleLabel = videoClips.indexOfFirst { it.id == selectedClipId }
-        .takeIf { it >= 0 }
-        ?.let(::formatCameraLabel)
+    val activeAngleIndex = videoClips.indexOfFirst { it.id == selectedClipId }.takeIf { it >= 0 }
+    val activeAngleLabel = activeAngleIndex?.let { index ->
+        stringResource(R.string.panel_multi_cam_camera_label, ('A' + index).toString())
+    }
 
     PremiumEditorPanel(
         title = stringResource(R.string.panel_multi_cam_title),
-        subtitle = "Sync angles, compare coverage, and switch the active shot without leaving the edit context.",
+        subtitle = stringResource(R.string.panel_multi_cam_subtitle),
         icon = Icons.Default.Videocam,
         accent = ClearCutAccents.Blue,
         onClose = onClose,
@@ -68,16 +69,16 @@ fun MultiCamPanel(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Angle overview",
+                        text = stringResource(R.string.panel_multi_cam_angle_overview),
                         style = MaterialTheme.typography.titleMedium,
                         color = semanticColors.text
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = if (videoClips.isEmpty()) {
-                            "Add at least two motion clips to start a multi-cam review pass."
+                            stringResource(R.string.panel_multi_cam_empty_description)
                         } else {
-                            "Choose an angle to make it active, then sync clips if the cameras need alignment. Still photos stay hidden here so the angle grid remains camera-focused."
+                            stringResource(R.string.panel_multi_cam_angle_overview_description)
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = semanticColors.subtext
@@ -91,14 +92,18 @@ fun MultiCamPanel(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     PremiumPanelPill(
-                        text = "${videoClips.size} angles",
+                        text = androidx.compose.ui.res.pluralStringResource(
+                            R.plurals.panel_multi_cam_angle_count,
+                            videoClips.size,
+                            videoClips.size,
+                        ),
                         accent = ClearCutAccents.Blue
                     )
                     PremiumPanelPill(
                         text = when {
-                            activeAngleLabel != null -> "$activeAngleLabel live"
-                            selectedClipId != null -> "Selection off-grid"
-                            else -> "No angle selected"
+                            activeAngleLabel != null -> stringResource(R.string.panel_multi_cam_angle_live, activeAngleLabel)
+                            selectedClipId != null -> stringResource(R.string.panel_multi_cam_selection_off_grid)
+                            else -> stringResource(R.string.panel_multi_cam_no_angle_selected)
                         },
                         accent = if (activeAngleLabel != null) ClearCutAccents.Green else semanticColors.overlayStrong
                     )
@@ -116,12 +121,12 @@ fun MultiCamPanel(
 
         PremiumPanelCard(accent = ClearCutAccents.Mauve) {
             Text(
-                text = "Sync cameras",
+                text = stringResource(R.string.panel_multi_cam_sync_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = semanticColors.text
             )
             Text(
-                text = "Run a sync pass before switching angles if the camera starts or audio reference drifted across tracks.",
+                text = stringResource(R.string.panel_multi_cam_sync_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = semanticColors.subtext
             )
@@ -148,7 +153,7 @@ fun MultiCamPanel(
 
         PremiumPanelCard(accent = if (videoClips.isEmpty()) semanticColors.overlayStrong else ClearCutAccents.Green) {
             Text(
-                text = "Available angles",
+                text = stringResource(R.string.panel_multi_cam_available_angles),
                 style = MaterialTheme.typography.titleMedium,
                 color = semanticColors.text
             )
@@ -169,7 +174,7 @@ fun MultiCamPanel(
                 }
             } else {
                 Text(
-                    text = "The first four motion clips appear here as switchable camera angles.",
+                    text = stringResource(R.string.panel_multi_cam_available_angles_description),
                     style = MaterialTheme.typography.bodyMedium,
                     color = semanticColors.subtext
                 )
@@ -180,8 +185,12 @@ fun MultiCamPanel(
                 ) {
                     videoClips.forEachIndexed { index, clip ->
                         MultiCamAngleCard(
-                            label = formatCameraLabel(index),
-                            fileName = clip.sourceUri.lastPathSegment?.substringAfterLast('/') ?: "Clip",
+                            fileName = clip.sourceUri.lastPathSegment?.substringAfterLast('/')
+                                ?: stringResource(R.string.panel_multi_cam_clip_fallback),
+                            label = stringResource(
+                                R.string.panel_multi_cam_camera_label,
+                                ('A' + index).toString(),
+                            ),
                             isActive = clip.id == selectedClipId,
                             onClick = { onAngleSelected(clip.id) },
                             modifier = Modifier.widthIn(min = if (isCompactGrid) 136.dp else 156.dp, max = 220.dp)
@@ -284,11 +293,13 @@ private fun MultiCamAngleCard(
             }
 
             PremiumPanelPill(
-                text = if (isActive) "Active angle" else "Tap to switch",
+                text = if (isActive) {
+                    stringResource(R.string.panel_multi_cam_active_angle)
+                } else {
+                    stringResource(R.string.panel_multi_cam_tap_to_switch)
+                },
                 accent = accent
             )
         }
     }
 }
-
-private fun formatCameraLabel(index: Int): String = "Cam ${'A' + index}"

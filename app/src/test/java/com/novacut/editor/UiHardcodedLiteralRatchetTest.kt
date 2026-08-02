@@ -17,10 +17,10 @@ class UiHardcodedLiteralRatchetTest {
         val budgets = mapOf(
             "CaptionEditorPanel.kt" to 15,
             "AudioMixerPanel.kt" to 2,
-            "MultiCamPanel.kt" to 7,
+            "MultiCamPanel.kt" to 0,
             "PipPresetsPanel.kt" to 21,
             "SpeedPresets.kt" to 14,
-            "StickerPickerPanel.kt" to 7,
+            "StickerPickerPanel.kt" to 0,
             "ToolPanel.kt" to 10,
             "EditorViewModel.kt" to 7,
         )

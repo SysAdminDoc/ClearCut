@@ -50,12 +50,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.novacut.editor.R
 
-private enum class StickerCategory(val label: String) {
-    EMOJI("Emoji"),
-    SHAPES("Shapes"),
-    ARROWS("Arrows"),
-    SOCIAL("Social"),
-    CUSTOM("Custom")
+private enum class StickerCategory {
+    EMOJI,
+    SHAPES,
+    ARROWS,
+    SOCIAL,
+    CUSTOM
 }
 
 private data class StickerItem(
@@ -151,7 +151,7 @@ fun StickerPickerPanel(
 
     PremiumEditorPanel(
         title = stringResource(R.string.sticker_title),
-        subtitle = "Drop in reactions, arrows, social callouts, or branded art without interrupting the cut.",
+        subtitle = stringResource(R.string.sticker_subtitle),
         icon = Icons.Default.EmojiEmotions,
         accent = accent,
         onClose = onClose,
@@ -164,25 +164,29 @@ fun StickerPickerPanel(
             ) {
                 PremiumPanelPill(
                     text = if (selectedCategory == StickerCategory.CUSTOM) {
-                        "Custom import"
+                        stringResource(R.string.sticker_custom_import)
                     } else {
-                        "${stickers.size} ready"
+                        androidx.compose.ui.res.pluralStringResource(
+                            R.plurals.sticker_ready_count,
+                            stickers.size,
+                            stickers.size,
+                        )
                     },
                     accent = accent
                 )
                 PremiumPanelPill(
-                    text = selectedCategory.label,
+                    text = stringResource(selectedCategory.labelRes()),
                     accent = ClearCutAccents.Sapphire
                 )
             }
 
             Text(
-                text = "Sticker shelf",
+                text = stringResource(R.string.sticker_shelf),
                 color = ClearCutAccents.Rosewater,
                 style = MaterialTheme.typography.labelLarge
             )
             Text(
-                text = "Keep overlays fast and expressive with curated bundles for humor, emphasis, direction, and social prompts.",
+                text = stringResource(R.string.sticker_shelf_description),
                 color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -234,7 +238,7 @@ fun StickerPickerPanel(
                         }
 
                         Text(
-                            text = "Bring in your own art",
+                            text = stringResource(R.string.sticker_bring_own_art),
                             color = semanticColors.text,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
@@ -268,12 +272,12 @@ fun StickerPickerPanel(
         } else {
             PremiumPanelCard(accent = accent) {
                 Text(
-                    text = "Bundled collection",
+                    text = stringResource(R.string.sticker_bundled_collection),
                     color = ClearCutAccents.Rosewater,
                     style = MaterialTheme.typography.labelLarge
                 )
                 Text(
-                    text = "Tap any sticker to place it immediately as an image overlay on the timeline.",
+                    text = stringResource(R.string.sticker_bundled_collection_description),
                     color = semanticColors.subtext,
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -319,7 +323,7 @@ private fun StickerCategoryChip(
         )
     ) {
         Text(
-            text = category.label,
+            text = stringResource(category.labelRes()),
             color = if (selected) accent else semanticColors.subtext,
             style = MaterialTheme.typography.labelLarge,
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
@@ -363,7 +367,7 @@ private fun StickerTile(
                     textAlign = TextAlign.Center
                 )
                 Text(
-                    text = "Tap to place",
+                    text = stringResource(R.string.sticker_tap_to_place),
                     color = semanticColors.subtext,
                     style = MaterialTheme.typography.labelSmall,
                     maxLines = 1,
@@ -380,4 +384,12 @@ private fun stickerAccent(category: StickerCategory): androidx.compose.ui.graphi
     StickerCategory.ARROWS -> ClearCutAccents.Green
     StickerCategory.SOCIAL -> ClearCutAccents.Pink
     StickerCategory.CUSTOM -> ClearCutAccents.Peach
+}
+
+private fun StickerCategory.labelRes(): Int = when (this) {
+    StickerCategory.EMOJI -> R.string.sticker_category_emoji
+    StickerCategory.SHAPES -> R.string.sticker_category_shapes
+    StickerCategory.ARROWS -> R.string.sticker_category_arrows
+    StickerCategory.SOCIAL -> R.string.sticker_category_social
+    StickerCategory.CUSTOM -> R.string.sticker_category_custom
 }
