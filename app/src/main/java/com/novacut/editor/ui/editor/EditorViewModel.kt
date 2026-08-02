@@ -167,6 +167,14 @@ internal fun recoveryOpenFeedbackFor(
     }
 }
 
+/**
+ * Map the Settings "default codec" string onto the enum the export config uses.
+ * The setting is stored as a bare token ("H264"/"HEVC"/"AV1"/"VP9"); an unrecognised
+ * value falls back to H.264, which every Android device can encode.
+ */
+internal fun videoCodecForSetting(stored: String): VideoCodec =
+    VideoCodec.entries.firstOrNull { it.name.equals(stored, ignoreCase = true) } ?: VideoCodec.H264
+
 internal fun shouldBlockAutoSaveForRecoveryOutcome(outcome: ProjectAutoSave.LoadOutcome): Boolean {
     return outcome is ProjectAutoSave.LoadOutcome.FutureSchema ||
         outcome is ProjectAutoSave.LoadOutcome.Corrupt ||
@@ -778,7 +786,8 @@ class EditorViewModel @Inject constructor(
         publish = directPublishEngine, flashSafety = flashSafetyEngine,
         colorBlind = colorBlindEngine, thumbnail = aiThumbnailEngine,
         audioDescription = audioDescriptionEngine, stylusMidi = stylusMidiEngine,
-        audioEngine = audioEngine, videoEngine = videoEngine
+        audioEngine = audioEngine, videoEngine = videoEngine,
+        acoustIdApiKey = { latestSettings?.acoustIdApiKey }
     )
 
     // Whisper model state (exposed via delegate for UI binding)
@@ -814,11 +823,15 @@ class EditorViewModel @Inject constructor(
         viewModelScope.launch { settingsRepo.updateDesktopOverride(value) }
     }
 
-    // Confirm-before-delete / show-waveforms (driven by user settings)
+    // Confirm-before-delete / show-waveforms / haptics (driven by user settings)
     private val _confirmBeforeDelete = MutableStateFlow(true)
     private val _showWaveforms = MutableStateFlow(true)
+    private val _hapticsEnabled = MutableStateFlow(true)
     val confirmBeforeDelete: Boolean get() = _confirmBeforeDelete.value
     val showWaveforms: Boolean get() = _showWaveforms.value
+
+    /** Settings > Haptic feedback. Timeline gestures consult this before buzzing. */
+    val hapticsEnabled: StateFlow<Boolean> = _hapticsEnabled
 
     // Stored outside EditorState to avoid recomposition on every resize
     @Volatile
@@ -1096,7 +1109,13 @@ class EditorViewModel @Inject constructor(
                                 config = s.exportConfig.copy(
                                     resolution = settings.defaultResolution,
                                     frameRate = settings.defaultFrameRate,
-                                    quality = quality
+                                    quality = quality,
+                                    // Default aspect ratio and codec were persisted and
+                                    // rendered back in Settings but never reached an
+                                    // export; they seed the export config alongside the
+                                    // resolution and frame rate that always did.
+                                    aspectRatio = settings.defaultAspectRatio,
+                                    codec = videoCodecForSetting(settings.defaultCodec)
                                 )
                             )
                         }
@@ -1125,6 +1144,17 @@ class EditorViewModel @Inject constructor(
                 // Sync confirm-before-delete and waveform settings
                 _confirmBeforeDelete.value = settings.confirmBeforeDelete
                 _showWaveforms.value = settings.showWaveforms
+                _hapticsEnabled.value = settings.hapticEnabled
+                // The thumbnail cache used to be hard-wired to heap/8, so the size
+                // control in Settings changed a stored number and nothing else.
+                videoEngine.setThumbnailCacheSizeMb(settings.thumbnailCacheSizeMb)
+                if (_state.value.proxySettings.resolution != settings.proxyResolution) {
+                    _state.update { state ->
+                        state.copy(
+                            proxySettings = state.proxySettings.copy(resolution = settings.proxyResolution)
+                        )
+                    }
+                }
                 if (settings.showWaveforms) {
                     preloadVisibleWaveforms(_state.value)
                 } else {

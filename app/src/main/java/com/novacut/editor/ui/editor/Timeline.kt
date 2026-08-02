@@ -38,7 +38,6 @@ import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
@@ -381,7 +380,7 @@ fun Timeline(
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
     val isCompactTimeline = screenWidth < 430.dp
     val density = LocalDensity.current
-    val haptic = LocalHapticFeedback.current
+    val haptic = com.novacut.editor.ui.theme.rememberUserHaptics()
     val rulerHeight = if (isCompactTimeline) 24.dp else 28.dp
     val pixelsPerMs = zoomLevel * BASE_SCALE
     val coroutineScope = rememberCoroutineScope()

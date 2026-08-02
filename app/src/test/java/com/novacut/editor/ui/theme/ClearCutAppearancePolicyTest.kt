@@ -8,15 +8,16 @@ import org.junit.Test
 class ClearCutAppearancePolicyTest {
 
     @Test
-    fun systemModeUsesDarkCanvasUntilLightPaletteIsAudited() {
+    fun theAppearanceMenuOffersOnlySchemesThatExist() {
+        // "System" used to sit in this list and resolve to DARK in both branches --
+        // a control that read the platform preference and ignored it.
         assertEquals(
-            AppearanceMode.DARK,
-            ClearCutThemeDefaults.resolveMode(AppearanceMode.SYSTEM, systemDark = false),
+            listOf(AppearanceMode.DARK, AppearanceMode.HIGH_CONTRAST_DARK),
+            AppearanceMode.entries.toList(),
         )
-        assertEquals(
-            AppearanceMode.DARK,
-            ClearCutThemeDefaults.resolveMode(AppearanceMode.SYSTEM, systemDark = true),
-        )
+        AppearanceMode.entries.forEach { mode ->
+            assertEquals(mode, ClearCutThemeDefaults.resolveMode(mode))
+        }
     }
 
     @Test

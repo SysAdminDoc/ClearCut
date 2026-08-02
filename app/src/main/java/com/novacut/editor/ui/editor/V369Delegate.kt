@@ -60,7 +60,13 @@ class V369Delegate(
     val audioDescription: AudioDescriptionEngine,
     val stylusMidi: StylusMidiEngine,
     private val audioEngine: AudioEngine,
-    private val videoEngine: VideoEngine
+    private val videoEngine: VideoEngine,
+    /**
+     * The AcoustID key from Settings, or null/blank when the user has not entered one.
+     * Without this the setting was a text field that stored a key nothing ever read,
+     * so the content-ID check could never move past the hash-only path.
+     */
+    private val acoustIdApiKey: () -> String? = { null }
 ) {
 
     private val jobs = mutableListOf<Job>()
@@ -386,7 +392,7 @@ class V369Delegate(
      * via `settingsRepo`/user input; without one the engine still returns the
      * local fingerprint hash so the UI can show something meaningful.
      */
-    fun runContentIdOnLastExport(apiKey: String? = null) {
+    fun runContentIdOnLastExport(apiKey: String? = acoustIdApiKey()?.takeIf { it.isNotBlank() }) {
         val path = stateFlow.value.lastExportedFilePath
         if (path == null) { showToast(appContext.getString(R.string.v369_export_first_toast)); return }
         jobs += scope.launch {

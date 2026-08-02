@@ -173,7 +173,9 @@ class VideoEngine @Inject constructor(
     }
 
     private var previewTrackedObjects: List<TrackedObject> = emptyList()
-    // Memory-bounded bitmap cache — uses 1/8 of available heap
+    // Memory-bounded bitmap cache. The initial bound is 1/8 of available heap; the
+    // Settings "thumbnail cache size" control resizes it through
+    // [setThumbnailCacheSizeMb], which is what makes that control do anything at all.
     // Don't recycle evicted bitmaps — they may still be referenced by Compose Image nodes
     private val thumbnailCache = object : android.util.LruCache<String, Bitmap>(
         (Runtime.getRuntime().maxMemory() / 8).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
@@ -194,6 +196,21 @@ class VideoEngine @Inject constructor(
         ) {
             clearThumbnailCache()
         }
+    }
+
+    /**
+     * Apply the user's thumbnail cache budget. Bounded above by half the heap so a
+     * generous setting on a small device cannot turn a cache into an OOM. Shrinking
+     * evicts immediately, which is the observable effect the control promises.
+     */
+    fun setThumbnailCacheSizeMb(sizeMb: Int) {
+        val heapCeiling = (Runtime.getRuntime().maxMemory() / 2)
+            .coerceAtMost(Int.MAX_VALUE.toLong())
+        val requested = sizeMb.coerceIn(32, 512).toLong() * 1024L * 1024L
+        val bytes = requested.coerceAtMost(heapCeiling).coerceAtLeast(8L * 1024L * 1024L).toInt()
+        if (thumbnailCache.maxSize() == bytes) return
+        Log.d(TAG, "Thumbnail cache resized to ${bytes / (1024 * 1024)} MB")
+        thumbnailCache.resize(bytes)
     }
 
     // Active Transformer for export cancellation

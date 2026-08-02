@@ -51,7 +51,7 @@ data class AppSettings(
     // local hash-only path (see ContentIdEngine).
     val acoustIdApiKey: String = "",
     val includeDiagnosticTimelineShape: Boolean = false,
-    val appearanceMode: AppearanceMode = AppearanceMode.SYSTEM,
+    val appearanceMode: AppearanceMode = AppearanceMode.DARK,
     // Opt-in passive update check for sideload / GitHub-release installs. Off by
     // default so no network request is ever made without explicit consent.
     val updateCheckEnabled: Boolean = false,
@@ -67,8 +67,15 @@ data class AppSettings(
 
 enum class DesktopOverride { AUTO, FORCE_ON, FORCE_OFF }
 
+/**
+ * The appearance schemes ClearCut actually implements.
+ *
+ * There is no "System" entry: only dark colour schemes exist, so offering it made the
+ * control a labelled no-op that read the platform preference and ignored it. A stored
+ * "SYSTEM" value from an older build no longer parses and falls back to [DARK], which
+ * is what it always resolved to anyway.
+ */
 enum class AppearanceMode {
-    SYSTEM,
     DARK,
     HIGH_CONTRAST_DARK,
 }
@@ -137,7 +144,7 @@ internal fun mapPreferencesToAppSettings(prefs: Preferences): AppSettings = AppS
     acoustIdApiKey = prefs[SettingsPreferenceKeys.ACOUSTID_KEY] ?: "",
     includeDiagnosticTimelineShape = prefs[SettingsPreferenceKeys.INCLUDE_DIAGNOSTIC_TIMELINE_SHAPE] ?: false,
     appearanceMode = prefs[SettingsPreferenceKeys.APPEARANCE_MODE]?.enumOrNull<AppearanceMode>()
-        ?: AppearanceMode.SYSTEM,
+        ?: AppearanceMode.DARK,
     updateCheckEnabled = prefs[SettingsPreferenceKeys.UPDATE_CHECK_ENABLED] ?: false,
     mediaPipeConsentVersion = prefs[SettingsPreferenceKeys.MEDIA_PIPE_CONSENT_VERSION]?.takeIf { it >= 0 } ?: 0,
 )

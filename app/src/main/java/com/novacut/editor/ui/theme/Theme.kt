@@ -1,6 +1,5 @@
 package com.novacut.editor.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
@@ -190,19 +189,15 @@ val LocalClearCutColors = staticCompositionLocalOf {
 }
 
 object ClearCutThemeDefaults {
-    fun resolveMode(mode: AppearanceMode, systemDark: Boolean): AppearanceMode = when (mode) {
-        AppearanceMode.SYSTEM -> {
-            // ClearCut deliberately keeps the editing canvas dark until a video-neutral
-            // light palette has a full screenshot/contrast audit.
-            if (systemDark) AppearanceMode.DARK else AppearanceMode.DARK
-        }
-        AppearanceMode.DARK -> AppearanceMode.DARK
-        AppearanceMode.HIGH_CONTRAST_DARK -> AppearanceMode.HIGH_CONTRAST_DARK
-    }
+    /**
+     * ClearCut ships dark schemes only, so every mode resolves to itself. Kept as a
+     * seam for the day a light palette passes its contrast audit -- but it no longer
+     * pretends to consult a system preference it cannot honour.
+     */
+    fun resolveMode(mode: AppearanceMode): AppearanceMode = mode
 
     fun colorSchemeFor(resolvedMode: AppearanceMode) = when (resolvedMode) {
         AppearanceMode.HIGH_CONTRAST_DARK -> ClearCutHighContrastColorScheme
-        AppearanceMode.SYSTEM,
         AppearanceMode.DARK -> ClearCutDarkColorScheme
     }
 
@@ -238,7 +233,6 @@ object ClearCutThemeDefaults {
             overlayStrong = Color(0xFFF4F7FF),
             onAccent = Color(0xFF05070D),
         )
-        AppearanceMode.SYSTEM,
         AppearanceMode.DARK -> ClearCutSemanticColors(
             mode = AppearanceMode.DARK,
             highContrast = false,
@@ -392,13 +386,10 @@ private val ClearCutShapes = Shapes(
 
 @Composable
 fun ClearCutTheme(
-    appearanceMode: AppearanceMode = AppearanceMode.SYSTEM,
+    appearanceMode: AppearanceMode = AppearanceMode.DARK,
     content: @Composable () -> Unit
 ) {
-    val resolvedMode = ClearCutThemeDefaults.resolveMode(
-        mode = appearanceMode,
-        systemDark = isSystemInDarkTheme(),
-    )
+    val resolvedMode = ClearCutThemeDefaults.resolveMode(appearanceMode)
     CompositionLocalProvider(LocalClearCutColors provides ClearCutThemeDefaults.colorsFor(resolvedMode)) {
         MaterialTheme(
             colorScheme = ClearCutThemeDefaults.colorSchemeFor(resolvedMode),

@@ -453,7 +453,11 @@ fun EditorScreen(
         return true
     }
 
-    CompositionLocalProvider(LocalLayoutMode provides layoutMode) {
+    val hapticsEnabled by viewModel.hapticsEnabled.collectAsStateWithLifecycle()
+    CompositionLocalProvider(
+        LocalLayoutMode provides layoutMode,
+        com.novacut.editor.ui.theme.LocalHapticsEnabled provides hapticsEnabled,
+    ) {
     Box(modifier = Modifier
         .fillMaxSize()
         .testTag(ClearCutTestTags.EDITOR_SCREEN)

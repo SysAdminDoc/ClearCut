@@ -1438,7 +1438,6 @@ private fun SegmentationModelState.displayLabel(): String = when (this) {
 
 @Composable
 private fun AppearanceMode.displayLabel(): String = when (this) {
-    AppearanceMode.SYSTEM -> stringResource(R.string.settings_appearance_system)
     AppearanceMode.DARK -> stringResource(R.string.settings_appearance_dark)
     AppearanceMode.HIGH_CONTRAST_DARK -> stringResource(R.string.settings_appearance_high_contrast)
 }

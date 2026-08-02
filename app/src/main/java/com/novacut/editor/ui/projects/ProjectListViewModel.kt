@@ -21,6 +21,7 @@ import com.novacut.editor.engine.IncomingDocumentItem
 import com.novacut.editor.engine.IncomingMediaItem
 import com.novacut.editor.engine.IncomingMediaKind
 import com.novacut.editor.engine.ProjectAutoSave
+import com.novacut.editor.engine.SettingsRepository
 import com.novacut.editor.engine.TemplateImportFailure
 import com.novacut.editor.engine.TemplateImportResult
 import com.novacut.editor.engine.TemplateManager
@@ -59,6 +60,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -77,6 +79,7 @@ class ProjectListViewModel @Inject constructor(
     private val autoSave: ProjectAutoSave,
     private val templateManager: TemplateManager,
     private val videoEngine: VideoEngine,
+    private val settingsRepo: SettingsRepository,
     private val mediaImportEngine: MediaImportEngine,
     private val incomingDocumentImportRouter: IncomingDocumentImportRouter,
     @ApplicationContext private val appContext: Context
@@ -234,26 +237,33 @@ class ProjectListViewModel @Inject constructor(
         _filterMode.value = mode
     }
 
+    /**
+     * Create a project. A null [aspectRatio], [frameRate] or [resolution] means the
+     * caller has no opinion, so the user's Settings defaults apply -- which is what
+     * makes those Settings controls do anything. A template that exists to produce a
+     * specific format (a 9:16 short, say) passes its own values and keeps them.
+     */
     fun createProject(
         name: String = "Untitled",
-        aspectRatio: AspectRatio = AspectRatio.RATIO_16_9,
-        frameRate: Int = 30,
-        resolution: Resolution = Resolution.FHD_1080P,
+        aspectRatio: AspectRatio? = null,
+        frameRate: Int? = null,
+        resolution: Resolution? = null,
         templateId: String? = null,
         trackTypes: List<TrackType> = listOf(TrackType.VIDEO, TrackType.AUDIO),
         onCreated: (String) -> Unit = {}
     ) {
         val normalizedName = normalizeProjectName(name)
-        val project = Project(
-            name = normalizedName,
-            aspectRatio = aspectRatio,
-            frameRate = frameRate,
-            resolution = resolution,
-            templateId = templateId
-        )
-        val initialTracks = buildTracks(trackTypes)
 
         viewModelScope.launch {
+            val settings = settingsRepo.settings.first()
+            val project = Project(
+                name = normalizedName,
+                aspectRatio = aspectRatio ?: settings.defaultAspectRatio,
+                frameRate = frameRate ?: settings.defaultFrameRate,
+                resolution = resolution ?: settings.defaultResolution,
+                templateId = templateId
+            )
+            val initialTracks = buildTracks(trackTypes, settings.defaultTrackHeight)
             val operation = beginOperation(
                 title = appContext.getString(R.string.projects_operation_create_title),
                 description = appContext.getString(R.string.projects_operation_create_body)
@@ -681,7 +691,10 @@ class ProjectListViewModel @Inject constructor(
                     ?: appContext.getString(R.string.project_imported_default_name)
                 val visualClips = imported.filter { it.trackType == TrackType.VIDEO }
                 val audioClips = imported.filter { it.trackType == TrackType.AUDIO }
-                val importedTracks = buildTracks(listOf(TrackType.VIDEO, TrackType.AUDIO)).map { track ->
+                val importedTracks = buildTracks(
+                    listOf(TrackType.VIDEO, TrackType.AUDIO),
+                    settingsRepo.settings.first().defaultTrackHeight,
+                ).map { track ->
                     when (track.type) {
                         TrackType.VIDEO -> track.copy(clips = visualClips.map { it.clip })
                         TrackType.AUDIO -> track.copy(clips = audioClips.map { it.clip })
@@ -816,10 +829,10 @@ class ProjectListViewModel @Inject constructor(
         _userTemplates.value = templates
     }
 
-    private fun buildTracks(trackTypes: List<TrackType>): List<Track> {
+    private fun buildTracks(trackTypes: List<TrackType>, trackHeight: Int): List<Track> {
         val normalizedTypes = trackTypes.ifEmpty { listOf(TrackType.VIDEO, TrackType.AUDIO) }
         return normalizedTypes.mapIndexed { index, type ->
-            Track(type = type, index = index)
+            Track(type = type, index = index, trackHeight = trackHeight.coerceIn(48, 120))
         }
     }
 

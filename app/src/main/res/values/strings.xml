@@ -608,7 +608,6 @@
     <string name="settings_appearance_description">Choose the editor contrast policy. ClearCut keeps a dark video-neutral canvas until a light palette has full screenshot QA.</string>
     <string name="settings_appearance_mode">Appearance mode</string>
     <string name="settings_appearance_mode_description">System and Dark use the standard dark canvas; High Contrast boosts strokes, chips, and text indicators.</string>
-    <string name="settings_appearance_system">System (dark canvas)</string>
     <string name="settings_appearance_dark">Dark</string>
     <string name="settings_appearance_high_contrast">High Contrast Dark</string>
     <string name="settings_diagnostic_timeline_shape">Include timeline shape</string>

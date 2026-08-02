@@ -585,7 +585,6 @@
     <string name="settings_appearance_description">Elija la política de contraste del editor. ClearCut mantiene un lienzo oscuro y neutro hasta que una paleta clara tiene un control de calidad de captura de pantalla completo.</string>
     <string name="settings_appearance_mode">Modo de apariencia</string>
     <string name="settings_appearance_mode_description">System y Dark utilizan el lienzo oscuro estándar; El contraste alto aumenta los trazos, las virutas y los indicadores de texto.</string>
-    <string name="settings_appearance_system">Sistema (lienzo oscuro)</string>
     <string name="settings_appearance_dark">oscuro</string>
     <string name="settings_appearance_high_contrast">Oscuro de alto contraste</string>
     <string name="settings_diagnostic_timeline_shape">Incluir forma de línea de tiempo</string>
