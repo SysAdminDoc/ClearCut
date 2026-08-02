@@ -750,7 +750,8 @@ class EditorViewModel @Inject constructor(
         audioEngine = audioEngine,
         exportIncidentStore = exportIncidentStore,
         appVersion = com.novacut.editor.ClearCutApp.VERSION,
-        ffmpegEngine = ffmpegEngine
+        ffmpegEngine = ffmpegEngine,
+        includeDiagnosticRawErrorText = { latestSettings?.includeDiagnosticRawErrorText == true },
     )
 
     val aiToolsDelegate = AiToolsDelegate(

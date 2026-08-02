@@ -50,17 +50,25 @@ data class ExportIncidentBundle(
     val remediation: String = ExportRemediation.UNKNOWN,
 ) {
     /**
-     * The report a user can copy out of the app verbatim. Names the stage, the
-     * codec, the device, the asset (redacted), and the next step — the five
-     * things a failure report is useless without.
+     * The report a user can copy out of the app. Names the stage, the codec,
+     * the device, the asset (redacted), and the next step — the five things a
+     * failure report is useless without.
+     *
+     * Raw encoder text is opt-in because codec errors can quote filenames,
+     * captions, or paths that generic redaction cannot recognize.
      */
-    fun toCopyableReport(): String = buildString {
+    fun toCopyableReport(includeRawErrorText: Boolean = false): String = buildString {
         appendLine("ClearCut export failure report")
         appendLine("incident: ${id.take(8)}")
         appendLine("app: $appVersion (Android SDK $androidSdk)")
         appendLine("device: $deviceModel")
         appendLine("stage: $failedPhase")
-        appendLine("error: $errorClass — $errorMessage")
+        val reportError = if (includeRawErrorText && errorMessage.isNotBlank()) {
+            errorMessage
+        } else {
+            "[redacted; enable raw error text in Settings]"
+        }
+        appendLine("error: $errorClass — $reportError")
         appendLine("codec: $codecLabel via $encoderPath")
         appendLine("output: $resolutionLabel @ ${frameRate}fps" + if (hdrRequested) " (HDR requested)" else "")
         appendLine("audio-only: $exportAudioOnly, stream-copy attempted: $streamCopyAttempted")

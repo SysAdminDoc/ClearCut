@@ -79,7 +79,8 @@ class ExportDelegate(
     private val audioEngine: com.novacut.editor.engine.AudioEngine? = null,
     private val exportIncidentStore: ExportIncidentStore? = null,
     private val appVersion: String = "unknown",
-    private val ffmpegEngine: com.novacut.editor.engine.FFmpegEngine? = null
+    private val ffmpegEngine: com.novacut.editor.engine.FFmpegEngine? = null,
+    private val includeDiagnosticRawErrorText: () -> Boolean = { false },
 ) {
     private fun text(resId: Int, vararg args: Any): String =
         appContext.getString(resId, *args)
@@ -242,6 +243,7 @@ class ExportDelegate(
     ) {
         val store = exportIncidentStore ?: return
         val samples = synchronized(progressSamples) { progressSamples.toList() }
+        val includeRawErrorText = includeDiagnosticRawErrorText()
         scope.launch(Dispatchers.IO) {
             runCatching {
                 val bundle = ExportIncidentBuilder.build(
@@ -275,7 +277,9 @@ class ExportDelegate(
                 )
                 store.save(bundle)
                 // Surface the report where the failure is: the export error card.
-                updateExport { it.copy(lastIncidentReport = bundle.toCopyableReport()) }
+                updateExport {
+                    it.copy(lastIncidentReport = bundle.toCopyableReport(includeRawErrorText))
+                }
             }
         }
     }

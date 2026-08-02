@@ -81,4 +81,19 @@ class ExportIncidentConsentTest {
         assertTrue(report.contains("ExportException"))
         assertTrue("a report with no next step is not actionable", report.contains("what to try:"))
     }
+
+    @Test
+    fun theCopyableReportWithholdsRawErrorTextByDefault() {
+        val report = bundle.toCopyableReport()
+
+        assertFalse(report.contains("/storage/emulated/0/DCIM/holiday.mp4"))
+        assertTrue(report.contains("[redacted; enable raw error text in Settings]"))
+    }
+
+    @Test
+    fun theCopyableReportIncludesRawErrorTextOnlyWithConsent() {
+        val report = bundle.toCopyableReport(includeRawErrorText = true)
+
+        assertTrue(report.contains(bundle.errorMessage))
+    }
 }
