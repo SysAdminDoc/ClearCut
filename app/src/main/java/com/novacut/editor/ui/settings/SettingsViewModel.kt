@@ -251,6 +251,9 @@ class SettingsViewModel @Inject constructor(
         _projectStorage.update { it.copy(feedbackMessage = null) }
     }
 
+    fun setIncludeDiagnosticRawErrorText(v: Boolean) =
+        viewModelScope.launch { repo.updateIncludeDiagnosticRawErrorText(v) }
+
     fun exportDiagnosticBundle() {
         if (_diagnosticExport.value.isExporting) return
         viewModelScope.launch {
@@ -282,7 +285,8 @@ class SettingsViewModel @Inject constructor(
                 }
                 val bundle = diagnosticExportEngine.exportDiagnosticBundle(
                     modelRegistry = modelRegistry,
-                    timelineShape = timelineShape
+                    timelineShape = timelineShape,
+                    includeRawExportErrorText = settingsSnapshot.includeDiagnosticRawErrorText
                 )
                 _diagnosticExport.update {
                     it.copy(

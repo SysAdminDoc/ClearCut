@@ -625,6 +625,14 @@ fun SettingsScreen(
                 checked = settings.includeDiagnosticTimelineShape,
                 onChanged = viewModel::setIncludeDiagnosticTimelineShape
             )
+            SettingsSwitch(
+                icon = Icons.Default.BugReport,
+                accent = Mocha.Peach,
+                label = stringResource(R.string.settings_diagnostic_raw_error_text),
+                description = stringResource(R.string.settings_diagnostic_raw_error_text_description),
+                checked = settings.includeDiagnosticRawErrorText,
+                onChanged = viewModel::setIncludeDiagnosticRawErrorText
+            )
             SettingsDiagnosticExportRow(
                 state = diagnosticExport,
                 onExport = viewModel::exportDiagnosticBundle,

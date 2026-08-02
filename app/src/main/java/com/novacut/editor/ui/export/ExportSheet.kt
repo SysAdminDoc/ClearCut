@@ -67,6 +67,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.engine.AiUsageLedger
@@ -134,6 +136,11 @@ fun ExportSheet(
     encoderName: String? = null,
     stallWarning: Boolean = false,
     lastExportedFilePath: String? = null,
+    /**
+     * Copyable failure report for the last failed export. Present means the error card
+     * can hand the user something a triager can actually read.
+     */
+    incidentReport: String? = null,
     suggestedResolution: Resolution? = null,
     suggestedFps: Int? = null,
     presentation: ExportSheetPresentation = ExportSheetPresentation.BOTTOM_SHEET,
@@ -449,6 +456,8 @@ fun ExportSheet(
         }
 
         if (exportState == ExportState.ERROR) {
+            val clipboard = LocalClipboardManager.current
+            var reportCopied by remember(incidentReport) { mutableStateOf(false) }
             val latestFailureDiagnostic = exportHistory.firstOrNull {
                 it.status == ExportHistoryStatus.FAILED || it.status == ExportHistoryStatus.BLOCKED
             }?.diagnosticSummary
@@ -462,6 +471,19 @@ fun ExportSheet(
                 onPrimary = onStartExport,
                 secondaryLabel = stringResource(R.string.close),
                 onSecondary = onClose,
+                // The report the engine already built for exactly this failure. Without
+                // this the card could only say "check diagnostics" and give no way there.
+                tertiaryLabel = incidentReport?.let {
+                    stringResource(
+                        if (reportCopied) R.string.export_copy_report_done else R.string.export_copy_report
+                    )
+                },
+                onTertiary = incidentReport?.let { report ->
+                    {
+                        clipboard.setText(AnnotatedString(report))
+                        reportCopied = true
+                    }
+                },
                 primaryStyle = PrimaryStyle.Filled
             )
             return

@@ -274,6 +274,8 @@ class ExportDelegate(
                     subjectAssetId = subjectClipId?.let { RedactedLog.assetId(it) },
                 )
                 store.save(bundle)
+                // Surface the report where the failure is: the export error card.
+                updateExport { it.copy(lastIncidentReport = bundle.toCopyableReport()) }
             }
         }
     }

@@ -210,6 +210,7 @@ fun BoxScope.EditorPrimaryPanelHost(
             encoderName = state.export.encoderName,
             stallWarning = state.export.stallWarning,
             lastExportedFilePath = state.lastExportedFilePath,
+            incidentReport = state.export.lastIncidentReport,
             suggestedResolution = Resolution.FHD_1080P,
             suggestedFps = state.project.frameRate,
             presentation = if (useEmbeddedExportPane) {

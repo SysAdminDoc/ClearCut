@@ -51,6 +51,14 @@ data class AppSettings(
     // local hash-only path (see ContentIdEngine).
     val acoustIdApiKey: String = "",
     val includeDiagnosticTimelineShape: Boolean = false,
+    /**
+     * Include the raw encoder error text in a shared diagnostics bundle. Off by
+     * default: a codec error can quote a filename, a caption, or a path, and generic
+     * redaction cannot recognise arbitrary user text. With only the error class, though,
+     * a triager often cannot tell two different failures apart -- so this is the user's
+     * call to make, explicitly.
+     */
+    val includeDiagnosticRawErrorText: Boolean = false,
     val appearanceMode: AppearanceMode = AppearanceMode.DARK,
     // Opt-in passive update check for sideload / GitHub-release installs. Off by
     // default so no network request is ever made without explicit consent.
@@ -106,6 +114,7 @@ internal object SettingsPreferenceKeys {
     val DESKTOP_OVERRIDE = stringPreferencesKey("desktop_override")
     val ACOUSTID_KEY = stringPreferencesKey("acoustid_api_key")
     val INCLUDE_DIAGNOSTIC_TIMELINE_SHAPE = booleanPreferencesKey("include_diagnostic_timeline_shape")
+    val INCLUDE_DIAGNOSTIC_RAW_ERROR_TEXT = booleanPreferencesKey("include_diagnostic_raw_error_text")
     val APPEARANCE_MODE = stringPreferencesKey("appearance_mode")
     val UPDATE_CHECK_ENABLED = booleanPreferencesKey("update_check_enabled")
     val MEDIA_PIPE_CONSENT_VERSION = intPreferencesKey("mediapipe_consent_version")
@@ -143,6 +152,7 @@ internal fun mapPreferencesToAppSettings(prefs: Preferences): AppSettings = AppS
         ?: DesktopOverride.AUTO,
     acoustIdApiKey = prefs[SettingsPreferenceKeys.ACOUSTID_KEY] ?: "",
     includeDiagnosticTimelineShape = prefs[SettingsPreferenceKeys.INCLUDE_DIAGNOSTIC_TIMELINE_SHAPE] ?: false,
+    includeDiagnosticRawErrorText = prefs[SettingsPreferenceKeys.INCLUDE_DIAGNOSTIC_RAW_ERROR_TEXT] ?: false,
     appearanceMode = prefs[SettingsPreferenceKeys.APPEARANCE_MODE]?.enumOrNull<AppearanceMode>()
         ?: AppearanceMode.DARK,
     updateCheckEnabled = prefs[SettingsPreferenceKeys.UPDATE_CHECK_ENABLED] ?: false,
@@ -333,6 +343,10 @@ class SettingsRepository internal constructor(
 
     suspend fun updateIncludeDiagnosticTimelineShape(value: Boolean) {
         dataStore.edit { it[SettingsPreferenceKeys.INCLUDE_DIAGNOSTIC_TIMELINE_SHAPE] = value }
+    }
+
+    suspend fun updateIncludeDiagnosticRawErrorText(value: Boolean) {
+        dataStore.edit { it[SettingsPreferenceKeys.INCLUDE_DIAGNOSTIC_RAW_ERROR_TEXT] = value }
     }
 
     suspend fun updateAppearanceMode(value: AppearanceMode) {

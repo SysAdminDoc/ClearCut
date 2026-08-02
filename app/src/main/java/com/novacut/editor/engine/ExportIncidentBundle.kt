@@ -125,7 +125,14 @@ class ExportIncidentStore internal constructor(private val incidentDir: File) {
             ?: emptyList()
     }
 
-    fun buildDiagnosticJson(): String? {
+    /**
+     * @param includeRawErrorText when true, the shared bundle carries each incident's
+     * raw encoder error string. It is withheld by default because a codec error can
+     * quote a filename, a caption, or a path, and generic redaction cannot recognise
+     * arbitrary user text -- but with only `errorClass` a triager often cannot tell two
+     * different failures apart, so the user can consent to include it.
+     */
+    fun buildDiagnosticJson(includeRawErrorText: Boolean = false): String? {
         val incidents = readAll()
         if (incidents.isEmpty()) return null
         val projectPseudonyms = linkedMapOf<String, String>()
@@ -136,7 +143,7 @@ class ExportIncidentStore internal constructor(private val incidentDir: File) {
             val pseudonym = projectPseudonyms.getOrPut(projectKey) {
                 "project-${projectPseudonyms.size + 1}"
             }
-            array.put(toDiagnosticJson(incident, pseudonym))
+            array.put(toDiagnosticJson(incident, pseudonym, includeRawErrorText))
         }
         return array.toString(2)
     }
@@ -201,6 +208,7 @@ class ExportIncidentStore internal constructor(private val incidentDir: File) {
         internal fun toDiagnosticJson(
             bundle: ExportIncidentBundle,
             projectPseudonym: String,
+            includeRawErrorText: Boolean = false,
         ): JSONObject = JSONObject().apply {
             put("schema", "com.clearcut.export-incident.shared.v1")
             put("id", bundle.id)
@@ -210,6 +218,10 @@ class ExportIncidentStore internal constructor(private val incidentDir: File) {
             put("projectPseudonym", projectPseudonym)
             put("failedPhase", bundle.failedPhase)
             put("errorClass", bundle.errorClass)
+            // Only present with explicit consent; see buildDiagnosticJson.
+            if (includeRawErrorText && bundle.errorMessage.isNotBlank()) {
+                put("errorMessage", bundle.errorMessage)
+            }
             put("encoderPath", bundle.encoderPath)
             put("codecLabel", bundle.codecLabel)
             put("resolutionLabel", bundle.resolutionLabel)

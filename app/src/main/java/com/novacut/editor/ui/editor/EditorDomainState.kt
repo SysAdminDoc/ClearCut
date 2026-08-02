@@ -83,7 +83,14 @@ data class EditorExportDomainState(
      * work runs while this is non-null: the user either confirms (which records
      * the accepted fallbacks) or cancels.
      */
-    val pendingConfirmation: ExportConfirmationRequest? = null
+    val pendingConfirmation: ExportConfirmationRequest? = null,
+    /**
+     * The copyable failure report for the most recent failed export. The report
+     * builder existed and was exercised only by its own test -- the error card offered
+     * Retry and Close, and its fallback copy told the user to check diagnostics it gave
+     * no way to open.
+     */
+    val lastIncidentReport: String? = null
 ) : EditorDomainState {
     override val kind: EditorDomainState.Kind = EditorDomainState.Kind.EXPORT
 }

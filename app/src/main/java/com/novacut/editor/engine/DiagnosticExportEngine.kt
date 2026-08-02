@@ -196,12 +196,13 @@ class DiagnosticExportEngine @Inject constructor(
         permissionSnapshots: List<PermissionSnapshot> = emptyList(),
         now: Long = System.currentTimeMillis(),
         retainCount: Int = 3,
+        includeRawExportErrorText: Boolean = false,
     ): File = withContext(Dispatchers.IO) {
         val outDir = File(context.filesDir, DIAG_DIR).apply { mkdirs() }
         val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US)
             .format(Date(now))
         val zipFile = File(outDir, "diagnostic-$stamp.zip")
-        writeBundle(zipFile, modelRegistry, timelineShape, permissionSnapshots, now)
+        writeBundle(zipFile, modelRegistry, timelineShape, permissionSnapshots, now, includeRawExportErrorText)
         pruneOldBundles(outDir, retainCount)
         zipFile
     }
@@ -217,6 +218,7 @@ class DiagnosticExportEngine @Inject constructor(
         timelineShape: TimelineShape? = null,
         permissionSnapshots: List<PermissionSnapshot> = emptyList(),
         now: Long = System.currentTimeMillis(),
+        includeRawExportErrorText: Boolean = false,
     ): Long {
         target.parentFile?.mkdirs()
         val entries = linkedMapOf<String, ByteArray>()
@@ -241,7 +243,7 @@ class DiagnosticExportEngine @Inject constructor(
         settingsResetReportStore.buildDiagnosticText()?.let { settingsResetJsonl ->
             entries[SettingsResetReportStore.BUNDLE_ENTRY] = settingsResetJsonl.toByteArray(Charsets.UTF_8)
         }
-        exportIncidentStore.buildDiagnosticJson()?.let { incidentsJson ->
+        exportIncidentStore.buildDiagnosticJson(includeRawExportErrorText)?.let { incidentsJson ->
             entries[ExportIncidentStore.BUNDLE_ENTRY] = incidentsJson.toByteArray(Charsets.UTF_8)
         }
         entries["logcat-tail.txt"] = buildLogcatTail().toByteArray(Charsets.UTF_8)

@@ -2517,4 +2517,8 @@
     <string name="media_picker_importing_progress">Importando %1$d de %2$d…</string>
     <string name="editor_project_not_found_title">Proyecto no encontrado</string>
     <string name="editor_project_not_found_back">Volver a proyectos</string>
+    <string name="export_copy_report">Copiar informe</string>
+    <string name="export_copy_report_done">Informe copiado</string>
+    <string name="settings_diagnostic_raw_error_text">Incluir errores sin procesar del codificador</string>
+    <string name="settings_diagnostic_raw_error_text_description">Añade el texto exacto del error del codificador al paquete de diagnóstico compartido. Desactivado por defecto: un error del codificador puede citar un nombre de archivo o un subtítulo, y no se puede censurar de forma fiable. Sin él, dos fallos distintos pueden parecer idénticos para quien lea el informe.</string>
 </resources>
