@@ -91,6 +91,7 @@ fun ProjectListScreen(
     val filterMode by viewModel.filterMode.collectAsStateWithLifecycle()
     val userTemplates by viewModel.userTemplates.collectAsStateWithLifecycle()
     val restorableTemplate by viewModel.restorableTemplate.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val toastMessage by viewModel.toastMessage.collectAsStateWithLifecycle()
     val operationState by viewModel.operationState.collectAsStateWithLifecycle()
     val documentImportPreview by viewModel.documentImportPreview.collectAsStateWithLifecycle()
@@ -191,7 +192,21 @@ fun ProjectListScreen(
                 }
             }
 
-            if (ProjectListTrashVisibilityPolicy.showsFullScreenEmptyState(projects.size, trashed.size)) {
+            if (ProjectListTrashVisibilityPolicy.showsLoadingState(projects.size, trashed.size, isLoading)) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else if (ProjectListTrashVisibilityPolicy.showsFullScreenEmptyState(
+                    projects.size,
+                    trashed.size,
+                    isLoading
+                )
+            ) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()

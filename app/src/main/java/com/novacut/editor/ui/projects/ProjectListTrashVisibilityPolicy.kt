@@ -16,7 +16,20 @@ object ProjectListTrashVisibilityPolicy {
      * an empty trash. Otherwise the list renders, carrying the trash section.
      */
     fun showsFullScreenEmptyState(activeCount: Int, trashedCount: Int): Boolean =
-        activeCount <= 0 && trashedCount <= 0
+        showsFullScreenEmptyState(activeCount, trashedCount, isLoading = false)
+
+    /**
+     * The list seeded straight to an empty list before Room's first emission, so
+     * "No projects yet" flashed on every cold start -- the app telling a returning
+     * user their work was gone. While [isLoading] is true nothing is empty yet: it is
+     * simply unknown.
+     */
+    fun showsFullScreenEmptyState(activeCount: Int, trashedCount: Int, isLoading: Boolean): Boolean =
+        !isLoading && activeCount <= 0 && trashedCount <= 0
+
+    /** True while the first Room emission is still outstanding. */
+    fun showsLoadingState(activeCount: Int, trashedCount: Int, isLoading: Boolean): Boolean =
+        isLoading && activeCount <= 0 && trashedCount <= 0
 
     /** True when the list should render at all (projects, trash, or both). */
     fun showsList(activeCount: Int, trashedCount: Int): Boolean =

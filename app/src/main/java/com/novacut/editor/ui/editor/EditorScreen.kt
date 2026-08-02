@@ -384,6 +384,22 @@ fun EditorScreen(
         if (state.selectedClipId == null) showClipLabelPicker = false
     }
 
+    // The requested project is not in the database. It used to be recreated blank under
+    // the same id, so the user saw an empty timeline where their work had been and no
+    // explanation. There is one way out of this dialog: back to the projects list.
+    if (state.projectNotFound) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text(stringResource(R.string.editor_project_not_found_title)) },
+            text = { Text(stringResource(R.string.editor_project_not_found)) },
+            confirmButton = {
+                TextButton(onClick = onBack) {
+                    Text(stringResource(R.string.editor_project_not_found_back))
+                }
+            }
+        )
+    }
+
     // The project opened, but not all of it came back. Saving is paused until the user
     // picks, because the alternative is an autosave quietly writing the truncation over
     // the only file that still has the missing pieces. There is no dismiss action.

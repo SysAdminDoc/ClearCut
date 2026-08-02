@@ -83,7 +83,14 @@ private class CaptureVideoWithGrant : ActivityResultContract<Uri, Boolean>() {
 
 private data class MediaPickerOperationState(
     val title: String,
-    val description: String
+    val description: String,
+    /**
+     * Determinate progress for batch imports. A forty-file import previously showed a
+     * static card with a spinner for minutes, so a slow import and a stuck one looked
+     * the same. Null for single-item work, where there is nothing to count.
+     */
+    val completed: Int? = null,
+    val total: Int? = null,
 )
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -124,30 +131,38 @@ fun MediaPickerSheet(
                     description = context.getString(R.string.media_picker_importing_batch_description)
                 )
                 try {
-                    val importResult = withContext(Dispatchers.IO) {
-                        val sortedUris = sortMediaChronologically(context, uris)
-                        var spaceChecked = false
-                        sortedUris.mapNotNull { uri ->
-                            val mediaType = resolvePickedMediaType(context, uri, fallbackType = "video")
-                            try {
-                                if (!spaceChecked) {
-                                    val totalSize = sortedUris.sumOf { u ->
-                                        querySourceSize(context, u).coerceAtLeast(0L)
-                                    }
-                                    if (totalSize > 0L && !checkFreeSpace(context, totalSize)) {
-                                        return@withContext emptyList<Pair<Uri, String>>() to sortedUris.size
-                                    }
-                                    spaceChecked = true
-                                }
-                                importUriToManagedMedia(context, uri, mediaType)?.let { localUri ->
-                                    localUri to mediaType
-                                }
-                            } finally {
-                                releasePersistedReadPermission(context, uri)
-                            }
-                        } to sortedUris.size
+                    val sortedUris = withContext(Dispatchers.IO) { sortMediaChronologically(context, uris) }
+                    val hasSpace = withContext(Dispatchers.IO) {
+                        val totalSize = sortedUris.sumOf { u -> querySourceSize(context, u).coerceAtLeast(0L) }
+                        totalSize <= 0L || checkFreeSpace(context, totalSize)
                     }
-                    val (mediaItems, requestedCount) = importResult
+                    // Import one at a time on the caller so the card can count them off.
+                    // Batching the whole list inside a single withContext left the user
+                    // watching an unchanging spinner with no way to tell progress from a hang.
+                    val mediaItems = mutableListOf<Pair<Uri, String>>()
+                    if (hasSpace) {
+                        sortedUris.forEachIndexed { index, uri ->
+                            operationState = operationState?.copy(
+                                completed = index,
+                                total = sortedUris.size,
+                            )
+                            val mediaType = resolvePickedMediaType(context, uri, fallbackType = "video")
+                            withContext(Dispatchers.IO) {
+                                try {
+                                    importUriToManagedMedia(context, uri, mediaType)?.let { localUri ->
+                                        mediaItems += localUri to mediaType
+                                    }
+                                } finally {
+                                    releasePersistedReadPermission(context, uri)
+                                }
+                            }
+                        }
+                    } else {
+                        withContext(Dispatchers.IO) {
+                            sortedUris.forEach { uri -> releasePersistedReadPermission(context, uri) }
+                        }
+                    }
+                    val requestedCount = sortedUris.size
                     mediaItems.forEach { (localUri, mediaType) -> onMediaSelected(localUri, mediaType) }
                     if (mediaItems.size < requestedCount) {
                         permissionMessage = if (mediaItems.isEmpty()) {
@@ -603,6 +618,19 @@ private fun MediaImportStatusCard(operation: MediaPickerOperationState) {
                     style = MaterialTheme.typography.titleSmall,
                     color = semanticColors.text
                 )
+                val total = operation.total
+                val completed = operation.completed
+                if (total != null && completed != null && total > 1) {
+                    Text(
+                        text = stringResource(
+                            R.string.media_picker_importing_progress,
+                            (completed + 1).coerceAtMost(total),
+                            total
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = semanticColors.text
+                    )
+                }
                 Text(
                     text = operation.description,
                     style = MaterialTheme.typography.bodyMedium,

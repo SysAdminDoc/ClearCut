@@ -59,6 +59,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -117,7 +118,17 @@ class ProjectListViewModel @Inject constructor(
         // those duplicates so the filtered/sorted StateFlow below doesn't force the grid to
         // recompose on every unrelated project update (e.g. auto-save bumping updatedAt).
         .distinctUntilChanged()
+        .onEach { _isLoading.value = false }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _isLoading = MutableStateFlow(true)
+
+    /**
+     * True until Room first emits. The list seeded straight to an empty list, so the
+     * first-run empty state ("No projects yet") flashed on every cold start before the
+     * user's projects arrived -- the app told returning users they had nothing.
+     */
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     val projectTotalCount: StateFlow<Int> = allProjects
         .map { it.size }

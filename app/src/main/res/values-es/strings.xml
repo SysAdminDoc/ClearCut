@@ -2513,4 +2513,8 @@
     <string name="project_template_restore_success_generic">Plantilla restaurada.</string>
     <string name="project_template_restore_failed">No se pudo restaurar esa plantilla.</string>
     <string name="project_template_restore_action">Deshacer eliminación</string>
+    <string name="editor_project_not_found">Ese proyecto ya no existe. No se creó nada en su lugar: vuelve a tus proyectos.</string>
+    <string name="media_picker_importing_progress">Importando %1$d de %2$d…</string>
+    <string name="editor_project_not_found_title">Proyecto no encontrado</string>
+    <string name="editor_project_not_found_back">Volver a proyectos</string>
 </resources>

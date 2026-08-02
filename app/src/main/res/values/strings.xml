@@ -2786,4 +2786,8 @@
     <string name="project_template_restore_success_generic">Template restored.</string>
     <string name="project_template_restore_failed">That template could not be restored.</string>
     <string name="project_template_restore_action">Undo delete</string>
+    <string name="editor_project_not_found">That project no longer exists. Nothing was created in its place — go back to your projects.</string>
+    <string name="media_picker_importing_progress">Importing %1$d of %2$d…</string>
+    <string name="editor_project_not_found_title">Project not found</string>
+    <string name="editor_project_not_found_back">Back to projects</string>
 </resources>

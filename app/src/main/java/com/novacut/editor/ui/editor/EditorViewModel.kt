@@ -417,6 +417,11 @@ data class EditorState(
      * would make the truncation permanent. Cleared by an explicit user decision.
      */
     val partialRestore: com.novacut.editor.engine.ProjectRestoreReport? = null,
+    /**
+     * The requested project is not in the database. The editor used to create a blank
+     * project under the same id, which read as "your work is gone" with no explanation.
+     */
+    val projectNotFound: Boolean = false,
     val media: EditorMediaState = EditorMediaState()
 ) {
     val panels: PanelVisibility get() = panel.panels
@@ -909,9 +914,16 @@ class EditorViewModel @Inject constructor(
                 if (project != null) {
                     _state.update { it.copy(project = project) }
                 } else {
-                    val newProject = _state.value.project.copy(id = projectId)
-                    _state.update { it.copy(project = newProject) }
-                    projectDao.insertProject(newProject)
+                    // Opening a project that no longer exists used to silently create a
+                    // blank one under the same id -- the user asked for their work and
+                    // got an empty timeline that looked like it. Report it instead and
+                    // let the caller route back to the dashboard.
+                    Log.w("EditorViewModel", "Project $projectId no longer exists; refusing to recreate it blank")
+                    _state.update { it.copy(projectNotFound = true) }
+                    recoveryOpenComplete = true
+                    autoSaveBlockedByRecovery = true
+                    showToast(text(R.string.editor_project_not_found), ToastSeverity.Error)
+                    return@launch
                 }
             }
 
