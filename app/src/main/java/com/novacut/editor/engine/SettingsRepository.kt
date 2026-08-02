@@ -37,7 +37,8 @@ data class AppSettings(
     val defaultTrackHeight: Int = 64,
     val snapToBeat: Boolean = false,
     val snapToMarker: Boolean = true,
-    val thumbnailCacheSizeMb: Int = 128,
+    /** Null means the cache follows the automatic heap/8 policy. */
+    val thumbnailCacheSizeMb: Int? = null,
     val confirmBeforeDelete: Boolean = true,
     val defaultExportQuality: String = "HIGH",
     val aiModelWifiOnly: Boolean = true,
@@ -141,7 +142,7 @@ internal fun mapPreferencesToAppSettings(prefs: Preferences): AppSettings = AppS
     defaultTrackHeight = prefs[SettingsPreferenceKeys.DEFAULT_TRACK_HEIGHT]?.takeIf { it in 48..120 } ?: 64,
     snapToBeat = prefs[SettingsPreferenceKeys.SNAP_TO_BEAT] ?: false,
     snapToMarker = prefs[SettingsPreferenceKeys.SNAP_TO_MARKER] ?: true,
-    thumbnailCacheSizeMb = prefs[SettingsPreferenceKeys.THUMBNAIL_CACHE_SIZE_MB]?.takeIf { it in 32..512 } ?: 128,
+    thumbnailCacheSizeMb = prefs[SettingsPreferenceKeys.THUMBNAIL_CACHE_SIZE_MB]?.takeIf { it in 32..512 },
     confirmBeforeDelete = prefs[SettingsPreferenceKeys.CONFIRM_BEFORE_DELETE] ?: true,
     defaultExportQuality = prefs[SettingsPreferenceKeys.DEFAULT_EXPORT_QUALITY]
         ?.takeIf { quality -> runCatching { ExportQuality.valueOf(quality) }.isSuccess }
@@ -326,6 +327,10 @@ class SettingsRepository internal constructor(
 
     suspend fun updateThumbnailCacheSize(value: Int) {
         dataStore.edit { it[SettingsPreferenceKeys.THUMBNAIL_CACHE_SIZE_MB] = value.coerceIn(32, 512) }
+    }
+
+    suspend fun clearThumbnailCacheSize() {
+        dataStore.edit { it.remove(SettingsPreferenceKeys.THUMBNAIL_CACHE_SIZE_MB) }
     }
 
     suspend fun updateConfirmBeforeDelete(value: Boolean) {

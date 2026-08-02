@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -74,7 +75,7 @@ class SettingsRepositoryTest {
         assertEquals(AspectRatio.RATIO_16_9, settings.defaultAspectRatio)
         assertEquals(ProxyResolution.QUARTER, settings.proxyResolution)
         assertEquals(64, settings.defaultTrackHeight)
-        assertEquals(128, settings.thumbnailCacheSizeMb)
+        assertNull(settings.thumbnailCacheSizeMb)
         assertEquals("H264", settings.defaultCodec)
         assertEquals("HIGH", settings.defaultExportQuality)
         assertEquals(DesktopOverride.AUTO, settings.desktopModeOverride)
@@ -98,13 +99,14 @@ class SettingsRepositoryTest {
             dataStore.edit {
                 it[SettingsPreferenceKeys.FRAME_RATE] = 24
                 it[SettingsPreferenceKeys.PROXY_ENABLED] = false
+                it[SettingsPreferenceKeys.THUMBNAIL_CACHE_SIZE_MB] = 256
             }
             val repo = SettingsRepository(dataStore, reportStore)
 
             val settings = repo.settings.first()
-
             assertEquals(24, settings.defaultFrameRate)
             assertEquals(false, settings.proxyEnabled)
+            assertEquals(256, settings.thumbnailCacheSizeMb)
             assertEquals(null, reportStore.latestReport())
         } finally {
             scope.cancel()

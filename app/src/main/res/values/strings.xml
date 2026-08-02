@@ -2221,7 +2221,8 @@
     <string name="settings_confirm_delete">Confirm Before Delete</string>
     <string name="settings_confirm_delete_desc">Show confirmation dialog before deleting clips</string>
     <string name="settings_thumbnail_cache">Thumbnail Cache</string>
-    <string name="settings_thumbnail_cache_description">Reserve more memory for faster thumbnail scrubbing.</string>
+    <string name="settings_thumbnail_cache_description">Automatic uses one-eighth of the app heap; explicit budgets are capped for device memory.</string>
+    <string name="settings_thumbnail_cache_automatic">Automatic</string>
     <string name="settings_export_quality">Default Export Quality</string>
     <string name="settings_export_quality_description">Set the quality balance for quick one-tap exports.</string>
     <string name="settings_quality_small">Small File</string>

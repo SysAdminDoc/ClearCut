@@ -1,5 +1,6 @@
 package com.novacut.editor.ui.settings
 
+import android.app.ActivityManager
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -58,6 +59,7 @@ import com.novacut.editor.engine.AppearanceMode
 import com.novacut.editor.engine.AppSettings
 import com.novacut.editor.engine.PrivacyDashboard
 import com.novacut.editor.engine.ProjectColorPolicy
+import com.novacut.editor.engine.ThumbnailCachePolicy
 import com.novacut.editor.engine.segmentation.SegmentationModelState
 import com.novacut.editor.engine.whisper.WhisperModelState
 import com.novacut.editor.model.*
@@ -108,6 +110,12 @@ fun SettingsScreen(
     val whisperModelState by viewModel.whisperModelState.collectAsStateWithLifecycle()
     val segmentationModelState by viewModel.segmentationModelState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val thumbnailCacheSizes = remember(context) {
+        ThumbnailCachePolicy.availableSettingsSizes(
+            maxMemoryBytes = Runtime.getRuntime().maxMemory(),
+            isLowRamDevice = context.getSystemService(ActivityManager::class.java)?.isLowRamDevice == true,
+        )
+    }
     val uriHandler = LocalUriHandler.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val canRemoveWhisperModel = whisperModelState == WhisperModelState.READY && aiModelStorage.whisperBytes > 0L
@@ -543,10 +551,15 @@ fun SettingsScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                listOf(64 to "64 MB", 128 to "128 MB", 256 to "256 MB").forEach { (size, label) ->
+                val choices: List<Pair<Int?, String>> = listOf(null to stringResource(R.string.settings_thumbnail_cache_automatic)) +
+                    thumbnailCacheSizes.map { size -> size to "$size MB" }
+                choices.forEach { (size, label) ->
                     ClearCutFilterChip(
                         selected = settings.thumbnailCacheSizeMb == size,
-                        onClick = { viewModel.setThumbnailCacheSize(size) },
+                        onClick = {
+                            if (size == null) viewModel.setThumbnailCacheAutomatic()
+                            else viewModel.setThumbnailCacheSize(size)
+                        },
                         text = label,
                         accent = Mocha.Peach,
                         icon = if (settings.thumbnailCacheSizeMb == size) Icons.Default.Check else null

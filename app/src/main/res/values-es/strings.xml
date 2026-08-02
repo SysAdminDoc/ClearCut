@@ -2066,7 +2066,8 @@
     <string name="settings_confirm_delete">Confirmar antes de eliminar</string>
     <string name="settings_confirm_delete_desc">Mostrar cuadro de diálogo de confirmación antes de eliminar clips</string>
     <string name="settings_thumbnail_cache">Caché de miniaturas</string>
-    <string name="settings_thumbnail_cache_description">Reserve más memoria para una limpieza de miniaturas más rápida.</string>
+    <string name="settings_thumbnail_cache_description">Automático usa una octava parte de la memoria de la aplicación; los límites explícitos se ajustan a la memoria del dispositivo.</string>
+    <string name="settings_thumbnail_cache_automatic">Automático</string>
     <string name="settings_export_quality">Calidad de exportación predeterminada</string>
     <string name="settings_export_quality_description">Establezca el equilibrio de calidad para exportaciones rápidas con un solo toque.</string>
     <string name="settings_quality_small">Archivo pequeño</string>

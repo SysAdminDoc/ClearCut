@@ -1,5 +1,6 @@
 package com.novacut.editor.engine
 
+import android.app.ActivityManager
 import android.content.Context
 import android.content.BroadcastReceiver
 import android.content.Intent
@@ -172,13 +173,16 @@ class VideoEngine @Inject constructor(
         }
     }
 
+    private val maxHeapBytes = Runtime.getRuntime().maxMemory()
+    private val isLowRamDevice = context.getSystemService(ActivityManager::class.java)?.isLowRamDevice == true
+
     private var previewTrackedObjects: List<TrackedObject> = emptyList()
     // Memory-bounded bitmap cache. The initial bound is 1/8 of available heap; the
     // Settings "thumbnail cache size" control resizes it through
     // [setThumbnailCacheSizeMb], which is what makes that control do anything at all.
     // Don't recycle evicted bitmaps — they may still be referenced by Compose Image nodes
     private val thumbnailCache = object : android.util.LruCache<String, Bitmap>(
-        (Runtime.getRuntime().maxMemory() / 8).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+        ThumbnailCachePolicy.automaticBytes(maxHeapBytes)
     ) {
         override fun sizeOf(key: String, bitmap: Bitmap): Int {
             return bitmap.byteCount
@@ -203,13 +207,11 @@ class VideoEngine @Inject constructor(
      * generous setting on a small device cannot turn a cache into an OOM. Shrinking
      * evicts immediately, which is the observable effect the control promises.
      */
-    fun setThumbnailCacheSizeMb(sizeMb: Int) {
-        val heapCeiling = (Runtime.getRuntime().maxMemory() / 2)
-            .coerceAtMost(Int.MAX_VALUE.toLong())
-        val requested = sizeMb.coerceIn(32, 512).toLong() * 1024L * 1024L
-        val bytes = requested.coerceAtMost(heapCeiling).coerceAtLeast(8L * 1024L * 1024L).toInt()
+    fun setThumbnailCacheSizeMb(sizeMb: Int?) {
+        val bytes = ThumbnailCachePolicy.resolveBytes(sizeMb, maxHeapBytes, isLowRamDevice)
         if (thumbnailCache.maxSize() == bytes) return
-        Log.d(TAG, "Thumbnail cache resized to ${bytes / (1024 * 1024)} MB")
+        val budgetLabel = sizeMb?.let { "${bytes / (1024 * 1024)} MB" } ?: "automatic heap/8"
+        Log.d(TAG, "Thumbnail cache resized to $budgetLabel")
         thumbnailCache.resize(bytes)
     }
 
