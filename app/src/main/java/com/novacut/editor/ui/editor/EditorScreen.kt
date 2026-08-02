@@ -384,6 +384,34 @@ fun EditorScreen(
         if (state.selectedClipId == null) showClipLabelPicker = false
     }
 
+    // The project opened, but not all of it came back. Saving is paused until the user
+    // picks, because the alternative is an autosave quietly writing the truncation over
+    // the only file that still has the missing pieces. There is no dismiss action.
+    state.partialRestore?.let { report ->
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text(stringResource(R.string.partial_restore_title)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.partial_restore_message,
+                        report.countsByKind().joinToString("\n") { (kind, count) -> "• $count $kind" }
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.restorePartialFromBackup() }) {
+                    Text(stringResource(R.string.partial_restore_use_backup))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.keepPartialRestore() }) {
+                    Text(stringResource(R.string.partial_restore_keep))
+                }
+            }
+        )
+    }
+
     if (showExportNotificationPermissionDialog) {
         AlertDialog(
             onDismissRequest = {

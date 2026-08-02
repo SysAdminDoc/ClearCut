@@ -200,7 +200,15 @@ class ProjectAutoSave @Inject constructor(
      * [loadRecoveryDataWithOutcome] instead.
      */
     sealed class LoadOutcome {
-        data class Loaded(val state: AutoSaveState) : LoadOutcome()
+        /**
+         * The file parsed. [report] is non-empty when elements were dropped along the
+         * way: the project opened looking whole but is not what is on disk, so the
+         * caller must not let an autosave write the truncation back.
+         */
+        data class Loaded(
+            val state: AutoSaveState,
+            val report: ProjectRestoreReport = ProjectRestoreReport.EMPTY,
+        ) : LoadOutcome()
         data class FutureSchema(val fileVersion: Int, val supportedVersion: Int) : LoadOutcome()
         data class Corrupt(val cause: Throwable) : LoadOutcome()
         data object NotFound : LoadOutcome()
@@ -244,9 +252,11 @@ class ProjectAutoSave @Inject constructor(
                 return@withLock LoadOutcome.FutureSchema(peek, AutoSaveState.FORMAT_VERSION)
             }
             try {
-                val state = AutoSaveState.deserialize(raw)
-                backupFile.delete()
-                LoadOutcome.Loaded(state)
+                val restored = AutoSaveState.deserializeWithReport(raw)
+                // A partial restore keeps the backup: it is the only remaining copy of
+                // whatever was dropped, and the user may choose to fall back to it.
+                if (!restored.report.isPartial) backupFile.delete()
+                LoadOutcome.Loaded(restored.state, restored.report)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load recovery data for $projectId", e)
                 if (!backupFile.exists()) return@withLock LoadOutcome.Corrupt(e)
@@ -262,13 +272,45 @@ class ProjectAutoSave @Inject constructor(
                 }
                 try {
                     Log.w(TAG, "Primary auto-save is corrupt; attempting backup restore for $projectId")
-                    val state = AutoSaveState.deserialize(backupRaw)
+                    val restored = AutoSaveState.deserializeWithReport(backupRaw)
                     moveFileReplacing(backupFile, file)
-                    LoadOutcome.Loaded(state)
+                    LoadOutcome.Loaded(restored.state, restored.report)
                 } catch (backupError: Exception) {
                     Log.e(TAG, "Backup auto-save restore failed for $projectId", backupError)
                     LoadOutcome.Corrupt(backupError)
                 }
+            }
+        }
+    }
+
+    /**
+     * Read the backup autosave, ignoring the primary file.
+     *
+     * This is the escape hatch offered after a partial restore: the backup is the
+     * previous good write, so it can still hold elements the primary lost. It is never
+     * consulted automatically — falling back to an older file silently would trade one
+     * kind of data loss for another.
+     */
+    suspend fun loadBackupWithOutcome(projectId: String): LoadOutcome = withContext(Dispatchers.IO) {
+        saveMutex.withLock {
+            val backupFile = getBackupFile(projectId)
+            if (!backupFile.exists()) return@withLock LoadOutcome.NotFound
+            val raw = try {
+                readAutoSaveText(backupFile)
+            } catch (e: Exception) {
+                Log.e(TAG, "Backup auto-save read failed for $projectId", e)
+                return@withLock LoadOutcome.Corrupt(e)
+            }
+            val peek = AutoSaveState.peekSchemaVersion(raw)
+            if (peek != null && peek > AutoSaveState.FORMAT_VERSION) {
+                return@withLock LoadOutcome.FutureSchema(peek, AutoSaveState.FORMAT_VERSION)
+            }
+            try {
+                val restored = AutoSaveState.deserializeWithReport(raw)
+                LoadOutcome.Loaded(restored.state, restored.report)
+            } catch (e: Exception) {
+                Log.e(TAG, "Backup auto-save restore failed for $projectId", e)
+                LoadOutcome.Corrupt(e)
             }
         }
     }
@@ -489,6 +531,58 @@ internal fun autoSaveFileStem(projectId: String): String {
     return "${safeProjectId}_$stableSuffix"
 }
 
+/** Why a persisted element could not be restored. */
+enum class DropReason {
+    /** The element's JSON was unreadable or its values failed the model's invariants. */
+    MALFORMED,
+
+    /** The element referenced a URI that could not be parsed. */
+    BAD_URI,
+
+    /** The element is present but the collection exceeded its hard cap, so the tail was cut. */
+    OVER_LIMIT,
+
+    /** The element nests deeper than the recursion limit allows. */
+    TOO_DEEP,
+}
+
+/**
+ * One element the restore could not bring back. [index] is the position within its
+ * collection, or the cut-off position for [DropReason.OVER_LIMIT].
+ */
+data class DroppedElement(
+    val kind: String,
+    val index: Int,
+    val reason: DropReason,
+    val detail: String,
+)
+
+/**
+ * What a restore lost. A non-empty report means the project on screen is *not* the
+ * project on disk: it opened looking whole, and the next autosave would write the
+ * truncation back over the file and make the loss permanent. Callers must gate that
+ * write on an explicit user decision.
+ */
+data class ProjectRestoreReport(val dropped: List<DroppedElement> = emptyList()) {
+    val isPartial: Boolean get() = dropped.isNotEmpty()
+
+    /** Dropped element counts by kind, most-lost first — the shape a user message needs. */
+    fun countsByKind(): List<Pair<String, Int>> =
+        dropped.groupingBy { it.kind }.eachCount().toList().sortedByDescending { it.second }
+
+    fun summary(): String = countsByKind().joinToString { (kind, count) -> "$count $kind" }
+
+    companion object {
+        val EMPTY = ProjectRestoreReport()
+    }
+}
+
+/** A restored project together with everything the restore could not bring back. */
+data class RestoredProject(
+    val state: AutoSaveState,
+    val report: ProjectRestoreReport,
+)
+
 data class AutoSaveState(
     val projectId: String,
     val timestamp: Long = System.currentTimeMillis(),
@@ -700,6 +794,10 @@ data class AutoSaveState(
 
     companion object {
         const val FORMAT_VERSION = 1
+
+        /** Collector for the in-flight [deserializeWithReport] call on this thread. */
+        private val activeDropSink = ThreadLocal<MutableList<DroppedElement>?>()
+
         private const val MAX_TRANSCRIPT_WORDS = 20_000
         private const val MAX_STORYBOARD_CARDS = 200
         private const val MAX_TRACKS = 64
@@ -763,8 +861,43 @@ data class AutoSaveState(
         private fun cappedArrayLength(arr: JSONArray, max: Int, label: String): Int {
             if (arr.length() > max) {
                 Log.w(TAG, "Auto-save contains ${arr.length()} $label; loading first $max")
+                recordDrop(
+                    DroppedElement(
+                        kind = label,
+                        index = max,
+                        reason = DropReason.OVER_LIMIT,
+                        detail = "${arr.length()} present, ${arr.length() - max} beyond the $max limit",
+                    )
+                )
             }
             return arr.length().coerceAtMost(max)
+        }
+
+        /**
+         * Record one dropped element and keep the log line the site already emitted.
+         * Returns `null` so a `catch` block can be written as `catch (e) { dropped(...) }`.
+         */
+        private fun dropped(kind: String, index: Int, cause: Throwable?): Nothing? {
+            Log.w(TAG, "Failed to deserialize $kind $index", cause)
+            recordDrop(
+                DroppedElement(
+                    kind = kind,
+                    index = index,
+                    reason = DropReason.MALFORMED,
+                    detail = cause?.javaClass?.simpleName ?: "malformed",
+                )
+            )
+            return null
+        }
+
+        /** Record a skip whose cause is known without an exception (bad URI, empty field). */
+        private fun skipped(kind: String, index: Int, reason: DropReason, detail: String): Nothing? {
+            recordDrop(DroppedElement(kind = kind, index = index, reason = reason, detail = detail))
+            return null
+        }
+
+        private fun recordDrop(element: DroppedElement) {
+            activeDropSink.get()?.add(element)
         }
 
         private fun boundedText(raw: String, maxChars: Int): String =
@@ -777,6 +910,30 @@ data class AutoSaveState(
         ): JSONObject {
             val fallback = if (default.isFinite()) default else 0f
             return put(name, (if (value.isFinite()) value else fallback).toDouble())
+        }
+
+        /**
+         * Deserialize and report everything that could not be restored.
+         *
+         * The sink is a thread local rather than a parameter threaded through the
+         * twenty private helpers below. Deserialization is a single synchronous call
+         * on one thread, and the alternative -- an extra parameter on every helper and
+         * every nested call site -- would have touched far more code than the recording
+         * itself, for no behavioural difference. [deserialize] keeps the old signature
+         * for callers that genuinely do not care.
+         */
+        fun deserializeWithReport(
+            raw: String,
+            uriParser: (String) -> Uri? = { Uri.parse(it) },
+        ): RestoredProject {
+            val sink = mutableListOf<DroppedElement>()
+            val previous = activeDropSink.get()
+            activeDropSink.set(sink)
+            return try {
+                RestoredProject(deserialize(raw, uriParser), ProjectRestoreReport(sink.toList()))
+            } finally {
+                activeDropSink.set(previous)
+            }
         }
 
         fun deserialize(
@@ -815,18 +972,20 @@ data class AutoSaveState(
                         timeMs = ch.optLong("timeMs", 0L),
                         title = boundedText(ch.optString("title", ""), MAX_SHORT_TEXT_CHARS)
                     )
-                } catch (e: Exception) { Log.w(TAG, "Failed to deserialize chapter marker $i", e); null }
+                } catch (e: Exception) { dropped("chapter marker", i, e) }
             }
             val imageOverlaysArr = json.optJSONArray("imageOverlays") ?: JSONArray()
             val imageOverlays = (0 until cappedArrayLength(imageOverlaysArr, MAX_IMAGE_OVERLAYS, "image overlays")).mapNotNull { i ->
                 try {
                     val io = imageOverlaysArr.getJSONObject(i)
                     val srcUri = io.optString("sourceUri", "")
-                    if (srcUri.isEmpty()) return@mapNotNull null
+                    if (srcUri.isEmpty()) {
+                        return@mapNotNull skipped("image overlay", i, DropReason.BAD_URI, "no source URI")
+                    }
                     val parsedUri = try { uriParser(srcUri) } catch (e: Exception) {
                         Log.w(TAG, "Skipping image overlay with malformed URI: $srcUri", e)
-                        return@mapNotNull null
-                    } ?: return@mapNotNull null
+                        return@mapNotNull skipped("image overlay", i, DropReason.BAD_URI, "malformed source URI")
+                    } ?: return@mapNotNull skipped("image overlay", i, DropReason.BAD_URI, "unparseable source URI")
                     // Coerce time range BEFORE constructing so a corrupt save with
                     // startTimeMs >= endTimeMs doesn't trip the ImageOverlay require()
                     // block and silently drop the overlay (data loss on recovery).
@@ -845,7 +1004,7 @@ data class AutoSaveState(
                         opacity = io.optDouble("opacity", 1.0).toFloat().let { if (it.isFinite()) it.coerceIn(0f, 1f) else 1f },
                         type = safeValueOf(io.optString("type", "STICKER"), ImageOverlayType.STICKER)
                     )
-                } catch (e: Exception) { Log.w(TAG, "Failed to deserialize image overlay $i", e); null }
+                } catch (e: Exception) { dropped("image overlay", i, e) }
             }
             val exportWatermark = json.optJSONObject("exportWatermark")?.let { watermark ->
                 runCatching {
@@ -862,7 +1021,10 @@ data class AutoSaveState(
                             .let { if (it.isFinite()) it.coerceIn(0f, 1f) else 0.9f },
                         scalePercent = watermark.optInt("scalePercent", 15).coerceIn(5, 50)
                     )
-                }.onFailure { Log.w(TAG, "Skipping invalid export watermark", it) }.getOrNull()
+                }.onFailure {
+                    Log.w(TAG, "Skipping invalid export watermark", it)
+                    skipped("export watermark", 0, DropReason.MALFORMED, it.javaClass.simpleName)
+                }.getOrNull()
             }
             val timelineMarkersArr = json.optJSONArray("timelineMarkers") ?: JSONArray()
             val timelineMarkers = (0 until cappedArrayLength(timelineMarkersArr, MAX_PROJECT_MARKERS, "timeline markers")).mapNotNull { i ->
@@ -875,7 +1037,7 @@ data class AutoSaveState(
                         color = safeValueOf(m.optString("color", "BLUE"), MarkerColor.BLUE),
                         notes = boundedText(m.optString("notes", ""), MAX_NOTES_CHARS)
                     )
-                } catch (e: Exception) { Log.w(TAG, "Failed to deserialize timeline marker $i", e); null }
+                } catch (e: Exception) { dropped("timeline marker", i, e) }
             }
             val globalTransitionsArr = json.optJSONArray("globalTransitions") ?: JSONArray()
             val globalTransitions = (0 until globalTransitionsArr.length().coerceAtMost(20)).mapNotNull { i ->
@@ -888,7 +1050,7 @@ data class AutoSaveState(
                         timelineAnchorMs = gt.optLong("timelineAnchorMs", 0L).coerceAtLeast(0L),
                         easing = safeValueOf(gt.optString("easing", "EASE_IN_OUT"), TransitionEasing.EASE_IN_OUT)
                     )
-                } catch (e: Exception) { Log.w(TAG, "Failed to deserialize global transition $i", e); null }
+                } catch (e: Exception) { dropped("global transition", i, e) }
             }
             val drawingPathsArr = json.optJSONArray("drawingPaths") ?: JSONArray()
             val drawingPaths = (0 until cappedArrayLength(drawingPathsArr, MAX_DRAWING_PATHS, "drawing paths")).mapNotNull { i ->
@@ -911,12 +1073,12 @@ data class AutoSaveState(
                         color = dp.optLong("color", 0xFFCBA6F7L),
                         strokeWidth = (if (rawStroke.isFinite()) rawStroke else 4f).coerceIn(0.5f, 64f)
                     )
-                } catch (e: Exception) { Log.w(TAG, "Failed to deserialize drawing path $i", e); null }
+                } catch (e: Exception) { dropped("drawing path", i, e) }
             }
             val beatMarkersArr = json.optJSONArray("beatMarkers") ?: JSONArray()
             val beatMarkers = (0 until cappedArrayLength(beatMarkersArr, MAX_BEAT_MARKERS, "beat markers")).mapNotNull { i ->
                 try { beatMarkersArr.getLong(i) }
-                catch (e: Exception) { Log.w(TAG, "Failed to deserialize beat marker $i", e); null }
+                catch (e: Exception) { dropped("beat marker", i, e) }
             }
             val aiUsageLedger = AiUsageLedger.fromJsonArray(
                 json.optJSONArray("aiUsageLedger"),
@@ -954,7 +1116,7 @@ data class AutoSaveState(
                         language = tr.optString("language", "en").take(8),
                         words = words
                     )
-                } catch (e: Exception) { Log.w(TAG, "Failed to deserialize transcript", e); null }
+                } catch (e: Exception) { dropped("transcript", 0, e) }
             }
             val trackedObjectsArr = json.optJSONArray("trackedObjects") ?: JSONArray()
             val trackedObjects = (0 until cappedArrayLength(trackedObjectsArr, MAX_TRACKED_OBJECTS, "tracked objects")).mapNotNull { i ->
@@ -1000,7 +1162,7 @@ data class AutoSaveState(
                                 maskPolygon = polygon
                             )
                         } catch (e: Exception) {
-                            Log.w(TAG, "Failed to deserialize tracked-object keyframe $ki", e); null
+                            dropped("tracked-object keyframe", ki, e)
                         }
                     }
                     com.novacut.editor.model.TrackedObject(
@@ -1019,7 +1181,7 @@ data class AutoSaveState(
                         keyframes = keyframes
                     )
                 } catch (e: Exception) {
-                    Log.w(TAG, "Failed to deserialize tracked object $i", e); null
+                    dropped("tracked object", i, e)
                 }
             }
             val storyboardArr = json.optJSONArray("storyboardCards") ?: JSONArray()
@@ -1034,7 +1196,7 @@ data class AutoSaveState(
                         status = safeValueOf(card.optString("status", "PLANNED"), com.novacut.editor.model.StoryboardCardStatus.PLANNED),
                         mediaUri = card.optString("mediaUri", "").takeIf { it.isNotEmpty() }?.let { uriParser(it) }
                     )
-                } catch (e: Exception) { Log.w(TAG, "Failed to deserialize storyboard card $i", e); null }
+                } catch (e: Exception) { dropped("storyboard card", i, e) }
             }
             return AutoSaveState(
                 projectId = json.optString("projectId", ""),
@@ -1086,7 +1248,9 @@ data class AutoSaveState(
                     val assetId = asset.optString("assetId")
                     val managedUri = asset.optString("managedUri")
                     val originalUri = asset.optString("originalUri")
-                    if (assetId.isBlank() || managedUri.isBlank()) return@mapNotNull null
+                    if (assetId.isBlank() || managedUri.isBlank()) {
+                        return@mapNotNull skipped("media asset", i, DropReason.MALFORMED, "missing assetId or managedUri")
+                    }
                     ProjectMediaAsset(
                         assetId = assetId,
                         managedUri = managedUri,
@@ -1103,8 +1267,7 @@ data class AutoSaveState(
                         lastVerifiedAtEpochMs = asset.optLong("lastVerifiedAtEpochMs", 0L).coerceAtLeast(0L)
                     )
                 } catch (e: Exception) {
-                    Log.w(TAG, "Failed to deserialize media asset $i", e)
-                    null
+                    dropped("media asset", i, e)
                 }
             }
         }
@@ -1539,8 +1702,7 @@ data class AutoSaveState(
                 try {
                     deserializeTrack(arr.getJSONObject(i), uriParser, mediaAssetUrisById)
                 } catch (e: Exception) {
-                    Log.w(TAG, "Failed to deserialize track $i", e)
-                    null
+                    dropped("track", i, e)
                 }
             }
         }
@@ -1573,11 +1735,11 @@ data class AutoSaveState(
                 isCollapsed = json.optBoolean("isCollapsed", false),
                 clips = (0 until clipsArr.length().coerceAtMost(MAX_CLIPS_PER_TRACK)).mapNotNull { i ->
                     try { deserializeClip(clipsArr.getJSONObject(i), uriParser, mediaAssetUrisById) } catch (e: Exception) {
-                        Log.w(TAG, "Failed to deserialize clip $i", e); null
+                        dropped("clip", i, e)
                     }
                 },
                 audioEffects = (0 until audioFxArr.length().coerceAtMost(MAX_AUDIO_EFFECTS_PER_SCOPE)).mapNotNull { i ->
-                    try { deserializeAudioEffect(audioFxArr.getJSONObject(i)) } catch (e: Exception) { Log.w(TAG, "Failed to deserialize track audio effect $i", e); null }
+                    try { deserializeAudioEffect(audioFxArr.getJSONObject(i)) } catch (e: Exception) { dropped("track audio effect", i, e) }
                 }
             )
         }
@@ -1590,7 +1752,7 @@ data class AutoSaveState(
         ): Clip? {
             if (depth > MAX_COMPOUND_CLIP_DEPTH) {
                 Log.w(TAG, "Skipping compound clip beyond depth $MAX_COMPOUND_CLIP_DEPTH")
-                return null
+                return skipped("compound clip", depth, DropReason.TOO_DEEP, "nested beyond $MAX_COMPOUND_CLIP_DEPTH levels")
             }
             val effectsArr = json.optJSONArray("effects") ?: JSONArray()
             val keyframesArr = json.optJSONArray("keyframes") ?: JSONArray()
@@ -1604,16 +1766,16 @@ data class AutoSaveState(
                 ?: serializedSourceUri
             if (sourceUriStr.isEmpty()) {
                 Log.w(TAG, "Skipping clip ${json.optString("id", "?")} with empty sourceUri")
-                return null
+                return skipped("clip", depth, DropReason.BAD_URI, "no source media reference")
             }
             val parsedSourceUri = try { uriParser(sourceUriStr) } catch (e: Exception) {
                 Log.w(TAG, "Skipping clip with malformed sourceUri: $sourceUriStr", e)
-                return null
-            } ?: return null
+                return skipped("clip", depth, DropReason.BAD_URI, "malformed source URI")
+            } ?: return skipped("clip", depth, DropReason.BAD_URI, "unparseable source URI")
             val sourceDurationMs = json.optLong("sourceDurationMs", 0L)
             if (sourceDurationMs <= 0L) {
                 Log.w(TAG, "Skipping clip ${json.optString("id", "?")} with non-positive sourceDurationMs=$sourceDurationMs")
-                return null
+                return skipped("clip", depth, DropReason.MALFORMED, "sourceDurationMs=$sourceDurationMs")
             }
             val rawTrimEnd = json.optLong("trimEndMs", sourceDurationMs)
             // Coerce trim values to satisfy model invariants (trimEndMs <= sourceDurationMs)
@@ -1661,7 +1823,7 @@ data class AutoSaveState(
                         return@let emptyList()
                     }
                     (0 until cappedArrayLength(arr, MAX_COMPOUND_CLIPS_PER_CLIP, "compound clips")).mapNotNull { i ->
-                        try { deserializeClip(arr.getJSONObject(i), uriParser, mediaAssetUrisById, depth + 1) } catch (e: Exception) { Log.w(TAG, "Failed to deserialize compound clip $i", e); null }
+                        try { deserializeClip(arr.getJSONObject(i), uriParser, mediaAssetUrisById, depth + 1) } catch (e: Exception) { dropped("compound clip", i, e) }
                     }
                 } ?: emptyList(),
                 linkedClipId = json.optString("linkedClipId", "").takeIf { it.isNotEmpty() },
@@ -1670,12 +1832,12 @@ data class AutoSaveState(
                 sourceColorMetadata = deserializeSourceColorMetadata(json.optJSONObject("sourceColorMetadata")),
                 effects = (0 until cappedArrayLength(effectsArr, MAX_CLIP_EFFECTS, "clip effects")).mapNotNull { i ->
                     try { deserializeEffect(effectsArr.getJSONObject(i)) } catch (e: Exception) {
-                        Log.w(TAG, "Failed to deserialize effect $i", e); null
+                        dropped("effect", i, e)
                     }
                 },
                 keyframes = (0 until cappedArrayLength(keyframesArr, MAX_KEYFRAMES_PER_SCOPE, "clip keyframes")).mapNotNull { i ->
                     try { deserializeKeyframe(keyframesArr.getJSONObject(i)) } catch (e: Exception) {
-                        Log.w(TAG, "Failed to deserialize keyframe $i", e); null
+                        dropped("keyframe", i, e)
                     }
                 }.distinctBy { Pair(it.timeOffsetMs, it.property) },
                 headTransition = (json.optJSONObject("headTransition") ?: json.optJSONObject("transition"))?.let { deserializeTransition(it) },
@@ -1683,13 +1845,13 @@ data class AutoSaveState(
                 colorGrade = json.optJSONObject("colorGrade")?.let { deserializeColorGrade(it) },
                 speedCurve = json.optJSONObject("speedCurve")?.let { deserializeSpeedCurve(it) },
                 masks = (0 until cappedArrayLength(masksArr, MAX_MASKS_PER_CLIP, "clip masks")).mapNotNull { i ->
-                    try { deserializeMask(masksArr.getJSONObject(i)) } catch (e: Exception) { Log.w(TAG, "Failed to deserialize mask $i", e); null }
+                    try { deserializeMask(masksArr.getJSONObject(i)) } catch (e: Exception) { dropped("mask", i, e) }
                 },
                 audioEffects = (0 until cappedArrayLength(audioFxArr, MAX_AUDIO_EFFECTS_PER_SCOPE, "clip audio effects")).mapNotNull { i ->
-                    try { deserializeAudioEffect(audioFxArr.getJSONObject(i)) } catch (e: Exception) { Log.w(TAG, "Failed to deserialize clip audio effect $i", e); null }
+                    try { deserializeAudioEffect(audioFxArr.getJSONObject(i)) } catch (e: Exception) { dropped("clip audio effect", i, e) }
                 },
                 captions = (0 until cappedArrayLength(captionsArr, MAX_CAPTIONS_PER_CLIP, "clip captions")).mapNotNull { i ->
-                    try { deserializeCaption(captionsArr.getJSONObject(i)) } catch (e: Exception) { Log.w(TAG, "Failed to deserialize caption $i", e); null }
+                    try { deserializeCaption(captionsArr.getJSONObject(i)) } catch (e: Exception) { dropped("caption", i, e) }
                 },
                 name = json.optString("name", "").takeIf { it.isNotEmpty() },
                 proxyUri = proxyUri,
@@ -1709,7 +1871,7 @@ data class AutoSaveState(
                                     rotation = safeFloat(tp.optDouble("rotation", 0.0), 0f),
                                     confidence = safeFloat(tp.optDouble("confidence", 1.0), 1f).coerceIn(0f, 1f)
                                 )
-                            } catch (e: Exception) { Log.w(TAG, "Failed to deserialize motion track point $i", e); null }
+                            } catch (e: Exception) { dropped("motion track point", i, e) }
                         },
                         targetType = safeValueOf(mtd.optString("targetType", "POINT"), TrackTargetType.POINT),
                         isActive = mtd.optBoolean("isActive", true)
@@ -1753,7 +1915,7 @@ data class AutoSaveState(
                 enabled = json.optBoolean("enabled", true),
                 params = params,
                 keyframes = (0 until cappedArrayLength(effectKfArr, MAX_KEYFRAMES_PER_SCOPE, "effect keyframes")).mapNotNull { i ->
-                    try { deserializeEffectKeyframe(effectKfArr.getJSONObject(i)) } catch (e: Exception) { Log.w(TAG, "Failed to deserialize effect keyframe $i", e); null }
+                    try { deserializeEffectKeyframe(effectKfArr.getJSONObject(i)) } catch (e: Exception) { dropped("effect keyframe", i, e) }
                 }.distinctBy { Pair(it.timeOffsetMs, it.paramName) },
                 targetTrackedObjectId = json.optString("targetTrackedObjectId", "")
                     .takeIf { it.isNotBlank() }
@@ -1852,7 +2014,7 @@ data class AutoSaveState(
                         handleOutX = safeFloat(pt.optDouble("hox", x.toDouble()), x).coerceIn(-1f, 2f),
                         handleOutY = safeFloat(pt.optDouble("hoy", y.toDouble()), y).coerceIn(-1f, 2f)
                     )
-                } catch (e: Exception) { Log.w(TAG, "Failed to deserialize curve point $i", e); null }
+                } catch (e: Exception) { dropped("curve point", i, e) }
             }.takeIf { it.isNotEmpty() }
         }
 
@@ -1879,8 +2041,7 @@ data class AutoSaveState(
                         handleOutY = handleOutY
                     )
                 } catch (e: Exception) {
-                    Log.w(TAG, "Failed to deserialize speed point $i", e)
-                    null
+                    dropped("speed point", i, e)
                 }
             }
             return SpeedCurve(points.ifEmpty { listOf(SpeedPoint(0f, 1f), SpeedPoint(1f, 1f)) })
@@ -1916,7 +2077,7 @@ data class AutoSaveState(
                                 },
                                 easing = safeValueOf(mkf.optString("easing", "LINEAR"), Easing.LINEAR)
                             )
-                        } catch (e: Exception) { Log.w(TAG, "Failed to deserialize mask keyframe $i", e); null }
+                        } catch (e: Exception) { dropped("mask keyframe", i, e) }
                     }
                 } ?: emptyList()
             )
@@ -2016,7 +2177,7 @@ data class AutoSaveState(
         private fun deserializeTextOverlays(arr: JSONArray): List<TextOverlay> {
             return (0 until cappedArrayLength(arr, MAX_TEXT_OVERLAYS, "text overlays")).mapNotNull { i ->
                 try { deserializeTextOverlay(arr.getJSONObject(i)) } catch (e: Exception) {
-                    Log.w(TAG, "Failed to deserialize text overlay $i", e); null
+                    dropped("text overlay", i, e)
                 }
             }
         }
@@ -2081,7 +2242,7 @@ data class AutoSaveState(
                 keyframes = json.optJSONArray("keyframes")?.let { kfArr ->
                     (0 until cappedArrayLength(kfArr, MAX_KEYFRAMES_PER_SCOPE, "text-overlay keyframes")).mapNotNull { i ->
                         try { deserializeKeyframe(kfArr.getJSONObject(i)) } catch (e: Exception) {
-                            Log.w(TAG, "Failed to deserialize text overlay keyframe $i", e); null
+                            dropped("text overlay keyframe", i, e)
                         }
                     }.distinctBy { Pair(it.timeOffsetMs, it.property) }
                 } ?: emptyList(),

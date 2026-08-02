@@ -140,7 +140,15 @@ internal fun recoveryOpenFeedbackFor(
     outcome: ProjectAutoSave.LoadOutcome,
     expectedRecovery: Boolean
 ): RecoveryOpenFeedback? = when (outcome) {
-    is ProjectAutoSave.LoadOutcome.Loaded -> null
+    is ProjectAutoSave.LoadOutcome.Loaded -> if (outcome.report.isPartial) {
+        RecoveryOpenFeedback(
+            message = "Some project data could not be restored (${outcome.report.summary()}). " +
+                "Saving is paused so the loss is not written back — choose what to do.",
+            severity = ToastSeverity.Error,
+        )
+    } else {
+        null
+    }
     is ProjectAutoSave.LoadOutcome.FutureSchema -> RecoveryOpenFeedback(
         message = "Autosave was made by a newer ClearCut version. It was left untouched to avoid losing edits.",
         severity = ToastSeverity.Error,
@@ -161,7 +169,11 @@ internal fun recoveryOpenFeedbackFor(
 
 internal fun shouldBlockAutoSaveForRecoveryOutcome(outcome: ProjectAutoSave.LoadOutcome): Boolean {
     return outcome is ProjectAutoSave.LoadOutcome.FutureSchema ||
-        outcome is ProjectAutoSave.LoadOutcome.Corrupt
+        outcome is ProjectAutoSave.LoadOutcome.Corrupt ||
+        // A partial load is the dangerous case precisely because it looks fine: the
+        // project opens, the user edits, and the first autosave overwrites the file
+        // with the truncated version. Hold the write until they decide.
+        (outcome is ProjectAutoSave.LoadOutcome.Loaded && outcome.report.isPartial)
 }
 
 internal fun mediaRelinkOpenToast(
@@ -391,6 +403,12 @@ data class EditorState(
     // populates them; persistence flows through AutoSaveState.trackedObjects.
     val trackedObjects: List<com.novacut.editor.model.TrackedObject> = emptyList(),
     val storyboardCards: List<com.novacut.editor.model.StoryboardCard> = emptyList(),
+    /**
+     * Set when the project on screen is not the project on disk: the restore dropped
+     * elements. Autosave stays blocked while this is non-null, because the next write
+     * would make the truncation permanent. Cleared by an explicit user decision.
+     */
+    val partialRestore: com.novacut.editor.engine.ProjectRestoreReport? = null,
     val media: EditorMediaState = EditorMediaState()
 ) {
     val panels: PanelVisibility get() = panel.panels
@@ -1119,6 +1137,7 @@ class EditorViewModel @Inject constructor(
     private fun handleRecoveryOpenOutcome(outcome: ProjectAutoSave.LoadOutcome) {
         if (outcome is ProjectAutoSave.LoadOutcome.Loaded) {
             restoreLoadedRecovery(outcome.state)
+            _state.update { it.copy(partialRestore = outcome.report.takeIf { r -> r.isPartial }) }
         }
         autoSaveBlockedByRecovery = shouldBlockAutoSaveForRecoveryOutcome(outcome)
         recoveryOpenComplete = true
@@ -1133,6 +1152,59 @@ class EditorViewModel @Inject constructor(
         applyAutoSaveSettings()
         if (outcome is ProjectAutoSave.LoadOutcome.Loaded) {
             refreshMediaRelinkReports(openPanelOnProblems = true)
+        }
+    }
+
+    /**
+     * Accept the partially restored project as-is. Saving resumes, which means the
+     * next write drops whatever the restore could not read — so this is only ever
+     * reached through an explicit choice, never a timeout or a dismissal.
+     */
+    fun keepPartialRestore() {
+        if (_state.value.partialRestore == null) return
+        val lost = _state.value.partialRestore?.summary().orEmpty()
+        _state.update { it.copy(partialRestore = null) }
+        autoSaveBlockedByRecovery = false
+        applySavedStateStatus(savedStateTracker.establishBaseline(currentProjectFingerprint()))
+        applyAutoSaveSettings()
+        saveProject()
+        showToast("Keeping the recovered project. Saving resumed; $lost stayed lost.", ToastSeverity.Warning)
+    }
+
+    /**
+     * Fall back to the previous autosave, which predates the write that produced the
+     * partial file and may still hold the dropped elements. Failing that, the project
+     * stays exactly as it is and saving stays blocked — never a silent downgrade.
+     */
+    fun restorePartialFromBackup() {
+        if (_state.value.partialRestore == null) return
+        val id = projectId ?: _state.value.project.id
+        viewModelScope.launch {
+            when (val outcome = autoSave.loadBackupWithOutcome(id)) {
+                is ProjectAutoSave.LoadOutcome.Loaded -> {
+                    restoreLoadedRecovery(outcome.state)
+                    if (outcome.report.isPartial) {
+                        _state.update { it.copy(partialRestore = outcome.report) }
+                        showToast(
+                            "The previous autosave is also incomplete (${outcome.report.summary()}). " +
+                                "Saving is still paused.",
+                            ToastSeverity.Error,
+                        )
+                    } else {
+                        _state.update { it.copy(partialRestore = null) }
+                        autoSaveBlockedByRecovery = false
+                        applySavedStateStatus(savedStateTracker.establishBaseline(currentProjectFingerprint()))
+                        applyAutoSaveSettings()
+                        saveProject()
+                        showToast("Restored the previous autosave in full. Saving resumed.", ToastSeverity.Info)
+                    }
+                }
+                else -> showToast(
+                    "No usable previous autosave was found. The recovered project is unchanged " +
+                        "and saving stays paused.",
+                    ToastSeverity.Error,
+                )
+            }
         }
     }
 
