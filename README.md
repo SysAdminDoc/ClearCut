@@ -570,7 +570,7 @@ keyPassword=yourpass
 
 Or via environment variables: `CLEARCUT_STORE_FILE`, `CLEARCUT_STORE_PASSWORD`, `CLEARCUT_KEY_ALIAS`, `CLEARCUT_KEY_PASSWORD`
 
-If release credentials are not configured, `assembleRelease` falls back to debug signing so local verification can still produce a testable release artifact without relying on an embedded keystore.
+Release credentials are required; see Release Signing Identity below for the pinned-key contract.
 
 ### Release Verification
 Local release builds publish a `.sha256` checksum and `.signing-cert-sha256` certificate-fingerprint sidecar next to every APK. After building `debug`, `release`, and `androidTest` APKs, write or refresh the sidecars, then run the single local release gate:

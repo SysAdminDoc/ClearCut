@@ -156,6 +156,25 @@ def has_qualifier(text: str) -> bool:
     return any(qualifier in lowered for qualifier in QUALIFIERS)
 
 
+def live_claim_text(surface: PublicSurface) -> str:
+    """Mask README version-history entries while preserving offsets and line numbers."""
+    if surface.path.name.lower() != "readme.md":
+        return surface.text
+
+    in_version_history = False
+    masked_lines: list[str] = []
+    for line in surface.text.splitlines(keepends=True):
+        if re.match(r"^###\s+v\d", line, re.IGNORECASE):
+            in_version_history = True
+        elif in_version_history and re.match(r"^##\s+", line):
+            in_version_history = False
+        if in_version_history:
+            masked_lines.append("".join("\n" if character == "\n" else "\r" if character == "\r" else " " for character in line))
+        else:
+            masked_lines.append(line)
+    return "".join(masked_lines)
+
+
 def tool_availability(source: str, tool: str) -> str | None:
     marker = f"Tool.{tool} to ToolRequirement("
     start = source.find(marker)
@@ -196,44 +215,45 @@ def validate(root: Path = ROOT) -> list[ClaimViolation]:
     violations: list[ClaimViolation] = []
 
     for surface in public_surfaces(root):
-        lowered = surface.text.lower()
+        claim_text = live_claim_text(surface)
+        lowered = claim_text.lower()
         if caption_model == "whisper.tiny.en.onnx":
-            for match in re.finditer(r"auto captions[^\n]*(multilingual|99 languages)", surface.text, re.IGNORECASE):
-                line = context_line(surface.text, match.start())
+            for match in re.finditer(r"auto captions[^\n]*(multilingual|99 languages)", claim_text, re.IGNORECASE):
+                line = context_line(claim_text, match.start())
                 if not has_qualifier(line):
-                    violations.append(ClaimViolation(RULES["ai_caption_language_gate"], surface.label, line_number(surface.text, match.start()), line))
+                    violations.append(ClaimViolation(RULES["ai_caption_language_gate"], surface.label, line_number(claim_text, match.start()), line))
 
         for term, tool in DEPENDENCY_MISSING_TERMS.items():
             if tool_availability(ai_source, tool) != "DEPENDENCY_MISSING":
                 continue
             for match in re.finditer(re.escape(term), lowered):
-                line = context_line(surface.text, match.start())
+                line = context_line(claim_text, match.start())
                 if not has_qualifier(line):
-                    violations.append(ClaimViolation(RULES["dependency_missing_ai_tools"], surface.label, line_number(surface.text, match.start()), line))
+                    violations.append(ClaimViolation(RULES["dependency_missing_ai_tools"], surface.label, line_number(claim_text, match.start()), line))
 
         if not signing_ready:
             for match in re.finditer(r"content credentials", lowered):
-                line = context_line(surface.text, match.start())
+                line = context_line(claim_text, match.start())
                 if not any(word in line.lower() for word in ("draft", "unsigned", "not verifiable", "unavailable", "planned", "future")):
-                    violations.append(ClaimViolation(RULES["content_credentials_draft_gate"], surface.label, line_number(surface.text, match.start()), line))
+                    violations.append(ClaimViolation(RULES["content_credentials_draft_gate"], surface.label, line_number(claim_text, match.start()), line))
 
         if not api_upload_ready:
             for pattern in (r"direct publish", r"direct upload", r"upload to (youtube|tiktok|instagram|threads|x|linkedin)", r"publish to (youtube|tiktok|instagram|threads|x|linkedin)", r"one-tap upload"):
                 for match in re.finditer(pattern, lowered):
-                    line = context_line(surface.text, match.start())
+                    line = context_line(claim_text, match.start())
                     if not any(word in line.lower() for word in ("share", "handoff", "preset", "manual", "planned", "future")):
-                        violations.append(ClaimViolation(RULES["share_handoff_gate"], surface.label, line_number(surface.text, match.start()), line))
+                        violations.append(ClaimViolation(RULES["share_handoff_gate"], surface.label, line_number(claim_text, match.start()), line))
 
         for phrase in ("no internet", "works offline", "editing works offline", "core editing works offline"):
             for match in re.finditer(re.escape(phrase), lowered):
-                paragraph_start = surface.text.rfind("\n\n", 0, match.start()) + 2
-                paragraph_end = surface.text.find("\n\n", match.start())
-                paragraph = surface.text[paragraph_start : len(surface.text) if paragraph_end == -1 else paragraph_end].lower()
+                paragraph_start = claim_text.rfind("\n\n", 0, match.start()) + 2
+                paragraph_end = claim_text.find("\n\n", match.start())
+                paragraph = claim_text[paragraph_start : len(claim_text) if paragraph_end == -1 else paragraph_end].lower()
                 if any(term not in paragraph for term in OFFLINE_REQUIRED_TERMS):
-                    violations.append(ClaimViolation(RULES["offline_network_boundary"], surface.label, line_number(surface.text, match.start()), context_line(surface.text, match.start())))
+                    violations.append(ClaimViolation(RULES["offline_network_boundary"], surface.label, line_number(claim_text, match.start()), context_line(claim_text, match.start())))
 
         for match in re.finditer(r"disclosure metadata ready for share targets", lowered):
-            violations.append(ClaimViolation(RULES["screenshot_disclosure_gate"], surface.label, line_number(surface.text, match.start()), context_line(surface.text, match.start())))
+            violations.append(ClaimViolation(RULES["screenshot_disclosure_gate"], surface.label, line_number(claim_text, match.start()), context_line(claim_text, match.start())))
 
     deduped: dict[tuple[str, str, int, str], ClaimViolation] = {}
     for violation in violations:
@@ -294,7 +314,12 @@ def run_self_tests() -> None:
         root = Path(temp)
         write_minimal_sources(
             root,
-            readme="| **Auto Captions** | ONNX Runtime Whisper tiny.en (English; multilingual path gated) | Yes |\n",
+            readme=(
+                "### v3.78.0 Historical release note\n"
+                "- A failed motion analysis once reported stabilization as successful.\n"
+                "## Live capabilities\n"
+                "| **Auto Captions** | ONNX Runtime Whisper tiny.en (English; multilingual path gated) | Yes |\n"
+            ),
             full_description=(
                 "AI-assisted tools with clear gates: auto captions, background removal, object removal, scene detection, "
                 "smart crop, motion tracking, auto color, and audio denoise; planned stabilization and style transfer "

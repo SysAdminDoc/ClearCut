@@ -85,6 +85,25 @@ class PublicFeatureClaimsTest {
     }
 
     @Test
+    fun readmeDoesNotPromiseDebugSigningFallback() {
+        val readme = locate("README.md").readText()
+        val buildScript = locate("app/build.gradle.kts").readText()
+        val releaseBlock = buildScript
+            .substringAfter("        release {", "")
+            .substringBefore("        create(\"streaming\")", "")
+        val releaseUsesDebugSigning = Regex("signingConfig\\s*=.*debug", RegexOption.IGNORE_CASE)
+            .containsMatchIn(releaseBlock)
+
+        if (!releaseUsesDebugSigning) {
+            assertFalse(
+                "README must not promise a debug-signing fallback when release signing is required",
+                Regex("(?:assembleRelease`?|release builds?)\\s+falls back to (?:debug signing|the debug key)", RegexOption.IGNORE_CASE)
+                    .containsMatchIn(readme)
+            )
+        }
+    }
+
+    @Test
     fun readmeTimelineImportCopyMatchesRuntimeGate() {
         val readme = locate("README.md").readText()
         val timelineInterchangeLine = readme

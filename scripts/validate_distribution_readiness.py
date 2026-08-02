@@ -118,10 +118,21 @@ def verify_latest_changelog(root: Path = ROOT) -> None:
         raise DistributionError(f"{rel(changelog)} is {len(text)} characters, expected <= 500")
 
 
+def verify_changelog_history(root: Path = ROOT) -> None:
+    changelog_dir = root / "fastlane" / "metadata" / "android" / "en-US" / "changelogs"
+    for changelog in sorted(changelog_dir.glob("*.txt")):
+        text = read_text(changelog).strip()
+        if not text:
+            raise DistributionError(f"{rel(changelog)} must not be empty")
+        if len(text) > 500:
+            raise DistributionError(f"{rel(changelog)} is {len(text)} characters, expected <= 500")
+
+
 def validate(root: Path = ROOT) -> None:
     verify_readme(root)
     verify_fastlane(root)
     verify_latest_changelog(root)
+    verify_changelog_history(root)
 
 
 def write_fixture(root: Path, relative: str, text: str) -> None:
@@ -162,6 +173,18 @@ def run_self_tests() -> None:
         root = Path(temp)
         write_minimal_repo(root, valid_readme, valid_full)
         validate(root)
+
+    with tempfile.TemporaryDirectory() as temp:
+        root = Path(temp)
+        write_minimal_repo(root, valid_readme, valid_full)
+        write_fixture(root, "fastlane/metadata/android/en-US/changelogs/199.txt", "x" * 501)
+        try:
+            validate(root)
+        except DistributionError as error:
+            if "199.txt" not in str(error):
+                raise DistributionError(f"self-test reported the wrong changelog: {error}")
+        else:
+            raise DistributionError("self-test expected an overlong historical changelog to fail")
 
     with tempfile.TemporaryDirectory() as temp:
         root = Path(temp)

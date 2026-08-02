@@ -1,7 +1,7 @@
 Nothing reports work that did not happen.
-Auto Captions no longer invent text when no transcription model is present; the timing it did measure is marked on the timeline instead.
-The copyright pre-check no longer says your audio is clear after a lookup it never made.
-A project that only partly restores now says what was lost and pauses saving, so the next autosave cannot write the loss back over your file.
-Export failures name the specific cause and what to try, and the error card can copy a report.
-Nine Settings controls that stored a value and changed nothing now do what they say.
-Snapshots, the AI usage ledger and deleted templates are recoverable again.
+Auto Captions mark measured timing when no transcription model is present.
+Copyright checks no longer call audio clear after an unmade lookup.
+Partial restores name what was lost and pause saving to protect the project.
+Export failures name their cause and next step; reports can be copied.
+Nine previously inert Settings controls now work.
+Snapshots, AI usage, and deleted templates are recoverable.
