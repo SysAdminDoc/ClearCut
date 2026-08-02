@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "publicProductName": "ClearCut",
+  "retiredPublicProductName": "NovaCut",
+  "applicationId": "com.novacut.editor",
+  "namespace": "com.novacut.editor",
+  "sourcePackage": "com.novacut.editor",
+  "migrationPolicy": {
+    "applicationId": "retain-existing-lineage",
+    "namespace": "retain-existing-lineage",
+    "signingCertificate": "retain-pinned-release-identity",
+    "identityChange": "new-install-with-explicit-export-import"
+  },
+  "nonReleaseVariants": {
+    "streaming": {
+      "applicationIdSuffix": ".streaming",
+      "purpose": "local-debug-network-streaming"
+    }
+  },
+  "providerAuthorities": [
+    "${applicationId}.androidx-startup",
+    "${applicationId}.fileprovider"
+  ],
+  "shortcutTarget": {
+    "package": "com.novacut.editor",
+    "class": "com.novacut.editor.MainActivity",
+    "actions": [
+      "com.novacut.editor.action.NEW_PROJECT",
+      "com.novacut.editor.action.OPEN_RECENT"
+    ]
+  },
+  "archiveAssociations": {
+    "extensions": [
+      ".clearcut",
+      ".clearcut-template"
+    ],
+    "mimeTypes": [
+      "application/octet-stream",
+      "application/json",
+      "application/zip",
+      "application/xml",
+      "text/xml",
+      "text/plain"
+    ]
+  },
+  "publicSurfacePaths": [
+    "README.md",
+    "docs/privacy-policy.md",
+    "docs/play-data-safety.md",
+    "fastlane/metadata/android/en-US/title.txt",
+    "fastlane/metadata/android/en-US/short_description.txt",
+    "fastlane/metadata/android/en-US/full_description.txt"
+  ],
+  "readmePolicyPhrases": [
+    "### Package identity and upgrade policy",
+    "`com.novacut.editor`",
+    "new install with an explicit export/import path"
+  ]
+}

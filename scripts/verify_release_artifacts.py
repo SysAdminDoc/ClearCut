@@ -149,6 +149,7 @@ def verify_local_trust_controls(apks: list[Path]) -> None:
     run_python_script("write_apk_signing_fingerprints.py", "--root", str(APK_ROOT), "--check")
     run_python_script("check_apk_size.py")
     run_python_script("validate_play_listing_assets.py", "--quiet")
+    run_python_script("validate_package_identity.py")
     run_python_script("validate_distribution_readiness.py")
     # These two shipped as workflow steps before the local migration; they are
     # release gates (unearned capability claims / audio API policy), not lint.

@@ -611,6 +611,14 @@ To build a release, create `keystore.properties` at the repository root (it is g
 
 Android developer verification is not complete. Starting in September 2026, Google requires apps installed on certified Android devices in initial regions to be registered by a verified developer, and package names must be registered with a signed APK. ClearCut can keep shipping direct APKs locally, but broad sideload/F-Droid continuity depends on completing that account/package-name step or documenting a limited-distribution fallback.
 
+### Package identity and upgrade policy
+
+ClearCut is the public product name. The Android application ID and source namespace are intentionally frozen at `com.novacut.editor`: it is the legacy technical identity that preserves the existing install lineage, not public branding. The machine-readable contract lives in `scripts/package_identity.json` and is checked by the release gate.
+
+Keeping that ID and the pinned release certificate lets existing installs receive in-place updates and keeps app-private projects reachable. Provider authorities remain `${applicationId}.androidx-startup` and `${applicationId}.fileprovider`; `.clearcut` and `.clearcut-template` files and their document MIME associations remain stable.
+
+If a future legal, ownership, or distribution decision requires a different application ID, it must ship as a new install with an explicit export/import path. It must not masquerade as an upgrade. The current policy is to retain the existing ID, so current users do not need a clean-install migration.
+
 ### Dependencies
 Key external dependencies currently in `build.gradle.kts`:
 

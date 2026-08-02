@@ -382,6 +382,7 @@ tasks.withType<Test>().configureEach {
     listOf(
         "README.md",
         "LICENSE",
+        "scripts/package_identity.json",
         "gradle/libs.versions.toml",
         "gradle/wrapper/gradle-wrapper.properties",
         "fastlane/metadata/android/en-US/full_description.txt",
