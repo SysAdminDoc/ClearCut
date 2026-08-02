@@ -424,7 +424,7 @@ fun EditorScreen(
                 Text(
                     stringResource(
                         R.string.partial_restore_message,
-                        report.countsByKind().joinToString("\n") { (kind, count) -> "• $count $kind" }
+                        partialRestoreBulletList(LocalContext.current.resources, report)
                     )
                 )
             },

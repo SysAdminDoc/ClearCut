@@ -3019,6 +3019,106 @@
     <string name="command_palette_search_hint">Search tools, effects, AI…</string>
     <string name="partial_restore_title">Some project data could not be restored</string>
     <string name="partial_restore_message">This project opened, but parts of it could not be read:\n\n%1$s\n\nSaving is paused so the missing pieces are not written over. Keep the project as recovered, or try the previous autosave, which may still contain them.</string>
+    <plurals name="partial_restore_clips">
+        <item quantity="one">%1$d clip</item>
+        <item quantity="other">%1$d clips</item>
+        <item quantity="many">%1$d clips</item>
+    </plurals>
+    <plurals name="partial_restore_tracks">
+        <item quantity="one">%1$d track</item>
+        <item quantity="other">%1$d tracks</item>
+        <item quantity="many">%1$d tracks</item>
+    </plurals>
+    <plurals name="partial_restore_effects">
+        <item quantity="one">%1$d effect</item>
+        <item quantity="other">%1$d effects</item>
+        <item quantity="many">%1$d effects</item>
+    </plurals>
+    <plurals name="partial_restore_keyframes">
+        <item quantity="one">%1$d keyframe</item>
+        <item quantity="other">%1$d keyframes</item>
+        <item quantity="many">%1$d keyframes</item>
+    </plurals>
+    <plurals name="partial_restore_chapter_markers">
+        <item quantity="one">%1$d chapter marker</item>
+        <item quantity="other">%1$d chapter markers</item>
+        <item quantity="many">%1$d chapter markers</item>
+    </plurals>
+    <plurals name="partial_restore_timeline_markers">
+        <item quantity="one">%1$d timeline marker</item>
+        <item quantity="other">%1$d timeline markers</item>
+        <item quantity="many">%1$d timeline markers</item>
+    </plurals>
+    <plurals name="partial_restore_beat_markers">
+        <item quantity="one">%1$d beat marker</item>
+        <item quantity="other">%1$d beat markers</item>
+        <item quantity="many">%1$d beat markers</item>
+    </plurals>
+    <plurals name="partial_restore_image_overlays">
+        <item quantity="one">%1$d image overlay</item>
+        <item quantity="other">%1$d image overlays</item>
+        <item quantity="many">%1$d image overlays</item>
+    </plurals>
+    <plurals name="partial_restore_text_overlays">
+        <item quantity="one">%1$d text overlay</item>
+        <item quantity="other">%1$d text overlays</item>
+        <item quantity="many">%1$d text overlays</item>
+    </plurals>
+    <plurals name="partial_restore_watermarks">
+        <item quantity="one">%1$d watermark</item>
+        <item quantity="other">%1$d watermarks</item>
+        <item quantity="many">%1$d watermarks</item>
+    </plurals>
+    <plurals name="partial_restore_transitions">
+        <item quantity="one">%1$d transition</item>
+        <item quantity="other">%1$d transitions</item>
+        <item quantity="many">%1$d transitions</item>
+    </plurals>
+    <plurals name="partial_restore_drawing_paths">
+        <item quantity="one">%1$d drawing path</item>
+        <item quantity="other">%1$d drawing paths</item>
+        <item quantity="many">%1$d drawing paths</item>
+    </plurals>
+    <plurals name="partial_restore_points">
+        <item quantity="one">%1$d point</item>
+        <item quantity="other">%1$d points</item>
+        <item quantity="many">%1$d points</item>
+    </plurals>
+    <plurals name="partial_restore_transcripts">
+        <item quantity="one">%1$d transcript</item>
+        <item quantity="other">%1$d transcripts</item>
+        <item quantity="many">%1$d transcripts</item>
+    </plurals>
+    <plurals name="partial_restore_tracked_objects">
+        <item quantity="one">%1$d tracked object</item>
+        <item quantity="other">%1$d tracked objects</item>
+        <item quantity="many">%1$d tracked objects</item>
+    </plurals>
+    <plurals name="partial_restore_storyboard_cards">
+        <item quantity="one">%1$d storyboard card</item>
+        <item quantity="other">%1$d storyboard cards</item>
+        <item quantity="many">%1$d storyboard cards</item>
+    </plurals>
+    <plurals name="partial_restore_media_assets">
+        <item quantity="one">%1$d media asset</item>
+        <item quantity="other">%1$d media assets</item>
+        <item quantity="many">%1$d media assets</item>
+    </plurals>
+    <plurals name="partial_restore_captions">
+        <item quantity="one">%1$d caption</item>
+        <item quantity="other">%1$d captions</item>
+        <item quantity="many">%1$d captions</item>
+    </plurals>
+    <plurals name="partial_restore_caption_words">
+        <item quantity="one">%1$d caption word</item>
+        <item quantity="other">%1$d caption words</item>
+        <item quantity="many">%1$d caption words</item>
+    </plurals>
+    <plurals name="partial_restore_other_elements">
+        <item quantity="one">%1$d element</item>
+        <item quantity="other">%1$d elements</item>
+        <item quantity="many">%1$d elements</item>
+    </plurals>
     <string name="partial_restore_keep">Keep as recovered</string>
     <string name="partial_restore_use_backup">Try previous autosave</string>
     <string name="vm_recovery_partial_toast">Some project data could not be restored (%1$s). Saving is paused so the loss is not written back — choose what to do.</string>

@@ -147,12 +147,13 @@ internal data class MediaRelinkOpenToastPart(
 
 internal fun recoveryOpenFeedbackFor(
     outcome: ProjectAutoSave.LoadOutcome,
-    expectedRecovery: Boolean
+    expectedRecovery: Boolean,
+    partialRestoreSummaryText: String? = null,
 ): RecoveryOpenFeedback? = when (outcome) {
     is ProjectAutoSave.LoadOutcome.Loaded -> if (outcome.report.isPartial) {
         RecoveryOpenFeedback(
             messageResId = R.string.vm_recovery_partial_toast,
-            messageArgs = listOf(outcome.report.summary()),
+            messageArgs = listOf(partialRestoreSummaryText ?: outcome.report.summary()),
             severity = ToastSeverity.Error,
         )
     } else {
@@ -1225,7 +1226,11 @@ class EditorViewModel @Inject constructor(
         } else {
             applySavedStateStatus(savedStateTracker.establishBaseline(currentProjectFingerprint()))
         }
-        recoveryOpenFeedbackFor(outcome, expectRecovery)?.let { feedback ->
+        val localizedPartialSummary = (outcome as? ProjectAutoSave.LoadOutcome.Loaded)
+            ?.report
+            ?.takeIf { it.isPartial }
+            ?.let { partialRestoreSummary(appContext.resources, it) }
+        recoveryOpenFeedbackFor(outcome, expectRecovery, localizedPartialSummary)?.let { feedback ->
             showToast(text(feedback.messageResId, *feedback.messageArgs.toTypedArray()), feedback.severity)
         }
         applyAutoSaveSettings()
@@ -1241,7 +1246,7 @@ class EditorViewModel @Inject constructor(
      */
     fun keepPartialRestore() {
         if (_state.value.partialRestore == null) return
-        val lost = _state.value.partialRestore?.summary().orEmpty()
+        val lost = _state.value.partialRestore?.let { partialRestoreSummary(appContext.resources, it) }.orEmpty()
         _state.update { it.copy(partialRestore = null) }
         autoSaveBlockedByRecovery = false
         applySavedStateStatus(savedStateTracker.establishBaseline(currentProjectFingerprint()))
@@ -1265,7 +1270,10 @@ class EditorViewModel @Inject constructor(
                     if (outcome.report.isPartial) {
                         _state.update { it.copy(partialRestore = outcome.report) }
                         showToast(
-                            text(R.string.vm_partial_restore_backup_incomplete, outcome.report.summary()),
+                            text(
+                                R.string.vm_partial_restore_backup_incomplete,
+                                partialRestoreSummary(appContext.resources, outcome.report),
+                            ),
                             ToastSeverity.Error,
                         )
                     } else {
@@ -2521,7 +2529,7 @@ class EditorViewModel @Inject constructor(
                 is ProjectDocumentReadResult.Loaded -> {
                     if (decoded.report.isPartial) {
                         showToast(
-                            "Snapshot is incomplete (${decoded.report.summary()}) and was not applied.",
+                            "Snapshot is incomplete (${partialRestoreSummary(appContext.resources, decoded.report)}) and was not applied.",
                             ToastSeverity.Error,
                         )
                         return

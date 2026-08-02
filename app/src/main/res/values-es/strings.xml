@@ -2746,6 +2746,106 @@
     <string name="command_palette_search_hint">Buscar herramientas, efectos, IA…</string>
     <string name="partial_restore_title">No se pudieron restaurar algunos datos del proyecto</string>
     <string name="partial_restore_message">Este proyecto se abrió, pero no se pudieron leer algunas partes:\n\n%1$s\n\nSe pausó el guardado para no sobrescribir lo que falta. Conserva el proyecto tal como se recuperó o prueba el guardado automático anterior, que quizá aún las contenga.</string>
+    <plurals name="partial_restore_clips">
+        <item quantity="one">%1$d clip</item>
+        <item quantity="other">%1$d clips</item>
+        <item quantity="many">%1$d clips</item>
+    </plurals>
+    <plurals name="partial_restore_tracks">
+        <item quantity="one">%1$d pista</item>
+        <item quantity="other">%1$d pistas</item>
+        <item quantity="many">%1$d pistas</item>
+    </plurals>
+    <plurals name="partial_restore_effects">
+        <item quantity="one">%1$d efecto</item>
+        <item quantity="other">%1$d efectos</item>
+        <item quantity="many">%1$d efectos</item>
+    </plurals>
+    <plurals name="partial_restore_keyframes">
+        <item quantity="one">%1$d fotograma clave</item>
+        <item quantity="other">%1$d fotogramas clave</item>
+        <item quantity="many">%1$d fotogramas clave</item>
+    </plurals>
+    <plurals name="partial_restore_chapter_markers">
+        <item quantity="one">%1$d marcador de capítulo</item>
+        <item quantity="other">%1$d marcadores de capítulo</item>
+        <item quantity="many">%1$d marcadores de capítulo</item>
+    </plurals>
+    <plurals name="partial_restore_timeline_markers">
+        <item quantity="one">%1$d marcador de la línea de tiempo</item>
+        <item quantity="other">%1$d marcadores de la línea de tiempo</item>
+        <item quantity="many">%1$d marcadores de la línea de tiempo</item>
+    </plurals>
+    <plurals name="partial_restore_beat_markers">
+        <item quantity="one">%1$d marcador de ritmo</item>
+        <item quantity="other">%1$d marcadores de ritmo</item>
+        <item quantity="many">%1$d marcadores de ritmo</item>
+    </plurals>
+    <plurals name="partial_restore_image_overlays">
+        <item quantity="one">%1$d superposición de imagen</item>
+        <item quantity="other">%1$d superposiciones de imagen</item>
+        <item quantity="many">%1$d superposiciones de imagen</item>
+    </plurals>
+    <plurals name="partial_restore_text_overlays">
+        <item quantity="one">%1$d superposición de texto</item>
+        <item quantity="other">%1$d superposiciones de texto</item>
+        <item quantity="many">%1$d superposiciones de texto</item>
+    </plurals>
+    <plurals name="partial_restore_watermarks">
+        <item quantity="one">%1$d marca de agua</item>
+        <item quantity="other">%1$d marcas de agua</item>
+        <item quantity="many">%1$d marcas de agua</item>
+    </plurals>
+    <plurals name="partial_restore_transitions">
+        <item quantity="one">%1$d transición</item>
+        <item quantity="other">%1$d transiciones</item>
+        <item quantity="many">%1$d transiciones</item>
+    </plurals>
+    <plurals name="partial_restore_drawing_paths">
+        <item quantity="one">%1$d trazado de dibujo</item>
+        <item quantity="other">%1$d trazados de dibujo</item>
+        <item quantity="many">%1$d trazados de dibujo</item>
+    </plurals>
+    <plurals name="partial_restore_points">
+        <item quantity="one">%1$d punto</item>
+        <item quantity="other">%1$d puntos</item>
+        <item quantity="many">%1$d puntos</item>
+    </plurals>
+    <plurals name="partial_restore_transcripts">
+        <item quantity="one">%1$d transcripción</item>
+        <item quantity="other">%1$d transcripciones</item>
+        <item quantity="many">%1$d transcripciones</item>
+    </plurals>
+    <plurals name="partial_restore_tracked_objects">
+        <item quantity="one">%1$d objeto rastreado</item>
+        <item quantity="other">%1$d objetos rastreados</item>
+        <item quantity="many">%1$d objetos rastreados</item>
+    </plurals>
+    <plurals name="partial_restore_storyboard_cards">
+        <item quantity="one">%1$d tarjeta del storyboard</item>
+        <item quantity="other">%1$d tarjetas del storyboard</item>
+        <item quantity="many">%1$d tarjetas del storyboard</item>
+    </plurals>
+    <plurals name="partial_restore_media_assets">
+        <item quantity="one">%1$d recurso multimedia</item>
+        <item quantity="other">%1$d recursos multimedia</item>
+        <item quantity="many">%1$d recursos multimedia</item>
+    </plurals>
+    <plurals name="partial_restore_captions">
+        <item quantity="one">%1$d subtítulo</item>
+        <item quantity="other">%1$d subtítulos</item>
+        <item quantity="many">%1$d subtítulos</item>
+    </plurals>
+    <plurals name="partial_restore_caption_words">
+        <item quantity="one">%1$d palabra del subtítulo</item>
+        <item quantity="other">%1$d palabras del subtítulo</item>
+        <item quantity="many">%1$d palabras del subtítulo</item>
+    </plurals>
+    <plurals name="partial_restore_other_elements">
+        <item quantity="one">%1$d elemento</item>
+        <item quantity="other">%1$d elementos</item>
+        <item quantity="many">%1$d elementos</item>
+    </plurals>
     <string name="partial_restore_keep">Conservar lo recuperado</string>
     <string name="partial_restore_use_backup">Probar el guardado anterior</string>
     <string name="vm_recovery_partial_toast">No se pudieron restaurar algunos datos del proyecto (%1$s). El guardado está pausado para no sobrescribir la pérdida; elige qué hacer.</string>

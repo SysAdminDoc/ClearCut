@@ -613,6 +613,58 @@ enum class DropReason {
     TOO_DEEP,
 }
 
+/** Stable presentation categories for restore losses; [DroppedElement.kind] stays log-friendly. */
+enum class RestoreElementKind {
+    CLIPS,
+    TRACKS,
+    EFFECTS,
+    KEYFRAMES,
+    CHAPTER_MARKERS,
+    TIMELINE_MARKERS,
+    BEAT_MARKERS,
+    IMAGE_OVERLAYS,
+    TEXT_OVERLAYS,
+    WATERMARKS,
+    TRANSITIONS,
+    DRAWING_PATHS,
+    POINTS,
+    TRANSCRIPTS,
+    TRACKED_OBJECTS,
+    STORYBOARD_CARDS,
+    MEDIA_ASSETS,
+    CAPTIONS,
+    CAPTION_WORDS,
+    OTHER;
+
+    companion object {
+        fun fromLogLabel(label: String): RestoreElementKind = when (label) {
+            "clip", "compound clip", "compound clips" -> CLIPS
+            "track" -> TRACKS
+            "effect", "effects", "clip effects", "clip audio effect", "track audio effect" -> EFFECTS
+            "keyframe", "keyframes", "clip keyframes", "effect keyframes", "mask keyframes",
+            "text-overlay keyframes", "tracked-object keyframes", "tracked-object keyframe",
+            "text overlay keyframe", "effect keyframe", "mask keyframe", "clip keyframe" -> KEYFRAMES
+            "chapter marker", "chapter markers" -> CHAPTER_MARKERS
+            "timeline marker", "timeline markers" -> TIMELINE_MARKERS
+            "beat marker", "beat markers" -> BEAT_MARKERS
+            "image overlay", "image overlays" -> IMAGE_OVERLAYS
+            "text overlay", "text overlays" -> TEXT_OVERLAYS
+            "export watermark" -> WATERMARKS
+            "global transition" -> TRANSITIONS
+            "drawing path", "drawing paths" -> DRAWING_PATHS
+            "drawing points", "mask points", "motion track points", "curve points",
+            "speed-curve points", "text-path points", "tracked-object mask points" -> POINTS
+            "transcript" -> TRANSCRIPTS
+            "tracked object", "tracked objects" -> TRACKED_OBJECTS
+            "storyboard card", "storyboard cards" -> STORYBOARD_CARDS
+            "media asset", "media assets" -> MEDIA_ASSETS
+            "caption", "captions", "clip captions" -> CAPTIONS
+            "caption words" -> CAPTION_WORDS
+            else -> OTHER
+        }
+    }
+}
+
 /**
  * One element the restore could not bring back. [index] is the position within its
  * collection, or the cut-off position for [DropReason.OVER_LIMIT].
@@ -622,6 +674,7 @@ data class DroppedElement(
     val index: Int,
     val reason: DropReason,
     val detail: String,
+    val kindKey: RestoreElementKind = RestoreElementKind.fromLogLabel(kind),
 )
 
 /**
@@ -636,6 +689,10 @@ data class ProjectRestoreReport(val dropped: List<DroppedElement> = emptyList())
     /** Dropped element counts by kind, most-lost first — the shape a user message needs. */
     fun countsByKind(): List<Pair<String, Int>> =
         dropped.groupingBy { it.kind }.eachCount().toList().sortedByDescending { it.second }
+
+    /** Counts by stable presentation category, most-lost first. */
+    fun countsByRestoreKind(): List<Pair<RestoreElementKind, Int>> =
+        dropped.groupingBy { it.kindKey }.eachCount().toList().sortedByDescending { it.second }
 
     fun summary(): String = countsByKind().joinToString { (kind, count) -> "$count $kind" }
 

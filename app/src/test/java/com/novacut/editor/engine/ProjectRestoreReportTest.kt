@@ -101,6 +101,24 @@ class ProjectRestoreReportTest {
     }
 
     @Test
+    fun theReportKeepsLogLabelsSeparateFromLocalizedPresentationKinds() {
+        val report = ProjectRestoreReport(
+            listOf(
+                DroppedElement("chapter marker", 0, DropReason.MALFORMED, "x"),
+                DroppedElement("chapter markers", 5, DropReason.OVER_LIMIT, "y"),
+                DroppedElement("clip", 1, DropReason.BAD_URI, "z"),
+            )
+        )
+
+        assertEquals(RestoreElementKind.CHAPTER_MARKERS, report.dropped[0].kindKey)
+        assertEquals(
+            listOf(RestoreElementKind.CHAPTER_MARKERS to 2, RestoreElementKind.CLIPS to 1),
+            report.countsByRestoreKind()
+        )
+        assertEquals("chapter marker", report.dropped[0].kind)
+    }
+
+    @Test
     fun theReportDoesNotLeakIntoALaterDeserializeCall() {
         AutoSaveState.deserializeWithReport(
             project(clips = JSONArray().put(validClip("clip-a").apply { remove("sourceUri") })).toString(),
