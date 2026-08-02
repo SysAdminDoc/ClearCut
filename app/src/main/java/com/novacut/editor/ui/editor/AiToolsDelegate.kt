@@ -5,6 +5,8 @@ import android.net.Uri
 import android.util.Log
 import com.novacut.editor.R
 import com.novacut.editor.ai.AiFeatures
+import com.novacut.editor.ai.CaptionEntry
+import com.novacut.editor.ai.CaptionSource
 import com.novacut.editor.engine.*
 
 import com.novacut.editor.model.*
@@ -396,8 +398,19 @@ class AiToolsDelegate(
             showToast(text(R.string.ai_no_speech_detected_toast))
             return
         }
+        // Energy segmentation measures when the audio got loud. It produces no words
+        // at all, and it used to fabricate numbered placeholder text to fill the gap.
+        // That invented text was saved into the project, drawn in the preview, burned into the
+        // exported video and written to the SRT. The timing is a real measurement, so
+        // it is committed as timeline markers, and the missing transcript is said out
+        // loud rather than papered over.
+        if (captions.all { it.source == CaptionSource.TIMING_ONLY }) {
+            commitSpeechTimingMarkers(captions)
+            return
+        }
+
         saveUndoState("AI auto captions")
-        val overlays = withContext(Dispatchers.Default) { aiFeatures.captionsToOverlays(captions) }
+        val overlays = withContext(Dispatchers.Default) { AiFeatures.captionsToOverlays(captions) }
         stateFlow.update { state ->
             val existing = state.textOverlays
             val deduped = overlays.filter { new ->
@@ -414,6 +427,33 @@ class AiToolsDelegate(
             text(R.string.ai_caption_source_energy_detection)
         }
         showToast(text(R.string.ai_captions_added_toast, captions.size, source))
+    }
+
+    /**
+     * Commit timing-only speech segments as timeline markers. This is everything the
+     * energy detector actually knows: where speech starts. No caption, no overlay, no
+     * subtitle cue — nothing that would read as a transcript downstream.
+     */
+    private fun commitSpeechTimingMarkers(captions: List<CaptionEntry>) {
+        val label = text(R.string.ai_speech_marker_label)
+        val existing = stateFlow.value.timelineMarkers
+        val markers = captions
+            .filter { caption -> existing.none { it.timeMs == caption.startMs && it.label == label } }
+            .map { caption ->
+                TimelineMarker(timeMs = caption.startMs, label = label, color = MarkerColor.YELLOW)
+            }
+        if (markers.isEmpty()) {
+            showToast(text(R.string.ai_caption_timing_only_no_new_toast))
+            return
+        }
+        saveUndoState("AI speech timing markers")
+        stateFlow.update { state ->
+            state.copy(
+                timelineMarkers = (state.timelineMarkers + markers).sortedBy { it.timeMs }
+            )
+        }
+        saveProject()
+        showToast(text(R.string.ai_caption_timing_only_toast, markers.size))
     }
 
     private suspend fun runSmartCrop(clip: Clip) {

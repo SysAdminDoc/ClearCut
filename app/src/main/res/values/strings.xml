@@ -266,6 +266,9 @@
     <string name="ai_caption_source_whisper">Whisper</string>
     <string name="ai_caption_source_energy_detection">energy detection</string>
     <string name="ai_captions_added_toast">Added %1$d captions (%2$s).</string>
+    <string name="ai_speech_marker_label">Speech</string>
+    <string name="ai_caption_timing_only_toast">No transcript available. Marked %1$d speech segments on the timeline — energy detection finds when speech happens, not what was said. Download the caption model to transcribe.</string>
+    <string name="ai_caption_timing_only_no_new_toast">No transcript available, and every speech segment found is already marked on the timeline.</string>
     <string name="ai_crop_analyze_failed_toast">Could not analyze the frame for crop.</string>
     <string name="ai_smart_crop_applied_toast">Smart crop applied (%1$.0f%% confidence).</string>
     <string name="ai_color_analyze_failed_toast">Could not analyze color.</string>

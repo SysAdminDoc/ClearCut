@@ -251,6 +251,9 @@
     <string name="ai_caption_source_whisper">Whisper</string>
     <string name="ai_caption_source_energy_detection">detección de energía</string>
     <string name="ai_captions_added_toast">Se agregaron %1$d subtítulos (%2$s).</string>
+    <string name="ai_speech_marker_label">Voz</string>
+    <string name="ai_caption_timing_only_toast">No hay transcripción disponible. Se marcaron %1$d segmentos de voz en la línea de tiempo: la detección de energía identifica cuándo hay voz, no lo que se dijo. Descarga el modelo de subtítulos para transcribir.</string>
+    <string name="ai_caption_timing_only_no_new_toast">No hay transcripción disponible y todos los segmentos de voz encontrados ya están marcados en la línea de tiempo.</string>
     <string name="ai_crop_analyze_failed_toast">No se pudo analizar el cuadro para recorte.</string>
     <string name="ai_smart_crop_applied_toast">Recorte inteligente aplicado (%1$.0f%% de confianza).</string>
     <string name="ai_color_analyze_failed_toast">No se pudo analizar el color.</string>

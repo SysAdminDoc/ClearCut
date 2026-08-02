@@ -62,6 +62,10 @@ class AiFeatures @Inject constructor(
     /**
      * Generates timed caption segments. Uses Whisper ONNX for real speech-to-text
      * when the model is downloaded, otherwise falls back to audio energy segmentation.
+     *
+     * The fallback is timing only: it returns [CaptionSource.TIMING_ONLY] entries with
+     * empty text. It knows *when* someone spoke and nothing about *what* they said, so
+     * callers must present those entries as slots to fill, never as a transcript.
      */
     suspend fun generateAutoCaptions(
         videoUri: Uri,
@@ -87,7 +91,8 @@ class AiFeatures @Inject constructor(
                     startMs = seg.startMs,
                     endMs = seg.endMs,
                     text = seg.text,
-                    confidence = 0.95f
+                    confidence = 0.95f,
+                    source = CaptionSource.TRANSCRIBED
                 )
             }
         } catch (e: Exception) {
@@ -217,7 +222,6 @@ class AiFeatures @Inject constructor(
             val threshold = maxEnergy * 0.15f
             val captions = mutableListOf<CaptionEntry>()
             var segmentStart = -1
-            var captionIndex = 1
 
             for (w in 0 until windowCount) {
                 val isSpeech = energy[w] > threshold
@@ -230,10 +234,10 @@ class AiFeatures @Inject constructor(
                         captions.add(CaptionEntry(
                             startMs = startMs,
                             endMs = endMs,
-                            text = "[Speech segment $captionIndex]",
-                            confidence = energy.slice(segmentStart until w).let { if (it.isEmpty()) 0.0 else it.average() }.toFloat() / maxEnergy
+                            text = "",
+                            confidence = energy.slice(segmentStart until w).let { if (it.isEmpty()) 0.0 else it.average() }.toFloat() / maxEnergy,
+                            source = CaptionSource.TIMING_ONLY
                         ))
-                        captionIndex++
                     }
                     segmentStart = -1
                 }
@@ -246,8 +250,9 @@ class AiFeatures @Inject constructor(
                     captions.add(CaptionEntry(
                         startMs = startMs,
                         endMs = endMs,
-                        text = "[Speech segment $captionIndex]",
-                        confidence = energy.slice(segmentStart until windowCount).let { if (it.isEmpty()) 0.0 else it.average() }.toFloat() / maxEnergy
+                        text = "",
+                        confidence = energy.slice(segmentStart until windowCount).let { if (it.isEmpty()) 0.0 else it.average() }.toFloat() / maxEnergy,
+                        source = CaptionSource.TIMING_ONLY
                     ))
                 }
             }
@@ -261,58 +266,64 @@ class AiFeatures @Inject constructor(
         }
     }
 
-    fun cleanCaptionText(text: String): String {
-        val fillerPatterns = listOf(
-            "\\b[Uu]h\\b",
-            "\\b[Uu]m\\b",
-            "\\b[Uu]mm\\b",
-            "\\b[Uu]hh\\b",
-            "(?<=,\\s*|^\\.?\\s*)[Ll]ike,?(?=\\s)",
-            "\\b[Yy]ou know\\b",
-            "\\b[Ss]o\\b(?=\\s*,)",
-            "\\b[Aa]ctually\\b(?=\\s*,)",
-            "\\b[Bb]asically\\b(?=\\s*,)",
-            "\\b[Ll]iterally\\b(?=\\s*,)",
-            "\\b[Rr]ight\\b(?=\\s*,)",
-            "\\b[Ii] mean\\b"
-        )
-        var result = text
-        for (pattern in fillerPatterns) {
-            result = result.replace(Regex(pattern), "")
-        }
-        result = result.replace(Regex(",\\s*,"), ",")
-        result = result.replace(Regex("\\s{2,}"), " ")
-        result = result.replace(Regex("^\\s*,\\s*"), "")
-        result = result.replace(Regex("\\s*,\\s*$"), "")
-        return result.trim()
-    }
-
-    /**
-     * Convert caption entries to TextOverlay objects for the timeline.
-     */
-    fun captionsToOverlays(
-        captions: List<CaptionEntry>,
-        style: CaptionStyle = CaptionStyle()
-    ): List<TextOverlay> {
-        return captions.mapNotNull { caption ->
-            val cleaned = cleanCaptionText(caption.text)
-            if (cleaned.isBlank()) return@mapNotNull null
-            TextOverlay(
-                text = cleaned,
-                fontSize = style.fontSize,
-                color = style.textColor,
-                backgroundColor = style.backgroundColor,
-                strokeColor = style.strokeColor,
-                strokeWidth = style.strokeWidth,
-                bold = style.bold,
-                alignment = TextAlignment.CENTER,
-                positionX = 0.5f,
-                positionY = style.positionY,
-                startTimeMs = caption.startMs,
-                endTimeMs = caption.endMs,
-                animationIn = TextAnimation.FADE,
-                animationOut = TextAnimation.FADE
+    companion object {
+        fun cleanCaptionText(text: String): String {
+            val fillerPatterns = listOf(
+                "\\b[Uu]h\\b",
+                "\\b[Uu]m\\b",
+                "\\b[Uu]mm\\b",
+                "\\b[Uu]hh\\b",
+                "(?<=,\\s*|^\\.?\\s*)[Ll]ike,?(?=\\s)",
+                "\\b[Yy]ou know\\b",
+                "\\b[Ss]o\\b(?=\\s*,)",
+                "\\b[Aa]ctually\\b(?=\\s*,)",
+                "\\b[Bb]asically\\b(?=\\s*,)",
+                "\\b[Ll]iterally\\b(?=\\s*,)",
+                "\\b[Rr]ight\\b(?=\\s*,)",
+                "\\b[Ii] mean\\b"
             )
+            var result = text
+            for (pattern in fillerPatterns) {
+                result = result.replace(Regex(pattern), "")
+            }
+            result = result.replace(Regex(",\\s*,"), ",")
+            result = result.replace(Regex("\\s{2,}"), " ")
+            result = result.replace(Regex("^\\s*,\\s*"), "")
+            result = result.replace(Regex("\\s*,\\s*$"), "")
+            return result.trim()
+        }
+
+        /**
+         * Convert caption entries to TextOverlay objects for the timeline.
+         */
+        fun captionsToOverlays(
+            captions: List<CaptionEntry>,
+            style: CaptionStyle = CaptionStyle()
+        ): List<TextOverlay> {
+            return captions.mapNotNull { caption ->
+                val cleaned = cleanCaptionText(caption.text)
+                // No words, no overlay. A timing-only caption always lands here, which
+                // is the point: its timing is real but it has nothing to say, and
+                // TextOverlay rightly refuses to exist without text. Callers surface
+                // those segments as timeline markers instead.
+                if (cleaned.isBlank()) return@mapNotNull null
+                TextOverlay(
+                    text = cleaned,
+                    fontSize = style.fontSize,
+                    color = style.textColor,
+                    backgroundColor = style.backgroundColor,
+                    strokeColor = style.strokeColor,
+                    strokeWidth = style.strokeWidth,
+                    bold = style.bold,
+                    alignment = TextAlignment.CENTER,
+                    positionX = 0.5f,
+                    positionY = style.positionY,
+                    startTimeMs = caption.startMs,
+                    endTimeMs = caption.endMs,
+                    animationIn = TextAnimation.FADE,
+                    animationOut = TextAnimation.FADE
+                )
+            }
         }
     }
 
@@ -2420,12 +2431,27 @@ internal fun radix2Fft(real: FloatArray, imag: FloatArray) {
 
 // Data classes for AI features
 
+/**
+ * How a [CaptionEntry] got its text — the difference between a transcript and a
+ * measurement. Energy segmentation can tell when someone spoke; it cannot tell
+ * what they said, so it must never hand back invented text for the project to
+ * save, render, and burn into an export.
+ */
+enum class CaptionSource {
+    /** A speech-to-text model produced the words. */
+    TRANSCRIBED,
+
+    /** Only the start/end times are real. [CaptionEntry.text] is empty by construction. */
+    TIMING_ONLY,
+}
+
 data class CaptionEntry(
     val startMs: Long,
     val endMs: Long,
     val text: String,
     val confidence: Float = 1f,
-    val languageCode: String = "en"
+    val languageCode: String = "en",
+    val source: CaptionSource = CaptionSource.TRANSCRIBED
 )
 
 data class CaptionStyle(
