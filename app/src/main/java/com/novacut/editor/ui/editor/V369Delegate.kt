@@ -2,6 +2,7 @@ package com.novacut.editor.ui.editor
 
 import android.content.Context
 import android.util.Log
+import androidx.annotation.StringRes
 import com.novacut.editor.R
 import com.novacut.editor.engine.AiUsageLedger
 import com.novacut.editor.engine.AiThumbnailEngine
@@ -400,9 +401,13 @@ class V369Delegate(
             }
             val match = contentId.analyze(pcm, apiKey)
             stateFlow.update { it.copy(v369 = it.v369.copy(contentIdResult = match)) }
+            val matchedTitle = match.matchedTitle
             showToast(
-                if (match.matchedTitle != null) "Match: ${match.matchedTitle}"
-                else "No copyright match detected"
+                if (match.lookup == ContentIdEngine.LookupOutcome.MATCHED && matchedTitle != null) {
+                    appContext.getString(R.string.v369_content_id_match, matchedTitle)
+                } else {
+                    appContext.getString(contentIdOutcomeMessageRes(match.lookup))
+                }
             )
         }
     }
@@ -439,5 +444,22 @@ class V369Delegate(
         }
     }
 
-    companion object { private const val TAG = "V369Delegate" }
+    companion object {
+        private const val TAG = "V369Delegate"
+
+        /**
+         * Copy for a content-ID result that is not a positive match. Only
+         * [ContentIdEngine.LookupOutcome.NO_MATCH] is allowed to read as "clear";
+         * the not-checked outcomes must say so, because a user who reads "no match"
+         * after nothing was queried may publish on the strength of it.
+         */
+        @StringRes
+        fun contentIdOutcomeMessageRes(outcome: ContentIdEngine.LookupOutcome): Int = when (outcome) {
+            ContentIdEngine.LookupOutcome.MATCHED,
+            ContentIdEngine.LookupOutcome.NO_MATCH -> R.string.v369_content_id_no_match
+            ContentIdEngine.LookupOutcome.NOT_CHECKED_NO_API_KEY -> R.string.v369_content_id_not_checked_no_key
+            ContentIdEngine.LookupOutcome.NOT_CHECKED_NO_FINGERPRINT_BACKEND ->
+                R.string.v369_content_id_not_checked_no_backend
+        }
+    }
 }

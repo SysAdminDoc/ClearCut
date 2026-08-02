@@ -23,16 +23,55 @@ import kotlin.math.sqrt
  * a real HTTP GET that never carried the fingerprint payload, so it was both
  * misleading and wasteful. This version returns the local hash reliably and
  * documents the integration hook.
+ *
+ * Every result carries a [LookupOutcome] because the stub and a genuine "nothing
+ * found" are indistinguishable from the returned fields alone, and a user told
+ * their audio is clear by a check that never ran may publish on that answer.
  */
 @Singleton
 class ContentIdEngine @Inject constructor() {
+
+    /**
+     * What actually happened during [analyze]. "The service said no" and "the service
+     * was never asked" produce identical `matchedTitle == null` results, and telling a
+     * user their audio is clear when nothing was checked is the worst kind of wrong
+     * answer this engine can give. Callers must branch on this, never on nullity.
+     */
+    enum class LookupOutcome {
+        /** The service was queried and returned a match. */
+        MATCHED,
+
+        /** The service was queried and returned nothing. Only this means "clear". */
+        NO_MATCH,
+
+        /** No lookup was attempted: the caller supplied no AcoustID API key. */
+        NOT_CHECKED_NO_API_KEY,
+
+        /**
+         * No lookup was attempted: AcoustID needs a Chromaprint fingerprint and the
+         * `libchromaprint` NDK path is not linked, so the query would be meaningless.
+         */
+        NOT_CHECKED_NO_FINGERPRINT_BACKEND,
+        ;
+
+        /** True when a completed lookup backs the result. */
+        val wasLookedUp: Boolean get() = this == MATCHED || this == NO_MATCH
+    }
 
     data class Match(
         val matchedTitle: String?,
         val matchedArtist: String?,
         val confidence: Float,
-        val hash: String
+        val hash: String,
+        val lookup: LookupOutcome
     )
+
+    /**
+     * Whether a Chromaprint-compatible fingerprint can be produced. Until the NDK
+     * library is linked this is false, and [analyze] reports that it did not look
+     * anything up rather than reporting a clear result it never obtained.
+     */
+    fun isChromaprintAvailable(): Boolean = false
 
     /**
      * Compute the fingerprint and (optionally) look it up via AcoustID.
@@ -44,16 +83,19 @@ class ContentIdEngine @Inject constructor() {
         val hash = fp.toHexString()
         if (apiKey.isNullOrBlank()) {
             Log.d(TAG, "no AcoustID key — returning hash-only result")
-            return@withContext Match(null, null, 0f, hash)
+            return@withContext Match(null, null, 0f, hash, LookupOutcome.NOT_CHECKED_NO_API_KEY)
         }
         // AcoustID lookup currently requires a Chromaprint fingerprint format,
         // which depends on the `libchromaprint` NDK library. Until that lands
-        // we do not pretend to query the service — the hash-only path is an
-        // honest "we scanned but didn't contact the service". Integration
-        // hook: send `fp` as Chromaprint-encoded `fingerprint` query param to
-        // https://api.acoustid.org/v2/lookup and parse the JSON `results`.
-        Log.i(TAG, "AcoustID lookup not wired — Chromaprint dependency pending")
-        Match(null, null, 0f, hash)
+        // we do not pretend to query the service. Integration hook: send `fp` as
+        // Chromaprint-encoded `fingerprint` query param to
+        // https://api.acoustid.org/v2/lookup and parse the JSON `results`, then
+        // return MATCHED or NO_MATCH from the response.
+        if (!isChromaprintAvailable()) {
+            Log.i(TAG, "AcoustID lookup not wired — Chromaprint dependency pending")
+            return@withContext Match(null, null, 0f, hash, LookupOutcome.NOT_CHECKED_NO_FINGERPRINT_BACKEND)
+        }
+        Match(null, null, 0f, hash, LookupOutcome.NO_MATCH)
     }
 
     /** Energy-envelope hash: RMS per 2048-sample window, clamped to 16-bit. */

@@ -1,5 +1,6 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.engine.ContentIdEngine
 import com.novacut.editor.ui.theme.ClearCutAccents
 import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.animation.AnimatedVisibility
@@ -202,9 +203,20 @@ fun V369FeaturesPanel(
             val result = v.contentIdResult
             if (result != null) {
                 val matchedTitle = result.matchedTitle
-                val txt = if (matchedTitle != null) stringResource(R.string.v369_content_id_match, matchedTitle)
-                else stringResource(R.string.v369_content_id_hash, result.hash.take(16))
+                val txt = if (result.lookup == ContentIdEngine.LookupOutcome.MATCHED && matchedTitle != null) {
+                    stringResource(R.string.v369_content_id_match, matchedTitle)
+                } else {
+                    // The local hash alone reads as a completed check. State the
+                    // lookup outcome first so a not-checked result cannot pass for a
+                    // clean bill of health.
+                    stringResource(V369Delegate.contentIdOutcomeMessageRes(result.lookup))
+                }
                 Text(txt, color = semanticColors.subtextStrong, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    stringResource(R.string.v369_content_id_hash, result.hash.take(16)),
+                    color = semanticColors.overlayStrong,
+                    style = MaterialTheme.typography.labelMedium
+                )
             }
             Text(
                 stringResource(R.string.v369_content_id_hint),

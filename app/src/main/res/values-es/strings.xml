@@ -2159,6 +2159,9 @@
     <string name="v369_content_id_title">Comprobación previa de Content-ID</string>
     <string name="v369_content_id_subtitle">Toma huellas dactilares de la última exportación antes de cargarla para revisar el riesgo de derechos de autor.</string>
     <string name="v369_content_id_match">Partido: %1$s</string>
+    <string name="v369_content_id_no_match">Se consultó la base de datos de derechos de autor: sin coincidencias.</string>
+    <string name="v369_content_id_not_checked_no_key">No se comprobó: no hay una clave de AcoustID configurada, así que no se consultó nada. Solo se calculó una huella local.</string>
+    <string name="v369_content_id_not_checked_no_backend">No se comprobó: el servicio de consulta de derechos de autor no está disponible en esta versión, así que no se consultó nada. Solo se calculó una huella local.</string>
     <string name="v369_content_id_hash">Hash local: %1$s...</string>
     <string name="v369_content_id_hint">El hash local funciona ahora. La búsqueda en línea se puede habilitar cuando se configura el servicio de huellas digitales.</string>
     <string name="v369_check_last_export">Consultar la última exportación</string>

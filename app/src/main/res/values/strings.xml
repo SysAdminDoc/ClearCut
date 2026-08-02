@@ -2428,6 +2428,9 @@
     <string name="v369_content_id_title">Content-ID Pre-check</string>
     <string name="v369_content_id_subtitle">Fingerprint the last export before upload for copyright-risk review.</string>
     <string name="v369_content_id_match">Match: %1$s</string>
+    <string name="v369_content_id_no_match">Checked against the copyright database: no match found.</string>
+    <string name="v369_content_id_not_checked_no_key">Not checked — no AcoustID key is configured, so nothing was looked up. Only a local fingerprint was computed.</string>
+    <string name="v369_content_id_not_checked_no_backend">Not checked — the copyright lookup service is unavailable in this build, so nothing was looked up. Only a local fingerprint was computed.</string>
     <string name="v369_content_id_hash">Local hash: %1$s...</string>
     <string name="v369_content_id_hint">Local hashing works now. Online lookup can be enabled when the fingerprint service is configured.</string>
     <string name="v369_check_last_export">Check last export</string>
