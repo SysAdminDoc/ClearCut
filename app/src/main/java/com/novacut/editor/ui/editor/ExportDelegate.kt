@@ -463,7 +463,7 @@ class ExportDelegate(
             return false
         }
         val finalizedFile = finalizeFilenameSize(outputFile)
-        writeAiDisclosureSidecarIfRequested(finalizedFile, config, state)
+        reportSidecarOutcome(writeAiDisclosureSidecarIfRequested(finalizedFile, config, state))
         updateExport {
             it.copy(
                 state = ExportState.COMPLETE,
@@ -1142,7 +1142,7 @@ class ExportDelegate(
                             onProgress = { p -> sampleProgress(p); updateExport { it.copy(progress = p) } },
                             onComplete = {
                                 val finalized = finalizeFilenameSize(outputFile)
-                                writeAiDisclosureSidecarIfRequested(finalized, configWithChapters, currentState)
+                                reportSidecarOutcome(writeAiDisclosureSidecarIfRequested(finalized, configWithChapters, currentState))
                                 updateExport {
                                     it.copy(
                                         state = ExportState.COMPLETE,
@@ -1328,7 +1328,7 @@ class ExportDelegate(
                 // No-op when the template didn't reference the token,
                 // so existing templates are unaffected.
                 val finalizedFile = finalizeFilenameSize(outputFile)
-                writeAiDisclosureSidecarIfRequested(finalizedFile, configWithChapters, currentState)
+                reportSidecarOutcome(writeAiDisclosureSidecarIfRequested(finalizedFile, configWithChapters, currentState))
                 updateExport {
                     it.copy(
                         state = ExportState.COMPLETE,
@@ -1529,14 +1529,22 @@ class ExportDelegate(
         return AiUsageLedger.summaryLine(entries)
     }
 
+    /**
+     * Write the AI-use disclosure sidecar the user asked for.
+     *
+     * Returns false when the write failed. This used to swallow the exception and let
+     * the export report success, in a file whose own KDoc cites EU AI Act Art. 50 as
+     * the reason it exists -- the user would have shipped an undisclosed AI-assisted
+     * export believing the disclosure was attached.
+     */
     private fun writeAiDisclosureSidecarIfRequested(
         outputFile: File,
         config: ExportConfig,
         state: EditorState
-    ) {
-        if (!config.writeAiUseSidecar) return
+    ): Boolean {
+        if (!config.writeAiUseSidecar) return true
         val entries = aiDisclosureEntries(config, state)
-        if (entries.isEmpty()) return
+        if (entries.isEmpty()) return true
         try {
             val sidecar = File(
                 outputFile.parentFile,
@@ -1550,9 +1558,21 @@ class ExportDelegate(
             )
             writeUtf8TextAtomically(sidecar, declaration.toString(2))
             writeC2paManifestSidecar(outputFile, entries, state)
+            return true
         } catch (e: Exception) {
             android.util.Log.w("ExportDelegate", "AI disclosure sidecar write failed", e)
+            return false
         }
+    }
+
+    /**
+     * Report a disclosure sidecar that could not be written. The video itself is fine,
+     * so the export is not failed -- but the user must know the disclosure they asked
+     * for is not next to the file before they publish it.
+     */
+    private fun reportSidecarOutcome(written: Boolean) {
+        if (written) return
+        showToast(text(R.string.export_ai_disclosure_sidecar_failed))
     }
 
     private fun writeC2paManifestSidecar(

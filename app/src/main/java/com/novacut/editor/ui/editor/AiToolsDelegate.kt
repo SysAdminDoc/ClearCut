@@ -6,6 +6,7 @@ import android.util.Log
 import com.novacut.editor.R
 import com.novacut.editor.ai.AiFeatures
 import com.novacut.editor.ai.CaptionEntry
+import com.novacut.editor.ai.CaptionOutcome
 import com.novacut.editor.ai.CaptionSource
 import com.novacut.editor.engine.*
 
@@ -393,7 +394,16 @@ class AiToolsDelegate(
     private suspend fun runAutoCaptions(clip: Clip) {
         val useWhisper = aiFeatures.whisperEngine.isReady()
         if (useWhisper) showToast(text(R.string.ai_transcribing_whisper_toast))
-        val captions = withContext(Dispatchers.Default) { aiFeatures.generateAutoCaptions(clip.sourceUri) }
+        val outcome = withContext(Dispatchers.Default) { aiFeatures.generateAutoCaptions(clip.sourceUri) }
+        // A transcription that crashed is not silence. Reporting the two the same way
+        // told the user their audio was empty when in fact nothing was ever heard.
+        val captions = when (outcome) {
+            is CaptionOutcome.Failed -> {
+                showToast(text(R.string.ai_caption_analysis_failed_toast, outcome.reason))
+                return
+            }
+            is CaptionOutcome.Analyzed -> outcome.captions
+        }
         if (captions.isEmpty()) {
             showToast(text(R.string.ai_no_speech_detected_toast))
             return
@@ -994,13 +1004,21 @@ class AiToolsDelegate(
         if (!stabilizationEngine.isOpenCvAvailable()) {
             showToast(text(R.string.ai_stabilize_fallback_toast))
             val result = withContext(Dispatchers.Default) { aiFeatures.stabilizeVideo(clip.sourceUri) }
+            // A default result means the analysis never ran. Reading it as "measured,
+            // and the footage is steady" told the user their shaky clip was fine.
+            if (!result.analyzed) {
+                showToast(text(R.string.ai_stabilize_analysis_failed_toast))
+                return
+            }
             val confidence = safeConfidence(result.confidence)
             val shakeMagnitude = safeAiFloat(result.shakeMagnitude, 0f, 0f, 1f)
             if (confidence < 0.1f || shakeMagnitude < 0.001f) {
                 showToast(text(R.string.ai_video_stable_toast))
             } else {
-                saveUndoState("AI stabilize (basic)")
-                // Apply 2% crop-based stabilization via scale
+                // This scales the clip up and applies no counter-motion, so it hides
+                // shake at the frame edges rather than removing it. Calling it
+                // stabilization overstated what happened; it is a crop, and says so.
+                saveUndoState("Crop to hide edge shake")
                 val stabilizeScale = 1f + (shakeMagnitude * 0.5f).coerceAtMost(0.1f)
                 stateFlow.update { s ->
                     s.copy(tracks = s.tracks.map { track ->
@@ -1016,7 +1034,7 @@ class AiToolsDelegate(
                         })
                     })
                 }
-                showToast(text(R.string.ai_basic_stabilization_applied_toast, shakeMagnitude * 100))
+                showToast(text(R.string.ai_shake_crop_applied_toast, shakeMagnitude * 100))
                 rebuildPlayerTimeline()
                 saveProject()
             }

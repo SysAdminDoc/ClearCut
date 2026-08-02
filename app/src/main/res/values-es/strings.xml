@@ -290,7 +290,7 @@
     <string name="ai_upscale_applied_toast">Escalado a %1$s con nitidez aplicada.</string>
     <string name="ai_object_removal_unavailable_toast">La pintura para eliminación de objetos no está lista en esta compilación.</string>
     <string name="ai_stabilize_fallback_toast">La estabilización avanzada no está disponible en este dispositivo. Se usará estabilización básica.</string>
-    <string name="ai_basic_stabilization_applied_toast">Estabilización básica aplicada (%1$.0f%% de movimiento).</string>
+    <string name="ai_shake_crop_applied_toast">Se recortó la imagen para ocultar el temblor en los bordes (%1$.0f%% medido). Es un recorte, no una estabilización: el encuadre no se contramueve.</string>
     <string name="ai_motion_analysis_failed_fallback_toast">El análisis de movimiento falló. La estabilización básica sigue disponible.</string>
     <string name="ai_camera_motion_analyzing_toast">Analizando movimiento de cámara…</string>
     <string name="ai_applying_stabilization_toast">Aplicando estabilización (%1$d cuadros)…</string>
@@ -2521,4 +2521,7 @@
     <string name="export_copy_report_done">Informe copiado</string>
     <string name="settings_diagnostic_raw_error_text">Incluir errores sin procesar del codificador</string>
     <string name="settings_diagnostic_raw_error_text_description">Añade el texto exacto del error del codificador al paquete de diagnóstico compartido. Desactivado por defecto: un error del codificador puede citar un nombre de archivo o un subtítulo, y no se puede censurar de forma fiable. Sin él, dos fallos distintos pueden parecer idénticos para quien lea el informe.</string>
+    <string name="ai_caption_analysis_failed_toast">No se pudieron generar los subtítulos (%1$s). No se llegó a ninguna conclusión sobre el audio.</string>
+    <string name="ai_stabilize_analysis_failed_toast">No se pudo medir el movimiento de cámara, así que no se sabe nada sobre la estabilidad de este clip.</string>
+    <string name="export_ai_disclosure_sidecar_failed">El vídeo se exportó, pero no se pudo escribir junto a él el archivo de divulgación de IA. No publiques este archivo como divulgado: vuelve a exportar o adjunta la divulgación tú mismo.</string>
 </resources>

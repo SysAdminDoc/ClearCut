@@ -71,7 +71,7 @@ class AiFeatures @Inject constructor(
         videoUri: Uri,
         languageCode: String = "en",
         onProgress: (Float) -> Unit = {}
-    ): List<CaptionEntry> {
+    ): CaptionOutcome {
         // Use Whisper when model is available
         if (whisperEngine.isReady()) {
             return generateWhisperCaptions(videoUri, onProgress)
@@ -83,28 +83,31 @@ class AiFeatures @Inject constructor(
     private suspend fun generateWhisperCaptions(
         videoUri: Uri,
         onProgress: (Float) -> Unit
-    ): List<CaptionEntry> = withContext(Dispatchers.IO) {
+    ): CaptionOutcome = withContext(Dispatchers.IO) {
         try {
             val segments = whisperEngine.transcribe(videoUri, onProgress)
-            segments.map { seg ->
-                CaptionEntry(
-                    startMs = seg.startMs,
-                    endMs = seg.endMs,
-                    text = seg.text,
-                    confidence = 0.95f,
-                    source = CaptionSource.TRANSCRIBED
-                )
-            }
+            CaptionOutcome.Analyzed(
+                segments.map { seg ->
+                    CaptionEntry(
+                        startMs = seg.startMs,
+                        endMs = seg.endMs,
+                        text = seg.text,
+                        source = CaptionSource.TRANSCRIBED
+                    )
+                }
+            )
         } catch (e: Exception) {
+            // A crashed transcription is not silence. Reporting it as "no speech
+            // detected" told the user their audio was empty when nothing was heard.
             Log.w(TAG, "Whisper caption generation failed", e)
-            emptyList()
+            CaptionOutcome.Failed(e.javaClass.simpleName)
         }
     }
 
     private suspend fun generateEnergyCaptions(
         videoUri: Uri,
         onProgress: (Float) -> Unit
-    ): List<CaptionEntry> = withContext(Dispatchers.IO) {
+    ): CaptionOutcome = withContext(Dispatchers.IO) {
         val extractor = MediaExtractor()
         try {
             extractor.setDataSource(context, videoUri, null)
@@ -119,13 +122,13 @@ class AiFeatures @Inject constructor(
                     break
                 }
             }
-            if (audioIndex < 0 || format == null) return@withContext emptyList()
+            if (audioIndex < 0 || format == null) return@withContext CaptionOutcome.Failed("no audio track")
 
             extractor.selectTrack(audioIndex)
             val sampleRate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
             val channels = format.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
-            if (channels <= 0) return@withContext emptyList()
-            val mime = format.getString(MediaFormat.KEY_MIME) ?: return@withContext emptyList()
+            if (channels <= 0) return@withContext CaptionOutcome.Failed("invalid channel count")
+            val mime = format.getString(MediaFormat.KEY_MIME) ?: return@withContext CaptionOutcome.Failed("unknown audio MIME")
 
             // Decode audio to PCM amplitudes
             val decoder = MediaCodec.createDecoderByType(mime)
@@ -172,7 +175,7 @@ class AiFeatures @Inject constructor(
                             if (AudioDecodeBudget.exceedsBudget(totalSamples, mono.size)) {
                                 Log.w(TAG, "Caption PCM exceeds the in-memory budget; stopping decode")
                                 decoder.releaseOutputBuffer(outIdx, false)
-                                return@withContext emptyList()
+                                return@withContext CaptionOutcome.Failed("audio exceeds the in-memory decode budget")
                             }
                             amplitudeChunks.add(mono)
                             totalSamples += mono.size
@@ -189,7 +192,7 @@ class AiFeatures @Inject constructor(
                 decoder.release()
             }
 
-            if (totalSamples == 0) return@withContext emptyList()
+            if (totalSamples == 0) return@withContext CaptionOutcome.Failed("no decoded audio")
 
             // Flatten into single array
             val allSamples = FloatArray(totalSamples)
@@ -202,7 +205,7 @@ class AiFeatures @Inject constructor(
             // Compute RMS energy in 100ms windows
             val windowSamples = (sampleRate / 10).coerceAtLeast(1)
             val windowCount = totalSamples / windowSamples
-            if (windowCount == 0) return@withContext emptyList()
+            if (windowCount == 0) return@withContext CaptionOutcome.Failed("clip shorter than one analysis window")
             val energy = FloatArray(windowCount)
             var maxEnergy = 0f
             for (w in 0 until windowCount) {
@@ -216,7 +219,7 @@ class AiFeatures @Inject constructor(
                 maxEnergy = max(maxEnergy, energy[w])
             }
 
-            if (maxEnergy < 0.001f) return@withContext emptyList()
+            if (maxEnergy < 0.001f) return@withContext CaptionOutcome.Analyzed(emptyList())
 
             // Normalize and find speech segments (above 15% threshold)
             val threshold = maxEnergy * 0.15f
@@ -257,10 +260,10 @@ class AiFeatures @Inject constructor(
                 }
             }
 
-            captions
+            CaptionOutcome.Analyzed(captions)
         } catch (e: Exception) {
             Log.w(TAG, "Energy-based caption generation failed", e)
-            emptyList()
+            CaptionOutcome.Failed("decode failed")
         } finally {
             extractor.release()
         }
@@ -516,11 +519,12 @@ class AiFeatures @Inject constructor(
                         offsetY = -sy * 0.5f
                     )
                 },
-                confidence = min(1f, motionX.size / 50f)
+                confidence = min(1f, motionX.size / 50f),
+                analyzed = true
             )
         } catch (e: Exception) {
             Log.w(TAG, "Video stabilization analysis failed", e)
-            StabilizationResult()
+            StabilizationResult(analyzed = false)
         } finally {
             retriever.release()
         }
@@ -2449,10 +2453,25 @@ data class CaptionEntry(
     val startMs: Long,
     val endMs: Long,
     val text: String,
-    val confidence: Float = 1f,
+    /**
+     * How strong the evidence for this caption is, where the producer can say. The
+     * Whisper path stamped a flat 0.95 on every caption regardless of what the model
+     * returned, which is not a confidence, so it reports null instead of a number the
+     * UI could act on. The energy path measures real relative loudness.
+     */
+    val confidence: Float? = null,
     val languageCode: String = "en",
     val source: CaptionSource = CaptionSource.TRANSCRIBED
 )
+
+/** What an auto-caption run actually established. */
+sealed interface CaptionOutcome {
+    /** The run completed. [captions] may legitimately be empty: nothing was heard. */
+    data class Analyzed(val captions: List<CaptionEntry>) : CaptionOutcome
+
+    /** The run could not complete. This is not silence and must not be reported as it. */
+    data class Failed(val reason: String) : CaptionOutcome
+}
 
 data class CaptionStyle(
     val fontSize: Float = 36f,
@@ -2507,7 +2526,13 @@ data class StabilizationResult(
     val shakeMagnitude: Float = 0f,
     val recommendedZoom: Float = 1f,
     val motionKeyframes: List<StabilizationKeyframe> = emptyList(),
-    val confidence: Float = 0f
+    val confidence: Float = 0f,
+    /**
+     * False when the analysis could not run at all. A default result is
+     * indistinguishable from "measured, and the footage is steady" -- and the UI read
+     * it as the latter, telling the user their shaky clip was already stable.
+     */
+    val analyzed: Boolean = false
 )
 
 data class StabilizationKeyframe(
