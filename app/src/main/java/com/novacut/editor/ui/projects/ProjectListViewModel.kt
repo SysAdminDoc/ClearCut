@@ -470,7 +470,10 @@ class ProjectListViewModel @Inject constructor(
 
                 val template = importResult.template
                 if (template != null) {
-                    showToast(appContext.getString(R.string.project_template_import_success, template.name))
+                    val warning = importResult.restoreReport.takeIf { it.isPartial }
+                        ?.let { " Warning: ${it.summary()} omitted from the template." }
+                        .orEmpty()
+                    showToast(appContext.getString(R.string.project_template_import_success, template.name) + warning)
                 } else {
                     showToast(templateImportFailureMessage(importResult))
                 }
@@ -604,14 +607,15 @@ class ProjectListViewModel @Inject constructor(
                 description = appContext.getString(R.string.projects_operation_template_create_body)
             )
             try {
-                val state = withContext(Dispatchers.IO) {
+                val loaded = withContext(Dispatchers.IO) {
                     templateManager.loadTemplateState(template)
                 }
-                if (state == null) {
+                if (loaded == null) {
                     showToast(appContext.getString(R.string.project_template_open_failed))
                     return@launch
                 }
-                val (tracks, textOverlays) = state
+                val tracks = loaded.tracks
+                val textOverlays = loaded.textOverlays
                 val project = Project(
                     name = normalizeProjectName(template.name),
                     aspectRatio = template.aspectRatio,
@@ -641,6 +645,9 @@ class ProjectListViewModel @Inject constructor(
                 }
                 if (created) {
                     onCreated(project.id)
+                    if (loaded.restoreReport.isPartial) {
+                        showToast("Warning: ${loaded.restoreReport.summary()} omitted while loading the template.")
+                    }
                 } else {
                     showToast(appContext.getString(R.string.project_create_failed))
                 }

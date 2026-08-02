@@ -99,7 +99,10 @@ class IncomingDocumentImportRouter @Inject constructor(
                     "Tracks: ${template.trackTypes.joinToString { it.name.lowercase() }}",
                     "Text overlays: ${template.textOverlayCount}",
                 ),
-                warnings = result.compatibilityReport?.issues.orEmpty().map { it.message },
+                warnings = result.compatibilityReport?.issues.orEmpty().map { it.message } +
+                    result.restoreReport.takeIf { it.isPartial }
+                        ?.let { listOf("Template document was partially restored: ${it.summary()}.") }
+                        .orEmpty(),
                 canImportNow = false,
             )
         } else {

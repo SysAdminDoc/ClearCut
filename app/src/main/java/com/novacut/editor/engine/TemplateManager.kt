@@ -36,7 +36,14 @@ data class UserTemplate(
 data class TemplateImportResult(
     val template: UserTemplate? = null,
     val failure: TemplateImportFailure = TemplateImportFailure.NONE,
-    val compatibilityReport: TemplateCompatibilityReport? = null
+    val compatibilityReport: TemplateCompatibilityReport? = null,
+    val restoreReport: ProjectRestoreReport = ProjectRestoreReport.EMPTY,
+)
+
+data class TemplateStateLoadResult(
+    val tracks: List<Track>,
+    val textOverlays: List<TextOverlay>,
+    val restoreReport: ProjectRestoreReport = ProjectRestoreReport.EMPTY,
 )
 
 enum class TemplateImportFailure {
@@ -168,7 +175,7 @@ class TemplateManager @Inject constructor(
         return File(File(templateDir, "trash"), templateFile.name)
     }
 
-    fun loadTemplateState(template: UserTemplate): Pair<List<Track>, List<TextOverlay>>? {
+    fun loadTemplateState(template: UserTemplate): TemplateStateLoadResult? {
         return try {
             val report = validateTemplateCompatibility(template.compatibility)
             if (!report.canImport) {
@@ -180,10 +187,14 @@ class TemplateManager @Inject constructor(
                     decoded.warnings.forEach { warning ->
                         Log.w("TemplateManager", "Template '${template.name}': $warning")
                     }
-                    decoded.document.state
+                    TemplateStateLoadResult(
+                        tracks = decoded.document.state.tracks,
+                        textOverlays = decoded.document.state.textOverlays,
+                        restoreReport = decoded.report,
+                    )
                 }
                 else -> return null
-            }.let { state -> state.tracks to state.textOverlays }
+            }
         } catch (e: Exception) {
             Log.e("TemplateManager", "Failed to deserialize template '${template.name}'", e)
             null
@@ -227,12 +238,13 @@ class TemplateManager @Inject constructor(
                 Log.w("TemplateManager", "Template import JSON is invalid", e)
                 return@withContext TemplateImportResult(failure = TemplateImportFailure.INVALID_JSON)
             }
-            val importedTemplate = when (val parsed = parseTemplateJson(
+            val parsed = parseTemplateJson(
                 json = json,
                 fallbackId = UUID.randomUUID().toString(),
                 defaultCreatedAt = System.currentTimeMillis()
-            )) {
-                is TemplateParseResult.Success -> parsed.template
+            )
+            val parsedTemplate = when (parsed) {
+                is TemplateParseResult.Success -> parsed
                 is TemplateParseResult.Failure -> {
                     return@withContext TemplateImportResult(
                         failure = parsed.failure,
@@ -240,12 +252,12 @@ class TemplateManager @Inject constructor(
                     )
                 }
             }
-            val template = normalizeImportedTemplate(importedTemplate, listTemplates())
+            val template = normalizeImportedTemplate(parsedTemplate.template, listTemplates())
             templateDir.mkdirs()
             val templateFile = templateFileForId(template.id)
                 ?: return@withContext TemplateImportResult(failure = TemplateImportFailure.WRITE_FAILED)
             writeUtf8TextAtomically(templateFile, templateToJson(template).toString(2))
-            TemplateImportResult(template = template)
+            TemplateImportResult(template = template, restoreReport = parsedTemplate.restoreReport)
         } catch (e: Exception) {
             Log.e("TemplateManager", "Failed to import template from URI", e)
             TemplateImportResult(failure = TemplateImportFailure.WRITE_FAILED)
@@ -300,12 +312,13 @@ class TemplateManager @Inject constructor(
             return TemplateParseResult.Failure(TemplateImportFailure.INVALID_STATE)
         }
 
-        val state = when (val decoded = ProjectDocumentApplicator.read(stateJson)) {
+        val decoded = ProjectDocumentApplicator.read(stateJson)
+        val loaded = when (decoded) {
             is ProjectDocumentReadResult.Loaded -> {
                 decoded.warnings.forEach { warning ->
                     Log.w("TemplateManager", "Imported template document: $warning")
                 }
-                decoded.document.state
+                decoded
             }
             is ProjectDocumentReadResult.FutureSchema -> {
                 Log.w("TemplateManager", "Template state uses a newer project document schema")
@@ -316,6 +329,7 @@ class TemplateManager @Inject constructor(
                 return TemplateParseResult.Failure(TemplateImportFailure.INVALID_STATE)
             }
         }
+        val state = loaded.document.state
 
         val inferredCompatibility = TemplateCompatibilityEngine.createMetadata(
             state = state,
@@ -347,25 +361,28 @@ class TemplateManager @Inject constructor(
             .joinToString(", ")
             .ifBlank { "No effects" }
 
-        return TemplateParseResult.Success(UserTemplate(
-            id = json.optString("id", fallbackId).ifBlank { fallbackId },
-            name = normalizeTemplateName(json.optString("name", "Untitled Template")),
-            description = normalizeTemplateDescription(json.optString("description", "")),
-            aspectRatio = parseAspectRatio(json.optString("aspectRatio", "RATIO_16_9")),
-            frameRate = json.optInt("frameRate", 30).coerceIn(1, 240),
-            frameRateNumerator = json.optInt(
-                "frameRateNumerator",
-                json.optInt("frameRate", 30),
-            ).coerceIn(1, 240_000),
-            frameRateDenominator = json.optInt("frameRateDenominator", 1).coerceIn(1, 10_000),
-            resolution = parseResolution(json.optString("resolution", "FHD_1080P")),
-            trackTypes = normalizedTrackTypes,
-            textOverlayCount = state.textOverlays.size,
-            effectSummary = effectSummary,
-            compatibility = compatibility,
-            createdAt = json.optLong("createdAt", defaultCreatedAt).takeIf { it > 0L } ?: defaultCreatedAt,
-            stateJson = stateJson
-        ))
+        return TemplateParseResult.Success(
+            template = UserTemplate(
+                id = json.optString("id", fallbackId).ifBlank { fallbackId },
+                name = normalizeTemplateName(json.optString("name", "Untitled Template")),
+                description = normalizeTemplateDescription(json.optString("description", "")),
+                aspectRatio = parseAspectRatio(json.optString("aspectRatio", "RATIO_16_9")),
+                frameRate = json.optInt("frameRate", 30).coerceIn(1, 240),
+                frameRateNumerator = json.optInt(
+                    "frameRateNumerator",
+                    json.optInt("frameRate", 30),
+                ).coerceIn(1, 240_000),
+                frameRateDenominator = json.optInt("frameRateDenominator", 1).coerceIn(1, 10_000),
+                resolution = parseResolution(json.optString("resolution", "FHD_1080P")),
+                trackTypes = normalizedTrackTypes,
+                textOverlayCount = state.textOverlays.size,
+                effectSummary = effectSummary,
+                compatibility = compatibility,
+                createdAt = json.optLong("createdAt", defaultCreatedAt).takeIf { it > 0L } ?: defaultCreatedAt,
+                stateJson = stateJson,
+            ),
+            restoreReport = loaded.report,
+        )
     }
 
     private fun templateToJson(template: UserTemplate): JSONObject {
@@ -510,7 +527,10 @@ class TemplateManager @Inject constructor(
     }
 
     private sealed class TemplateParseResult {
-        data class Success(val template: UserTemplate) : TemplateParseResult()
+        data class Success(
+            val template: UserTemplate,
+            val restoreReport: ProjectRestoreReport = ProjectRestoreReport.EMPTY,
+        ) : TemplateParseResult()
         data class Failure(
             val failure: TemplateImportFailure,
             val compatibilityReport: TemplateCompatibilityReport? = null

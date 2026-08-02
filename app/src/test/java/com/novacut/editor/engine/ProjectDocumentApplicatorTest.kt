@@ -87,6 +87,34 @@ class ProjectDocumentApplicatorTest {
     }
 
     @Test
+    fun partialStateIsReportedAtTheCanonicalDocumentBoundary() {
+        val root = JSONObject(
+            ProjectDocumentApplicator.encode(
+                ProjectDocumentApplicator.capture(
+                    Project(id = "project"),
+                    AutoSaveState(
+                        projectId = "project",
+                        tracks = listOf(Track(type = TrackType.VIDEO, index = 0)),
+                    ),
+                )
+            )
+        )
+        root.getJSONObject("state")
+            .getJSONArray("tracks")
+            .getJSONObject(0)
+            .getJSONArray("clips")
+            .put(JSONObject().put("id", "malformed"))
+
+        val result = ProjectDocumentApplicator.read(root.toString())
+
+        assertTrue(result is ProjectDocumentReadResult.Loaded)
+        val loaded = result as ProjectDocumentReadResult.Loaded
+        assertTrue(loaded.report.isPartial)
+        assertTrue(loaded.warnings.any { it.contains("partially restored") })
+        assertTrue(loaded.document.state.tracks.single().clips.isEmpty())
+    }
+
+    @Test
     fun futureDocumentAndStateVersionsAreRejectedBeforeDeserialization() {
         val root = JSONObject(
             ProjectDocumentApplicator.encode(

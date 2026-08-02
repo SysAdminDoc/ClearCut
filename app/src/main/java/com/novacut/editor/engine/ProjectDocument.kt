@@ -132,10 +132,12 @@ object ProjectDocumentApplicator {
             val root = JSONObject(raw)
             if (!root.has(DOCUMENT_VERSION_KEY)) {
                 val restored = AutoSaveState.deserializeWithReport(raw)
+                val warnings = mutableListOf("Legacy project state was wrapped in the current document format.")
+                appendRestoreWarning(warnings, restored.report)
                 return ProjectDocumentReadResult.Loaded(
                     document = fromState(restored.state),
                     report = restored.report,
-                    warnings = listOf("Legacy project state was wrapped in the current document format."),
+                    warnings = warnings,
                     migratedFromLegacyState = true,
                 )
             }
@@ -165,6 +167,7 @@ object ProjectDocumentApplicator {
             if (unknownKeys.isNotEmpty()) {
                 warnings += "Ignored unknown project document fields: ${unknownKeys.joinToString()}"
             }
+            appendRestoreWarning(warnings, restored.report)
             val projectJson = root.optJSONObject(PROJECT_KEY)
             val project = if (projectJson == null) {
                 warnings += "Project metadata was missing; defaults were synthesized."
@@ -185,6 +188,15 @@ object ProjectDocumentApplicator {
             )
         } catch (e: Exception) {
             ProjectDocumentReadResult.Corrupt(e)
+        }
+    }
+
+    private fun appendRestoreWarning(
+        warnings: MutableList<String>,
+        report: ProjectRestoreReport,
+    ) {
+        if (report.isPartial) {
+            warnings += "Project document was partially restored: ${report.summary()}."
         }
     }
 
