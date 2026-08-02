@@ -595,6 +595,8 @@ class VideoEngine @Inject constructor(
                     tracks = processedTracks,
                     sourceSizeBytes = { clip -> querySourceSize(context, clip.sourceUri).takeIf { it > 0L } },
                 ),
+                expectedDurationMs = processedTracks.flatMap { it.clips }
+                    .maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L,
                 onProgress = onProgress,
                 onComplete = {
                     reversedTempFiles.forEach { it.delete() }
@@ -680,6 +682,7 @@ class VideoEngine @Inject constructor(
                     tracks = processedTracks,
                     sourceSizeBytes = { clip -> querySourceSize(context, clip.sourceUri).takeIf { it > 0L } },
                 ),
+                expectedDurationMs = totalDurationMs,
                 onProgress = onProgress,
                 onComplete = { reversedTempFiles.forEach { it.delete() }; onComplete() },
                 onError = { e -> reversedTempFiles.forEach { it.delete() }; onError(e) },
@@ -754,6 +757,7 @@ class VideoEngine @Inject constructor(
                         tracks = listOf(stem),
                         sourceSizeBytes = { clip -> querySourceSize(context, clip.sourceUri).takeIf { it > 0L } },
                     ),
+                    expectedDurationMs = totalDurationMs,
                     onProgress = { p ->
                         val base = index.toFloat() / processedStems.size
                         onProgress(base + p / processedStems.size)
@@ -1060,6 +1064,7 @@ class VideoEngine @Inject constructor(
                                 tracks = runTracks,
                                 sourceSizeBytes = { clip -> querySourceSize(context, clip.sourceUri).takeIf { it > 0L } },
                             ),
+                            expectedDurationMs = execution.run.durationMs,
                             onProgress = { progress ->
                                 publishMixedProgress(completedWeight, stepWeight, progress)
                             },
@@ -1072,7 +1077,11 @@ class VideoEngine @Inject constructor(
                         segmentError?.let { throw it }
                     }
                 }
-                ensureNonEmptyExportOutput(runOutput, "Mixed run ${execution.index}")
+                ensureVerifiedExportOutput(
+                    outputFile = runOutput,
+                    label = "Mixed run ${execution.index}",
+                    expectedDurationMs = execution.run.durationMs,
+                )
                 outputsByName[execution.outputFileName] = runOutput
                 completedWeight += stepWeight
                 publishMixedProgress(completedWeight, 1L, 0f)
@@ -1106,7 +1115,12 @@ class VideoEngine @Inject constructor(
             if (!concatOk) {
                 throw IllegalStateException("Mixed FFmpeg concat failed")
             }
-            ensureNonEmptyExportOutput(outputFile, "Mixed concat")
+            ensureVerifiedExportOutput(
+                outputFile = outputFile,
+                label = "Mixed concat",
+                expectedDurationMs = tracks.flatMap { it.clips }
+                    .maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L,
+            )
 
             _exportState.value = ExportState.COMPLETE
             _exportProgress.value = 1f
@@ -1172,6 +1186,24 @@ class VideoEngine @Inject constructor(
     private fun ensureNonEmptyExportOutput(outputFile: File, label: String) {
         if (!outputFile.exists() || outputFile.length() <= 0L) {
             throw IllegalStateException("$label produced an empty output file")
+        }
+    }
+
+    private fun ensureVerifiedExportOutput(
+        outputFile: File,
+        label: String,
+        expectedDurationMs: Long,
+    ) {
+        ensureNonEmptyExportOutput(outputFile, label)
+        val verification = ExportOutputVerifier.verify(
+            outputFile = outputFile,
+            expectVideo = true,
+            expectedDurationMs = expectedDurationMs,
+        )
+        if (!verification.valid) {
+            throw IllegalStateException(
+                "$label failed output verification: ${verification.reason ?: "invalid output"}"
+            )
         }
     }
 
@@ -2063,7 +2095,8 @@ class VideoEngine @Inject constructor(
         onProgress: (Float) -> Unit,
         onComplete: () -> Unit,
         onError: (Exception) -> Unit,
-        markCompleteOnFinish: Boolean = true
+        markCompleteOnFinish: Boolean = true,
+        expectedDurationMs: Long = 0L,
     ) {
         withContext(Dispatchers.Main) {
             // Cancelled before the transformer was built: starting it anyway
@@ -2115,7 +2148,8 @@ class VideoEngine @Inject constructor(
                     val verification = ExportOutputVerifier.verify(
                         outputFile = outputFile,
                         expectVideo = !config.exportAudioOnly && !config.exportStemsOnly,
-                        expectAudio = config.exportAudioOnly || config.exportStemsOnly
+                        expectAudio = config.exportAudioOnly || config.exportStemsOnly,
+                        expectedDurationMs = expectedDurationMs,
                     )
                     if (!verification.valid) {
                         Log.e(TAG, "Post-export verification failed: ${verification.reason}")

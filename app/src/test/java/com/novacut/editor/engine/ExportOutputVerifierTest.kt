@@ -64,4 +64,26 @@ class ExportOutputVerifierTest {
         assertEquals(1080, result.height)
         assertEquals(1, result.trackCount)
     }
+
+    @Test
+    fun shortEncodedOutputIsRejectedAgainstTheRequestedTimelineDuration() {
+        val reason = outputDurationFailureReason(
+            expectedDurationMs = 65L * 60L * 1_000L,
+            actualDurationMs = 30L * 1_000L,
+            durationToleranceMs = 2_000L,
+        )
+
+        assertTrue(reason?.contains("shorter than expected") == true)
+    }
+
+    @Test
+    fun outputWithinDurationToleranceRemainsValid() {
+        assertNull(
+            outputDurationFailureReason(
+                expectedDurationMs = 3_000L,
+                actualDurationMs = 1_500L,
+                durationToleranceMs = 2_000L,
+            )
+        )
+    }
 }

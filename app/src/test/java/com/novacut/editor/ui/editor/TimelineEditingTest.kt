@@ -309,6 +309,47 @@ class TimelineEditingTest {
     }
 
     @Test
+    fun `sequential trims compose against the already trimmed source window`() {
+        val original = clip(
+            id = "clip",
+            timelineStartMs = 0L,
+            trimStartMs = 0L,
+            trimEndMs = 1_000L,
+            sourceDurationMs = 1_000L,
+        )
+        val track = Track(type = TrackType.VIDEO, index = 0, clips = listOf(original))
+
+        val afterLeadingTrim = trimClipOnTrack(
+            track = track,
+            clipId = original.id,
+            requestedTrimStartMs = 200L,
+        )
+        val afterTrailingTrim = trimClipOnTrack(
+            track = afterLeadingTrim,
+            clipId = original.id,
+            requestedTrimEndMs = 600L,
+        ).clips.single()
+
+        assertEquals(200L, afterTrailingTrim.trimStartMs)
+        assertEquals(600L, afterTrailingTrim.trimEndMs)
+        assertEquals(200L, afterTrailingTrim.timelineStartMs)
+        assertEquals(600L, afterTrailingTrim.timelineEndMs)
+    }
+
+    @Test
+    fun `a second leading trim is absolute within the current source window`() {
+        val original = clip("clip", 0L, 0L, 1_000L, 1_000L)
+        val track = Track(type = TrackType.VIDEO, index = 0, clips = listOf(original))
+
+        val first = trimClipOnTrack(track, original.id, requestedTrimStartMs = 200L)
+        val second = trimClipOnTrack(first, original.id, requestedTrimStartMs = 300L).clips.single()
+
+        assertEquals(300L, second.trimStartMs)
+        assertEquals(300L, second.timelineStartMs)
+        assertEquals(1_000L, second.timelineEndMs)
+    }
+
+    @Test
     fun `leading trim respects the previous clip boundary`() {
         val previous = clip(
             id = "prev",

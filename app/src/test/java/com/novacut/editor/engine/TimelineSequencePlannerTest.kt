@@ -43,6 +43,23 @@ class TimelineSequencePlannerTest {
     }
 
     @Test
+    fun mismatchedVideoAndAudioDurationsShareTheSameTimelineEnd() {
+        val video = clip(id = "video", timelineStartMs = 0L, durationMs = 3_000L)
+        val audio = clip(id = "audio", timelineStartMs = 0L, durationMs = 3_030L)
+        val timelineEndMs = maxOf(video.timelineEndMs, audio.timelineEndMs)
+
+        val videoSteps = buildTimelineSequenceSteps(listOf(video), timelineEndMs)
+        val audioSteps = buildTimelineSequenceSteps(listOf(audio), timelineEndMs)
+
+        fun endMs(steps: List<TimelineSequenceStep>): Long =
+            steps.maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L
+
+        assertEquals(timelineEndMs, endMs(videoSteps))
+        assertEquals(timelineEndMs, endMs(audioSteps))
+        assertEquals("gap:3000:30", describeStep(videoSteps.last()))
+    }
+
+    @Test
     fun durationMsToUs_clampsBeforeOverflow() {
         assertEquals(1_500_000L, durationMsToUs(1_500L))
         assertEquals(Long.MAX_VALUE / 1_000L * 1_000L, durationMsToUs(Long.MAX_VALUE))

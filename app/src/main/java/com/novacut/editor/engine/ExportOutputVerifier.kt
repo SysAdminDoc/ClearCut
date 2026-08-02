@@ -16,6 +16,26 @@ data class ExportVerificationResult(
     val trackCount: Int = 0
 )
 
+/** Return a failure only when an encoded artifact is materially shorter than requested. */
+internal fun outputDurationFailureReason(
+    expectedDurationMs: Long,
+    actualDurationMs: Long,
+    durationToleranceMs: Long,
+): String? {
+    if (expectedDurationMs <= 0L) return null
+    val tolerance = durationToleranceMs.coerceAtLeast(0L)
+    val minimumDurationMs = if (tolerance >= expectedDurationMs) {
+        1L
+    } else {
+        expectedDurationMs - tolerance
+    }
+    return if (actualDurationMs < minimumDurationMs) {
+        "Output is shorter than expected (${actualDurationMs}ms vs ${expectedDurationMs}ms)"
+    } else {
+        null
+    }
+}
+
 object ExportOutputVerifier {
 
     private const val TAG = "ExportOutputVerifier"
@@ -115,6 +135,23 @@ object ExportOutputVerifier {
                     hasVideo = hasVideo, hasAudio = hasAudio,
                     durationMs = 0L, width = width, height = height,
                     trackCount = trackCount
+                )
+            }
+
+            outputDurationFailureReason(
+                expectedDurationMs = expectedDurationMs,
+                actualDurationMs = durationMs,
+                durationToleranceMs = durationToleranceMs,
+            )?.let { reason ->
+                return ExportVerificationResult(
+                    false,
+                    reason = reason,
+                    hasVideo = hasVideo,
+                    hasAudio = hasAudio,
+                    durationMs = durationMs,
+                    width = width,
+                    height = height,
+                    trackCount = trackCount,
                 )
             }
 

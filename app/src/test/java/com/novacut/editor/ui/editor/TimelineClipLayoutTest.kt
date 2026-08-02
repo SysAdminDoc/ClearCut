@@ -170,6 +170,33 @@ class TimelineClipLayoutTest {
     }
 
     @Test
+    fun `trim gesture actions remain anchored to the gesture start clip`() {
+        val clip = clip(
+            id = "clip",
+            timelineStartMs = 0L,
+            trimStartMs = 200L,
+            trimEndMs = 800L,
+            sourceDurationMs = 1_000L,
+        )
+
+        val first = resolveTimelineClipGestureAction(
+            zone = TimelineClipGestureZone.TRIM_LEFT,
+            clip = clip,
+            deltaXPx = 100f,
+            pixelsPerMs = 1f,
+        )
+        val laterInTheSameGesture = resolveTimelineClipGestureAction(
+            zone = TimelineClipGestureZone.TRIM_LEFT,
+            clip = clip,
+            deltaXPx = 200f,
+            pixelsPerMs = 1f,
+        )
+
+        assertEquals(TimelineClipGestureAction.TrimLeft(300L), first)
+        assertEquals(TimelineClipGestureAction.TrimLeft(400L), laterInTheSameGesture)
+    }
+
+    @Test
     fun `gesture action ignores invalid ranges and inactive zones`() {
         val shortClip = clip(
             id = "short",
