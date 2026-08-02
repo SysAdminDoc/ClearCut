@@ -332,7 +332,7 @@ private fun AddEffectButton(
         ) {
             AudioEffectType.entries.forEach { type ->
                 DropdownMenuItem(
-                    text = { Text(type.displayName) },
+                    text = { Text(androidx.compose.ui.res.stringResource(type.displayNameRes())) },
                     onClick = {
                         onAdd(type)
                         showAddMenu = false
@@ -757,7 +757,7 @@ private fun AudioEffectChip(
                     )
             )
             Text(
-                text = effect.type.displayName,
+                text = androidx.compose.ui.res.stringResource(effect.type.displayNameRes()),
                 style = MaterialTheme.typography.labelLarge,
                 color = if (isSelected) ClearCutAccents.Mauve else semanticColors.text,
                 maxLines = 1,
@@ -791,7 +791,7 @@ private fun AudioEffectParams(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
-                text = effect.type.displayName,
+                text = androidx.compose.ui.res.stringResource(effect.type.displayNameRes()),
                 style = MaterialTheme.typography.titleMedium,
                 color = semanticColors.text
             )
@@ -810,7 +810,7 @@ private fun AudioEffectParams(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = formatParamName(param),
+                            text = localizedParamName(param),
                             style = MaterialTheme.typography.labelLarge,
                             color = semanticColors.text
                         )
@@ -869,6 +869,64 @@ private fun formatParamName(param: String): String {
         .joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
 }
 
+@Composable
+private fun localizedParamName(param: String): String {
+    val bandNumber = param.removePrefix("band")
+        .takeWhile(Char::isDigit)
+        .toIntOrNull()
+    if (bandNumber != null) {
+        return when {
+            param.endsWith("_freq") -> androidx.compose.ui.res.stringResource(
+                R.string.mixer_param_band_frequency,
+                bandNumber,
+            )
+            param.endsWith("_gain") -> androidx.compose.ui.res.stringResource(
+                R.string.mixer_param_band_gain,
+                bandNumber,
+            )
+            param.endsWith("_q") -> androidx.compose.ui.res.stringResource(
+                R.string.mixer_param_band_q,
+                bandNumber,
+            )
+            else -> androidx.compose.ui.res.stringResource(R.string.mixer_param_generic, formatParamName(param))
+        }
+    }
+
+    val resourceId = when (param) {
+        "threshold" -> R.string.mixer_param_threshold
+        "ratio" -> R.string.mixer_param_ratio
+        "attack" -> R.string.mixer_param_attack
+        "release" -> R.string.mixer_param_release
+        "knee" -> R.string.mixer_param_knee
+        "makeupGain" -> R.string.mixer_param_makeup_gain
+        "ceiling" -> R.string.mixer_param_ceiling
+        "hold" -> R.string.mixer_param_hold
+        "roomSize" -> R.string.mixer_param_room_size
+        "damping" -> R.string.mixer_param_damping
+        "wetDry" -> R.string.mixer_param_wet_dry
+        "preDelay" -> R.string.mixer_param_pre_delay
+        "decay" -> R.string.mixer_param_decay
+        "delayMs" -> R.string.mixer_param_delay
+        "feedback" -> R.string.mixer_param_feedback
+        "pingPong" -> R.string.mixer_param_ping_pong
+        "frequency" -> R.string.mixer_param_frequency
+        "rate" -> R.string.mixer_param_rate
+        "depth" -> R.string.mixer_param_depth
+        "semitones" -> R.string.mixer_param_semitones
+        "cents" -> R.string.mixer_param_cents
+        "targetPeakDb" -> R.string.mixer_param_target_peak
+        "mode" -> R.string.mixer_param_mode
+        "resonance" -> R.string.mixer_param_resonance
+        "bandwidth" -> R.string.mixer_param_bandwidth
+        else -> null
+    }
+    return if (resourceId != null) {
+        androidx.compose.ui.res.stringResource(resourceId)
+    } else {
+        androidx.compose.ui.res.stringResource(R.string.mixer_param_generic, formatParamName(param))
+    }
+}
+
 private fun formatParamValue(param: String, value: Float): String {
     return when {
         param.endsWith("_freq") || param == "frequency" -> "${value.toInt()}Hz"
@@ -898,6 +956,24 @@ private fun TrackType.displayNameRes(): Int = when (this) {
     TrackType.OVERLAY -> R.string.mixer_track_type_overlay
     TrackType.TEXT -> R.string.mixer_track_type_text
     TrackType.ADJUSTMENT -> R.string.mixer_track_type_adjustment
+}
+
+private fun AudioEffectType.displayNameRes(): Int = when (this) {
+    AudioEffectType.PARAMETRIC_EQ -> R.string.mixer_effect_parametric_eq
+    AudioEffectType.COMPRESSOR -> R.string.mixer_effect_compressor
+    AudioEffectType.LIMITER -> R.string.mixer_effect_limiter
+    AudioEffectType.NOISE_GATE -> R.string.mixer_effect_noise_gate
+    AudioEffectType.REVERB -> R.string.mixer_effect_reverb
+    AudioEffectType.DELAY -> R.string.mixer_effect_delay
+    AudioEffectType.DE_ESSER -> R.string.mixer_effect_de_esser
+    AudioEffectType.CHORUS -> R.string.mixer_effect_chorus
+    AudioEffectType.FLANGER -> R.string.mixer_effect_flanger
+    AudioEffectType.PITCH_SHIFT -> R.string.mixer_effect_pitch_shift
+    AudioEffectType.NORMALIZER -> R.string.mixer_effect_normalizer
+    AudioEffectType.HIGH_PASS -> R.string.mixer_effect_high_pass
+    AudioEffectType.LOW_PASS -> R.string.mixer_effect_low_pass
+    AudioEffectType.BAND_PASS -> R.string.mixer_effect_band_pass
+    AudioEffectType.NOTCH -> R.string.mixer_effect_notch
 }
 
 private fun TrackType.mixerAccent(): Color = when (this) {
