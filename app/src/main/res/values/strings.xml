@@ -2797,4 +2797,9 @@
     <string name="ai_caption_analysis_failed_toast">Captions could not be generated (%1$s). No conclusion was reached about the audio.</string>
     <string name="ai_stabilize_analysis_failed_toast">Camera motion could not be measured, so nothing is known about this clip\'s steadiness.</string>
     <string name="export_ai_disclosure_sidecar_failed">The video exported, but the AI disclosure file could not be written next to it. Do not publish this file as disclosed — export again or attach the disclosure yourself.</string>
+    <string name="ai_requirement_unmet_download">%1$s is not downloaded yet. Download it from AI Tools, then run this again.</string>
+    <string name="ai_requirement_unmet_dependency">%1$s is not included in this build, so this tool cannot run here.</string>
+    <string name="ai_requirement_unmet_generic">%1$s is not ready yet, so this tool cannot run.</string>
+    <string name="ai_requirement_unknown_tool_title">This tool needs something that is not listed</string>
+    <string name="ai_requirement_unknown_tool_body">ClearCut has no requirement entry for this tool, so it cannot say what is missing. Open AI Tools to see which models are installed.</string>
 </resources>

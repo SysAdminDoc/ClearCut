@@ -2524,4 +2524,9 @@
     <string name="ai_caption_analysis_failed_toast">No se pudieron generar los subtítulos (%1$s). No se llegó a ninguna conclusión sobre el audio.</string>
     <string name="ai_stabilize_analysis_failed_toast">No se pudo medir el movimiento de cámara, así que no se sabe nada sobre la estabilidad de este clip.</string>
     <string name="export_ai_disclosure_sidecar_failed">El vídeo se exportó, pero no se pudo escribir junto a él el archivo de divulgación de IA. No publiques este archivo como divulgado: vuelve a exportar o adjunta la divulgación tú mismo.</string>
+    <string name="ai_requirement_unmet_download">%1$s aún no se ha descargado. Descárgalo desde Herramientas de IA y vuelve a ejecutarlo.</string>
+    <string name="ai_requirement_unmet_dependency">%1$s no viene incluido en esta versión, así que esta herramienta no puede ejecutarse aquí.</string>
+    <string name="ai_requirement_unmet_generic">%1$s aún no está listo, así que esta herramienta no puede ejecutarse.</string>
+    <string name="ai_requirement_unknown_tool_title">Esta herramienta necesita algo que no está registrado</string>
+    <string name="ai_requirement_unknown_tool_body">ClearCut no tiene una entrada de requisitos para esta herramienta, así que no puede indicar qué falta. Abre Herramientas de IA para ver qué modelos están instalados.</string>
 </resources>

@@ -207,8 +207,28 @@ class AiToolsDelegate(
         runAiTool(toolId = toolId, requirePreflight = true)
     }
 
+    /**
+     * The requirement sheet's Run action. The tool is marked as already acknowledged so
+     * that a still-unmet requirement reports itself rather than re-opening the sheet
+     * the user just acted on.
+     */
     fun runAiToolAfterRequirement(toolId: String) {
+        acknowledgedRequirementToolId = toolId
         runAiTool(toolId = toolId, requirePreflight = false)
+    }
+
+    /** The tool whose requirement sheet the user has just pressed Run in, if any. */
+    private var acknowledgedRequirementToolId: String? = null
+
+    /** Name the specific thing that is still missing, in the user's language. */
+    private fun unmetRequirementMessage(
+        requirement: AiToolRequirements.ToolRequirement
+    ): String = when (requirement.availability) {
+        AiToolRequirements.Availability.MODEL_DOWNLOAD_REQUIRED ->
+            text(R.string.ai_requirement_unmet_download, requirement.modelDisplayName)
+        AiToolRequirements.Availability.DEPENDENCY_MISSING ->
+            text(R.string.ai_requirement_unmet_dependency, requirement.modelDisplayName)
+        else -> text(R.string.ai_requirement_unmet_generic, requirement.modelDisplayName)
     }
 
     fun showAiModelRequirement(toolId: String) {
@@ -925,16 +945,27 @@ class AiToolsDelegate(
         }
     }
 
-    private fun showAiRequirementPrompt(
-        toolId: String,
-        title: String,
-        body: String,
-        modelName: String,
-        estimatedSize: String,
-        actionLabel: String = appContext.getString(R.string.ai_requirement_review_models)
-    ) {
+    /**
+     * Present the requirement for [toolId].
+     *
+     * Every caller names a tool the registry knows, so the registry sheet is what the
+     * user sees. The title/body/model/size text these calls used to pass was hardcoded
+     * English that the registry path never read -- it is gone rather than translated.
+     * The generic prompt below remains the fallback for a tool id the registry does not
+     * cover, and now says so in a localized string.
+     */
+    private fun showAiRequirementPrompt(toolId: String) {
         val requirement = resolveAiModelRequirement(toolId)
         if (requirement != null) {
+            // The requirement sheet's Run button routes back here. Re-presenting the
+            // same sheet made Run a loop with no exit: press it, get the sheet you
+            // just pressed Run in. When the user has already seen this sheet, say
+            // which requirement is still unmet instead of asking again.
+            if (acknowledgedRequirementToolId == toolId) {
+                acknowledgedRequirementToolId = null
+                showToast(unmetRequirementMessage(requirement))
+                return
+            }
             showAiModelRequirement(requirement)
             return
         }
@@ -943,12 +974,12 @@ class AiToolsDelegate(
                 ai.copy(
                     modelRequirement = null,
                     requirementPrompt = AiRequirementPrompt(
-                    title = title,
-                    body = body,
-                    modelName = modelName,
-                    estimatedSize = estimatedSize,
-                    actionLabel = actionLabel
-                )
+                        title = text(R.string.ai_requirement_unknown_tool_title),
+                        body = text(R.string.ai_requirement_unknown_tool_body),
+                        modelName = text(R.string.ai_model_size_not_available),
+                        estimatedSize = text(R.string.ai_model_size_not_available),
+                        actionLabel = text(R.string.ai_requirement_review_models)
+                    )
                 )
             }
         }
@@ -957,47 +988,23 @@ class AiToolsDelegate(
     // --- Tier 3: ML Engine Wrapper Methods ---
 
     private suspend fun applyFrameInterpolation(clip: Clip) {
-        showAiRequirementPrompt(
-            toolId = "frame_interp",
-            title = "Frame interpolation needs a model pack",
-            body = "Install the RIFE frame interpolation model before generating in-between frames. Until then, ClearCut avoids duplicating frames so motion remains predictable.",
-            modelName = "RIFE v4.6",
-            estimatedSize = "~10 MB"
-        )
+        showAiRequirementPrompt(toolId = "frame_interp")
     }
 
     private suspend fun applyObjectRemoval(clip: Clip) {
         if (!inpaintingEngine.isModelReady()) {
-            showAiRequirementPrompt(
-                toolId = "object_remove",
-                title = "Object removal needs LaMa",
-                body = "Object removal requires the LaMa inpainting model so masked areas can be rebuilt instead of blurred or hidden. Download it before painting out objects.",
-                modelName = "LaMa inpainting",
-                estimatedSize = "~174 MB"
-            )
+            showAiRequirementPrompt(toolId = "object_remove")
             return
         }
         showToast(text(R.string.ai_object_removal_unavailable_toast))
     }
 
     private suspend fun applyVideoUpscale(clip: Clip) {
-        showAiRequirementPrompt(
-            toolId = "video_upscale",
-            title = "AI upscale needs Real-ESRGAN",
-            body = "AI upscale needs the Real-ESRGAN model before rebuilding detail beyond the current project resolution. The standard upscale assist remains available for layout and sharpening.",
-            modelName = "Real-ESRGAN x4",
-            estimatedSize = "~17 MB"
-        )
+        showAiRequirementPrompt(toolId = "video_upscale")
     }
 
     private suspend fun applyAiBackground(clip: Clip) {
-        showAiRequirementPrompt(
-            toolId = "ai_background",
-            title = "AI background generation is model-gated",
-            body = "Background generation needs the compositing model workflow before ClearCut can synthesize a replacement safely. Use Remove BG or Replace BG when the segmentation model is ready.",
-            modelName = "Background composer",
-            estimatedSize = text(R.string.ai_model_size_not_available)
-        )
+        showAiRequirementPrompt(toolId = "ai_background")
     }
 
     private suspend fun applyStabilization(clip: Clip) {
@@ -1091,13 +1098,7 @@ class AiToolsDelegate(
     }
 
     private suspend fun applyStyleTransfer(clip: Clip) {
-        showAiRequirementPrompt(
-            toolId = "ai_style_transfer",
-            title = "AI style transfer needs a style model",
-            body = "Install a neural style model before applying full-frame artistic transfer. The lightweight style analyzer remains available through Style Transfer.",
-            modelName = "AnimeGAN / Fast NST",
-            estimatedSize = "~6-9 MB"
-        )
+        showAiRequirementPrompt(toolId = "ai_style_transfer")
     }
 
 }
