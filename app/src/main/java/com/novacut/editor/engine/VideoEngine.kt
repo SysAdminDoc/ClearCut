@@ -159,6 +159,7 @@ class VideoEngine @Inject constructor(
     )
 
     private var player: CompositionPlayer? = null
+    private var playerLease: CodecLease<Unit>? = null
     private var playerListener: Player.Listener? = null
     private var previewCompositionPlan = PreviewCompositionPlan.create(emptyList())
     private var previewTracks: List<Track> = emptyList()
@@ -290,24 +291,33 @@ class VideoEngine @Inject constructor(
     @androidx.annotation.OptIn(UnstableApi::class)
     fun getPlayer(): Player {
         if (player == null) {
-            val loadControl = DefaultLoadControl.Builder()
-                .setBufferDurationsMs(
-                    /* minBufferMs */ 5_000,
-                    /* maxBufferMs */ 50_000,
-                    /* bufferForPlaybackMs */ 1_500,
-                    /* bufferForPlaybackAfterRebufferMs */ 3_000
-                )
-                .setPrioritizeTimeOverSizeThresholds(true)
-                .build()
-            val previewAudioAttributes = ClearCutAudioFocusPolicy.buildPreviewAttributes()
-            player = CompositionPlayer.Builder(context)
-                .setLoadControl(loadControl)
-                .setVideoGraphFactory(MultipleInputVideoGraph.Factory())
-                .setAudioAttributes(previewAudioAttributes, true)
-                .build()
-                .apply {
-                    playerListener?.let(::addListener)
-                }
+            val lease = CodecInstanceBudget.acquirePlayerBlocking()
+            try {
+                val loadControl = DefaultLoadControl.Builder()
+                    .setBufferDurationsMs(
+                        /* minBufferMs */ 5_000,
+                        /* maxBufferMs */ 50_000,
+                        /* bufferForPlaybackMs */ 1_500,
+                        /* bufferForPlaybackAfterRebufferMs */ 3_000
+                    )
+                    .setPrioritizeTimeOverSizeThresholds(true)
+                    .build()
+                val previewAudioAttributes = ClearCutAudioFocusPolicy.buildPreviewAttributes()
+                player = CompositionPlayer.Builder(context)
+                    .setLoadControl(loadControl)
+                    .setVideoGraphFactory(MultipleInputVideoGraph.Factory())
+                    .setAudioAttributes(previewAudioAttributes, true)
+                    .build()
+                    .apply {
+                        playerListener?.let(::addListener)
+                    }
+                playerLease = lease
+            } catch (t: Throwable) {
+                player?.release()
+                player = null
+                lease.close()
+                throw t
+            }
             if (!noisyReceiverRegistered) {
                 ContextCompat.registerReceiver(
                     context,
@@ -405,14 +415,15 @@ class VideoEngine @Inject constructor(
     fun isPlaybackEnded(): Boolean = player?.playbackState == Player.STATE_ENDED
 
     fun getVideoDuration(uri: Uri): Long {
-        val retriever = MediaMetadataRetriever()
+        val retrieverLease = CodecInstanceBudget.acquireRetrieverBlocking(resolveMimeType(uri))
+        val retriever = retrieverLease.resource
         return try {
             retriever.setDataSource(context, uri)
             retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
         } catch (e: Exception) {
             0L
         } finally {
-            retriever.release()
+            retrieverLease.close()
         }
     }
 
@@ -432,7 +443,8 @@ class VideoEngine @Inject constructor(
     }
 
     fun getVideoResolution(uri: Uri): Pair<Int, Int> {
-        val retriever = MediaMetadataRetriever()
+        val retrieverLease = CodecInstanceBudget.acquireRetrieverBlocking(resolveMimeType(uri))
+        val retriever = retrieverLease.resource
         return try {
             retriever.setDataSource(context, uri)
             val w = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull() ?: 0
@@ -441,12 +453,13 @@ class VideoEngine @Inject constructor(
         } catch (e: Exception) {
             0 to 0
         } finally {
-            retriever.release()
+            retrieverLease.close()
         }
     }
 
     fun getVideoFrameRate(uri: Uri): Int {
-        val retriever = MediaMetadataRetriever()
+        val retrieverLease = CodecInstanceBudget.acquireRetrieverBlocking(resolveMimeType(uri))
+        val retriever = retrieverLease.resource
         return try {
             retriever.setDataSource(context, uri)
             // Try CAPTURE_FRAMERATE first (camera recordings), fall back to parsing bitrate
@@ -455,7 +468,7 @@ class VideoEngine @Inject constructor(
         } catch (e: Exception) {
             30
         } finally {
-            retriever.release()
+            retrieverLease.close()
         }
     }
 
@@ -470,7 +483,8 @@ class VideoEngine @Inject constructor(
         val key = "${uri}_${timeUs}_${width}x${height}"
         thumbnailCache.get(key)?.let { return it }
 
-        val retriever = MediaMetadataRetriever()
+        val retrieverLease = CodecInstanceBudget.acquireRetrieverBlocking(resolveMimeType(uri))
+        val retriever = retrieverLease.resource
         var frame: Bitmap? = null
         return try {
             retriever.setDataSource(context, uri)
@@ -506,7 +520,7 @@ class VideoEngine @Inject constructor(
             Log.w(TAG, "Thumbnail extract failed at ${timeUs}us for ${uri.redacted()}", e)
             null
         } finally {
-            retriever.release()
+            retrieverLease.close()
         }
     }
 
@@ -2348,7 +2362,8 @@ class VideoEngine @Inject constructor(
      * `androidx.media3.inspector.frame.FrameExtractor`.
      */
     fun extractFrameToFile(uri: Uri, timeMs: Long): File? {
-        val retriever = MediaMetadataRetriever()
+        val retrieverLease = CodecInstanceBudget.acquireRetrieverBlocking(resolveMimeType(uri))
+        val retriever = retrieverLease.resource
         return try {
             retriever.setDataSource(context, uri)
             val frame = retriever.getFrameAtTime(
@@ -2374,7 +2389,7 @@ class VideoEngine @Inject constructor(
             Log.w(TAG, "Frame extraction failed", e)
             null
         } finally {
-            retriever.release()
+            retrieverLease.close()
         }
     }
 
@@ -2391,6 +2406,8 @@ class VideoEngine @Inject constructor(
         removePlayerListener()
         player?.release()
         player = null
+        playerLease?.close()
+        playerLease = null
         if (noisyReceiverRegistered) {
             runCatching { context.unregisterReceiver(noisyReceiver) }
             noisyReceiverRegistered = false

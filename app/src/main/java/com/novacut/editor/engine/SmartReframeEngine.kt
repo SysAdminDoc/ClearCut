@@ -178,7 +178,8 @@ class SmartReframeEngine @Inject constructor(
             return@withContext null
         }
 
-        val retriever = MediaMetadataRetriever()
+        val retrieverLease = CodecInstanceBudget.acquireRetriever(context.contentResolver.getType(uri))
+        val retriever = retrieverLease.resource
         try {
             retriever.setDataSource(context, uri)
 
@@ -296,7 +297,7 @@ class SmartReframeEngine @Inject constructor(
             Log.e(TAG, "analyzeForReframe failed", e)
             null
         } finally {
-            retriever.release()
+            retrieverLease.close()
         }
     }
 

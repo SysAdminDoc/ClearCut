@@ -392,7 +392,8 @@ private data class MediaDimensions(
 )
 
 private fun readMediaMetadata(context: Context, uri: Uri): MediaDimensions {
-    val retriever = MediaMetadataRetriever()
+    val retrieverLease = CodecInstanceBudget.acquireRetrieverBlocking(context.contentResolver.getType(uri))
+    val retriever = retrieverLease.resource
     return try {
         retriever.setDataSource(context, uri)
         MediaDimensions(
@@ -409,7 +410,7 @@ private fun readMediaMetadata(context: Context, uri: Uri): MediaDimensions {
     } catch (_: Exception) {
         MediaDimensions()
     } finally {
-        runCatching { retriever.release() }
+        retrieverLease.close()
     }
 }
 

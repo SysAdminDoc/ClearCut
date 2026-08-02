@@ -10,6 +10,7 @@ import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import com.novacut.editor.engine.AudioDecodeBudget
+import com.novacut.editor.engine.CodecInstanceBudget
 import com.novacut.editor.engine.ModelDownloadManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -523,7 +524,8 @@ class WhisperEngine @Inject constructor(
             if (sampleRate <= 0 || channels <= 0) return null
             val mime = format.getString(MediaFormat.KEY_MIME) ?: return null
 
-            val decoder = MediaCodec.createDecoderByType(mime)
+            val decoderLease = CodecInstanceBudget.acquireDecoder(mime)
+            val decoder = decoderLease.resource
             val chunks = mutableListOf<FloatArray>()
             var totalSamples = 0
 
@@ -587,8 +589,7 @@ class WhisperEngine @Inject constructor(
                     }
                 }
             } finally {
-                try { decoder.stop() } catch (e: Exception) { Log.w("WhisperEngine", "Failed to stop decoder", e) }
-                decoder.release()
+                decoderLease.close()
             }
 
             if (totalSamples == 0) return null

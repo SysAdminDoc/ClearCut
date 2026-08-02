@@ -31,7 +31,8 @@ object ColorMatchEngine {
         uri: Uri,
         timeMs: Long
     ): ColorStats? = withContext(Dispatchers.IO) {
-        val retriever = MediaMetadataRetriever()
+        val retrieverLease = CodecInstanceBudget.acquireRetriever(context.contentResolver.getType(uri))
+        val retriever = retrieverLease.resource
         var bitmap: Bitmap? = null
         try {
             retriever.setDataSource(context, uri)
@@ -42,7 +43,7 @@ object ColorMatchEngine {
             null
         } finally {
             try { bitmap?.recycle() } catch (_: Exception) { /* already recycled */ }
-            try { retriever.release() } catch (e: Exception) { Log.w("ColorMatchEngine", "Failed to release retriever", e) }
+            retrieverLease.close()
         }
     }
 

@@ -129,7 +129,13 @@ class ProxyEngine @Inject constructor(
         }
 
         activeProxyKeys.add(key)
+        var pipelineLease: CodecLease<Unit>? = null
         try {
+            // Transformer owns the source decoder and output encoder. Hold a
+            // shared video-family permit for the complete proxy lifecycle so
+            // proxy generation queues behind preview/retriever work instead
+            // of turning a codec-ceiling collision into a failed render.
+            pipelineLease = CodecInstanceBudget.acquirePipelineBlocking()
             suspendCancellableCoroutine { cont ->
                 val mediaItem = MediaItem.fromUri(sourceUri)
 
@@ -200,6 +206,7 @@ class ProxyEngine @Inject constructor(
             proxyMap.remove(key)
             null
         } finally {
+            pipelineLease?.close()
             activeProxyKeys.remove(key)
             // Always release the per-key mutex so the next caller (or a
             // retry after a failure) can try again. Using runCatching so a

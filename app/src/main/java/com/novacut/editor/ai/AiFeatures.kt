@@ -10,6 +10,7 @@ import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.util.Log
 import com.novacut.editor.engine.AudioDecodeBudget
+import com.novacut.editor.engine.CodecInstanceBudget
 import com.novacut.editor.engine.AudioEffectsEngine
 import com.novacut.editor.engine.segmentation.SegmentationEngine
 import com.novacut.editor.engine.whisper.WhisperEngine
@@ -131,7 +132,8 @@ class AiFeatures @Inject constructor(
             val mime = format.getString(MediaFormat.KEY_MIME) ?: return@withContext CaptionOutcome.Failed("unknown audio MIME")
 
             // Decode audio to PCM amplitudes
-            val decoder = MediaCodec.createDecoderByType(mime)
+            val decoderLease = CodecInstanceBudget.acquireDecoder(mime)
+            val decoder = decoderLease.resource
             val amplitudeChunks = mutableListOf<FloatArray>()
             var totalSamples = 0
 
@@ -188,8 +190,7 @@ class AiFeatures @Inject constructor(
                     }
                 }
             } finally {
-                try { decoder.stop() } catch (_: Exception) {}
-                decoder.release()
+                decoderLease.close()
             }
 
             if (totalSamples == 0) return@withContext CaptionOutcome.Failed("no decoded audio")
@@ -343,7 +344,8 @@ class AiFeatures @Inject constructor(
     suspend fun autoColorCorrect(
         videoUri: Uri
     ): ColorCorrection = withContext(Dispatchers.IO) {
-        val retriever = MediaMetadataRetriever()
+        val retrieverLease = CodecInstanceBudget.acquireRetriever(context.contentResolver.getType(videoUri))
+        val retriever = retrieverLease.resource
         try {
             retriever.setDataSource(context, videoUri)
             val rawDurationMs = retriever.extractMetadata(
@@ -419,7 +421,7 @@ class AiFeatures @Inject constructor(
             Log.w(TAG, "Auto color correction failed", e)
             ColorCorrection()
         } finally {
-            retriever.release()
+            retrieverLease.close()
         }
     }
 
@@ -453,7 +455,8 @@ class AiFeatures @Inject constructor(
     suspend fun stabilizeVideo(
         videoUri: Uri
     ): StabilizationResult = withContext(Dispatchers.IO) {
-        val retriever = MediaMetadataRetriever()
+        val retrieverLease = CodecInstanceBudget.acquireRetriever(context.contentResolver.getType(videoUri))
+        val retriever = retrieverLease.resource
         try {
             retriever.setDataSource(context, videoUri)
             val durationMs = retriever.extractMetadata(
@@ -526,7 +529,7 @@ class AiFeatures @Inject constructor(
             Log.w(TAG, "Video stabilization analysis failed", e)
             StabilizationResult(analyzed = false)
         } finally {
-            retriever.release()
+            retrieverLease.close()
         }
     }
 
@@ -634,7 +637,8 @@ class AiFeatures @Inject constructor(
             // plus the first/last 500ms (noise floor), so keep a bounded head buffer and
             // a 500ms tail ring instead of accumulating the whole track — a long input
             // previously buffered every decoded sample and could OOM.
-            val decoder = MediaCodec.createDecoderByType(mime)
+            val decoderLease = CodecInstanceBudget.acquireDecoder(mime)
+            val decoder = decoderLease.resource
             val budgetCap = AudioDecodeBudget.MAX_PCM_SAMPLES.toLong()
             val headCapShorts = (sampleRate.toLong() * 10L * channels).coerceIn(1L, budgetCap).toInt()
             val tailCapShorts = ((sampleRate.toLong() / 2L) * channels).coerceIn(1L, budgetCap).toInt()
@@ -701,8 +705,7 @@ class AiFeatures @Inject constructor(
                     }
                 }
             } finally {
-                try { decoder.stop() } catch (_: Exception) {}
-                decoder.release()
+                decoderLease.close()
             }
 
             if (totalShorts == 0L) return@withContext NoiseProfile()
@@ -806,7 +809,8 @@ class AiFeatures @Inject constructor(
     suspend fun analyzeBackground(
         videoUri: Uri
     ): BackgroundAnalysis = withContext(Dispatchers.IO) {
-        val retriever = MediaMetadataRetriever()
+        val retrieverLease = CodecInstanceBudget.acquireRetriever(context.contentResolver.getType(videoUri))
+        val retriever = retrieverLease.resource
         try {
             retriever.setDataSource(context, videoUri)
             val durationMs = retriever.extractMetadata(
@@ -875,7 +879,7 @@ class AiFeatures @Inject constructor(
             Log.w(TAG, "Background analysis failed", e)
             BackgroundAnalysis()
         } finally {
-            retriever.release()
+            retrieverLease.close()
         }
     }
 
@@ -890,7 +894,8 @@ class AiFeatures @Inject constructor(
         sensitivity: Float = 0.5f
     ): List<SceneChange> = withContext(Dispatchers.IO) {
         val scenes = mutableListOf<SceneChange>()
-        val retriever = MediaMetadataRetriever()
+        val retrieverLease = CodecInstanceBudget.acquireRetriever(context.contentResolver.getType(videoUri))
+        val retriever = retrieverLease.resource
 
         try {
             retriever.setDataSource(context, videoUri)
@@ -938,7 +943,7 @@ class AiFeatures @Inject constructor(
             }
             previousFrame?.recycle()
         } finally {
-            retriever.release()
+            retrieverLease.close()
         }
 
         scenes
@@ -957,7 +962,8 @@ class AiFeatures @Inject constructor(
         startMs: Long,
         endMs: Long
     ): List<TrackingResult> = withContext(Dispatchers.IO) {
-        val retriever = MediaMetadataRetriever()
+        val retrieverLease = CodecInstanceBudget.acquireRetriever(context.contentResolver.getType(videoUri))
+        val retriever = retrieverLease.resource
         try {
             retriever.setDataSource(context, videoUri)
             val results = mutableListOf<TrackingResult>()
@@ -1011,7 +1017,7 @@ class AiFeatures @Inject constructor(
             Log.w(TAG, "Scene detection failed", e)
             emptyList()
         } finally {
-            retriever.release()
+            retrieverLease.close()
         }
     }
 
@@ -1073,7 +1079,8 @@ class AiFeatures @Inject constructor(
         videoUri: Uri,
         targetAspectRatio: Float
     ): CropSuggestion = withContext(Dispatchers.IO) {
-        val retriever = MediaMetadataRetriever()
+        val retrieverLease = CodecInstanceBudget.acquireRetriever(context.contentResolver.getType(videoUri))
+        val retriever = retrieverLease.resource
         try {
             retriever.setDataSource(context, videoUri)
             val durationMs = retriever.extractMetadata(
@@ -1162,7 +1169,7 @@ class AiFeatures @Inject constructor(
                 confidence = 0.3f
             )
         } finally {
-            retriever.release()
+            retrieverLease.close()
         }
     }
 
@@ -1180,7 +1187,8 @@ class AiFeatures @Inject constructor(
     suspend fun analyzeAndApplyStyle(
         videoUri: Uri
     ): StyleTransferResult = withContext(Dispatchers.IO) {
-        val retriever = MediaMetadataRetriever()
+        val retrieverLease = CodecInstanceBudget.acquireRetriever(context.contentResolver.getType(videoUri))
+        val retriever = retrieverLease.resource
         try {
             retriever.setDataSource(context, videoUri)
             val durationMs = retriever.extractMetadata(
@@ -1289,7 +1297,7 @@ class AiFeatures @Inject constructor(
             Log.w(TAG, "Style transfer analysis failed", e)
             StyleTransferResult()
         } finally {
-            retriever.release()
+            retrieverLease.close()
         }
     }
 
@@ -1302,7 +1310,8 @@ class AiFeatures @Inject constructor(
     suspend fun analyzeForUpscale(
         videoUri: Uri
     ): UpscaleResult = withContext(Dispatchers.IO) {
-        val retriever = MediaMetadataRetriever()
+        val retrieverLease = CodecInstanceBudget.acquireRetriever(context.contentResolver.getType(videoUri))
+        val retriever = retrieverLease.resource
         try {
             retriever.setDataSource(context, videoUri)
             val width = retriever.extractMetadata(
@@ -1340,7 +1349,7 @@ class AiFeatures @Inject constructor(
             Log.w(TAG, "Upscale analysis failed", e)
             UpscaleResult()
         } finally {
-            retriever.release()
+            retrieverLease.close()
         }
     }
 
@@ -1429,7 +1438,8 @@ class AiFeatures @Inject constructor(
             val channels = format.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
             val mime = format.getString(MediaFormat.KEY_MIME) ?: return@withContext emptyList()
 
-            val decoder = MediaCodec.createDecoderByType(mime)
+            val decoderLease = CodecInstanceBudget.acquireDecoder(mime)
+            val decoder = decoderLease.resource
             val chunks = mutableListOf<ShortArray>()
             var totalSamples = 0
 
@@ -1476,8 +1486,7 @@ class AiFeatures @Inject constructor(
                     }
                 }
             } finally {
-                try { decoder.stop() } catch (_: Exception) {}
-                decoder.release()
+                decoderLease.close()
             }
 
             onProgress(0.4f)
@@ -1563,7 +1572,8 @@ class AiFeatures @Inject constructor(
         targetAspect: AspectRatio,
         onProgress: (Float) -> Unit = {}
     ): List<ReframeKeyframe> = withContext(Dispatchers.IO) {
-        val retriever = MediaMetadataRetriever()
+        val retrieverLease = CodecInstanceBudget.acquireRetriever(context.contentResolver.getType(videoUri))
+        val retriever = retrieverLease.resource
         try {
             retriever.setDataSource(context, videoUri)
             val rawDurationMs = retriever.extractMetadata(
@@ -1636,7 +1646,7 @@ class AiFeatures @Inject constructor(
             Log.w(TAG, "Smart reframe analysis failed", e)
             emptyList()
         } finally {
-            retriever.release()
+            retrieverLease.close()
         }
     }
 
@@ -1772,7 +1782,8 @@ class AiFeatures @Inject constructor(
         for ((analyzedIndex, spec) in windowSpecs.withIndex()) {
             ensureActive()
             val (clip, windowIndex, range) = spec
-            val retriever = MediaMetadataRetriever()
+            val retrieverLease = CodecInstanceBudget.acquireRetriever(context.contentResolver.getType(clip.uri))
+            val retriever = retrieverLease.resource
             try {
                 var qualityScore = 0f
                 var motionScore = 0f
@@ -1839,7 +1850,7 @@ class AiFeatures @Inject constructor(
 
                 onProgress(0.05f + 0.5f * (analyzedIndex + 1) / windowSpecs.size.coerceAtLeast(1))
             } finally {
-                retriever.release()
+                retrieverLease.close()
             }
         }
 
@@ -1865,7 +1876,8 @@ class AiFeatures @Inject constructor(
                         val mime = format.getString(MediaFormat.KEY_MIME)
 
                         if (mime != null) {
-                            val decoder = MediaCodec.createDecoderByType(mime)
+                            val decoderLease = CodecInstanceBudget.acquireDecoder(mime)
+                            val decoder = decoderLease.resource
                             val pcmChunks = mutableListOf<ShortArray>()
                             var totalPcm = 0
                             try {
@@ -1915,8 +1927,7 @@ class AiFeatures @Inject constructor(
                                     }
                                 }
                             } finally {
-                                try { decoder.stop() } catch (_: Exception) {}
-                                decoder.release()
+                                decoderLease.close()
                             }
                             if (totalPcm > 0) {
                                 val allPcm = ShortArray(totalPcm)
@@ -2087,7 +2098,8 @@ class AiFeatures @Inject constructor(
 
             // Decode first 2 seconds of audio
             val maxSamples = sampleRate * 2 // 2 seconds of mono
-            val decoder = MediaCodec.createDecoderByType(mime)
+            val decoderLease = CodecInstanceBudget.acquireDecoder(mime)
+            val decoder = decoderLease.resource
             val chunks = mutableListOf<ShortArray>()
             var totalSamples = 0
 
@@ -2129,8 +2141,7 @@ class AiFeatures @Inject constructor(
                     }
                 }
             } finally {
-                try { decoder.stop() } catch (_: Exception) {}
-                decoder.release()
+                decoderLease.close()
             }
 
             onProgress(0.4f)

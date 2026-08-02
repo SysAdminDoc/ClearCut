@@ -409,7 +409,8 @@ class InpaintingEngine @Inject constructor(
             return@withContext null
         }
 
-        val retriever = android.media.MediaMetadataRetriever()
+        val retrieverLease = CodecInstanceBudget.acquireRetriever(context.contentResolver.getType(uri))
+        val retriever = retrieverLease.resource
         try {
             retriever.setDataSource(context, uri)
             val durationMs = retriever.extractMetadata(
@@ -503,7 +504,7 @@ class InpaintingEngine @Inject constructor(
             Log.e(TAG, "Video inpainting failed", e)
             null
         } finally {
-            retriever.release()
+            retrieverLease.close()
         }
     }
 

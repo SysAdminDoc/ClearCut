@@ -80,6 +80,7 @@ import com.novacut.editor.engine.ExportState
 import com.novacut.editor.engine.ExportStoragePolicy
 import com.novacut.editor.engine.HdrOverlayPolicy
 import com.novacut.editor.engine.HdrOverlaySummary
+import com.novacut.editor.engine.CodecInstanceBudget
 import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.platform.LocalContext
@@ -2386,16 +2387,26 @@ private fun ExportPreviewPlayer(filePath: String) {
     val file = remember(filePath) { java.io.File(filePath) }
     if (!file.exists()) return
 
-    val player = remember(filePath) {
-        ExoPlayer.Builder(context).build().apply {
-            setMediaItem(MediaItem.fromUri(Uri.fromFile(file)))
-            repeatMode = Player.REPEAT_MODE_OFF
-            prepare()
+    val playerSession = remember(filePath) {
+        val lease = CodecInstanceBudget.acquirePlayerBlocking()
+        try {
+            lease to ExoPlayer.Builder(context).build().apply {
+                setMediaItem(MediaItem.fromUri(Uri.fromFile(file)))
+                repeatMode = Player.REPEAT_MODE_OFF
+                prepare()
+            }
+        } catch (t: Throwable) {
+            lease.close()
+            throw t
         }
     }
+    val player = playerSession.second
 
     DisposableEffect(filePath) {
-        onDispose { player.release() }
+        onDispose {
+            player.release()
+            playerSession.first.close()
+        }
     }
 
     Card(

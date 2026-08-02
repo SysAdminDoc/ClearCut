@@ -202,7 +202,8 @@ class MultiCamEngine @Inject constructor(
                 // sample offsets to ms with the rate the samples are actually at.
                 val effectiveRate = effectiveDecimatedRate(sourceSampleRate, safeTargetRate)
 
-                val decoder = MediaCodec.createDecoderByType(mime)
+                val decoderLease = CodecInstanceBudget.acquireDecoder(mime)
+                val decoder = decoderLease.resource
                 val samples = mutableListOf<Float>()
 
                 try {
@@ -266,12 +267,7 @@ class MultiCamEngine @Inject constructor(
                         }
                     }
                 } finally {
-                    try {
-                        decoder.stop()
-                    } catch (e: Exception) {
-                        Log.w("MultiCamEngine", "Failed to stop decoder", e)
-                    }
-                    decoder.release()
+                    decoderLease.close()
                 }
 
                 MonoPcm(samples.toFloatArray(), effectiveRate)

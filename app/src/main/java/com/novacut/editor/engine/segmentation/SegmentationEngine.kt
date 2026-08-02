@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import com.novacut.editor.engine.MediaPipeUsageGate
+import com.novacut.editor.engine.CodecInstanceBudget
 import com.novacut.editor.engine.ModelDownloadManager
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.framework.image.ByteBufferExtractor
@@ -240,7 +241,8 @@ class SegmentationEngine @Inject constructor(
         videoUri: Uri,
         timestampMs: Long = -1
     ): SegmentationResult? = withContext(Dispatchers.IO) {
-        val retriever = MediaMetadataRetriever()
+        val retrieverLease = CodecInstanceBudget.acquireRetriever(context.contentResolver.getType(videoUri))
+        val retriever = retrieverLease.resource
         // Track both bitmaps so the outer finally can guarantee recycling even when
         // createScaledBitmap OOMs or segment() throws partway through. Without this,
         // a single failed segmentation could leak ~10 MB of bitmap memory.
@@ -270,7 +272,7 @@ class SegmentationEngine @Inject constructor(
         } finally {
             try { scaled?.takeIf { it !== frame }?.recycle() } catch (_: Exception) { /* already recycled */ }
             try { frame?.recycle() } catch (_: Exception) { /* already recycled */ }
-            try { retriever.release() } catch (e: Exception) { android.util.Log.w("SegmentationEngine", "retriever release failed", e) }
+            retrieverLease.close()
         }
     }
 

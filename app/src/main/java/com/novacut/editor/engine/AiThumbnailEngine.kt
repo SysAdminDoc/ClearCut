@@ -51,7 +51,8 @@ class AiThumbnailEngine @Inject constructor(
         topN: Int = 5
     ): List<Candidate> = withContext(Dispatchers.IO) {
         if (durationMs <= 0L || topN <= 0) return@withContext emptyList()
-        val retriever = MediaMetadataRetriever()
+        val retrieverLease = CodecInstanceBudget.acquireRetriever(context.contentResolver.getType(uri))
+        val retriever = retrieverLease.resource
         // Min-heap so the lowest-scored candidate is always at head; when a
         // better frame arrives we poll() the head, recycle its bitmap, offer
         // the new one. Capacity topN guarantees bounded memory.
@@ -91,7 +92,7 @@ class AiThumbnailEngine @Inject constructor(
         } catch (e: Exception) {
             Log.w(TAG, "thumbnail scoring failed", e)
         } finally {
-            try { retriever.release() } catch (_: Exception) {}
+            retrieverLease.close()
         }
         heap.toList().sortedByDescending { it.score }
     }

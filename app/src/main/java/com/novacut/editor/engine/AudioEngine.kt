@@ -149,11 +149,13 @@ class AudioEngine @Inject constructor(
             val mime = format.getString(MediaFormat.KEY_MIME) ?: return@withContext FloatArray(boundedSampleCount)
 
             // Decode audio to PCM
-            var decoder: MediaCodec? = null
+            var decoderLease: CodecLease<MediaCodec>? = null
             val amplitudes: MutableList<Float>
             var maxAmplitude = 1f
             try {
-                decoder = MediaCodec.createDecoderByType(mime)
+                val decoder = CodecInstanceBudget.acquireDecoder(mime)
+                    .also { decoderLease = it }
+                    .resource
                 decoder.configure(format, null, null, 0)
                 decoder.start()
 
@@ -204,8 +206,7 @@ class AudioEngine @Inject constructor(
                     }
                 }
             } finally {
-                try { decoder?.stop() } catch (_: Exception) { /* shutting down */ }
-                try { decoder?.release() } catch (_: Exception) { /* best-effort */ }
+                decoderLease?.close()
             }
 
             // Resample to desired count and normalize
@@ -322,14 +323,16 @@ class AudioEngine @Inject constructor(
 
             extractor.selectTrack(audioIndex)
             val mime = format.getString(MediaFormat.KEY_MIME) ?: return@withContext ShortArray(0)
-            var decoder: MediaCodec? = null
+            var decoderLease: CodecLease<MediaCodec>? = null
 
             // Collect chunks as ShortArrays to avoid boxing millions of Shorts
             val chunks = mutableListOf<ShortArray>()
             var totalSamples = 0
 
             try {
-                decoder = MediaCodec.createDecoderByType(mime)
+                val decoder = CodecInstanceBudget.acquireDecoder(mime)
+                    .also { decoderLease = it }
+                    .resource
                 decoder.configure(format, null, null, 0)
                 decoder.start()
 
@@ -375,8 +378,7 @@ class AudioEngine @Inject constructor(
                     }
                 }
             } finally {
-                try { decoder?.stop() } catch (_: Exception) { /* shutting down */ }
-                try { decoder?.release() } catch (_: Exception) { /* best-effort */ }
+                decoderLease?.close()
             }
 
             // Concatenate chunks into a single ShortArray without boxing

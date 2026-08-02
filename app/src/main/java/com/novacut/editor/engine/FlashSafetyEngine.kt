@@ -34,7 +34,8 @@ class FlashSafetyEngine @Inject constructor(
     enum class Kind { GENERAL_FLASH, RED_FLASH }
 
     suspend fun analyze(uri: Uri, durationMs: Long): List<Warning> = withContext(Dispatchers.IO) {
-        val retriever = MediaMetadataRetriever()
+        val retrieverLease = CodecInstanceBudget.acquireRetriever(context.contentResolver.getType(uri))
+        val retriever = retrieverLease.resource
         val warnings = mutableListOf<Warning>()
         try {
             retriever.setDataSource(context, uri)
@@ -65,7 +66,7 @@ class FlashSafetyEngine @Inject constructor(
         } catch (e: Exception) {
             Log.w(TAG, "flash analysis failed", e)
         } finally {
-            try { retriever.release() } catch (_: Exception) {}
+            retrieverLease.close()
         }
         warnings
     }

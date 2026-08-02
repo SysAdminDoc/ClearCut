@@ -39,7 +39,8 @@ class TalkingHeadFramingEngine @Inject constructor(
         durationMs: Long,
         sampleStepMs: Long = 500L
     ): List<FrameCenter> = withContext(Dispatchers.IO) {
-        val retriever = MediaMetadataRetriever()
+        val retrieverLease = CodecInstanceBudget.acquireRetriever(context.contentResolver.getType(uri))
+        val retriever = retrieverLease.resource
         val out = mutableListOf<FrameCenter>()
         try {
             retriever.setDataSource(context, uri)
@@ -56,7 +57,7 @@ class TalkingHeadFramingEngine @Inject constructor(
         } catch (e: Exception) {
             Log.w(TAG, "Face tracking failed", e)
         } finally {
-            try { retriever.release() } catch (_: Exception) {}
+            retrieverLease.close()
         }
         oneEuroSmooth(out)
     }

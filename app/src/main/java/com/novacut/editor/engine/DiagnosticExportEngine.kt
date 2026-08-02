@@ -314,6 +314,8 @@ class DiagnosticExportEngine @Inject constructor(
         } catch (e: Throwable) {
             appendLine("# Unable to enumerate codecs: ${e.javaClass.simpleName}: ${e.message}")
         }
+        appendLine()
+        append(CodecInstanceBudget.diagnosticSummary())
     }
 
     private fun buildModelRegistry(models: List<ModelSnapshot>): String = buildString {
