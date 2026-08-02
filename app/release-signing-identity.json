@@ -1,0 +1,22 @@
+{
+  "_comment": [
+    "The signing identity every published ClearCut release must carry.",
+    "Android refuses an in-place update when the signing certificate changes, and",
+    "ClearCut's projects live in app-private storage, so a fingerprint change strands",
+    "every installed user. The release build fails when the resolved signing key does",
+    "not produce this fingerprint, rather than silently falling back to the debug key.",
+    "This is a self-signed key: no CA, no EV certificate, no Play App Signing, no",
+    "notarization. Only the certificate digest is recorded here -- never the keystore,",
+    "its passwords, or its path."
+  ],
+  "certificateSha256": "76cf4c647590f1dc17b37175b9dd65cac6d0a1e7ffff6a86f8ea8a29f67f75f6",
+  "keyAlias": "androiddebugkey",
+  "subject": "C=US, O=Android, CN=Android Debug",
+  "notBefore": "2026-02-16",
+  "notAfter": "2056-02-09",
+  "firstPublishedRelease": "v3.74.108",
+  "verifiedAgainst": [
+    "v3.74.108",
+    "v3.77.0"
+  ]
+}

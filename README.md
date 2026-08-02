@@ -581,7 +581,18 @@ python scripts\check_apk_size.py
 ### Distribution Readiness
 GitHub Releases are the direct APK distribution channel for this checkout. Google Play listing metadata, privacy disclosures, Data safety worksheet, and screenshot assets are committed under `fastlane/metadata/android/en-US/` and validated by the local release gate.
 
-F-Droid-compatible Fastlane metadata is present in the same source tree. F-Droid publication still needs a final reproducible-build metadata pass, including `AllowedAPKSigningKeys` after the release signing key policy is fixed.
+F-Droid-compatible Fastlane metadata is present in the same source tree. F-Droid publication still needs a final reproducible-build metadata pass, including `AllowedAPKSigningKeys`, which can now be filled from the pinned certificate below.
+
+### Release Signing Identity
+Every published release since `v3.74.108` is signed with one self-signed key, recorded by certificate digest in `app/release-signing-identity.json`. Nothing else about the key lives in the repository — not the keystore, not its passwords, not its path.
+
+This matters more than it sounds: Android refuses an in-place update when the signing certificate changes, and ClearCut keeps projects in app-private storage. Publishing a release signed with a different key would strand every installed user, with their projects still on the device and unreachable from the new install.
+
+So the release lane no longer falls back to the debug key when no keystore resolves. `:app:verifyReleaseSigningIdentity` runs before `preReleaseBuild` and fails when the resolved certificate does not match the pinned digest, naming both fingerprints.
+
+To build a release, create `keystore.properties` at the repository root (it is gitignored) with `storeFile`, `storePassword`, `keyAlias`, and `keyPassword`, or export `CLEARCUT_STORE_FILE`, `CLEARCUT_STORE_PASSWORD`, `CLEARCUT_KEY_ALIAS`, and `CLEARCUT_KEY_PASSWORD`.
+
+**The keystore exists on one machine.** It is not backed up off-machine, and no copy of it can be reconstructed from this repository or from a published APK. Until it is copied somewhere durable, losing that machine ends the update path for every existing install. This is a self-signed key only: no certificate authority, no EV certificate, no Play App Signing, no notarization.
 
 Android developer verification is not complete. Starting in September 2026, Google requires apps installed on certified Android devices in initial regions to be registered by a verified developer, and package names must be registered with a signed APK. ClearCut can keep shipping direct APKs locally, but broad sideload/F-Droid continuity depends on completing that account/package-name step or documenting a limited-distribution fallback.
 

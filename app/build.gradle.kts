@@ -1,4 +1,5 @@
 import java.util.Properties
+import java.security.KeyStore
 import java.security.MessageDigest
 
 plugins {
@@ -84,12 +85,13 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            val releaseSigning = signingConfigs.getByName("release")
-            signingConfig = if (releaseSigning.storeFile?.exists() == true) {
-                releaseSigning
-            } else {
-                signingConfigs.getByName("debug")
-            }
+            // Never fall back to the debug key. Android refuses an in-place update
+            // when the signing certificate changes, and ClearCut's projects live in
+            // app-private storage -- signing a release with a different key strands
+            // every installed user with no migration path. The release build fails
+            // loudly instead, and `verifyReleaseSigningIdentity` proves the resolved
+            // key is the one every published release already carries.
+            signingConfig = signingConfigs.getByName("release")
         }
         create("streaming") {
             initWith(getByName("debug"))
@@ -342,6 +344,69 @@ $components
 // the wrapper pin. Gradle cannot infer those as task inputs, so editing one left the
 // test task UP-TO-DATE and the assertion silently never ran -- a claim validator that
 // cannot fail. Declare them so a change to public copy re-runs the checks that police it.
+// The signing identity is not a build detail: it is the only thing that lets an
+// installed user receive an update. Losing or changing it is unrecoverable for
+// them, so the release lane proves the resolved key before it produces anything.
+val verifyReleaseSigningIdentity = tasks.register("verifyReleaseSigningIdentity") {
+    group = "verification"
+    description = "Fail the release build unless the signing key matches the published certificate."
+    val identityFile = file("release-signing-identity.json")
+    inputs.file(identityFile)
+    val signing = android.signingConfigs.getByName("release")
+    val storeFile = signing.storeFile
+    val storePassword = signing.storePassword
+    val keyAlias = signing.keyAlias
+    doFirst {
+        val expected = Regex("\"certificateSha256\"\\s*:\\s*\"([0-9a-fA-F]+)\"")
+            .find(identityFile.readText())
+            ?.groupValues?.get(1)
+            ?.lowercase()
+            ?: throw GradleException(
+                "release-signing-identity.json has no certificateSha256. " +
+                    "Restore it from a published release's .signing-cert-sha256 sidecar."
+            )
+
+        if (storeFile == null || !storeFile.exists()) {
+            throw GradleException(
+                "No release keystore resolved. Create keystore.properties (gitignored) with " +
+                    "storeFile/storePassword/keyAlias/keyPassword, or export CLEARCUT_STORE_FILE, " +
+                    "CLEARCUT_STORE_PASSWORD, CLEARCUT_KEY_ALIAS and CLEARCUT_KEY_PASSWORD. " +
+                    "The release build no longer falls back to the debug key: a release signed " +
+                    "with a different certificate cannot update any existing install."
+            )
+        }
+
+        val keyStore = KeyStore.getInstance("PKCS12")
+        storeFile.inputStream().use { stream -> keyStore.load(stream, storePassword?.toCharArray()) }
+        val alias = keyAlias ?: throw GradleException("keystore.properties defines no keyAlias.")
+        val certificate = keyStore.getCertificate(alias)
+            ?: throw GradleException("Alias '$alias' is not present in ${storeFile.name}.")
+        val actual = MessageDigest.getInstance("SHA-256")
+            .digest(certificate.encoded)
+            .joinToString("") { byte -> "%02x".format(byte) }
+
+        if (actual != expected) {
+            throw GradleException(
+                "Release signing certificate mismatch.\n" +
+                    "  expected: $expected (every published release since v3.74.108)\n" +
+                    "  resolved: $actual (alias '$alias' in ${storeFile.name})\n" +
+                    "Signing with this key would strand every installed user, because Android " +
+                    "refuses an in-place update across a certificate change and ClearCut's " +
+                    "projects live in app-private storage. Point keystore.properties at the " +
+                    "correct keystore, or -- if the break is deliberate -- update " +
+                    "release-signing-identity.json and document the clean-install migration."
+            )
+        }
+        logger.lifecycle("Release signing identity verified: $actual")
+    }
+}
+
+tasks.configureEach {
+    if (name == "preReleaseBuild") {
+        dependsOn(verifyReleaseSigningIdentity)
+    }
+}
+
 tasks.withType<Test>().configureEach {
     listOf(
         "README.md",
