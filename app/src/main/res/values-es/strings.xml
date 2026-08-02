@@ -2485,4 +2485,27 @@
     <string name="partial_restore_message">Este proyecto se abrió, pero no se pudieron leer algunas partes:\n\n%1$s\n\nSe pausó el guardado para no sobrescribir lo que falta. Conserva el proyecto tal como se recuperó o prueba el guardado automático anterior, que quizá aún las contenga.</string>
     <string name="partial_restore_keep">Conservar lo recuperado</string>
     <string name="partial_restore_use_backup">Probar el guardado anterior</string>
+    <string name="export_failure_setup">No se pudo preparar la exportación.</string>
+    <string name="export_failure_setup_fix">Vuelve a abrir el proyecto e inténtalo de nuevo; si se repite, quita el último clip o efecto que añadiste.</string>
+    <string name="export_failure_encoder">El codificador de vídeo falló a mitad del proceso.</string>
+    <string name="export_failure_encoder_fix">Prueba con una resolución más baja o con otro códec en los ajustes de exportación.</string>
+    <string name="export_failure_empty_output">La codificación informó de éxito pero escribió un archivo vacío.</string>
+    <string name="export_failure_empty_output_fix">El codificador de este dispositivo rechazó la línea de tiempo. Prueba con una resolución más baja o con H.264 en lugar de H.265.</string>
+    <string name="export_failure_verification">El archivo exportado no superó la comprobación de integridad y se eliminó.</string>
+    <string name="export_failure_verification_fix">Inténtalo de nuevo; si se repite, exporta un intervalo más corto para localizar el clip que falla.</string>
+    <string name="export_failure_stalled">La exportación dejó de avanzar y se canceló.</string>
+    <string name="export_failure_stalled_fix">Cierra otras aplicaciones y reinténtalo. Las líneas de tiempo 4K largas pueden agotar el codificador en un dispositivo caliente.</string>
+    <string name="export_failure_service_timeout">Android detuvo la exportación porque se ejecutó demasiado tiempo en segundo plano.</string>
+    <string name="export_failure_service_timeout_fix">Mantén ClearCut en primer plano mientras exportas o exporta un intervalo más corto.</string>
+    <string name="export_failure_storage">No se pudo escribir la exportación en el almacenamiento.</string>
+    <string name="export_failure_storage_fix">Libera espacio o elige otra carpeta de destino e inténtalo de nuevo.</string>
+    <string name="export_failure_audio_encode">No se pudo codificar la pista de audio.</string>
+    <string name="export_failure_audio_encode_fix">Revisa los clips de audio por si tienen formatos no compatibles, o exporta solo el vídeo.</string>
+    <string name="export_failure_mixed_render">Falló el paso de renderizado combinado.</string>
+    <string name="export_failure_mixed_render_fix">Quita el último efecto o transición que añadiste e inténtalo de nuevo.</string>
+    <string name="export_failure_subtitle_burn">No se pudieron incrustar los subtítulos en el vídeo.</string>
+    <string name="export_failure_subtitle_burn_fix">Exporta sin subtítulos incrustados y usa un archivo de subtítulos aparte, o simplifica el estilo de los subtítulos.</string>
+    <string name="export_failure_stage_refused">Una etapa del renderizado se negó a continuar.</string>
+    <string name="export_failure_stage_refused_fix">Abre los detalles del clip indicado arriba y deshaz la edición que no se pudo renderizar.</string>
+    <string name="export_failure_unknown_fix">Inténtalo de nuevo y, si se repite, usa «Copiar informe» en la tarjeta de error de exportación.</string>
 </resources>

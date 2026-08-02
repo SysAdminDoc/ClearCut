@@ -212,6 +212,59 @@ class VideoEngine @Inject constructor(
     val exportErrorMessage: StateFlow<String?> = _exportErrorMessage
 
     /**
+     * Why the last export ended in ERROR. Every terminal path below already computes
+     * a specific reason; without a typed carrier the UI could only fall back to one
+     * generic sentence, so a stalled encoder, a zero-byte output and a failed
+     * verification all read identically to the user.
+     */
+    enum class ExportFailureCause {
+        /** The composition or transformer could not be built. */
+        SETUP_FAILED,
+
+        /** Media3 Transformer reported an ExportException while encoding. */
+        ENCODER_FAILED,
+
+        /** Encoding reported success but wrote a zero-byte file. */
+        EMPTY_OUTPUT,
+
+        /** The written file failed post-export track verification. */
+        VERIFICATION_FAILED,
+
+        /** No progress for the stall timeout; the export was treated as hung. */
+        STALLED,
+
+        /** Android stopped the media-processing foreground service before the export finished. */
+        SERVICE_TIMEOUT,
+
+        /** Storage preflight refused the write (space, path, or permission). */
+        STORAGE,
+
+        /** The audio-only or stems encode failed. */
+        AUDIO_ENCODE_FAILED,
+
+        /** The mixed FFmpeg/Transformer render path failed. */
+        MIXED_RENDER_FAILED,
+
+        /** Burning subtitles into the video failed. */
+        SUBTITLE_BURN_IN_FAILED,
+
+        /** A stage refused to change render intent and stopped the export. */
+        STAGE_REFUSED,
+
+        /** No cause was recorded — the only outcome that may use generic copy. */
+        UNKNOWN,
+    }
+
+    private val _exportFailureCause = MutableStateFlow<ExportFailureCause?>(null)
+    val exportFailureCause: StateFlow<ExportFailureCause?> = _exportFailureCause
+
+    /** Record a terminal failure reason next to its message. */
+    private fun failExport(cause: ExportFailureCause, message: String) {
+        _exportErrorMessage.value = message
+        _exportFailureCause.value = cause
+    }
+
+    /**
      * Get or create the composition-backed preview player. Must be called from main thread.
      */
     @androidx.annotation.OptIn(UnstableApi::class)
@@ -493,6 +546,7 @@ class VideoEngine @Inject constructor(
         }
         _exportProgress.value = 0f
         _exportErrorMessage.value = null
+        _exportFailureCause.value = null
 
         val reversedTempFiles = mutableListOf<File>()
         try {
@@ -550,7 +604,7 @@ class VideoEngine @Inject constructor(
         } catch (e: Exception) {
             Log.e(TAG, "Export setup failed", e)
             reversedTempFiles.forEach { it.delete() }
-            _exportErrorMessage.value = e.message ?: "Export setup failed"
+            failExport(ExportFailureCause.SETUP_FAILED, e.message ?: "Export setup failed")
             _exportState.value = ExportState.ERROR
             _exportProgress.value = 0f
             activeTransformer = null
@@ -724,6 +778,7 @@ class VideoEngine @Inject constructor(
         }
         _exportProgress.value = 0f
         _exportErrorMessage.value = null
+        _exportFailureCause.value = null
         return true
     }
 
@@ -739,7 +794,7 @@ class VideoEngine @Inject constructor(
                 _exportState.value = ExportState.CANCELLED
             }
         } else {
-            _exportErrorMessage.value = message ?: "Audio export failed"
+            failExport(ExportFailureCause.AUDIO_ENCODE_FAILED, message ?: "Audio export failed")
             _exportState.value = ExportState.ERROR
         }
         _exportProgress.value = 0f
@@ -896,6 +951,7 @@ class VideoEngine @Inject constructor(
         }
         _exportProgress.value = 0f
         _exportErrorMessage.value = null
+        _exportFailureCause.value = null
 
         val parentDir = outputFile.parentFile ?: context.cacheDir
         val tempDir = File(
@@ -1050,7 +1106,7 @@ class VideoEngine @Inject constructor(
             throw e
         } catch (e: Exception) {
             Log.e(TAG, "Mixed export failed", e)
-            _exportErrorMessage.value = e.message ?: "Mixed export failed"
+            failExport(ExportFailureCause.MIXED_RENDER_FAILED, e.message ?: "Mixed export failed")
             _exportState.value = ExportState.ERROR
             _exportProgress.value = 0f
             activeTransformer = null
@@ -1986,7 +2042,7 @@ class VideoEngine @Inject constructor(
                     // unplayable artifact and trust that it succeeded. Surface as ERROR instead.
                     if (!outputFile.exists() || outputFile.length() <= 0L) {
                         Log.e(TAG, "Transformer reported COMPLETE but output file is empty: ${outputFile.redacted()}")
-                        _exportErrorMessage.value = "Export produced an empty file"
+                        failExport(ExportFailureCause.EMPTY_OUTPUT, "Export produced an empty file")
                         _exportState.value = ExportState.ERROR
                         _exportProgress.value = 0f
                         activeExportOutputFile = null
@@ -2001,7 +2057,7 @@ class VideoEngine @Inject constructor(
                     )
                     if (!verification.valid) {
                         Log.e(TAG, "Post-export verification failed: ${verification.reason}")
-                        _exportErrorMessage.value = verification.reason ?: "Export verification failed"
+                        failExport(ExportFailureCause.VERIFICATION_FAILED, verification.reason ?: "Export verification failed")
                         _exportState.value = ExportState.ERROR
                         _exportProgress.value = 0f
                         activeExportOutputFile = null
@@ -2026,7 +2082,7 @@ class VideoEngine @Inject constructor(
                     // Guard against callbacks arriving after cancellation or timeout
                     if (_exportState.value != ExportState.EXPORTING) return
                     Log.e(TAG, "Export failed", exportException)
-                    _exportErrorMessage.value = exportException.message ?: "Export encoding failed"
+                    failExport(ExportFailureCause.ENCODER_FAILED, exportException.message ?: "Export encoding failed")
                     _exportState.value = ExportState.ERROR
                     _exportProgress.value = 0f
                     activeExportOutputFile = null
@@ -2070,7 +2126,7 @@ class VideoEngine @Inject constructor(
             if (stallPolls >= stallTimeoutPolls && _exportState.value == ExportState.EXPORTING && !terminalReached) {
                 Log.w(TAG, "Export made no progress for 10 minutes — treating as a hang")
                 transformer.cancel()
-                _exportErrorMessage.value = "Export stalled — no progress for 10 minutes"
+                failExport(ExportFailureCause.STALLED, "Export stalled — no progress for 10 minutes")
                 _exportState.value = ExportState.ERROR
                 _exportProgress.value = 0f
                 activeExportOutputFile = null
@@ -2116,7 +2172,7 @@ class VideoEngine @Inject constructor(
         )
         val failure = check.failure ?: return
         val message = context.exportStorageFailureMessage(failure)
-        _exportErrorMessage.value = message
+        failExport(ExportFailureCause.STORAGE, message)
         _exportState.value = ExportState.ERROR
         _exportProgress.value = 0f
         activeExportOutputFile = null
@@ -2147,7 +2203,7 @@ class VideoEngine @Inject constructor(
         synchronized(this) {
             if (_exportState.value != ExportState.EXPORTING) return false
             Log.w(TAG, "Failing export after foreground service media-processing timeout")
-            _exportErrorMessage.value = message
+            failExport(ExportFailureCause.SERVICE_TIMEOUT, message)
             _exportState.value = ExportState.ERROR
             activeTransformer?.cancel()
             activeTransformer = null

@@ -84,6 +84,16 @@ class ExportDelegate(
     private fun text(resId: Int, vararg args: Any): String =
         appContext.getString(resId, *args)
 
+    /**
+     * Turn the engine's recorded failure cause into the sentence the user reads:
+     * what went wrong, then what to do about it. Only [VideoEngine.ExportFailureCause.UNKNOWN]
+     * and a missing cause may fall back to the generic copy.
+     */
+    private fun exportFailureText(cause: VideoEngine.ExportFailureCause?): String {
+        val copy = exportFailureCopyFor(cause)
+        return text(copy.messageRes) + " " + text(copy.remediationRes)
+    }
+
     // --- Export ---
     private val progressSamples = mutableListOf<Float>()
     // Holder for the GIF-style / contact-sheet / any other non-Transformer
@@ -1273,7 +1283,9 @@ class ExportDelegate(
                             assFile?.delete()
                             burnedFile?.delete()
                             outputFile.delete()
-                            val message = text(R.string.export_video_failed_message)
+                            val message = exportFailureText(
+                                VideoEngine.ExportFailureCause.SUBTITLE_BURN_IN_FAILED
+                            )
                             updateExport {
                                 it.copy(
                                     state = ExportState.ERROR,
@@ -1344,7 +1356,11 @@ class ExportDelegate(
                     // which clip and stage failed — say so instead of collapsing
                     // it into the generic "export failed" copy.
                     is ExportStageException -> e.message
-                    else -> text(R.string.export_video_failed_message)
+                    // The engine recorded exactly why it stopped. Turning that into
+                    // its own sentence plus a remediation line is the whole point of
+                    // the typed cause; the generic string is the last resort, not the
+                    // default.
+                    else -> exportFailureText(videoEngine.exportFailureCause.value)
                 }
                 val technicalMessage = e.message ?: e::class.java.simpleName
                 updateExport {
@@ -1460,7 +1476,7 @@ class ExportDelegate(
                 throw e
             } catch (e: Exception) {
                 outputFile.delete()
-                val message = text(R.string.export_video_failed_message)
+                val message = exportFailureText(videoEngine.exportFailureCause.value)
                 val technicalMessage = e.message ?: e::class.java.simpleName
                 updateExport {
                     it.copy(
@@ -1793,7 +1809,9 @@ class ExportDelegate(
     ) {
         val message = when (e) {
             is ExportStorageException -> appContext.exportStorageFailureMessage(e.failure)
-            else -> text(R.string.export_failed)
+            else -> exportFailureText(
+                videoEngine.exportFailureCause.value ?: VideoEngine.ExportFailureCause.AUDIO_ENCODE_FAILED
+            )
         }
         val technicalMessage = e.message ?: e::class.java.simpleName
         android.util.Log.w("ExportDelegate", "Audio export failed", e)
@@ -2174,3 +2192,54 @@ class ExportDelegate(
     }
 
 }
+
+/** The two lines a terminal export failure must produce: the cause, then the fix. */
+internal data class ExportFailureCopy(
+    @androidx.annotation.StringRes val messageRes: Int,
+    @androidx.annotation.StringRes val remediationRes: Int,
+)
+
+/**
+ * Every terminal export failure maps to its own pair of strings. Seven distinct
+ * failures used to collapse into one "export failed" sentence with no remediation,
+ * which left the user with nothing to act on and the triager with nothing to read.
+ */
+internal fun exportFailureCopyFor(cause: VideoEngine.ExportFailureCause?): ExportFailureCopy =
+    when (cause) {
+        VideoEngine.ExportFailureCause.SETUP_FAILED -> ExportFailureCopy(
+            R.string.export_failure_setup, R.string.export_failure_setup_fix
+        )
+        VideoEngine.ExportFailureCause.ENCODER_FAILED -> ExportFailureCopy(
+            R.string.export_failure_encoder, R.string.export_failure_encoder_fix
+        )
+        VideoEngine.ExportFailureCause.EMPTY_OUTPUT -> ExportFailureCopy(
+            R.string.export_failure_empty_output, R.string.export_failure_empty_output_fix
+        )
+        VideoEngine.ExportFailureCause.VERIFICATION_FAILED -> ExportFailureCopy(
+            R.string.export_failure_verification, R.string.export_failure_verification_fix
+        )
+        VideoEngine.ExportFailureCause.STALLED -> ExportFailureCopy(
+            R.string.export_failure_stalled, R.string.export_failure_stalled_fix
+        )
+        VideoEngine.ExportFailureCause.SERVICE_TIMEOUT -> ExportFailureCopy(
+            R.string.export_failure_service_timeout, R.string.export_failure_service_timeout_fix
+        )
+        VideoEngine.ExportFailureCause.STORAGE -> ExportFailureCopy(
+            R.string.export_failure_storage, R.string.export_failure_storage_fix
+        )
+        VideoEngine.ExportFailureCause.AUDIO_ENCODE_FAILED -> ExportFailureCopy(
+            R.string.export_failure_audio_encode, R.string.export_failure_audio_encode_fix
+        )
+        VideoEngine.ExportFailureCause.MIXED_RENDER_FAILED -> ExportFailureCopy(
+            R.string.export_failure_mixed_render, R.string.export_failure_mixed_render_fix
+        )
+        VideoEngine.ExportFailureCause.SUBTITLE_BURN_IN_FAILED -> ExportFailureCopy(
+            R.string.export_failure_subtitle_burn, R.string.export_failure_subtitle_burn_fix
+        )
+        VideoEngine.ExportFailureCause.STAGE_REFUSED -> ExportFailureCopy(
+            R.string.export_failure_stage_refused, R.string.export_failure_stage_refused_fix
+        )
+        VideoEngine.ExportFailureCause.UNKNOWN, null -> ExportFailureCopy(
+            R.string.export_video_failed_message, R.string.export_failure_unknown_fix
+        )
+    }

@@ -2758,4 +2758,27 @@
     <string name="partial_restore_message">This project opened, but parts of it could not be read:\n\n%1$s\n\nSaving is paused so the missing pieces are not written over. Keep the project as recovered, or try the previous autosave, which may still contain them.</string>
     <string name="partial_restore_keep">Keep as recovered</string>
     <string name="partial_restore_use_backup">Try previous autosave</string>
+    <string name="export_failure_setup">The export could not be set up.</string>
+    <string name="export_failure_setup_fix">Reopen the project and try again; if it repeats, remove the most recently added clip or effect.</string>
+    <string name="export_failure_encoder">The video encoder failed part-way through.</string>
+    <string name="export_failure_encoder_fix">Try a lower resolution or a different codec in Export settings.</string>
+    <string name="export_failure_empty_output">Encoding reported success but wrote an empty file.</string>
+    <string name="export_failure_empty_output_fix">This device\'s encoder rejected the timeline. Try a lower resolution, or H.264 instead of H.265.</string>
+    <string name="export_failure_verification">The exported file failed its integrity check and was deleted.</string>
+    <string name="export_failure_verification_fix">Try again; if it repeats, export a shorter range to find the clip that breaks it.</string>
+    <string name="export_failure_stalled">The export stopped making progress and was cancelled.</string>
+    <string name="export_failure_stalled_fix">Close other apps and retry. Long 4K timelines can exhaust the encoder on a warm device.</string>
+    <string name="export_failure_service_timeout">Android stopped the export because it ran too long in the background.</string>
+    <string name="export_failure_service_timeout_fix">Keep ClearCut in the foreground while exporting, or export a shorter range.</string>
+    <string name="export_failure_storage">The export could not be written to storage.</string>
+    <string name="export_failure_storage_fix">Free up space or choose a different output folder, then try again.</string>
+    <string name="export_failure_audio_encode">The audio track could not be encoded.</string>
+    <string name="export_failure_audio_encode_fix">Check the audio clips for unsupported formats, or export video only.</string>
+    <string name="export_failure_mixed_render">The combined render pass failed.</string>
+    <string name="export_failure_mixed_render_fix">Remove the most recently added effect or transition and try again.</string>
+    <string name="export_failure_subtitle_burn">Subtitles could not be burned into the video.</string>
+    <string name="export_failure_subtitle_burn_fix">Export without burned-in subtitles and use a separate subtitle file, or simplify the caption styling.</string>
+    <string name="export_failure_stage_refused">A render stage refused to continue.</string>
+    <string name="export_failure_stage_refused_fix">Open the details for the clip named above and undo the edit it could not render.</string>
+    <string name="export_failure_unknown_fix">Try again, then use Copy report in the export error card if it repeats.</string>
 </resources>
