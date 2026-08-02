@@ -1318,8 +1318,10 @@
     <string name="snapshot_restored_success">Instantánea restaurada: %1$s</string>
     <string name="snapshot_restore_failed">No se pudo restaurar la instantánea</string>
     <string name="snapshot_delete_title">¿Eliminar instantánea?</string>
-    <string name="snapshot_delete_body">¿Eliminar “%1$s” del historial de versiones? Esto no se puede deshacer.</string>
+    <string name="snapshot_delete_body">¿Eliminar “%1$s” del historial de versiones? Puedes restaurarla una vez después de eliminarla.</string>
     <string name="snapshot_delete_confirm">Eliminar instantánea</string>
+    <string name="snapshot_deleted_title">Instantánea eliminada</string>
+    <string name="snapshot_deleted_body">“%1$s” se eliminó del historial de versiones. ¿Quieres restaurarla ahora?</string>
     <string name="pip_title">Imagen en imagen</string>
     <string name="pip_layout">Diseño</string>
     <string name="pip_close_cd">Cerrar el panel de imágenes incrustadas</string>
@@ -2507,7 +2509,8 @@
     <string name="export_failure_stage_refused">Una etapa del renderizado se negó a continuar.</string>
     <string name="export_failure_stage_refused_fix">Abre los detalles del clip indicado arriba y deshaz la edición que no se pudo renderizar.</string>
     <string name="export_failure_unknown_fix">Inténtalo de nuevo y, si se repite, usa «Copiar informe» en la tarjeta de error de exportación.</string>
-    <string name="vm_snapshot_deleted_toast">Se eliminó la instantánea «%1$s». Deshaz para recuperarla.</string>
+    <string name="vm_snapshot_deleted_toast">Se eliminó la instantánea «%1$s». Ahora puedes restaurarla.</string>
+    <string name="vm_snapshot_restored_toast">Se restauró la instantánea «%1$s».</string>
     <string name="vm_ai_ledger_cleared_toast">Se borró el registro de uso de IA. Deshaz para recuperarlo.</string>
     <string name="project_template_restore_success">Se restauró «%1$s».</string>
     <string name="project_template_restore_success_generic">Plantilla restaurada.</string>

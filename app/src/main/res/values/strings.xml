@@ -1399,8 +1399,10 @@
     <string name="snapshot_restored_success">Restored snapshot: %1$s</string>
     <string name="snapshot_restore_failed">Snapshot could not be restored</string>
     <string name="snapshot_delete_title">Delete snapshot?</string>
-    <string name="snapshot_delete_body">Delete “%1$s” from version history? This cannot be undone.</string>
+    <string name="snapshot_delete_body">Delete “%1$s” from version history? You can restore it once after deletion.</string>
     <string name="snapshot_delete_confirm">Delete snapshot</string>
+    <string name="snapshot_deleted_title">Snapshot deleted</string>
+    <string name="snapshot_deleted_body">“%1$s” was removed from version history. Restore it now?</string>
 
     <!-- PipPresetsPanel -->
     <string name="pip_title">Picture-in-Picture</string>
@@ -2780,7 +2782,8 @@
     <string name="export_failure_stage_refused">A render stage refused to continue.</string>
     <string name="export_failure_stage_refused_fix">Open the details for the clip named above and undo the edit it could not render.</string>
     <string name="export_failure_unknown_fix">Try again, then use Copy report in the export error card if it repeats.</string>
-    <string name="vm_snapshot_deleted_toast">Snapshot “%1$s” deleted. Undo to bring it back.</string>
+    <string name="vm_snapshot_deleted_toast">Snapshot “%1$s” deleted. Restore is available now.</string>
+    <string name="vm_snapshot_restored_toast">Snapshot “%1$s” restored.</string>
     <string name="vm_ai_ledger_cleared_toast">AI usage ledger cleared. Undo to bring it back.</string>
     <string name="project_template_restore_success">Restored “%1$s”.</string>
     <string name="project_template_restore_success_generic">Template restored.</string>

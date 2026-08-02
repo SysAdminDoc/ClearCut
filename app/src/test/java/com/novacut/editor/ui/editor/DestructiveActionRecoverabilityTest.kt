@@ -1,14 +1,16 @@
 package com.novacut.editor.ui.editor
 
+import com.novacut.editor.model.ProjectSnapshot
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
 /**
  * Editor undo covers nearly every mutation, which makes the gaps more surprising,
- * not less. Three destructive actions had no undo and no restore; one of them --
- * deleting a user-created checkpoint -- also had no confirmation and no toast, so
- * the work simply vanished.
+ * not less. Destructive actions must either stay in the document undo model or expose
+ * an explicit restore path when they are metadata rather than document edits.
  *
  * These assertions read source text because the behaviour they guard lives across a
  * ViewModel, a manager and a Compose sheet that no JVM unit test can stand up. They
@@ -17,10 +19,11 @@ import java.io.File
 class DestructiveActionRecoverabilityTest {
 
     @Test
-    fun deletingASnapshotIsUndoableAndSaysSo() {
+    fun deletingASnapshotUsesAnExplicitRestoreOffer() {
         val body = functionBody(editorViewModel(), "fun deleteSnapshot(")
 
-        assertTrue("deleteSnapshot must push an undo state", body.contains("saveUndoState("))
+        assertFalse("snapshot metadata must not enter the document undo stack", body.contains("saveUndoState("))
+        assertTrue("deleteSnapshot must hold the deleted checkpoint", body.contains("_restorableSnapshot.value = snapshot"))
         assertTrue("deleteSnapshot must tell the user it happened", body.contains("showToast("))
     }
 
@@ -33,21 +36,35 @@ class DestructiveActionRecoverabilityTest {
     }
 
     @Test
-    fun theUndoSnapshotActuallyCarriesTheCheckpointList() {
+    fun undoActionsDoNotOwnTheCheckpointList() {
         val source = editorViewModel()
+        val undoAction = undoActionBody(source)
 
-        assertTrue(
-            "UndoAction must capture projectSnapshots, or deleting one cannot be undone",
-            source.contains("val projectSnapshots: List<ProjectSnapshot>")
-        )
-        assertTrue(
-            "captureUndoAction must record the checkpoints",
-            source.contains("projectSnapshots = state.projectSnapshots.toList()")
-        )
-        assertTrue(
-            "undo/redo must restore the checkpoints",
-            source.contains("projectSnapshots = action.projectSnapshots")
-        )
+        assertFalse("UndoAction must not capture project snapshots", undoAction.contains("projectSnapshots"))
+        assertFalse("undo/redo must not restore project snapshots", source.contains("projectSnapshots = action.projectSnapshots"))
+        assertTrue("undo/redo must restore through the document-only helper", source.contains("withUndoDocument"))
+    }
+
+    @Test
+    fun restoringAnEarlierEditLeavesCreatedSnapshotPresent() {
+        val snapshot = ProjectSnapshot(projectId = "project", label = "Before export", stateJson = "{}")
+        val current = EditorState(projectSnapshots = listOf(snapshot))
+        val earlierEdit = UndoAction("Trim clip", tracks = emptyList(), textOverlays = emptyList())
+
+        val restored = current.withUndoDocument(earlierEdit)
+
+        assertEquals(listOf(snapshot), restored.projectSnapshots)
+    }
+
+    @Test
+    fun redoingAfterAnUndoLeavesSnapshotListPresent() {
+        val snapshot = ProjectSnapshot(projectId = "project", label = "Before export", stateJson = "{}")
+        val afterUndo = EditorState(projectSnapshots = listOf(snapshot))
+        val redoEdit = UndoAction("Redo trim", tracks = emptyList(), textOverlays = emptyList())
+
+        val restored = afterUndo.withUndoDocument(redoEdit)
+
+        assertEquals(listOf(snapshot), restored.projectSnapshots)
     }
 
     @Test
@@ -72,8 +89,26 @@ class DestructiveActionRecoverabilityTest {
         assertTrue("the sheet must surface the restore", sheet.contains("onRestoreDeletedTemplate"))
     }
 
+    @Test
+    fun theEditorOffersTheWayBackForADeletedSnapshot() {
+        val viewModel = editorViewModel()
+        val host = locate("app/src/main/java/com/novacut/editor/ui/editor/EditorUtilityPanelHost.kt").readText()
+
+        assertTrue(viewModel.contains("fun restoreDeletedSnapshot()"))
+        assertTrue(viewModel.contains("private val _restorableSnapshot = MutableStateFlow<ProjectSnapshot?>(null)"))
+        assertTrue("the editor host must surface the restore", host.contains("onClick = viewModel::restoreDeletedSnapshot"))
+    }
+
     private fun editorViewModel(): String =
         locate("app/src/main/java/com/novacut/editor/ui/editor/EditorViewModel.kt").readText()
+
+    private fun undoActionBody(source: String): String {
+        val start = source.indexOf("data class UndoAction(")
+        require(start >= 0) { "UndoAction not found" }
+        val end = source.indexOf("\n)\n\n/**", start)
+        require(end > start) { "could not find the end of UndoAction" }
+        return source.substring(start, end)
+    }
 
     /** Text from a function's declaration to its closing brace at the same indent. */
     private fun functionBody(source: String, declaration: String): String {

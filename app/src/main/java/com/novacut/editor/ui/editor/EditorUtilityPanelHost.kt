@@ -55,6 +55,54 @@ fun BoxScope.EditorUtilityPanelHost(
     onAction: (String) -> Unit = {}
 ) {
     val semanticColors = LocalClearCutColors.current
+    val restorableSnapshot by viewModel.restorableSnapshot.collectAsStateWithLifecycle()
+
+    restorableSnapshot?.let { snapshot ->
+        AlertDialog(
+            onDismissRequest = viewModel::dismissSnapshotRestore,
+            icon = {
+                ClearCutDialogIcon(
+                    icon = Icons.Default.Restore,
+                    accent = ClearCutAccents.Green
+                )
+            },
+            title = {
+                Text(
+                    text = stringResource(R.string.snapshot_deleted_title),
+                    color = semanticColors.text,
+                    style = MaterialTheme.typography.titleLarge
+                )
+            },
+            text = {
+                Text(
+                    text = stringResource(
+                        R.string.snapshot_deleted_body,
+                        snapshot.label.ifEmpty { stringResource(R.string.panel_snapshot_untitled) }
+                    ),
+                    color = semanticColors.subtext,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                ClearCutPrimaryButton(
+                    text = stringResource(R.string.snapshot_restore_confirm),
+                    onClick = viewModel::restoreDeletedSnapshot,
+                    icon = Icons.Default.Restore
+                )
+            },
+            dismissButton = {
+                ClearCutSecondaryButton(
+                    text = stringResource(R.string.panel_snapshot_cancel),
+                    onClick = viewModel::dismissSnapshotRestore
+                )
+            },
+            containerColor = semanticColors.panelHighest,
+            titleContentColor = semanticColors.text,
+            textContentColor = semanticColors.subtext,
+            shape = RoundedCornerShape(Radius.xxl)
+        )
+    }
+
     BottomSheetSlot(
         visible = state.panels.isOpen(PanelId.SCRATCHPAD),
         modifier = Modifier.align(Alignment.BottomCenter)
