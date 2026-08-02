@@ -529,7 +529,7 @@ com.novacut.editor/
 ./gradlew assembleRelease
 
 # Managed-device startup/editor performance gate
-./gradlew :baselineprofile:pixel6Api36BenchmarkReleaseAndroidTest :baselineprofile:collectNonMinifiedReleaseBaselineProfile
+./gradlew :baselineprofile:pixel6Api37BenchmarkReleaseAndroidTest :baselineprofile:collectNonMinifiedReleaseBaselineProfile
 ```
 
 ### Manual QA: audio focus
@@ -559,7 +559,7 @@ With the editor activity visible, run TTS preview, start and stop a voiceover re
 ### Requirements
 - Android Studio Panda 3+ (2025.3.3+)
 - AGP 9.1.1, Gradle 9.3.1, JDK 21
-- Android SDK 36
+- Android SDK 37
 
 ### Release Signing
 Configure via `keystore.properties`:
@@ -646,7 +646,7 @@ Open-source notices are available in **Settings > Third-party notices > Open sou
 ## Supported Devices
 
 - **Min SDK:** 26 (Android 8.0 Oreo)
-- **Target SDK:** 36 (Android 16)
+- **Target SDK:** 37 (Android 17)
 - **Required:** OpenGL ES 3.0
 - **Recommended:** 4GB+ RAM, Snapdragon 7-series or better for AI features
 - **AV1 hardware encoding:** Pixel 8+, Snapdragon 8 Gen 3+, Dimensity 9200+

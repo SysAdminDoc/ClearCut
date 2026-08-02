@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace = "com.clearcut.baselineprofile"
-    compileSdk = 36
+    compileSdk = 37
     targetProjectPath = ":app"
 
     defaultConfig {
         minSdk = 28
-        targetSdk = 36
+        targetSdk = 37
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         testInstrumentationRunnerArguments["androidx.benchmark.suppressErrors"] = "EMULATOR"
     }
@@ -22,9 +22,9 @@ android {
 
     testOptions.managedDevices {
         localDevices {
-            create("pixel6Api36") {
+            create("pixel6Api37") {
                 device = "Pixel 6"
-                apiLevel = 36
+                apiLevel = 37
                 systemImageSource = "google"
             }
         }
@@ -32,7 +32,7 @@ android {
 }
 
 baselineProfile {
-    managedDevices += "pixel6Api36"
+    managedDevices += "pixel6Api37"
     useConnectedDevices = false
 }
 

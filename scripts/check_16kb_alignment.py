@@ -5,7 +5,7 @@ APK or AAB declares 16 KB (0x4000) or larger LOAD-segment alignment.
 
 Why: Google Play blocks uploads of apps targeting Android 15+ (API 35+)
 that bundle native libraries whose ELF LOAD segments are not 16 KB aligned.
-ClearCut targets API 36; non-compliance is a hard upload gate.
+ClearCut targets API 37; non-compliance is a hard upload gate.
 
 Usage:
     python scripts/check_16kb_alignment.py app/build/intermediates/merged_native_libs/release/out/lib/arm64-v8a

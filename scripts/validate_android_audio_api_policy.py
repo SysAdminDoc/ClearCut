@@ -11,6 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "app" / "src" / "main" / "AndroidManifest.xml"
+APP_GRADLE = ROOT / "app" / "build.gradle.kts"
 
 
 class AudioPolicyError(RuntimeError):
@@ -65,6 +66,30 @@ def verify_export_service_has_no_background_audio(root: Path = ROOT) -> None:
         raise AudioPolicyError(f"{rel(path)} must not perform background audio APIs: {', '.join(violations)}")
 
 
+def verify_android_17_target(root: Path = ROOT) -> None:
+    build_path = root / APP_GRADLE.relative_to(ROOT)
+    build = read_text(build_path)
+    for assignment in ("compileSdk = 37", "targetSdk = 37"):
+        if not re.search(rf"(?m)^\s*{re.escape(assignment)}\s*$", build):
+            raise AudioPolicyError(f"{rel(build_path)} must pin {assignment}")
+
+
+def verify_large_screen_configuration(root: Path = ROOT) -> None:
+    manifest_path = root / MANIFEST.relative_to(ROOT)
+    manifest = read_text(manifest_path)
+    if 'android:resizeableActivity="true"' not in manifest:
+        raise AudioPolicyError("MainActivity must remain resizeable for Android 17 large-screen behavior")
+    if "android:screenOrientation=" in manifest:
+        raise AudioPolicyError("Android 17 target must not opt MainActivity out of large-screen orientation behavior")
+
+
+def verify_no_writable_native_loads(root: Path = ROOT) -> None:
+    source_root = root / "app" / "src" / "main" / "java"
+    for path in source_root.rglob("*.kt"):
+        if re.search(r"\bSystem\.load\s*\(", path.read_text(encoding="utf-8")):
+            raise AudioPolicyError(f"{rel(path)} must not load a native library from a writable path with System.load()")
+
+
 def verify_manifest_foreground_service_type(root: Path = ROOT) -> None:
     manifest_path = root / MANIFEST.relative_to(ROOT)
     manifest = read_text(manifest_path)
@@ -104,6 +129,7 @@ def verify_visible_audio_paths_request_focus(root: Path = ROOT) -> None:
 def verify_documented_smoke(root: Path = ROOT) -> None:
     readme = read_text(root / "README.md")
     required = (
+        "Target SDK",
         "Android 17 audio hardening",
         "adb shell cmd audio set-enable-hardening throw",
         "AudioHardening",
@@ -117,6 +143,9 @@ def verify_documented_smoke(root: Path = ROOT) -> None:
 
 
 def validate(root: Path = ROOT) -> None:
+    verify_android_17_target(root)
+    verify_large_screen_configuration(root)
+    verify_no_writable_native_loads(root)
     verify_export_service_has_no_background_audio(root)
     verify_manifest_foreground_service_type(root)
     verify_visible_audio_paths_request_focus(root)
@@ -130,6 +159,11 @@ def write_fixture(root: Path, relative: str, text: str) -> None:
 
 
 def write_valid_fixture(root: Path, export_service: str = "class ExportService { fun run() = Unit }\n") -> None:
+    write_fixture(
+        root,
+        "app/build.gradle.kts",
+        "android {\n    compileSdk = 37\n    defaultConfig {\n        targetSdk = 37\n    }\n}\n",
+    )
     write_fixture(root, "app/src/main/java/com/novacut/editor/engine/ExportService.kt", export_service)
     write_fixture(
         root,
@@ -138,6 +172,7 @@ def write_valid_fixture(root: Path, export_service: str = "class ExportService {
         <manifest xmlns:android="http://schemas.android.com/apk/res/android">
           <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROCESSING" />
           <application>
+            <activity android:name=".MainActivity" android:resizeableActivity="true" />
             <service
               android:name=".engine.ExportService"
               android:foregroundServiceType="mediaProcessing|dataSync"
@@ -161,7 +196,7 @@ def write_valid_fixture(root: Path, export_service: str = "class ExportService {
     write_fixture(
         root,
         "README.md",
-        "Android 17 audio hardening: run `adb shell cmd audio set-enable-hardening throw`, "
+        "Target SDK 37. Android 17 audio hardening: run `adb shell cmd audio set-enable-hardening throw`, "
         "then exercise TTS preview, voiceover, and export while watching AudioHardening logs.\n",
     )
 

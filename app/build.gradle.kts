@@ -18,12 +18,12 @@ fun resolveSigningSecret(vararg keys: String): String? {
 
 android {
     namespace = "com.novacut.editor"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.novacut.editor"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 295
         versionName = "3.78.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
