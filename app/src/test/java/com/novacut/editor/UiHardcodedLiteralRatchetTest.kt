@@ -19,7 +19,7 @@ class UiHardcodedLiteralRatchetTest {
             "AudioMixerPanel.kt" to 2,
             "MultiCamPanel.kt" to 0,
             "PipPresetsPanel.kt" to 21,
-            "SpeedPresets.kt" to 14,
+            "SpeedPresets.kt" to 0,
             "StickerPickerPanel.kt" to 0,
             "ToolPanel.kt" to 10,
             "EditorViewModel.kt" to 7,

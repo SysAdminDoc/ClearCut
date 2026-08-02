@@ -66,21 +66,21 @@ enum class ProjectFilterMode(val label: String) {
     EMPTY("No clips")
 }
 
-enum class SpeedPresetType(val displayName: String, val description: String) {
-    BULLET_TIME("Bullet Time", "Dramatic slow-mo with speed ramp"),
-    HERO_TIME("Hero Time", "Slow entrance, normal exit"),
-    MONTAGE("Montage", "Fast cuts with brief pauses"),
-    JUMP_CUT("Jump Cut", "Instant speed changes"),
-    SMOOTH_RAMP_UP("Smooth Ramp Up", "Gradually accelerate"),
-    SMOOTH_RAMP_DOWN("Smooth Ramp Down", "Gradually decelerate"),
-    PULSE("Pulse", "Rhythmic speed oscillation"),
-    FLASH("Flash", "Brief fast forward"),
-    DREAMY("Dreamy", "Slow with gentle waves"),
-    REWIND("Rewind", "Fast reverse feel"),
-    TIME_FREEZE("Time Freeze", "Freeze at midpoint then resume"),
-    FILM_REEL("Film Reel", "Classic 24fps stutter effect"),
-    HEARTBEAT("Heartbeat", "Repeating fast-slow-fast pattern"),
-    CRESCENDO("Crescendo", "Exponential ramp from slow to fast")
+enum class SpeedPresetType {
+    BULLET_TIME,
+    HERO_TIME,
+    MONTAGE,
+    JUMP_CUT,
+    SMOOTH_RAMP_UP,
+    SMOOTH_RAMP_DOWN,
+    PULSE,
+    FLASH,
+    DREAMY,
+    REWIND,
+    TIME_FREEZE,
+    FILM_REEL,
+    HEARTBEAT,
+    CRESCENDO
 }
 
 enum class SaveIndicatorState {

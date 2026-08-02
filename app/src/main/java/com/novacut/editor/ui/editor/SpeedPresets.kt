@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.novacut.editor.R
 import com.novacut.editor.model.*
@@ -38,8 +39,8 @@ fun SpeedPresetsPanel(
     }
 
     PremiumEditorPanel(
-        title = "Speed Presets",
-        subtitle = "Shape tempo, impact, and rhythm with reusable speed curves instead of rebuilding them point by point.",
+        title = stringResource(R.string.panel_speed_presets_title),
+        subtitle = stringResource(R.string.panel_speed_presets_subtitle),
         icon = Icons.Default.Speed,
         accent = ClearCutAccents.Peach,
         onClose = onClose,
@@ -52,26 +53,30 @@ fun SpeedPresetsPanel(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 PremiumPanelPill(
-                    text = "${SpeedPresetType.entries.size} presets",
+                    text = pluralStringResource(
+                        R.plurals.panel_speed_presets_count,
+                        SpeedPresetType.entries.size,
+                        SpeedPresetType.entries.size,
+                    ),
                     accent = ClearCutAccents.Peach
                 )
                 PremiumPanelPill(
-                    text = "Reusable curves",
+                    text = stringResource(R.string.panel_speed_presets_reusable_curves),
                     accent = ClearCutAccents.Sapphire
                 )
                 PremiumPanelPill(
-                    text = "Clip mode",
+                    text = stringResource(R.string.panel_speed_presets_clip_mode),
                     accent = ClearCutAccents.Green
                 )
             }
 
             Text(
-                text = "Speed language",
+                text = stringResource(R.string.panel_speed_presets_language_title),
                 color = ClearCutAccents.Rosewater,
                 style = MaterialTheme.typography.labelLarge
             )
             Text(
-                text = "Preset curves are best when you want a repeatable editorial feel: hero slow motion, rhythmic pulses, stutters, or bold fast-forward beats.",
+                text = stringResource(R.string.panel_speed_presets_language_description),
                 color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -84,13 +89,13 @@ fun SpeedPresetsPanel(
 
             PremiumPanelCard(accent = section.accent) {
                 Text(
-                    text = section.title,
+                    text = stringResource(section.titleRes),
                     color = section.accent,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = section.subtitle,
+                    text = stringResource(section.subtitleRes),
                     color = semanticColors.subtext,
                     style = MaterialTheme.typography.bodySmall
                 )
@@ -183,7 +188,7 @@ private fun SpeedPresetCard(
             }
 
             Text(
-                text = presetType.displayName,
+                text = stringResource(presetType.displayNameRes()),
                 color = semanticColors.text,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
@@ -191,18 +196,22 @@ private fun SpeedPresetCard(
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = presetType.description,
+                text = stringResource(presetType.descriptionRes()),
                 color = semanticColors.subtext,
                 style = MaterialTheme.typography.bodySmall,
                 minLines = 2
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PremiumPanelPill(
-                    text = "${formatSpeed(minMax.first)}-${formatSpeed(minMax.second)}",
+                    text = stringResource(
+                        R.string.speed_preset_range,
+                        formatSpeed(minMax.first),
+                        formatSpeed(minMax.second),
+                    ),
                     accent = accent
                 )
                 PremiumPanelPill(
-                    text = speedPresetFeel(presetType),
+                    text = stringResource(presetType.feelRes()),
                     accent = ClearCutAccents.Sky
                 )
             }
@@ -211,16 +220,16 @@ private fun SpeedPresetCard(
 }
 
 private data class SpeedPresetSection(
-    val title: String,
-    val subtitle: String,
+    val titleRes: Int,
+    val subtitleRes: Int,
     val accent: Color,
     val presets: List<SpeedPresetType>
 )
 
 private fun speedPresetSections(): List<SpeedPresetSection> = listOf(
     SpeedPresetSection(
-        title = "Cinematic ramps",
-        subtitle = "Use these when you want entrance, release, or crescendo moments to feel composed and deliberate.",
+        titleRes = R.string.panel_speed_presets_cinematic_title,
+        subtitleRes = R.string.panel_speed_presets_cinematic_description,
         accent = ClearCutAccents.Peach,
         presets = listOf(
             SpeedPresetType.BULLET_TIME,
@@ -232,8 +241,8 @@ private fun speedPresetSections(): List<SpeedPresetSection> = listOf(
         )
     ),
     SpeedPresetSection(
-        title = "Rhythm and pulse",
-        subtitle = "Great for music-driven edits, montage pacing, and beats that need a more graphic editorial pattern.",
+        titleRes = R.string.panel_speed_presets_rhythm_title,
+        subtitleRes = R.string.panel_speed_presets_rhythm_description,
         accent = ClearCutAccents.Mauve,
         presets = listOf(
             SpeedPresetType.MONTAGE,
@@ -243,8 +252,8 @@ private fun speedPresetSections(): List<SpeedPresetSection> = listOf(
         )
     ),
     SpeedPresetSection(
-        title = "Punch and disruption",
-        subtitle = "Reach for these when the cut needs freeze moments, stutters, flashes, or aggressive tempo changes.",
+        titleRes = R.string.panel_speed_presets_punch_title,
+        subtitleRes = R.string.panel_speed_presets_punch_description,
         accent = ClearCutAccents.Sapphire,
         presets = listOf(
             SpeedPresetType.JUMP_CUT,
@@ -255,21 +264,55 @@ private fun speedPresetSections(): List<SpeedPresetSection> = listOf(
     )
 )
 
-private fun speedPresetFeel(type: SpeedPresetType): String = when (type) {
-    SpeedPresetType.BULLET_TIME -> "Hero"
-    SpeedPresetType.HERO_TIME -> "Entrance"
-    SpeedPresetType.MONTAGE -> "Rhythm"
-    SpeedPresetType.JUMP_CUT -> "Punch"
-    SpeedPresetType.SMOOTH_RAMP_UP -> "Lift"
-    SpeedPresetType.SMOOTH_RAMP_DOWN -> "Ease"
-    SpeedPresetType.PULSE -> "Pulse"
-    SpeedPresetType.FLASH -> "Hit"
-    SpeedPresetType.DREAMY -> "Float"
-    SpeedPresetType.REWIND -> "Retro"
-    SpeedPresetType.TIME_FREEZE -> "Freeze"
-    SpeedPresetType.FILM_REEL -> "Stutter"
-    SpeedPresetType.HEARTBEAT -> "Beat"
-    SpeedPresetType.CRESCENDO -> "Build"
+private fun SpeedPresetType.displayNameRes(): Int = when (this) {
+    SpeedPresetType.BULLET_TIME -> R.string.speed_preset_bullet_time_name
+    SpeedPresetType.HERO_TIME -> R.string.speed_preset_hero_time_name
+    SpeedPresetType.MONTAGE -> R.string.speed_preset_montage_name
+    SpeedPresetType.JUMP_CUT -> R.string.speed_preset_jump_cut_name
+    SpeedPresetType.SMOOTH_RAMP_UP -> R.string.speed_preset_smooth_ramp_up_name
+    SpeedPresetType.SMOOTH_RAMP_DOWN -> R.string.speed_preset_smooth_ramp_down_name
+    SpeedPresetType.PULSE -> R.string.speed_preset_pulse_name
+    SpeedPresetType.FLASH -> R.string.speed_preset_flash_name
+    SpeedPresetType.DREAMY -> R.string.speed_preset_dreamy_name
+    SpeedPresetType.REWIND -> R.string.speed_preset_rewind_name
+    SpeedPresetType.TIME_FREEZE -> R.string.speed_preset_time_freeze_name
+    SpeedPresetType.FILM_REEL -> R.string.speed_preset_film_reel_name
+    SpeedPresetType.HEARTBEAT -> R.string.speed_preset_heartbeat_name
+    SpeedPresetType.CRESCENDO -> R.string.speed_preset_crescendo_name
+}
+
+private fun SpeedPresetType.descriptionRes(): Int = when (this) {
+    SpeedPresetType.BULLET_TIME -> R.string.speed_preset_bullet_time_description
+    SpeedPresetType.HERO_TIME -> R.string.speed_preset_hero_time_description
+    SpeedPresetType.MONTAGE -> R.string.speed_preset_montage_description
+    SpeedPresetType.JUMP_CUT -> R.string.speed_preset_jump_cut_description
+    SpeedPresetType.SMOOTH_RAMP_UP -> R.string.speed_preset_smooth_ramp_up_description
+    SpeedPresetType.SMOOTH_RAMP_DOWN -> R.string.speed_preset_smooth_ramp_down_description
+    SpeedPresetType.PULSE -> R.string.speed_preset_pulse_description
+    SpeedPresetType.FLASH -> R.string.speed_preset_flash_description
+    SpeedPresetType.DREAMY -> R.string.speed_preset_dreamy_description
+    SpeedPresetType.REWIND -> R.string.speed_preset_rewind_description
+    SpeedPresetType.TIME_FREEZE -> R.string.speed_preset_time_freeze_description
+    SpeedPresetType.FILM_REEL -> R.string.speed_preset_film_reel_description
+    SpeedPresetType.HEARTBEAT -> R.string.speed_preset_heartbeat_description
+    SpeedPresetType.CRESCENDO -> R.string.speed_preset_crescendo_description
+}
+
+private fun SpeedPresetType.feelRes(): Int = when (this) {
+    SpeedPresetType.BULLET_TIME -> R.string.speed_preset_bullet_time_feel
+    SpeedPresetType.HERO_TIME -> R.string.speed_preset_hero_time_feel
+    SpeedPresetType.MONTAGE -> R.string.speed_preset_montage_feel
+    SpeedPresetType.JUMP_CUT -> R.string.speed_preset_jump_cut_feel
+    SpeedPresetType.SMOOTH_RAMP_UP -> R.string.speed_preset_smooth_ramp_up_feel
+    SpeedPresetType.SMOOTH_RAMP_DOWN -> R.string.speed_preset_smooth_ramp_down_feel
+    SpeedPresetType.PULSE -> R.string.speed_preset_pulse_feel
+    SpeedPresetType.FLASH -> R.string.speed_preset_flash_feel
+    SpeedPresetType.DREAMY -> R.string.speed_preset_dreamy_feel
+    SpeedPresetType.REWIND -> R.string.speed_preset_rewind_feel
+    SpeedPresetType.TIME_FREEZE -> R.string.speed_preset_time_freeze_feel
+    SpeedPresetType.FILM_REEL -> R.string.speed_preset_film_reel_feel
+    SpeedPresetType.HEARTBEAT -> R.string.speed_preset_heartbeat_feel
+    SpeedPresetType.CRESCENDO -> R.string.speed_preset_crescendo_feel
 }
 
 private fun formatSpeed(speed: Float): String = "%.1fx".format(speed)

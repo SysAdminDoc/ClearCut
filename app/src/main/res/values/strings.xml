@@ -795,6 +795,49 @@
     <string name="speed_preset_slow_mo">Slow Mo</string>
     <string name="speed_preset_double">2x</string>
     <string name="speed_preset_quad">4x</string>
+    <string name="speed_preset_range">%1$s–%2$s</string>
+    <string name="speed_preset_bullet_time_name">Bullet Time</string>
+    <string name="speed_preset_bullet_time_description">Dramatic slow-mo with speed ramp</string>
+    <string name="speed_preset_bullet_time_feel">Hero</string>
+    <string name="speed_preset_hero_time_name">Hero Time</string>
+    <string name="speed_preset_hero_time_description">Slow entrance, normal exit</string>
+    <string name="speed_preset_hero_time_feel">Entrance</string>
+    <string name="speed_preset_montage_name">Montage</string>
+    <string name="speed_preset_montage_description">Fast cuts with brief pauses</string>
+    <string name="speed_preset_montage_feel">Rhythm</string>
+    <string name="speed_preset_jump_cut_name">Jump Cut</string>
+    <string name="speed_preset_jump_cut_description">Instant speed changes</string>
+    <string name="speed_preset_jump_cut_feel">Punch</string>
+    <string name="speed_preset_smooth_ramp_up_name">Smooth Ramp Up</string>
+    <string name="speed_preset_smooth_ramp_up_description">Gradually accelerate</string>
+    <string name="speed_preset_smooth_ramp_up_feel">Lift</string>
+    <string name="speed_preset_smooth_ramp_down_name">Smooth Ramp Down</string>
+    <string name="speed_preset_smooth_ramp_down_description">Gradually decelerate</string>
+    <string name="speed_preset_smooth_ramp_down_feel">Ease</string>
+    <string name="speed_preset_pulse_name">Pulse</string>
+    <string name="speed_preset_pulse_description">Rhythmic speed oscillation</string>
+    <string name="speed_preset_pulse_feel">Pulse</string>
+    <string name="speed_preset_flash_name">Flash</string>
+    <string name="speed_preset_flash_description">Brief fast-forward hit</string>
+    <string name="speed_preset_flash_feel">Hit</string>
+    <string name="speed_preset_dreamy_name">Dreamy</string>
+    <string name="speed_preset_dreamy_description">Slow with gentle waves</string>
+    <string name="speed_preset_dreamy_feel">Float</string>
+    <string name="speed_preset_rewind_name">Rewind</string>
+    <string name="speed_preset_rewind_description">Fast reverse feel</string>
+    <string name="speed_preset_rewind_feel">Retro</string>
+    <string name="speed_preset_time_freeze_name">Time Freeze</string>
+    <string name="speed_preset_time_freeze_description">Freeze at midpoint then resume</string>
+    <string name="speed_preset_time_freeze_feel">Freeze</string>
+    <string name="speed_preset_film_reel_name">Film Reel</string>
+    <string name="speed_preset_film_reel_description">Classic 24fps stutter effect</string>
+    <string name="speed_preset_film_reel_feel">Stutter</string>
+    <string name="speed_preset_heartbeat_name">Heartbeat</string>
+    <string name="speed_preset_heartbeat_description">Repeating fast-slow-fast pattern</string>
+    <string name="speed_preset_heartbeat_feel">Beat</string>
+    <string name="speed_preset_crescendo_name">Crescendo</string>
+    <string name="speed_preset_crescendo_description">Exponential ramp from slow to fast</string>
+    <string name="speed_preset_crescendo_feel">Build</string>
 
     <!-- MaskEditorPanel -->
     <string name="mask_title">Masks</string>
@@ -1967,6 +2010,22 @@
     <!-- SpeedCurveEditor -->
     <string name="panel_speed_constant">Constant</string>
     <string name="panel_speed_ramp">Speed Ramp</string>
+    <string name="panel_speed_presets_title">Speed Presets</string>
+    <string name="panel_speed_presets_subtitle">Shape tempo, impact, and rhythm with reusable speed curves instead of rebuilding them point by point.</string>
+    <plurals name="panel_speed_presets_count">
+        <item quantity="one">%1$d preset</item>
+        <item quantity="other">%1$d presets</item>
+    </plurals>
+    <string name="panel_speed_presets_reusable_curves">Reusable curves</string>
+    <string name="panel_speed_presets_clip_mode">Clip mode</string>
+    <string name="panel_speed_presets_language_title">Speed language</string>
+    <string name="panel_speed_presets_language_description">Preset curves are best when you want a repeatable editorial feel: hero slow motion, rhythmic pulses, stutters, or bold fast-forward beats.</string>
+    <string name="panel_speed_presets_cinematic_title">Cinematic ramps</string>
+    <string name="panel_speed_presets_cinematic_description">Use these when you want entrance, release, or crescendo moments to feel composed and deliberate.</string>
+    <string name="panel_speed_presets_rhythm_title">Rhythm and pulse</string>
+    <string name="panel_speed_presets_rhythm_description">Great for music-driven edits, montage pacing, and beats that need a more graphic editorial pattern.</string>
+    <string name="panel_speed_presets_punch_title">Punch and disruption</string>
+    <string name="panel_speed_presets_punch_description">Reach for these when the cut needs freeze moments, stutters, flashes, or aggressive tempo changes.</string>
 
     <!-- TtsPanel -->
     <string name="panel_tts_subtitle">Turn hooks, explainers, and voiceover notes into a timeline-ready read without leaving the edit.</string>
