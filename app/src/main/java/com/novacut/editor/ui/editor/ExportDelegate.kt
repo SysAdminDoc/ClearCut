@@ -23,6 +23,8 @@ import com.novacut.editor.engine.ExportStoragePolicy
 import com.novacut.editor.engine.ExportStageException
 import com.novacut.editor.engine.ExportStorageException
 import com.novacut.editor.engine.ExportState
+import com.novacut.editor.engine.HdrOverlayPolicy
+import com.novacut.editor.engine.HdrOverlaySummary
 import com.novacut.editor.engine.MAX_REVERSE_CLIP_DURATION_MS
 import com.novacut.editor.engine.MediaHealthReport
 import com.novacut.editor.engine.MixedRenderExportPlanner
@@ -634,11 +636,21 @@ class ExportDelegate(
         acceptedFallbackNote = acceptedConfirmation?.acceptedFallbackSummary()
         val healthReport = mediaHealthPreflight(currentState)
         val audioConformance = buildAudioConformance(currentState)
+        val hdrOverlayDisclosure = HdrOverlayPolicy.evaluate(
+            hdrRequested = currentState.exportConfig.hdr10PlusMetadata,
+            codec = currentState.exportConfig.codec,
+            overlays = HdrOverlaySummary(
+                textOverlayCount = currentState.textOverlays.size,
+                imageOverlayCount = currentState.imageOverlays.size,
+                watermarkPresent = currentState.exportConfig.watermark != null,
+            ),
+        ).disclosure
         val mediaPreflight = ExportMediaPreflight.evaluate(
             healthReport = healthReport,
             relinkReports = currentState.media.relinkReports,
             audioConformance = audioConformance,
             dependencies = projectDependencyManifest(currentState),
+            additionalWarnings = hdrOverlayDisclosure?.let { listOf(it) }.orEmpty(),
             intentFallbacks = reverseIntentFallbacks(currentState),
         )
         stateFlow.update { state ->

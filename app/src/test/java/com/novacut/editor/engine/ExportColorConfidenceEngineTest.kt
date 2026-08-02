@@ -188,6 +188,25 @@ class ExportColorConfidenceEngineTest {
     }
 
     @Test
+    fun hdrExportWithBitmapOverlaysDisclosesSdrFallback() {
+        val report = ExportColorConfidenceEngine.analyze(
+            config = ExportConfig(codec = VideoCodec.HEVC, hdr10PlusMetadata = true),
+            width = 1920,
+            height = 1080,
+            hdrSupport = ExportColorConfidenceEngine.HdrEncodeSupport(setOf("HDR10+")),
+            overlaySummary = HdrOverlaySummary(
+                textOverlayCount = 1,
+                imageOverlayCount = 1,
+                watermarkPresent = true,
+            ),
+        )
+
+        assertTrue(report.hasWarnings)
+        assertTrue(report.warnings.any { it.contains("HDR preservation is unavailable") })
+        assertTrue(report.chips.any { it.label == "HDR overlays → SDR" })
+    }
+
+    @Test
     fun av1DolbyVisionProfile10SupportReportsDynamicPath() {
         val report = ExportColorConfidenceEngine.analyze(
             config = ExportConfig(codec = VideoCodec.AV1, hdr10PlusMetadata = true),

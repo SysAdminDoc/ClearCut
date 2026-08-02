@@ -71,6 +71,7 @@
     <string name="export_hdr_preserve">Preserve HDR Metadata</string>
     <string name="export_hdr_preserve_description">Keep HDR color metadata when the source and selected encoder both support it.</string>
     <string name="export_hdr_preserve_disabled">Requires HEVC, AV1, or VP9. H.264 exports are SDR.</string>
+    <string name="export_hdr_preserve_overlays_disabled">Unavailable with text, image, or watermark overlays. Export will use the SDR overlay path to prevent HDR color errors.</string>
     <string name="export_fast_trim">Fast Trim When Possible</string>
     <string name="export_fast_trim_description">Use stream-copy for untouched single-source trims and fall back to a full render when edits require it.</string>
     <string name="export_color_confidence_title">Color / HDR confidence</string>

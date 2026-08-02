@@ -212,6 +212,19 @@ class ExportMediaPreflightTest {
     }
 
     @Test
+    fun additionalWarningsRequireConsentBeforeExportStarts() {
+        val result = ExportMediaPreflight.evaluate(
+            healthReport = report(),
+            relinkReports = emptyMap(),
+            additionalWarnings = listOf("HDR preservation is unavailable with image overlays."),
+        )
+
+        assertTrue(result.canExport)
+        assertTrue(result.requiresConsent)
+        assertEquals(listOf("HDR preservation is unavailable with image overlays."), result.warnings)
+    }
+
+    @Test
     fun blockedProjectStillItemizesWarningsForTheReport() {
         val result = ExportMediaPreflight.evaluate(
             healthReport = report(

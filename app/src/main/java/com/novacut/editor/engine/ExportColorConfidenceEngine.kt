@@ -61,7 +61,8 @@ object ExportColorConfidenceEngine {
         height: Int,
         hdrSupport: HdrEncodeSupport,
         sourceSummary: SourceHdrSummary = SourceHdrSummary(),
-        projectColorPolicy: ProjectColorPolicy = ProjectColorPolicy.DEFAULT
+        projectColorPolicy: ProjectColorPolicy = ProjectColorPolicy.DEFAULT,
+        overlaySummary: HdrOverlaySummary = HdrOverlaySummary(),
     ): Report {
         val chips = mutableListOf<Chip>()
         val warnings = mutableListOf<String>()
@@ -99,6 +100,19 @@ object ExportColorConfidenceEngine {
             warnings += "${config.codec.label} cannot carry HDR in ClearCut exports. Switch to HEVC, AV1, or VP9 before preserving HDR metadata."
             addProjectColorPolicyChips(projectColorPolicy, config, chips, warnings)
             return Report(chips = chips, warnings = warnings)
+        }
+
+        HdrOverlayPolicy.evaluate(
+            hdrRequested = config.hdr10PlusMetadata,
+            codec = config.codec,
+            overlays = overlaySummary,
+        ).disclosure?.let { disclosure ->
+            chips += Chip(
+                label = "HDR overlays → SDR",
+                detail = disclosure,
+                tone = Tone.WARNING,
+            )
+            warnings += disclosure
         }
 
         if (!hdrSupport.hasAnyHdr) {

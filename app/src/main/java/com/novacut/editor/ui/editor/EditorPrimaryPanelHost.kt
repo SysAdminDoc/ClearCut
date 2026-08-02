@@ -205,6 +205,8 @@ fun BoxScope.EditorPrimaryPanelHost(
             smartRenderSummary = exportSmartRenderSummary,
             sourceHdrSummary = sourceHdrSummary,
             projectColorPolicy = ProjectColorPolicy.DEFAULT,
+            hasTextOverlays = state.textOverlays.isNotEmpty(),
+            hasImageOverlays = state.imageOverlays.isNotEmpty(),
             aiUsageLedger = state.aiUsageLedger,
             exportHistory = state.exportHistory,
             encoderName = state.export.encoderName,

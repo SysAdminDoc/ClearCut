@@ -1242,7 +1242,19 @@ class VideoEngine @Inject constructor(
         }
         val hasEmbeddedVisualAudio = visualTrackSequences.any { it.hasEmbeddedAudio }
 
-        val preserveHdr = config.hdr10PlusMetadata && config.codec != VideoCodec.H264
+        val hdrOverlayDecision = HdrOverlayPolicy.evaluate(
+            hdrRequested = config.hdr10PlusMetadata,
+            codec = config.codec,
+            overlays = HdrOverlaySummary(
+                textOverlayCount = textOverlays.size,
+                imageOverlayCount = imageOverlays.size,
+                watermarkPresent = config.watermark != null,
+            ),
+        )
+        if (hdrOverlayDecision.requiresSdrFallback) {
+            Log.w(TAG, "Export: ${hdrOverlayDecision.disclosure}")
+        }
+        val preserveHdr = hdrOverlayDecision.preserveHdr
         val composition = buildComposition(
             allSequences,
             audioSequences.isNotEmpty(),
@@ -1539,7 +1551,15 @@ class VideoEngine @Inject constructor(
             val overlappingLottie = lottieOverlays.filter { lo ->
                 lo.startTimeMs < clipEnd && lo.endTimeMs > clipStart
             }
-            val preserveLottieHdr = config.hdr10PlusMetadata && config.codec != VideoCodec.H264
+            val preserveLottieHdr = HdrOverlayPolicy.evaluate(
+                hdrRequested = config.hdr10PlusMetadata,
+                codec = config.codec,
+                overlays = HdrOverlaySummary(
+                    textOverlayCount = textOverlays.size,
+                    imageOverlayCount = imageOverlays.size,
+                    watermarkPresent = config.watermark != null,
+                ),
+            ).preserveHdr
             val lottieBackendPlans = overlappingLottie.map { lo ->
                 val relStartUs = ((lo.startTimeMs - clipStart).coerceAtLeast(0L)) * 1000L
                 val durationUs = (lo.endTimeMs - lo.startTimeMs).coerceAtLeast(1L) * 1000L

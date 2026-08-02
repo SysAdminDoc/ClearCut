@@ -78,6 +78,8 @@ import com.novacut.editor.engine.ExportHistoryEntry
 import com.novacut.editor.engine.ExportHistoryStatus
 import com.novacut.editor.engine.ExportState
 import com.novacut.editor.engine.ExportStoragePolicy
+import com.novacut.editor.engine.HdrOverlayPolicy
+import com.novacut.editor.engine.HdrOverlaySummary
 import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.platform.LocalContext
@@ -131,6 +133,8 @@ fun ExportSheet(
     smartRenderSummary: SmartRenderEngine.SmartRenderSummary? = null,
     sourceHdrSummary: ExportColorConfidenceEngine.SourceHdrSummary = ExportColorConfidenceEngine.SourceHdrSummary(),
     projectColorPolicy: ProjectColorPolicy = ProjectColorPolicy.DEFAULT,
+    hasTextOverlays: Boolean = false,
+    hasImageOverlays: Boolean = false,
     aiUsageLedger: List<AiUsageLedger.Entry> = emptyList(),
     exportHistory: List<ExportHistoryEntry> = emptyList(),
     encoderName: String? = null,
@@ -179,6 +183,28 @@ fun ExportSheet(
     }
     var showClearAiLedgerConfirm by remember { mutableStateOf(false) }
     val codecCanCarryHdr = config.codec != VideoCodec.H264
+    val hdrOverlaySummary = remember(
+        hasTextOverlays,
+        hasImageOverlays,
+        effectiveConfig.watermark,
+    ) {
+        HdrOverlaySummary(
+            textOverlayCount = if (hasTextOverlays) 1 else 0,
+            imageOverlayCount = if (hasImageOverlays) 1 else 0,
+            watermarkPresent = effectiveConfig.watermark != null,
+        )
+    }
+    val hdrOverlayDecision = remember(
+        effectiveConfig.hdr10PlusMetadata,
+        effectiveConfig.codec,
+        hdrOverlaySummary,
+    ) {
+        HdrOverlayPolicy.evaluate(
+            hdrRequested = effectiveConfig.hdr10PlusMetadata,
+            codec = effectiveConfig.codec,
+            overlays = hdrOverlaySummary,
+        )
+    }
     val hdrProfileSupport = remember(effectiveConfig.codec) {
         EncoderCapabilityProbe.queryHdrProfiles(effectiveConfig.codec)
     }
@@ -199,7 +225,8 @@ fun ExportSheet(
         height,
         hdrEncodeSupport,
         sourceHdrSummary,
-        projectColorPolicy
+        projectColorPolicy,
+        hdrOverlaySummary,
     ) {
         ExportColorConfidenceEngine.analyze(
             config = effectiveConfig,
@@ -207,7 +234,8 @@ fun ExportSheet(
             height = height,
             hdrSupport = hdrEncodeSupport,
             sourceSummary = sourceHdrSummary,
-            projectColorPolicy = projectColorPolicy
+            projectColorPolicy = projectColorPolicy,
+            overlaySummary = hdrOverlaySummary,
         )
     }
 
@@ -1042,11 +1070,15 @@ fun ExportSheet(
                     icon = Icons.Default.GraphicEq,
                     title = stringResource(R.string.export_hdr_preserve),
                     description = stringResource(
-                        if (codecCanCarryHdr) R.string.export_hdr_preserve_description
-                        else R.string.export_hdr_preserve_disabled
+                        when {
+                            !codecCanCarryHdr -> R.string.export_hdr_preserve_disabled
+                            hdrOverlayDecision.requiresSdrFallback -> R.string.export_hdr_preserve_overlays_disabled
+                            else -> R.string.export_hdr_preserve_description
+                        }
                     ),
-                    checked = config.hdr10PlusMetadata && codecCanCarryHdr,
-                    enabled = codecCanCarryHdr,
+                    checked = config.hdr10PlusMetadata && codecCanCarryHdr &&
+                        !hdrOverlayDecision.requiresSdrFallback,
+                    enabled = codecCanCarryHdr && !hdrOverlayDecision.requiresSdrFallback,
                     onCheckedChange = { enabled ->
                         onConfigChanged(config.copy(hdr10PlusMetadata = enabled && codecCanCarryHdr))
                     },

@@ -44,6 +44,8 @@ object ExportMediaPreflight {
         relinkReports: Map<String, MediaRelinkProbe.ClipRelinkReport>,
         audioConformance: AudioConformanceReport? = null,
         dependencies: ProjectDependencyManifest = ProjectDependencyManifest(emptyList()),
+        /** Warnings about deliberate render-policy fallbacks, such as HDR overlay safety. */
+        additionalWarnings: List<String> = emptyList(),
         // Render intents the export pipeline already knows it cannot honour —
         // currently reversed clips whose backend is unavailable or that exceed
         // the reverse pre-render limit. They would export forward, which is a
@@ -97,6 +99,7 @@ object ExportMediaPreflight {
         }
 
         intentFallbacks.forEach { fallback -> warnings += fallback.message }
+        additionalWarnings.forEach { warning -> warnings += warning }
 
         val blockingCount = blockers.size
         val warningCount = warnings.size
