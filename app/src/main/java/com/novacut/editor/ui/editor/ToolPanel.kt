@@ -724,7 +724,7 @@ fun EffectsPanel(
                             modifier = Modifier.size(18.dp)
                         )
                         Text(
-                            text = "Tracked masks",
+                            text = stringResource(R.string.tool_tracked_masks),
                             color = semanticColors.text,
                             style = MaterialTheme.typography.titleSmall
                         )
@@ -760,7 +760,7 @@ fun EffectsPanel(
                             },
                             label = {
                                 Text(
-                                    text = "${trackedObject.label} Mosaic",
+                                    text = stringResource(R.string.tool_tracked_mosaic_format, trackedObject.label),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -1003,7 +1003,10 @@ fun SpeedPanel(
         PremiumPanelCard(accent = ClearCutAccents.Peach) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PremiumPanelPill(
-                    text = "${formatEffectValue(currentSpeed, 0.1f, 100f)}x",
+                    text = stringResource(
+                        R.string.tool_speed_multiplier_format,
+                        formatEffectValue(currentSpeed, 0.1f, 100f),
+                    ),
                     accent = ClearCutAccents.Rosewater
                 )
                 PremiumPanelPill(
@@ -1030,7 +1033,10 @@ fun SpeedPanel(
                         },
                         label = {
                             Text(
-                                text = "${formatEffectValue(speed, 0.1f, 100f)}x",
+                                text = stringResource(
+                                    R.string.tool_speed_multiplier_format,
+                                    formatEffectValue(speed, 0.1f, 100f),
+                                ),
                                 style = MaterialTheme.typography.labelMedium
                             )
                         },
@@ -1552,12 +1558,12 @@ fun TransitionPicker(
             Spacer(modifier = Modifier.height(12.dp))
             PremiumPanelCard(accent = ClearCutAccents.Lavender) {
                 Text(
-                    text = "Easing",
+                    text = stringResource(R.string.tool_transition_easing_title),
                     color = semanticColors.text,
                     style = MaterialTheme.typography.titleMedium
                 )
                 Text(
-                    text = "Control the transition speed curve",
+                    text = stringResource(R.string.tool_transition_easing_description),
                     color = semanticColors.subtext,
                     style = MaterialTheme.typography.bodyMedium
                 )

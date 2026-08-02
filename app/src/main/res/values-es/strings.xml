@@ -1132,6 +1132,11 @@
     <string name="tool_tab_trans">Trans</string>
     <string name="tool_tab_color">Color</string>
     <string name="tool_tab_ai">IA</string>
+    <string name="tool_tracked_masks">Máscaras con seguimiento</string>
+    <string name="tool_tracked_mosaic_format">Mosaico de %1$s</string>
+    <string name="tool_speed_multiplier_format">%1$sx</string>
+    <string name="tool_transition_easing_title">Suavizado</string>
+    <string name="tool_transition_easing_description">Controla la curva de velocidad de la transición</string>
     <string name="tool_add_text">Agregar texto</string>
     <string name="tool_text_templates">Plantillas</string>
     <string name="tool_captions">Subtítulos</string>

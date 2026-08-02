@@ -1181,6 +1181,11 @@
     <string name="tool_tab_trans">Trans</string>
     <string name="tool_tab_color">Color</string>
     <string name="tool_tab_ai">AI</string>
+    <string name="tool_tracked_masks">Tracked masks</string>
+    <string name="tool_tracked_mosaic_format">%1$s Mosaic</string>
+    <string name="tool_speed_multiplier_format">%1$sx</string>
+    <string name="tool_transition_easing_title">Easing</string>
+    <string name="tool_transition_easing_description">Control the transition speed curve</string>
 
     <!-- ToolPanel: Text sub-menu -->
     <string name="tool_add_text">Add Text</string>

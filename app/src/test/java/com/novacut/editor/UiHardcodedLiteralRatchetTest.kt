@@ -21,7 +21,7 @@ class UiHardcodedLiteralRatchetTest {
             "PipPresetsPanel.kt" to 21,
             "SpeedPresets.kt" to 0,
             "StickerPickerPanel.kt" to 0,
-            "ToolPanel.kt" to 10,
+            "ToolPanel.kt" to 4,
             "EditorViewModel.kt" to 7,
         )
 
