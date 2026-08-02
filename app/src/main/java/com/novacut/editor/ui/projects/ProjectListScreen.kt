@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
@@ -96,6 +97,7 @@ fun ProjectListScreen(
     val operationState by viewModel.operationState.collectAsStateWithLifecycle()
     val documentImportPreview by viewModel.documentImportPreview.collectAsStateWithLifecycle()
     val actionsEnabled = operationState == null
+    val currentLocale = LocalConfiguration.current.locales[0]
     val hasAnyProjects = projectTotalCount > 0
     var showTemplateSheet by remember { mutableStateOf(false) }
     val templateImportLauncher = rememberLauncherForActivityResult(
@@ -247,20 +249,20 @@ fun ProjectListScreen(
                     description = if (hasActiveSearch && hasActiveFilter) {
                         stringResource(
                             R.string.projects_filtered_sorted_summary,
-                            filterLabel.lowercase(Locale.getDefault()),
-                            sortLabel.lowercase(Locale.getDefault())
+                            filterLabel.lowercase(currentLocale),
+                            sortLabel.lowercase(currentLocale)
                         )
                     } else if (hasActiveSearch) {
                         stringResource(
                             R.string.projects_sorted_summary,
-                            sortLabel.lowercase(Locale.getDefault())
+                            sortLabel.lowercase(currentLocale)
                         )
                     } else if (hasActiveFilter) {
                         stringResource(
                             R.string.projects_filter_count_sorted_summary,
                             projects.size,
                             projectTotalCount,
-                            sortLabel.lowercase(Locale.getDefault())
+                            sortLabel.lowercase(currentLocale)
                         )
                     } else null,
                     modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, top = 14.dp, bottom = Spacing.sm),
@@ -424,13 +426,13 @@ fun ProjectListScreen(
 
         // Template picker
         if (showTemplateSheet) {
-            val ctx = LocalContext.current
+            val untitledProjectName = stringResource(R.string.project_untitled)
+            val genericRestoreName = stringResource(R.string.project_template_delete_success_generic)
             ProjectTemplateSheet(
-                onTemplateSelected = { template ->
+                onTemplateSelected = { template, templateName ->
                     showTemplateSheet = false
-                    val templateName = ctx.getString(template.nameResId)
                     viewModel.createProject(
-                        name = if (template.id == "blank") ctx.getString(R.string.project_untitled) else templateName,
+                        name = if (template.id == "blank") untitledProjectName else templateName,
                         aspectRatio = template.aspectRatio,
                         templateId = template.id,
                         trackTypes = template.tracks
@@ -447,7 +449,7 @@ fun ProjectListScreen(
                 onDeleteUserTemplate = viewModel::deleteUserTemplate,
                 userTemplates = userTemplates,
                 restorableTemplateName = restorableTemplate?.let { pending ->
-                    pending.name ?: ctx.getString(R.string.project_template_delete_success_generic)
+                    pending.name ?: genericRestoreName
                 },
                 onRestoreDeletedTemplate = viewModel::restoreDeletedTemplate,
                 onDismissTemplateRestore = viewModel::dismissTemplateRestore,
@@ -1660,7 +1662,8 @@ private fun formatDate(timestamp: Long): String {
         diff < 86_400_000 -> stringResource(R.string.projects_hours_ago, diff / 3_600_000)
         diff < 604_800_000 -> stringResource(R.string.projects_days_ago, diff / 86_400_000)
         else -> {
-            val sdf = java.text.SimpleDateFormat("MMM d", java.util.Locale.getDefault())
+            val locale = LocalConfiguration.current.locales[0]
+            val sdf = java.text.SimpleDateFormat("MMM d", locale)
             sdf.format(java.util.Date(timestamp))
         }
     }

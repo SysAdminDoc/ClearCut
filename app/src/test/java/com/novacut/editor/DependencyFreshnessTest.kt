@@ -25,12 +25,12 @@ class DependencyFreshnessTest {
      * update this fixture (and its hold reason, if applicable).
      */
     private val expectedVersions = mapOf(
-        "agp" to "8.7.3",
-        "kotlin" to "2.1.21",
-        "ksp" to "2.1.21-2.0.1",
+        "agp" to "9.1.1",
+        "kotlin" to "2.4.10",
+        "ksp" to "2.3.10",
         "composeBom" to "2026.06.00",
         "media3" to "1.10.1",
-        "hilt" to "2.58",
+        "hilt" to "2.60.1",
         "room" to "2.8.4",
         "coroutines" to "1.11.0",
         "lifecycle" to "2.10.0",
@@ -41,7 +41,8 @@ class DependencyFreshnessTest {
         "onnxruntime" to "1.26.0",
         "mediapipe" to "0.10.35",
         "protobufJavalite" to "4.27.5",
-        "robolectric" to "4.14.1",
+        "robolectric" to "4.16.1",
+        "androidxBenchmark" to "1.5.0-beta01",
     )
 
     /**
@@ -53,31 +54,10 @@ class DependencyFreshnessTest {
      */
     @Suppress("unused")
     val HOLDS = mapOf(
-        "agp" to Hold(
-            "8.7.3",
-            "AGP 8.8+ requires compileSdk 36 alignment; upgrade is a separate toolchain migration.",
-            "Upgrade when compileSdk 36 is baseline and AGP 8.8 reaches stable."
-        ),
-        "kotlin" to Hold(
-            "2.1.21",
-            "Kotlin 2.4.0 context parameters are desirable but KSP2 beta gaps block adoption.",
-            "Upgrade when KSP2 is stable and docs/kotlin-2.4-upgrade-plan.md criteria are met."
-        ),
-        "ksp" to Hold(
-            "2.1.21-2.0.1",
-            "Tracks Kotlin 2.1 maintenance line; KSP 2.3+ requires AGP APIs absent from AGP 8.7.3.",
-            "Upgrade alongside Kotlin."
-        ),
-        "hilt" to Hold(
-            "2.58",
-            "Dagger 2.58 lint AAR crashes AGP 8.7.3 lint (NegativeArraySizeException). " +
-                "Runtime and compiler are fine; only the lint artifact is excluded.",
-            "Re-test lint AAR after AGP upgrade."
-        ),
         "coil" to Hold(
             "3.3.0",
-            "Coil 3.4.0+ requires Kotlin 2.4.0; ClearCut uses 2.1.21.",
-            "Upgrade alongside Kotlin 2.4."
+            "Coil 3.4.0+ remains a separate Compose compatibility decision after the toolchain lane.",
+            "Upgrade after Coil 3.4.0+ passes the current Compose integration and package-size gates."
         ),
         "lottieCompose" to Hold(
             "6.7.1",

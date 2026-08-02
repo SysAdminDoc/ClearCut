@@ -118,7 +118,7 @@ val projectTemplates = listOf(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ProjectTemplateSheet(
-    onTemplateSelected: (ProjectTemplateUI) -> Unit,
+    onTemplateSelected: (ProjectTemplateUI, String) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     onUserTemplateSelected: (UserTemplate) -> Unit = {},
@@ -282,7 +282,7 @@ fun ProjectTemplateSheet(
             items(projectTemplates, key = { it.id }) { template ->
                 ProjectTemplateCard(
                     template = template,
-                    onClick = { onTemplateSelected(template) }
+                    onClick = { templateName -> onTemplateSelected(template, templateName) }
                 )
             }
         }
@@ -446,7 +446,7 @@ private fun UserTemplateCard(
 @Composable
 private fun ProjectTemplateCard(
     template: ProjectTemplateUI,
-    onClick: () -> Unit
+    onClick: (String) -> Unit
 ) {
     val templateName = stringResource(template.nameResId)
     val category = formatCategory(template.category)
@@ -463,7 +463,7 @@ private fun ProjectTemplateCard(
             .clip(RoundedCornerShape(Radius.xl))
             .background(Mocha.PanelHighest)
             .border(1.dp, Mocha.CardStrokeStrong, RoundedCornerShape(Radius.xl))
-            .clickable(role = Role.Button, onClick = onClick)
+            .clickable(role = Role.Button, onClick = { onClick(templateName) })
             .semantics { contentDescription = templateDescription }
     ) {
         Box(

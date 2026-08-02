@@ -443,7 +443,7 @@ Planning files are local-only in the development checkout:
 
 | Component | Technology |
 |-----------|-----------|
-| Language | Kotlin 2.1.21 |
+| Language | Kotlin 2.4.10 |
 | UI | Jetpack Compose + Material 3 (Catppuccin Mocha theme) |
 | Video | Media3 1.10.1 (Transformer + ExoPlayer) |
 | Effects | OpenGL ES 3.0 (37 GLSL transitions, 40+ effect shaders) |
@@ -462,7 +462,7 @@ Planning files are local-only in the development checkout:
 | TTS | Android System TTS (Piper via Sherpa-ONNX planned) |
 | ASR acceleration target | Sherpa-ONNX v1.13.2 AAR + Moonshine v2 Tiny EN policy (native backend still gated) |
 | Animated Titles | Lottie Compose 6.7.1 and Media3 Lottie overlay support |
-| Startup performance | AndroidX Baseline Profile / Macrobenchmark 1.4.1 |
+| Startup performance | AndroidX Baseline Profile / Macrobenchmark 1.5.0-beta01 |
 | Timeline Exchange | OpenTimelineIO / FCPXML / EDL export (import not implemented) |
 | DI | Hilt / Dagger |
 | Database | Room 2.8.4 (schema v9, migration chain 1→9) |
@@ -555,8 +555,8 @@ adb logcat | grep AudioHardening
 With the editor activity visible, run TTS preview, start and stop a voiceover recording, then start an export. TTS preview and voiceover should continue to require visible editor interaction, and export should stay in the `mediaProcessing` foreground service without starting TextToSpeech, MediaRecorder, audio playback, or audio-focus APIs from `ExportService`.
 
 ### Requirements
-- Android Studio Ladybug+ (2024.2+)
-- AGP 8.7.3, Gradle 8.9, JDK 21
+- Android Studio Panda 3+ (2025.3.3+)
+- AGP 9.1.1, Gradle 9.3.1, JDK 21
 - Android SDK 36
 
 ### Release Signing
@@ -619,7 +619,7 @@ Key external dependencies currently in `build.gradle.kts`:
 | SAM 2.1 ONNX | Targeted | Future tracked-mask path via explicit model download; MobileSAM remains the small-device fallback |
 | MediaPipe | 0.10.35 | Selfie segmentation |
 | Lottie Compose | 6.7.1 | Animated title templates |
-| AndroidX Benchmark/ProfileInstaller | 1.4.1 / 1.4.1 | Baseline Profile generation and release profile install |
+| AndroidX Benchmark/ProfileInstaller | 1.5.0-beta01 / 1.4.1 | Baseline Profile generation and release profile install |
 | OkHttp | 5.4.0 | Model downloads and future opt-in provider calls |
 | FFmpegKitNext / FFmpeg | 8.1.0 / 8.1.2 | Source-pinned GPL build for FFmpeg-backed paths not covered by Media3 Transformer |
 | Android DeepFilterNet | 0.0.8 | On-device voiceover noise reduction |
@@ -655,7 +655,7 @@ Normal debug and release APKs omit dormant Nearby/local-network permissions. Tho
 ## Known Limitations
 - Multi-sequence export now honors track opacity through Media3 compositor settings, and all 18 fallback blend modes render distinctly; true source-over-destination blend math still needs a custom programmable compositor because Media3's public settings only expose alpha/transform
 - Reversed clip export pre-renders through FFmpeg (clips over 5 minutes export forward; FFmpeg unavailable falls back to forward playback)
-- Android Lint runs locally with current Kotlin/AGP detector-crash workarounds; warning debt remains before it should become release-blocking
+- Android Lint runs all source detectors on the AGP 9/Kotlin 2.4 toolchain; warning debt remains before it should become release-blocking
 - 11 AI/ML engine stubs awaiting dependency integration (see ROADMAP.md)
 
 ## License

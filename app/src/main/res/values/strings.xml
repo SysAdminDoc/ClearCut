@@ -2996,7 +2996,7 @@
     <!-- V369Delegate toasts -->
     <string name="v369_no_words_selected_toast">No words selected</string>
     <string name="v369_nothing_to_cut_toast">Nothing to cut</string>
-    <string name="v369_removed_segments_toast">Removed %1$d segment(s) (-%2$ss)</string>
+    <string name="v369_removed_segments_toast">Removed %1$d segment(s) (-%2$.1fs)</string>
     <string name="v369_transcribe_first_toast">Transcribe audio first (AI Tools → Auto Captions)</string>
     <string name="v369_no_captions_toast">No captions generated</string>
     <string name="v369_export_first_toast">Export something first</string>

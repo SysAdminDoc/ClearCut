@@ -38,7 +38,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.novacut.editor.R
@@ -171,15 +170,14 @@ fun CommandPaletteSheet(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
     val allCommands = remember { CommandRegistry.allCommands() }
     var query by remember { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
 
-    val filtered = remember(query, hasSelectedClip) {
-        val resolved = allCommands.map { cmd ->
-            cmd to context.getString(cmd.labelRes)
-        }
+    val resolved = allCommands.map { cmd ->
+        cmd to stringResource(cmd.labelRes)
+    }
+    val filtered = remember(query, hasSelectedClip, resolved) {
         if (query.isBlank()) {
             resolved
         } else {

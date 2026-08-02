@@ -4,7 +4,6 @@ import java.security.MessageDigest
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
@@ -15,12 +14,6 @@ fun resolveSigningSecret(vararg keys: String): String? {
     return keys.firstNotNullOfOrNull { key ->
         System.getenv(key)?.trim()?.takeIf { it.isNotEmpty() }
     }
-}
-
-configurations.configureEach {
-    // Dagger 2.58's lint AAR crashes AGP 8.7.3 lint jar migration with an
-    // ASM NegativeArraySizeException before ClearCut findings are reported.
-    exclude(group = "com.google.dagger", module = "dagger-lint-aar")
 }
 
 android {
@@ -122,10 +115,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
     buildFeatures {
         compose = true
         buildConfig = true
@@ -142,28 +131,10 @@ android {
     }
 
     sourceSets {
-        getByName("androidTest").assets.srcDir("$projectDir/schemas")
+        getByName("androidTest").assets.directories += "$projectDir/schemas"
     }
 
     lint {
-        // Independently re-probed on 2026-07-12 with AGP 8.7.3, Kotlin 2.1.21,
-        // lifecycle 2.10.0, and Compose BOM 2026.06.00. Each detector throws an
-        // IncompatibleClassChangeError while scanning Kotlin sources because its lint jar
-        // expects a different Kotlin analysis API. Pass -PcleancutLintProbe=<id>
-        // to enable exactly one workaround detector after a dependency upgrade.
-        val sourceDetectorCrashWorkarounds = listOf(
-            "NullSafeMutableLiveData",
-            "FrequentlyChangingValue",
-            "FlowOperatorInvokedInComposition",
-            "RememberInComposition",
-            "AutoboxingStateCreation",
-            "UnrememberedMutableState"
-        )
-        val probeDetector = providers.gradleProperty("cleancutLintProbe").orNull
-        require(probeDetector == null || probeDetector in sourceDetectorCrashWorkarounds) {
-            "Unknown cleancutLintProbe detector: $probeDetector"
-        }
-        disable += sourceDetectorCrashWorkarounds.filterNot { it == probeDetector }
         baseline = file("lint-baseline.xml")
         abortOnError = true
         htmlReport = true
@@ -253,7 +224,7 @@ fun compareVersions(a: String, b: String): Int {
  * version, and that drift has to be a deliberate, recorded decision.
  */
 val resolvedVersionPolicy = mapOf(
-    "org.jetbrains.kotlin:kotlin-stdlib" to "2.2.21",
+    "org.jetbrains.kotlin:kotlin-stdlib" to "2.4.10",
 )
 
 val verifyResolvedAdvisoryFloors by tasks.registering {

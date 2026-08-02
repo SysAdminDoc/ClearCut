@@ -1,6 +1,6 @@
 package com.novacut.editor
 
-import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -8,36 +8,24 @@ import java.io.File
 class LintDetectorRatchetTest {
 
     @Test
-    fun onlyCurrentlyCrashingSourceDetectorsRemainDisabled() {
+    fun sourceDetectorsAreNotDisabledByTheToolchain() {
         val build = projectFile("app/build.gradle.kts").readText()
-        val workaroundBlock = build.substringAfter("val sourceDetectorCrashWorkarounds = listOf(")
-            .substringBefore("val probeDetector")
-
-        assertEquals(
-            setOf(
-                "NullSafeMutableLiveData",
-                "FrequentlyChangingValue",
-                "FlowOperatorInvokedInComposition",
-                "RememberInComposition",
-                "AutoboxingStateCreation",
-                "UnrememberedMutableState",
-            ),
-            QUOTED_VALUE.findAll(workaroundBlock).map { it.groupValues[1] }.toSet(),
-        )
-        assertTrue("Per-detector re-probe escape hatch was removed.", "filterNot { it == probeDetector }" in build)
+        assertFalse("Source lint detectors must run on the migrated toolchain.", "sourceDetectorCrashWorkarounds" in build)
+        assertFalse("The old per-detector probe escape hatch must be removed.", "cleancutLintProbe" in build)
     }
 
     @Test
     fun dependencyUpgradeForcesWorkaroundReview() {
         val versions = projectFile("gradle/libs.versions.toml").readText()
         mapOf(
-            "agp" to "8.7.3",
-            "kotlin" to "2.1.21",
+            "agp" to "9.1.1",
+            "kotlin" to "2.4.10",
+            "ksp" to "2.3.10",
             "composeBom" to "2026.06.00",
             "lifecycle" to "2.10.0",
         ).forEach { (name, version) ->
             assertTrue(
-                "$name changed; independently re-run each cleancutLintProbe before updating this ratchet.",
+                "$name changed; independently re-audit the source lint detectors before updating this ratchet.",
                 Regex("(?m)^$name\\s*=\\s*\"${Regex.escape(version)}\"$").containsMatchIn(versions),
             )
         }
@@ -55,7 +43,4 @@ class LintDetectorRatchetTest {
         error("Could not locate $relativePath")
     }
 
-    private companion object {
-        val QUOTED_VALUE = Regex("\"([^\"]+)\"")
-    }
 }

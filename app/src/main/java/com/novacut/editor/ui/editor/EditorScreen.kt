@@ -115,13 +115,26 @@ fun EditorScreen(
         label = "autoSaveOverlayOffset"
     )
     val context = LocalContext.current
+    val audioMicPermissionRequired = stringResource(R.string.audio_mic_permission_required)
+    val exportNotificationPermissionFallback = stringResource(
+        R.string.export_notification_permission_fallback
+    )
+    val selectClipEffects = stringResource(R.string.editor_select_clip_effects)
+    val selectClipColorGrade = stringResource(R.string.editor_select_clip_color_grade)
+    val selectClipKeyframes = stringResource(R.string.editor_select_clip_keyframes)
+    val selectClipMasks = stringResource(R.string.editor_select_clip_masks)
+    val selectClipBlendMode = stringResource(R.string.editor_select_clip_blend_mode)
+    val selectClipPip = stringResource(R.string.editor_select_clip_pip)
+    val selectClipChromaKey = stringResource(R.string.editor_select_clip_chroma_key)
+    val selectClipCaptions = stringResource(R.string.editor_select_clip_captions)
+    val selectClipNormalize = stringResource(R.string.editor_select_clip_normalize)
     val recordAudioPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) {
             viewModel.startVoiceover()
         } else {
-            viewModel.showToast(context.getString(R.string.audio_mic_permission_required))
+            viewModel.showToast(audioMicPermissionRequired)
         }
     }
 
@@ -193,7 +206,7 @@ fun EditorScreen(
         val outputDir = pendingNotificationExportDir ?: return
         pendingNotificationExportDir = null
         if (showFallbackMessage) {
-            viewModel.showToast(context.getString(R.string.export_notification_permission_fallback))
+            viewModel.showToast(exportNotificationPermissionFallback)
         }
         viewModel.startExport(outputDir)
     }
@@ -586,7 +599,7 @@ fun EditorScreen(
                 "speed" -> viewModel.showSpeedCurveEditor()
                 "transform" -> viewModel.showTransformPanel()
                 "effects" -> viewModel.showEffectsPanel()
-                "effects_disabled" -> viewModel.showToast(context.getString(R.string.editor_select_clip_effects))
+                "effects_disabled" -> viewModel.showToast(selectClipEffects)
                 "transition" -> viewModel.showTransitionPicker()
                 "aspect" -> viewModel.showCropPanel()
                 "back" -> {
@@ -603,17 +616,17 @@ fun EditorScreen(
                 "copy_fx" -> viewModel.copyEffects()
                 "paste_fx" -> viewModel.pasteEffects()
                 "color_grade" -> viewModel.showColorGrading()
-                "color_grade_disabled" -> viewModel.showToast(context.getString(R.string.editor_select_clip_color_grade))
+                "color_grade_disabled" -> viewModel.showToast(selectClipColorGrade)
                 "keyframes" -> viewModel.showKeyframeEditor()
-                "keyframes_disabled" -> viewModel.showToast(context.getString(R.string.editor_select_clip_keyframes))
+                "keyframes_disabled" -> viewModel.showToast(selectClipKeyframes)
                 "masks" -> viewModel.showMaskEditor()
-                "masks_disabled" -> viewModel.showToast(context.getString(R.string.editor_select_clip_masks))
+                "masks_disabled" -> viewModel.showToast(selectClipMasks)
                 "blend_mode" -> viewModel.showBlendModeSelector()
-                "blend_mode_disabled" -> viewModel.showToast(context.getString(R.string.editor_select_clip_blend_mode))
+                "blend_mode_disabled" -> viewModel.showToast(selectClipBlendMode)
                 "pip" -> viewModel.showPipPresets()
-                "pip_disabled" -> viewModel.showToast(context.getString(R.string.editor_select_clip_pip))
+                "pip_disabled" -> viewModel.showToast(selectClipPip)
                 "chroma_key" -> viewModel.showChromaKey()
-                "chroma_key_disabled" -> viewModel.showToast(context.getString(R.string.editor_select_clip_chroma_key))
+                "chroma_key_disabled" -> viewModel.showToast(selectClipChromaKey)
                 "auto_duck" -> viewModel.autoDuck()
                 "scopes" -> viewModel.toggleScopes()
                 "audio_mixer" -> viewModel.showAudioMixer()
@@ -622,9 +635,9 @@ fun EditorScreen(
                 "snapshot" -> viewModel.createSnapshot()
                 "captions" -> {
                     if (state.selectedClipId != null) viewModel.showCaptionEditor()
-                    else viewModel.showToast(context.getString(R.string.editor_select_clip_captions))
+                    else viewModel.showToast(selectClipCaptions)
                 }
-                "captions_disabled" -> viewModel.showToast(context.getString(R.string.editor_select_clip_captions))
+                "captions_disabled" -> viewModel.showToast(selectClipCaptions)
                 "chapters" -> viewModel.showChapterMarkers()
                 "history" -> viewModel.showSnapshotHistory()
                 "export_srt" -> viewModel.exportSubtitles(SubtitleFormat.SRT)
@@ -632,7 +645,7 @@ fun EditorScreen(
                 "text_templates" -> viewModel.showTextTemplates()
                 "media_manager" -> viewModel.showMediaManager()
                 "audio_norm" -> viewModel.showAudioNorm()
-                "audio_norm_disabled" -> viewModel.showToast(context.getString(R.string.editor_select_clip_normalize))
+                "audio_norm_disabled" -> viewModel.showToast(selectClipNormalize)
                 "compound" -> viewModel.createCompoundClip()
                 "render_preview" -> viewModel.showRenderPreview()
                 "cloud_backup" -> viewModel.showCloudBackup()

@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.android.test)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.androidx.baselineprofile)
 }
 
@@ -21,15 +20,13 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
-    testOptions.managedDevices.devices {
-        create<com.android.build.api.dsl.ManagedVirtualDevice>("pixel6Api36") {
-            device = "Pixel 6"
-            apiLevel = 36
-            systemImageSource = "google"
+    testOptions.managedDevices {
+        localDevices {
+            create("pixel6Api36") {
+                device = "Pixel 6"
+                apiLevel = 36
+                systemImageSource = "google"
+            }
         }
     }
 }

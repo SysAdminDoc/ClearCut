@@ -102,6 +102,20 @@ fun MediaPickerSheet(
 ) {
     val semanticColors = LocalClearCutColors.current
     val context = LocalContext.current
+    val importingBatchTitle = stringResource(R.string.media_picker_importing_batch_title)
+    val importingBatchDescription = stringResource(R.string.media_picker_importing_batch_description)
+    val localCopyFailed = stringResource(R.string.media_picker_local_copy_failed)
+    val someImportsFailed = stringResource(R.string.media_picker_some_imports_failed)
+    val insufficientSpace = stringResource(R.string.media_picker_insufficient_space)
+    val audioOnly = stringResource(R.string.media_picker_audio_only)
+    val importingVideoTitle = stringResource(R.string.media_picker_importing_video_title)
+    val importingVideoDescription = stringResource(R.string.media_picker_importing_video_description)
+    val importingImageTitle = stringResource(R.string.media_picker_importing_image_title)
+    val importingImageDescription = stringResource(R.string.media_picker_importing_image_description)
+    val importingCaptureTitle = stringResource(R.string.media_picker_importing_capture_title)
+    val importingCaptureDescription = stringResource(R.string.media_picker_importing_capture_description)
+    val cameraEmptyCapture = stringResource(R.string.media_picker_camera_empty_capture)
+    val cameraHandoffFailed = stringResource(R.string.media_picker_camera_handoff_failed)
     val coroutineScope = rememberCoroutineScope()
     var pendingMediaType by remember { mutableStateOf("video") }
     var cameraVideoUri by remember { mutableStateOf<Uri?>(null) }
@@ -127,8 +141,8 @@ fun MediaPickerSheet(
             }
             coroutineScope.launch {
                 operationState = MediaPickerOperationState(
-                    title = context.getString(R.string.media_picker_importing_batch_title),
-                    description = context.getString(R.string.media_picker_importing_batch_description)
+                    title = importingBatchTitle,
+                    description = importingBatchDescription
                 )
                 try {
                     val sortedUris = withContext(Dispatchers.IO) { sortMediaChronologically(context, uris) }
@@ -166,9 +180,9 @@ fun MediaPickerSheet(
                     mediaItems.forEach { (localUri, mediaType) -> onMediaSelected(localUri, mediaType) }
                     if (mediaItems.size < requestedCount) {
                         permissionMessage = if (mediaItems.isEmpty()) {
-                            context.getString(R.string.media_picker_local_copy_failed)
+                            localCopyFailed
                         } else {
-                            context.getString(R.string.media_picker_some_imports_failed)
+                            someImportsFailed
                         }
                     }
                 } finally {
@@ -192,9 +206,9 @@ fun MediaPickerSheet(
                 when (result) {
                     is IngestResult.Success -> onMediaSelected(result.managedUri, mediaType)
                     is IngestResult.InsufficientSpace ->
-                        permissionMessage = context.getString(R.string.media_picker_insufficient_space)
+                        permissionMessage = insufficientSpace
                     else ->
-                        permissionMessage = context.getString(R.string.media_picker_local_copy_failed)
+                        permissionMessage = localCopyFailed
                 }
             } finally {
                 operationState = null
@@ -206,8 +220,8 @@ fun MediaPickerSheet(
         if (uris.isEmpty() || !actionsEnabled) return
         coroutineScope.launch {
             operationState = MediaPickerOperationState(
-                title = context.getString(R.string.media_picker_importing_batch_title),
-                description = context.getString(R.string.media_picker_importing_batch_description)
+                title = importingBatchTitle,
+                description = importingBatchDescription
             )
             try {
                 val imported = withContext(Dispatchers.IO) {
@@ -224,9 +238,9 @@ fun MediaPickerSheet(
                 imported.forEach { (localUri, type) -> onMediaSelected(localUri, type) }
                 if (imported.size < uris.size) {
                     permissionMessage = if (imported.isEmpty()) {
-                        context.getString(R.string.media_picker_local_copy_failed)
+                        localCopyFailed
                     } else {
-                        context.getString(R.string.media_picker_some_imports_failed)
+                        someImportsFailed
                     }
                 }
             } finally {
@@ -273,15 +287,15 @@ fun MediaPickerSheet(
             if (pendingMediaType == "audio") {
                 val mimeType = context.contentResolver.getType(uri).orEmpty()
                 if (!mimeType.startsWith("audio/") && mimeType != "application/ogg") {
-                    permissionMessage = context.getString(R.string.media_picker_audio_only)
+                    permissionMessage = audioOnly
                     return@rememberLauncherForActivityResult
                 }
             }
             importPickedMedia(
                 uri = uri,
                 mediaType = pendingMediaType,
-                title = context.getString(R.string.media_picker_importing_batch_title),
-                description = context.getString(R.string.media_picker_importing_batch_description)
+                title = importingBatchTitle,
+                description = importingBatchDescription
             )
         }
     }
@@ -296,8 +310,8 @@ fun MediaPickerSheet(
             importPickedMedia(
                 uri = uri,
                 mediaType = "video",
-                title = context.getString(R.string.media_picker_importing_video_title),
-                description = context.getString(R.string.media_picker_importing_video_description)
+                title = importingVideoTitle,
+                description = importingVideoDescription
             )
         }
     }
@@ -309,8 +323,8 @@ fun MediaPickerSheet(
             importPickedMedia(
                 uri = uri,
                 mediaType = "image",
-                title = context.getString(R.string.media_picker_importing_image_title),
-                description = context.getString(R.string.media_picker_importing_image_description)
+                title = importingImageTitle,
+                description = importingImageDescription
             )
         }
     }
@@ -321,8 +335,8 @@ fun MediaPickerSheet(
         if (uris.isNotEmpty()) {
             coroutineScope.launch {
                 operationState = MediaPickerOperationState(
-                    title = context.getString(R.string.media_picker_importing_batch_title),
-                    description = context.getString(R.string.media_picker_importing_batch_description)
+                    title = importingBatchTitle,
+                    description = importingBatchDescription
                 )
                 try {
                     val imported = withContext(Dispatchers.IO) {
@@ -336,9 +350,9 @@ fun MediaPickerSheet(
                     imported.forEach { (localUri, type) -> onMediaSelected(localUri, type) }
                     if (imported.size < uris.size) {
                         permissionMessage = if (imported.isEmpty()) {
-                            context.getString(R.string.media_picker_local_copy_failed)
+                            localCopyFailed
                         } else {
-                            context.getString(R.string.media_picker_some_imports_failed)
+                            someImportsFailed
                         }
                     }
                 } finally {
@@ -357,8 +371,8 @@ fun MediaPickerSheet(
         if (success) {
             coroutineScope.launch {
                 operationState = MediaPickerOperationState(
-                    title = context.getString(R.string.media_picker_importing_capture_title),
-                    description = context.getString(R.string.media_picker_importing_capture_description)
+                    title = importingCaptureTitle,
+                    description = importingCaptureDescription
                 )
                 try {
                     val finalizedUri = withContext(Dispatchers.IO) {
@@ -367,7 +381,7 @@ fun MediaPickerSheet(
                     if (finalizedUri != null) {
                         onMediaSelected(finalizedUri, "video")
                     } else {
-                        permissionMessage = context.getString(R.string.media_picker_camera_empty_capture)
+                        permissionMessage = cameraEmptyCapture
                         withContext(Dispatchers.IO) { capturedFile?.delete() }
                     }
                 } finally {
@@ -396,7 +410,7 @@ fun MediaPickerSheet(
         }.getOrNull()
 
         if (uri == null) {
-            permissionMessage = context.getString(R.string.media_picker_camera_handoff_failed)
+            permissionMessage = cameraHandoffFailed
             return
         }
 
@@ -408,7 +422,7 @@ fun MediaPickerSheet(
                 cameraVideoFile = null
                 cameraVideoUri = null
                 videoFile.delete()
-                permissionMessage = context.getString(R.string.media_picker_camera_handoff_failed)
+                permissionMessage = cameraHandoffFailed
             }
     }
 
