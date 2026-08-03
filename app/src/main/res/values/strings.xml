@@ -1921,7 +1921,7 @@
     <string name="panel_cloud_backup_archive_title">Portable project archive</string>
     <string name="panel_cloud_backup_archive_body">Exports land in Downloads/ClearCut so they are easy to share, move to another device, or keep as rollback points before major edits.</string>
     <string name="panel_cloud_backup_archive_include_title">What gets packed</string>
-    <string name="panel_cloud_backup_archive_include_body">Each archive keeps the edit portable without baking in a render, so restores stay fast and faithful to the current project state.</string>
+    <string name="panel_cloud_backup_archive_include_body">Each archive keeps the edit, managed media, LUTs, custom fonts, and watermark assets portable without baking in a render. Missing external references remain visible for relinking.</string>
     <string name="panel_cloud_backup_include_timeline">Timeline structure</string>
     <string name="panel_cloud_backup_include_links">Media links</string>
     <string name="panel_cloud_backup_include_state">Project state</string>

@@ -67,6 +67,21 @@ class BackupPolicyRulesTest {
         assertGeneratedMediaPolicy(rules, expectedIncluded = true)
     }
 
+    @Test
+    fun deviceTransferCarriesAppOwnedFontsAndLutsButNotPartialCopies() {
+        val deviceRules = readRules("data_extraction_rules.xml", section = "device-transfer")
+        val cloudRules = readDocument("data_extraction_rules.xml")
+            .documentElement.firstChildElement("cloud-backup")
+            .readRules()
+
+        assertTrue(deviceRules.includes("file", "fonts/Inter.ttf"))
+        assertTrue(deviceRules.includes("file", "luts/cinema.cube"))
+        assertFalse(deviceRules.includes("file", "fonts/.Inter.ttf.partial"))
+        assertFalse(deviceRules.includes("file", "luts/.cinema.cube.partial"))
+        assertFalse(cloudRules.includes("file", "fonts/Inter.ttf"))
+        assertFalse(cloudRules.includes("file", "luts/cinema.cube"))
+    }
+
     private fun assertGeneratedMediaPolicy(
         rules: List<BackupRule>,
         expectedIncluded: Boolean

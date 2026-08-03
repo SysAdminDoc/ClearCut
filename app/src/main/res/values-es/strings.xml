@@ -1808,7 +1808,7 @@
     <string name="panel_cloud_backup_archive_title">Archivo de proyectos portátil</string>
     <string name="panel_cloud_backup_archive_body">Las exportaciones llegan a Descargas/ClearCut para que sean fáciles de compartir, mover a otro dispositivo o conservar como puntos de reversión antes de realizar ediciones importantes.</string>
     <string name="panel_cloud_backup_archive_include_title">lo que se empaca</string>
-    <string name="panel_cloud_backup_archive_include_body">Cada archivo mantiene la edición portátil sin necesidad de realizar una renderización, por lo que las restauraciones se mantienen rápidas y fieles al estado actual del proyecto.</string>
+    <string name="panel_cloud_backup_archive_include_body">Cada archivo mantiene portátiles la edición, los medios administrados, los LUT, las fuentes personalizadas y los recursos de marca de agua sin renderizar. Las referencias externas faltantes quedan visibles para volver a vincularlas.</string>
     <string name="panel_cloud_backup_include_timeline">Estructura de la línea de tiempo</string>
     <string name="panel_cloud_backup_include_links">Enlaces de medios</string>
     <string name="panel_cloud_backup_include_state">Estado del proyecto</string>
