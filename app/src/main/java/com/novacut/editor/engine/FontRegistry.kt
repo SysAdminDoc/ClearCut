@@ -14,13 +14,17 @@ import javax.inject.Singleton
 class FontRegistry @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    private val fontsDir = File(context.filesDir, "fonts")
+    private val fontsDir = File(context.filesDir, "fonts").also { it.mkdirs() }
+    private val rollbackDir = File(fontsDir, "rollback").also { it.mkdirs() }
     private val typefaceCache = mutableMapOf<String, Typeface>()
 
     data class ImportedFont(
         val fileName: String,
         val displayName: String,
-        val file: File
+        val file: File,
+        val contentHash: String = "",
+        val provenanceSource: String = "local import",
+        val canRollback: Boolean = false,
     )
 
     fun listImportedFonts(): List<ImportedFont> {
@@ -32,7 +36,9 @@ class FontRegistry @Inject constructor(
                 ImportedFont(
                     fileName = file.name,
                     displayName = file.nameWithoutExtension.replace(Regex("[_-]"), " "),
-                    file = file
+                    file = file,
+                    contentHash = runCatching { DeclarativePackContract.sha256File(file) }.getOrDefault(""),
+                    canRollback = rollbackFileForName(file.name)?.isFile == true,
                 )
             }
             ?.sortedBy { it.displayName }
@@ -46,7 +52,9 @@ class FontRegistry @Inject constructor(
             Log.w(TAG, "Rejected font import: unsupported or unnamed file type")
             return null
         }
-        val targetFile = File(fontsDir, fileName)
+        val targetFile = fileForName(fileName) ?: return null
+        val hadExisting = targetFile.isFile
+        if (hadExisting && !backupForRollback(targetFile)) return null
 
         return try {
             // Bounded, atomic install: copy under a byte ceiling to a temp file,
@@ -70,14 +78,17 @@ class FontRegistry @Inject constructor(
             // leave a broken entry in the picker).
             if (loadTypeface(targetFile) == null) {
                 targetFile.delete()
-                Log.w(TAG, "Imported font is not reloadable: $fileName")
+                if (hadExisting) restoreRollback(targetFile)
+                Log.w(TAG, "Imported font is not reloadable: ${RedactedLog.assetId(fileName)}")
                 return null
             }
             typefaceCache.remove(targetFile.name)
             ImportedFont(
                 fileName = targetFile.name,
                 displayName = targetFile.nameWithoutExtension.replace(Regex("[_-]"), " "),
-                file = targetFile
+                file = targetFile,
+                contentHash = DeclarativePackContract.sha256File(targetFile),
+                canRollback = hadExisting,
             )
         } catch (e: Exception) {
             Log.w(TAG, "Failed to import font", e)
@@ -86,15 +97,40 @@ class FontRegistry @Inject constructor(
     }
 
     fun deleteFont(fileName: String): Boolean {
-        typefaceCache.remove(fileName)
-        return File(fontsDir, fileName).delete()
+        val targetFile = fileForName(fileName) ?: return false
+        if (!targetFile.isFile || !backupForRollback(targetFile)) return false
+        typefaceCache.remove(targetFile.name)
+        return targetFile.delete()
+    }
+
+    fun canRollback(fileName: String): Boolean =
+        rollbackFileForName(fileName)?.isFile == true
+
+    fun rollbackFont(fileName: String): Boolean {
+        val targetFile = fileForName(fileName) ?: return false
+        val rollbackFile = rollbackFileForName(fileName) ?: return false
+        if (!rollbackFile.isFile) return false
+        return try {
+            writeFileAtomically(targetFile, requireNonEmpty = true) { tempFile ->
+                rollbackFile.inputStream().use { input ->
+                    tempFile.outputStream().use { output -> input.copyTo(output) }
+                }
+            }
+            if (loadTypeface(targetFile) == null) return false
+            rollbackFile.delete()
+            typefaceCache.remove(targetFile.name)
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to roll back font: ${RedactedLog.assetId(fileName)}", e)
+            false
+        }
     }
 
     fun resolveTypeface(fontFamily: String): Typeface? {
         if (!fontFamily.startsWith(CUSTOM_PREFIX)) return null
         val fileName = fontFamily.removePrefix(CUSTOM_PREFIX)
         typefaceCache[fileName]?.let { return it }
-        val file = File(fontsDir, fileName)
+        val file = fileForName(fileName) ?: return null
         return loadTypeface(file)?.also { typefaceCache[fileName] = it }
     }
 
@@ -152,6 +188,43 @@ class FontRegistry @Inject constructor(
     } catch (e: Exception) {
         Log.w(TAG, "Invalid font file: ${file.redacted()}", e)
         null
+    }
+
+    private fun fileForName(fileName: String): File? =
+        sanitizedFontFileName(fileName)?.takeIf { it == fileName }?.let { File(fontsDir, it) }
+
+    private fun rollbackFileForName(fileName: String): File? =
+        fileForName(fileName)?.let { File(rollbackDir, it.name) }
+
+    private fun backupForRollback(file: File): Boolean {
+        val rollbackFile = rollbackFileForName(file.name) ?: return false
+        return try {
+            writeFileAtomically(rollbackFile, requireNonEmpty = true) { tempFile ->
+                file.inputStream().use { input ->
+                    tempFile.outputStream().use { output -> input.copyTo(output) }
+                }
+            }
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to preserve font for rollback: ${file.redacted()}", e)
+            false
+        }
+    }
+
+    private fun restoreRollback(file: File): Boolean {
+        val rollbackFile = rollbackFileForName(file.name) ?: return false
+        if (!rollbackFile.isFile) return false
+        return try {
+            writeFileAtomically(file, requireNonEmpty = true) { tempFile ->
+                rollbackFile.inputStream().use { input ->
+                    tempFile.outputStream().use { output -> input.copyTo(output) }
+                }
+            }
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to restore font after import failure: ${file.redacted()}", e)
+            false
+        }
     }
 
     /**

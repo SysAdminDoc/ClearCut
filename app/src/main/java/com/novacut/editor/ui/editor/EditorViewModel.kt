@@ -660,6 +660,7 @@ class EditorViewModel @Inject constructor(
     private val stylusMidiEngine: StylusMidiEngine,
     private val captionTranslationEngine: com.novacut.editor.engine.CaptionTranslationEngine,
     private val fontRegistry: FontRegistry,
+    private val lutRegistry: com.novacut.editor.engine.LutRegistry,
     private val exportIncidentStore: ExportIncidentStore,
     private val ffmpegEngine: com.novacut.editor.engine.FFmpegEngine,
     @ApplicationContext private val appContext: Context,
@@ -706,7 +707,7 @@ class EditorViewModel @Inject constructor(
     // --- Delegates (extracted to reduce ViewModel size) ---
 
     val colorGradingDelegate = ColorGradingDelegate(
-        stateFlow = _state, appContext = appContext,
+        stateFlow = _state, appContext = appContext, lutRegistry = lutRegistry,
         scope = viewModelScope, saveUndoState = ::saveUndoState, showToast = ::showToast,
         pauseIfPlaying = ::pauseIfPlaying, dismissedPanelState = ::dismissedPanelState,
         getSelectedClip = ::getSelectedClip, updatePreview = ::updatePreview,

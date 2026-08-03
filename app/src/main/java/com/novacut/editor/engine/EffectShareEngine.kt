@@ -22,6 +22,7 @@ class EffectShareEngine @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private companion object {
+        private const val TAG = "EffectShareEngine"
         private const val MAX_EFFECT_SHARE_BYTES = 1_000_000L
     }
 
@@ -41,6 +42,9 @@ class EffectShareEngine @Inject constructor(
                 put("name", name)
                 put("version", 1)
                 put("type", "clearcut_effects")
+                put("schemaVersion", DeclarativePackContract.CURRENT_SCHEMA_VERSION)
+                put("packType", DeclarativePackKind.EFFECT.wireName)
+                put("provenance", JSONObject().put("source", "ClearCut effect export"))
 
                 // Effects
                 val effectsArr = JSONArray()
@@ -89,6 +93,7 @@ class EffectShareEngine @Inject constructor(
                     }
                     put("audioEffects", audioArr)
                 }
+                put("contentHash", DeclarativePackContract.contentHash(this))
             }
 
             val sanitized = sanitizeFileName(name, fallback = "effects", maxLength = 50)
@@ -96,8 +101,43 @@ class EffectShareEngine @Inject constructor(
             writeUtf8TextAtomically(file, json.toString(2))
             file
         } catch (e: Exception) {
-            Log.e("EffectShareEngine", "Export effects failed", e)
+            Log.e(TAG, "Export effects failed", e)
             null
+        }
+    }
+
+    enum class EffectPackFailure {
+        NONE,
+        UNREADABLE,
+        INVALID_JSON,
+        INVALID_SCHEMA,
+        WRONG_KIND,
+        INCOMPATIBLE_VERSION,
+        UNSAFE_CONTENT,
+        MISSING_CONTENT_HASH,
+        HASH_MISMATCH,
+        INVALID_ENTRY,
+    }
+
+    data class EffectPackValidation(
+        val imported: ImportedEffects? = null,
+        val failure: EffectPackFailure = EffectPackFailure.NONE,
+        val schemaVersion: Int = DeclarativePackContract.LEGACY_SCHEMA_VERSION,
+        val contentHash: String? = null,
+        val provenanceSource: String? = null,
+        val warnings: List<String> = emptyList(),
+    )
+
+    /** Read-only validation for the Projects import preview. */
+    suspend fun validateEffects(uri: Uri): EffectPackValidation = withContext(Dispatchers.IO) {
+        try {
+            val json = context.contentResolver.openInputStream(uri)?.use { stream ->
+                readUtf8WithByteLimit(stream, MAX_EFFECT_SHARE_BYTES)
+            } ?: return@withContext EffectPackValidation(failure = EffectPackFailure.UNREADABLE)
+            validateEffectsJson(json)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to validate effect pack", e)
+            EffectPackValidation(failure = EffectPackFailure.UNREADABLE)
         }
     }
 
@@ -109,9 +149,9 @@ class EffectShareEngine @Inject constructor(
             val json = context.contentResolver.openInputStream(uri)?.use { stream ->
                 readUtf8WithByteLimit(stream, MAX_EFFECT_SHARE_BYTES)
             } ?: return@withContext null
-            parseEffectsJson(json)
+            validateEffectsJson(json).imported
         } catch (e: Exception) {
-            Log.e("EffectShareEngine", "Import effects failed", e)
+            Log.e(TAG, "Import effects failed", e)
             null
         }
     }
@@ -122,32 +162,72 @@ class EffectShareEngine @Inject constructor(
     suspend fun importEffects(file: File): ImportedEffects? = withContext(Dispatchers.IO) {
         try {
             if (file.length() > MAX_EFFECT_SHARE_BYTES) {
-                Log.w("EffectShareEngine", "Effect share file exceeds 1MB limit")
+                Log.w(TAG, "Effect share file exceeds 1MB limit")
                 return@withContext null
             }
-            parseEffectsJson(file.inputStream().use { input ->
+            validateEffectsJson(file.inputStream().use { input ->
                 readUtf8WithByteLimit(input, MAX_EFFECT_SHARE_BYTES)
-            })
+            }).imported
         } catch (e: Exception) {
-            Log.e("EffectShareEngine", "Import effects failed", e)
+            Log.e(TAG, "Import effects failed", e)
             null
         }
     }
 
-    private fun parseEffectsJson(jsonStr: String): ImportedEffects? {
+    fun validateEffectsJson(jsonStr: String): EffectPackValidation {
         return try {
             val json = JSONObject(jsonStr)
-            if (json.optString("type") != "clearcut_effects") return null
+            val envelope = DeclarativePackContract.inspect(json, DeclarativePackKind.EFFECT)
+            val contractFailure = when (envelope.issue) {
+                DeclarativePackIssue.NONE -> null
+                DeclarativePackIssue.INVALID_SCHEMA -> EffectPackFailure.INVALID_SCHEMA
+                DeclarativePackIssue.FUTURE_SCHEMA -> EffectPackFailure.INCOMPATIBLE_VERSION
+                DeclarativePackIssue.WRONG_KIND -> EffectPackFailure.WRONG_KIND
+                DeclarativePackIssue.MISSING_CONTENT_HASH -> EffectPackFailure.MISSING_CONTENT_HASH
+                DeclarativePackIssue.HASH_MISMATCH -> EffectPackFailure.HASH_MISMATCH
+                DeclarativePackIssue.EXECUTABLE_CONTENT -> EffectPackFailure.UNSAFE_CONTENT
+            }
+            if (contractFailure != null) {
+                return EffectPackValidation(
+                    failure = contractFailure,
+                    schemaVersion = envelope.schemaVersion,
+                    contentHash = envelope.contentHash,
+                    provenanceSource = envelope.source,
+                    warnings = envelope.warnings,
+                )
+            }
+            if (json.optString("type") != "clearcut_effects") {
+                return EffectPackValidation(
+                    failure = EffectPackFailure.WRONG_KIND,
+                    schemaVersion = envelope.schemaVersion,
+                    contentHash = envelope.contentHash,
+                    provenanceSource = envelope.source,
+                    warnings = listOf("This JSON document is not a ClearCut effect pack."),
+                )
+            }
 
             val name = json.optString("name", "Imported")
+            val strictEntries = envelope.schemaVersion >= DeclarativePackContract.CURRENT_SCHEMA_VERSION
+            val warnings = envelope.warnings.toMutableList()
+            var invalidEntries = 0
 
             // Parse effects
             val effects = mutableListOf<Effect>()
             val effectsArr = json.optJSONArray("effects")
             if (effectsArr != null) {
                 for (i in 0 until effectsArr.length()) {
-                    val eo = effectsArr.optJSONObject(i) ?: continue
-                    val type = try { EffectType.valueOf(eo.getString("type")) } catch (e: Exception) { Log.w("EffectShareEngine", "Unknown effect type in JSON", e); continue }
+                    val eo = effectsArr.optJSONObject(i)
+                    if (eo == null) {
+                        invalidEntries++
+                        continue
+                    }
+                    val type = try {
+                        EffectType.valueOf(eo.getString("type"))
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Unknown effect type in JSON", e)
+                        invalidEntries++
+                        continue
+                    }
                     val params = mutableMapOf<String, Float>()
                     val po = eo.optJSONObject("params")
                     if (po != null) {
@@ -196,8 +276,18 @@ class EffectShareEngine @Inject constructor(
             val audioArr = json.optJSONArray("audioEffects")
             if (audioArr != null) {
                 for (i in 0 until audioArr.length()) {
-                    val ao = audioArr.optJSONObject(i) ?: continue
-                    val type = try { AudioEffectType.valueOf(ao.getString("type")) } catch (e: Exception) { Log.w("EffectShareEngine", "Unknown audio effect type in JSON", e); continue }
+                    val ao = audioArr.optJSONObject(i)
+                    if (ao == null) {
+                        invalidEntries++
+                        continue
+                    }
+                    val type = try {
+                        AudioEffectType.valueOf(ao.getString("type"))
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Unknown audio effect type in JSON", e)
+                        invalidEntries++
+                        continue
+                    }
                     val params = mutableMapOf<String, Float>()
                     val po = ao.optJSONObject("params")
                     if (po != null) {
@@ -209,10 +299,39 @@ class EffectShareEngine @Inject constructor(
                 }
             }
 
-            ImportedEffects(name, effects, colorGrade, audioEffects)
+            if (invalidEntries > 0 && strictEntries) {
+                return EffectPackValidation(
+                    failure = EffectPackFailure.INVALID_ENTRY,
+                    schemaVersion = envelope.schemaVersion,
+                    contentHash = envelope.contentHash,
+                    provenanceSource = envelope.source,
+                    warnings = listOf(
+                        "Effect pack contains $invalidEntries unsupported or invalid effect entr${if (invalidEntries == 1) "y" else "ies"}."
+                    ),
+                )
+            }
+            if (invalidEntries > 0) {
+                warnings.add("Skipped $invalidEntries unsupported legacy effect entr${if (invalidEntries == 1) "y" else "ies"}.")
+            }
+            val imported = ImportedEffects(
+                name = name,
+                effects = effects,
+                colorGrade = colorGrade,
+                audioEffects = audioEffects,
+                schemaVersion = envelope.schemaVersion,
+                contentHash = envelope.contentHash.orEmpty(),
+                provenanceSource = envelope.source,
+            )
+            EffectPackValidation(
+                imported = imported,
+                schemaVersion = envelope.schemaVersion,
+                contentHash = envelope.contentHash,
+                provenanceSource = envelope.source,
+                warnings = warnings,
+            )
         } catch (e: Exception) {
-            Log.e("EffectShareEngine", "Parse failed", e)
-            null
+            Log.e(TAG, "Parse failed", e)
+            EffectPackValidation(failure = EffectPackFailure.INVALID_JSON)
         }
     }
 
@@ -258,5 +377,8 @@ data class ImportedEffects(
     val name: String,
     val effects: List<Effect>,
     val colorGrade: ColorGrade?,
-    val audioEffects: List<AudioEffect>
+    val audioEffects: List<AudioEffect>,
+    val schemaVersion: Int = DeclarativePackContract.LEGACY_SCHEMA_VERSION,
+    val contentHash: String = "",
+    val provenanceSource: String? = null,
 )

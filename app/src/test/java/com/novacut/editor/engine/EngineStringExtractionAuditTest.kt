@@ -67,13 +67,14 @@ class EngineStringExtractionAuditTest {
         //             font-import engines landed (the cap had drifted red).
         // 2026-06-20: 161 after AiDisclosurePolicy and recent engine additions.
         // 2026-08-02: 186 after the project composition planning and builder boundaries.
+        // 2026-08-03: 188 after the declarative pack contract and LUT registry.
         // Bump intentionally when adding new engines so the
         // docs/models.md registry and the ROADMAP stay in sync. This assertion
         // is a checkpoint, not a hard cap.
         assertTrue(
             "Engine file count drifted from the audit baseline (was 161, now $count). " +
                 "If you added an engine, update docs/models.md and bump this number.",
-            count in 95..186
+            count in 95..188
         )
     }
 

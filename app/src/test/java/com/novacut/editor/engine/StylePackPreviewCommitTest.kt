@@ -77,6 +77,51 @@ class StylePackPreviewCommitTest {
     }
 
     @Test
+    fun replacementAndRemovalKeepOneStepRollback() {
+        manager.importFromJson(validPackJson(name = "Original"))
+        manager.importFromJson(validPackJson(name = "Replacement"))
+
+        assertTrue(manager.canRollback(PACK_ID))
+        assertTrue(manager.rollbackPack(PACK_ID))
+        assertEquals("Original", manager.listInstalledPacks().single().name)
+        assertFalse(manager.canRollback(PACK_ID))
+
+        assertTrue(manager.removePack(PACK_ID))
+        assertFalse(manager.isInstalled(PACK_ID))
+        assertTrue(manager.canRollback(PACK_ID))
+        assertTrue(manager.rollbackPack(PACK_ID))
+        assertTrue(manager.isInstalled(PACK_ID))
+        assertEquals("Original", manager.listInstalledPacks().single().name)
+    }
+
+    @Test
+    fun currentSchemaTamperingAndExecutableFieldsAreRejected() {
+        val current = org.json.JSONObject(validPackJson())
+            .put("schemaVersion", DeclarativePackContract.CURRENT_SCHEMA_VERSION)
+            .put("packType", DeclarativePackKind.STYLE.wireName)
+            .put("provenance", org.json.JSONObject().put("source", "test"))
+        current.put("contentHash", DeclarativePackContract.contentHash(current))
+
+        assertEquals(StylePackFailure.NONE, manager.validateFromJson(current.toString()).failure)
+
+        current.getJSONArray("styles").getJSONObject(0).put("name", "tampered")
+        assertEquals(StylePackFailure.HASH_MISMATCH, manager.validateFromJson(current.toString()).failure)
+
+        val unsafe = org.json.JSONObject(validPackJson()).put("script", "not allowed")
+        assertEquals(StylePackFailure.UNSAFE_CONTENT, manager.validateFromJson(unsafe.toString()).failure)
+    }
+
+    @Test
+    fun previewDisclosesStyleIdConflictsAcrossInstalledPacks() {
+        manager.importFromJson(validPackJson(id = PACK_ID))
+
+        val result = manager.validateFromJson(validPackJson(id = "other-pack", name = "Other"))
+
+        assertTrue(result.warnings.any { it.contains("Conflict", ignoreCase = true) })
+        assertTrue(result.warnings.any { it.contains("style-a") })
+    }
+
+    @Test
     fun traversalIdIsRejectedByValidationBeforeAnyWrite() {
         val result = manager.validateFromJson(validPackJson(id = "../../databases/room-projects"))
 

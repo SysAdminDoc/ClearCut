@@ -4,9 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import com.novacut.editor.R
-import com.novacut.editor.engine.copyWithLimit
-import com.novacut.editor.engine.sanitizeFileNamePreservingExtension
-import com.novacut.editor.engine.writeFileAtomically
+import com.novacut.editor.engine.LutRegistry
 import com.novacut.editor.model.ColorGrade
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -15,11 +13,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.IOException
-
-private const val MAX_LUT_IMPORT_BYTES = 32L * 1024L * 1024L
-
 /**
  * Delegate handling color grading, LUT import, and scope operations.
  * Extracted from EditorViewModel to reduce its size.
@@ -27,6 +20,7 @@ private const val MAX_LUT_IMPORT_BYTES = 32L * 1024L * 1024L
 class ColorGradingDelegate(
     private val stateFlow: MutableStateFlow<EditorState>,
     private val appContext: Context,
+    private val lutRegistry: LutRegistry,
     private val scope: CoroutineScope,
     private val saveUndoState: (String) -> Unit,
     private val showToast: (String) -> Unit,
@@ -89,41 +83,16 @@ class ColorGradingDelegate(
         _showLutPicker.value = false
         scope.launch(Dispatchers.IO) {
             try {
-                val lutDir = File(appContext.filesDir, "luts").also { it.mkdirs() }
-                val rawFileName = uri.lastPathSegment?.substringAfterLast('/') ?: "imported.cube"
-                val fileName = sanitizeFileNamePreservingExtension(
-                    raw = rawFileName,
-                    fallbackStem = "imported",
-                    maxLength = 80
-                ).let { sanitized ->
-                    if (sanitized.contains('.')) sanitized else "$sanitized.cube"
-                }
-                val destFile = File(lutDir, fileName)
-                writeFileAtomically(destFile, requireNonEmpty = true) { tempFile ->
-                    val inputStream = appContext.contentResolver.openInputStream(uri)
-                        ?: throw IOException("Cannot open LUT file")
-                    inputStream.use { input ->
-                        tempFile.outputStream().use { output ->
-                            copyWithLimit(input, output, MAX_LUT_IMPORT_BYTES)
-                        }
-                    }
-                }
+                val imported = lutRegistry.importLut(uri)
+                    ?: throw IllegalArgumentException("LUT was not a valid bounded .cube/.3dl asset")
                 withContext(Dispatchers.Main) {
-                    setClipLut(destFile.absolutePath)
-                    showToast(appContext.getString(R.string.color_lut_applied_toast, fileName))
+                    setClipLut(imported.file.absolutePath)
+                    showToast(appContext.getString(R.string.color_lut_applied_toast, imported.fileName))
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    val message = if (
-                        e is IOException &&
-                        e.message?.contains("byte limit", ignoreCase = true) == true
-                    ) {
-                        text(R.string.color_lut_too_large_toast)
-                    } else {
-                        Log.e("ColorGradingDelegate", "Failed to import LUT", e)
-                        text(R.string.color_lut_import_failed_toast)
-                    }
-                    showToast(message)
+                    Log.e("ColorGradingDelegate", "Failed to import LUT", e)
+                    showToast(text(R.string.color_lut_import_failed_toast))
                 }
             }
         }

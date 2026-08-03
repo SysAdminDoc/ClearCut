@@ -24,6 +24,9 @@ data class StylePack(
     val license: String,
     val minAppVersion: String,
     val styles: List<CaptionStyleTemplate>,
+    val schemaVersion: Int = DeclarativePackContract.LEGACY_SCHEMA_VERSION,
+    val contentHash: String = "",
+    val provenanceSource: String? = null,
 )
 
 data class StylePackImportResult(
@@ -37,7 +40,13 @@ enum class StylePackFailure {
     UNREADABLE,
     INVALID_JSON,
     MISSING_REQUIRED_FIELDS,
+    INVALID_SCHEMA,
+    WRONG_KIND,
     INCOMPATIBLE_VERSION,
+    UNSAFE_CONTENT,
+    INVALID_STYLE_ENTRY,
+    MISSING_CONTENT_HASH,
+    HASH_MISMATCH,
     EMPTY_STYLES,
     DUPLICATE_ID,
     OVERSIZED,
@@ -51,13 +60,17 @@ class StylePackManager @Inject constructor(
     companion object {
         private const val TAG = "StylePackManager"
         private const val MAX_STYLE_PACK_BYTES = 1_000_000L
-        private const val SCHEMA_VERSION = 1
+        private const val SCHEMA_VERSION = DeclarativePackContract.CURRENT_SCHEMA_VERSION
         private const val MAX_STYLES_PER_PACK = 50
         private const val MAX_PACK_ID_CHARS = 128
+        private const val ROLLBACK_DIR_NAME = "rollback"
     }
 
     private val packsDir: File
         get() = File(context.filesDir, "style_packs").also { it.mkdirs() }
+
+    private val rollbackDir: File
+        get() = File(packsDir, ROLLBACK_DIR_NAME).also { it.mkdirs() }
 
     /**
      * Resolve the on-disk file for a pack id, returning null for any id that is
@@ -75,6 +88,11 @@ class StylePackManager @Inject constructor(
             return null
         }
         return File(packsDir, "$sanitized.json")
+    }
+
+    private fun rollbackFileForId(id: String): File? {
+        val packFile = packFileForId(id) ?: return null
+        return File(rollbackDir, packFile.name)
     }
 
     suspend fun importFromUri(uri: Uri): StylePackImportResult = withContext(Dispatchers.IO) {
@@ -131,7 +149,13 @@ class StylePackManager @Inject constructor(
             ?.mapNotNull { file ->
                 try {
                     val root = JSONObject(file.readText())
-                    parsePack(root)
+                    val envelope = DeclarativePackContract.inspect(root, DeclarativePackKind.STYLE)
+                    if (envelope.issue != DeclarativePackIssue.NONE) {
+                        Log.w(TAG, "Skipping invalid installed pack: ${file.redacted()} (${envelope.issue})")
+                        null
+                    } else {
+                        parsePack(root)
+                    }
                 } catch (e: Exception) {
                     Log.w(TAG, "Failed to read installed pack: ${file.redacted()}", e)
                     null
@@ -147,16 +171,40 @@ class StylePackManager @Inject constructor(
 
     fun removePack(packId: String): Boolean {
         val file = packFileForId(packId) ?: return false
-        return if (file.exists()) {
-            file.delete().also { ok ->
-                if (ok) Log.d(TAG, "Removed style pack: $packId")
-                else Log.w(TAG, "Failed to delete style pack file: $packId")
-            }
-        } else false
+        if (!file.exists()) return false
+        if (!backupForRollback(file, packId)) return false
+        return file.delete().also { ok ->
+            if (ok) Log.d(TAG, "Removed style pack with rollback available: $packId")
+            else Log.w(TAG, "Failed to delete style pack file: $packId")
+        }
     }
 
     fun isInstalled(packId: String): Boolean =
         packFileForId(packId)?.exists() == true
+
+    fun canRollback(packId: String): Boolean =
+        rollbackFileForId(packId)?.isFile == true
+
+    /** Restore the most recent replaced or removed version of a pack. */
+    fun rollbackPack(packId: String): Boolean {
+        val targetFile = packFileForId(packId) ?: return false
+        val rollbackFile = rollbackFileForId(packId) ?: return false
+        if (!rollbackFile.isFile) return false
+        return try {
+            val root = JSONObject(rollbackFile.readText(Charsets.UTF_8))
+            val envelope = DeclarativePackContract.inspect(root, DeclarativePackKind.STYLE)
+            if (envelope.issue != DeclarativePackIssue.NONE) return false
+            val pack = parsePack(root) ?: return false
+            if (pack.id != packId) return false
+            writeUtf8TextAtomically(targetFile, root.toString(2))
+            rollbackFile.delete()
+            Log.d(TAG, "Rolled back style pack: $packId")
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to roll back style pack", e)
+            false
+        }
+    }
 
     /** A pack that passed every validation rule and is ready for [install]. */
     private data class ValidatedPack(
@@ -172,24 +220,49 @@ class StylePackManager @Inject constructor(
     )
 
     private fun validate(root: JSONObject): Validation {
-        val pack = parsePack(root)
-            ?: return Validation(StylePackImportResult(failure = StylePackFailure.MISSING_REQUIRED_FIELDS))
-
-        val schemaVersion = root.optInt("schemaVersion", 0)
-        if (schemaVersion > SCHEMA_VERSION) {
+        val envelope = DeclarativePackContract.inspect(root, DeclarativePackKind.STYLE)
+        val contractFailure = when (envelope.issue) {
+            DeclarativePackIssue.NONE -> null
+            DeclarativePackIssue.INVALID_SCHEMA -> StylePackFailure.INVALID_SCHEMA
+            DeclarativePackIssue.FUTURE_SCHEMA -> StylePackFailure.INCOMPATIBLE_VERSION
+            DeclarativePackIssue.WRONG_KIND -> StylePackFailure.WRONG_KIND
+            DeclarativePackIssue.MISSING_CONTENT_HASH -> StylePackFailure.MISSING_CONTENT_HASH
+            DeclarativePackIssue.HASH_MISMATCH -> StylePackFailure.HASH_MISMATCH
+            DeclarativePackIssue.EXECUTABLE_CONTENT -> StylePackFailure.UNSAFE_CONTENT
+        }
+        if (contractFailure != null) {
             return Validation(
                 StylePackImportResult(
-                    failure = StylePackFailure.INCOMPATIBLE_VERSION,
-                    warnings = listOf("Pack requires schema version $schemaVersion, this app supports up to $SCHEMA_VERSION.")
+                    failure = contractFailure,
+                    warnings = envelope.warnings,
                 )
             )
         }
 
+        val stylesArray = root.optJSONArray("styles")
+            ?: return Validation(StylePackImportResult(failure = StylePackFailure.MISSING_REQUIRED_FIELDS))
+        val parsedStyles = parseStyles(stylesArray)
+        if (parsedStyles.invalidEntries > 0) {
+            return Validation(
+                StylePackImportResult(
+                    failure = StylePackFailure.INVALID_STYLE_ENTRY,
+                    warnings = listOf("Pack contains ${parsedStyles.invalidEntries} invalid style entr${if (parsedStyles.invalidEntries == 1) "y" else "ies"}.")
+                )
+            )
+        }
+        val pack = parsePack(root, parsedStyles.styles)
+            ?: return Validation(StylePackImportResult(failure = StylePackFailure.MISSING_REQUIRED_FIELDS))
+
         if (pack.styles.isEmpty()) {
-            return Validation(StylePackImportResult(failure = StylePackFailure.EMPTY_STYLES))
+            return Validation(
+                StylePackImportResult(
+                    failure = StylePackFailure.EMPTY_STYLES,
+                    warnings = envelope.warnings,
+                )
+            )
         }
 
-        val warnings = mutableListOf<String>()
+        val warnings = envelope.warnings.toMutableList()
         if (pack.styles.size > MAX_STYLES_PER_PACK) {
             warnings.add("Pack contains ${pack.styles.size} styles; only the first $MAX_STYLES_PER_PACK will be imported.")
         }
@@ -206,6 +279,26 @@ class StylePackManager @Inject constructor(
             warnings.add("Installing will replace the previously installed pack \"${pack.name}\".")
         }
 
+        val incomingStyleIds = pack.styles.map { it.id }.toSet()
+        listInstalledPacks()
+            .filter { it.id != pack.id }
+            .forEach { installed ->
+                val conflicts = installed.styles.map { it.id }.filter(incomingStyleIds::contains).distinct()
+                if (conflicts.isNotEmpty()) {
+                    warnings.add(
+                        "Conflict: style id(s) ${conflicts.joinToString()} are already supplied by pack " +
+                            "\"${installed.name}\" (${installed.id})."
+                    )
+                }
+            }
+
+        val installedPack = listInstalledPacks().firstOrNull { it.id == pack.id }
+        if (installedPack != null && installedPack.version > pack.version) {
+            warnings.add(
+                "Installing version ${pack.version} will downgrade the installed version ${installedPack.version}."
+            )
+        }
+
         return Validation(
             result = StylePackImportResult(pack = pack, warnings = warnings),
             validated = ValidatedPack(pack = pack, root = root, targetFile = file, warnings = warnings)
@@ -214,22 +307,34 @@ class StylePackManager @Inject constructor(
 
     private fun install(validated: ValidatedPack): StylePackImportResult {
         return try {
+            val normalizedRoot = normalizeForInstall(validated.root)
+            val installedPack = parsePack(normalizedRoot) ?: return StylePackImportResult(
+                failure = StylePackFailure.WRITE_FAILED,
+                warnings = validated.warnings,
+            )
+            if (validated.targetFile.exists() && !backupForRollback(validated.targetFile, validated.pack.id)) {
+                return StylePackImportResult(
+                    failure = StylePackFailure.WRITE_FAILED,
+                    warnings = validated.warnings,
+                )
+            }
             // Atomic: a crash mid-write leaves the previously installed pack (or no
             // pack at all) rather than a truncated file the gallery would fail to load.
-            writeUtf8TextAtomically(validated.targetFile, validated.root.toString(2))
+            writeUtf8TextAtomically(validated.targetFile, normalizedRoot.toString(2))
             Log.d(
                 TAG,
-                "Installed style pack: ${validated.pack.id} " +
-                    "(${validated.pack.name}, ${validated.pack.styles.size} styles)"
+                "Installed style pack: ${installedPack.id} " +
+                    "(${installedPack.name}, ${installedPack.styles.size} styles, " +
+                    "hash=${installedPack.contentHash.take(12)})"
             )
-            StylePackImportResult(pack = validated.pack, warnings = validated.warnings)
+            StylePackImportResult(pack = installedPack, warnings = validated.warnings)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to write style pack", e)
             StylePackImportResult(failure = StylePackFailure.WRITE_FAILED)
         }
     }
 
-    private fun parsePack(root: JSONObject): StylePack? {
+    private fun parsePack(root: JSONObject, parsedStyles: List<CaptionStyleTemplate>? = null): StylePack? {
         val id = root.optString("id", "").takeIf { it.isNotBlank() } ?: return null
         val name = root.optString("name", "").takeIf { it.isNotBlank() } ?: return null
         val version = root.optInt("version", 1)
@@ -237,7 +342,7 @@ class StylePackManager @Inject constructor(
         val license = root.optString("license", "")
         val minAppVersion = root.optString("minAppVersion", "")
         val stylesArray = root.optJSONArray("styles") ?: return null
-        val styles = parseStyles(stylesArray).take(MAX_STYLES_PER_PACK)
+        val styles = (parsedStyles ?: parseStyles(stylesArray).styles).take(MAX_STYLES_PER_PACK)
         return StylePack(
             id = id,
             name = name,
@@ -246,17 +351,63 @@ class StylePackManager @Inject constructor(
             license = license,
             minAppVersion = minAppVersion,
             styles = styles,
+            schemaVersion = root.optInt("schemaVersion", DeclarativePackContract.LEGACY_SCHEMA_VERSION),
+            contentHash = root.optString("contentHash", "").trim(),
+            provenanceSource = root.optJSONObject("provenance")
+                ?.optString("source", "")
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() },
         )
     }
 
-    private fun parseStyles(array: JSONArray): List<CaptionStyleTemplate> {
+    private data class ParsedStyles(
+        val styles: List<CaptionStyleTemplate>,
+        val invalidEntries: Int,
+    )
+
+    private fun parseStyles(array: JSONArray): ParsedStyles {
         val result = mutableListOf<CaptionStyleTemplate>()
+        var invalidEntries = 0
         for (i in 0 until array.length()) {
-            val obj = array.optJSONObject(i) ?: continue
-            val style = parseStyle(obj) ?: continue
+            val obj = array.optJSONObject(i)
+            if (obj == null) {
+                invalidEntries++
+                continue
+            }
+            val style = parseStyle(obj)
+            if (style == null) {
+                invalidEntries++
+                continue
+            }
             result.add(style)
         }
-        return result
+        return ParsedStyles(result, invalidEntries)
+    }
+
+    private fun normalizeForInstall(root: JSONObject): JSONObject {
+        val normalized = JSONObject(root.toString())
+        normalized.put("schemaVersion", SCHEMA_VERSION)
+        normalized.put("packType", DeclarativePackKind.STYLE.wireName)
+        val provenance = normalized.optJSONObject("provenance") ?: JSONObject().also {
+            normalized.put("provenance", it)
+        }
+        if (provenance.optString("source", "").isBlank()) {
+            provenance.put("source", "local import")
+        }
+        normalized.put("installedAtEpochMs", System.currentTimeMillis())
+        normalized.put("contentHash", DeclarativePackContract.contentHash(normalized))
+        return normalized
+    }
+
+    private fun backupForRollback(file: File, packId: String): Boolean {
+        val rollbackFile = rollbackFileForId(packId) ?: return false
+        return try {
+            writeUtf8TextAtomically(rollbackFile, file.readText(Charsets.UTF_8))
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to preserve style pack for rollback", e)
+            false
+        }
     }
 
     private fun parseStyle(obj: JSONObject): CaptionStyleTemplate? {

@@ -134,6 +134,10 @@ class IncomingDocumentImportRouter @Inject constructor(
                     "Pack: ${pack.name} v${pack.version}",
                     "Author: ${pack.author.ifBlank { "Unknown" }}",
                     "Styles: ${pack.styles.size}",
+                    "Schema: v${pack.schemaVersion}",
+                    "Content hash: ${pack.contentHash.ifBlank { "not recorded" }}",
+                    "Source: ${pack.provenanceSource ?: "not specified"}",
+                    "Rollback available: ${stylePackManager.canRollback(pack.id)}",
                 ),
                 warnings = result.warnings,
                 canImportNow = false,
@@ -165,6 +169,10 @@ class IncomingDocumentImportRouter @Inject constructor(
                 "Author: ${pack.author.ifBlank { "Unknown" }}",
                 "License: ${pack.license.ifBlank { "Not specified" }}",
                 "Styles: ${pack.styles.size}",
+                "Schema: v${pack.schemaVersion}",
+                "Content hash: ${pack.contentHash.ifBlank { "computed on install" }}",
+                "Source: ${pack.provenanceSource ?: "not specified; recorded as local import on install"}",
+                "Rollback available: ${stylePackManager.canRollback(pack.id)}",
             ),
             warnings = result.warnings + "Nothing was installed during preview; choose Import to install.",
             canImportNow = true,
@@ -184,8 +192,13 @@ class IncomingDocumentImportRouter @Inject constructor(
     }
 
     private suspend fun previewEffectPack(item: IncomingDocumentItem): IncomingDocumentImportPreview {
-        val imported = effectShareEngine.importEffects(item.uri)
-            ?: return invalid(item, "This .ncfx file did not match ClearCut's effect-pack schema.")
+        val validation = effectShareEngine.validateEffects(item.uri)
+        val imported = validation.imported
+            ?: return invalid(
+                item = item,
+                body = effectPackFailureMessage(validation.failure),
+                warnings = validation.warnings,
+            )
         return IncomingDocumentImportPreview(
             item = item,
             status = IncomingDocumentImportStatus.READY,
@@ -196,8 +209,11 @@ class IncomingDocumentImportRouter @Inject constructor(
                 "Video effects: ${imported.effects.size}",
                 "Audio effects: ${imported.audioEffects.size}",
                 "Color grade: ${if (imported.colorGrade != null) "included" else "not included"}",
+                "Schema: v${validation.schemaVersion}",
+                "Content hash: ${validation.contentHash ?: "computed for legacy pack on export"}",
+                "Source: ${validation.provenanceSource ?: "not specified"}",
             ),
-            warnings = listOf("No clip was changed from the Projects screen."),
+            warnings = validation.warnings + "No clip was changed from the Projects screen.",
             canImportNow = false,
         )
     }
@@ -411,11 +427,32 @@ class IncomingDocumentImportRouter @Inject constructor(
             StylePackFailure.UNREADABLE -> "ClearCut could not read this file."
             StylePackFailure.INVALID_JSON -> "File is not valid JSON."
             StylePackFailure.MISSING_REQUIRED_FIELDS -> "Pack is missing required fields (id, name, or styles)."
+            StylePackFailure.INVALID_SCHEMA -> "Pack schemaVersion must be a positive integer."
+            StylePackFailure.WRONG_KIND -> "This file declares a different declarative pack type."
             StylePackFailure.INCOMPATIBLE_VERSION -> "Pack requires a newer version of ClearCut."
+            StylePackFailure.UNSAFE_CONTENT -> "Pack contains executable or plugin content, which ClearCut rejects."
+            StylePackFailure.INVALID_STYLE_ENTRY -> "Pack contains an invalid style entry."
+            StylePackFailure.MISSING_CONTENT_HASH -> "Current-schema packs must include a content hash."
+            StylePackFailure.HASH_MISMATCH -> "Pack content failed its integrity check."
             StylePackFailure.EMPTY_STYLES -> "Pack contains no styles."
             StylePackFailure.DUPLICATE_ID -> "Pack contains duplicate style IDs."
             StylePackFailure.OVERSIZED -> "Pack file is too large."
             StylePackFailure.WRITE_FAILED -> "Could not save pack to device storage."
+        }
+    }
+
+    private fun effectPackFailureMessage(failure: EffectShareEngine.EffectPackFailure): String {
+        return when (failure) {
+            EffectShareEngine.EffectPackFailure.NONE -> "Effect pack validation failed."
+            EffectShareEngine.EffectPackFailure.UNREADABLE -> "ClearCut could not read this effect pack."
+            EffectShareEngine.EffectPackFailure.INVALID_JSON -> "Effect pack is not valid JSON."
+            EffectShareEngine.EffectPackFailure.INVALID_SCHEMA -> "Effect pack schemaVersion must be a positive integer."
+            EffectShareEngine.EffectPackFailure.WRONG_KIND -> "This file declares a different declarative pack type."
+            EffectShareEngine.EffectPackFailure.INCOMPATIBLE_VERSION -> "Effect pack requires a newer version of ClearCut."
+            EffectShareEngine.EffectPackFailure.UNSAFE_CONTENT -> "Effect pack contains executable or plugin content, which ClearCut rejects."
+            EffectShareEngine.EffectPackFailure.MISSING_CONTENT_HASH -> "Current-schema effect packs must include a content hash."
+            EffectShareEngine.EffectPackFailure.HASH_MISMATCH -> "Effect pack content failed its integrity check."
+            EffectShareEngine.EffectPackFailure.INVALID_ENTRY -> "Effect pack contains an unsupported or invalid effect entry."
         }
     }
 
